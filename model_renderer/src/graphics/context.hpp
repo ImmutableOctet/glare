@@ -3,28 +3,32 @@
 // TODO: Review exposure of implementation detail.
 using SDL_GLContext = void*; // class SDL_GLContext;
 
+namespace app
+{
+	class Window;
+}
+
 namespace graphics
 {
-	class window;
-	class canvas;
+	class Canvas;
 
 	enum backend
 	{
 		OpenGL
 	};
 
-	class context
+	class Context
 	{
 		public:
-			context(window& wnd, backend gfx);
-			~context();
+			Context(app::Window& wnd, backend gfx);
+			~Context();
 
 			// Commands:
-			void flip(window& wnd);
+			void flip(app::Window& wnd);
 		private:
 			const backend graphic_backend;
 
 			// TODO: Graphics abstraction -- Use std::variant or similar.
-			SDL_GLContext gl_context;
+			SDL_GLContext gl_Context;
 	};
 }

@@ -4,15 +4,15 @@
 
 struct SDL_Window;
 
-namespace graphics
+namespace app
 {
-	class context;
+	class Context;
 
-	class window
+	class Window
 	{
 		public:
-			window(int width, int height, const std::string& title = "");
-			~window();
+			Window(int width, int height, const std::string& title = "");
+			~Window();
 
 			inline SDL_Window* get_handle() { return handle; }
 		private:

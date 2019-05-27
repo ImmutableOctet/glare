@@ -155,18 +155,31 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="src\app\application.cpp" />
+    <ClCompile Include="src\app\event_handler.cpp" />
+    <ClCompile Include="src\app\window.cpp" />
     <ClCompile Include="src\graphics\canvas.cpp" />
     <ClCompile Include="src\graphics\context.cpp" />
-    <ClCompile Include="src\graphics\window.cpp" />
+    <ClCompile Include="src\graphics\model.cpp" />
     <ClCompile Include="src\util\lib.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\app\app.hpp" />
+    <ClInclude Include="src\app\application.hpp" />
+    <ClInclude Include="src\app\event_handler.hpp" />
+    <ClInclude Include="src\app\window.hpp" />
     <ClInclude Include="src\core.hpp" />
+    <ClInclude Include="src\debug.hpp" />
+    <ClInclude Include="src\engine\engine.hpp" />
+    <ClInclude Include="src\engine\entity.hpp" />
     <ClInclude Include="src\graphics\canvas.hpp" />
     <ClInclude Include="src\graphics\context.hpp" />
     <ClInclude Include="src\graphics\graphics.hpp" />
+    <ClInclude Include="src\graphics\mesh.hpp" />
+    <ClInclude Include="src\graphics\model.hpp" />
     <ClInclude Include="src\graphics\native\opengl.hpp" />
-    <ClInclude Include="src\graphics\window.hpp" />
+    <ClInclude Include="src\graphics\primitives.hpp" />
+    <ClInclude Include="src\types.hpp" />
     <ClInclude Include="src\util\lib.hpp" />
     <ClInclude Include="src\util\util.hpp" />
   </ItemGroup>

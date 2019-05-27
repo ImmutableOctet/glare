@@ -7,50 +7,91 @@
 
 // Temporary:
 #include <sdl2/SDL.h>
-#include "src/graphics/native/opengl.hpp"
 
-namespace graphics
+class Game : public app::Application
 {
-	class mesh
-	{
+	public:
+		struct Libraries
+		{
+			Libraries()
+			{
+				using namespace util;
 
-	};
+				ASSERT(lib::init_sdl());
+				ASSERT(lib::establish_gl());
+			}
 
-	class material
-	{
+			~Libraries() {}
+		};
 
-	};
+		struct Graphics
+		{
+			Graphics(app::Window& window)
+			{
+				context = std::make_shared<graphics::Context>(window, graphics::backend::OpenGL);
 
-	class model
-	{
-		private:
-			std::vector<mesh> meshes;
-			std::vector<material> materials;
-	};
-}
+				// Create the default canvas.
+				canvas = std::make_shared<graphics::Canvas>(context);
+			}
+
+			ref<graphics::Context> context;
+			ref<graphics::Canvas> canvas;
+		};
+
+		Libraries init_libraries;
+		app::Window window;
+		Graphics graphics;
+
+		Game(const std::string& title="", bool auto_run=true, int width=1280, int height=720)
+			: init_libraries(), window(width, height, title), graphics(window)
+		{
+			if (auto_run)
+			{
+				start();
+				run();
+			}
+		}
+
+		void update() override
+		{
+			/*
+			//std::cout << "Hello world." << std::endl;
+
+			SDL_Event event;
+
+			while (SDL_PollEvent(&event))
+			{
+				switch (event.type)
+				{
+				case SDL_KEYDOWN:
+					break;
+				case SDL_QUIT:
+					stop();
+
+					return;
+				}
+			}
+			*/
+		}
+
+		void render() override
+		{
+			auto& gfx = *graphics.canvas;
+
+			gfx.clear(1, 1, 0, 1);
+			gfx.flip(window);
+		}
+};
 
 int main(int argc, char** argv)
 {
-	using namespace std;
-	using namespace util;
+	std::cout << "Hello world\n";
 
-	if (!lib::init_sdl())
-		return 1;
+	{
+		Game game("Game Engine");
+	}
 
-	lib::establish_gl();
-
-	auto wnd = graphics::window(1024, 768);
-	auto ctx = std::make_shared<graphics::context>(wnd, graphics::backend::OpenGL);
-
-	auto gfx = graphics::canvas(ctx);
-
-	gfx.clear(1, 1, 0, 1);
-
-	gfx.flip(wnd);
-
-	cout << "Hello world\n";
-
-	cin.get();
+	std::cin.get();
 
 	return 0;
 }

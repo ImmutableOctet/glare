@@ -2,25 +2,29 @@
 
 #include <memory>
 
+namespace app
+{
+	class Window;
+}
+
 namespace graphics
 {
-	class context;
-	class window;
+	class Context;
 
-	class canvas
+	class Canvas
 	{
 		public:
-			canvas();
-			canvas(std::shared_ptr<context> ctx);
+			Canvas();
+			Canvas(std::shared_ptr<Context> ctx);
 
-			~canvas();
+			~Canvas();
 
-			bool attach(std::shared_ptr<context> ctx);
+			bool attach(std::shared_ptr<Context> ctx);
 			void detach();
 
-			void flip(window& wnd);
+			void flip(app::Window& wnd);
 			void clear(float red, float green, float blue, float alpha);
 		private:
-			std::shared_ptr<context> ctx; // Attached context.
+			std::shared_ptr<Context> ctx; // Attached Context.
 	};
 }

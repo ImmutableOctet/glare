@@ -1,30 +1,28 @@
-#include "canvas.hpp"
+#include "Canvas.hpp"
 #include "context.hpp"
 
 // TODO: Remove this requirement.
-#include "window.hpp"
-
 #include "native/opengl.hpp"
 
 namespace graphics
 {
-	canvas::canvas()
+	Canvas::Canvas()
 	{
 		// Nothing so far.
 	}
 
-	canvas::canvas(std::shared_ptr<context> ctx)
-		: canvas()
+	Canvas::Canvas(std::shared_ptr<Context> ctx)
+		: Canvas()
 	{
 		attach(ctx);
 	}
 
-	canvas::~canvas()
+	Canvas::~Canvas()
 	{
 		detach();
 	}
 
-	bool canvas::attach(std::shared_ptr<context> ctx)
+	bool Canvas::attach(std::shared_ptr<Context> ctx)
 	{
 		if (ctx == nullptr)
 		{
@@ -36,17 +34,17 @@ namespace graphics
 		return true;
 	}
 
-	void canvas::detach()
+	void Canvas::detach()
 	{
 		ctx = nullptr;
 	}
 
-	void canvas::flip(window& wnd)
+	void Canvas::flip(app::Window& wnd)
 	{
 		ctx->flip(wnd);
 	}
 
-	void canvas::clear(float red, float green, float blue, float alpha)
+	void Canvas::clear(float red, float green, float blue, float alpha)
 	{
 		// TODO: Graphics Abstraction.
 		glClearColor(red, green, blue, alpha);

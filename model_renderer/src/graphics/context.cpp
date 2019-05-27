@@ -1,6 +1,6 @@
-#include "context.hpp"
-#include "window.hpp"
-#include "canvas.hpp"
+#include "Context.hpp"
+#include "../app/window.hpp"
+#include "Canvas.hpp"
 
 #include "native/opengl.hpp"
 
@@ -8,13 +8,13 @@
 
 namespace graphics
 {
-	context::context(window& wnd, backend gfx)
+	Context::Context(app::Window& wnd, backend gfx)
 		: graphic_backend(gfx)
 	{
 		switch (gfx) // graphics_backend
 		{
 			case backend::OpenGL:
-				gl_context = SDL_GL_CreateContext(wnd.get_handle());
+				gl_Context = SDL_GL_CreateContext(wnd.get_handle());
 
 				glewInit();
 
@@ -22,18 +22,18 @@ namespace graphics
 		}
 	}
 
-	context::~context()
+	Context::~Context()
 	{
 		switch (graphic_backend)
 		{
 			case backend::OpenGL:
-				SDL_GL_DeleteContext(gl_context);
+				SDL_GL_DeleteContext(gl_Context);
 
 				break;
 		}
 	}
 
-	void context::flip(window& wnd)
+	void Context::flip(app::Window& wnd)
 	{
 		SDL_GL_SwapWindow(wnd.get_handle());
 	}
