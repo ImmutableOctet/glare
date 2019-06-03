@@ -1,6 +1,7 @@
 #pragma once
 
 #include <graphics/context.hpp>
+#include <graphics/drivers/driver.hpp>
 
 namespace graphics
 {

@@ -227,5 +227,8 @@
     <ClInclude Include="src\graphics\drivers\opengl\driver.hpp">
       <Filter>Header Files\graphics\drivers\opengl</Filter>
     </ClInclude>
+    <ClInclude Include="src\graphics\drivers\driver.hpp">
+      <Filter>Header Files\graphics\drivers</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

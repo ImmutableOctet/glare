@@ -200,6 +200,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\graphics\canvas.hpp" />
     <ClInclude Include="src\graphics\context.hpp" />
     <ClInclude Include="src\graphics\context_state.hpp" />
+    <ClInclude Include="src\graphics\drivers\driver.hpp" />
     <ClInclude Include="src\graphics\drivers\drivers.hpp" />
     <ClInclude Include="src\graphics\drivers\opengl\driver.hpp" />
     <ClInclude Include="src\graphics\graphics.hpp" />
