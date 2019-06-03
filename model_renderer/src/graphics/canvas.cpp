@@ -1,9 +1,6 @@
 #include "Canvas.hpp"
 #include "context.hpp"
 
-// TODO: Remove this requirement.
-#include "native/opengl.hpp"
-
 namespace graphics
 {
 	Canvas::Canvas()
@@ -46,8 +43,6 @@ namespace graphics
 
 	void Canvas::clear(float red, float green, float blue, float alpha)
 	{
-		// TODO: Graphics Abstraction.
-		glClearColor(red, green, blue, alpha);
-		glClear(GL_COLOR_BUFFER_BIT);
+		ctx->clear(red, green, blue, alpha);
 	}
 }

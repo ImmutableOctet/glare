@@ -15,8 +15,6 @@
 
 #include <sdl2/SDL_video.h>
 
-#include "../native/opengl.hpp"
-
 namespace graphics
 {
 	// Implementation detail:
@@ -68,6 +66,13 @@ namespace graphics
 	void Context::flip(app::Window& wnd)
 	{
 		SDL_GL_SwapWindow(wnd.get_handle());
+	}
+
+	void Context::clear(float red, float green, float blue, float alpha)
+	{
+		// TODO: Graphics Abstraction.
+		glClearColor(red, green, blue, alpha);
+		glClear(GL_COLOR_BUFFER_BIT);
 	}
 
 	Shader& Context::bind(Shader& shader)

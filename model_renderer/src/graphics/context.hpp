@@ -10,7 +10,7 @@
 //#include "context_state.hpp"
 
 // Driver-specific:
-#include "drivers/opengl/mesh_composition.hpp"
+#include "drivers/drivers.hpp"
 
 namespace app
 {
@@ -44,7 +44,7 @@ namespace graphics
 			friend class BindOperation;
 
 			// Types:
-			using Handle = unsigned int; // GLint;
+			using Handle = ContextHandle;
 			using Backend = graphics::Backend;
 
 			using State = ContextState;
@@ -70,6 +70,9 @@ namespace graphics
 
 			// Commands:
 			void flip(app::Window& wnd);
+
+			// TODO: Add an overload for vectors.
+			void clear(float red, float green, float blue, float alpha);
 
 			// Creates a safe bind operation for the resource specified.
 			template <typename ResourceType>

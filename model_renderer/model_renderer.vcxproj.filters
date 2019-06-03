@@ -140,9 +140,6 @@
     <ClInclude Include="src\graphics\model.hpp">
       <Filter>Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="src\graphics\primitives.hpp">
-      <Filter>Header Files\graphics</Filter>
-    </ClInclude>
     <ClInclude Include="src\engine\engine.hpp">
       <Filter>Header Files\engine</Filter>
     </ClInclude>
@@ -229,6 +226,9 @@
     </ClInclude>
     <ClInclude Include="src\graphics\drivers\driver.hpp">
       <Filter>Header Files\graphics\drivers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\types.hpp">
+      <Filter>Header Files\graphics</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

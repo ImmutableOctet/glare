@@ -1,6 +1,5 @@
 #pragma once
 
-#include <graphics/context.hpp>
 #include <graphics/drivers/driver.hpp>
 
 namespace graphics
@@ -9,12 +8,12 @@ namespace graphics
 	struct GLMeshComposition
 	{
 		// Vertex Array Object. (Mesh State)
-		Context::Handle VAO;
+		ContextHandle VAO;
 
 		// Vertex Buffer Object. (Vertices)
-		Context::Handle VBO;
+		ContextHandle VBO;
 
 		// Element Buffer Object. (Indices)
-		Context::Handle EBO;
+		ContextHandle EBO;
 	};
 }

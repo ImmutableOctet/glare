@@ -4,7 +4,7 @@
 
 #include <debug.hpp>
 
-#include "primitives.hpp"
+#include "types.hpp"
 #include "context.hpp"
 
 namespace graphics
