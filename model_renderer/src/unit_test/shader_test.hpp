@@ -16,7 +16,7 @@ namespace unit_test
 
 			ShaderTest(bool auto_execute=true)
 			:
-				GraphicsApplication("Shader Test", 1280, 720),
+				GraphicsApplication("Shader Test", 1600, 900),
 				
 				test_shader
 				(

@@ -46,28 +46,23 @@ namespace graphics
 	Context::Context(app::Window& wnd, Backend gfx)
 		: graphics_backend(gfx), state(memory::unique<Context::State>())
 	{
-		switch (gfx) // graphics_backend
-		{
-			case Backend::OpenGL:
-				ASSERT(util::lib::establish_gl());
+		ASSERT(get_backend() == Backend::OpenGL);
+		ASSERT(util::lib::establish_gl());
 
-				native_context = SDL_GL_CreateContext(wnd.get_handle());
+		native_context = SDL_GL_CreateContext(wnd.get_handle());
 
-				glewInit();
+		glewInit();
 
-				break;
-		}
+		// TODO: Move this to a separate member-function:
+		// Initial configuration:
+		glEnable(GL_DEPTH_TEST);
 	}
 
 	Context::~Context()
 	{
-		switch (graphics_backend)
-		{
-			case Backend::OpenGL:
-				SDL_GL_DeleteContext(native_context);
+		//ASSERT(get_backend() == Backend::OpenGL);
 
-				break;
-		}
+		SDL_GL_DeleteContext(native_context);
 	}
 
 	void Context::flip(app::Window& wnd)
