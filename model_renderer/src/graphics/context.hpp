@@ -9,6 +9,9 @@
 #include "bind.hpp"
 //#include "context_state.hpp"
 
+// Driver-specific:
+#include "drivers/opengl/mesh_composition.hpp"
+
 namespace app
 {
 	class Window;
@@ -31,6 +34,7 @@ namespace graphics
 	class Context
 	{
 		public:
+			// Friends:
 			friend Shader;
 
 			template <typename T>
@@ -39,11 +43,13 @@ namespace graphics
 			template <typename resource_t, typename bind_fn>
 			friend class BindOperation;
 
+			// Types:
 			using Handle = unsigned int; // GLint;
 			using Backend = graphics::Backend;
 
 			using State = ContextState;
 
+			// Constants:
 			static constexpr Handle NoHandle = {};
 		private:
 			const Backend graphics_backend;

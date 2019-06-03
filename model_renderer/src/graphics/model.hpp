@@ -13,6 +13,6 @@ namespace graphics
 	class Model
 	{
 		//model(Context& ctx std::string path);
-		Model(Context& ctx, const std::vector<Mesh>& data);
+		//Model(Context& ctx, const std::vector<Mesh>& data);
 	};
 }

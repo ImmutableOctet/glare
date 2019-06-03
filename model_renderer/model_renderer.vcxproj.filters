@@ -46,14 +46,23 @@
     <Filter Include="Header Files\app\input">
       <UniqueIdentifier>{d4ed09c5-d75a-4ff9-9a00-5c138e5e3ce6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\graphics\opengl">
-      <UniqueIdentifier>{2dbc7641-4f8c-4411-8021-2da6dc3dd522}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\Unit Tests">
       <UniqueIdentifier>{e6d9f2a6-488d-4fb0-9340-67d3be4d32ac}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\math">
       <UniqueIdentifier>{f71d5075-2c92-44e9-8946-32dca8b681b7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\graphics\drivers">
+      <UniqueIdentifier>{00e09fee-ca5e-44b5-9595-9102065016ea}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\graphics\drivers\opengl">
+      <UniqueIdentifier>{01bfce19-23b8-4878-bff3-15a4ed066abf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\graphics\drivers">
+      <UniqueIdentifier>{56c88088-14ef-4188-a26d-03ac9a4b7009}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\graphics\drivers\opengl">
+      <UniqueIdentifier>{cbcaa2f2-5977-4645-8adb-603cc1d040af}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -93,14 +102,17 @@
     <ClCompile Include="src\util\io.cpp">
       <Filter>Source Files\util</Filter>
     </ClCompile>
-    <ClCompile Include="src\graphics\opengl\context.cpp">
-      <Filter>Source Files\graphics\opengl</Filter>
-    </ClCompile>
     <ClCompile Include="src\engine\engine.cpp">
       <Filter>Source Files\engine</Filter>
     </ClCompile>
     <ClCompile Include="src\unit_test\shader_test.hpp">
       <Filter>Source Files\Unit Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\resource.cpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\drivers\opengl\context.cpp">
+      <Filter>Source Files\graphics\drivers\opengl</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -205,6 +217,15 @@
     </ClInclude>
     <ClInclude Include="src\graphics\vertex.hpp">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\resource.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\drivers\drivers.hpp">
+      <Filter>Header Files\graphics\drivers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\drivers\opengl\driver.hpp">
+      <Filter>Header Files\graphics\drivers\opengl</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

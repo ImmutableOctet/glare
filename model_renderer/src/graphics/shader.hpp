@@ -4,10 +4,8 @@
 #include <type_traits>
 
 #include <debug.hpp>
-#include <math/math.hpp>
 
-#include "primitives.hpp"
-#include "context.hpp"
+#include "resource.hpp"
 
 namespace graphics
 {
@@ -70,7 +68,7 @@ namespace graphics
 			value_t value;
 	};
 
-	class Shader
+	class Shader : public Resource
 	{
 		public:
 			friend Context;
@@ -85,29 +83,7 @@ namespace graphics
 			inline Shader() : Shader({}, {}) {}
 
 			~Shader();
-
-			inline Context::Handle get_handle() const { return handle; }
-			inline ref<Context> get_context() const { return context.lock(); }
-
-			inline bool operator==(const Shader& rhs) const
-			{
-				if (rhs.get_handle() != get_handle())
-				{
-					return false;
-				}
-
-				if (rhs.get_context() != get_context())
-				{
-					return false;
-				}
-
-				return true;
-			}
-			inline bool operator!=(const Shader& rhs) const { return !operator==(rhs); }
 		protected:
 			Shader(weak_ref<Context> ctx, Context::Handle&& resource_handle);
-
-			weak_ref<Context> context;
-			Context::Handle handle = Context::NoHandle;
 	};
 }

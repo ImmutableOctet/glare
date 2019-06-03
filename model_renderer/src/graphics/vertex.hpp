@@ -4,13 +4,13 @@
 
 namespace graphics
 {
-	struct vertex
+	struct Vertex
 	{
 		math::vec3f position;
 	};
 
-	struct rgb_vertex : public vertex { math::vec3f color; };
-	struct rgba_vertex : public vertex { math::vec4f color; };
+	struct RGBVertex : public Vertex { math::vec3f color; };
+	struct RBAVertex : public Vertex { math::vec4f color; };
 
-	struct textured_vertex : public vertex { math::vec2f uv; };
+	struct TextureVertex : public Vertex { math::vec2f uv; };
 }
