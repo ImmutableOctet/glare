@@ -3,6 +3,8 @@
 #include <vector>
 #include <cstdint>
 
+#include "vertex.hpp"
+
 namespace graphics
 {
 	class Mesh
