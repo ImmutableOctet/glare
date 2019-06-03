@@ -3,6 +3,7 @@
 #include "Window.hpp"
 
 #include <sdl2/SDL_video.h>
+#include <sdl2/SDL_events.h>
 
 namespace app
 {
@@ -19,5 +20,23 @@ namespace app
 			SDL_DestroyWindow(handle);
 			//handle = null;
 		}
+	}
+
+	bool Window::handle_events()
+	{
+		SDL_Event event;
+
+		while (SDL_PollEvent(&event)) // SDL_WaitEvent
+		{
+			switch (event.type)
+			{
+				case SDL_KEYDOWN:
+					break;
+				case SDL_QUIT:
+					return false;
+			}
+		}
+
+		return true;
 	}
 }

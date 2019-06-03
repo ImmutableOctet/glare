@@ -3,11 +3,16 @@
 #include <thread>
 #include <mutex>
 
+#include <types.hpp>
+
+#include "input/input_handler.hpp"
+
 namespace app
 {
 	class Application;
 
-	class EventHandler
+	// Asynchronous event handler. (Base class)
+	class EventHandler // abstract
 	{
 		public:
 			using lock_t = std::lock_guard<std::mutex>;
@@ -20,7 +25,9 @@ namespace app
 
 			lock_t&& pause();
 		protected:
-			void run();
+			void poll();
+
+			virtual void run() abstract;
 
 			std::thread event_thread;
 			std::mutex event_mutex;

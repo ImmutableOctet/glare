@@ -40,11 +40,23 @@
     <Filter Include="Source Files\app">
       <UniqueIdentifier>{779bb8d5-c0fc-498d-8fa0-6de1dc2aa7a2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\app\input">
+      <UniqueIdentifier>{d9cf5bb5-36ad-4604-81b4-2668c3d672ab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\app\input">
+      <UniqueIdentifier>{d4ed09c5-d75a-4ff9-9a00-5c138e5e3ce6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\graphics\opengl">
+      <UniqueIdentifier>{2dbc7641-4f8c-4411-8021-2da6dc3dd522}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Unit Tests">
+      <UniqueIdentifier>{e6d9f2a6-488d-4fb0-9340-67d3be4d32ac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\math">
+      <UniqueIdentifier>{f71d5075-2c92-44e9-8946-32dca8b681b7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\graphics\context.cpp">
-      <Filter>Source Files\graphics</Filter>
-    </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -66,11 +78,32 @@
     <ClCompile Include="src\app\event_handler.cpp">
       <Filter>Source Files\app</Filter>
     </ClCompile>
+    <ClCompile Include="src\app\input\input.cpp">
+      <Filter>Source Files\app\input</Filter>
+    </ClCompile>
+    <ClCompile Include="src\app\input\keyboard.cpp">
+      <Filter>Source Files\app\input</Filter>
+    </ClCompile>
+    <ClCompile Include="src\app\input\mouse.cpp">
+      <Filter>Source Files\app\input</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\shader.cpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\util\io.cpp">
+      <Filter>Source Files\util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\opengl\context.cpp">
+      <Filter>Source Files\graphics\opengl</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\engine.cpp">
+      <Filter>Source Files\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\unit_test\shader_test.hpp">
+      <Filter>Source Files\Unit Tests</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\graphics\context.hpp">
-      <Filter>Header Files\graphics</Filter>
-    </ClInclude>
     <ClInclude Include="src\graphics\graphics.hpp">
       <Filter>Header Files\graphics</Filter>
     </ClInclude>
@@ -121,6 +154,54 @@
     </ClInclude>
     <ClInclude Include="src\app\event_handler.hpp">
       <Filter>Header Files\app</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\input.hpp">
+      <Filter>Header Files\app</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\input\input.hpp">
+      <Filter>Header Files\app\input</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\input\mouse.hpp">
+      <Filter>Header Files\app\input</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\input\keyboard.hpp">
+      <Filter>Header Files\app\input</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\input\types.hpp">
+      <Filter>Header Files\app\input</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\input\devices.hpp">
+      <Filter>Header Files\app\input</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\input\input_handler.hpp">
+      <Filter>Header Files\app\input</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\memory.hpp">
+      <Filter>Header Files\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\shader.hpp">
+      <Filter>Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\io.hpp">
+      <Filter>Header Files\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\context.hpp">
+      <Filter>Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\graphics_application.hpp">
+      <Filter>Header Files\app</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\shorthand.hpp">
+      <Filter>Header Files\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\math\math.hpp">
+      <Filter>Header Files\math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\bind.hpp">
+      <Filter>Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\context_state.hpp">
+      <Filter>Header Files\graphics</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

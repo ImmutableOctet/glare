@@ -6,4 +6,9 @@ namespace engine
 	{
 
 	};
+
+	class Actor
+	{
+
+	};
 }

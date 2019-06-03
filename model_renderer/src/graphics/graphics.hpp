@@ -1,9 +1,10 @@
 #pragma once
 
-#include "../app/window.hpp"
+#include <app/window.hpp>
 
-#include "Context.hpp"
+#include "shader.hpp"
+#include "context.hpp"
 #include "primitives.hpp"
-#include "Canvas.hpp"
-#include "Mesh.hpp"
+#include "canvas.hpp"
+#include "mesh.hpp"
 #include "model.hpp"

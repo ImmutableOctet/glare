@@ -1,8 +1,6 @@
 #include "event_handler.hpp"
 #include "application.hpp"
 
-#include <sdl2/SDL_events.h>
-
 namespace app
 {
 	EventHandler::EventHandler(Application& app_inst, bool auto_start)
@@ -43,21 +41,7 @@ namespace app
 		}
 	}
 
-	void EventHandler::run()
+	void EventHandler::poll()
 	{
-		SDL_Event event;
-
-		while (SDL_WaitEvent(&event)) // SDL_PollEvent
-		{
-			switch (event.type)
-			{
-				case SDL_KEYDOWN:
-					break;
-				case SDL_QUIT:
-					app_instance.stop();
-
-					return;
-			}
-		}
 	}
 }

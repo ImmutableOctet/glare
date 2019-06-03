@@ -1,5 +1,7 @@
 #pragma once
 
+#include <debug.hpp>
+
 namespace util
 {
 	namespace lib
