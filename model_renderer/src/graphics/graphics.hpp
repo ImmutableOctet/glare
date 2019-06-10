@@ -3,6 +3,7 @@
 #include <app/window.hpp>
 
 #include "shader.hpp"
+#include "texture.hpp"
 #include "context.hpp"
 #include "types.hpp"
 #include "vertex.hpp"

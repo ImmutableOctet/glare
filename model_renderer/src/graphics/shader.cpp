@@ -2,6 +2,7 @@
 
 #include <glm/glm.hpp>
 
+#include "context.hpp"
 #include "shader.hpp"
 
 namespace graphics

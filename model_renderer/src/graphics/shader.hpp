@@ -21,13 +21,29 @@ namespace graphics
 			std::string fragment;
 	};
 
+	class Shader : public Resource
+	{
+		public:
+			friend Context;
+			friend ContextState;
+
+			using Source = ShaderSource;
+
+			Shader(pass_ref<Context> ctx, const std::string& vertex_path, const std::string& fragment_path);
+			inline Shader() : Shader({}, {}) {}
+
+			~Shader();
+		protected:
+			Shader(weak_ref<Context> ctx, Context::Handle&& resource_handle);
+	};
+
 	template <typename T>
 	class ShaderVar
 	{
 		public:
 			using value_t = T;
 
-			ShaderVar(raw_string name, weak_ref<Shader> shader, value_t value)
+			ShaderVar(raw_string name="", weak_ref<Shader> shader={}, value_t value={})
 				: name(name), program(shader), value(value) {}
 			
 			inline raw_string get_name_raw() const { return name; }
@@ -35,18 +51,8 @@ namespace graphics
 
 			inline value_t get_value() const { return value; }
 
-			inline bool set_value(const value_t& value)
+			inline bool upload(Shader& shader, value_t value)
 			{
-				auto program_lock = program.lock();
-
-				//ASSERT(program_lock);
-
-				if (program_lock == nullptr)
-				{
-					return false;
-				}
-
-				auto& shader = *program_lock;
 				auto& context = *(shader.get_context());
 
 				if (context.set_uniform(shader, name, value))
@@ -59,31 +65,30 @@ namespace graphics
 				return false;
 			}
 
+			inline bool upload(const value_t& value)
+			{
+				auto program_lock = program.lock();
+
+				//ASSERT(program_lock);
+
+				if (program_lock == nullptr)
+				{
+					return false;
+				}
+
+				auto& shader = *program_lock;
+
+				return upload(shader, value);
+			}
+
+			inline void upload() { upload(value); } // reupload() { ... }
+
 			// Operators:
 			inline operator value_t() const { return get_value(); }
-			inline ShaderVar& operator=(const value_t& value) { set_value(value); return *this; }
+			inline ShaderVar& operator=(const value_t& value) { upload(value); return *this; }
 		protected:
 			raw_string name; // std::string
 			weak_ref<Shader> program;
 			value_t value;
-	};
-
-	class Shader : public Resource
-	{
-		public:
-			friend Context;
-			friend ContextState;
-
-			using Source = ShaderSource;
-
-			template <typename T>
-			using Var = ShaderVar<T>;
-
-			Shader(pass_ref<Context> ctx, const std::string& vertex_path, const std::string& fragment_path);
-			inline Shader() : Shader({}, {}) {}
-
-			~Shader();
-		protected:
-			Shader(weak_ref<Context> ctx, Context::Handle&& resource_handle);
 	};
 }

@@ -8,7 +8,7 @@
 
 #include <half/half.hpp>
 
-#include <types.hpp>
+#include "types.hpp"
 #include <util/algorithm.hpp>
 #include <math/math.hpp>
 
@@ -16,30 +16,6 @@
 
 namespace graphics
 {
-	enum VertexElementType
-	{
-		Byte,
-		UByte,
-		Short,
-		UShort,
-		Int,
-		UInt,
-		Half,
-		Float,
-		Double,
-
-		Char = Byte, // UByte
-		Unknown = -1,
-	};
-
-	struct VertexAttribute
-	{
-		VertexElementType type;
-
-		int num_elements; // unsigned int
-		int offset = 0;
-	};
-
 	struct Vertex
 	{
 		using ElementType = VertexElementType;

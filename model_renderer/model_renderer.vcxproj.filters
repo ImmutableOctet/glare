@@ -64,6 +64,15 @@
     <Filter Include="Header Files\graphics\drivers\opengl">
       <UniqueIdentifier>{cbcaa2f2-5977-4645-8adb-603cc1d040af}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Libraries">
+      <UniqueIdentifier>{87c3b140-763b-4db2-94b9-7898070ba150}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="assets">
+      <UniqueIdentifier>{534b67dd-5a3f-4603-bbfd-e74b77be1ed1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="assets\unit_tests">
+      <UniqueIdentifier>{f3b4f9b8-edef-44d3-b2cb-6fa768c824f3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -116,6 +125,15 @@
     </ClCompile>
     <ClCompile Include="src\graphics\vertex.cpp">
       <Filter>Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\texture.cpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\pixelmap.cpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="dependencies\modules\stb\deprecated\stb_image.c">
+      <Filter>Source Files\Libraries</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -239,5 +257,19 @@
     <ClInclude Include="src\util\algorithm.hpp">
       <Filter>Header Files\util</Filter>
     </ClInclude>
+    <ClInclude Include="src\graphics\texture.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\pixelmap.hpp">
+      <Filter>Header Files\graphics</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="assets\unit_tests\shader_test\test.fs">
+      <Filter>assets\unit_tests</Filter>
+    </None>
+    <None Include="assets\unit_tests\shader_test\test.vs">
+      <Filter>assets\unit_tests</Filter>
+    </None>
   </ItemGroup>
 </Project>

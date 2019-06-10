@@ -162,6 +162,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="dependencies\modules\stb\deprecated\stb_image.c" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="src\app\application.cpp" />
     <ClCompile Include="src\app\event_handler.cpp" />
@@ -173,8 +174,10 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\graphics\canvas.cpp" />
     <ClCompile Include="src\graphics\drivers\opengl\context.cpp" />
     <ClCompile Include="src\graphics\model.cpp" />
+    <ClCompile Include="src\graphics\pixelmap.cpp" />
     <ClCompile Include="src\graphics\resource.cpp" />
     <ClCompile Include="src\graphics\shader.cpp" />
+    <ClCompile Include="src\graphics\texture.cpp" />
     <ClCompile Include="src\graphics\vertex.cpp" />
     <ClCompile Include="src\unit_test\shader_test.hpp" />
     <ClCompile Include="src\util\io.cpp" />
@@ -208,6 +211,8 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\graphics\mesh.hpp" />
     <ClInclude Include="src\graphics\model.hpp" />
     <ClInclude Include="src\graphics\native\opengl.hpp" />
+    <ClInclude Include="src\graphics\pixelmap.hpp" />
+    <ClInclude Include="src\graphics\texture.hpp" />
     <ClInclude Include="src\graphics\types.hpp" />
     <ClInclude Include="src\graphics\resource.hpp" />
     <ClInclude Include="src\graphics\shader.hpp" />
@@ -221,6 +226,10 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\util\memory.hpp" />
     <ClInclude Include="src\util\shorthand.hpp" />
     <ClInclude Include="src\util\util.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="assets\unit_tests\shader_test\test.fs" />
+    <None Include="assets\unit_tests\shader_test\test.vs" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

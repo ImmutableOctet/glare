@@ -2,15 +2,13 @@
 
 #include <utility>
 #include <functional>
-//#include <iterator>
+#include <string>
 
-#include "types.hpp"
 #include <math/math.hpp>
 
+#include "types.hpp"
 #include "bind.hpp"
 //#include "context_state.hpp"
-
-#include "vertex.hpp"
 
 // Driver-specific:
 #include "drivers/drivers.hpp"
@@ -24,12 +22,14 @@ namespace graphics
 {
 	class ContextState;
 	class Canvas;
-	class Shader;
+
+	// Static Resources:
 	class ShaderSource;
+	class PixelMap;
 
-	using NativeContext = void*;
-
-	//using VertexAttributeIterator = std::iterator<std::input_iterator_tag, VertexAttribute>;
+	// Dynamic Resources:
+	class Shader;
+	class Texture;
 
 	enum Backend
 	{
@@ -41,6 +41,7 @@ namespace graphics
 		public:
 			// Friends:
 			friend Shader;
+			friend Texture;
 
 			template <typename T>
 			friend class ShaderVar;
@@ -63,7 +64,7 @@ namespace graphics
 			const Backend graphics_backend;
 
 			// TODO: Graphics abstraction -- Use std::variant or similar.
-			NativeContext native_context; // SDL_GLContext
+			NativeContext native_context;
 
 			memory::unique_ref<State> state;
 		protected:
@@ -72,15 +73,30 @@ namespace graphics
 			// Binds the shader specified, returning
 			// a reference to the previously bound shader.
 			Shader& bind(Shader& shader);
+
+			/*
+				Binds the texture specified, returning
+				a reference to the previously bound texture.
+				
+				NOTE: Texures bind to driver-controlled incremental indices.
+
+				For this reason, each bind texture bind-operation
+				results in a new allocation of a texture slot.
+			*/
+			Texture& bind(Texture& texture);
 		public:
 			Context(app::Window& wnd, Backend gfx);
 			~Context();
 
 			// Commands:
+
 			void flip(app::Window& wnd);
 
 			// TODO: Add an overload for vectors.
 			void clear(float red, float green, float blue, float alpha);
+
+			// NOTE: Unsafe; use at your own risk.
+			void clear_textures();
 
 			// Creates a safe bind operation for the resource specified.
 			template <typename ResourceType>
@@ -107,17 +123,22 @@ namespace graphics
 				exec();
 			}
 
+			// Other:
 			inline Backend get_backend() const { return graphics_backend; }
+			inline NativeContext get_native() { return native_context; }
 		protected:
 			inline State& get_state() const { return *state; }
 			
 			// Mesh related:
 			MeshComposition generate_mesh(memory::memory_view vertices, std::size_t vertex_size, memory::array_view<VertexAttribute> attributes, memory::array_view<MeshIndex> indices=nullptr) noexcept;
-
 			void release_mesh(MeshComposition&& mesh);
 
+			// Texture related:
+			Handle generate_texture(const PixelMap& texture_data, TextureFlags flags);
+			void release_texture(Handle&& handle);
+
 			// Shader related:
-			Handle build_shader(const ShaderSource& source); // generate_shader(...);
+			Handle build_shader(const ShaderSource& source); // generate_shader(...) noexcept;
 			void release_shader(Handle&& handle);
 
 			bool set_uniform(Shader& shader, raw_string name, int value);
