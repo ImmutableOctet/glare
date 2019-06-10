@@ -3,12 +3,12 @@
 #include <vector>
 #include <cstdint>
 
+#include "types.hpp"
+#include "context.hpp"
 #include "vertex.hpp"
 
 namespace graphics
 {
-	using MeshIndex = std::int32_t; // GLint;
-
 	template <typename VertexType>
 	struct MeshData
 	{
@@ -16,7 +16,7 @@ namespace graphics
 		//using Vertex = VertexType;
 
 		std::vector<VertexType> vertices;
-		std::vector<MeshIndex> indices;
+		std::vector<Index> indices;
 
 		inline bool has_vertices() const { return (vertices.count() > 0); }
 		inline bool has_indices() const { return (indices.count() > 0); }
@@ -35,10 +35,32 @@ namespace graphics
 			//using Vertex = VertexType;
 
 			using Data = MeshData<VertexType>;
+		protected:
+			// Fields:
+			MeshComposition composition;
+			weak_ref<Context> context;
+		public:
+			inline ref<Context> get_context_ref() { return context.lock(); }
+			inline Context& get_context() { return *get_context_ref(); }
+			inline const MeshComposition& get_composition() const { return composition; }
 
-			inline Mesh(const Data& data)
+			Mesh(pass_ref<Context> ctx, const Data& data)
+				: context(ctx),
+				composition
+				(
+					ctx->generate_mesh
+					(
+						memory::memory_view(data.vertices.data(), data.vertices.size()),
+						sizeof(VertexType),
+						VertexType::format()
+					)
+				)
 			{
+			}
 
+			~Mesh()
+			{
+				get_context().release_mesh(std::move(composition));
 			}
 	};
 }

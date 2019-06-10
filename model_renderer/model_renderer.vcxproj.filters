@@ -114,6 +114,9 @@
     <ClCompile Include="src\graphics\drivers\opengl\context.cpp">
       <Filter>Source Files\graphics\drivers\opengl</Filter>
     </ClCompile>
+    <ClCompile Include="src\graphics\vertex.cpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\graphics\graphics.hpp">
@@ -229,6 +232,12 @@
     </ClInclude>
     <ClInclude Include="src\graphics\types.hpp">
       <Filter>Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\unit_test\vertex_element_types.hpp">
+      <Filter>Source Files\Unit Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\algorithm.hpp">
+      <Filter>Header Files\util</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

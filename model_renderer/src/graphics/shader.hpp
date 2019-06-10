@@ -79,7 +79,7 @@ namespace graphics
 			template <typename T>
 			using Var = ShaderVar<T>;
 
-			Shader(weak_ref<Context> ctx, const std::string& vertex_path, const std::string& fragment_path);
+			Shader(pass_ref<Context> ctx, const std::string& vertex_path, const std::string& fragment_path);
 			inline Shader() : Shader({}, {}) {}
 
 			~Shader();

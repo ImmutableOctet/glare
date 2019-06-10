@@ -33,10 +33,9 @@ namespace unit_test
 
 				color("color", test_shader, {})
 			{
-
-
 				cube = memory::allocate<MeshType>
 				(
+					graphics.context,
 					MeshType::Data
 					{
 						{

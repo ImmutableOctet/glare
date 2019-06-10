@@ -2,12 +2,15 @@
 
 #include <utility>
 #include <functional>
+//#include <iterator>
 
-#include <types.hpp>
+#include "types.hpp"
 #include <math/math.hpp>
 
 #include "bind.hpp"
 //#include "context_state.hpp"
+
+#include "vertex.hpp"
 
 // Driver-specific:
 #include "drivers/drivers.hpp"
@@ -26,6 +29,8 @@ namespace graphics
 
 	using NativeContext = void*;
 
+	//using VertexAttributeIterator = std::iterator<std::input_iterator_tag, VertexAttribute>;
+
 	enum Backend
 	{
 		OpenGL
@@ -39,6 +44,9 @@ namespace graphics
 
 			template <typename T>
 			friend class ShaderVar;
+
+			template <typename T>
+			friend class Mesh;
 
 			template <typename resource_t, typename bind_fn>
 			friend class BindOperation;
@@ -103,8 +111,13 @@ namespace graphics
 		protected:
 			inline State& get_state() const { return *state; }
 			
+			// Mesh related:
+			MeshComposition generate_mesh(memory::memory_view vertices, std::size_t vertex_size, memory::array_view<VertexAttribute> attributes, memory::array_view<MeshIndex> indices=nullptr) noexcept;
+
+			void release_mesh(MeshComposition&& mesh);
+
 			// Shader related:
-			Handle build_shader(const ShaderSource& source);
+			Handle build_shader(const ShaderSource& source); // generate_shader(...);
 			void release_shader(Handle&& handle);
 
 			bool set_uniform(Shader& shader, raw_string name, int value);

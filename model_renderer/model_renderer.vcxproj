@@ -175,6 +175,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\graphics\model.cpp" />
     <ClCompile Include="src\graphics\resource.cpp" />
     <ClCompile Include="src\graphics\shader.cpp" />
+    <ClCompile Include="src\graphics\vertex.cpp" />
     <ClCompile Include="src\unit_test\shader_test.hpp" />
     <ClCompile Include="src\util\io.cpp" />
     <ClCompile Include="src\util\lib.cpp" />
@@ -213,6 +214,8 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\graphics\vertex.hpp" />
     <ClInclude Include="src\math\math.hpp" />
     <ClInclude Include="src\types.hpp" />
+    <ClInclude Include="src\unit_test\vertex_element_types.hpp" />
+    <ClInclude Include="src\util\algorithm.hpp" />
     <ClInclude Include="src\util\io.hpp" />
     <ClInclude Include="src\util\lib.hpp" />
     <ClInclude Include="src\util\memory.hpp" />
