@@ -29,32 +29,32 @@ class defaultable_ref
 	private:
 		T default_value = T();
 	public:
-		T& ref = default_value;
+		T* ptr = &default_value;
 		
 		inline operator T&() const
 		{
-			return ref;
+			return *ptr;
 		}
 
 		inline T* operator&() const
 		{
-			return &ref;
+			return ptr;
 		}
 
 		inline T& operator*() const
 		{
-			return *ref;
+			return *ptr;
 		}
 
 		inline T& operator=(T& new_ref)
 		{
-			ref = new_ref;
+			ptr = &new_ref;
 
-			return ref;
+			return *ptr;
 		}
 
 		inline void make_default()
 		{
-			ref = default_value;
+			ptr = &default_value;
 		}
 };

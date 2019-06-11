@@ -1,5 +1,6 @@
 #include "pixelmap.hpp"
 
+//#include <algorithm>
 #include <stb/stb_image.h>
 
 namespace graphics
@@ -19,9 +20,14 @@ namespace graphics
 
 		RawPtr data = reinterpret_cast<RawPtr>(stbi_load(path.c_str(), &width, &height, &color_channels, desired_channels));
 
+		if (desired_channels <= 0)
+		{
+			desired_channels = color_channels;
+		}
+
 		// TODO: Add proper handling for invalid 'PixelMap' objects.
 		ASSERT(data);
 
-		return PixelMap(std::move(data), width, height, color_channels);
+		return PixelMap(std::move(data), width, height, desired_channels);
 	}
 }

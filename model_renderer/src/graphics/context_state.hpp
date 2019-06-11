@@ -6,6 +6,7 @@
 #include "types.hpp"
 #include "shader.hpp"
 #include "texture.hpp"
+#include "mesh.hpp"
 
 namespace graphics
 {
@@ -23,6 +24,7 @@ namespace graphics
 
 			// The currently bound shader.
 			defaultable_ref<Shader> shader;
+			defaultable_ref<Mesh> mesh;
 
 			std::vector<Texture*> textures; // std::stack<Texture>
 
@@ -61,6 +63,7 @@ namespace graphics
 			{
 				// Change every member to its default state:
 				shader.make_default();
+				mesh.make_default();
 				
 				clear_textures();
 			}

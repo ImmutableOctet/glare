@@ -67,11 +67,14 @@
     <Filter Include="Source Files\Libraries">
       <UniqueIdentifier>{87c3b140-763b-4db2-94b9-7898070ba150}</UniqueIdentifier>
     </Filter>
-    <Filter Include="assets">
+    <Filter Include="Assets">
       <UniqueIdentifier>{534b67dd-5a3f-4603-bbfd-e74b77be1ed1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="assets\unit_tests">
+    <Filter Include="Assets\unit_tests">
       <UniqueIdentifier>{f3b4f9b8-edef-44d3-b2cb-6fa768c824f3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Unit Tests">
+      <UniqueIdentifier>{bd3e1bce-5995-4360-b720-eb764e458982}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -114,9 +117,6 @@
     <ClCompile Include="src\engine\engine.cpp">
       <Filter>Source Files\engine</Filter>
     </ClCompile>
-    <ClCompile Include="src\unit_test\shader_test.hpp">
-      <Filter>Source Files\Unit Tests</Filter>
-    </ClCompile>
     <ClCompile Include="src\graphics\resource.cpp">
       <Filter>Source Files\graphics</Filter>
     </ClCompile>
@@ -134,6 +134,9 @@
     </ClCompile>
     <ClCompile Include="dependencies\modules\stb\deprecated\stb_image.c">
       <Filter>Source Files\Libraries</Filter>
+    </ClCompile>
+    <ClCompile Include="src\unit_test\shader_test.cpp">
+      <Filter>Source Files\Unit Tests</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -251,9 +254,6 @@
     <ClInclude Include="src\graphics\types.hpp">
       <Filter>Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="src\unit_test\vertex_element_types.hpp">
-      <Filter>Source Files\Unit Tests</Filter>
-    </ClInclude>
     <ClInclude Include="src\util\algorithm.hpp">
       <Filter>Header Files\util</Filter>
     </ClInclude>
@@ -263,13 +263,19 @@
     <ClInclude Include="src\graphics\pixelmap.hpp">
       <Filter>Header Files\graphics</Filter>
     </ClInclude>
+    <ClInclude Include="src\unit_test\vertex_element_types.cpp">
+      <Filter>Source Files\Unit Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="src\unit_test\shader_test.hpp">
+      <Filter>Header Files\Unit Tests</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\unit_tests\shader_test\test.fs">
-      <Filter>assets\unit_tests</Filter>
+      <Filter>Assets\unit_tests</Filter>
     </None>
     <None Include="assets\unit_tests\shader_test\test.vs">
-      <Filter>assets\unit_tests</Filter>
+      <Filter>Assets\unit_tests</Filter>
     </None>
   </ItemGroup>
 </Project>

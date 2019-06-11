@@ -12,6 +12,8 @@ namespace app
 
 		running = true;
 
+		retrieve_start_time();
+
 		return is_running();
 	}
 
@@ -20,6 +22,8 @@ namespace app
 		//events.stop();
 
 		running = false;
+
+		retrieve_stop_time();
 
 		return !is_running();
 	}
@@ -48,5 +52,35 @@ namespace app
 			update();
 			render();
 		}
+	}
+
+	Application::time_point Application::now() const
+	{
+		return std::chrono::system_clock::now();
+	}
+
+	Application::duration Application::time() const
+	{
+		return now().time_since_epoch();
+	}
+
+	std::int64_t Application::unix_time() const
+	{
+		return std::chrono::duration_cast<std::chrono::milliseconds>(time()).count();
+	}
+
+	std::int64_t Application::milliseconds() const
+	{
+		return std::chrono::duration_cast<std::chrono::milliseconds>(now() - start_point).count();
+	}
+
+	void Application::retrieve_start_time()
+	{
+		start_point = now();
+	}
+
+	void Application::retrieve_stop_time()
+	{
+		stop_point = now();
 	}
 }

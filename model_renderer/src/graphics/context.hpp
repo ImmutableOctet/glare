@@ -30,6 +30,7 @@ namespace graphics
 	// Dynamic Resources:
 	class Shader;
 	class Texture;
+	class Mesh;
 
 	enum Backend
 	{
@@ -42,12 +43,10 @@ namespace graphics
 			// Friends:
 			friend Shader;
 			friend Texture;
+			friend Mesh;
 
 			template <typename T>
 			friend class ShaderVar;
-
-			template <typename T>
-			friend class Mesh;
 
 			template <typename resource_t, typename bind_fn>
 			friend class BindOperation;
@@ -84,6 +83,10 @@ namespace graphics
 				results in a new allocation of a texture slot.
 			*/
 			Texture& bind(Texture& texture);
+
+			// Binds the mesh specified, returning
+			// a reference to the previously bound mesh.
+			Mesh& bind(Mesh& mesh);
 		public:
 			Context(app::Window& wnd, Backend gfx);
 			~Context();
@@ -93,7 +96,7 @@ namespace graphics
 			void flip(app::Window& wnd);
 
 			// TODO: Add an overload for vectors.
-			void clear(float red, float green, float blue, float alpha);
+			void clear(float red, float green, float blue, float alpha, BufferType buffer_type=BufferType::Color);
 
 			// NOTE: Unsafe; use at your own risk.
 			void clear_textures();
@@ -123,6 +126,9 @@ namespace graphics
 				exec();
 			}
 
+			// Draw using the currently bound 'Mesh' object.
+			void draw();
+
 			// Other:
 			inline Backend get_backend() const { return graphics_backend; }
 			inline NativeContext get_native() { return native_context; }
@@ -134,11 +140,13 @@ namespace graphics
 			void release_mesh(MeshComposition&& mesh);
 
 			// Texture related:
-			Handle generate_texture(const PixelMap& texture_data, TextureFlags flags);
+
+			// TODO: Work-out mixed formats between input and native driver format.
+			Handle generate_texture(const PixelMap& texture_data, ElementType channel_type, TextureFlags flags);
 			void release_texture(Handle&& handle);
 
 			// Shader related:
-			Handle build_shader(const ShaderSource& source); // generate_shader(...) noexcept;
+			Handle build_shader(const ShaderSource& source) noexcept; // generate_shader(...)
 			void release_shader(Handle&& handle);
 
 			bool set_uniform(Shader& shader, raw_string name, int value);

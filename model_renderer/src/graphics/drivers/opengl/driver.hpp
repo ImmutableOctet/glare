@@ -5,7 +5,7 @@
 namespace graphics
 {
 	// The layout of an OpenGL high-level mesh composition.
-	struct GLMeshComposition
+	struct GLComposition
 	{
 		// Vertex Array Object. (Mesh State)
 		ContextHandle VAO;

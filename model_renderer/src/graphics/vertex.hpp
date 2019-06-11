@@ -18,41 +18,40 @@ namespace graphics
 {
 	struct Vertex
 	{
-		using ElementType = VertexElementType;
 		using Format = VertexAttribute;
 
 		math::vec3f position;
 
-		// Retrieves the primitive 'VertexElementType' assocaited with 'T'.
+		// Retrieves the primitive 'ElementType' assocaited with 'T'.
 		template <typename T>
-		inline static VertexElementType GetElementType() noexcept
+		inline static ElementType GetElementType() noexcept
 		{
 			const auto& type = typeid(T);
 
 			// Primitives:
-			if (type == typeid(std::int8_t)) return Byte;
-			else if (type == typeid(std::uint8_t)) return UByte;
-			else if (type == typeid(std::int16_t)) return Short;
-			else if (type == typeid(std::uint16_t)) return UShort;
-			else if (type == typeid(std::int32_t)) return Int;
-			else if (type == typeid(std::uint32_t)) return UInt;
-			else if (type == typeid(float)) return Float;
-			else if (type == typeid(double)) return Double;
+			if (type == typeid(std::int8_t))           return ElementType::Byte;
+			else if (type == typeid(std::uint8_t))     return ElementType::UByte;
+			else if (type == typeid(std::int16_t))     return ElementType::Short;
+			else if (type == typeid(std::uint16_t))    return ElementType::UShort;
+			else if (type == typeid(std::int32_t))     return ElementType::Int;
+			else if (type == typeid(std::uint32_t))    return ElementType::UInt;
+			else if (type == typeid(float))            return ElementType::Float;
+			else if (type == typeid(double))           return ElementType::Double;
 
 			// Extensions:
-			else if (type == typeid(half_float::half)) return Half;
-			else if (type == typeid(std::string)) return Char;
+			else if (type == typeid(half_float::half)) return ElementType::Half;
+			else if (type == typeid(std::string))      return ElementType::Char;
 
 			// Math:
-			else if (type == typeid(math::vec2f)) return Float;
-			else if (type == typeid(math::vec3f)) return Float;
-			else if (type == typeid(math::vec4f)) return Float;
-			else if (type == typeid(math::mat2f)) return Float;
-			else if (type == typeid(math::mat3f)) return Float;
-			else if (type == typeid(math::mat4f)) return Float;
+			else if (type == typeid(math::vec2f))      return ElementType::Float;
+			else if (type == typeid(math::vec3f))      return ElementType::Float;
+			else if (type == typeid(math::vec4f))      return ElementType::Float;
+			else if (type == typeid(math::mat2f))      return ElementType::Float;
+			else if (type == typeid(math::mat3f))      return ElementType::Float;
+			else if (type == typeid(math::mat4f))      return ElementType::Float;
 			
 			// Unsupported:
-			else return Unknown;
+			else return ElementType::Unknown;
 		}
 
 		template <typename T>

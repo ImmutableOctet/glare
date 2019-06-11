@@ -16,6 +16,9 @@ namespace app
 
 	class Application
 	{
+		public:
+			using time_point = std::chrono::time_point<std::chrono::system_clock>;
+			using duration = std::chrono::system_clock::duration;
 		protected:
 			friend EventHandler;
 
@@ -35,19 +38,20 @@ namespace app
 			// Atomic so that we can see if the application is running from another thread.
 			std::atomic<bool> running = false; // <-- May change later. (Could use a mutex for this, etc)
 
-			//input::InputHandler input;
+			std::chrono::time_point<std::chrono::system_clock> start_point;
+			std::chrono::time_point<std::chrono::system_clock> stop_point;
 
+			//input::InputHandler input;
+		protected:
 			Application();
 
 			Window& make_window(int width, int height, const std::string& title="");
 
-			inline std::int64_t milliseconds() const
-			{
-				auto now = std::chrono::system_clock::now();
-				auto duration = now.time_since_epoch();
-
-				return std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
-			}
+			time_point now() const;
+			duration time() const;
+			
+			std::int64_t unix_time() const;
+			std::int64_t milliseconds() const;
 
 			virtual void update() abstract;
 			virtual void render() abstract;
@@ -70,5 +74,8 @@ namespace app
 				run();
 				stop();
 			}
+		private:
+			void retrieve_start_time();
+			void retrieve_stop_time();
 	};
 }

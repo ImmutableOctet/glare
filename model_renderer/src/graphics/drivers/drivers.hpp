@@ -18,7 +18,7 @@ namespace graphics
 	// required to represent a complete mesh.
 	union MeshComposition
 	{
-		GLMeshComposition gl;
+		GLComposition gl;
 
 		// Used for ABI compatibility.
 		//std::uint8_t padding[64];

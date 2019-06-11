@@ -35,6 +35,8 @@ namespace graphics
 			static constexpr GLenum BASE_TEXTURE_INDEX = GL_TEXTURE0;
 			static constexpr GLenum MAX_TEXTURE_INDEX = (BASE_TEXTURE_INDEX + MAX_TEXTURES); // GL_TEXTURE31;
 
+			static constexpr gl_uniform_location InvalidUniform = -1;
+
 			inline int max_textures() const { return MAX_TEXTURES; }
 		protected:
 			// SDL:
@@ -49,20 +51,58 @@ namespace graphics
 				return glGetUniformLocation(shader.get_handle(), name);
 			}
 
-			// Returns the native OpenGL equivalent of 'VertexElementType'.
-			static GLenum get_element_type(VertexElementType type)
+			// Returns the native OpenGL equivalent of 'ElementType'.
+			static GLenum get_element_type(ElementType type)
 			{
 				switch (type)
 				{
-					case VertexElementType::Byte:    return GL_BYTE;
-					case VertexElementType::UByte:   return GL_UNSIGNED_BYTE;
-					case VertexElementType::Short:   return GL_SHORT;
-					case VertexElementType::UShort:  return GL_UNSIGNED_SHORT;
-					case VertexElementType::Int:     return GL_INT;
-					case VertexElementType::UInt:    return GL_UNSIGNED_INT;
-					case VertexElementType::Half:    return GL_HALF_FLOAT;
-					case VertexElementType::Float:   return GL_FLOAT;
-					case VertexElementType::Double:  return GL_DOUBLE;
+					case ElementType::Byte:    return GL_BYTE;
+					case ElementType::UByte:   return GL_UNSIGNED_BYTE;
+					case ElementType::Short:   return GL_SHORT;
+					case ElementType::UShort:  return GL_UNSIGNED_SHORT;
+					case ElementType::Int:     return GL_INT;
+					case ElementType::UInt:    return GL_UNSIGNED_INT;
+					case ElementType::Half:    return GL_HALF_FLOAT;
+					case ElementType::Float:   return GL_FLOAT;
+					case ElementType::Double:  return GL_DOUBLE;
+				}
+
+				return GL_NONE;
+			}
+
+			// TODO: Look into 10-bit color options, etc:
+			static GLenum get_texture_format(const PixelMap& texture_data)
+			{
+				// Check which color channels are enabled.
+				switch (texture_data.channels())
+				{
+					case 1:
+						return GL_RED;
+					case 2:
+						return GL_RG;
+					case 3:
+						return GL_RGB;
+					case 4:
+						return GL_RGBA;
+				}
+
+				return GL_NONE;
+			}
+
+			static GLenum get_primitive(Primitive primitive)
+			{
+				switch (primitive)
+				{
+					case Primitive::Point:           return GL_POINTS;
+					case Primitive::Line:            return GL_LINE;
+					case Primitive::LineLoop:        return GL_LINE_LOOP;
+					case Primitive::LineStrip:       return GL_LINE_STRIP;
+					case Primitive::Triangle:        return GL_TRIANGLES;
+					case Primitive::TriangleStrip:   return GL_TRIANGLE_STRIP;
+					case Primitive::TriangleFan:     return GL_TRIANGLE_FAN;
+					case Primitive::Quad:            return GL_QUADS;
+					case Primitive::QuadStrip:       return GL_QUAD_STRIP;
+					case Primitive::Polygon:         return GL_POLYGON;
 				}
 
 				return GL_NONE;
@@ -75,11 +115,27 @@ namespace graphics
 				// Allocate a native OpenGL shader source container.
 				auto obj = glCreateShader(type);
 
+				if (obj == 0) // NULL
+				{
+					return {};
+				}
+
 				// Upload our shader source code.
 				glShaderSource(obj, 1, &source_raw, nullptr); // source.length;
 
 				// Compile the source code associated with our container.
 				glCompileShader(obj);
+
+				GLint success;
+
+				glGetShaderiv(obj, GL_COMPILE_STATUS, &success); //ASSERT(success);
+
+				if (!success)
+				{
+					glDeleteShader(obj);
+
+					return {};
+				}
 
 				return obj;
 			}
@@ -189,11 +245,33 @@ namespace graphics
 		SDL_GL_SwapWindow(wnd.get_handle());
 	}
 
-	void Context::clear(float red, float green, float blue, float alpha)
+	void Context::clear(float red, float green, float blue, float alpha, BufferType buffer_type)
 	{
-		// TODO: Graphics Abstraction.
+		// TODO: Look into clear color state. (Likely to be added to a 'Canvas' type)
 		glClearColor(red, green, blue, alpha);
-		glClear(GL_COLOR_BUFFER_BIT);
+
+		GLbitfield buffer_flags = 0; // {};
+
+		if ((buffer_type & BufferType::Color)) { buffer_flags |= GL_COLOR_BUFFER_BIT; }
+		if ((buffer_type & BufferType::Depth)) { buffer_flags |= GL_DEPTH_BUFFER_BIT; }
+
+		if (buffer_flags == 0)
+		{
+			buffer_flags = GL_COLOR_BUFFER_BIT;
+		}
+
+		glClear(buffer_flags);
+	}
+
+	void Context::draw()
+	{
+		const Mesh& mesh = state->mesh;
+
+		const auto primitive_type = Driver::get_primitive(mesh.get_primitive());
+		const auto offset = static_cast<GLint>(mesh.offset());
+		const auto count = static_cast<GLsizei>(mesh.size());
+
+		glDrawArrays(primitive_type, offset, count);
 	}
 
 	void Context::clear_textures()
@@ -242,6 +320,22 @@ namespace graphics
 		return prev_texture;
 	}
 
+	Mesh& Context::bind(Mesh& mesh)
+	{
+		// Retrieve the currently bound mesh.
+		Mesh& prev_mesh = state->mesh;
+
+		const auto& native_rep = mesh.get_composition().gl;
+
+		glBindVertexArray(native_rep.VAO);
+
+		// Assign the newly bound mesh.
+		state->mesh = mesh;
+
+		// Return the previously bound mesh.
+		return prev_mesh;
+	}
+
 	// Mesh related:
 	MeshComposition Context::generate_mesh(memory::memory_view vertices, std::size_t vertex_size, memory::array_view<VertexAttribute> attributes, memory::array_view<MeshIndex> indices) noexcept
 	{
@@ -249,7 +343,7 @@ namespace graphics
 		ASSERT(vertex_size);
 		ASSERT(attributes);
 
-		GLMeshComposition mesh = {};
+		GLComposition mesh = {};
 
 		const void* vertex_data_offset = 0;
 		const bool indices_available = (indices);
@@ -309,8 +403,9 @@ namespace graphics
 
 	void Context::release_mesh(MeshComposition&& mesh)
 	{
-		auto& native_rep = mesh.gl;
+		const auto& native_rep = mesh.gl;
 
+		// TODO: Make sure this is valid behavior when 'native_rep' contains default constructed values.
 		glDeleteVertexArrays(1, &native_rep.VAO);
 
 		// Could be simplified to one GL call:
@@ -319,9 +414,12 @@ namespace graphics
 	}
 
 	// Texture related:
-	Context::Handle Context::generate_texture(const PixelMap& texture_data, TextureFlags flags)
+	Context::Handle Context::generate_texture(const PixelMap& texture_data, ElementType channel_type, TextureFlags flags)
 	{
 		ASSERT(texture_data);
+
+		// At this time, no more than four color channels are supported.
+		ASSERT(texture_data.channels() <= 4);
 
 		Handle texture = NoHandle;
 
@@ -340,8 +438,17 @@ namespace graphics
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // GL_NEAREST
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // GL_NEAREST
 
-		// TODO: Look into RGBA textures and greater-than 8-bit textures.
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texture_data.width(), texture_data.height(), 0, GL_RGB, GL_UNSIGNED_BYTE, texture_data.data());
+		// TODO: Review behavior for Depth and Stencil buffers.
+		bool is_depth_map = ((flags & TextureFlags::DepthMap));
+
+		// For now, Depth maps are not supported.
+		ASSERT(!is_depth_map);
+
+		// TODO: Greater-than 8-bit textures.
+		const auto texture_format = Driver::get_texture_format(texture_data);
+		const auto element_type = Driver::get_element_type(channel_type);
+
+		glTexImage2D(GL_TEXTURE_2D, 0, texture_format, texture_data.width(), texture_data.height(), 0, texture_format, element_type, texture_data.data());
 
 		// TODO: Implement mip-mapping as a texture flag.
 		glGenerateMipmap(GL_TEXTURE_2D);
@@ -355,10 +462,14 @@ namespace graphics
 	}
 
 	// Shader related:
-	Context::Handle Context::build_shader(const ShaderSource& source)
+	Context::Handle Context::build_shader(const ShaderSource& source) noexcept
 	{
 		auto vertex   = Driver::compile_shader(source.vertex, GL_VERTEX_SHADER);
 		auto fragment = Driver::compile_shader(source.fragment, GL_FRAGMENT_SHADER);
+
+		// TODO: Look into proper error handling if possible.
+		ASSERT(vertex);
+		ASSERT(fragment);
 
 		// Allocate a shader-program object.
 		auto program = glCreateProgram();
@@ -369,6 +480,12 @@ namespace graphics
 
 		// Link together the program.
 		glLinkProgram(program);
+		
+		GLint success;
+		glGetProgramiv(program, GL_LINK_STATUS, &success);
+
+		// TODO: Look into proper error handling for link-failure if possible.
+		ASSERT(success);
 
 		glDeleteShader(vertex);
 		glDeleteShader(fragment);
@@ -381,63 +498,119 @@ namespace graphics
 		glDeleteProgram(handle);
 	}
 
-	bool Context::set_uniform(Shader& shader, raw_string name, int value)
-	{
-		glUniform1i(Driver::get_uniform(shader, name), value);
-
-		return true;
-	}
-
 	bool Context::set_uniform(Shader& shader, raw_string name, bool value)
 	{
 		return set_uniform(shader, name, static_cast<int>(value));
 	}
 
+	bool Context::set_uniform(Shader& shader, raw_string name, int value)
+	{
+		auto uniform = Driver::get_uniform(shader, name);
+
+		if (uniform == Driver::InvalidUniform)
+		{
+			return false;
+		}
+
+		glUniform1i(uniform, value);
+
+		return true;
+	}
+
 	bool Context::set_uniform(Shader& shader, raw_string name, float value)
 	{
-		glUniform1f(Driver::get_uniform(shader, name), value);
+		auto uniform = Driver::get_uniform(shader, name);
+
+		if (uniform == Driver::InvalidUniform)
+		{
+			return false;
+		}
+
+		glUniform1f(uniform, value);
 
 		return true;
 	}
 	
 	bool Context::set_uniform(Shader& shader, raw_string name, const math::Vector2D& value)
 	{
-		glUniform2fv(Driver::get_uniform(shader, name), 1, &value[0]);
+		auto uniform = Driver::get_uniform(shader, name);
+
+		if (uniform == Driver::InvalidUniform)
+		{
+			return false;
+		}
+
+		glUniform2fv(uniform, 1, &value[0]);
 
 		return true;
 	}
 
 	bool Context::set_uniform(Shader& shader, raw_string name, const math::Vector3D& value)
 	{
-		glUniform3fv(Driver::get_uniform(shader, name), 1, &value[0]);
+		auto uniform = Driver::get_uniform(shader, name);
+
+		if (uniform == Driver::InvalidUniform)
+		{
+			return false;
+		}
+
+		glUniform3fv(uniform, 1, &value[0]);
 
 		return true;
 	}
 
 	bool Context::set_uniform(Shader& shader, raw_string name, const math::Vector4D& value)
 	{
-		glUniform4fv(Driver::get_uniform(shader, name), 1, &value[0]);
+		auto uniform = Driver::get_uniform(shader, name);
+
+		if (uniform == Driver::InvalidUniform)
+		{
+			return false;
+		}
+
+		glUniform4fv(uniform, 1, &value[0]);
 
 		return true;
 	}
 
 	bool Context::set_uniform(Shader& shader, raw_string name, const math::Matrix2x2& value)
 	{
-		glUniformMatrix2fv(Driver::get_uniform(shader, name), 1, GL_FALSE, &value[0][0]);
+		auto uniform = Driver::get_uniform(shader, name);
+
+		if (uniform == Driver::InvalidUniform)
+		{
+			return false;
+		}
+
+		glUniformMatrix2fv(uniform, 1, GL_FALSE, &value[0][0]);
 
 		return true;
 	}
 
 	bool Context::set_uniform(Shader& shader, raw_string name, const math::Matrix3x3& value)
 	{
-		glUniformMatrix3fv(Driver::get_uniform(shader, name), 1, GL_FALSE, &value[0][0]);
+		auto uniform = Driver::get_uniform(shader, name);
+
+		if (uniform == Driver::InvalidUniform)
+		{
+			return false;
+		}
+
+		glUniformMatrix3fv(uniform, 1, GL_FALSE, &value[0][0]);
 
 		return true;
 	}
 
 	bool Context::set_uniform(Shader& shader, raw_string name, const math::Matrix4x4& value)
 	{
-		glUniformMatrix4fv(Driver::get_uniform(shader, name), 1, GL_FALSE, &value[0][0]);
+		auto uniform = Driver::get_uniform(shader, name);
+
+		if (uniform == Driver::InvalidUniform)
+		{
+			return false;
+		}
+
+		glUniformMatrix4fv(uniform, 1, GL_FALSE, &value[0][0]);
 
 		return true;
 	}
