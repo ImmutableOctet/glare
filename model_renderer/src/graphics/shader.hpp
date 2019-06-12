@@ -32,12 +32,26 @@ namespace graphics
 
 			using Source = ShaderSource;
 
+			inline friend void swap(Shader& x, Shader& y)
+			{
+				swap(static_cast<Resource&>(x), static_cast<Resource&>(y));
+			}
+
 			Shader(pass_ref<Context> ctx, const std::string& vertex_path, const std::string& fragment_path);
+
 			inline Shader() : Shader({}, {}) {}
+			inline Shader(Shader&& shader) : Shader() { swap(*this, shader); }
 
 			Shader(const Shader&)=delete;
 
 			~Shader();
+
+			inline Shader& operator=(Shader shader)
+			{
+				swap(*this, shader);
+
+				return *this;
+			}
 		protected:
 			Shader(weak_ref<Context> ctx, ContextHandle&& resource_handle);
 	};

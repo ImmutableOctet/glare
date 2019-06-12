@@ -24,10 +24,11 @@ namespace unit_test
 			"assets/unit_tests/shader_test/test.vs",
 			"assets/unit_tests/shader_test/test.fs"
 		);
-		
-		auto test_texture = graphics::Texture(graphics.context, "assets/unit_tests/shader_test/texture1.png");
 
-		texture1 = std::move(test_texture);
+		auto local_shader = std::move(*test_shader);
+		*test_shader = std::move(local_shader);
+
+		texture1 = graphics::Texture(graphics.context, "assets/unit_tests/shader_test/texture1.png");
 		texture2 = graphics::Texture(graphics.context, "assets/unit_tests/shader_test/texture2.jpg");
 
 		texture1_sampler = Var<int>("texture1", test_shader, 0);

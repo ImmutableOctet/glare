@@ -28,7 +28,7 @@ namespace graphics
 			Texture(pass_ref<Context> ctx, const std::string& path, Flags flags=Flags::Default);
 			Texture(pass_ref<Context> ctx, const PixelMap& data, Flags flags=Flags::Default);
 
-			Texture(Texture&& texture) { swap(*this, texture); }
+			Texture(Texture&& texture) : Texture() { swap(*this, texture); }
 
 			inline Texture() : Texture({}, {}) {}
 
