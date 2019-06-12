@@ -2,7 +2,6 @@
 
 #include <vector>
 #include <cstdint>
-#include <algorithm>
 
 #include "types.hpp"
 #include "context.hpp"
@@ -28,6 +27,9 @@ namespace graphics
 		inline operator bool() const { return is_usable(); }
 	};
 
+	// TODO: Review separation of 'MeshComposition' and 'Mesh'.
+	// Context-controlled 'MeshComposition' objects would allow proper
+	// re-use of buffer objects, and help unify the rendering model.
 	class Mesh
 	{
 		public:
@@ -56,6 +58,9 @@ namespace graphics
 			inline const MeshComposition& get_composition() const { return composition; }
 			inline Primitive get_primitive() const { return primitive_type; }
 
+			inline std::size_t size() const { return vertex_count; }
+			inline Index offset() const { return vertex_offset; }
+
 			template <typename VertexType>
 			static Mesh Generate(pass_ref<Context> ctx, const Data<VertexType>& data, Primitive primitive_type=Primitive::Triangle)
 			{
@@ -75,17 +80,7 @@ namespace graphics
 				);
 			}
 
-			// TODO: Move this to a separate source file.
-			inline friend void swap(Mesh& x, Mesh& y)
-			{
-				using std::swap;
-
-				swap(x.context, y.context);
-				swap(x.composition, y.composition);
-				swap(x.primitive_type, y.primitive_type);
-				swap(x.vertex_count, y.vertex_count);
-				swap(x.vertex_offset, y.vertex_offset);
-			}
+			friend void swap(Mesh& x, Mesh& y);
 
 			inline Mesh& operator=(Mesh mesh)
 			{
@@ -97,12 +92,6 @@ namespace graphics
 			Mesh() = default;
 			inline Mesh(Mesh&& mesh) : Mesh() { swap(*this, mesh); }
 			
-			~Mesh()
-			{
-				get_context().release_mesh(std::move(composition));
-			}
-
-			inline std::size_t size() const { return vertex_count; }
-			inline Index offset() const { return vertex_offset; }
+			~Mesh();
 	};
 }
