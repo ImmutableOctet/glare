@@ -133,14 +133,17 @@ namespace unit_test
 						glm::mat4 model = glm::mat4(1.0f);
 						model = glm::translate(model, math::vec3(0.0, 0.0, -0.1));
 
-						float angle = 20.0f * (milliseconds() / 32);
+						for (auto i = 0; i < 1; i++)
+						{
+							float angle = 3.0f * (milliseconds() / 16) * (i+1);
 
-						model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-						this->model = model;
+							model = glm::rotate(model, glm::radians(angle), glm::vec3(0.45f, 1.0f, 0.45f));
+							this->model = model;
 
-						//color = { std::sin(milliseconds()), 0.5, 0.5 };
+							//color = { std::sin(milliseconds()), 0.5, 0.5 };
 
-						graphics.context->draw();
+							graphics.context->draw();
+						}
 					});
 				});
 			});
