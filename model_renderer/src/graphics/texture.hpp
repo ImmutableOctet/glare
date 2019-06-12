@@ -27,6 +27,6 @@ namespace graphics
 
 			~Texture();
 		protected:
-			Texture(weak_ref<Context> ctx, Context::Handle&& resource_handle);
+			Texture(weak_ref<Context> ctx, ContextHandle&& resource_handle);
 	};
 }

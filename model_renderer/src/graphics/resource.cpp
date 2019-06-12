@@ -1,8 +1,11 @@
+#include <algorithm>
+
 #include "resource.hpp"
+#include "context.hpp"
 
 namespace graphics
 {
-	Resource::Resource(weak_ref<Context> context, Context::Handle&& handle)
+	Resource::Resource(weak_ref<Context> context, ContextHandle&& handle)
 		: context(context), handle(handle) {}
 
 	bool Resource::operator==(const Resource& rhs) const
@@ -18,5 +21,13 @@ namespace graphics
 		}
 
 		return true;
+	}
+
+	void swap(Resource& x, Resource& y)
+	{
+		using std::swap;
+
+		swap(x.context, y.context);
+		swap(x.handle, y.handle);
 	}
 }

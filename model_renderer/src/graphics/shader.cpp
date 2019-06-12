@@ -8,7 +8,7 @@
 namespace graphics
 {
 	// Shader:
-	Shader::Shader(weak_ref<Context> ctx, Context::Handle&& handle)
+	Shader::Shader(weak_ref<Context> ctx, ContextHandle&& handle)
 		: Resource(ctx, std::move(handle)) {}
 
 	Shader::Shader(pass_ref<Context> ctx, const std::string& vertex_path, const std::string& fragment_path)

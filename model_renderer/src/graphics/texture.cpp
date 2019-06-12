@@ -7,7 +7,7 @@
 namespace graphics
 {
 	// Texture:
-	Texture::Texture(weak_ref<Context> ctx, Context::Handle&& handle)
+	Texture::Texture(weak_ref<Context> ctx, ContextHandle&& handle)
 		: Resource(ctx, std::move(handle)) {}
 
 	Texture::Texture(pass_ref<Context> ctx, const PixelMap& data, Flags flags)

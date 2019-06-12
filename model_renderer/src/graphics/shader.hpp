@@ -9,6 +9,9 @@
 
 namespace graphics
 {
+	// Forward declarations:
+	class ContextState;
+
 	// Declare the 'Shader' class for early use.
 	class Shader;
 	
@@ -32,9 +35,11 @@ namespace graphics
 			Shader(pass_ref<Context> ctx, const std::string& vertex_path, const std::string& fragment_path);
 			inline Shader() : Shader({}, {}) {}
 
+			Shader(const Shader&)=delete;
+
 			~Shader();
 		protected:
-			Shader(weak_ref<Context> ctx, Context::Handle&& resource_handle);
+			Shader(weak_ref<Context> ctx, ContextHandle&& resource_handle);
 	};
 
 	template <typename T>
