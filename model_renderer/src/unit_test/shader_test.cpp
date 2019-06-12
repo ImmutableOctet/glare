@@ -25,9 +25,6 @@ namespace unit_test
 			"assets/unit_tests/shader_test/test.fs"
 		);
 
-		auto local_shader = std::move(*test_shader);
-		*test_shader = std::move(local_shader);
-
 		texture1 = graphics::Texture(graphics.context, "assets/unit_tests/shader_test/texture1.png");
 		texture2 = graphics::Texture(graphics.context, "assets/unit_tests/shader_test/texture2.jpg");
 
