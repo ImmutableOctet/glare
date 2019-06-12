@@ -24,9 +24,11 @@ namespace unit_test
 			"assets/unit_tests/shader_test/test.vs",
 			"assets/unit_tests/shader_test/test.fs"
 		);
-				
-		texture1 = memory::allocate<graphics::Texture>(graphics.context, "assets/unit_tests/shader_test/texture1.png");
-		texture2 = memory::allocate<graphics::Texture>(graphics.context, "assets/unit_tests/shader_test/texture2.jpg");
+		
+		auto test_texture = graphics::Texture(graphics.context, "assets/unit_tests/shader_test/texture1.png");
+
+		texture1 = std::move(test_texture);
+		texture2 = graphics::Texture(graphics.context, "assets/unit_tests/shader_test/texture2.jpg");
 
 		texture1_sampler = Var<int>("texture1", test_shader, 0);
 		texture2_sampler = Var<int>("texture2", test_shader, 1);
@@ -112,9 +114,9 @@ namespace unit_test
 		//std::sinf(milliseconds())
 		graphics.context->clear(0.1f, 0.33f, 0.25f, 1.0f, graphics::BufferType::Color|graphics::BufferType::Depth); // gfx
 
-		graphics.context->use(*texture1, [this]()
+		graphics.context->use(texture1, [this]()
 		{
-			graphics.context->use(*texture2, [this]()
+			graphics.context->use(texture2, [this]()
 			{
 				graphics.context->use(*test_shader, [this]()
 				{

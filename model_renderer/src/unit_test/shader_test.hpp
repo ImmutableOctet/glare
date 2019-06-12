@@ -13,8 +13,8 @@ namespace unit_test
 
 			ref<graphics::Shader> test_shader;
 			
-			ref<graphics::Texture> texture1;
-			ref<graphics::Texture> texture2;
+			graphics::Texture texture1;
+			graphics::Texture texture2;
 
 			Var<int> texture1_sampler;
 			Var<int> texture2_sampler;
