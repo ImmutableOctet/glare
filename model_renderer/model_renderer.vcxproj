@@ -170,7 +170,9 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\app\input\keyboard.cpp" />
     <ClCompile Include="src\app\input\mouse.cpp" />
     <ClCompile Include="src\app\window.cpp" />
+    <ClCompile Include="src\engine\camera.cpp" />
     <ClCompile Include="src\engine\engine.cpp" />
+    <ClCompile Include="src\engine\entity.cpp" />
     <ClCompile Include="src\graphics\canvas.cpp" />
     <ClCompile Include="src\graphics\drivers\opengl\context.cpp" />
     <ClCompile Include="src\graphics\mesh.cpp" />
@@ -199,6 +201,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\app\window.hpp" />
     <ClInclude Include="src\core.hpp" />
     <ClInclude Include="src\debug.hpp" />
+    <ClInclude Include="src\engine\camera.hpp" />
     <ClInclude Include="src\engine\engine.hpp" />
     <ClInclude Include="src\engine\entity.hpp" />
     <ClInclude Include="src\graphics\bind.hpp" />

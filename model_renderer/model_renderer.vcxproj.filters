@@ -141,6 +141,12 @@
     <ClCompile Include="src\graphics\mesh.cpp">
       <Filter>Source Files\graphics</Filter>
     </ClCompile>
+    <ClCompile Include="src\engine\camera.cpp">
+      <Filter>Source Files\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\entity.cpp">
+      <Filter>Source Files\engine</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\graphics\graphics.hpp">
@@ -271,6 +277,9 @@
     </ClInclude>
     <ClInclude Include="src\unit_test\shader_test.hpp">
       <Filter>Header Files\Unit Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\camera.hpp">
+      <Filter>Header Files\engine</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

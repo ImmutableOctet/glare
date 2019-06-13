@@ -91,8 +91,9 @@ namespace graphics
 			Context(app::Window& wnd, Backend gfx);
 			~Context();
 
-			// Commands:
+			void configure_3D();
 
+			// Commands:
 			void flip(app::Window& wnd);
 
 			// TODO: Add an overload for vectors.

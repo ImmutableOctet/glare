@@ -240,6 +240,11 @@ namespace graphics
 		delete reinterpret_cast<Driver*>(native_context);
 	}
 
+	void Context::configure_3D()
+	{
+		glEnable(GL_DEPTH_TEST);
+	}
+
 	void Context::flip(app::Window& wnd)
 	{
 		SDL_GL_SwapWindow(wnd.get_handle());

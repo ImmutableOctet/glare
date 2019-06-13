@@ -4,11 +4,16 @@ namespace engine
 {
 	class Entity
 	{
+		public:
+			Entity* parent = nullptr;
+
 
 	};
 
-	class Actor
+	/*
+	class Actor : public Entity
 	{
 
 	};
+	*/
 }

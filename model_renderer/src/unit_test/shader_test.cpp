@@ -107,8 +107,6 @@ namespace unit_test
 		auto& gfx = *graphics.canvas;
 		auto& wnd = *window;
 
-		glEnable(GL_DEPTH_TEST);
-
 		//std::sinf(milliseconds())
 		graphics.context->clear(0.1f, 0.33f, 0.25f, 1.0f, graphics::BufferType::Color|graphics::BufferType::Depth); // gfx
 
@@ -133,17 +131,14 @@ namespace unit_test
 						glm::mat4 model = glm::mat4(1.0f);
 						model = glm::translate(model, math::vec3(0.0, 0.0, -0.1));
 
-						for (auto i = 0; i < 1; i++)
-						{
-							float angle = 3.0f * (milliseconds() / 16) * (i+1);
+						float angle = (3.0f) * (milliseconds() / 16);
 
-							model = glm::rotate(model, glm::radians(angle), glm::vec3(0.45f, 1.0f, 0.45f));
-							this->model = model;
+						model = glm::rotate(model, glm::radians(angle), glm::vec3(0.45f, 1.0f, 0.45f));
+						this->model = model;
 
-							//color = { std::sin(milliseconds()), 0.5, 0.5 };
+						//color = { std::sin(milliseconds()), 0.5, 0.5 };
 
-							graphics.context->draw();
-						}
+						graphics.context->draw();
 					});
 				});
 			});

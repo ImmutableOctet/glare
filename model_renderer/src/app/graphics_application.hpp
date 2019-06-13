@@ -16,6 +16,8 @@ namespace app
 				{
 					context = memory::allocate<graphics::Context>(window, graphics::Backend::OpenGL);
 
+					context->configure_3D();
+
 					// Create the default canvas.
 					canvas = memory::allocate<graphics::Canvas>(context);
 				}
