@@ -20,14 +20,17 @@
 
 namespace graphics
 {
+	using Driver = Context::Driver;
+
 	// Most details of the active state is handled by OpenGL, but for
 	// higher-level details, we keep track of state with this data-structure.
-	class Driver
+	class Context::Driver
 	{
 		public:
 			friend Context;
 
 			using Handle = Context::Handle;
+			using Flags = Context::Flags;
 
 			static constexpr Handle NoHandle = Context::NoHandle;
 
@@ -139,6 +142,34 @@ namespace graphics
 
 				return obj;
 			}
+			
+			static Flags handle_flag(ContextState& state, Flags flags, Flags target_flag, GLenum gl_target, bool value)
+			{
+				if ((flags & target_flag))
+				{
+					if (value)
+					{
+						glEnable(gl_target);
+
+						state.flags |= target_flag;
+					}
+					else
+					{
+						state.flags &= target_flag;
+
+						glDisable(gl_target);
+					}
+				}
+
+				return state.flags;
+			}
+
+			static Flags set_flags(ContextState& state, Flags flags, bool value)
+			{
+				handle_flag(state, flags, Flags::Depth, GL_DEPTH_TEST, value);
+
+				return state.get_flags();
+			}
 		protected:
 			Driver(SDL_Window* window_handle)
 				: sdl(SDL_GL_CreateContext(window_handle)) {}
@@ -218,7 +249,7 @@ namespace graphics
 	}
 
 	// Context API:
-	Context::Context(app::Window& wnd, Backend gfx)
+	Context::Context(app::Window& wnd, Backend gfx, Flags flags)
 		: graphics_backend(gfx), state(memory::unique<Context::State>())
 	{
 		ASSERT(get_backend() == Backend::OpenGL);
@@ -228,9 +259,8 @@ namespace graphics
 
 		glewInit();
 
-		// TODO: Move this to a separate member-function:
 		// Initial configuration:
-		glEnable(GL_DEPTH_TEST);
+		toggle(flags, true);
 	}
 
 	Context::~Context()
@@ -240,9 +270,9 @@ namespace graphics
 		delete reinterpret_cast<Driver*>(native_context);
 	}
 
-	void Context::configure_3D()
+	Context::Flags Context::toggle(Flags flags, bool value)
 	{
-		glEnable(GL_DEPTH_TEST);
+		return Driver::set_flags(*state, flags, value);
 	}
 
 	void Context::flip(app::Window& wnd)

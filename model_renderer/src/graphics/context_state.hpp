@@ -15,14 +15,19 @@ namespace graphics
 	// High-level state management:
 	class ContextState
 	{
+		public:
+			using Flags = ContextFlags;
 		private:
 			// TODO: Review behavior of 'textures' containers;
 			// this value could be held as a reserved element of that container.
 			Texture null_texture = {};
 		protected:
 			friend Context;
+			friend Context::Driver;
 
-			// The currently bound shader.
+			// Modified and otherwise managed by 'Context' and 'Context::Driver'.
+			Flags flags = Flags::Default;
+
 			defaultable_ref<Shader> shader;
 			defaultable_ref<Mesh> mesh;
 
@@ -58,6 +63,8 @@ namespace graphics
 			{
 				textures.clear();
 			}
+		public:
+			inline Flags get_flags() const { return flags; }
 		protected:
 			void default_all()
 			{

@@ -40,22 +40,26 @@ namespace graphics
 	class Context
 	{
 		public:
-			// Friends:
-			friend Shader;
-			friend Texture;
-			friend Mesh;
-
 			template <typename T>
 			friend class ShaderVar;
 
 			template <typename resource_t, typename bind_fn>
 			friend class BindOperation;
 
+			class Driver;
+
+			// Friends:
+			friend Shader;
+			friend Texture;
+			friend Mesh;
+			friend Driver;
+
 			// Types:
 			using Handle = ContextHandle;
 			using Backend = graphics::Backend;
 
 			using State = ContextState;
+			using Flags = ContextFlags;
 
 			// Constants:
 			static constexpr Handle NoHandle = {};
@@ -88,10 +92,10 @@ namespace graphics
 			// a reference to the previously bound mesh.
 			Mesh& bind(Mesh& mesh);
 		public:
-			Context(app::Window& wnd, Backend gfx);
+			Context(app::Window& wnd, Backend gfx, Flags flags=Flags::Default);
 			~Context();
 
-			void configure_3D();
+			Flags toggle(Flags flag, bool value);
 
 			// Commands:
 			void flip(app::Window& wnd);

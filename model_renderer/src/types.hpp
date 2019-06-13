@@ -23,6 +23,7 @@ using weak_ref = memory::weak_ref<T>;
 template <typename T>
 using pass_ref = memory::pass_ref<T>;
 
+// TODO: Look into 'std::variant' as an alternative to this.
 template <typename T>
 class defaultable_ref
 {
