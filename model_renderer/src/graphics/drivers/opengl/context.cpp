@@ -43,7 +43,7 @@ namespace graphics
 			inline int max_textures() const { return MAX_TEXTURES; }
 		protected:
 			// SDL:
-			SDL_GLContext sdl = nullptr;
+			SDL_GLContext SDL = nullptr;
 
 			// State:
 			GLenum texture_index = BASE_TEXTURE_INDEX;
@@ -166,17 +166,19 @@ namespace graphics
 
 			static Flags set_flags(ContextState& state, Flags flags, bool value)
 			{
+				// TODO: Look into compile-time maps.
+				// (Data driven solution vs. code driven solution)
 				handle_flag(state, flags, Flags::Depth, GL_DEPTH_TEST, value);
 
 				return state.get_flags();
 			}
 		protected:
 			Driver(SDL_Window* window_handle)
-				: sdl(SDL_GL_CreateContext(window_handle)) {}
+				: SDL(SDL_GL_CreateContext(window_handle)) {}
 
 			~Driver()
 			{
-				SDL_GL_DeleteContext(sdl);
+				SDL_GL_DeleteContext(SDL);
 			}
 		public:
 			// OpenGL API:
