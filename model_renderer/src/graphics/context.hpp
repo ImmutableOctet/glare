@@ -101,7 +101,7 @@ namespace graphics
 			void flip(app::Window& wnd);
 
 			// TODO: Add an overload for vectors.
-			void clear(float red, float green, float blue, float alpha, BufferType buffer_type=BufferType::Color);
+			void clear(float red, float green, float blue, float alpha, BufferType buffer_type=BufferType::ColorDepth);
 
 			// NOTE: Unsafe; use at your own risk.
 			void clear_textures();

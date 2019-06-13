@@ -174,6 +174,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\engine\engine.cpp" />
     <ClCompile Include="src\engine\entity.cpp" />
     <ClCompile Include="src\graphics\canvas.cpp" />
+    <ClCompile Include="src\graphics\context_state.cpp" />
     <ClCompile Include="src\graphics\drivers\opengl\context.cpp" />
     <ClCompile Include="src\graphics\mesh.cpp" />
     <ClCompile Include="src\graphics\model.cpp" />

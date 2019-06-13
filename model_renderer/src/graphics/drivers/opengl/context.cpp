@@ -290,7 +290,11 @@ namespace graphics
 		GLbitfield buffer_flags = 0; // {};
 
 		if ((buffer_type & BufferType::Color)) { buffer_flags |= GL_COLOR_BUFFER_BIT; }
-		if ((buffer_type & BufferType::Depth)) { buffer_flags |= GL_DEPTH_BUFFER_BIT; }
+
+		if (state->enabled(Flags::Depth))
+		{
+			if ((buffer_type & BufferType::Depth)) { buffer_flags |= GL_DEPTH_BUFFER_BIT; }
+		}
 
 		if (buffer_flags == 0)
 		{

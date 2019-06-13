@@ -68,6 +68,8 @@ namespace graphics
 	{
 		Color = (1 << 0),
 		Depth = (1 << 1),
+
+		ColorDepth = (Color | Depth),
 	};
 
 	enum class ContextFlags

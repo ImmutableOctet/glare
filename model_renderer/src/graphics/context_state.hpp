@@ -34,45 +34,17 @@ namespace graphics
 			std::vector<Texture*> textures; // std::stack<Texture>
 
 			// There is no guarantee of the lifetime for the object returned by this method.
-			Texture& get_current_texture()
-			{
-				if (textures.size() > 0)
-				{
-					return *(textures.back());
-				}
+			Texture& get_current_texture();
+			
+			void push_texture(Texture& texture);
+			Texture& pop_texture();
 
-				return null_texture;
-			}
-
-			void push_texture(Texture& texture)
-			{
-				textures.push_back(&texture);
-			}
-
-			Texture& pop_texture()
-			{
-				if (textures.size() > 0)
-				{
-					textures.pop_back();
-				}
-
-				return get_current_texture();
-			}
-
-			void clear_textures()
-			{
-				textures.clear();
-			}
+			void clear_textures();
 		public:
 			inline Flags get_flags() const { return flags; }
+
+			bool enabled(Flags check) const;
 		protected:
-			void default_all()
-			{
-				// Change every member to its default state:
-				shader.make_default();
-				mesh.make_default();
-				
-				clear_textures();
-			}
+			void default_all();
 	};
 }
