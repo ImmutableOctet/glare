@@ -9,6 +9,11 @@ namespace graphics
 
 	using ContextHandle = unsigned int; // GLint;
 
+	using ColorRGB = math::vec3f;
+	using ColorRGBA = math::vec4f;
+
+	using Color = ColorRGB;
+
 	// TODO: Implement half-size indices for smaller meshes.
 	using MeshIndex = std::uint32_t; // GLuint;
 
@@ -75,9 +80,9 @@ namespace graphics
 	enum class ContextFlags
 	{
 		None             = (1 << 0),
-		Depth            = (1 << 1),
+		DepthTest        = (1 << 1),
 
-		Default          = Depth,
+		Default          = DepthTest,
 	};
 
 	// Boilerplate:

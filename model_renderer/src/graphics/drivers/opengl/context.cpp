@@ -168,7 +168,7 @@ namespace graphics
 			{
 				// TODO: Look into compile-time maps.
 				// (Data driven solution vs. code driven solution)
-				handle_flag(state, flags, Flags::Depth, GL_DEPTH_TEST, value);
+				handle_flag(state, flags, Flags::DepthTest, GL_DEPTH_TEST, value);
 
 				return state.get_flags();
 			}
@@ -291,7 +291,7 @@ namespace graphics
 
 		if ((buffer_type & BufferType::Color)) { buffer_flags |= GL_COLOR_BUFFER_BIT; }
 
-		if (state->enabled(Flags::Depth))
+		if (state->enabled(Flags::DepthTest))
 		{
 			if ((buffer_type & BufferType::Depth)) { buffer_flags |= GL_DEPTH_BUFFER_BIT; }
 		}

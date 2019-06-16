@@ -23,6 +23,8 @@ namespace unit_test
 			Var<math::mat4> view;
 			Var<math::mat4> model;
 
+			engine::Camera camera;
+
 			//graphics::ShaderVar<math::vec3> color;
 
 			graphics::Mesh cube;

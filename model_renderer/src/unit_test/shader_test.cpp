@@ -129,7 +129,7 @@ namespace unit_test
 						view = glm::translate(math::mat4(1.0f), math::vec3(0.0f, 0.0f, -3.0f));
 
 						glm::mat4 model = glm::mat4(1.0f);
-						model = glm::translate(model, math::vec3(0.0, 0.0, -0.1));
+						model = glm::translate(model, math::vec3(0.0, 0.0, -2));
 
 						float angle = (3.0f) * (milliseconds() / 16);
 

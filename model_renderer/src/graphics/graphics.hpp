@@ -9,4 +9,5 @@
 #include "vertex.hpp"
 #include "canvas.hpp"
 #include "mesh.hpp"
+#include "material.hpp"
 #include "model.hpp"
