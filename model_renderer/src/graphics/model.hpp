@@ -24,8 +24,26 @@ namespace graphics
 		private:
 			MeshData meshes;
 		protected:
-			Model(Context& ctx, const MeshData& meshes);
+			Model(const MeshData& meshes);
 		public:
-			Model Load(const std::string& path);
+			static Model Load(pass_ref<Context> context, const std::string& path);
+
+			friend void swap(Model& x, Model& y);
+
+			Model() = default;
+
+			// TODO: Handle copies.
+			Model(const Model&) = delete;
+
+			Model(Model&& model);
+
+			inline Model& operator=(Model model)
+			{
+				swap(*this, model);
+
+				return *this;
+			}
+
+			inline void draw() {}
 	};
 }

@@ -153,6 +153,9 @@
     <ClCompile Include="src\graphics\material.cpp">
       <Filter>Source Files\graphics</Filter>
     </ClCompile>
+    <ClCompile Include="src\unit_test\model_test.cpp">
+      <Filter>Source Files\Unit Tests</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\graphics\graphics.hpp">
@@ -251,12 +254,6 @@
     <ClInclude Include="src\graphics\context_state.hpp">
       <Filter>Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="src\graphics\vertex.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\graphics\resource.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\graphics\drivers\drivers.hpp">
       <Filter>Header Files\graphics\drivers</Filter>
     </ClInclude>
@@ -271,9 +268,6 @@
     </ClInclude>
     <ClInclude Include="src\util\algorithm.hpp">
       <Filter>Header Files\util</Filter>
-    </ClInclude>
-    <ClInclude Include="src\graphics\texture.hpp">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\graphics\pixelmap.hpp">
       <Filter>Header Files\graphics</Filter>
@@ -290,13 +284,17 @@
     <ClInclude Include="src\graphics\material.hpp">
       <Filter>Header Files\graphics</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="assets\unit_tests\shader_test\test.fs">
-      <Filter>Assets\unit_tests</Filter>
-    </None>
-    <None Include="assets\unit_tests\shader_test\test.vs">
-      <Filter>Assets\unit_tests</Filter>
-    </None>
+    <ClInclude Include="src\unit_test\model_test.hpp">
+      <Filter>Header Files\Unit Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\resource.hpp">
+      <Filter>Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\texture.hpp">
+      <Filter>Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\vertex.hpp">
+      <Filter>Header Files\graphics</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

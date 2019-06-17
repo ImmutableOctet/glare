@@ -34,7 +34,8 @@ namespace graphics
 
 	enum Backend
 	{
-		OpenGL
+		OpenGL   = 1,
+		Direct3D = 2,
 	};
 
 	class Context

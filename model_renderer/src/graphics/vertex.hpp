@@ -107,7 +107,18 @@ namespace graphics
 
 		inline static auto format()
 		{
-			return util::concatenate<VertexAttribute, 1, 1>(Vertex::format(), { VERTEX_ATTRIBUTE(TextureVertex, uv) });
+			return util::concatenate(Vertex::format(), std::array { VERTEX_ATTRIBUTE(TextureVertex, uv) });
+		}
+	};
+
+	struct StandardVertex : public Vertex
+	{
+		math::vec3f normal;
+		math::vec2f uv;
+
+		inline static auto format()
+		{
+			return util::concatenate(Vertex::format(), std::array { VERTEX_ATTRIBUTE(TextureVertex, uv) });
 		}
 	};
 }

@@ -26,23 +26,23 @@ namespace util
 	}
 	*/
 
-	template <typename T, std::size_t N1, std::size_t N2>
-	constexpr std::array<T, (N1 + N2)> concatenate(std::array<T, N1> lhs, std::array<T, N2> rhs)
+	template <typename lhs_t, typename rhs_t>
+	constexpr auto concatenate(lhs_t lhs, rhs_t rhs)
 	{
-		std::array<T, N1 + N2> result {};
+		std::array<typename lhs_t::value_type, (lhs.size() + rhs.size())> result {};
 
 		std::size_t index = 0;
 
-		for (auto& el : lhs)
+		for (auto& element : lhs)
 		{
-			result[index] = std::move(el);
+			result[index] = std::move(element);
 
 			index++;
 		}
-		
-		for (auto& el : rhs)
+
+		for (auto& element : rhs)
 		{
-			result[index] = std::move(el);
+			result[index] = std::move(element);
 
 			index++;
 		}

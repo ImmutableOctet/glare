@@ -184,6 +184,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\graphics\shader.cpp" />
     <ClCompile Include="src\graphics\texture.cpp" />
     <ClCompile Include="src\graphics\vertex.cpp" />
+    <ClCompile Include="src\unit_test\model_test.cpp" />
     <ClCompile Include="src\unit_test\shader_test.cpp" />
     <ClCompile Include="src\util\io.cpp" />
     <ClCompile Include="src\util\lib.cpp" />
@@ -226,6 +227,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\graphics\vertex.hpp" />
     <ClInclude Include="src\math\math.hpp" />
     <ClInclude Include="src\types.hpp" />
+    <ClInclude Include="src\unit_test\model_test.hpp" />
     <ClInclude Include="src\unit_test\shader_test.hpp" />
     <ClInclude Include="src\unit_test\vertex_element_types.cpp" />
     <ClInclude Include="src\util\algorithm.hpp" />
@@ -234,10 +236,6 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\util\memory.hpp" />
     <ClInclude Include="src\util\shorthand.hpp" />
     <ClInclude Include="src\util\util.hpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="assets\unit_tests\shader_test\test.fs" />
-    <None Include="assets\unit_tests\shader_test\test.vs" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

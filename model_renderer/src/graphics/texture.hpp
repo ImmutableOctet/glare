@@ -32,6 +32,8 @@ namespace graphics
 
 			inline Texture() : Texture({}, {}) {}
 
+			Texture(const Texture&) = delete;
+
 			~Texture();
 
 			inline Texture& operator=(Texture texture)
