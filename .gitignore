@@ -262,3 +262,5 @@ __pycache__/
 /model_renderer/dependencies
 /model_renderer/assets/unit_tests/shader_test/texture1.png
 /model_renderer/assets/unit_tests/shader_test/texture2.jpg
+
+*.i

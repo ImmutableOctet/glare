@@ -31,6 +31,7 @@ namespace util
 	{
 		std::array<typename lhs_t::value_type, (lhs.size() + rhs.size())> result {};
 
+		// TODO: Review use of unsigned integer for indexing.
 		std::size_t index = 0;
 
 		for (auto& element : lhs)

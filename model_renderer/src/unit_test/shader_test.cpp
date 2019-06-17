@@ -40,7 +40,7 @@ namespace unit_test
 		cube = graphics::Mesh::Generate
 		(
 			graphics.context,
-			graphics::Mesh::Data<graphics::TextureVertex>
+			graphics::Mesh::Data<graphics::TexturedVertex>
 			{
 				{
 					{{{-0.5f, -0.5f, -0.5f}},  {0.0f, 0.0f}},

@@ -9,6 +9,11 @@
 #include "mesh.hpp"
 #include "material.hpp"
 
+// Assimp:
+struct aiScene;
+struct aiNode;
+struct aiMesh;
+
 namespace graphics
 {
 	class Context;
@@ -19,12 +24,12 @@ namespace graphics
 	class Model
 	{
 		public:
-			using MeshPair = std::pair<ref<Mesh>, ref<Material>>;
-			using MeshData = std::vector<MeshPair>;
+			using MeshDescriptor = std::pair<ref<Mesh>, ref<Material>>;
+			using Meshes = std::vector<MeshDescriptor>;
 		private:
-			MeshData meshes;
+			Meshes meshes;
 		protected:
-			Model(const MeshData& meshes);
+			Model(const Meshes& meshes);
 		public:
 			static Model Load(pass_ref<Context> context, const std::string& path);
 
@@ -44,6 +49,9 @@ namespace graphics
 				return *this;
 			}
 
-			inline void draw() {}
+			void draw(Context& context); // virtual override
+		protected:
+			void process_node(pass_ref<Context> context, const aiScene* scene, const aiNode* node);
+			MeshDescriptor process_mesh(pass_ref<Context> context, const aiScene* scene, const aiMesh* mesh);
 	};
 }

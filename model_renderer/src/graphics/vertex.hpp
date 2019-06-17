@@ -12,7 +12,28 @@
 #include <util/algorithm.hpp>
 #include <math/math.hpp>
 
-#define VERTEX_ATTRIBUTE(vertex_type, member) get_attribute<decltype(member)>(offsetof(vertex_type, member)) // Vertex::get_attribute
+#define DECLARE_ATTRIBUTE(vertex_type, member) Vertex::get_attribute<decltype(member)>(offsetof(vertex_type, member)) // Vertex::get_attribute
+
+#define VERTEX_ATTRIBUTE(name, member_type, member_name)                     \
+template <typename VertexType>                                               \
+struct Attribute_##name : public VertexType                                  \
+{                                                                            \
+	member_type member_name;                                                 \
+                                                                             \
+	inline static auto format()                                              \
+	{                                                                        \
+		return util::concatenate                                             \
+		(                                                                    \
+			VertexType::format(),                                            \
+			std::array { DECLARE_ATTRIBUTE(Attribute_##name, member_name) }  \
+		);                                                                   \
+	}                                                                        \
+};                                                                           \
+                                                                             \
+template <typename VertexType>                                               \
+using A_##name = Attribute_##name<VertexType>;                               \
+
+#define VERTEX_FIELD(name, type) VERTEX_ATTRIBUTE(name, type, name)
 
 namespace graphics
 {
@@ -92,33 +113,18 @@ namespace graphics
 
 		inline static auto format()
 		{
-			return std::array { VERTEX_ATTRIBUTE(Vertex, position) };
+			return std::array { DECLARE_ATTRIBUTE(Vertex, position) };
 		}
 	};
 
-	struct RGBVertex : public Vertex
-	{
-		math::vec3f color;
-	};
+	// Attribute templates:
+	VERTEX_ATTRIBUTE(RGB, ColorRGB, color);
+	VERTEX_ATTRIBUTE(TexCoords, math::vec2f, uv);
+	VERTEX_ATTRIBUTE(Normal, math::vec3f, normal);
+	VERTEX_ATTRIBUTE(Tangent, math::vec3f, tangent);
+	VERTEX_ATTRIBUTE(Bitangent, math::vec3f, bitangent);
 
-	struct TextureVertex : public Vertex
-	{
-		math::vec2f uv;
-
-		inline static auto format()
-		{
-			return util::concatenate(Vertex::format(), std::array { VERTEX_ATTRIBUTE(TextureVertex, uv) });
-		}
-	};
-
-	struct StandardVertex : public Vertex
-	{
-		math::vec3f normal;
-		math::vec2f uv;
-
-		inline static auto format()
-		{
-			return util::concatenate(Vertex::format(), std::array { VERTEX_ATTRIBUTE(TextureVertex, uv) });
-		}
-	};
+	//using PositionVertex = Vertex;
+	using TexturedVertex = A_TexCoords<Vertex>;
+	using StandardVertex = A_Bitangent<A_Tangent<A_TexCoords<A_Normal<Vertex>>>>;
 }

@@ -54,6 +54,8 @@ namespace unit_test
 		//std::sinf(milliseconds())
 		graphics.context->clear(0.1f, 0.33f, 0.25f, 1.0f, graphics::BufferType::Color|graphics::BufferType::Depth); // gfx
 
+		//graphics.canvas.draw();
+
 		//loaded_model.draw();
 
 		/*
