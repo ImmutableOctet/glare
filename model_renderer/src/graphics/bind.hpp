@@ -7,7 +7,10 @@ namespace graphics
 	{
 		public:
 			BindOperation(resource_t& resource, bind_fn bind)
-				: bind(bind), prev_resource(bind(resource)) {}
+				: bind(bind), prev_resource(bind(resource))
+			{
+				resource.on_bind();
+			}
 
 			~BindOperation()
 			{

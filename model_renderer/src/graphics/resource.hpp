@@ -35,5 +35,7 @@ namespace graphics
 
 				return *this;
 			}
+
+			virtual void on_bind();
 	};
 }
