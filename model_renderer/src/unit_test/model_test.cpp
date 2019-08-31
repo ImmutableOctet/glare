@@ -60,11 +60,7 @@ namespace unit_test
 
 		graphics.context->use(*test_shader, [this]()
 		{
-			int width, height;
-
-			window->get_size(width, height);
-
-			projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
+			projection = glm::perspective(glm::radians(45.0f), window->horizontal_aspect_ratio(), 0.1f, 100.0f);
 			view = glm::translate(math::mat4(1.0f), math::vec3(0.0f, 0.0f, -10.0f));
 
 			//graphics.canvas.draw(*loaded_model);

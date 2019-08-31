@@ -22,9 +22,18 @@ namespace app
 		}
 	}
 
-	void Window::get_size(int& width, int& height)
+	void Window::get_size(int& width, int& height) const
 	{
 		SDL_GetWindowSize(get_handle(), &width, &height);
+	}
+
+	float Window::horizontal_aspect_ratio() const
+	{
+		int width, height;
+
+		get_size(width, height);
+
+		return (static_cast<float>(width) / static_cast<float>(height));
 	}
 
 	bool Window::handle_events()
