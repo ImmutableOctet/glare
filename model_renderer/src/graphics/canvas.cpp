@@ -8,10 +8,10 @@ namespace graphics
 		// Nothing so far.
 	}
 
-	Canvas::Canvas(std::shared_ptr<Context> ctx)
+	Canvas::Canvas(std::shared_ptr<Context> context)
 		: Canvas()
 	{
-		attach(ctx);
+		attach(context);
 	}
 
 	Canvas::~Canvas()
@@ -33,16 +33,16 @@ namespace graphics
 
 	void Canvas::detach()
 	{
-		ctx = nullptr;
+		context = nullptr;
 	}
 
 	void Canvas::flip(app::Window& wnd)
 	{
-		ctx->flip(wnd);
+		context->flip(wnd);
 	}
 
 	void Canvas::clear(float red, float green, float blue, float alpha)
 	{
-		ctx->clear(red, green, blue, alpha);
+		context->clear(red, green, blue, alpha);
 	}
 }

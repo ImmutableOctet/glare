@@ -16,6 +16,9 @@ namespace app
 
 			inline SDL_Window* get_handle() const { return handle; }
 
+			// Retrieve the width and height of the window.
+			void get_size(int& width, int& height);
+
 			// If this method returns 'false', then the window has received a 'close' message.
 			// It is up to the caller of 'handle_events' to handle this message.
 			bool handle_events();

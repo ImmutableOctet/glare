@@ -22,6 +22,11 @@ namespace app
 		}
 	}
 
+	void Window::get_size(int& width, int& height)
+	{
+		SDL_GetWindowSize(get_handle(), &width, &height);
+	}
+
 	bool Window::handle_events()
 	{
 		SDL_Event event;

@@ -50,6 +50,9 @@ namespace graphics
 			}
 
 			void draw(Context& context); // virtual override
+
+			// TODO: Verify non-const access.
+			inline Meshes& get_meshes() { return meshes; };
 		protected:
 			void process_node(pass_ref<Context> context, const aiScene* scene, const aiNode* node);
 			MeshDescriptor process_mesh(pass_ref<Context> context, const aiScene* scene, const aiMesh* mesh);

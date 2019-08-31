@@ -111,3 +111,5 @@ namespace graphics
 			value_t value;
 	};
 }
+
+#define NamedVar(type, name) graphics::ShaderVar<type> name = graphics::ShaderVar<type>(#name);

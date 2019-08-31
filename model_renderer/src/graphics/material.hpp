@@ -25,12 +25,12 @@ namespace graphics
 		public:
 			ForwardMaterial(pass_ref<Shader> shader);
 		protected:
-			ShaderVar<Color> diffuse;
-			ShaderVar<Color> ambient;
-			ShaderVar<Color> specular;
-			ShaderVar<Color> emissive;
+			NamedVar(Color, diffuse);
+			NamedVar(Color, ambient);
+			NamedVar(Color, specular);
+			NamedVar(Color, emissive);
 
-			ShaderVar<float> shininess; // = 40.0f;
-			ShaderVar<float> alpha; // = 1.0f;
+			NamedVar(float, shininess); // = 40.0f;
+			NamedVar(float, alpha); // = 1.0f;
 	};
 }

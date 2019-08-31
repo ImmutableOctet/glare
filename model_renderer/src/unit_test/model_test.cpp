@@ -58,41 +58,37 @@ namespace unit_test
 
 		//loaded_model.draw();
 
-		/*
-		graphics.context->use(texture1, [this]()
+		graphics.context->use(*test_shader, [this]()
 		{
-			graphics.context->use(texture2, [this]()
+			int width, height;
+
+			window->get_size(width, height);
+
+			projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
+			view = glm::translate(math::mat4(1.0f), math::vec3(0.0f, 0.0f, -10.0f));
+
+			//graphics.canvas.draw(*loaded_model);
+
+			for (auto& m : loaded_model->get_meshes())
 			{
-				graphics.context->use(*test_shader, [this]()
+				auto& mesh = *m.first;
+
+				graphics.context->use(mesh, [this]()
 				{
-					graphics.context->use(cube, [this]()
-					{
-						texture1_sampler.upload();
-						texture2_sampler.upload();
+					glm::mat4 model = glm::mat4(1.0f);
+					model = glm::translate(model, math::vec3(0.0, 0.0, -2));
 
-						int width, height;
+					float angle = (3.0f) * (milliseconds() / 16);
 
-						SDL_GetWindowSize(window->get_handle(), &width, &height);
+					model = glm::rotate(model, glm::radians(angle), glm::vec3(0.45f, 1.0f, 0.45f));
+					this->model = model;
 
-						projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
-						view = glm::translate(math::mat4(1.0f), math::vec3(0.0f, 0.0f, -3.0f));
+					//color = { std::sin(milliseconds()), 0.5, 0.5 };
 
-						glm::mat4 model = glm::mat4(1.0f);
-						model = glm::translate(model, math::vec3(0.0, 0.0, -2));
-
-						float angle = (3.0f) * (milliseconds() / 16);
-
-						model = glm::rotate(model, glm::radians(angle), glm::vec3(0.45f, 1.0f, 0.45f));
-						this->model = model;
-
-						//color = { std::sin(milliseconds()), 0.5, 0.5 };
-
-						graphics.context->draw();
-					});
+					graphics.context->draw();
 				});
-			});
+			}
 		});
-		*/
 
 		gfx.flip(wnd);
 	}

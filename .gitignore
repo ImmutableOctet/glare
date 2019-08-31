@@ -264,3 +264,4 @@ __pycache__/
 /model_renderer/assets/unit_tests/shader_test/texture2.jpg
 
 *.i
+/model_renderer/assets/unit_tests/model_test/Stage.b3d
