@@ -23,7 +23,7 @@ namespace graphics
 		return true;
 	}
 
-	void Resource::on_bind() {} // Blank implementation.
+	void Resource::on_bind(Context& context) {} // Blank implementation.
 
 	void swap(Resource& x, Resource& y)
 	{

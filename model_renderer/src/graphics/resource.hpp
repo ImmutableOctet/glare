@@ -36,6 +36,6 @@ namespace graphics
 				return *this;
 			}
 
-			virtual void on_bind();
+			virtual void on_bind(Context& context);
 	};
 }

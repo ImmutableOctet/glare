@@ -113,7 +113,7 @@ namespace graphics
 			{
 				return bind_resource
 				(
-					resource,
+					*this, resource,
 
 					[this](ResourceType& res) -> ResourceType&
 					{

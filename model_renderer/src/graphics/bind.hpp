@@ -2,14 +2,16 @@
 
 namespace graphics
 {
+	class Context;
+
 	template <typename resource_t, typename bind_fn>
 	class BindOperation
 	{
 		public:
-			BindOperation(resource_t& resource, bind_fn bind)
+			BindOperation(Context& context, resource_t& resource, bind_fn bind)
 				: bind(bind), prev_resource(bind(resource))
 			{
-				resource.on_bind();
+				resource.on_bind(context);
 			}
 
 			~BindOperation()
@@ -22,8 +24,8 @@ namespace graphics
 	};
 
 	template <typename resource_t, typename bind_fn>
-	auto bind_resource(resource_t& resource, bind_fn bind)
+	auto bind_resource(Context& context, resource_t& resource, bind_fn bind)
 	{
-		return BindOperation<resource_t, bind_fn>(resource, bind);
+		return BindOperation<resource_t, bind_fn>(context, resource, bind);
 	}
 }

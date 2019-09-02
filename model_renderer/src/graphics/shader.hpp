@@ -54,6 +54,8 @@ namespace graphics
 			}
 		protected:
 			Shader(weak_ref<Context> ctx, ContextHandle&& resource_handle);
+
+			void on_bind(Context& context) override;
 	};
 
 	template <typename T>
