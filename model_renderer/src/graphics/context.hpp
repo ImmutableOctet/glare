@@ -8,6 +8,8 @@
 
 #include "types.hpp"
 #include "bind.hpp"
+#include "uniform.hpp"
+
 //#include "context_state.hpp"
 
 // Driver-specific:
@@ -96,6 +98,9 @@ namespace graphics
 			Context(app::Window& wnd, Backend gfx, Flags flags=Flags::Default);
 			~Context();
 
+			inline Backend get_backend() const { return graphics_backend; }
+			inline NativeContext get_native() { return native_context; }
+
 			Flags toggle(Flags flag, bool value);
 
 			// Commands:
@@ -103,6 +108,9 @@ namespace graphics
 
 			// TODO: Add an overload for vectors.
 			void clear(float red, float green, float blue, float alpha, BufferType buffer_type=BufferType::ColorDepth);
+
+			// Assigns the current rendering viewport.
+			void set_viewport(int x, int y, int width, int height);
 
 			// NOTE: Unsafe; use at your own risk.
 			void clear_textures();
@@ -135,9 +143,26 @@ namespace graphics
 			// Draw using the currently bound 'Mesh' object.
 			void draw();
 
-			// Other:
-			inline Backend get_backend() const { return graphics_backend; }
-			inline NativeContext get_native() { return native_context; }
+			// Draw using the currently bound 'Mesh' object, but with a different primitive type.
+			void draw(Primitive primitive);
+
+			bool set_uniform(Shader& shader, raw_string name, int value);
+			bool set_uniform(Shader& shader, raw_string name, bool value);
+			bool set_uniform(Shader& shader, raw_string name, float value);
+
+			bool set_uniform(Shader& shader, raw_string name, const math::Vector2D& value);
+			bool set_uniform(Shader& shader, raw_string name, const math::Vector3D& value);
+			bool set_uniform(Shader& shader, raw_string name, const math::Vector4D& value);
+
+			bool set_uniform(Shader& shader, raw_string name, const math::Matrix2x2& value);
+			bool set_uniform(Shader& shader, raw_string name, const math::Matrix3x3& value);
+			bool set_uniform(Shader& shader, raw_string name, const math::Matrix4x4& value);
+
+			template <typename T>
+			inline bool update(Shader& shader, const Uniform<T>& uniform)
+			{
+				return set_uniform(shader, uniform.get_name_raw(), uniform.get_value());
+			}
 		protected:
 			inline State& get_state() const { return *state; }
 			
@@ -154,17 +179,5 @@ namespace graphics
 			// Shader related:
 			Handle build_shader(const ShaderSource& source) noexcept; // generate_shader(...)
 			void release_shader(Handle&& handle);
-
-			bool set_uniform(Shader& shader, raw_string name, int value);
-			bool set_uniform(Shader& shader, raw_string name, bool value);
-			bool set_uniform(Shader& shader, raw_string name, float value);
-
-			bool set_uniform(Shader& shader, raw_string name, const math::Vector2D& value);
-			bool set_uniform(Shader& shader, raw_string name, const math::Vector3D& value);
-			bool set_uniform(Shader& shader, raw_string name, const math::Vector4D& value);
-
-			bool set_uniform(Shader& shader, raw_string name, const math::Matrix2x2& value);
-			bool set_uniform(Shader& shader, raw_string name, const math::Matrix3x3& value);
-			bool set_uniform(Shader& shader, raw_string name, const math::Matrix4x4& value);
 	};
 }

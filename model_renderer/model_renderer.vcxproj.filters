@@ -162,6 +162,9 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\unit_test\deferred_test.cpp">
+      <Filter>Source Files\Unit Tests</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\graphics\graphics.hpp">
@@ -301,6 +304,15 @@
     </ClInclude>
     <ClInclude Include="src\graphics\vertex.hpp">
       <Filter>Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\uniform.hpp">
+      <Filter>Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\unit_test\deferred_test.hpp">
+      <Filter>Header Files\Unit Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\types.hpp">
+      <Filter>Header Files\app</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

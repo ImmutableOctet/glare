@@ -3,6 +3,11 @@
 #include <types.hpp>
 #include <math/math.hpp>
 
+#include <utility>
+
+#include <string>
+#include <variant>
+
 namespace graphics
 {
 	using NativeContext = void*;
@@ -85,7 +90,9 @@ namespace graphics
 		Default          = DepthTest,
 	};
 
-	// Boilerplate:
+	using uniform_t = std::variant<int, float, bool, math::Vector2D, math::Vector3D, math::Vector4D, math::Matrix2x2, math::Matrix3x3, math::Matrix4x4>;
+
+	// Bitfield boilerplate:
 	inline std::uint32_t operator& (BufferType a, BufferType b) { return (std::uint32_t)((std::uint32_t)a & (std::uint32_t)b); }
 	inline BufferType operator~ (BufferType a) { return (BufferType)~(std::uint32_t)a; }
 	inline BufferType operator| (BufferType a, BufferType b) { return (BufferType)((std::uint32_t)a | (std::uint32_t)b); }

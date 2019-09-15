@@ -5,7 +5,8 @@
 
 // Unit Tests:
 //#include "src/unit_test/shader_test.hpp"
-#include "src/unit_test/model_test.hpp"
+//#include "src/unit_test/model_test.hpp"
+#include "src/unit_test/deferred_test.hpp"
 
 int main(int argc, char** argv)
 {
@@ -13,7 +14,8 @@ int main(int argc, char** argv)
 
 	//test_vertex_element_types();
 	//ShaderTest();
-	ModelTest();
+	//ModelTest();
+	DeferredTest();
 
 	return 0;
 }

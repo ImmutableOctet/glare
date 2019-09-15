@@ -13,6 +13,9 @@ namespace graphics
 	class Resource
 	{
 		protected:
+			template <typename resource_t, typename bind_fn>
+			friend class BindOperation;
+
 			weak_ref<Context> context;
 			ContextHandle handle;
 		public:

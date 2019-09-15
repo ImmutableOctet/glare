@@ -2,7 +2,14 @@
 
 #include <string>
 
+#include "types.hpp"
+
+// SDL:
 struct SDL_Window;
+
+// Events:
+union SDL_Event;
+struct SDL_WindowEvent;
 
 namespace app
 {
@@ -11,10 +18,15 @@ namespace app
 	class Window
 	{
 		public:
-			Window(int width, int height, const std::string& title = "");
+			using Flags = WindowFlags;
+
+			Window(int width, int height, const std::string& title="", WindowFlags flags=WindowFlags::Default);
 			~Window();
 
 			inline SDL_Window* get_handle() const { return handle; }
+
+			std::uint32_t get_id() const;
+			WindowFlags get_flags() const;
 
 			// Retrieve the width and height of the window.
 			void get_size(int& width, int& height) const;
@@ -22,9 +34,10 @@ namespace app
 			float horizontal_aspect_ratio() const;
 
 			// If this method returns 'false', then the window has received a 'close' message.
-			// It is up to the caller of 'handle_events' to handle this message.
-			bool handle_events();
+			// It is up to the caller to handle the result of this message.
+			bool handle_event(const SDL_Event& event, const SDL_WindowEvent& window_event);
 		private:
 			SDL_Window* handle; // = nullptr;
+			Flags creation_flags;
 	};
 }

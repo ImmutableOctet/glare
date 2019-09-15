@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <unordered_map>
 #include <type_traits>
 
 #include <debug.hpp>
@@ -55,63 +56,6 @@ namespace graphics
 		protected:
 			Shader(weak_ref<Context> ctx, ContextHandle&& resource_handle);
 
-			void on_bind(Context& context) override;
-	};
-
-	template <typename T>
-	class ShaderVar
-	{
-		public:
-			using value_t = T;
-
-			ShaderVar(raw_string name="", weak_ref<Shader> shader={}, value_t value={})
-				: name(name), program(shader), value(value) {}
-			
-			inline raw_string get_name_raw() const { return name; }
-			inline std::string get_name() const { return get_name_raw(); }
-
-			inline value_t get_value() const { return value; }
-
-			inline bool upload(Shader& shader, value_t value)
-			{
-				auto& context = *(shader.get_context());
-
-				if (context.set_uniform(shader, name, value))
-				{
-					this->value = value;
-
-					return true;
-				}
-
-				return false;
-			}
-
-			inline bool upload(const value_t& value)
-			{
-				auto program_lock = program.lock();
-
-				//ASSERT(program_lock);
-
-				if (program_lock == nullptr)
-				{
-					return false;
-				}
-
-				auto& shader = *program_lock;
-
-				return upload(shader, value);
-			}
-
-			inline void upload() { upload(value); } // reupload() { ... }
-
-			// Operators:
-			inline operator value_t() const { return get_value(); }
-			inline ShaderVar& operator=(const value_t& value) { upload(value); return *this; }
-		protected:
-			raw_string name; // std::string
-			weak_ref<Shader> program;
-			value_t value;
+			//void on_bind(Context& context) override;
 	};
 }
-
-#define NamedVar(type, name) graphics::ShaderVar<type> name = graphics::ShaderVar<type>(#name);

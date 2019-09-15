@@ -28,15 +28,9 @@ namespace unit_test
 		texture1 = graphics::Texture(graphics.context, "assets/unit_tests/shader_test/texture1.png");
 		texture2 = graphics::Texture(graphics.context, "assets/unit_tests/shader_test/texture2.jpg");
 
-		texture1_sampler = Var<int>("texture1", test_shader, 0);
-		texture2_sampler = Var<int>("texture2", test_shader, 1);
+		uniforms = {};
 
-		projection = Var<math::mat4>("projection", test_shader, {});
-		view       = Var<math::mat4>("view",       test_shader, {});
-		model      = Var<math::mat4>("model",      test_shader, {});
-
-		//color = {"color", test_shader, {}};
-
+		/*
 		cube = graphics::Mesh::Generate
 		(
 			graphics.context,
@@ -90,6 +84,9 @@ namespace unit_test
 				{}
 			}
 		);
+		*/
+
+		quad = graphics::Mesh::GenerateTexturedQuad(graphics.context);
 
 		if (auto_execute)
 		{
@@ -99,7 +96,7 @@ namespace unit_test
 
 	void ShaderTest::update()
 	{
-				
+		
 	}
 
 	void ShaderTest::render()
@@ -107,36 +104,37 @@ namespace unit_test
 		auto& gfx = *graphics.canvas;
 		auto& wnd = *window;
 
+		auto& shader = *test_shader;
+
 		//std::sinf(milliseconds())
 		graphics.context->clear(0.1f, 0.33f, 0.25f, 1.0f, graphics::BufferType::Color|graphics::BufferType::Depth); // gfx
 
-		graphics.context->use(texture1, [this]()
+		graphics.context->use(shader, [&, this]()
 		{
-			graphics.context->use(texture2, [this]()
+			graphics.context->set_uniform(shader, "texture1", 0);
+			graphics.context->set_uniform(shader, "texture2", 1);
+
+			graphics.context->use(texture1, [&, this]()
 			{
-				graphics.context->use(*test_shader, [this]()
+				graphics.context->use(texture2, [&, this]()
 				{
-					graphics.context->use(cube, [this]()
+					graphics.context->use(quad, [&, this]()
 					{
-						texture1_sampler.upload();
-						texture2_sampler.upload();
+						uniforms.projection = glm::perspective(glm::radians(45.0f), window->horizontal_aspect_ratio(), 0.1f, 100.0f);
+						uniforms.view = glm::translate(math::mat4(1.0f), math::vec3(0.0f, 0.0f, -3.0f));
 
-						int width, height;
-
-						SDL_GetWindowSize(window->get_handle(), &width, &height);
-
-						projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
-						view = glm::translate(math::mat4(1.0f), math::vec3(0.0f, 0.0f, -3.0f));
-
-						glm::mat4 model = glm::mat4(1.0f);
-						model = glm::translate(model, math::vec3(0.0, 0.0, -2));
+						uniforms.model = glm::mat4(1.0f);
+						uniforms.model = glm::translate(uniforms.model.get_value(), math::vec3(0.0, 0.0, -2));
 
 						float angle = (3.0f) * (milliseconds() / 16);
 
-						model = glm::rotate(model, glm::radians(angle), glm::vec3(0.45f, 1.0f, 0.45f));
-						this->model = model;
+						uniforms.model = glm::rotate(uniforms.model.get_value(), glm::radians(angle), glm::vec3(0.45f, 1.0f, 0.45f));
 
 						//color = { std::sin(milliseconds()), 0.5, 0.5 };
+
+						graphics.context->update(shader, uniforms.projection);
+						graphics.context->update(shader, uniforms.view);
+						graphics.context->update(shader, uniforms.model);
 
 						graphics.context->draw();
 					});

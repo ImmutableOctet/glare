@@ -5,13 +5,10 @@
 
 namespace unit_test
 {
-	class ShaderTest : public app::GraphicsApplication
+	class DeferredTest : public app::GraphicsApplication
 	{
 		public:
 			ref<graphics::Shader> test_shader;
-			
-			graphics::Texture texture1;
-			graphics::Texture texture2;
 
 			struct
 			{
@@ -20,12 +17,9 @@ namespace unit_test
 				Uniform<math::mat4> model = {"model"};
 			} uniforms;
 
-			//graphics::ShaderVar<math::vec3> color;
+			ref<graphics::Model> loaded_model;
 
-			graphics::Mesh cube;
-			graphics::Mesh quad;
-
-			ShaderTest(bool auto_execute=true);
+			DeferredTest(bool auto_execute=true);
 
 			void update() override;
 			void render() override;

@@ -25,12 +25,6 @@ namespace unit_test
 			"assets/unit_tests/model_test/test.fs"
 		);
 
-		projection = Var<math::mat4>("projection", test_shader, {});
-		view       = Var<math::mat4>("view",       test_shader, {});
-		model      = Var<math::mat4>("model",      test_shader, {});
-
-		//color = {"color", test_shader, {}};
-
 		loaded_model = memory::allocate<graphics::Model>();
 
 		*loaded_model = graphics::Model::Load(graphics.context, "assets/unit_tests/model_test/sphere.obj");

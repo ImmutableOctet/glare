@@ -33,6 +33,9 @@ namespace graphics
 	class Mesh
 	{
 		public:
+			template <typename resource_t, typename bind_fn>
+			friend class BindOperation;
+
 			using Index = MeshIndex;
 			//using Vertex = VertexType;
 
@@ -52,6 +55,8 @@ namespace graphics
 				: context(ctx), composition(composition), primitive_type(primitive_type), vertex_count(vertex_count), vertex_offset(vertex_offset) {}
 
 			Mesh(const Mesh&) = delete;
+
+			virtual void on_bind(Context& context);
 		public:
 			inline ref<Context> get_context_ref() { return context.lock(); }
 			inline Context& get_context() { return *get_context_ref(); }
@@ -79,6 +84,8 @@ namespace graphics
 					data.vertices.size(), 0
 				);
 			}
+
+			static Mesh GenerateTexturedQuad(pass_ref<Context> ctx);
 
 			friend void swap(Mesh& x, Mesh& y);
 

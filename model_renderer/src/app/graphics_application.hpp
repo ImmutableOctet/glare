@@ -26,7 +26,7 @@ namespace app
 
 			Graphics graphics;
 
-			GraphicsApplication(const std::string& title, int width, int height)
-				: Application(), graphics(make_window(width, height, title)) {}
+			GraphicsApplication(const std::string& title, int width, int height, WindowFlags flags)
+				: Application(), graphics(make_window(width, height, title, flags)) {}
 	};
 }

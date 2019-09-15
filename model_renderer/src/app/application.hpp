@@ -4,7 +4,7 @@
 #include <atomic>
 #include <chrono>
 
-#include <types.hpp>
+#include "types.hpp"
 #include <util/lib.hpp>
 
 #include "input/input_handler.hpp"
@@ -45,7 +45,7 @@ namespace app
 		protected:
 			Application();
 
-			Window& make_window(int width, int height, const std::string& title="");
+			Window& make_window(int width, int height, const std::string& title="", WindowFlags flags=WindowFlags::Default);
 
 			time_point now() const;
 			duration time() const;
@@ -67,6 +67,8 @@ namespace app
 			// Stops all additional threads associated with the application.
 			// To ensure proper finalization, this should be executed after calling 'run'.
 			bool stop();
+
+			bool handle_events();
 
 			inline void execute()
 			{

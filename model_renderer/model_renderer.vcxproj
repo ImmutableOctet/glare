@@ -189,6 +189,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\graphics\texture.cpp" />
     <ClCompile Include="src\graphics\vertex.cpp" />
     <ClCompile Include="src\math\math.cpp" />
+    <ClCompile Include="src\unit_test\deferred_test.cpp" />
     <ClCompile Include="src\unit_test\model_test.cpp" />
     <ClCompile Include="src\unit_test\shader_test.cpp" />
     <ClCompile Include="src\util\io.cpp" />
@@ -206,6 +207,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\app\input\keyboard.hpp" />
     <ClInclude Include="src\app\input\mouse.hpp" />
     <ClInclude Include="src\app\input\types.hpp" />
+    <ClInclude Include="src\app\types.hpp" />
     <ClInclude Include="src\app\window.hpp" />
     <ClInclude Include="src\core.hpp" />
     <ClInclude Include="src\debug.hpp" />
@@ -229,9 +231,11 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\graphics\types.hpp" />
     <ClInclude Include="src\graphics\resource.hpp" />
     <ClInclude Include="src\graphics\shader.hpp" />
+    <ClInclude Include="src\graphics\uniform.hpp" />
     <ClInclude Include="src\graphics\vertex.hpp" />
     <ClInclude Include="src\math\math.hpp" />
     <ClInclude Include="src\types.hpp" />
+    <ClInclude Include="src\unit_test\deferred_test.hpp" />
     <ClInclude Include="src\unit_test\model_test.hpp" />
     <ClInclude Include="src\unit_test\shader_test.hpp" />
     <ClInclude Include="src\unit_test\vertex_element_types.cpp" />

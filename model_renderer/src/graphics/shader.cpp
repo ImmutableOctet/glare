@@ -19,11 +19,6 @@ namespace graphics
 		get_context()->release_shader(std::move(handle));
 	}
 
-	void Shader::on_bind(Context& context)
-	{
-		//update_uniforms();
-	}
-
 	// ShaderSource:
 	ShaderSource ShaderSource::Load(const std::string& vertex_path, const std::string& fragment_path)
 	{

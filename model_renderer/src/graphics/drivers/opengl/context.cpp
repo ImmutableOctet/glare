@@ -304,15 +304,144 @@ namespace graphics
 		glClear(buffer_flags);
 	}
 
+	void Context::set_viewport(int x, int y, int width, int height)
+	{
+		glViewport(x, y, width, height);
+	}
+
 	void Context::draw()
 	{
 		const Mesh& mesh = state->mesh;
 
-		const auto primitive_type = Driver::get_primitive(mesh.get_primitive());
+		draw(mesh.get_primitive());
+	}
+
+	void Context::draw(Primitive primitive)
+	{
+		const Mesh& mesh = state->mesh;
+
+		const auto primitive_type = Driver::get_primitive(primitive);
 		const auto offset = static_cast<GLint>(mesh.offset());
 		const auto count = static_cast<GLsizei>(mesh.size());
 
 		glDrawArrays(primitive_type, offset, count);
+	}
+
+	bool Context::set_uniform(Shader& shader, raw_string name, int value)
+	{
+		auto uniform = Driver::get_uniform(shader, name);
+
+		if (uniform == Driver::InvalidUniform)
+		{
+			return false;
+		}
+
+		glUniform1i(uniform, value);
+
+		return true;
+	}
+
+	bool Context::set_uniform(Shader& shader, raw_string name, float value)
+	{
+		auto uniform = Driver::get_uniform(shader, name);
+
+		if (uniform == Driver::InvalidUniform)
+		{
+			return false;
+		}
+
+		glUniform1f(uniform, value);
+
+		return true;
+	}
+
+	bool Context::set_uniform(Shader& shader, raw_string name, bool value)
+	{
+		return set_uniform(shader, name, static_cast<int>(value));
+	}
+
+	bool Context::set_uniform(Shader& shader, raw_string name, const math::Vector2D& value)
+	{
+		auto uniform = Driver::get_uniform(shader, name);
+
+		if (uniform == Driver::InvalidUniform)
+		{
+			return false;
+		}
+
+		glUniform2fv(uniform, 1, &value[0]);
+
+		return true;
+	}
+
+	bool Context::set_uniform(Shader& shader, raw_string name, const math::Vector3D& value)
+	{
+		auto uniform = Driver::get_uniform(shader, name);
+
+		if (uniform == Driver::InvalidUniform)
+		{
+			return false;
+		}
+
+		glUniform3fv(uniform, 1, &value[0]);
+
+		return true;
+	}
+
+	bool Context::set_uniform(Shader& shader, raw_string name, const math::Vector4D& value)
+	{
+		auto uniform = Driver::get_uniform(shader, name);
+
+		if (uniform == Driver::InvalidUniform)
+		{
+			return false;
+		}
+
+		glUniform4fv(uniform, 1, &value[0]);
+
+		return true;
+	}
+
+	bool Context::set_uniform(Shader& shader, raw_string name, const math::Matrix2x2& value)
+	{
+		auto uniform = Driver::get_uniform(shader, name);
+
+		if (uniform == Driver::InvalidUniform)
+		{
+			return false;
+		}
+
+		glUniformMatrix2fv(uniform, 1, GL_FALSE, &value[0][0]);
+
+		return true;
+	}
+
+	bool Context::set_uniform(Shader& shader, raw_string name, const math::Matrix3x3& value)
+	{
+		auto uniform = Driver::get_uniform(shader, name);
+
+		if (uniform == Driver::InvalidUniform)
+		{
+			return false;
+		}
+
+		glUniformMatrix3fv(uniform, 1, GL_FALSE, &value[0][0]);
+
+		return true;
+	}
+
+	bool Context::set_uniform(Shader& shader, raw_string name, const math::Matrix4x4& value)
+	{
+		auto uniform = Driver::get_uniform(shader, name);
+
+		if (uniform == Driver::InvalidUniform)
+		{
+			return false;
+		}
+
+		glUniformMatrix4fv(uniform, 1, GL_FALSE, &value[0][0]);
+
+		return true;
 	}
 
 	void Context::clear_textures()
@@ -537,122 +666,5 @@ namespace graphics
 	void Context::release_shader(Context::Handle&& handle)
 	{
 		glDeleteProgram(handle);
-	}
-
-	bool Context::set_uniform(Shader& shader, raw_string name, bool value)
-	{
-		return set_uniform(shader, name, static_cast<int>(value));
-	}
-
-	bool Context::set_uniform(Shader& shader, raw_string name, int value)
-	{
-		auto uniform = Driver::get_uniform(shader, name);
-
-		if (uniform == Driver::InvalidUniform)
-		{
-			return false;
-		}
-
-		glUniform1i(uniform, value);
-
-		return true;
-	}
-
-	bool Context::set_uniform(Shader& shader, raw_string name, float value)
-	{
-		auto uniform = Driver::get_uniform(shader, name);
-
-		if (uniform == Driver::InvalidUniform)
-		{
-			return false;
-		}
-
-		glUniform1f(uniform, value);
-
-		return true;
-	}
-	
-	bool Context::set_uniform(Shader& shader, raw_string name, const math::Vector2D& value)
-	{
-		auto uniform = Driver::get_uniform(shader, name);
-
-		if (uniform == Driver::InvalidUniform)
-		{
-			return false;
-		}
-
-		glUniform2fv(uniform, 1, &value[0]);
-
-		return true;
-	}
-
-	bool Context::set_uniform(Shader& shader, raw_string name, const math::Vector3D& value)
-	{
-		auto uniform = Driver::get_uniform(shader, name);
-
-		if (uniform == Driver::InvalidUniform)
-		{
-			return false;
-		}
-
-		glUniform3fv(uniform, 1, &value[0]);
-
-		return true;
-	}
-
-	bool Context::set_uniform(Shader& shader, raw_string name, const math::Vector4D& value)
-	{
-		auto uniform = Driver::get_uniform(shader, name);
-
-		if (uniform == Driver::InvalidUniform)
-		{
-			return false;
-		}
-
-		glUniform4fv(uniform, 1, &value[0]);
-
-		return true;
-	}
-
-	bool Context::set_uniform(Shader& shader, raw_string name, const math::Matrix2x2& value)
-	{
-		auto uniform = Driver::get_uniform(shader, name);
-
-		if (uniform == Driver::InvalidUniform)
-		{
-			return false;
-		}
-
-		glUniformMatrix2fv(uniform, 1, GL_FALSE, &value[0][0]);
-
-		return true;
-	}
-
-	bool Context::set_uniform(Shader& shader, raw_string name, const math::Matrix3x3& value)
-	{
-		auto uniform = Driver::get_uniform(shader, name);
-
-		if (uniform == Driver::InvalidUniform)
-		{
-			return false;
-		}
-
-		glUniformMatrix3fv(uniform, 1, GL_FALSE, &value[0][0]);
-
-		return true;
-	}
-
-	bool Context::set_uniform(Shader& shader, raw_string name, const math::Matrix4x4& value)
-	{
-		auto uniform = Driver::get_uniform(shader, name);
-
-		if (uniform == Driver::InvalidUniform)
-		{
-			return false;
-		}
-
-		glUniformMatrix4fv(uniform, 1, GL_FALSE, &value[0][0]);
-
-		return true;
 	}
 }

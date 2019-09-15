@@ -1,5 +1,6 @@
-#include "application.hpp"
+#include <sdl2/SDL_events.h>
 
+#include "application.hpp"
 #include "window.hpp"
 
 namespace app
@@ -28,11 +29,11 @@ namespace app
 		return !is_running();
 	}
 
-	Window& Application::make_window(int width, int height, const std::string& title)
+	Window& Application::make_window(int width, int height, const std::string& title, WindowFlags flags)
 	{
 		if (window == nullptr)
 		{
-			window = memory::unique<app::Window>(width, height, title);
+			window = memory::unique<app::Window>(width, height, title, flags);
 		}
 
 		return (*window);
@@ -42,16 +43,46 @@ namespace app
 	{
 		while (is_running())
 		{
-			if (!window->handle_events())
+			if (!handle_events())
 			{
 				stop();
 
-				break;
+				break; // return;
 			}
 
 			update();
 			render();
 		}
+	}
+
+	bool Application::handle_events()
+	{
+		SDL_Event event;
+
+		while (SDL_PollEvent(&event)) // SDL_WaitEvent
+		{
+			switch (event.type)
+			{
+				case SDL_QUIT:
+					return false;
+				case SDL_WINDOWEVENT:
+					const auto& window_event = event.window;
+
+					if (window->get_id() == window_event.windowID)
+					{
+						if (!window->handle_event(event, window_event))
+						{
+							return false;
+						}
+					}
+
+					break;
+				case SDL_KEYDOWN:
+					break;
+			}
+		}
+
+		return true;
 	}
 
 	Application::time_point Application::now() const
