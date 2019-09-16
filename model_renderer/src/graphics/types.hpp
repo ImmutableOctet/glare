@@ -63,7 +63,7 @@ namespace graphics
 	};
 
 	// NOTE: Support for texture flags is driver-dependent.
-	enum class TextureFlags
+	enum class TextureFlags : std::uint32_t
 	{
 		None               = (1 << 0),
 
@@ -72,7 +72,7 @@ namespace graphics
 		DepthStencilMap    = (1 << 2),
 
 		Default            = None,
-	};
+	}; FLAG_ENUM(std::uint32_t, TextureFlags);
 
 	enum class BufferType : std::uint32_t
 	{
@@ -80,40 +80,15 @@ namespace graphics
 		Depth = (1 << 1),
 
 		ColorDepth = (Color | Depth),
-	};
+	}; FLAG_ENUM(std::uint32_t, BufferType);
 
-	enum class ContextFlags
+	enum class ContextFlags : std::uint32_t
 	{
 		None             = (1 << 0),
 		DepthTest        = (1 << 1),
 
 		Default          = DepthTest,
-	};
+	}; FLAG_ENUM(std::uint32_t, ContextFlags);
 
 	using uniform_t = std::variant<int, float, bool, math::Vector2D, math::Vector3D, math::Vector4D, math::Matrix2x2, math::Matrix3x3, math::Matrix4x4>;
-
-	// Bitfield boilerplate:
-	inline std::uint32_t operator& (BufferType a, BufferType b) { return (std::uint32_t)((std::uint32_t)a & (std::uint32_t)b); }
-	inline BufferType operator~ (BufferType a) { return (BufferType)~(std::uint32_t)a; }
-	inline BufferType operator| (BufferType a, BufferType b) { return (BufferType)((std::uint32_t)a | (std::uint32_t)b); }
-	inline BufferType operator^ (BufferType a, BufferType b) { return (BufferType)((std::uint32_t)a ^ (std::uint32_t)b); }
-	inline BufferType& operator|= (BufferType& a, BufferType b) { return (BufferType&)((std::uint32_t&)a |= (std::uint32_t)b); }
-	inline BufferType& operator&= (BufferType& a, BufferType b) { return (BufferType&)((std::uint32_t&)a &= (std::uint32_t)b); }
-	inline BufferType& operator^= (BufferType& a, BufferType b) { return (BufferType&)((std::uint32_t&)a ^= (std::uint32_t)b); }
-
-	inline std::uint32_t operator& (TextureFlags a, TextureFlags b) { return (std::uint32_t)((std::uint32_t)a & (std::uint32_t)b); }
-	inline TextureFlags operator~ (TextureFlags a) { return (TextureFlags)~(std::uint32_t)a; }
-	inline TextureFlags operator| (TextureFlags a, TextureFlags b) { return (TextureFlags)((std::uint32_t)a | (std::uint32_t)b); }
-	inline TextureFlags operator^ (TextureFlags a, TextureFlags b) { return (TextureFlags)((std::uint32_t)a ^ (std::uint32_t)b); }
-	inline TextureFlags& operator|= (TextureFlags& a, TextureFlags b) { return (TextureFlags&)((std::uint32_t&)a |= (std::uint32_t)b); }
-	inline TextureFlags& operator&= (TextureFlags& a, TextureFlags b) { return (TextureFlags&)((std::uint32_t&)a &= (std::uint32_t)b); }
-	inline TextureFlags& operator^= (TextureFlags& a, TextureFlags b) { return (TextureFlags&)((std::uint32_t&)a ^= (std::uint32_t)b); }
-
-	inline std::uint32_t operator& (ContextFlags a, ContextFlags b) { return (std::uint32_t)((std::uint32_t)a & (std::uint32_t)b); }
-	inline ContextFlags operator~ (ContextFlags a) { return (ContextFlags)~(std::uint32_t)a; }
-	inline ContextFlags operator| (ContextFlags a, ContextFlags b) { return (ContextFlags)((std::uint32_t)a | (std::uint32_t)b); }
-	inline ContextFlags operator^ (ContextFlags a, ContextFlags b) { return (ContextFlags)((std::uint32_t)a ^ (std::uint32_t)b); }
-	inline ContextFlags& operator|= (ContextFlags& a, ContextFlags b) { return (ContextFlags&)((std::uint32_t&)a |= (std::uint32_t)b); }
-	inline ContextFlags& operator&= (ContextFlags& a, ContextFlags b) { return (ContextFlags&)((std::uint32_t&)a &= (std::uint32_t)b); }
-	inline ContextFlags& operator^= (ContextFlags& a, ContextFlags b) { return (ContextFlags&)((std::uint32_t&)a ^= (std::uint32_t)b); }
 }

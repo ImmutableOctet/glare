@@ -20,6 +20,8 @@ namespace app
 		public:
 			using Flags = WindowFlags;
 
+			static std::uint32_t to_native_window_flags(WindowFlags flags);
+
 			Window(int width, int height, const std::string& title="", WindowFlags flags=WindowFlags::Default);
 			~Window();
 

@@ -15,7 +15,7 @@
 namespace unit_test
 {
 	ModelTest::ModelTest(bool auto_execute)
-		: GraphicsApplication("Shader Test", 1600, 900)
+		: GraphicsApplication("Shader Test", 1600, 900, app::WindowFlags::OpenGL)
 	{
 		test_shader = memory::allocate<graphics::Shader>
 		(

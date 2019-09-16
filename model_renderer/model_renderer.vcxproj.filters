@@ -314,5 +314,8 @@
     <ClInclude Include="src\app\types.hpp">
       <Filter>Header Files\app</Filter>
     </ClInclude>
+    <ClInclude Include="src\util\bitfield.hpp">
+      <Filter>Header Files\util</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

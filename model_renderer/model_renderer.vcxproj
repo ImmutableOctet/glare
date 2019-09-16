@@ -240,6 +240,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\unit_test\shader_test.hpp" />
     <ClInclude Include="src\unit_test\vertex_element_types.cpp" />
     <ClInclude Include="src\util\algorithm.hpp" />
+    <ClInclude Include="src\util\bitfield.hpp" />
     <ClInclude Include="src\util\io.hpp" />
     <ClInclude Include="src\util\lib.hpp" />
     <ClInclude Include="src\util\memory.hpp" />

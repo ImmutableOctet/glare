@@ -66,6 +66,7 @@ namespace app
 				case SDL_QUIT:
 					return false;
 				case SDL_WINDOWEVENT:
+				{
 					const auto& window_event = event.window;
 
 					if (window->get_id() == window_event.windowID)
@@ -77,6 +78,7 @@ namespace app
 					}
 
 					break;
+				}
 				case SDL_KEYDOWN:
 					break;
 			}
