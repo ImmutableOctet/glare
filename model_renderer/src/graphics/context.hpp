@@ -33,6 +33,7 @@ namespace graphics
 	class Shader;
 	class Texture;
 	class Mesh;
+	class FrameBuffer;
 
 	enum Backend
 	{
@@ -52,10 +53,11 @@ namespace graphics
 			class Driver;
 
 			// Friends:
+			friend Driver;
 			friend Shader;
 			friend Texture;
+			friend FrameBuffer;
 			friend Mesh;
-			friend Driver;
 
 			// Types:
 			using Handle = ContextHandle;
@@ -94,6 +96,15 @@ namespace graphics
 			// Binds the mesh specified, returning
 			// a reference to the previously bound mesh.
 			Mesh& bind(Mesh& mesh);
+
+			/* 
+				Binds the framebuffer specified, returning
+				a reference to the previously bound buffer.
+				If 'read_only' is enabled, the buffer specified
+				will only be bound for read operations.
+			*/
+
+			FrameBuffer& bind(FrameBuffer& buffer, bool read_only=false);
 		public:
 			Context(app::Window& wnd, Backend gfx, Flags flags=Flags::Default);
 			~Context();
@@ -173,11 +184,24 @@ namespace graphics
 			// Texture related:
 
 			// TODO: Work-out mixed formats between input and native driver format.
-			Handle generate_texture(const PixelMap& texture_data, ElementType channel_type, TextureFlags flags);
+			Handle generate_texture(const PixelMap& texture_data, ElementType channel_type, TextureFlags flags=TextureFlags::Default, bool __keep_bound=true); // noexcept;
+			Handle generate_texture(int width, int height, TextureFormat format, ElementType channel_type, TextureFlags flags=TextureFlags::Default, bool __keep_bound=true); // noexcept;
+
+			void allocate_texture(int width, int height, TextureFormat texture_format, ElementType channel_type, const memory::raw_ptr raw_data=nullptr, bool _calculate_exact_format=true);
+
 			void release_texture(Handle&& handle);
 
 			// Shader related:
 			Handle build_shader(const ShaderSource& source) noexcept; // generate_shader(...)
 			void release_shader(Handle&& handle);
+
+			// Framebuffer related:
+			Handle generate_framebuffer(); // noexcept;
+			void release_framebuffer(Handle&& handle);
+
+			// Attaches a texture to the currently bound framebuffer.
+			// NOTE: The 'texture' reference must be non-const, as attaching it
+			// to the currently bound framebuffer would indicate mutation.
+			bool framebuffer_attachment(Texture& texture);
 	};
 }

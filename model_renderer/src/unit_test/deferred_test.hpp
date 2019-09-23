@@ -8,7 +8,15 @@ namespace unit_test
 	class DeferredTest : public app::GraphicsApplication
 	{
 		public:
-			ref<graphics::Shader> test_shader;
+			struct
+			{
+				graphics::Shader geometry_pass;
+				graphics::Shader lighting_pass;
+				graphics::Shader light_box;
+			} shaders;
+
+			graphics::Mesh screen_quad;
+			graphics::FrameBuffer gBuffer;
 
 			struct
 			{
@@ -17,7 +25,7 @@ namespace unit_test
 				Uniform<math::mat4> model = {"model"};
 			} uniforms;
 
-			ref<graphics::Model> loaded_model;
+			ref<graphics::Model> model;
 
 			DeferredTest(bool auto_execute=true);
 

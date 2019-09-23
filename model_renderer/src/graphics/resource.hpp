@@ -16,6 +16,7 @@ namespace graphics
 			template <typename resource_t, typename bind_fn>
 			friend class BindOperation;
 
+			// TODO: Review whether this should handle proper context-references instead.
 			weak_ref<Context> context;
 			ContextHandle handle;
 		public:

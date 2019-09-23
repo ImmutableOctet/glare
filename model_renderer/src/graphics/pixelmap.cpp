@@ -14,6 +14,40 @@ namespace graphics
 		stbi_image_free(raw_data);
 	}
 
+	int PixelMap::get_format_channels(TextureFormat format)
+	{
+		switch (format)
+		{
+			case TextureFormat::R:
+				return 1;
+			case TextureFormat::RG:
+				return 2;
+			case TextureFormat::RGB:
+				return 3;
+			case TextureFormat::RGBA:
+				return 4;
+		}
+
+		return 0;
+	}
+
+	TextureFormat PixelMap::get_format_for(int channels)
+	{
+		switch (channels)
+		{
+			case 1:
+				return TextureFormat::R;
+			case 2:
+				return TextureFormat::RG;
+			case 3:
+				return TextureFormat::RGB;
+			case 4:
+				return TextureFormat::RGBA;
+		}
+
+		return TextureFormat::Unknown;
+	}
+
 	PixelMap PixelMap::Load(const std::string& path, int desired_channels)
 	{
 		int width, height, color_channels;

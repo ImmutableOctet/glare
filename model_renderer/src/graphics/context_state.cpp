@@ -45,4 +45,32 @@ namespace graphics
 	{
 		return (get_flags() & check);
 	}
+
+	bool ContextState::bound(const Shader& shader)
+	{
+		return ((&(this->shader)) == (&shader));
+	}
+
+	bool ContextState::bound(const FrameBuffer& buffer)
+	{
+		return ((&(this->framebuffer)) == (&buffer));
+	}
+
+	bool ContextState::bound(const Mesh& mesh)
+	{
+		return ((&(this->mesh)) == (&mesh));
+	}
+
+	bool ContextState::bound(const Texture& texture)
+	{
+		for (auto* t_ptr : this->textures)
+		{
+			if (t_ptr == (&texture))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
 }

@@ -71,7 +71,14 @@ namespace graphics
 		DepthMap           = (1 << 1),
 		DepthStencilMap    = (1 << 2),
 
-		Default            = None,
+		LinearFiltering    = (1 << 3),
+		MipMap             = (1 << 4),
+		WrapS              = (1 << 5),
+		WrapT              = (1 << 6),
+		
+		WrapST             = (WrapS|WrapT),
+
+		Default            = (LinearFiltering|WrapST),
 	}; FLAG_ENUM(std::uint32_t, TextureFlags);
 
 	enum class BufferType : std::uint32_t
@@ -86,9 +93,20 @@ namespace graphics
 	{
 		None             = (1 << 0),
 		DepthTest        = (1 << 1),
+		FaceCulling      = (1 << 2),
 
-		Default          = DepthTest,
+		Default          = (DepthTest|FaceCulling),
 	}; FLAG_ENUM(std::uint32_t, ContextFlags);
+
+	enum class TextureFormat
+	{
+		Unknown = 0,
+
+		R,
+		RG,
+		RGB,
+		RGBA,
+	};
 
 	using uniform_t = std::variant<int, float, bool, math::Vector2D, math::Vector3D, math::Vector4D, math::Matrix2x2, math::Matrix3x3, math::Matrix4x4>;
 }

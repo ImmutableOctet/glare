@@ -180,6 +180,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\graphics\canvas.cpp" />
     <ClCompile Include="src\graphics\context_state.cpp" />
     <ClCompile Include="src\graphics\drivers\opengl\context.cpp" />
+    <ClCompile Include="src\graphics\framebuffer.cpp" />
     <ClCompile Include="src\graphics\material.cpp" />
     <ClCompile Include="src\graphics\mesh.cpp" />
     <ClCompile Include="src\graphics\model.cpp" />
@@ -221,6 +222,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\graphics\drivers\driver.hpp" />
     <ClInclude Include="src\graphics\drivers\drivers.hpp" />
     <ClInclude Include="src\graphics\drivers\opengl\driver.hpp" />
+    <ClInclude Include="src\graphics\framebuffer.hpp" />
     <ClInclude Include="src\graphics\graphics.hpp" />
     <ClInclude Include="src\graphics\material.hpp" />
     <ClInclude Include="src\graphics\mesh.hpp" />

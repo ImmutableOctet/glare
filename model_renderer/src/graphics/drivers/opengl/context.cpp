@@ -11,6 +11,7 @@
 #include <graphics/vertex.hpp>
 #include <graphics/canvas.hpp>
 #include <graphics/shader.hpp>
+#include <graphics/framebuffer.hpp>
 #include <graphics/texture.hpp>
 #include <graphics/pixelmap.hpp>
 
@@ -48,10 +49,66 @@ namespace graphics
 			// State:
 			GLenum texture_index = BASE_TEXTURE_INDEX;
 		public:
+			/*
+			struct texture_format_properties
+			{
+				GLenum element_type;
+				GLenum format;
+				GLenum layout;
+
+				int channels; // std::uint8_t
+			};
+			*/
+
 			// Utility Code:
 			static gl_uniform_location get_uniform(Shader& shader, raw_string name)
 			{
 				return glGetUniformLocation(shader.get_handle(), name);
+			}
+
+			// Applies texture flags to the currently bound texture.
+			static void apply_texture_flags(TextureFlags flags)
+			{
+				// Wrapping parameters:
+				if ((flags & TextureFlags::WrapS))
+				{
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+				}
+
+				if ((flags & TextureFlags::WrapT))
+				{
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+				}
+
+				// TODO: Review filtering behavior.
+
+				// Filtering parameters:
+				if ((flags & TextureFlags::LinearFiltering))
+				{
+					if ((flags & TextureFlags::MipMap))
+					{
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+					}
+					else
+					{
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+					}
+				}
+				else
+				{
+					if ((flags & TextureFlags::MipMap))
+					{
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+					}
+					else
+					{
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+					}
+				}
 			}
 
 			// Returns the native OpenGL equivalent of 'ElementType'.
@@ -73,11 +130,9 @@ namespace graphics
 				return GL_NONE;
 			}
 
-			// TODO: Look into 10-bit color options, etc:
-			static GLenum get_texture_format(const PixelMap& texture_data)
+			static GLenum get_format_from_channels(int channels)
 			{
-				// Check which color channels are enabled.
-				switch (texture_data.channels())
+				switch (channels)
 				{
 					case 1:
 						return GL_RED;
@@ -90,6 +145,63 @@ namespace graphics
 				}
 
 				return GL_NONE;
+			}
+
+			static int get_format_channels(TextureFormat format)
+			{
+				return PixelMap::get_format_channels(format);
+			}
+
+			// TODO: Review other potential formats if needed. (May already work as intended)
+			static GLenum get_texture_format(TextureFormat format, ElementType element_type, bool exact_format)
+			{
+				auto native_format_raw = get_format_from_channels(get_format_channels(format));
+
+				if (exact_format)
+				{
+					switch (native_format_raw)
+					{
+						case GL_RGB:
+							switch (element_type)
+							{
+								case ElementType::Half:
+									return GL_RGB16F;
+								case ElementType::Float:
+									return GL_RGB32F;
+							}
+
+							break;
+					}
+				}
+
+				return native_format_raw;
+			}
+
+			static GLenum get_texture_format(const PixelMap& texture_data, ElementType element_type, bool exact_format)
+			{
+				return get_texture_format(texture_data.format(), element_type, exact_format);
+			}
+
+			static GLenum get_texture_layout(TextureFormat format)
+			{
+				switch (format)
+				{
+					case TextureFormat::R:
+						return get_format_from_channels(1);
+					case TextureFormat::RG:
+						return get_format_from_channels(2);
+					case TextureFormat::RGB:
+						return get_format_from_channels(3);
+					case TextureFormat::RGBA:
+						return get_format_from_channels(4);
+				}
+
+				return GL_NONE;
+			}
+
+			static GLenum get_texture_layout(const PixelMap& texture_data)
+			{
+				return get_texture_layout(texture_data.format());
 			}
 
 			static GLenum get_primitive(Primitive primitive)
@@ -169,6 +281,15 @@ namespace graphics
 				// TODO: Look into compile-time maps.
 				// (Data driven solution vs. code driven solution)
 				handle_flag(state, flags, Flags::DepthTest, GL_DEPTH_TEST, value);
+
+				// Face culling:
+				if ((flags & Flags::FaceCulling))
+				{
+					// Discard back-faces, keep front-faces.
+					glCullFace(GL_BACK);
+				}
+
+				handle_flag(state, flags, Flags::FaceCulling, GL_CULL_FACE, value);
 
 				return state.get_flags();
 			}
@@ -506,6 +627,24 @@ namespace graphics
 		return prev_mesh;
 	}
 
+	FrameBuffer& Context::bind(FrameBuffer& buffer, bool read_only)
+	{
+		// Retrieve the currently bound mesh.
+		FrameBuffer& prev = state->framebuffer;
+
+		const auto& native_rep = buffer.get_handle();
+
+		const GLenum target = ((read_only) ? GL_READ_FRAMEBUFFER : GL_FRAMEBUFFER);
+
+		glBindFramebuffer(target, native_rep);
+
+		// Assign the newly bound mesh.
+		state->framebuffer = buffer;
+
+		// Return the previously bound mesh.
+		return prev;
+	}
+
 	// Mesh related:
 	MeshComposition Context::generate_mesh(memory::memory_view vertices, std::size_t vertex_size, memory::array_view<VertexAttribute> attributes, memory::array_view<MeshIndex> indices) noexcept
 	{
@@ -584,7 +723,7 @@ namespace graphics
 	}
 
 	// Texture related:
-	Context::Handle Context::generate_texture(const PixelMap& texture_data, ElementType channel_type, TextureFlags flags)
+	Context::Handle Context::generate_texture(const PixelMap& texture_data, ElementType channel_type, TextureFlags flags, bool __keep_bound)
 	{
 		ASSERT(texture_data);
 
@@ -598,32 +737,61 @@ namespace graphics
 		// TODO: Add support for non-2D textures. (1D, 3D, etc)
 		glBindTexture(GL_TEXTURE_2D, texture);
 
-		// TODO: Add texture flag support:
+		// Apply texture flags:
+		Driver::apply_texture_flags(flags);
 
-		// Wrapping parameters:
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		/*
+			// TODO: Review behavior for Depth and Stencil buffers.
+			bool is_depth_map = ((flags & TextureFlags::DepthMap));
 
-		// Filtering parameters:
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // GL_NEAREST
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // GL_NEAREST
+			// For now, Depth maps are not supported.
+			ASSERT(!is_depth_map);
+		*/
 
-		// TODO: Review behavior for Depth and Stencil buffers.
-		bool is_depth_map = ((flags & TextureFlags::DepthMap));
+		allocate_texture(texture_data.width(), texture_data.height(), texture_data.format(), channel_type, texture_data.data(), false); // true;
 
-		// For now, Depth maps are not supported.
-		ASSERT(!is_depth_map);
+		if ((flags & TextureFlags::MipMap))
+		{
+			glGenerateMipmap(GL_TEXTURE_2D);
+		}
 
-		// TODO: Greater-than 8-bit textures.
-		const auto texture_format = Driver::get_texture_format(texture_data);
-		const auto element_type = Driver::get_element_type(channel_type);
-
-		glTexImage2D(GL_TEXTURE_2D, 0, texture_format, texture_data.width(), texture_data.height(), 0, texture_format, element_type, texture_data.data());
-
-		// TODO: Implement mip-mapping as a texture flag.
-		glGenerateMipmap(GL_TEXTURE_2D);
+		if (!__keep_bound)
+		{
+			glBindTexture(GL_TEXTURE_2D, 0);
+		}
 
 		return texture;
+	}
+
+	Context::Handle Context::generate_texture(int width, int height, TextureFormat format, ElementType element_type, TextureFlags flags, bool __keep_bound)
+	{
+		Handle texture = NoHandle;
+
+		glGenTextures(1, &texture);
+
+		// TODO: Add support for non-2D textures. (1D, 3D, etc)
+		glBindTexture(GL_TEXTURE_2D, texture);
+
+		// Apply texture flags.
+		Driver::apply_texture_flags(flags);
+
+		allocate_texture(width, height, format, element_type);
+
+		if (!__keep_bound)
+		{
+			glBindTexture(GL_TEXTURE_2D, 0);
+		}
+
+		return texture;
+	}
+
+	void Context::allocate_texture(int width, int height, TextureFormat format, ElementType channel_type, const memory::raw_ptr raw_data, bool _calculate_exact_format)
+	{
+		const auto texture_format = Driver::get_texture_format(format, channel_type, _calculate_exact_format);
+		const auto texture_layout = Driver::get_texture_layout(format);
+		const auto element_type = Driver::get_element_type(channel_type);
+
+		glTexImage2D(GL_TEXTURE_2D, 0, texture_format, width, height, 0, texture_layout, element_type, raw_data);
 	}
 
 	void Context::release_texture(Handle&& handle)
@@ -666,5 +834,35 @@ namespace graphics
 	void Context::release_shader(Context::Handle&& handle)
 	{
 		glDeleteProgram(handle);
+	}
+
+	// Framebuffer related:
+	Context::Handle Context::generate_framebuffer()
+	{
+		GLuint buffer = NoHandle;
+
+		glGenFramebuffers(1, &buffer);
+
+		return buffer;
+	}
+
+	void Context::release_framebuffer(Context::Handle&& handle)
+	{
+		glDeleteFramebuffers(1, &handle);
+	}
+
+	bool Context::framebuffer_attachment(Texture& texture)
+	{
+		FrameBuffer& framebuffer = state->framebuffer;
+		const auto attachment_index = framebuffer.get_attachment_index();
+
+		const auto texture_handle = texture.get_handle();
+		const auto buffer_handle = framebuffer.get_handle();
+
+		glFramebufferTexture2D(GL_FRAMEBUFFER, (GL_COLOR_ATTACHMENT0 + attachment_index), GL_TEXTURE_2D, texture_handle, 0);
+
+		framebuffer.attachments.push_back(texture);
+
+		return true;
 	}
 }

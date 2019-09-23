@@ -4,6 +4,7 @@
 
 namespace memory
 {
+	using raw_ptr    = void*;
 	using raw_string = const char*;
 
 	template <typename T>

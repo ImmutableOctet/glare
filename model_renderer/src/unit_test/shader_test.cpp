@@ -106,6 +106,12 @@ namespace unit_test
 
 		auto& shader = *test_shader;
 
+		int width, height;
+
+		window->get_size(width, height);
+
+		graphics.context->set_viewport(0, 0, width, height);
+
 		//std::sinf(milliseconds())
 		graphics.context->clear(0.1f, 0.33f, 0.25f, 1.0f, graphics::BufferType::Color|graphics::BufferType::Depth); // gfx
 
@@ -121,7 +127,7 @@ namespace unit_test
 					graphics.context->use(quad, [&, this]()
 					{
 						uniforms.projection = glm::perspective(glm::radians(45.0f), window->horizontal_aspect_ratio(), 0.1f, 100.0f);
-						uniforms.view = glm::translate(math::mat4(1.0f), math::vec3(0.0f, 0.0f, -3.0f));
+						uniforms.view = glm::translate(math::mat4(1.0f), math::vec3(0.0f, 0.0f, -4.0f));
 
 						uniforms.model = glm::mat4(1.0f);
 						uniforms.model = glm::translate(uniforms.model.get_value(), math::vec3(0.0, 0.0, -2));

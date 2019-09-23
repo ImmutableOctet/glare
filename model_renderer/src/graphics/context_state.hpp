@@ -5,6 +5,7 @@
 
 #include "types.hpp"
 #include "shader.hpp"
+#include "framebuffer.hpp"
 #include "texture.hpp"
 #include "mesh.hpp"
 
@@ -29,6 +30,7 @@ namespace graphics
 			Flags flags = Flags::Default;
 
 			defaultable_ref<Shader> shader;
+			defaultable_ref<FrameBuffer> framebuffer;
 			defaultable_ref<Mesh> mesh;
 
 			std::vector<Texture*> textures; // std::stack<Texture>
@@ -44,6 +46,18 @@ namespace graphics
 			inline Flags get_flags() const { return flags; }
 
 			bool enabled(Flags check) const;
+
+			// Returns 'true' if the resource specified is currently bound.
+			bool bound(const Shader& shader);
+
+			// Returns 'true' if the resource specified is currently bound.
+			bool bound(const FrameBuffer& buffer);
+
+			// Returns 'true' if the resource specified is currently bound.
+			bool bound(const Mesh& mesh);
+
+			// Returns 'true' if the resource specified is currently bound.
+			bool bound(const Texture& texture);
 		protected:
 			void default_all();
 	};

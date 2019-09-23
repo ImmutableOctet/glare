@@ -30,8 +30,11 @@ class defaultable_ref
 	private:
 		T default_value = T();
 	public:
-		T* ptr = &default_value;
-		
+		T* ptr = nullptr;
+
+		inline defaultable_ref() : defaultable_ref(default_value) {}
+		inline defaultable_ref(T& value) : ptr(&value) {}
+
 		inline operator T&() const
 		{
 			return *ptr;

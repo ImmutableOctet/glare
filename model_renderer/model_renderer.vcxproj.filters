@@ -165,6 +165,9 @@
     <ClCompile Include="src\unit_test\deferred_test.cpp">
       <Filter>Source Files\Unit Tests</Filter>
     </ClCompile>
+    <ClCompile Include="src\graphics\framebuffer.cpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\graphics\graphics.hpp">
@@ -316,6 +319,9 @@
     </ClInclude>
     <ClInclude Include="src\util\bitfield.hpp">
       <Filter>Header Files\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\framebuffer.hpp">
+      <Filter>Header Files\graphics</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

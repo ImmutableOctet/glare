@@ -15,9 +15,26 @@
 namespace unit_test
 {
 	DeferredTest::DeferredTest(bool auto_execute)
-		: GraphicsApplication("Shader Test", 1600, 900)
+		: GraphicsApplication("Deferred Shading", 1600, 900)
 	{
-		test_shader = memory::allocate<graphics::Shader>(graphics.context, "assets/unit_tests/shader_test/test.vs", "assets/unit_tests/shader_test/test.fs");
+		static const std::string asset_folder = "assets/unit_tests/deferred_test/";
+
+		shaders.geometry_pass = graphics::Shader(graphics.context, (asset_folder + "g_buffer.vs"), (asset_folder + "g_buffer.fs"));
+		shaders.lighting_pass = graphics::Shader(graphics.context, (asset_folder + "deferred_shading.vs"), (asset_folder + "deferred_shading.fs"));
+		shaders.light_box     = graphics::Shader(graphics.context, (asset_folder + "deferred_light_box.vs"), (asset_folder + "deferred_light_box.fs"));
+
+		screen_quad = graphics::Mesh::GenerateTexturedQuad(graphics.context);
+
+		gBuffer = graphics::FrameBuffer(graphics.context);
+
+		graphics.context->use(gBuffer, []()
+		{
+			//gBuffer.attach();
+		});
+
+		model = memory::allocate<graphics::Model>();
+		
+		*model = std::move(graphics::Model::Load(graphics.context, asset_folder + "nanosuit/nanosuit.obj"));
 
 		if (auto_execute)
 		{
@@ -35,8 +52,6 @@ namespace unit_test
 		auto& gfx = *graphics.canvas;
 		auto& wnd = *window;
 
-		auto& shader = *test_shader;
-
 		int width, height;
 
 		window->get_size(width, height);
@@ -45,6 +60,6 @@ namespace unit_test
 
 		graphics.context->clear(0.1f, 0.33f, 0.25f, 1.0f, graphics::BufferType::Color | graphics::BufferType::Depth); // gfx
 
-		gfx.flip(wnd);
+		graphics.context->flip(wnd);
 	}
 }

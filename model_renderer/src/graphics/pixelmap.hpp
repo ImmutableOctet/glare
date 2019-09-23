@@ -23,11 +23,16 @@ namespace graphics
 		public:
 			friend Texture;
 
+			static int get_format_channels(TextureFormat format);
+			static TextureFormat get_format_for(int channels);
+
 			static PixelMap Load(const std::string& path, int color_channels=0);
 
 			inline int width()    const { return image_width;    }
 			inline int height()   const { return image_height;   }
 			inline int channels() const { return image_channels; }
+
+			inline TextureFormat format() const { return get_format_for(channels()); }
 
 			inline int size() const { return (width() * height() * channels()); }
 			inline const RawPtr data() const { return raw_data; }

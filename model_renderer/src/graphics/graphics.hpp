@@ -11,4 +11,5 @@
 #include "canvas.hpp"
 #include "mesh.hpp"
 #include "material.hpp"
+#include "framebuffer.hpp"
 #include "model.hpp"
