@@ -266,3 +266,4 @@ __pycache__/
 *.i
 /model_renderer/assets/unit_tests/model_test/Stage.b3d
 /model_renderer/assets/unit_tests/deferred_test/nanosuit
+/model_renderer/assets/unit_tests/model_test/Checkpoint

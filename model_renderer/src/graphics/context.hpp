@@ -34,6 +34,7 @@ namespace graphics
 	class Texture;
 	class Mesh;
 	class FrameBuffer;
+	class RenderBuffer;
 
 	enum Backend
 	{
@@ -57,6 +58,7 @@ namespace graphics
 			friend Shader;
 			friend Texture;
 			friend FrameBuffer;
+			friend RenderBuffer;
 			friend Mesh;
 
 			// Types:
@@ -149,6 +151,8 @@ namespace graphics
 				auto op = use(resource);
 
 				exec();
+
+				// ~op executes here.
 			}
 
 			// Draw using the currently bound 'Mesh' object.
@@ -191,6 +195,8 @@ namespace graphics
 
 			void release_texture(Handle&& handle);
 
+			void resize_texture(Texture& texture, int width, int height);
+
 			// Shader related:
 			Handle build_shader(const ShaderSource& source) noexcept; // generate_shader(...)
 			void release_shader(Handle&& handle);
@@ -203,5 +209,15 @@ namespace graphics
 			// NOTE: The 'texture' reference must be non-const, as attaching it
 			// to the currently bound framebuffer would indicate mutation.
 			bool framebuffer_attachment(Texture& texture);
+			
+			// TODO: Look into alternatives to making this public.
+			// Links the current framebuffer to its attachments.
+			bool framebuffer_link_attachments();
+
+			// Renderbuffer related:
+			Handle generate_renderbuffer(RenderBufferType type, int width, int height);
+			Handle generate_renderbuffer(RenderBufferType type, int width, int height, TextureFormat format, ElementType element_type);
+
+			void release_renderbuffer(Handle&& handle);
 	};
 }

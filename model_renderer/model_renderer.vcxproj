@@ -22,32 +22,32 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{F89C24DB-2B38-4899-854E-79FC5DD83CB5}</ProjectGuid>
     <RootNamespace>modelrenderer</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -70,19 +70,19 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>Q:\Projects\model_renderer\model_renderer\src;Q:\Projects\model_renderer\model_renderer\dependencies\include;$(IncludePath)</IncludePath>
+    <IncludePath>Q:\Projects\model_renderer\model_renderer\src;Q:\Projects\model_renderer\model_renderer\dependencies\include; Q:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;$(IncludePath)</IncludePath>
     <LibraryPath>Q:\Projects\model_renderer\model_renderer\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>Q:\Projects\model_renderer\model_renderer\src;Q:\Projects\model_renderer\model_renderer\dependencies\include;$(IncludePath)</IncludePath>
+    <IncludePath>Q:\Projects\model_renderer\model_renderer\src;Q:\Projects\model_renderer\model_renderer\dependencies\include; Q:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;$(IncludePath)</IncludePath>
     <LibraryPath>Q:\Projects\model_renderer\model_renderer\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>Q:\Projects\model_renderer\model_renderer\src;Q:\Projects\model_renderer\model_renderer\dependencies\include;$(IncludePath)</IncludePath>
+    <IncludePath>Q:\Projects\model_renderer\model_renderer\src;Q:\Projects\model_renderer\model_renderer\dependencies\include; Q:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;$(IncludePath)</IncludePath>
     <LibraryPath>Q:\Projects\model_renderer\model_renderer\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>Q:\Projects\model_renderer\model_renderer\src;Q:\Projects\model_renderer\model_renderer\dependencies\include;$(IncludePath)</IncludePath>
+    <IncludePath>Q:\Projects\model_renderer\model_renderer\src;Q:\Projects\model_renderer\model_renderer\dependencies\include; Q:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;$(IncludePath)</IncludePath>
     <LibraryPath>Q:\Projects\model_renderer\model_renderer\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -185,6 +185,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\graphics\mesh.cpp" />
     <ClCompile Include="src\graphics\model.cpp" />
     <ClCompile Include="src\graphics\pixelmap.cpp" />
+    <ClCompile Include="src\graphics\renderbuffer.cpp" />
     <ClCompile Include="src\graphics\resource.cpp" />
     <ClCompile Include="src\graphics\shader.cpp" />
     <ClCompile Include="src\graphics\texture.cpp" />
@@ -229,6 +230,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\graphics\model.hpp" />
     <ClInclude Include="src\graphics\native\opengl.hpp" />
     <ClInclude Include="src\graphics\pixelmap.hpp" />
+    <ClInclude Include="src\graphics\renderbuffer.hpp" />
     <ClInclude Include="src\graphics\texture.hpp" />
     <ClInclude Include="src\graphics\types.hpp" />
     <ClInclude Include="src\graphics\resource.hpp" />
@@ -248,6 +250,10 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\util\memory.hpp" />
     <ClInclude Include="src\util\shorthand.hpp" />
     <ClInclude Include="src\util\util.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="assets\unit_tests\model_test\test.fs" />
+    <None Include="assets\unit_tests\model_test\test.vs" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

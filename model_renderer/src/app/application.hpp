@@ -9,6 +9,9 @@
 
 #include "input/input_handler.hpp"
 
+// SDL:
+struct SDL_KeyboardEvent;
+
 namespace app
 {
 	class Window;
@@ -19,6 +22,8 @@ namespace app
 		public:
 			using time_point = std::chrono::time_point<std::chrono::system_clock>;
 			using duration = std::chrono::system_clock::duration;
+
+			using keyboard_event_t = SDL_KeyboardEvent;
 		protected:
 			friend EventHandler;
 
@@ -41,6 +46,9 @@ namespace app
 			std::chrono::time_point<std::chrono::system_clock> start_point;
 			std::chrono::time_point<std::chrono::system_clock> stop_point;
 
+			std::uint64_t update_counter = 0;
+			std::uint64_t render_counter = 0;
+
 			//input::InputHandler input;
 		protected:
 			Application();
@@ -55,6 +63,9 @@ namespace app
 
 			virtual void update() abstract;
 			virtual void render() abstract;
+
+			virtual void on_keydown(const keyboard_event_t& event);
+			virtual void on_keyup(const keyboard_event_t& event);
 		public:
 			inline bool is_running() const { return running; }
 
@@ -70,12 +81,7 @@ namespace app
 
 			bool handle_events();
 
-			inline void execute()
-			{
-				start();
-				run();
-				stop();
-			}
+			void execute();
 		private:
 			void retrieve_start_time();
 			void retrieve_stop_time();

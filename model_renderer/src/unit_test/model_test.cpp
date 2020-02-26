@@ -7,6 +7,8 @@
 #include <graphics/native/opengl.hpp>
 
 #include <sdl2/SDL_video.h>
+#include <sdl2/SDL_hints.h>
+#include <sdl2/SDL_mouse.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -27,7 +29,10 @@ namespace unit_test
 
 		loaded_model = memory::allocate<graphics::Model>();
 
-		*loaded_model = graphics::Model::Load(graphics.context, "assets/unit_tests/model_test/sphere.obj");
+		*loaded_model = graphics::Model::Load(graphics.context, "assets/unit_tests/model_test/checkpoint/checkpoint.b3d"); // "stage.obj"
+
+		SDL_SetHintWithPriority(SDL_HINT_MOUSE_RELATIVE_MODE_WARP, "1", SDL_HINT_OVERRIDE);
+		SDL_SetRelativeMouseMode(SDL_TRUE);
 
 		if (auto_execute)
 		{
@@ -37,7 +42,11 @@ namespace unit_test
 
 	void ModelTest::update()
 	{
-				
+		int x, y;
+
+		auto buttons = SDL_GetRelativeMouseState(&x, &y);
+
+		std::cout << x << ", " << y << '\n';
 	}
 
 	void ModelTest::render()
@@ -54,8 +63,8 @@ namespace unit_test
 
 		graphics.context->use(*test_shader, [this]()
 		{
-			projection = glm::perspective(glm::radians(45.0f), window->horizontal_aspect_ratio(), 0.1f, 100.0f);
-			view = glm::translate(math::mat4(1.0f), math::vec3(0.0f, 0.0f, -10.0f));
+			this->uniforms.projection = glm::perspective(glm::radians(75.0f), window->horizontal_aspect_ratio(), 0.1f, 1000.0f);
+			this->uniforms.view = glm::translate(math::mat4(1.0f), math::vec3(0.0f, 0.0f, -1.0f));
 
 			//graphics.canvas.draw(*loaded_model);
 
@@ -66,12 +75,19 @@ namespace unit_test
 				graphics.context->use(mesh, [this]()
 				{
 					glm::mat4 model = glm::mat4(1.0f);
-					model = glm::translate(model, math::vec3(0.0, 0.0, -2));
+					model = glm::translate(model, math::vec3(0.0, 0.0, -40.0));
 
-					float angle = (3.0f) * (milliseconds() / 16);
+					float angle = 45.0f; // (3.0f)* (milliseconds() / 16);
 
-					model = glm::rotate(model, glm::radians(angle), glm::vec3(0.45f, 1.0f, 0.45f));
-					this->model = model;
+					//model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.1f, 0.0f));
+
+					//model = glm::scale(model, {0.1, 0.1, 0.1});
+					
+					this->uniforms.model = model;
+
+					graphics.context->update(*test_shader, uniforms.projection);
+					graphics.context->update(*test_shader, uniforms.view);
+					graphics.context->update(*test_shader, uniforms.model);
 
 					//color = { std::sin(milliseconds()), 0.5, 0.5 };
 

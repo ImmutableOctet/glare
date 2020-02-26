@@ -1,6 +1,7 @@
 #pragma once
 
 #include <debug.hpp>
+#include <memory>
 
 namespace memory
 {

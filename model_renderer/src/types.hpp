@@ -35,6 +35,11 @@ class defaultable_ref
 		inline defaultable_ref() : defaultable_ref(default_value) {}
 		inline defaultable_ref(T& value) : ptr(&value) {}
 
+		inline bool is_default() const
+		{
+			return (ptr == (&default_value));
+		}
+
 		inline operator T&() const
 		{
 			return *ptr;

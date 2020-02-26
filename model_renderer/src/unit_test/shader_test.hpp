@@ -2,6 +2,9 @@
 
 #include <core.hpp>
 #include <math/math.hpp>
+#include <glm/fwd.hpp>
+
+//#include <sdl2/SDL_stdinc.h>
 
 namespace unit_test
 {
@@ -25,9 +28,16 @@ namespace unit_test
 			graphics::Mesh cube;
 			graphics::Mesh quad;
 
+			const std::uint8_t* key_state = nullptr;
+
+			//glm::quat rotation;
+
 			ShaderTest(bool auto_execute=true);
 
 			void update() override;
 			void render() override;
+
+			virtual void on_keydown(const keyboard_event_t& event) override;
+			virtual void on_keyup(const keyboard_event_t& event) override;
 	};
 }

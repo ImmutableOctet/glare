@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "context.hpp"
 #include "context_state.hpp"
 
@@ -6,16 +8,23 @@
 namespace graphics
 {
 	// FrameBuffer:
-	FrameBuffer::FrameBuffer(weak_ref<Context> ctx, ContextHandle&& handle)
-		: Resource(ctx, std::move(handle)) {}
+	FrameBuffer::FrameBuffer()
+		: Resource({}, {}) {}
 
 	FrameBuffer::FrameBuffer(pass_ref<Context> ctx)
-		: FrameBuffer(ctx, ctx->generate_framebuffer()) {}
+		: Resource(ctx, ctx->generate_framebuffer()) {}
 
 	FrameBuffer::~FrameBuffer()
 	{
+		auto ctx = get_context();
+
+		if (!ctx)
+		{
+			return;
+		}
+
 		// TODO: Implement framebuffer destruction.
-		get_context()->release_framebuffer(std::move(handle));
+		ctx->release_framebuffer(std::move(handle));
 	}
 
 	bool FrameBuffer::attach(Texture& texture)
@@ -31,6 +40,65 @@ namespace graphics
 		return ctx->framebuffer_attachment(texture);
 	}
 
+	bool FrameBuffer::attach(RenderBufferType type, int width, int height)
+	{
+		auto ctx = get_context();
+
+		// Ensure that this framebuffer is appropriately bound.
+		if (!ctx->state->bound(*this))
+		{
+			return false;
+		}
+
+		return attach(RenderBuffer(ctx, type, width, height));
+	}
+
+	bool FrameBuffer::attach(RenderBuffer&& buffer)
+	{
+		auto ctx = get_context();
+
+		// Ensure that this framebuffer is appropriately bound.
+		if (!ctx->state->bound(*this))
+		{
+			return false;
+		}
+
+		render_buffers.push_back(std::move(buffer));
+
+		return true;
+	}
+
+	bool FrameBuffer::link()
+	{
+		auto ctx = get_context();
+
+		// Ensure that this framebuffer is appropriately bound.
+		if (!ctx->state->bound(*this))
+		{
+			return false;
+		}
+
+		return ctx->framebuffer_link_attachments();
+	}
+
+	bool FrameBuffer::resize(int width, int height)
+	{
+		auto ctx = get_context();
+
+		// Ensure that this framebuffer is appropriately bound.
+		if (!ctx->state->bound(*this))
+		{
+			return false;
+		}
+
+		for (auto& texture : attachments)
+		{
+			ctx->resize_texture(texture, width, height);
+		}
+
+		return true;
+	}
+
 	// This method returns the next index used for texture attachment.
 	unsigned int FrameBuffer::get_attachment_index() const
 	{
@@ -42,5 +110,6 @@ namespace graphics
 		swap(static_cast<Resource&>(x), static_cast<Resource&>(y));
 
 		swap(x.attachments, y.attachments);
+		swap(x.attachment_indices, y.attachment_indices);
 	}
 }

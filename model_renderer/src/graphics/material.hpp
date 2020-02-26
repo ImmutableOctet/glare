@@ -4,6 +4,7 @@
 #include "types.hpp"
 
 #include "shader.hpp"
+#include "texture.hpp"
 
 namespace graphics
 {
@@ -20,6 +21,7 @@ namespace graphics
 			Material(pass_ref<Shader> shader);
 	};
 
+	// Forward renderer:
 	class ForwardMaterial : public Material
 	{
 		public:
@@ -32,5 +34,10 @@ namespace graphics
 
 			float shininess; // = 40.0f;
 			float alpha; // = 1.0f;
+
+			ref<Texture> color_map;
+			ref<Texture> detail_map;
+			ref<Texture> alpha_map;
+			ref<Texture> bump_map;
 	};
 }

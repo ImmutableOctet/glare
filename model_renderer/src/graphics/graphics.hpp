@@ -12,4 +12,5 @@
 #include "mesh.hpp"
 #include "material.hpp"
 #include "framebuffer.hpp"
+#include "renderbuffer.hpp"
 #include "model.hpp"

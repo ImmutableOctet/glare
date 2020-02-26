@@ -1,4 +1,5 @@
 #include <sdl2/SDL_events.h>
+#include <iostream>
 
 #include "application.hpp"
 #include "window.hpp"
@@ -50,8 +51,8 @@ namespace app
 				break; // return;
 			}
 
-			update();
-			render();
+			update(); update_counter++;
+			render(); render_counter++;
 		}
 	}
 
@@ -80,11 +81,43 @@ namespace app
 					break;
 				}
 				case SDL_KEYDOWN:
+					on_keydown(event.key);
+
+					break;
+				case SDL_KEYUP:
+					on_keyup(event.key);
+
 					break;
 			}
 		}
 
 		return true;
+	}
+
+	void Application::execute()
+	{
+		std::cout << "Executing start-up procedure...\n";
+
+		start();
+
+		std::cout << "Running...\n";
+
+		run();
+
+		std::cout << "Shutting down...\n";
+
+		stop();
+
+		std::cout << "Done.\n";
+	}
+
+	void Application::on_keydown(const keyboard_event_t& event)
+	{
+	}
+
+	void Application::on_keyup(const keyboard_event_t& event)
+	{
+		
 	}
 
 	Application::time_point Application::now() const

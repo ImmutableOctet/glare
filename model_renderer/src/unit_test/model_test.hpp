@@ -14,6 +14,13 @@ namespace unit_test
 			math::mat4 view;
 			math::mat4 model;
 
+			struct
+			{
+				Uniform<math::mat4> projection = { "projection" };
+				Uniform<math::mat4> view = { "view" };
+				Uniform<math::mat4> model = { "model" };
+			} uniforms;
+
 			ref<graphics::Model> loaded_model;
 
 			ModelTest(bool auto_execute=true);

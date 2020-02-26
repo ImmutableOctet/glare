@@ -14,16 +14,19 @@ namespace graphics
 
 	class Texture : public Resource
 	{
+		protected:
+			int width, height;
+
+			TextureFormat format;
+			ElementType element_type;
+			TextureFlags flags;
 		public:
 			friend Context;
 			friend ContextState;
 
 			using Flags = TextureFlags;
 
-			inline friend void swap(Texture& x, Texture& y)
-			{
-				swap(static_cast<Resource&>(x), static_cast<Resource&>(y));
-			}
+			friend void swap(Texture& x, Texture& y);
 
 			Texture(pass_ref<Context> ctx, const std::string& path, Flags flags=Flags::Default);
 			Texture(pass_ref<Context> ctx, const PixelMap& data, Flags flags=Flags::Default);
@@ -31,7 +34,7 @@ namespace graphics
 			
 			Texture(Texture&& texture) : Texture() { swap(*this, texture); }
 
-			inline Texture() : Texture({}, {}) {}
+			inline Texture() : Texture({}, {}, 0, 0, TextureFormat::Unknown, ElementType::Unknown, TextureFlags::None) {}
 
 			Texture(const Texture&) = delete;
 
@@ -43,7 +46,14 @@ namespace graphics
 
 				return *this;
 			}
+
+			inline int get_width() const { return width; }
+			inline int get_height() const { return height; }
+
+			inline TextureFormat get_format() const { return format; }
+			inline ElementType get_element_type() const { return element_type; }
+			inline TextureFlags get_flags() const { return flags;  }
 		protected:
-			Texture(weak_ref<Context> ctx, ContextHandle&& resource_handle);
+			Texture(weak_ref<Context> ctx, ContextHandle&& resource_handle, int width, int height, TextureFormat format, ElementType element_type, TextureFlags flags);
 	};
 }

@@ -12,6 +12,7 @@
 #include <graphics/canvas.hpp>
 #include <graphics/shader.hpp>
 #include <graphics/framebuffer.hpp>
+#include <graphics/renderbuffer.hpp>
 #include <graphics/texture.hpp>
 #include <graphics/pixelmap.hpp>
 
@@ -155,7 +156,8 @@ namespace graphics
 			// TODO: Review other potential formats if needed. (May already work as intended)
 			static GLenum get_texture_format(TextureFormat format, ElementType element_type, bool exact_format)
 			{
-				auto native_format_raw = get_format_from_channels(get_format_channels(format));
+				//auto native_format_raw = get_format_from_channels(get_format_channels(format));
+				auto native_format_raw = get_texture_layout(format);
 
 				if (exact_format)
 				{
@@ -168,6 +170,50 @@ namespace graphics
 									return GL_RGB16F;
 								case ElementType::Float:
 									return GL_RGB32F;
+							}
+
+							break;
+						case GL_DEPTH_COMPONENT:
+							switch (element_type)
+							{
+								case ElementType::Half:
+								case ElementType::Short:
+								case ElementType::UShort:
+									return GL_DEPTH_COMPONENT16;
+								
+								// Special-case usage of 'UInt24':
+								case ElementType::UInt24:
+									return GL_DEPTH_COMPONENT24;
+
+								// NOTE: 32-bit depth-buffer support is driver-dependent.
+								case ElementType::Float:
+								case ElementType::Int:
+								case ElementType::UInt:
+									return GL_DEPTH_COMPONENT32;
+							}
+
+							break;
+						case GL_STENCIL_INDEX:
+							switch (element_type)
+							{
+								case ElementType::Bit:
+									return GL_STENCIL_INDEX1;
+								case ElementType::Nibble:
+									return GL_STENCIL_INDEX4;
+								case ElementType::Short:
+								case ElementType::UShort:
+									return GL_STENCIL_INDEX16;
+							}
+
+							break;
+						case GL_DEPTH_STENCIL:
+							switch (element_type)
+							{
+								case ElementType::Int:
+								case ElementType::UInt:
+									return GL_DEPTH24_STENCIL8;
+								case ElementType::Int32_8:
+									return GL_DEPTH32F_STENCIL8;
 							}
 
 							break;
@@ -194,6 +240,12 @@ namespace graphics
 						return get_format_from_channels(3);
 					case TextureFormat::RGBA:
 						return get_format_from_channels(4);
+					case TextureFormat::Depth:
+						return GL_DEPTH_COMPONENT;
+					case TextureFormat::Stencil:
+						return GL_STENCIL_INDEX;
+					case TextureFormat::DepthStencil:
+						return GL_DEPTH_STENCIL;
 				}
 
 				return GL_NONE;
@@ -202,6 +254,23 @@ namespace graphics
 			static GLenum get_texture_layout(const PixelMap& texture_data)
 			{
 				return get_texture_layout(texture_data.format());
+			}
+
+			static GLenum get_renderbuffer_attachment(RenderBufferType type)
+			{
+				switch (type)
+				{
+					case RenderBufferType::Color:
+						return GL_COLOR_ATTACHMENT0;
+					case RenderBufferType::Depth:
+						return GL_DEPTH_ATTACHMENT;
+					case RenderBufferType::Stencil:
+						return GL_STENCIL_ATTACHMENT;
+					case RenderBufferType::DepthStencil:
+						return GL_DEPTH_STENCIL_ATTACHMENT;
+				}
+
+				return GL_NONE;
 			}
 
 			static GLenum get_primitive(Primitive primitive)
@@ -281,6 +350,12 @@ namespace graphics
 				// TODO: Look into compile-time maps.
 				// (Data driven solution vs. code driven solution)
 				handle_flag(state, flags, Flags::DepthTest, GL_DEPTH_TEST, value);
+
+				// Depth-testing:
+				if ((flags & Flags::DepthTest))
+				{
+					glDepthFunc(GL_LESS);
+				}
 
 				// Face culling:
 				if ((flags & Flags::FaceCulling))
@@ -410,11 +485,17 @@ namespace graphics
 
 		GLbitfield buffer_flags = 0; // {};
 
-		if ((buffer_type & BufferType::Color)) { buffer_flags |= GL_COLOR_BUFFER_BIT; }
+		if ((buffer_type & BufferType::Color))
+		{
+			buffer_flags |= GL_COLOR_BUFFER_BIT;
+		}
 
 		if (state->enabled(Flags::DepthTest))
 		{
-			if ((buffer_type & BufferType::Depth)) { buffer_flags |= GL_DEPTH_BUFFER_BIT; }
+			if ((buffer_type & BufferType::Depth))
+			{
+				buffer_flags |= GL_DEPTH_BUFFER_BIT;
+			}
 		}
 
 		if (buffer_flags == 0)
@@ -799,6 +880,17 @@ namespace graphics
 		glDeleteTextures(1, &handle);
 	}
 
+	void Context::resize_texture(Texture& texture, int width, int height)
+	{
+		use(texture, [&]()
+		{
+			allocate_texture(width, height, texture.get_format(), texture.get_element_type(), nullptr);
+		});
+
+		texture.width = width;
+		texture.height = height;
+	}
+
 	// Shader related:
 	Context::Handle Context::build_shader(const ShaderSource& source) noexcept
 	{
@@ -859,10 +951,94 @@ namespace graphics
 		const auto texture_handle = texture.get_handle();
 		const auto buffer_handle = framebuffer.get_handle();
 
-		glFramebufferTexture2D(GL_FRAMEBUFFER, (GL_COLOR_ATTACHMENT0 + attachment_index), GL_TEXTURE_2D, texture_handle, 0);
+		const auto native_attachment_index = (GL_COLOR_ATTACHMENT0 + attachment_index);
 
+		glFramebufferTexture2D(GL_FRAMEBUFFER, native_attachment_index, GL_TEXTURE_2D, texture_handle, 0);
+
+		framebuffer.attachment_indices.push_back(native_attachment_index);
 		framebuffer.attachments.push_back(texture);
 
 		return true;
+	}
+
+	bool Context::framebuffer_link_attachments()
+	{
+		FrameBuffer& framebuffer = state->framebuffer;
+
+		glDrawBuffers(framebuffer.attachment_indices.size(), framebuffer.attachment_indices.data());
+
+		return true;
+	}
+
+	Context::Handle Context::generate_renderbuffer(RenderBufferType type, int width, int height)
+	{
+		if (type == RenderBufferType::Unknown)
+		{
+			return NoHandle;
+		}
+
+		TextureFormat format;
+		ElementType element_type;
+
+		switch (type)
+		{
+			case RenderBufferType::Color:
+				format = TextureFormat::RGBA; // RGB;
+				element_type = ElementType::UByte;
+
+				break;
+			case RenderBufferType::Stencil:
+				format = TextureFormat::Stencil;
+				element_type = ElementType::UByte;
+
+				break;
+			case RenderBufferType::Depth:
+				format = TextureFormat::Depth;
+
+				// TODO: Verify that this resolves correctly to 24-bit depth.
+				// Driver-dependent depth bits.
+				element_type = ElementType::Unknown; // Int24
+
+				break;
+			case RenderBufferType::DepthStencil:
+				format = TextureFormat::DepthStencil;
+
+				// 24-bit depth, 8-bit stencil.
+				element_type = ElementType::UInt;
+		}
+
+		return generate_renderbuffer(type, width, height, format, element_type);
+	}
+
+	// Renderbuffer related:
+	Context::Handle Context::generate_renderbuffer(RenderBufferType type, int width, int height, TextureFormat format, ElementType element_type)
+	{
+		if (type == RenderBufferType::Unknown)
+		{
+			return NoHandle;
+		}
+
+		if (!state->has_framebuffer())
+		{
+			return NoHandle;
+		}
+
+		Handle buffer = NoHandle;
+
+		auto attachment_type = Driver::get_renderbuffer_attachment(type);
+		auto texture_format = Driver::get_texture_format(format, element_type, true);
+		
+		glGenRenderbuffers(1, &buffer);
+		glBindRenderbuffer(GL_RENDERBUFFER, buffer);
+		glRenderbufferStorage(GL_RENDERBUFFER, texture_format, width, height);
+		
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment_type, GL_RENDERBUFFER, buffer);
+
+		return buffer;
+	}
+
+	void Context::release_renderbuffer(Handle&& handle)
+	{
+		glDeleteRenderbuffers(1, &handle);
 	}
 }

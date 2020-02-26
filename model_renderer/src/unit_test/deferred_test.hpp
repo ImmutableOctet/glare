@@ -3,6 +3,8 @@
 #include <core.hpp>
 #include <math/math.hpp>
 
+#include <glm/vec3.hpp>
+
 namespace unit_test
 {
 	class DeferredTest : public app::GraphicsApplication
@@ -15,8 +17,16 @@ namespace unit_test
 				graphics::Shader light_box;
 			} shaders;
 
-			graphics::Mesh screen_quad;
-			graphics::FrameBuffer gBuffer;
+			struct
+			{
+				graphics::FrameBuffer framebuffer;
+
+				graphics::Texture position;
+				graphics::Texture normal;
+				graphics::Texture albedo_specular;
+
+				graphics::Mesh screen_quad;
+			} gBuffer;
 
 			struct
 			{
@@ -26,6 +36,13 @@ namespace unit_test
 			} uniforms;
 
 			ref<graphics::Model> model;
+
+			std::vector<glm::vec3> lightPositions;
+			std::vector<glm::vec3> lightColors;
+
+			const unsigned int NR_LIGHTS = 32;
+
+			void make_lights();
 
 			DeferredTest(bool auto_execute=true);
 

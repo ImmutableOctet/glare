@@ -34,6 +34,17 @@ namespace graphics
 		Float,
 		Double,
 
+		// Specialized:
+
+		// Only used for special-case scenarios, such as 24-bit depth buffers, etc.
+		UInt24,
+
+		// Only used for 32-bit depth + 8-bit stencil. (32 + 8)
+		Int32_8,
+
+		Bit,    // 1-bit integer.
+		Nibble, // 4-bit integer.
+
 		Char = Byte, // UByte
 		Unknown = -1,
 	};
@@ -75,6 +86,9 @@ namespace graphics
 		MipMap             = (1 << 4),
 		WrapS              = (1 << 5),
 		WrapT              = (1 << 6),
+
+		// This flag currently does nothing, it simply states that a texture was a result of a custom allocation.
+		Dynamic            = (1 << 7),
 		
 		WrapST             = (WrapS|WrapT),
 
@@ -106,6 +120,26 @@ namespace graphics
 		RG,
 		RGB,
 		RGBA,
+
+		// Context sensitive; equivalent to the driver's default depth-format.
+		Depth,
+
+		// Context sensitive; equivalent to the driver's default stencil-format.
+		Stencil,
+
+		// Context sensitive; equivalent to a depth + stencil buffer.
+		DepthStencil,
+	};
+
+	// Types of integrated render buffers.
+	enum class RenderBufferType
+	{
+		Color,
+		Depth,
+		Stencil,
+		DepthStencil,
+
+		Unknown,
 	};
 
 	using uniform_t = std::variant<int, float, bool, math::Vector2D, math::Vector3D, math::Vector4D, math::Matrix2x2, math::Matrix3x3, math::Matrix4x4>;

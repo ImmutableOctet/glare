@@ -79,6 +79,18 @@
     <Filter Include="Source Files\math">
       <UniqueIdentifier>{c1d9bc30-4557-4ffd-b083-f93dc012385d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Assets\unit_tests\unit_tests">
+      <UniqueIdentifier>{64f54ddb-059b-49e4-919d-b10987a721e4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets\unit_tests\unit_tests\shader_test">
+      <UniqueIdentifier>{ceb90ae2-dfa6-4979-bdb7-29bfd9486994}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets\unit_tests\unit_tests\model_test">
+      <UniqueIdentifier>{575fd2cf-1474-4e4a-bd30-0cdc5dd03202}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets\unit_tests\unit_tests\deferred_test">
+      <UniqueIdentifier>{bbf9c376-a972-4dcf-aeef-dc9860728c42}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\util\lib.cpp">
@@ -166,6 +178,9 @@
       <Filter>Source Files\Unit Tests</Filter>
     </ClCompile>
     <ClCompile Include="src\graphics\framebuffer.cpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\renderbuffer.cpp">
       <Filter>Source Files\graphics</Filter>
     </ClCompile>
   </ItemGroup>
@@ -323,5 +338,16 @@
     <ClInclude Include="src\graphics\framebuffer.hpp">
       <Filter>Header Files\graphics</Filter>
     </ClInclude>
+    <ClInclude Include="src\graphics\renderbuffer.hpp">
+      <Filter>Header Files\graphics</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="assets\unit_tests\model_test\test.fs">
+      <Filter>Assets\unit_tests\unit_tests\model_test</Filter>
+    </None>
+    <None Include="assets\unit_tests\model_test\test.vs">
+      <Filter>Assets\unit_tests\unit_tests\model_test</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -21,7 +21,7 @@ namespace app
 						throw std::runtime_error("OpenGL is currently the only supported graphics-backend.");
 					}
 
-					context = memory::allocate<graphics::Context>(window, graphics::Backend::OpenGL);
+					context = memory::allocate<graphics::Context>(window, graphics::Backend::OpenGL, graphics::ContextFlags::Default);
 
 					// Create the default canvas.
 					canvas = memory::allocate<graphics::Canvas>(context);

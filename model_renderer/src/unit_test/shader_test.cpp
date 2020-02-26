@@ -7,6 +7,9 @@
 #include <graphics/native/opengl.hpp>
 
 #include <sdl2/SDL_video.h>
+#include <sdl2/SDL_events.h>
+
+#include <sdl2/SDL.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -17,6 +20,10 @@ namespace unit_test
 	ShaderTest::ShaderTest(bool auto_execute)
 		: GraphicsApplication("Shader Test", 1600, 900)
 	{
+		std::cout << "Generating test shader...\n";
+
+		key_state = reinterpret_cast<decltype(key_state)>(SDL_GetKeyboardState(nullptr));
+
 		test_shader = memory::allocate<graphics::Shader>
 		(
 			graphics.context,
@@ -25,13 +32,16 @@ namespace unit_test
 			"assets/unit_tests/shader_test/test.fs"
 		);
 
+		std::cout << "Loading textures...\n";
+
 		texture1 = graphics::Texture(graphics.context, "assets/unit_tests/shader_test/texture1.png");
 		texture2 = graphics::Texture(graphics.context, "assets/unit_tests/shader_test/texture2.jpg");
 
 		uniforms = {};
 
-		/*
-		cube = graphics::Mesh::Generate
+		std::cout << "Generating test mesh...\n";
+
+		quad = graphics::Mesh::Generate
 		(
 			graphics.context,
 			graphics::Mesh::Data<graphics::TexturedVertex>
@@ -71,7 +81,7 @@ namespace unit_test
 					{{{ 0.5f, -0.5f,  0.5f}},  {1.0f, 0.0f}},
 					{{{-0.5f, -0.5f,  0.5f}},  {0.0f, 0.0f}},
 					{{{-0.5f, -0.5f, -0.5f}},  {0.0f, 1.0f}},
-
+					
 					{{{-0.5f,  0.5f, -0.5f}},  {0.0f, 1.0f}},
 					{{{ 0.5f,  0.5f, -0.5f}},  {1.0f, 1.0f}},
 					{{{ 0.5f,  0.5f,  0.5f}},  {1.0f, 0.0f}},
@@ -82,11 +92,16 @@ namespace unit_test
 						
 				// Raw vertices; no index data.
 				{}
-			}
+			},
+			
+			graphics::Primitive::Triangle
 		);
-		*/
 
-		quad = graphics::Mesh::GenerateTexturedQuad(graphics.context);
+		//quad = graphics::Mesh::GenerateTexturedQuad(graphics.context);
+
+		//rotation = glm::quat_cast(glm::mat4());
+
+		//graphics.context;
 
 		if (auto_execute)
 		{
@@ -96,7 +111,30 @@ namespace unit_test
 
 	void ShaderTest::update()
 	{
-		
+		if (key_state[SDL_SCANCODE_SPACE])
+		{
+			//std::cout << milliseconds() << '\n';
+
+			
+		}
+	}
+
+	void ShaderTest::on_keydown(const keyboard_event_t& event)
+	{
+		//std::cout << "KeyDown Event: " << event.keysym.sym << '\n';
+	}
+
+	void ShaderTest::on_keyup(const keyboard_event_t& event)
+	{
+		std::cout << "KeyUp Event: " << event.keysym.sym << '\n';
+
+		switch (event.keysym.sym)
+		{
+			case SDLK_ESCAPE:
+				stop();
+
+				break;
+		}
 	}
 
 	void ShaderTest::render()
@@ -110,39 +148,45 @@ namespace unit_test
 
 		window->get_size(width, height);
 
-		graphics.context->set_viewport(0, 0, width, height);
+		auto& ctx = graphics.context;
+
+		ctx->set_viewport(0, 0, width, height);
 
 		//std::sinf(milliseconds())
-		graphics.context->clear(0.1f, 0.33f, 0.25f, 1.0f, graphics::BufferType::Color|graphics::BufferType::Depth); // gfx
+		ctx->clear(0.1f, 0.33f, 0.25f, 1.0f, (graphics::BufferType::Color|graphics::BufferType::Depth)); // gfx
 
-		graphics.context->use(shader, [&, this]()
+		ctx->use(shader, [&, this]()
 		{
-			graphics.context->set_uniform(shader, "texture1", 0);
-			graphics.context->set_uniform(shader, "texture2", 1);
+			ctx->set_uniform(shader, "texture1", 0);
+			ctx->set_uniform(shader, "texture2", 1);
 
-			graphics.context->use(texture1, [&, this]()
+			ctx->use(texture1, [&, this]()
 			{
-				graphics.context->use(texture2, [&, this]()
+				ctx->use(texture2, [&, this]()
 				{
-					graphics.context->use(quad, [&, this]()
+					ctx->use(quad, [&, this]()
 					{
 						uniforms.projection = glm::perspective(glm::radians(45.0f), window->horizontal_aspect_ratio(), 0.1f, 100.0f);
 						uniforms.view = glm::translate(math::mat4(1.0f), math::vec3(0.0f, 0.0f, -4.0f));
 
-						uniforms.model = glm::mat4(1.0f);
-						uniforms.model = glm::translate(uniforms.model.get_value(), math::vec3(0.0, 0.0, -2));
+						auto model = glm::mat4(1.0f);
+						model = glm::translate(model, math::vec3(0.0, 0.0, -2));
 
-						float angle = (3.0f) * (milliseconds() / 16);
+						//float angle = (3.0f) * (milliseconds() / 16);
 
-						uniforms.model = glm::rotate(uniforms.model.get_value(), glm::radians(angle), glm::vec3(0.45f, 1.0f, 0.45f));
+						//model = glm::rotate(model, glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
+
+						//model *= glm::mat4_cast(rotation);
 
 						//color = { std::sin(milliseconds()), 0.5, 0.5 };
 
-						graphics.context->update(shader, uniforms.projection);
-						graphics.context->update(shader, uniforms.view);
-						graphics.context->update(shader, uniforms.model);
+						uniforms.model = model;
 
-						graphics.context->draw();
+						ctx->update(shader, uniforms.projection);
+						ctx->update(shader, uniforms.view);
+						ctx->update(shader, uniforms.model);
+
+						ctx->draw();
 					});
 				});
 			});

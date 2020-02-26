@@ -46,22 +46,27 @@ namespace graphics
 		return (get_flags() & check);
 	}
 
-	bool ContextState::bound(const Shader& shader)
+	bool ContextState::has_framebuffer() const
+	{
+		return (!this->framebuffer.is_default());
+	}
+
+	bool ContextState::bound(const Shader& shader) const
 	{
 		return ((&(this->shader)) == (&shader));
 	}
 
-	bool ContextState::bound(const FrameBuffer& buffer)
+	bool ContextState::bound(const FrameBuffer& buffer) const
 	{
 		return ((&(this->framebuffer)) == (&buffer));
 	}
 
-	bool ContextState::bound(const Mesh& mesh)
+	bool ContextState::bound(const Mesh& mesh) const
 	{
 		return ((&(this->mesh)) == (&mesh));
 	}
 
-	bool ContextState::bound(const Texture& texture)
+	bool ContextState::bound(const Texture& texture) const
 	{
 		for (auto* t_ptr : this->textures)
 		{

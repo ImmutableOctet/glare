@@ -45,19 +45,21 @@ namespace graphics
 		public:
 			inline Flags get_flags() const { return flags; }
 
+			bool has_framebuffer() const;
+
 			bool enabled(Flags check) const;
 
 			// Returns 'true' if the resource specified is currently bound.
-			bool bound(const Shader& shader);
+			bool bound(const Shader& shader) const;
 
 			// Returns 'true' if the resource specified is currently bound.
-			bool bound(const FrameBuffer& buffer);
+			bool bound(const FrameBuffer& buffer) const;
 
 			// Returns 'true' if the resource specified is currently bound.
-			bool bound(const Mesh& mesh);
+			bool bound(const Mesh& mesh) const;
 
 			// Returns 'true' if the resource specified is currently bound.
-			bool bound(const Texture& texture);
+			bool bound(const Texture& texture) const;
 		protected:
 			void default_all();
 	};
