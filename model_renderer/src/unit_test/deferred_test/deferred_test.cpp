@@ -85,16 +85,16 @@ namespace unit_test
 		for (unsigned int i = 0; i < NR_LIGHTS; i++)
 		{
 			// calculate slightly random offsets
-			float xPos = ((rand() % 100) / 100.0) * 6.0 - 3.0;
-			float yPos = ((rand() % 100) / 100.0) * 6.0 - 4.0;
-			float zPos = ((rand() % 100) / 100.0) * 6.0 - 3.0;
+			float xPos = (static_cast<float>(rand() % 100) / 100.0f) * 6.0f - 3.0f;
+			float yPos = (static_cast<float>(rand() % 100) / 100.0f) * 6.0f - 4.0f;
+			float zPos = (static_cast<float>(rand() % 100) / 100.0f) * 6.0f - 3.0f;
 
 			lightPositions.push_back(glm::vec3(xPos, yPos, zPos));
 
 			// also calculate random color
-			float rColor = ((rand() % 100) / 200.0f) + 0.5; // between 0.5 and 1.0
-			float gColor = ((rand() % 100) / 200.0f) + 0.5; // between 0.5 and 1.0
-			float bColor = ((rand() % 100) / 200.0f) + 0.5; // between 0.5 and 1.0
+			float rColor = (static_cast<float>(rand() % 100) / 200.0f) + 0.5f; // between 0.5 and 1.0
+			float gColor = (static_cast<float>(rand() % 100) / 200.0f) + 0.5f; // between 0.5 and 1.0
+			float bColor = (static_cast<float>(rand() % 100) / 200.0f) + 0.5f; // between 0.5 and 1.0
 
 			lightColors.push_back(glm::vec3(rColor, gColor, bColor));
 		}

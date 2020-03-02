@@ -6,6 +6,7 @@
 
 //#include <half/half.hpp>
 
+#include "util/bitfield.hpp"
 #include "util/memory.hpp"
 #include "util/shorthand.hpp"
 

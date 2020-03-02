@@ -1,4 +1,8 @@
 #pragma once
 
-#include "entity.hpp"
-#include "camera.hpp"
+#include "types.hpp"
+#include "transform.hpp"
+#include "relationship.hpp"
+#include "free_look.hpp"
+
+#include "world/world.hpp"

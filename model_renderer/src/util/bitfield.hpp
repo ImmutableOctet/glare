@@ -1,5 +1,7 @@
 #pragma once
 
+#include "bitflag.hpp"
+
 namespace util
 {
 	template <typename InType, typename OutType>

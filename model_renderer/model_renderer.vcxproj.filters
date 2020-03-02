@@ -16,26 +16,11 @@
     <Filter Include="Source Files\graphics">
       <UniqueIdentifier>{1023ccfa-c7a1-4ccd-8493-3ba102cca546}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\graphics">
-      <UniqueIdentifier>{1c87e565-257e-4b6a-b5f0-025eaa9bf563}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\util">
-      <UniqueIdentifier>{19fe0b64-2af8-470f-b421-96ed8aabb74e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\util">
       <UniqueIdentifier>{20c8435f-4d7f-46f3-ad12-29fc4b7fe603}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\graphics\native">
-      <UniqueIdentifier>{69b2d191-7537-44a6-a506-8f978fba239e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\engine">
       <UniqueIdentifier>{4c1349e6-5e59-493b-9b5b-18dcec2f85a5}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\engine">
-      <UniqueIdentifier>{f23472d2-e0e8-43d0-b743-d5ac396f0935}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\app">
-      <UniqueIdentifier>{ef08bdd4-6af1-4087-b440-db0f671763bf}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\app">
       <UniqueIdentifier>{779bb8d5-c0fc-498d-8fa0-6de1dc2aa7a2}</UniqueIdentifier>
@@ -43,26 +28,11 @@
     <Filter Include="Source Files\app\input">
       <UniqueIdentifier>{d9cf5bb5-36ad-4604-81b4-2668c3d672ab}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\app\input">
-      <UniqueIdentifier>{d4ed09c5-d75a-4ff9-9a00-5c138e5e3ce6}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Unit Tests">
-      <UniqueIdentifier>{e6d9f2a6-488d-4fb0-9340-67d3be4d32ac}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\math">
-      <UniqueIdentifier>{f71d5075-2c92-44e9-8946-32dca8b681b7}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\graphics\drivers">
       <UniqueIdentifier>{00e09fee-ca5e-44b5-9595-9102065016ea}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\graphics\drivers\opengl">
       <UniqueIdentifier>{01bfce19-23b8-4878-bff3-15a4ed066abf}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\graphics\drivers">
-      <UniqueIdentifier>{56c88088-14ef-4188-a26d-03ac9a4b7009}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\graphics\drivers\opengl">
-      <UniqueIdentifier>{cbcaa2f2-5977-4645-8adb-603cc1d040af}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Libraries">
       <UniqueIdentifier>{87c3b140-763b-4db2-94b9-7898070ba150}</UniqueIdentifier>
@@ -72,9 +42,6 @@
     </Filter>
     <Filter Include="Assets\unit_tests">
       <UniqueIdentifier>{f3b4f9b8-edef-44d3-b2cb-6fa768c824f3}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\Unit Tests">
-      <UniqueIdentifier>{bd3e1bce-5995-4360-b720-eb764e458982}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\math">
       <UniqueIdentifier>{c1d9bc30-4557-4ffd-b083-f93dc012385d}</UniqueIdentifier>
@@ -90,6 +57,45 @@
     </Filter>
     <Filter Include="Assets\unit_tests\unit_tests\deferred_test">
       <UniqueIdentifier>{bbf9c376-a972-4dcf-aeef-dc9860728c42}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\graphics\native">
+      <UniqueIdentifier>{69b2d191-7537-44a6-a506-8f978fba239e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\app\input\mouse">
+      <UniqueIdentifier>{b17931fd-1192-4944-93fe-9fc8d5489644}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\app\input\keyboard">
+      <UniqueIdentifier>{3e125903-c046-47bb-baf8-667c16f4b08b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\app\input\input_handler">
+      <UniqueIdentifier>{563147ea-f5c1-476b-a417-6aaac9899f9b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Tests">
+      <UniqueIdentifier>{e6d9f2a6-488d-4fb0-9340-67d3be4d32ac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Tests\model_test">
+      <UniqueIdentifier>{73aa88d3-f458-4e43-b02a-37c9f647c94c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Tests\deferred_test">
+      <UniqueIdentifier>{1475c388-6fcb-4225-b57a-4ecb1bea321a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Tests\shader_test">
+      <UniqueIdentifier>{b9cad5dc-0735-4a4c-95ba-7db9210ea2b3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\engine\world">
+      <UniqueIdentifier>{f3bb9c27-1a1a-4c04-b650-652a10c1ae62}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\engine\world\entity">
+      <UniqueIdentifier>{0060910a-a7bf-4ef2-b51e-3e7e15ea8d7c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\engine\world\camera">
+      <UniqueIdentifier>{b0482730-4326-41fb-bcfa-7c4973d6c397}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\engine\world\debug">
+      <UniqueIdentifier>{9afa5e8d-afc2-445f-88ab-28788a857afd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Tests\signal_test">
+      <UniqueIdentifier>{3101c4fb-22fa-4185-b150-a6377df4eda0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -114,20 +120,11 @@
     <ClCompile Include="src\app\input\input.cpp">
       <Filter>Source Files\app\input</Filter>
     </ClCompile>
-    <ClCompile Include="src\app\input\keyboard.cpp">
-      <Filter>Source Files\app\input</Filter>
-    </ClCompile>
-    <ClCompile Include="src\app\input\mouse.cpp">
-      <Filter>Source Files\app\input</Filter>
-    </ClCompile>
     <ClCompile Include="src\graphics\shader.cpp">
       <Filter>Source Files\graphics</Filter>
     </ClCompile>
     <ClCompile Include="src\util\io.cpp">
       <Filter>Source Files\util</Filter>
-    </ClCompile>
-    <ClCompile Include="src\engine\engine.cpp">
-      <Filter>Source Files\engine</Filter>
     </ClCompile>
     <ClCompile Include="src\graphics\resource.cpp">
       <Filter>Source Files\graphics</Filter>
@@ -147,17 +144,8 @@
     <ClCompile Include="dependencies\modules\stb\deprecated\stb_image.c">
       <Filter>Source Files\Libraries</Filter>
     </ClCompile>
-    <ClCompile Include="src\unit_test\shader_test.cpp">
-      <Filter>Source Files\Unit Tests</Filter>
-    </ClCompile>
     <ClCompile Include="src\graphics\mesh.cpp">
       <Filter>Source Files\graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="src\engine\camera.cpp">
-      <Filter>Source Files\engine</Filter>
-    </ClCompile>
-    <ClCompile Include="src\engine\entity.cpp">
-      <Filter>Source Files\engine</Filter>
     </ClCompile>
     <ClCompile Include="src\graphics\context_state.cpp">
       <Filter>Source Files\graphics</Filter>
@@ -165,17 +153,11 @@
     <ClCompile Include="src\graphics\material.cpp">
       <Filter>Source Files\graphics</Filter>
     </ClCompile>
-    <ClCompile Include="src\unit_test\model_test.cpp">
-      <Filter>Source Files\Unit Tests</Filter>
-    </ClCompile>
     <ClCompile Include="src\math\math.cpp">
       <Filter>Source Files\math</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\unit_test\deferred_test.cpp">
-      <Filter>Source Files\Unit Tests</Filter>
     </ClCompile>
     <ClCompile Include="src\graphics\framebuffer.cpp">
       <Filter>Source Files\graphics</Filter>
@@ -183,163 +165,247 @@
     <ClCompile Include="src\graphics\renderbuffer.cpp">
       <Filter>Source Files\graphics</Filter>
     </ClCompile>
+    <ClCompile Include="src\app\input\keyboard\keyboard.cpp">
+      <Filter>Source Files\app\input\keyboard</Filter>
+    </ClCompile>
+    <ClCompile Include="src\app\input\mouse\mouse.cpp">
+      <Filter>Source Files\app\input\mouse</Filter>
+    </ClCompile>
+    <ClCompile Include="src\app\input\input_handler\input_handler.cpp">
+      <Filter>Source Files\app\input\input_handler</Filter>
+    </ClCompile>
+    <ClCompile Include="src\unit_test\model_test\model_test.cpp">
+      <Filter>Source Files\Tests\model_test</Filter>
+    </ClCompile>
+    <ClCompile Include="src\unit_test\deferred_test\deferred_test.cpp">
+      <Filter>Source Files\Tests\deferred_test</Filter>
+    </ClCompile>
+    <ClCompile Include="src\unit_test\shader_test\shader_test.cpp">
+      <Filter>Source Files\Tests\shader_test</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\engine.cpp">
+      <Filter>Source Files\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\world.cpp">
+      <Filter>Source Files\engine\world</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\camera.cpp">
+      <Filter>Source Files\engine\world\camera</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\entity.cpp">
+      <Filter>Source Files\engine\world\entity</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\relationship.cpp">
+      <Filter>Source Files\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\debug\debug_camera.cpp">
+      <Filter>Source Files\engine\world\debug</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\free_look.cpp">
+      <Filter>Source Files\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\transform.cpp">
+      <Filter>Source Files\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\unit_test\signal_test\signal_test.cpp">
+      <Filter>Source Files\Tests\signal_test</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\graphics\graphics.hpp">
-      <Filter>Header Files\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="src\util\util.hpp">
-      <Filter>Header Files\util</Filter>
-    </ClInclude>
-    <ClInclude Include="src\core.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\util\lib.hpp">
-      <Filter>Header Files\util</Filter>
-    </ClInclude>
     <ClInclude Include="src\graphics\native\opengl.hpp">
-      <Filter>Header Files\graphics\native</Filter>
-    </ClInclude>
-    <ClInclude Include="src\graphics\canvas.hpp">
-      <Filter>Header Files\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="src\graphics\mesh.hpp">
-      <Filter>Header Files\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="src\graphics\model.hpp">
-      <Filter>Header Files\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="src\engine\engine.hpp">
-      <Filter>Header Files\engine</Filter>
-    </ClInclude>
-    <ClInclude Include="src\engine\entity.hpp">
-      <Filter>Header Files\engine</Filter>
-    </ClInclude>
-    <ClInclude Include="src\app\app.hpp">
-      <Filter>Header Files\app</Filter>
-    </ClInclude>
-    <ClInclude Include="src\app\window.hpp">
-      <Filter>Header Files\app</Filter>
-    </ClInclude>
-    <ClInclude Include="src\types.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\debug.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\app\application.hpp">
-      <Filter>Header Files\app</Filter>
-    </ClInclude>
-    <ClInclude Include="src\app\event_handler.hpp">
-      <Filter>Header Files\app</Filter>
-    </ClInclude>
-    <ClInclude Include="src\app\input.hpp">
-      <Filter>Header Files\app</Filter>
-    </ClInclude>
-    <ClInclude Include="src\app\input\input.hpp">
-      <Filter>Header Files\app\input</Filter>
-    </ClInclude>
-    <ClInclude Include="src\app\input\mouse.hpp">
-      <Filter>Header Files\app\input</Filter>
-    </ClInclude>
-    <ClInclude Include="src\app\input\keyboard.hpp">
-      <Filter>Header Files\app\input</Filter>
-    </ClInclude>
-    <ClInclude Include="src\app\input\types.hpp">
-      <Filter>Header Files\app\input</Filter>
-    </ClInclude>
-    <ClInclude Include="src\app\input\devices.hpp">
-      <Filter>Header Files\app\input</Filter>
-    </ClInclude>
-    <ClInclude Include="src\app\input\input_handler.hpp">
-      <Filter>Header Files\app\input</Filter>
-    </ClInclude>
-    <ClInclude Include="src\util\memory.hpp">
-      <Filter>Header Files\util</Filter>
-    </ClInclude>
-    <ClInclude Include="src\graphics\shader.hpp">
-      <Filter>Header Files\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="src\util\io.hpp">
-      <Filter>Header Files\util</Filter>
-    </ClInclude>
-    <ClInclude Include="src\graphics\context.hpp">
-      <Filter>Header Files\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="src\app\graphics_application.hpp">
-      <Filter>Header Files\app</Filter>
-    </ClInclude>
-    <ClInclude Include="src\util\shorthand.hpp">
-      <Filter>Header Files\util</Filter>
-    </ClInclude>
-    <ClInclude Include="src\math\math.hpp">
-      <Filter>Header Files\math</Filter>
-    </ClInclude>
-    <ClInclude Include="src\graphics\bind.hpp">
-      <Filter>Header Files\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="src\graphics\context_state.hpp">
-      <Filter>Header Files\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="src\graphics\drivers\drivers.hpp">
-      <Filter>Header Files\graphics\drivers</Filter>
-    </ClInclude>
-    <ClInclude Include="src\graphics\drivers\opengl\driver.hpp">
-      <Filter>Header Files\graphics\drivers\opengl</Filter>
-    </ClInclude>
-    <ClInclude Include="src\graphics\drivers\driver.hpp">
-      <Filter>Header Files\graphics\drivers</Filter>
-    </ClInclude>
-    <ClInclude Include="src\graphics\types.hpp">
-      <Filter>Header Files\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="src\util\algorithm.hpp">
-      <Filter>Header Files\util</Filter>
-    </ClInclude>
-    <ClInclude Include="src\graphics\pixelmap.hpp">
-      <Filter>Header Files\graphics</Filter>
+      <Filter>Source Files\graphics\native</Filter>
     </ClInclude>
     <ClInclude Include="src\unit_test\vertex_element_types.cpp">
-      <Filter>Source Files\Unit Tests</Filter>
+      <Filter>Source Files\Tests</Filter>
     </ClInclude>
-    <ClInclude Include="src\unit_test\shader_test.hpp">
-      <Filter>Header Files\Unit Tests</Filter>
+    <ClInclude Include="src\app\app.hpp">
+      <Filter>Source Files\app</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\camera.hpp">
-      <Filter>Header Files\engine</Filter>
+    <ClInclude Include="src\app\application.hpp">
+      <Filter>Source Files\app</Filter>
     </ClInclude>
-    <ClInclude Include="src\graphics\material.hpp">
-      <Filter>Header Files\graphics</Filter>
+    <ClInclude Include="src\app\event_handler.hpp">
+      <Filter>Source Files\app</Filter>
     </ClInclude>
-    <ClInclude Include="src\unit_test\model_test.hpp">
-      <Filter>Header Files\Unit Tests</Filter>
-    </ClInclude>
-    <ClInclude Include="src\graphics\resource.hpp">
-      <Filter>Header Files\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="src\graphics\texture.hpp">
-      <Filter>Header Files\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="src\graphics\vertex.hpp">
-      <Filter>Header Files\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="src\graphics\uniform.hpp">
-      <Filter>Header Files\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="src\unit_test\deferred_test.hpp">
-      <Filter>Header Files\Unit Tests</Filter>
+    <ClInclude Include="src\app\graphics_application.hpp">
+      <Filter>Source Files\app</Filter>
     </ClInclude>
     <ClInclude Include="src\app\types.hpp">
-      <Filter>Header Files\app</Filter>
+      <Filter>Source Files\app</Filter>
     </ClInclude>
-    <ClInclude Include="src\util\bitfield.hpp">
-      <Filter>Header Files\util</Filter>
+    <ClInclude Include="src\app\window.hpp">
+      <Filter>Source Files\app</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\input\devices.hpp">
+      <Filter>Source Files\app\input</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\input\input.hpp">
+      <Filter>Source Files\app\input</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\input\types.hpp">
+      <Filter>Source Files\app\input</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\vertex.hpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\bind.hpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\canvas.hpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\context.hpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\context_state.hpp">
+      <Filter>Source Files\graphics</Filter>
     </ClInclude>
     <ClInclude Include="src\graphics\framebuffer.hpp">
-      <Filter>Header Files\graphics</Filter>
+      <Filter>Source Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\graphics.hpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\material.hpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\mesh.hpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\model.hpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\pixelmap.hpp">
+      <Filter>Source Files\graphics</Filter>
     </ClInclude>
     <ClInclude Include="src\graphics\renderbuffer.hpp">
-      <Filter>Header Files\graphics</Filter>
+      <Filter>Source Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\resource.hpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\shader.hpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\texture.hpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\types.hpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\uniform.hpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\drivers\driver.hpp">
+      <Filter>Source Files\graphics\drivers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\drivers\drivers.hpp">
+      <Filter>Source Files\graphics\drivers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\drivers\opengl\driver.hpp">
+      <Filter>Source Files\graphics\drivers\opengl</Filter>
+    </ClInclude>
+    <ClInclude Include="src\math\math.hpp">
+      <Filter>Source Files\math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\util.hpp">
+      <Filter>Source Files\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\algorithm.hpp">
+      <Filter>Source Files\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\bitfield.hpp">
+      <Filter>Source Files\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\io.hpp">
+      <Filter>Source Files\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\lib.hpp">
+      <Filter>Source Files\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\memory.hpp">
+      <Filter>Source Files\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\shorthand.hpp">
+      <Filter>Source Files\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\debug.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\types.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\events.hpp">
+      <Filter>Source Files\app</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\input\keyboard\keycodes.hpp">
+      <Filter>Source Files\app\input\keyboard</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\input\keyboard\keyboard.hpp">
+      <Filter>Source Files\app\input\keyboard</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\input\mouse\mouse.hpp">
+      <Filter>Source Files\app\input\mouse</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\input\input_handler\input_handler.hpp">
+      <Filter>Source Files\app\input\input_handler</Filter>
+    </ClInclude>
+    <ClInclude Include="src\unit_test\model_test\model_test.hpp">
+      <Filter>Source Files\Tests\model_test</Filter>
+    </ClInclude>
+    <ClInclude Include="src\unit_test\deferred_test\deferred_test.hpp">
+      <Filter>Source Files\Tests\deferred_test</Filter>
+    </ClInclude>
+    <ClInclude Include="src\unit_test\shader_test\shader_test.hpp">
+      <Filter>Source Files\Tests\shader_test</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\engine.hpp">
+      <Filter>Source Files\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\world.hpp">
+      <Filter>Source Files\engine\world</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\camera.hpp">
+      <Filter>Source Files\engine\world\camera</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\entity.hpp">
+      <Filter>Source Files\engine\world\entity</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\types.hpp">
+      <Filter>Source Files\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\relationship.hpp">
+      <Filter>Source Files\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\debug\debug.hpp">
+      <Filter>Source Files\engine\world\debug</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\debug\debug_camera.hpp">
+      <Filter>Source Files\engine\world\debug</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\transform.hpp">
+      <Filter>Source Files\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\free_look.hpp">
+      <Filter>Source Files\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\name.hpp">
+      <Filter>Source Files\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\bitflag.hpp">
+      <Filter>Source Files\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\unit_test\signal_test\signal_test.hpp">
+      <Filter>Source Files\Tests\signal_test</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\debug\debug_move.hpp">
+      <Filter>Source Files\engine\world\debug</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\input\input_device.hpp">
+      <Filter>Source Files\app\input</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

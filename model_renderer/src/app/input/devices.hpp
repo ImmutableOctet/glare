@@ -1,13 +1,14 @@
 #pragma once
 
-#include "mouse.hpp"
-#include "keyboard.hpp"
+#include "input_device.hpp"
+#include "mouse/mouse.hpp"
+#include "keyboard/keyboard.hpp"
 
 namespace app
 {
 	namespace input
 	{
-		struct InputState
+		struct InputDevices
 		{
 			Mouse mouse;
 			Keyboard keyboard;

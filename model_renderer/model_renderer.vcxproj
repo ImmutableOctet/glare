@@ -70,19 +70,19 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>Q:\Projects\model_renderer\model_renderer\src;Q:\Projects\model_renderer\model_renderer\dependencies\include; Q:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;$(IncludePath)</IncludePath>
+    <IncludePath>Q:\Projects\model_renderer\model_renderer\src;Q:\Projects\model_renderer\model_renderer\dependencies\include;Q:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;Q:\Projects\model_renderer\model_renderer\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
     <LibraryPath>Q:\Projects\model_renderer\model_renderer\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>Q:\Projects\model_renderer\model_renderer\src;Q:\Projects\model_renderer\model_renderer\dependencies\include; Q:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;$(IncludePath)</IncludePath>
+    <IncludePath>Q:\Projects\model_renderer\model_renderer\src;Q:\Projects\model_renderer\model_renderer\dependencies\include;Q:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;Q:\Projects\model_renderer\model_renderer\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
     <LibraryPath>Q:\Projects\model_renderer\model_renderer\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>Q:\Projects\model_renderer\model_renderer\src;Q:\Projects\model_renderer\model_renderer\dependencies\include; Q:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;$(IncludePath)</IncludePath>
+    <IncludePath>Q:\Projects\model_renderer\model_renderer\src;Q:\Projects\model_renderer\model_renderer\dependencies\include;Q:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;Q:\Projects\model_renderer\model_renderer\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
     <LibraryPath>Q:\Projects\model_renderer\model_renderer\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>Q:\Projects\model_renderer\model_renderer\src;Q:\Projects\model_renderer\model_renderer\dependencies\include; Q:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;$(IncludePath)</IncludePath>
+    <IncludePath>Q:\Projects\model_renderer\model_renderer\src;Q:\Projects\model_renderer\model_renderer\dependencies\include;Q:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;Q:\Projects\model_renderer\model_renderer\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
     <LibraryPath>Q:\Projects\model_renderer\model_renderer\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -171,12 +171,18 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\app\application.cpp" />
     <ClCompile Include="src\app\event_handler.cpp" />
     <ClCompile Include="src\app\input\input.cpp" />
-    <ClCompile Include="src\app\input\keyboard.cpp" />
-    <ClCompile Include="src\app\input\mouse.cpp" />
+    <ClCompile Include="src\app\input\input_handler\input_handler.cpp" />
+    <ClCompile Include="src\app\input\keyboard\keyboard.cpp" />
+    <ClCompile Include="src\app\input\mouse\mouse.cpp" />
     <ClCompile Include="src\app\window.cpp" />
-    <ClCompile Include="src\engine\camera.cpp" />
     <ClCompile Include="src\engine\engine.cpp" />
-    <ClCompile Include="src\engine\entity.cpp" />
+    <ClCompile Include="src\engine\free_look.cpp" />
+    <ClCompile Include="src\engine\relationship.cpp" />
+    <ClCompile Include="src\engine\transform.cpp" />
+    <ClCompile Include="src\engine\world\camera.cpp" />
+    <ClCompile Include="src\engine\world\debug\debug_camera.cpp" />
+    <ClCompile Include="src\engine\world\entity.cpp" />
+    <ClCompile Include="src\engine\world\world.cpp" />
     <ClCompile Include="src\graphics\canvas.cpp" />
     <ClCompile Include="src\graphics\context_state.cpp" />
     <ClCompile Include="src\graphics\drivers\opengl\context.cpp" />
@@ -191,31 +197,43 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\graphics\texture.cpp" />
     <ClCompile Include="src\graphics\vertex.cpp" />
     <ClCompile Include="src\math\math.cpp" />
-    <ClCompile Include="src\unit_test\deferred_test.cpp" />
-    <ClCompile Include="src\unit_test\model_test.cpp" />
-    <ClCompile Include="src\unit_test\shader_test.cpp" />
+    <ClCompile Include="src\unit_test\deferred_test\deferred_test.cpp" />
+    <ClCompile Include="src\unit_test\model_test\model_test.cpp" />
+    <ClCompile Include="src\unit_test\shader_test\shader_test.cpp" />
+    <ClCompile Include="src\unit_test\signal_test\signal_test.cpp" />
     <ClCompile Include="src\util\io.cpp" />
     <ClCompile Include="src\util\lib.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\app\app.hpp" />
     <ClInclude Include="src\app\application.hpp" />
+    <ClInclude Include="src\app\events.hpp" />
     <ClInclude Include="src\app\event_handler.hpp" />
     <ClInclude Include="src\app\graphics_application.hpp" />
-    <ClInclude Include="src\app\input.hpp" />
     <ClInclude Include="src\app\input\devices.hpp" />
     <ClInclude Include="src\app\input\input.hpp" />
-    <ClInclude Include="src\app\input\input_handler.hpp" />
-    <ClInclude Include="src\app\input\keyboard.hpp" />
-    <ClInclude Include="src\app\input\mouse.hpp" />
+    <ClInclude Include="src\app\input\input_device.hpp" />
+    <ClInclude Include="src\app\input\input_handler\input_handler.hpp" />
+    <ClInclude Include="src\app\input\keyboard\keyboard.hpp" />
+    <ClInclude Include="src\app\input\keyboard\keycodes.hpp" />
+    <ClInclude Include="src\app\input\mouse\mouse.hpp" />
     <ClInclude Include="src\app\input\types.hpp" />
     <ClInclude Include="src\app\types.hpp" />
     <ClInclude Include="src\app\window.hpp" />
     <ClInclude Include="src\core.hpp" />
     <ClInclude Include="src\debug.hpp" />
-    <ClInclude Include="src\engine\camera.hpp" />
     <ClInclude Include="src\engine\engine.hpp" />
-    <ClInclude Include="src\engine\entity.hpp" />
+    <ClInclude Include="src\engine\free_look.hpp" />
+    <ClInclude Include="src\engine\name.hpp" />
+    <ClInclude Include="src\engine\relationship.hpp" />
+    <ClInclude Include="src\engine\transform.hpp" />
+    <ClInclude Include="src\engine\types.hpp" />
+    <ClInclude Include="src\engine\world\camera.hpp" />
+    <ClInclude Include="src\engine\world\debug\debug.hpp" />
+    <ClInclude Include="src\engine\world\debug\debug_camera.hpp" />
+    <ClInclude Include="src\engine\world\debug\debug_move.hpp" />
+    <ClInclude Include="src\engine\world\entity.hpp" />
+    <ClInclude Include="src\engine\world\world.hpp" />
     <ClInclude Include="src\graphics\bind.hpp" />
     <ClInclude Include="src\graphics\canvas.hpp" />
     <ClInclude Include="src\graphics\context.hpp" />
@@ -239,12 +257,14 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\graphics\vertex.hpp" />
     <ClInclude Include="src\math\math.hpp" />
     <ClInclude Include="src\types.hpp" />
-    <ClInclude Include="src\unit_test\deferred_test.hpp" />
-    <ClInclude Include="src\unit_test\model_test.hpp" />
-    <ClInclude Include="src\unit_test\shader_test.hpp" />
+    <ClInclude Include="src\unit_test\deferred_test\deferred_test.hpp" />
+    <ClInclude Include="src\unit_test\model_test\model_test.hpp" />
+    <ClInclude Include="src\unit_test\shader_test\shader_test.hpp" />
+    <ClInclude Include="src\unit_test\signal_test\signal_test.hpp" />
     <ClInclude Include="src\unit_test\vertex_element_types.cpp" />
     <ClInclude Include="src\util\algorithm.hpp" />
     <ClInclude Include="src\util\bitfield.hpp" />
+    <ClInclude Include="src\util\bitflag.hpp" />
     <ClInclude Include="src\util\io.hpp" />
     <ClInclude Include="src\util\lib.hpp" />
     <ClInclude Include="src\util\memory.hpp" />

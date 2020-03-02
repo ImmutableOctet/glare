@@ -3,6 +3,9 @@
 #include <core.hpp>
 #include <math/math.hpp>
 
+#include <engine/engine.hpp>
+#include <engine/world/debug/debug.hpp>
+
 namespace unit_test
 {
 	class ModelTest : public app::GraphicsApplication
@@ -23,9 +26,14 @@ namespace unit_test
 
 			ref<graphics::Model> loaded_model;
 
+			engine::World world;
+			engine::Entity& camera = world.cameras[0];
+
 			ModelTest(bool auto_execute=true);
 
 			void update() override;
 			void render() override;
+
+			void on_keyup(const keyboard_event_t& event) override;
 	};
 }

@@ -3,17 +3,32 @@
 #include <array>
 
 #include <types.hpp>
+#include <engine/types.hpp>
+
+#include "input_device.hpp"
 
 namespace app
 {
 	namespace input
 	{
-		template <std::size_t num_buttons>
-		struct DeviceState
+		struct MouseState
 		{
-			static const std::size_t button_count = num_buttons;
+			int x = 0;
+			int y = 0;
 
-			std::array<bool, button_count> buttons;
+			bool left = false;
+			bool middle = false;
+			bool right = false;
+		};
+
+		struct KeyboardState
+		{
+			public:
+				using key_value_t = std::uint8_t;
+
+				const key_value_t* keys = nullptr;
+
+				inline bool has_keys() const { return (keys != nullptr); }
 		};
 	}
 }

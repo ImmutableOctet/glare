@@ -4,11 +4,11 @@
 #include <string>
 #include <cmath>
 
+#include <app/events.hpp>
+#include <app/input/keyboard/keycodes.hpp>
 #include <graphics/native/opengl.hpp>
 
 #include <sdl2/SDL_video.h>
-#include <sdl2/SDL_hints.h>
-#include <sdl2/SDL_mouse.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -29,10 +29,9 @@ namespace unit_test
 
 		loaded_model = memory::allocate<graphics::Model>();
 
-		*loaded_model = graphics::Model::Load(graphics.context, "assets/unit_tests/model_test/checkpoint/checkpoint.b3d"); // "stage.obj"
+		*loaded_model = graphics::Model::Load(graphics.context, "assets/unit_tests/model_test/sphere.obj"); // "checkpoint/checkpoint.b3d"
 
-		SDL_SetHintWithPriority(SDL_HINT_MOUSE_RELATIVE_MODE_WARP, "1", SDL_HINT_OVERRIDE);
-		SDL_SetRelativeMouseMode(SDL_TRUE);
+		input.get_mouse().lock();
 
 		if (auto_execute)
 		{
@@ -42,11 +41,9 @@ namespace unit_test
 
 	void ModelTest::update()
 	{
-		int x, y;
+		input.poll(world.get_event_handler());
 
-		auto buttons = SDL_GetRelativeMouseState(&x, &y);
-
-		std::cout << x << ", " << y << '\n';
+		world.update(1.0f);
 	}
 
 	void ModelTest::render()
@@ -61,10 +58,25 @@ namespace unit_test
 
 		//loaded_model.draw();
 
-		graphics.context->use(*test_shader, [this]()
+		auto& registry = world.get_registry();
+
+		//auto& camera_transform = registry.get<engine::TransformComponent>(camera);
+		//auto inverse_world = camera_transform.inverse_world;
+
+		auto camera_local_transform = world.get_transform(camera);
+
+		//camera_local_transform.set_scale({0.5f, 1.0f, 0.5f});
+		//camera_local_transform.set_position({0.0, 5.0, -30.0});
+
+		math::Matrix inverse_world = glm::inverse(camera_local_transform.get_matrix());
+
+		graphics.context->use(*test_shader, [this, inverse_world]()
 		{
 			this->uniforms.projection = glm::perspective(glm::radians(75.0f), window->horizontal_aspect_ratio(), 0.1f, 1000.0f);
-			this->uniforms.view = glm::translate(math::mat4(1.0f), math::vec3(0.0f, 0.0f, -1.0f));
+			this->uniforms.view = inverse_world; // glm::translate(math::mat4(1.0f), math::vec3(0.0f, 0.0f, -1.0f));
+
+			graphics.context->update(*test_shader, uniforms.projection);
+			graphics.context->update(*test_shader, uniforms.view);
 
 			//graphics.canvas.draw(*loaded_model);
 
@@ -85,8 +97,6 @@ namespace unit_test
 					
 					this->uniforms.model = model;
 
-					graphics.context->update(*test_shader, uniforms.projection);
-					graphics.context->update(*test_shader, uniforms.view);
 					graphics.context->update(*test_shader, uniforms.model);
 
 					//color = { std::sin(milliseconds()), 0.5, 0.5 };
@@ -97,5 +107,24 @@ namespace unit_test
 		});
 
 		gfx.flip(wnd);
+	}
+
+	void ModelTest::on_keyup(const keyboard_event_t& event)
+	{
+		switch (event.keysym.sym)
+		{
+			case SDLK_ESCAPE:
+				stop();
+
+				break;
+			case SDLK_SPACE:
+			{
+				auto& mouse = input.get_mouse();
+
+				mouse.toggle_lock();
+
+				break;
+			}
+		}
 	}
 }

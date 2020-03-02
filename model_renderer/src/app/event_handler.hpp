@@ -5,8 +5,6 @@
 
 #include <types.hpp>
 
-#include "input/input_handler.hpp"
-
 namespace app
 {
 	class Application;

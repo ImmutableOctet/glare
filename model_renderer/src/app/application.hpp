@@ -7,7 +7,7 @@
 #include "types.hpp"
 #include <util/lib.hpp>
 
-#include "input/input_handler.hpp"
+#include "input/input.hpp"
 
 // SDL:
 struct SDL_KeyboardEvent;
@@ -49,7 +49,7 @@ namespace app
 			std::uint64_t update_counter = 0;
 			std::uint64_t render_counter = 0;
 
-			//input::InputHandler input;
+			input::InputHandler input;
 		protected:
 			Application();
 
