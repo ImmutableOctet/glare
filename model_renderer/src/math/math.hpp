@@ -24,6 +24,12 @@ namespace math
 	using Matrix = AffineMatrix4;
 	using RotationMatrix = Matrix3x3;
 
+	template <typename T>
+	inline T sq(T x)
+	{
+		return (x * x);
+	}
+
 	// Retrieves the translation vector from a 4x4 or 3x4 (affine) matrix:
 	template <typename mat4_type>
 	inline Vector3D get_translation(const mat4_type& m)
@@ -52,6 +58,15 @@ namespace math
 
 		return Vector3D(mv);
 	}
+
+	float get_vector_pitch(const Vector& v);
+	float get_vector_yaw(const Vector& v);
+
+	float get_matrix_pitch(const RotationMatrix& m);
+	float get_matrix_yaw(const RotationMatrix& m);
+	float get_matrix_roll(const RotationMatrix& m);
+
+	Vector get_rotation(const RotationMatrix& m);
 
 	RotationMatrix rotation_pitch(float angle);
 	RotationMatrix rotation_yaw(float angle);

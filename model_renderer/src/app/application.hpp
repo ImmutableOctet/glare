@@ -41,7 +41,7 @@ namespace app
 			unique_ref<Window> window;
 
 			// Atomic so that we can see if the application is running from another thread.
-			std::atomic<bool> running = false; // <-- May change later. (Could use a mutex for this, etc)
+			bool running = false; // <-- May change later. (Could use a mutex for this, etc) // std::atomic<bool>
 
 			std::chrono::time_point<std::chrono::system_clock> start_point;
 			std::chrono::time_point<std::chrono::system_clock> stop_point;

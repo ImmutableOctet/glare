@@ -20,14 +20,15 @@ namespace unit_test
 			struct
 			{
 				Uniform<math::mat4> projection = { "projection" };
-				Uniform<math::mat4> view = { "view" };
-				Uniform<math::mat4> model = { "model" };
+				Uniform<math::mat4> view       = { "view" };
+				Uniform<math::mat4> model      = { "model" };
 			} uniforms;
 
 			ref<graphics::Model> loaded_model;
 
 			engine::World world;
 			engine::Entity& camera = world.cameras[0];
+			engine::Entity model_entity;
 
 			ModelTest(bool auto_execute=true);
 
@@ -35,5 +36,6 @@ namespace unit_test
 			void render() override;
 
 			void on_keyup(const keyboard_event_t& event) override;
+			void on_keydown(const keyboard_event_t& event) override;
 	};
 }

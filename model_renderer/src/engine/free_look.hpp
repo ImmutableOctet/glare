@@ -2,11 +2,8 @@
 
 //#include <app/input/types.hpp>
 
+#include <math/math.hpp>
 #include "types.hpp"
-#include "transform.hpp"
-
-#include "world/world.hpp"
-//#include "world/entity.hpp"
 
 namespace app
 {
@@ -18,6 +15,8 @@ namespace app
 
 namespace engine
 {
+	struct Transform;
+
 	struct FreeLook
 	{
 		public:
@@ -29,7 +28,7 @@ namespace engine
 			//int y = 0;
 
 			// Mouse sensitivity. (In radians)
-			float sensitivity = glm::radians(0.1f); // 2 degrees.
+			float sensitivity = glm::radians(0.05f);
 		protected:
 			void apply(World& world, Entity entity, Transform& transform, const MouseState& input);
 	};

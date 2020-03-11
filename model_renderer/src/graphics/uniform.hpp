@@ -19,6 +19,7 @@ class Uniform
 
 		inline void set_value(const T& value) { this->value = value; }
 
+		inline T& operator*() { return value; }
 		inline operator const T&() const { return value; }
 		inline Uniform& operator=(const T& value) { set_value(value); return (*this); }
 	protected:

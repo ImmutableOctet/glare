@@ -1,5 +1,6 @@
-#include "Canvas.hpp"
+#include "canvas.hpp"
 #include "context.hpp"
+#include "model.hpp"
 
 namespace graphics
 {
@@ -8,7 +9,7 @@ namespace graphics
 		// Nothing so far.
 	}
 
-	Canvas::Canvas(std::shared_ptr<Context> context)
+	Canvas::Canvas(memory::pass_ref<Context> context)
 		: Canvas()
 	{
 		attach(context);
@@ -19,14 +20,14 @@ namespace graphics
 		detach();
 	}
 
-	bool Canvas::attach(std::shared_ptr<Context> ctx)
+	bool Canvas::attach(memory::pass_ref<Context> ctx)
 	{
 		if (ctx == nullptr)
 		{
 			return false;
 		}
 
-		ctx = std::move(ctx);
+		this->context = ctx;
 
 		return true;
 	}
@@ -44,5 +45,18 @@ namespace graphics
 	void Canvas::clear(float red, float green, float blue, float alpha)
 	{
 		context->clear(red, green, blue, alpha);
+	}
+	
+	void Canvas::draw(Model& model, const math::Matrix& model_matrix)
+	{
+		for (auto& m : model.get_meshes())
+		{
+			auto& mesh = *m.first;
+
+			context->use(mesh, [&]()
+			{
+				context->draw();
+			});
+		}
 	}
 }

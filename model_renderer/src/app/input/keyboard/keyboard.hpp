@@ -14,8 +14,6 @@ namespace app
 				Keyboard();
 
 				virtual State peek() override;
-			protected:
-				std::uint32_t num_keys = 0;
 		};
 	}
 }

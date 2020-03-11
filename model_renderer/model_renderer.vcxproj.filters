@@ -210,6 +210,9 @@
     <ClCompile Include="src\unit_test\signal_test\signal_test.cpp">
       <Filter>Source Files\Tests\signal_test</Filter>
     </ClCompile>
+    <ClCompile Include="src\engine\world\debug\debug_move.cpp">
+      <Filter>Source Files\engine\world\debug</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\graphics\native\opengl.hpp">

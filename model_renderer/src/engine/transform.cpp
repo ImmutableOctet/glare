@@ -155,6 +155,16 @@ namespace engine
 		return transform.basis;
 	}
 
+	math::Vector Transform::get_rotation()
+	{
+		return math::get_rotation(get_basis());
+	}
+
+	math::Vector Transform::get_local_rotation()
+	{
+		return math::get_rotation(get_local_basis());
+	}
+
 	void Transform::set_position(const math::Vector& position)
 	{
 		auto parent = get_parent();
@@ -180,6 +190,51 @@ namespace engine
 		set_local_basis((parent) ? (parent->get_basis()) : basis );
 
 		invalidate();
+	}
+
+	void Transform::set_rotation(const math::Vector& rv)
+	{
+		set_basis(math::rotation_from_vector(rv));
+	}
+
+	void Transform::set_local_rotation(const math::Vector& rv)
+	{
+		set_local_basis(math::rotation_from_vector(rv));
+	}
+
+	void Transform::move(const math::Vector& tv, bool local)
+	{
+		// TODO: Review behavior of 'local'.
+		if (!local)
+		{
+			set_local_position(get_local_position() + tv);
+		}
+		else
+		{
+			auto basis = get_basis();
+
+			auto movement = (basis * tv);
+
+			set_position(get_position() + movement);
+		}
+	}
+
+	void Transform::look_at(const math::Vector& target, const math::Vector& up)
+	{
+		auto position = get_position();
+
+		auto k = glm::normalize(position - target);
+		auto i = glm::normalize(glm::cross(up, k));
+		auto j = glm::cross(k, i);
+
+		auto m = RotationMatrix(i, j, k);
+
+		set_basis(m);
+	}
+
+	void Transform::look_at(Transform& t)
+	{
+		look_at(t.get_position());
 	}
 
 	void Transform::rotate(const math::Vector& rv, bool local)

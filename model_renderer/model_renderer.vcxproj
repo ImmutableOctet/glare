@@ -181,6 +181,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\engine\transform.cpp" />
     <ClCompile Include="src\engine\world\camera.cpp" />
     <ClCompile Include="src\engine\world\debug\debug_camera.cpp" />
+    <ClCompile Include="src\engine\world\debug\debug_move.cpp" />
     <ClCompile Include="src\engine\world\entity.cpp" />
     <ClCompile Include="src\engine\world\world.cpp" />
     <ClCompile Include="src\graphics\canvas.cpp" />

@@ -6,6 +6,7 @@
 
 #include <app/events.hpp>
 #include <app/input/keyboard/keycodes.hpp>
+#include <engine/engine.hpp>
 #include <graphics/native/opengl.hpp>
 
 #include <sdl2/SDL_video.h>
@@ -29,7 +30,13 @@ namespace unit_test
 
 		loaded_model = memory::allocate<graphics::Model>();
 
-		*loaded_model = graphics::Model::Load(graphics.context, "assets/unit_tests/model_test/sphere.obj"); // "checkpoint/checkpoint.b3d"
+		*loaded_model = graphics::Model::Load(graphics.context, "assets/unit_tests/model_test/sphere.obj");
+
+		model_entity = engine::create_pivot(world);
+
+		auto model_transform = world.get_transform(model_entity);
+
+		model_transform.move({3.0f, 10.0f, -30.0f});
 
 		input.get_mouse().lock();
 
@@ -41,7 +48,12 @@ namespace unit_test
 
 	void ModelTest::update()
 	{
-		input.poll(world.get_event_handler());
+		auto& mouse = input.get_mouse();
+
+		if (mouse.locked())
+		{
+			input.poll(world.get_event_handler());
+		}
 
 		world.update(1.0f);
 	}
@@ -63,47 +75,49 @@ namespace unit_test
 		//auto& camera_transform = registry.get<engine::TransformComponent>(camera);
 		//auto inverse_world = camera_transform.inverse_world;
 
-		auto camera_local_transform = world.get_transform(camera);
+		auto camera_transform = world.get_transform(camera);
 
-		//camera_local_transform.set_scale({0.5f, 1.0f, 0.5f});
-		//camera_local_transform.set_position({0.0, 5.0, -30.0});
+		auto& camera_params = registry.get<engine::CameraParameters>(camera);
 
-		math::Matrix inverse_world = glm::inverse(camera_local_transform.get_matrix());
+		camera_params.aspect_ratio = window->horizontal_aspect_ratio();
 
-		graphics.context->use(*test_shader, [this, inverse_world]()
+		auto rotation = glm::degrees(camera_transform.get_rotation());
+		
+		//std::cout << rotation.x << ", " << rotation.y << ", " << rotation.z << '\r';
+
+		math::Matrix inverse_world = camera_transform.get_inverse_matrix();
+
+		graphics.context->use(*test_shader, [&]()
 		{
-			this->uniforms.projection = glm::perspective(glm::radians(75.0f), window->horizontal_aspect_ratio(), 0.1f, 1000.0f);
+			this->uniforms.projection = glm::perspective(camera_params.fov, camera_params.aspect_ratio, camera_params.near, camera_params.far);
 			this->uniforms.view = inverse_world; // glm::translate(math::mat4(1.0f), math::vec3(0.0f, 0.0f, -1.0f));
 
 			graphics.context->update(*test_shader, uniforms.projection);
 			graphics.context->update(*test_shader, uniforms.view);
 
-			//graphics.canvas.draw(*loaded_model);
+			auto model_transform = world.get_transform(model_entity);
 
+			//model_transform.move({0.0f, (0.2f * std::sin(milliseconds() / 100)), 0.0f});
+
+			auto model_matrix = model_transform.get_matrix();
+
+			this->uniforms.model = model_matrix;
+
+			graphics.context->update(*test_shader, uniforms.model);
+
+			graphics.canvas->draw(*loaded_model, model_matrix);
+
+			/*
 			for (auto& m : loaded_model->get_meshes())
 			{
 				auto& mesh = *m.first;
 
-				graphics.context->use(mesh, [this]()
+				graphics.context->use(mesh, [&]()
 				{
-					glm::mat4 model = glm::mat4(1.0f);
-					model = glm::translate(model, math::vec3(0.0, 0.0, -40.0));
-
-					float angle = 45.0f; // (3.0f)* (milliseconds() / 16);
-
-					//model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.1f, 0.0f));
-
-					//model = glm::scale(model, {0.1, 0.1, 0.1});
-					
-					this->uniforms.model = model;
-
-					graphics.context->update(*test_shader, uniforms.model);
-
-					//color = { std::sin(milliseconds()), 0.5, 0.5 };
-
 					graphics.context->draw();
 				});
 			}
+			*/
 		});
 
 		gfx.flip(wnd);
@@ -125,6 +139,24 @@ namespace unit_test
 
 				break;
 			}
+		}
+	}
+
+	void ModelTest::on_keydown(const keyboard_event_t& event)
+	{
+		switch (event.keysym.sym)
+		{
+			case SDLK_0:
+				auto camera_transform = world.get_transform(camera);
+
+				auto model = this->uniforms.model.get_value();
+				auto v = math::get_translation(model);
+
+				std::cout << v.x << ", " << v.y << ", " << v.z << '\n';
+
+				camera_transform.look_at(v);
+
+				break;
 		}
 	}
 }

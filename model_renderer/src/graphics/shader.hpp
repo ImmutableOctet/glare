@@ -43,7 +43,7 @@ namespace graphics
 			inline Shader() : Shader({}, {}) {}
 			inline Shader(Shader&& shader) : Shader() { swap(*this, shader); }
 
-			Shader(const Shader&)=delete;
+			Shader(const Shader&) = delete;
 
 			~Shader();
 
@@ -53,6 +53,8 @@ namespace graphics
 
 				return *this;
 			}
+
+			
 		protected:
 			Shader(weak_ref<Context> ctx, ContextHandle&& resource_handle);
 

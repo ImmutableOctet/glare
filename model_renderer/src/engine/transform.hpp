@@ -121,9 +121,20 @@ namespace engine
 			math::Vector get_scale();
 			math::RotationMatrix get_basis();
 
+			math::Vector get_rotation();
+			math::Vector get_local_rotation();
+
 			void set_position(const math::Vector& position);
 			void set_scale(const math::Vector& scale);
 			void set_basis(const math::RotationMatrix& basis);
+
+			void set_rotation(const math::Vector& rv);
+			void set_local_rotation(const math::Vector& rv);
+
+			void move(const math::Vector& tv, bool local=false);
+
+			void look_at(const math::Vector& target, const math::Vector& up={0.0f, 1.0f, 0.0f});
+			void look_at(Transform& t);
 
 			// Rotation:
 			void rotate(const math::Vector& rv, bool local=false);

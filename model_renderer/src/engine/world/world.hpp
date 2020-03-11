@@ -12,6 +12,7 @@ namespace app
 	{
 		class InputHandler;
 		struct MouseState;
+		struct KeyboardState;
 	}
 }
 
@@ -44,5 +45,6 @@ namespace engine
 			inline EventHandler& get_event_handler() { return event_handler; }
 
 			void on_mouse_input(const app::input::MouseState& mouse);
+			void on_keyboard_input(const app::input::KeyboardState& keyboard);
 	};
 }

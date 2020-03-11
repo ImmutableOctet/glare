@@ -9,6 +9,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include <util/memory.hpp>
+#include <math/math.hpp>
+
 namespace app
 {
 	class Window;
@@ -17,22 +20,23 @@ namespace app
 namespace graphics
 {
 	class Context;
+	class Model;
 
 	class Canvas
 	{
 		public:
 			Canvas();
-			Canvas(std::shared_ptr<Context> ctx);
+			Canvas(memory::pass_ref<Context> ctx);
 
 			~Canvas();
 
-			bool attach(std::shared_ptr<Context> ctx);
+			bool attach(memory::pass_ref<Context> ctx);
 			void detach();
 
 			void flip(app::Window& wnd);
 			void clear(float red, float green, float blue, float alpha);
 
-			void draw();
+			void draw(Model& model, const math::Matrix& model_matrix);
 		private:
 			std::shared_ptr<Context> context;
 

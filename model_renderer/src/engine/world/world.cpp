@@ -1,6 +1,8 @@
 #include "world.hpp"
 #include "camera.hpp"
+
 #include "debug/debug_camera.hpp"
+#include "debug/debug_move.hpp"
 
 #include <engine/free_look.hpp>
 #include <engine/relationship.hpp>
@@ -12,7 +14,8 @@ namespace engine
 {
 	World::World()
 	{
-		register_event<app::input::MouseState, &World::on_mouse_input>();
+		register_event<app::input::MouseState,    &World::on_mouse_input>();
+		register_event<app::input::KeyboardState, &World::on_keyboard_input>();
 
 		auto pivot = create_pivot(*this);
 		auto pivot_transform = get_transform(pivot);
@@ -51,5 +54,10 @@ namespace engine
 	void World::on_mouse_input(const app::input::MouseState& mouse)
 	{
 		FreeLook::update(*this, mouse);
+	}
+
+	void World::on_keyboard_input(const app::input::KeyboardState& keyboard)
+	{
+		engine::debug::DebugMove::update(*this, keyboard);
 	}
 }

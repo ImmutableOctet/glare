@@ -28,8 +28,6 @@ namespace graphics
 			using Meshes = std::vector<MeshDescriptor>;
 		private:
 			Meshes meshes;
-		protected:
-			Model(const Meshes& meshes);
 		public:
 			static Model Load(pass_ref<Context> context, const std::string& path);
 
@@ -40,6 +38,7 @@ namespace graphics
 			// TODO: Handle copies.
 			Model(const Model&) = delete;
 
+			Model(const Meshes& meshes);
 			Model(Model&& model);
 
 			inline Model& operator=(Model model)
@@ -48,8 +47,6 @@ namespace graphics
 
 				return *this;
 			}
-
-			void draw(Context& context); // virtual override
 
 			// TODO: Verify non-const access.
 			inline Meshes& get_meshes() { return meshes; };
