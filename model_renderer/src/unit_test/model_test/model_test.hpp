@@ -23,7 +23,7 @@ namespace unit_test
 
 			ModelTest(bool auto_execute=true);
 
-			void update() override;
+			void update(const app::DeltaTime& delta_time) override;
 			void render() override;
 
 			void on_keyup(const keyboard_event_t& event) override;

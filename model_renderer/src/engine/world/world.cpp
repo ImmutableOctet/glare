@@ -12,7 +12,8 @@
 
 namespace engine
 {
-	World::World()
+	World::World(const app::DeltaTime& delta_time)
+		: delta_time(delta_time)
 	{
 		register_event<app::input::MouseState,    &World::on_mouse_input>();
 		register_event<app::input::KeyboardState, &World::on_keyboard_input>();
@@ -41,7 +42,7 @@ namespace engine
 	}
 	*/
 
-	void World::update(float delta)
+	void World::update()
 	{
 		event_handler.update();
 	}

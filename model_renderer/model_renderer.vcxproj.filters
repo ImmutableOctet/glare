@@ -413,6 +413,9 @@
     <ClInclude Include="src\util\variant.hpp">
       <Filter>Source Files\util</Filter>
     </ClInclude>
+    <ClInclude Include="src\app\delta_time.hpp">
+      <Filter>Source Files\app</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\unit_tests\model_test\test.fs">

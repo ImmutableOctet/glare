@@ -12,6 +12,8 @@ namespace app
 	class GraphicsApplication : public Application
 	{
 		public:
+			static constexpr DeltaTime::Rate DEFAULT_FRAMERATE = 60;
+
 			struct Graphics
 			{
 				Graphics(app::Window& window, WindowFlags flags)
@@ -33,7 +35,7 @@ namespace app
 
 			Graphics graphics;
 
-			GraphicsApplication(const std::string& title, int width, int height, WindowFlags flags=app::WindowFlags::OpenGL|app::WindowFlags::Resizable)
-				: Application(), graphics(make_window(width, height, title, flags), flags) {}
+			GraphicsApplication(const std::string& title, int width, int height, WindowFlags flags=app::WindowFlags::OpenGL|app::WindowFlags::Resizable, DeltaTime::Rate update_rate=DEFAULT_FRAMERATE)
+				: Application(update_rate), graphics(make_window(width, height, title, flags), flags) {}
 	};
 }

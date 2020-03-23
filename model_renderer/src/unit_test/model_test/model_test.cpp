@@ -20,10 +20,10 @@
 namespace unit_test
 {
 	ModelTest::ModelTest(bool auto_execute)
-		: GraphicsApplication("Model Test", 1600, 900, app::WindowFlags::OpenGL)
+		: GraphicsApplication("Model Test", 1600, 900, app::WindowFlags::OpenGL), world(delta_time)
 	{
 		// Uncap framerate.
-		//SDL_GL_SetSwapInterval(0);
+		SDL_GL_SetSwapInterval(0);
 
 		test_shader = memory::allocate<graphics::Shader>
 		(
@@ -60,7 +60,7 @@ namespace unit_test
 
 		auto model_transform = world.get_transform(model_entity);
 
-		model_transform.move({3.0f, 0.0f, -30.0f});
+		model_transform.move({0.0f, 0.0f, -30.0f});
 
 		input.get_mouse().lock();
 
@@ -70,7 +70,7 @@ namespace unit_test
 		}
 	}
 
-	void ModelTest::update()
+	void ModelTest::update(const app::DeltaTime& delta_time)
 	{
 		auto& mouse = input.get_mouse();
 
@@ -79,7 +79,7 @@ namespace unit_test
 			input.poll(world.get_event_handler());
 		}
 
-		world.update(1.0f);
+		world.update();
 	}
 
 	void ModelTest::render()
@@ -137,7 +137,7 @@ namespace unit_test
 				stop();
 
 				break;
-			case SDLK_SPACE:
+			case SDLK_TAB:
 			{
 				auto& mouse = input.get_mouse();
 

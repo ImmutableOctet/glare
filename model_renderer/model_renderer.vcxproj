@@ -207,6 +207,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
   <ItemGroup>
     <ClInclude Include="src\app\app.hpp" />
     <ClInclude Include="src\app\application.hpp" />
+    <ClInclude Include="src\app\delta_time.hpp" />
     <ClInclude Include="src\app\events.hpp" />
     <ClInclude Include="src\app\event_handler.hpp" />
     <ClInclude Include="src\app\graphics_application.hpp" />

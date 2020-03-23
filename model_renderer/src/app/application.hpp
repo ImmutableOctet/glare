@@ -7,6 +7,7 @@
 #include "types.hpp"
 #include <util/lib.hpp>
 
+#include "delta_time.hpp"
 #include "input/input.hpp"
 
 // SDL:
@@ -49,9 +50,10 @@ namespace app
 			std::uint64_t update_counter = 0;
 			std::uint64_t render_counter = 0;
 
+			DeltaTime delta_time;
 			input::InputHandler input;
 		protected:
-			Application();
+			Application(DeltaTime::Rate update_rate);
 
 			Window& make_window(int width, int height, const std::string& title="", WindowFlags flags=WindowFlags::Default);
 
@@ -61,7 +63,7 @@ namespace app
 			std::int64_t unix_time() const;
 			std::int64_t milliseconds() const;
 
-			virtual void update() abstract;
+			virtual void update(const DeltaTime& delta_time) abstract;
 			virtual void render() abstract;
 
 			virtual void on_keydown(const keyboard_event_t& event);

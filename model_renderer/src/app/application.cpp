@@ -6,7 +6,7 @@
 
 namespace app
 {
-	Application::Application() : init_libraries() {}
+	Application::Application(DeltaTime::Rate update_rate) : init_libraries(), delta_time(update_rate) {}
 
 	bool Application::start()
 	{
@@ -51,7 +51,12 @@ namespace app
 				break; // return;
 			}
 
-			update(); update_counter++;
+			float frame_delta;
+
+			delta_time << milliseconds();
+			delta_time >> frame_delta;
+
+			update(delta_time); update_counter++;
 			render(); render_counter++;
 		}
 	}
@@ -130,12 +135,12 @@ namespace app
 		return now().time_since_epoch();
 	}
 
-	std::int64_t Application::unix_time() const
+	Milliseconds Application::unix_time() const
 	{
 		return std::chrono::duration_cast<std::chrono::milliseconds>(time()).count();
 	}
 
-	std::int64_t Application::milliseconds() const
+	Milliseconds Application::milliseconds() const
 	{
 		return std::chrono::duration_cast<std::chrono::milliseconds>(now() - start_point).count();
 	}

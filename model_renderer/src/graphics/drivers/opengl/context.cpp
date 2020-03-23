@@ -23,6 +23,7 @@
 #include <utility>
 #include <variant>
 #include <vector>
+#include <unordered_map>
 //#include <stack>
 #include <type_traits>
 
@@ -63,6 +64,11 @@ namespace graphics
 		private:
 			// Used internally to mitigate constant allocation of buffers for texture-array description.
 			std::vector<int> _texture_assignment_buffer;
+
+			using UniformLocationMap       = std::unordered_map<std::string_view, gl_uniform_location>;
+			using UniformLocationContainer = std::unordered_map<Handle, UniformLocationMap>;
+
+			UniformLocationContainer _uniform_cache;
 		protected:
 			static int gl_texture_id_to_index(GLenum texture_id)
 			{
@@ -86,7 +92,7 @@ namespace graphics
 			*/
 
 			// Utility Code:
-			static gl_uniform_location get_uniform(Shader& shader, raw_string name)
+			gl_uniform_location get_uniform(Shader& shader, raw_string name)
 			{
 				return glGetUniformLocation(shader.get_handle(), name);
 			}
@@ -602,7 +608,9 @@ namespace graphics
 
 	bool Context::set_uniform(Shader& shader, raw_string name, int value)
 	{
-		auto uniform = Driver::get_uniform(shader, name);
+		auto& driver = get_driver(*this);
+
+		auto uniform = driver.get_uniform(shader, name);
 
 		if (uniform == Driver::InvalidUniform)
 		{
@@ -616,7 +624,9 @@ namespace graphics
 
 	bool Context::set_uniform(Shader& shader, raw_string name, float value)
 	{
-		auto uniform = Driver::get_uniform(shader, name);
+		auto& driver = get_driver(*this);
+
+		auto uniform = driver.get_uniform(shader, name);
 
 		if (uniform == Driver::InvalidUniform)
 		{
@@ -635,7 +645,9 @@ namespace graphics
 
 	bool Context::set_uniform(Shader& shader, raw_string name, const math::Vector2D& value)
 	{
-		auto uniform = Driver::get_uniform(shader, name);
+		auto& driver = get_driver(*this);
+
+		auto uniform = driver.get_uniform(shader, name);
 
 		if (uniform == Driver::InvalidUniform)
 		{
@@ -649,7 +661,9 @@ namespace graphics
 
 	bool Context::set_uniform(Shader& shader, raw_string name, const math::Vector3D& value)
 	{
-		auto uniform = Driver::get_uniform(shader, name);
+		auto& driver = get_driver(*this);
+
+		auto uniform = driver.get_uniform(shader, name);
 
 		if (uniform == Driver::InvalidUniform)
 		{
@@ -663,7 +677,9 @@ namespace graphics
 
 	bool Context::set_uniform(Shader& shader, raw_string name, const math::Vector4D& value)
 	{
-		auto uniform = Driver::get_uniform(shader, name);
+		auto& driver = get_driver(*this);
+
+		auto uniform = driver.get_uniform(shader, name);
 
 		if (uniform == Driver::InvalidUniform)
 		{
@@ -677,7 +693,9 @@ namespace graphics
 
 	bool Context::set_uniform(Shader& shader, raw_string name, const math::Matrix2x2& value)
 	{
-		auto uniform = Driver::get_uniform(shader, name);
+		auto& driver = get_driver(*this);
+
+		auto uniform = driver.get_uniform(shader, name);
 
 		if (uniform == Driver::InvalidUniform)
 		{
@@ -691,7 +709,9 @@ namespace graphics
 
 	bool Context::set_uniform(Shader& shader, raw_string name, const math::Matrix3x3& value)
 	{
-		auto uniform = Driver::get_uniform(shader, name);
+		auto& driver = get_driver(*this);
+
+		auto uniform = driver.get_uniform(shader, name);
 
 		if (uniform == Driver::InvalidUniform)
 		{
@@ -705,7 +725,9 @@ namespace graphics
 
 	bool Context::set_uniform(Shader& shader, raw_string name, const math::Matrix4x4& value)
 	{
-		auto uniform = Driver::get_uniform(shader, name);
+		auto& driver = get_driver(*this);
+
+		auto uniform = driver.get_uniform(shader, name);
 
 		if (uniform == Driver::InvalidUniform)
 		{
@@ -721,7 +743,7 @@ namespace graphics
 	{
 		auto& driver = get_driver(*this);
 
-		auto uniform = Driver::get_uniform(shader, name);
+		auto uniform = driver.get_uniform(shader, name);
 
 		if (uniform == Driver::InvalidUniform)
 		{

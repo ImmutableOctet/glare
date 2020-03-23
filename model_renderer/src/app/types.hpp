@@ -4,6 +4,8 @@
 
 namespace app
 {
+	using Milliseconds = std::int64_t;
+
 	enum class WindowFlags : std::uint32_t
 	{
 		OpenGL            = (1 << 0),
