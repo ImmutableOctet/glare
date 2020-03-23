@@ -6,12 +6,22 @@
 #include <utility>
 
 #include <string>
+#include <unordered_map>
+#include <type_traits>
 #include <variant>
+
+namespace engine
+{
+	class ResourceManager;
+}
 
 namespace graphics
 {
-	using NativeContext = void*;
+	using ResourceManager = engine::ResourceManager;
 
+	class Texture;
+
+	using NativeContext = void*;
 	using ContextHandle = unsigned int; // GLint;
 
 	using ColorRGB = math::vec3f;
@@ -65,6 +75,34 @@ namespace graphics
 		Unknown = -1,
 	};
 
+	enum class TextureType : std::int32_t // int
+	{
+		StartType = 1,
+
+		None = 0,
+		Diffuse,
+		Specular,
+		Ambient,
+		Emissive,
+		Height,
+		Normals,
+		Shininess,
+		Opacity,
+		Displacement,
+		Lightmap,
+		Reflection,
+		BaseColor,
+		NormalCamera,
+		EmissionColor,
+		Metalness,
+		DiffuseRoughness,
+		AmbientOcclusion,
+		Unknown,
+
+		MaxTypes,
+		EndType = MaxTypes
+	};
+
 	struct VertexAttribute
 	{
 		ElementType type;
@@ -109,7 +147,7 @@ namespace graphics
 		DepthTest        = (1 << 1),
 		FaceCulling      = (1 << 2),
 
-		Default          = (DepthTest|FaceCulling),
+		Default          = (DepthTest), // FaceCulling
 	}; FLAG_ENUM(std::uint32_t, ContextFlags);
 
 	enum class TextureFormat
@@ -142,5 +180,19 @@ namespace graphics
 		Unknown,
 	};
 
-	using uniform_t = std::variant<int, float, bool, math::Vector2D, math::Vector3D, math::Vector4D, math::Matrix2x2, math::Matrix3x3, math::Matrix4x4>;
+	using TextureArray = std::vector<ref<Texture>>;
+
+	using UniformData = std::variant<bool, int, float, math::Vector2D, math::Vector3D, math::Vector4D, math::Matrix2x2, math::Matrix3x3, math::Matrix4x4, ref<Texture>, TextureArray>;
+	using UniformMap = std::unordered_map<std::string, UniformData>;
+
+	template <typename fn_type>
+	void enumerate_texture_types(fn_type&& fn)
+	{
+		for (auto type = static_cast<int>(TextureType::StartType); type < static_cast<decltype(type)>(TextureType::EndType); type++)
+		{
+			auto texture_type = static_cast<TextureType>(type);
+
+			fn(texture_type);
+		}
+	}
 }

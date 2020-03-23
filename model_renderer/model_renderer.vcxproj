@@ -70,20 +70,20 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>Q:\Projects\model_renderer\model_renderer\src;Q:\Projects\model_renderer\model_renderer\dependencies\include;Q:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;Q:\Projects\model_renderer\model_renderer\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
-    <LibraryPath>Q:\Projects\model_renderer\model_renderer\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\Projects\model_renderer\model_renderer\src;D:\Projects\model_renderer\model_renderer\dependencies\include;D:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;D:\Projects\model_renderer\model_renderer\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\Projects\model_renderer\model_renderer\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>Q:\Projects\model_renderer\model_renderer\src;Q:\Projects\model_renderer\model_renderer\dependencies\include;Q:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;Q:\Projects\model_renderer\model_renderer\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
-    <LibraryPath>Q:\Projects\model_renderer\model_renderer\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\Projects\model_renderer\model_renderer\src;D:\Projects\model_renderer\model_renderer\dependencies\include;D:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;D:\Projects\model_renderer\model_renderer\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\Projects\model_renderer\model_renderer\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>Q:\Projects\model_renderer\model_renderer\src;Q:\Projects\model_renderer\model_renderer\dependencies\include;Q:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;Q:\Projects\model_renderer\model_renderer\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
-    <LibraryPath>Q:\Projects\model_renderer\model_renderer\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\Projects\model_renderer\model_renderer\src;D:\Projects\model_renderer\model_renderer\dependencies\include;D:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;D:\Projects\model_renderer\model_renderer\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\Projects\model_renderer\model_renderer\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>Q:\Projects\model_renderer\model_renderer\src;Q:\Projects\model_renderer\model_renderer\dependencies\include;Q:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;Q:\Projects\model_renderer\model_renderer\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
-    <LibraryPath>Q:\Projects\model_renderer\model_renderer\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\Projects\model_renderer\model_renderer\src;D:\Projects\model_renderer\model_renderer\dependencies\include;D:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;D:\Projects\model_renderer\model_renderer\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\Projects\model_renderer\model_renderer\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -96,7 +96,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;sdl2.lib;SDL2main.lib;glew32.lib;glew32s.lib;opengl32.lib;assimp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;glew32.lib;glew32s.lib;opengl32.lib;assimp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy "$(ProjectDir)bin\$(Platform)" "$(TargetDir)" /e /y /i /r
@@ -114,7 +114,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;sdl2.lib;SDL2main.lib;glew32.lib;glew32s.lib;opengl32.lib;assimp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;glew32.lib;glew32s.lib;opengl32.lib;assimp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy "$(ProjectDir)bin\$(Platform)" "$(TargetDir)" /e /y /i /r
@@ -136,7 +136,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;sdl2.lib;SDL2main.lib;glew32.lib;glew32s.lib;opengl32.lib;assimp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;glew32.lib;glew32s.lib;opengl32.lib;assimp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy "$(ProjectDir)bin\$(Platform)" "$(TargetDir)" /e /y /i /r
@@ -158,7 +158,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;sdl2.lib;SDL2main.lib;glew32.lib;glew32s.lib;opengl32.lib;assimp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;glew32.lib;glew32s.lib;opengl32.lib;assimp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy "$(ProjectDir)bin\$(Platform)" "$(TargetDir)" /e /y /i /r
@@ -183,6 +183,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\engine\world\debug\debug_camera.cpp" />
     <ClCompile Include="src\engine\world\debug\debug_move.cpp" />
     <ClCompile Include="src\engine\world\entity.cpp" />
+    <ClCompile Include="src\engine\world\graphics_entity.cpp" />
     <ClCompile Include="src\engine\world\world.cpp" />
     <ClCompile Include="src\graphics\canvas.cpp" />
     <ClCompile Include="src\graphics\context_state.cpp" />
@@ -198,9 +199,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\graphics\texture.cpp" />
     <ClCompile Include="src\graphics\vertex.cpp" />
     <ClCompile Include="src\math\math.cpp" />
-    <ClCompile Include="src\unit_test\deferred_test\deferred_test.cpp" />
     <ClCompile Include="src\unit_test\model_test\model_test.cpp" />
-    <ClCompile Include="src\unit_test\shader_test\shader_test.cpp" />
     <ClCompile Include="src\unit_test\signal_test\signal_test.cpp" />
     <ClCompile Include="src\util\io.cpp" />
     <ClCompile Include="src\util\lib.cpp" />
@@ -223,10 +222,13 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\app\window.hpp" />
     <ClInclude Include="src\core.hpp" />
     <ClInclude Include="src\debug.hpp" />
+    <ClInclude Include="src\engine\components\graphics\graphics.hpp" />
+    <ClInclude Include="src\engine\components\graphics\model_component.hpp" />
     <ClInclude Include="src\engine\engine.hpp" />
     <ClInclude Include="src\engine\free_look.hpp" />
     <ClInclude Include="src\engine\name.hpp" />
     <ClInclude Include="src\engine\relationship.hpp" />
+    <ClInclude Include="src\engine\resource_manager.hpp" />
     <ClInclude Include="src\engine\transform.hpp" />
     <ClInclude Include="src\engine\types.hpp" />
     <ClInclude Include="src\engine\world\camera.hpp" />
@@ -234,6 +236,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\engine\world\debug\debug_camera.hpp" />
     <ClInclude Include="src\engine\world\debug\debug_move.hpp" />
     <ClInclude Include="src\engine\world\entity.hpp" />
+    <ClInclude Include="src\engine\world\graphics_entity.hpp" />
     <ClInclude Include="src\engine\world\world.hpp" />
     <ClInclude Include="src\graphics\bind.hpp" />
     <ClInclude Include="src\graphics\canvas.hpp" />
@@ -254,13 +257,10 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\graphics\types.hpp" />
     <ClInclude Include="src\graphics\resource.hpp" />
     <ClInclude Include="src\graphics\shader.hpp" />
-    <ClInclude Include="src\graphics\uniform.hpp" />
     <ClInclude Include="src\graphics\vertex.hpp" />
     <ClInclude Include="src\math\math.hpp" />
     <ClInclude Include="src\types.hpp" />
-    <ClInclude Include="src\unit_test\deferred_test\deferred_test.hpp" />
     <ClInclude Include="src\unit_test\model_test\model_test.hpp" />
-    <ClInclude Include="src\unit_test\shader_test\shader_test.hpp" />
     <ClInclude Include="src\unit_test\signal_test\signal_test.hpp" />
     <ClInclude Include="src\unit_test\vertex_element_types.cpp" />
     <ClInclude Include="src\util\algorithm.hpp" />
@@ -271,6 +271,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\util\memory.hpp" />
     <ClInclude Include="src\util\shorthand.hpp" />
     <ClInclude Include="src\util\util.hpp" />
+    <ClInclude Include="src\util\variant.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\unit_tests\model_test\test.fs" />

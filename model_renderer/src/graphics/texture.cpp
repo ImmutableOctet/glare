@@ -17,6 +17,9 @@ namespace graphics
 	Texture::Texture(pass_ref<Context> ctx, int width, int height, TextureFormat format, ElementType element_type, TextureFlags flags)
 		: Texture(ctx, ctx->generate_texture(width, height, format, element_type, (flags | TextureFlags::Dynamic)), width, height, format, element_type, flags) {}
 
+	Texture::Texture(pass_ref<Context> ctx, raw_string path, Flags flags)
+		: Texture(ctx, PixelMap::Load(path), flags) {}
+
 	Texture::Texture(pass_ref<Context> ctx, const std::string& path, Flags flags)
 		: Texture(ctx, PixelMap::Load(path), flags) {}
 

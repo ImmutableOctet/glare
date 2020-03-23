@@ -1,3 +1,4 @@
+/*
 #include "deferred_test.hpp"
 
 #include <iostream>
@@ -188,3 +189,4 @@ namespace unit_test
 		ctx.flip(wnd);
 	}
 }
+*/

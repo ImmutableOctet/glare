@@ -8,7 +8,8 @@
 
 #include "types.hpp"
 #include "bind.hpp"
-#include "uniform.hpp"
+#include "shader.hpp"
+#include "texture.hpp"
 
 //#include "context_state.hpp"
 
@@ -55,6 +56,7 @@ namespace graphics
 
 			// Friends:
 			friend Driver;
+			friend Canvas;
 			friend Shader;
 			friend Texture;
 			friend FrameBuffer;
@@ -126,7 +128,7 @@ namespace graphics
 			void set_viewport(int x, int y, int width, int height);
 
 			// NOTE: Unsafe; use at your own risk.
-			void clear_textures();
+			void clear_textures(bool force=false);
 
 			// Creates a safe bind operation for the resource specified.
 			template <typename ResourceType>
@@ -161,7 +163,7 @@ namespace graphics
 			// Draw using the currently bound 'Mesh' object, but with a different primitive type.
 			void draw(Primitive primitive);
 
-			bool set_uniform(Shader& shader, raw_string name, int value);
+			bool set_uniform(Shader& shader, raw_string name, int value); // std::int32_t
 			bool set_uniform(Shader& shader, raw_string name, bool value);
 			bool set_uniform(Shader& shader, raw_string name, float value);
 
@@ -173,11 +175,29 @@ namespace graphics
 			bool set_uniform(Shader& shader, raw_string name, const math::Matrix3x3& value);
 			bool set_uniform(Shader& shader, raw_string name, const math::Matrix4x4& value);
 
+
+			bool set_uniform(Shader& shader, raw_string name, const TextureArray& textures);
+			bool set_uniform(Shader& shader, raw_string name, const pass_ref<Texture> texture);
+			bool set_uniform(Shader& shader, raw_string name, Texture& texture); // std::int32_t
+
+			bool set_uniform(Shader& shader, const std::string& name, const UniformData& uniform);
+
 			template <typename T>
-			inline bool update(Shader& shader, const Uniform<T>& uniform)
+			inline bool set_uniform(Shader& shader, const std::string& name, const T& value)
 			{
-				return set_uniform(shader, uniform.get_name_raw(), uniform.get_value());
+				return set_uniform(shader, name.c_str(), value);
 			}
+
+			//bool set_uniform(Shader& shader, const std::string& name, const pass_ref<Texture> texture); // std::int32_t
+			//bool set_uniform(Shader& shader, const std::string& name, Texture& texture); // std::int32_t
+
+			bool apply_uniforms(Shader& shader, const UniformMap& uniforms);
+
+			// Force-flushes the uniforms stored by 'shader'.
+			bool flush_uniforms(Shader& shader);
+
+			// Force-flushes the uniforms stored in the actively bound shader.
+			bool flush_uniforms();
 		protected:
 			inline State& get_state() const { return *state; }
 			

@@ -20,6 +20,12 @@
 
 #include <sdl2/SDL_video.h>
 
+#include <utility>
+#include <variant>
+#include <vector>
+//#include <stack>
+#include <type_traits>
+
 namespace graphics
 {
 	using Driver = Context::Driver;
@@ -36,7 +42,7 @@ namespace graphics
 
 			static constexpr Handle NoHandle = Context::NoHandle;
 
-			static constexpr int MAX_TEXTURES = 32; // GLenum
+			static constexpr int MAX_TEXTURES = 32; // GLenum // std::size_t
 			static constexpr GLenum BASE_TEXTURE_INDEX = GL_TEXTURE0;
 			static constexpr GLenum MAX_TEXTURE_INDEX = (BASE_TEXTURE_INDEX + MAX_TEXTURES); // GL_TEXTURE31;
 
@@ -48,7 +54,25 @@ namespace graphics
 			SDL_GLContext SDL = nullptr;
 
 			// State:
-			GLenum texture_index = BASE_TEXTURE_INDEX;
+			GLenum gl_texture_id = BASE_TEXTURE_INDEX; // 0;
+
+			std::vector<Handle> texture_stack;
+
+			// TODO: Implement wrapping behavior for bound textures.
+			//bool wrap_texture_indices = true;
+		private:
+			// Used internally to mitigate constant allocation of buffers for texture-array description.
+			std::vector<int> _texture_assignment_buffer;
+		protected:
+			static int gl_texture_id_to_index(GLenum texture_id)
+			{
+				return static_cast<int>((texture_id - BASE_TEXTURE_INDEX));
+			}
+
+			static GLenum gl_index_to_texture_id(int texture_index)
+			{
+				return static_cast<GLenum>((texture_index + BASE_TEXTURE_INDEX));
+			}
 		public:
 			/*
 			struct texture_format_properties
@@ -361,7 +385,7 @@ namespace graphics
 				if ((flags & Flags::FaceCulling))
 				{
 					// Discard back-faces, keep front-faces.
-					glCullFace(GL_BACK);
+					glCullFace(GL_FRONT_AND_BACK); // GL_FRONT // GL_BACK
 				}
 
 				handle_flag(state, flags, Flags::FaceCulling, GL_CULL_FACE, value);
@@ -370,7 +394,11 @@ namespace graphics
 			}
 		protected:
 			Driver(SDL_Window* window_handle)
-				: SDL(SDL_GL_CreateContext(window_handle)) {}
+				: SDL(SDL_GL_CreateContext(window_handle)),
+					texture_stack(MAX_TEXTURES, NoHandle)
+			{
+				_texture_assignment_buffer.reserve(MAX_TEXTURES);
+			}
 
 			~Driver()
 			{
@@ -378,30 +406,34 @@ namespace graphics
 			}
 		public:
 			// OpenGL API:
-			static void bind_texture(GLenum texture_index, Handle texture)
+			static void bind_texture(GLenum gl_texture_id, Handle texture)
 			{
 				// TODO: Add support for non-2D textures:
-				glActiveTexture(texture_index);
+				glActiveTexture(gl_texture_id);
 				glBindTexture(GL_TEXTURE_2D, texture);
 			}
 
-			static void unbind_texture(GLenum texture_index)
+			static void unbind_texture(GLenum gl_texture_id)
 			{
-				bind_texture(texture_index, NoHandle);
+				bind_texture(gl_texture_id, NoHandle);
 			}
 
 			GLenum push_texture(Handle texture)
 			{
-				if (texture_index >= MAX_TEXTURE_INDEX)
+				///ASSERT(gl_texture_id < MAX_TEXTURE_INDEX);
+
+				if (gl_texture_id >= MAX_TEXTURE_INDEX)
 				{
 					//reset_textures(false);
 
 					return GL_NONE;
 				}
 
-				bind_texture(texture_index, texture);
+				bind_texture(gl_texture_id, texture);
 
-				return ++texture_index;
+				texture_stack[gl_texture_id_to_index(gl_texture_id)] = texture;
+
+				return ++gl_texture_id;
 			}
 
 			// TODO: Observe performance difference between hard and soft unbinds of textures.
@@ -409,10 +441,26 @@ namespace graphics
 			{
 				if (hard_pop)
 				{
-					unbind_texture(texture_index);
+					unbind_texture(gl_texture_id);
 				}
 
-				return --texture_index;
+				texture_stack[gl_texture_id_to_index(gl_texture_id)] = NoHandle;
+
+				return --gl_texture_id;
+			}
+
+			// If the specified texture-handle could not be found, '-1' is returned.
+			int get_texture_index(Handle texture)
+			{
+				for (auto i = 0; i < texture_stack.size(); i++)
+				{
+					if (texture_stack[i] == texture)
+					{
+						return i;
+					}
+				}
+
+				return -1;
 			}
 
 			void reset_textures(bool hard_reset=false)
@@ -421,11 +469,29 @@ namespace graphics
 				{
 					for (GLenum i = BASE_TEXTURE_INDEX; i < MAX_TEXTURES; i++)
 					{
-						unbind_texture(texture_index);
+						unbind_texture(gl_texture_id);
 					}
 				}
 
-				texture_index = BASE_TEXTURE_INDEX;
+				gl_texture_id = BASE_TEXTURE_INDEX;
+			}
+		protected:
+			// Returns a reference to an internal buffer, populated with the indices requested.
+			const std::vector<int>& get_texture_indices(const TextureArray& textures, std::size_t texture_count)
+			{
+				auto& buffer = _texture_assignment_buffer;
+
+				// Clear the previous contents of the buffer.
+				buffer.clear();
+
+				for (const auto& texture : textures)
+				{
+					auto texture_index = get_texture_index(texture->get_handle());
+
+					buffer.push_back(texture_index);
+				}
+
+				return buffer;
 			}
 	};
 
@@ -459,6 +525,11 @@ namespace graphics
 
 		// Initial configuration:
 		toggle(flags, true);
+
+		// TODO: Implement this using context-flags:
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		//glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
 	}
 
 	Context::~Context()
@@ -646,11 +717,99 @@ namespace graphics
 		return true;
 	}
 
-	void Context::clear_textures()
+	bool Context::set_uniform(Shader& shader, raw_string name, const TextureArray& textures)
+	{
+		auto& driver = get_driver(*this);
+
+		auto uniform = Driver::get_uniform(shader, name);
+
+		if (uniform == Driver::InvalidUniform)
+		{
+			return false;
+		}
+
+		auto texture_count = textures.size();
+
+		if (texture_count == 0)
+		{
+			return false;
+		}
+		else if (texture_count == 1)
+		{
+			return set_uniform(shader, name, textures[0]);
+		}
+
+		const auto& buffer = driver.get_texture_indices(textures, texture_count);
+
+		glUniform1iv(uniform, texture_count, buffer.data());
+
+		return true;
+	}
+
+	bool Context::set_uniform(Shader& shader, raw_string name, const pass_ref<Texture> texture)
+	{
+		return set_uniform(shader, name, *texture);
+	}
+
+	bool Context::set_uniform(Shader& shader, raw_string name, Texture& texture)
+	{
+		auto& driver = get_driver(*this);
+
+		int texture_index = driver.get_texture_index(texture.get_handle());
+
+		if (texture_index != -1)
+		{
+			return set_uniform(shader, name, texture_index);
+		}
+
+		return false;
+	}
+
+	bool Context::set_uniform(Shader& shader, const std::string& name, const UniformData& uniform)
+	{
+		bool result = false;
+
+		std::visit([&](auto&& data)
+		{
+			result = set_uniform(shader, name, data);
+		}, uniform);
+
+		return result;
+	}
+
+	bool Context::apply_uniforms(Shader& shader, const UniformMap& uniforms)
+	{
+		for (const auto& uniform : uniforms)
+		{
+			const auto* name = uniform.first.c_str();
+			const auto& data = uniform.second;
+
+			if (!set_uniform(shader, name, data))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	// Force-flushes the uniforms stored by 'shader'.
+	bool Context::flush_uniforms(Shader& shader)
+	{
+		return apply_uniforms(shader, shader.get_uniforms());
+	}
+
+	// Force-flushes the uniforms stored in the actively bound shader.
+	bool Context::flush_uniforms()
+	{
+		return flush_uniforms(state->shader);
+	}
+
+	void Context::clear_textures(bool force)
 	{
 		auto& driver = get_driver(this);
 
-		driver.reset_textures(false); // true;
+		driver.reset_textures(force); // true;
 		state->clear_textures();
 	}
 
@@ -686,8 +845,8 @@ namespace graphics
 			return state->pop_texture();
 		}
 
-		state->push_texture(texture);
 		driver.push_texture(texture.handle);
+		state->push_texture(texture);
 		
 		return prev_texture;
 	}
@@ -806,10 +965,10 @@ namespace graphics
 	// Texture related:
 	Context::Handle Context::generate_texture(const PixelMap& texture_data, ElementType channel_type, TextureFlags flags, bool __keep_bound)
 	{
-		ASSERT(texture_data);
+		///ASSERT(texture_data);
 
 		// At this time, no more than four color channels are supported.
-		ASSERT(texture_data.channels() <= 4);
+		///ASSERT(texture_data.channels() <= 4);
 
 		Handle texture = NoHandle;
 

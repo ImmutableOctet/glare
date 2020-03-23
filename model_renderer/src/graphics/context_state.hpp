@@ -12,6 +12,7 @@
 namespace graphics
 {
 	class Context;
+	class Canvas;
 
 	// High-level state management:
 	class ContextState
@@ -25,6 +26,8 @@ namespace graphics
 		protected:
 			friend Context;
 			friend Context::Driver;
+
+			friend Canvas;
 
 			// Modified and otherwise managed by 'Context' and 'Context::Driver'.
 			Flags flags = Flags::Default;

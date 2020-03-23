@@ -1,6 +1,7 @@
 #include "transform.hpp"
 
 #include <glm/gtx/matrix_decompose.hpp>
+#include <glm/gtx/orthonormalize.hpp>
 
 using namespace math;
 
@@ -63,13 +64,13 @@ namespace engine
 		{
 			auto local_basis = get_local_basis();
 
-			set_local_basis((local_basis * basis));
+			set_local_basis((basis * local_basis));
 		}
 		else
 		{
 			auto current_basis = get_basis();
 
-			set_basis((basis * current_basis));
+			set_basis((current_basis * basis));
 		}
 	}
 
@@ -187,7 +188,18 @@ namespace engine
 	{
 		auto parent = get_parent();
 
-		set_local_basis((parent) ? (parent->get_basis()) : basis );
+		if (parent)
+		{
+			auto parent_basis = parent->get_basis();
+
+			set_local_basis(glm::transpose(parent_basis) * basis);
+		}
+		else
+		{
+			set_local_basis(basis);
+		}
+
+		//set_local_basis((parent) ? (parent->get_basis()) : basis );
 
 		invalidate();
 	}
@@ -356,7 +368,7 @@ namespace engine
 
 	void Transform::set_local_basis(const math::RotationMatrix& basis)
 	{
-		transform.basis = basis;
+		transform.basis = basis; // glm::orthonormalize(basis);
 
 		invalidate();
 

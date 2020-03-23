@@ -28,13 +28,6 @@ namespace unit_test
 				graphics::Mesh screen_quad;
 			} gBuffer;
 
-			struct
-			{
-				Uniform<math::mat4> projection = {"projection"};
-				Uniform<math::mat4> view = {"view"};
-				Uniform<math::mat4> model = {"model"};
-			} uniforms;
-
 			ref<graphics::Model> model;
 
 			std::vector<glm::vec3> lightPositions;

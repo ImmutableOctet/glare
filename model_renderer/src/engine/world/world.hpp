@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "entity.hpp"
+#include "graphics_entity.hpp"
 #include "camera.hpp"
 
 namespace app

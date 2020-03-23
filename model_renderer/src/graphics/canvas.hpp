@@ -21,6 +21,7 @@ namespace graphics
 {
 	class Context;
 	class Model;
+	//class Shader;
 
 	class Canvas
 	{
@@ -36,7 +37,7 @@ namespace graphics
 			void flip(app::Window& wnd);
 			void clear(float red, float green, float blue, float alpha);
 
-			void draw(Model& model, const math::Matrix& model_matrix);
+			void draw(Model& model); // const math::Matrix& model_matrix
 		private:
 			std::shared_ptr<Context> context;
 

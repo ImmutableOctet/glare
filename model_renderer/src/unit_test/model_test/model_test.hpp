@@ -13,20 +13,11 @@ namespace unit_test
 		public:
 			ref<graphics::Shader> test_shader;
 
-			math::mat4 projection;
-			math::mat4 view;
-			math::mat4 model;
-
-			struct
-			{
-				Uniform<math::mat4> projection = { "projection" };
-				Uniform<math::mat4> view       = { "view" };
-				Uniform<math::mat4> model      = { "model" };
-			} uniforms;
-
 			ref<graphics::Model> loaded_model;
 
 			engine::World world;
+			engine::ResourceManager resource_manager;
+
 			engine::Entity& camera = world.cameras[0];
 			engine::Entity model_entity;
 

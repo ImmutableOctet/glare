@@ -1,15 +1,37 @@
 #pragma once
 
-#include <math/math.hpp>
-#include "types.hpp"
+#include <string>
+#include <string_view>
 
+#include <util/variant.hpp>
+//#include <math/math.hpp>
+
+#include "types.hpp"
 #include "shader.hpp"
-#include "texture.hpp"
 
 namespace graphics
 {
 	//class Shader;
 
+	using Material = UniformMap;
+
+	constexpr std::string_view MATERIAL_VAR_ALPHA = "alpha"; // sv
+	constexpr std::string_view MATERIAL_VAR_DIFFUSE_COLOR = "diffuse_color"; // sv
+
+	constexpr float MATERIAL_TRANSPARENCY_THRESHOLD = 0.99f;
+
+	// Returns whether 'material' is considered transparent or not.
+	bool transparent_material(const Material& material);
+
+	template <typename T>
+	Material& set_material_var(Material& material, const std::string_view& material_var, const T& value)
+	{
+		material[std::string(material_var)] = value;
+
+		return material;
+	}
+
+	/*
 	// TODO: Break this interface into multiple material types.
 	class Material
 	{
@@ -40,4 +62,5 @@ namespace graphics
 			ref<Texture> alpha_map;
 			ref<Texture> bump_map;
 	};
+	*/
 }

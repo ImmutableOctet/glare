@@ -2,7 +2,6 @@
 
 #include <app/window.hpp>
 
-#include "uniform.hpp"
 #include "shader.hpp"
 #include "texture.hpp"
 #include "context.hpp"

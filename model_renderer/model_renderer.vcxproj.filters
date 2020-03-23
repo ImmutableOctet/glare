@@ -76,12 +76,6 @@
     <Filter Include="Source Files\Tests\model_test">
       <UniqueIdentifier>{73aa88d3-f458-4e43-b02a-37c9f647c94c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Tests\deferred_test">
-      <UniqueIdentifier>{1475c388-6fcb-4225-b57a-4ecb1bea321a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Tests\shader_test">
-      <UniqueIdentifier>{b9cad5dc-0735-4a4c-95ba-7db9210ea2b3}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\engine\world">
       <UniqueIdentifier>{f3bb9c27-1a1a-4c04-b650-652a10c1ae62}</UniqueIdentifier>
     </Filter>
@@ -96,6 +90,12 @@
     </Filter>
     <Filter Include="Source Files\Tests\signal_test">
       <UniqueIdentifier>{3101c4fb-22fa-4185-b150-a6377df4eda0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\engine\components">
+      <UniqueIdentifier>{b92a9c53-f103-4ac5-88c8-ca593afbb067}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\engine\components\graphics">
+      <UniqueIdentifier>{b6b67feb-1599-47f1-a0ab-fbbd3a26727f}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -177,12 +177,6 @@
     <ClCompile Include="src\unit_test\model_test\model_test.cpp">
       <Filter>Source Files\Tests\model_test</Filter>
     </ClCompile>
-    <ClCompile Include="src\unit_test\deferred_test\deferred_test.cpp">
-      <Filter>Source Files\Tests\deferred_test</Filter>
-    </ClCompile>
-    <ClCompile Include="src\unit_test\shader_test\shader_test.cpp">
-      <Filter>Source Files\Tests\shader_test</Filter>
-    </ClCompile>
     <ClCompile Include="src\engine\engine.cpp">
       <Filter>Source Files\engine</Filter>
     </ClCompile>
@@ -212,6 +206,9 @@
     </ClCompile>
     <ClCompile Include="src\engine\world\debug\debug_move.cpp">
       <Filter>Source Files\engine\world\debug</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\graphics_entity.cpp">
+      <Filter>Source Files\engine\world</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -296,9 +293,6 @@
     <ClInclude Include="src\graphics\types.hpp">
       <Filter>Source Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="src\graphics\uniform.hpp">
-      <Filter>Source Files\graphics</Filter>
-    </ClInclude>
     <ClInclude Include="src\graphics\drivers\driver.hpp">
       <Filter>Source Files\graphics\drivers</Filter>
     </ClInclude>
@@ -359,12 +353,6 @@
     <ClInclude Include="src\unit_test\model_test\model_test.hpp">
       <Filter>Source Files\Tests\model_test</Filter>
     </ClInclude>
-    <ClInclude Include="src\unit_test\deferred_test\deferred_test.hpp">
-      <Filter>Source Files\Tests\deferred_test</Filter>
-    </ClInclude>
-    <ClInclude Include="src\unit_test\shader_test\shader_test.hpp">
-      <Filter>Source Files\Tests\shader_test</Filter>
-    </ClInclude>
     <ClInclude Include="src\engine\engine.hpp">
       <Filter>Source Files\engine</Filter>
     </ClInclude>
@@ -409,6 +397,21 @@
     </ClInclude>
     <ClInclude Include="src\app\input\input_device.hpp">
       <Filter>Source Files\app\input</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\resource_manager.hpp">
+      <Filter>Source Files\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\graphics_entity.hpp">
+      <Filter>Source Files\engine\world</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\components\graphics\model_component.hpp">
+      <Filter>Source Files\engine\components\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\components\graphics\graphics.hpp">
+      <Filter>Source Files\engine\components\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\variant.hpp">
+      <Filter>Source Files\util</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

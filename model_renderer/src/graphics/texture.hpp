@@ -28,6 +28,7 @@ namespace graphics
 
 			friend void swap(Texture& x, Texture& y);
 
+			Texture(pass_ref<Context> ctx, raw_string path, Flags flags=Flags::Default);
 			Texture(pass_ref<Context> ctx, const std::string& path, Flags flags=Flags::Default);
 			Texture(pass_ref<Context> ctx, const PixelMap& data, Flags flags=Flags::Default);
 			Texture(pass_ref<Context> ctx, int width, int height, TextureFormat format, ElementType element_type, TextureFlags flags=Flags::None);

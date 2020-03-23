@@ -6,8 +6,8 @@ newmtl Material
 illum 2
 d 1
 ka 1 1 1
-kd 0 0.137255 1
-ks 0 0 0
-ke 0 0 0
-ns 40
-map_kd Q:\Projects\model_renderer\model_renderer\assets\unit_tests\model_test\texture.jpg
+kd 1 0.882353 0
+ks 1 0 0
+ke 1 1 1
+ns 10
+map_kd D:\Projects\model_renderer\model_renderer\assets\unit_tests\model_test\texture.jpg

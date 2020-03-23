@@ -9,6 +9,8 @@
 #include <engine/engine.hpp>
 #include <graphics/native/opengl.hpp>
 
+#include <engine/free_look.hpp>
+
 #include <sdl2/SDL_video.h>
 
 #include <glm/glm.hpp>
@@ -18,8 +20,11 @@
 namespace unit_test
 {
 	ModelTest::ModelTest(bool auto_execute)
-		: GraphicsApplication("Shader Test", 1600, 900, app::WindowFlags::OpenGL)
+		: GraphicsApplication("Model Test", 1600, 900, app::WindowFlags::OpenGL)
 	{
+		// Uncap framerate.
+		//SDL_GL_SetSwapInterval(0);
+
 		test_shader = memory::allocate<graphics::Shader>
 		(
 			graphics.context,
@@ -30,13 +35,32 @@ namespace unit_test
 
 		loaded_model = memory::allocate<graphics::Model>();
 
-		*loaded_model = graphics::Model::Load(graphics.context, "assets/unit_tests/model_test/sphere.obj");
+		std::string path;
 
-		model_entity = engine::create_pivot(world);
+		//path = "Q:\\Projects\\BlitzSonic Projects\\Blitzsonic Related\\Genesis Redux Project 1.1\\Stages\\GreenHill\\Stage\\Stage.b3d";
+		//path = "Q:\\Projects\\BlitzSonic Projects\\Blitzsonic-backups\\BlitzSonicv02\\Stages\\GreenHill\\Stage\\Stage.b3d";
+		//path = "Q:\\Projects\\BlitzSonic Projects\\Blitzsonic Related\\HAXY EDIT OF DOOM\\Stages\\Emerald Coast\\1\\EC1.b3d";
+		//path = "model_renderer/assets/unit_tests/model_test/Bianco/Stage2.b3d";
+
+		//path = "assets\\unit_tests\\model_test\\Checkpoint\\Checkpoint.b3d";
+
+		//path = "assets/unit_tests/model_test/custom_sonic.b3d";
+		//path = "assets/unit_tests/model_test/Stage.obj";
+		//path = "assets/unit_tests/model_test/Young Samus/rtm_zero_samus_old.obj";
+		//path = "assets\\unit_tests\\deferred_test\\nanosuit\\nanosuit.obj";
+		//path = "assets/unit_tests/model_test/SeasideShortcut/Stage.b3d";
+		path = "assets/unit_tests/model_test/sphere.obj";
+		//path = "assets/unit_tests/model_test/Sonic.obj";
+
+		*loaded_model = graphics::Model::Load(graphics.context, resource_manager, path);
+
+		model_entity = engine::create_model(world, loaded_model);
+
+		//world.get_registry().assign<engine::FreeLook>(model_entity);
 
 		auto model_transform = world.get_transform(model_entity);
 
-		model_transform.move({3.0f, 10.0f, -30.0f});
+		model_transform.move({3.0f, 0.0f, -30.0f});
 
 		input.get_mouse().lock();
 
@@ -87,37 +111,19 @@ namespace unit_test
 
 		math::Matrix inverse_world = camera_transform.get_inverse_matrix();
 
-		graphics.context->use(*test_shader, [&]()
-		{
-			this->uniforms.projection = glm::perspective(camera_params.fov, camera_params.aspect_ratio, camera_params.near, camera_params.far);
-			this->uniforms.view = inverse_world; // glm::translate(math::mat4(1.0f), math::vec3(0.0f, 0.0f, -1.0f));
+		auto& shader = *test_shader;
 
-			graphics.context->update(*test_shader, uniforms.projection);
-			graphics.context->update(*test_shader, uniforms.view);
+		graphics.context->use(shader, [&]()
+		{
+			shader["projection"] = glm::perspective(camera_params.fov, camera_params.aspect_ratio, camera_params.near, camera_params.far);
+			shader["view"] = inverse_world;
 
 			auto model_transform = world.get_transform(model_entity);
+			auto model_matrix    = model_transform.get_matrix();
 
-			//model_transform.move({0.0f, (0.2f * std::sin(milliseconds() / 100)), 0.0f});
+			shader["model"] = model_matrix;
 
-			auto model_matrix = model_transform.get_matrix();
-
-			this->uniforms.model = model_matrix;
-
-			graphics.context->update(*test_shader, uniforms.model);
-
-			graphics.canvas->draw(*loaded_model, model_matrix);
-
-			/*
-			for (auto& m : loaded_model->get_meshes())
-			{
-				auto& mesh = *m.first;
-
-				graphics.context->use(mesh, [&]()
-				{
-					graphics.context->draw();
-				});
-			}
-			*/
+			graphics.canvas->draw(*loaded_model);
 		});
 
 		gfx.flip(wnd);
@@ -146,17 +152,34 @@ namespace unit_test
 	{
 		switch (event.keysym.sym)
 		{
-			case SDLK_0:
-				auto camera_transform = world.get_transform(camera);
-
-				auto model = this->uniforms.model.get_value();
-				auto v = math::get_translation(model);
-
-				std::cout << v.x << ", " << v.y << ", " << v.z << '\n';
-
-				camera_transform.look_at(v);
+			case SDLK_1:
+			{
+				auto model_transform = world.get_transform(model_entity);
+				model_transform.rotateX(45.0f * (3.14159f / 180.0f));
 
 				break;
+			}
+			case SDLK_2:
+			{
+				auto model_transform = world.get_transform(model_entity);
+				model_transform.rotateY(45.0f * (3.14159f / 180.0f));
+
+				break;
+			}
+			case SDLK_3:
+			{
+				auto model_transform = world.get_transform(model_entity);
+				model_transform.rotateZ(45.0f * (3.14159f / 180.0f));
+
+				break;
+			}
+			case SDLK_4:
+			{
+				auto model_transform = world.get_transform(model_entity);
+				model_transform.set_rotation({0.0f, 0.0f, 0.0f});
+
+				break;
+			}
 		}
 	}
 }

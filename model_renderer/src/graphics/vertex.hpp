@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <cstddef>
 
-#include <half/half.hpp>
+///#include <half/half.hpp>
 
 #include "types.hpp"
 #include <util/algorithm.hpp>
@@ -60,7 +60,7 @@ namespace graphics
 			else if (type == typeid(double))           return ElementType::Double;
 
 			// Extensions:
-			else if (type == typeid(half_float::half)) return ElementType::Half;
+			///else if (type == typeid(half_float::half)) return ElementType::Half;
 			else if (type == typeid(std::string))      return ElementType::Char;
 
 			// Math:
@@ -91,7 +91,7 @@ namespace graphics
 			else if (type == typeid(double)) return 1;
 
 			// Extensions:
-			else if (type == typeid(half_float::half)) return 1;
+			///else if (type == typeid(half_float::half)) return 1;
 
 			// Math:
 			else if (type == typeid(math::vec2f)) return 2;

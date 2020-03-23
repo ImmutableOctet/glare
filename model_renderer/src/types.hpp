@@ -10,6 +10,11 @@
 #include "util/memory.hpp"
 #include "util/shorthand.hpp"
 
+namespace engine
+{
+	class ResourceManager;
+}
+
 using raw_string = memory::raw_string;
 
 template <typename T>
@@ -31,7 +36,7 @@ class defaultable_ref
 	private:
 		T default_value = T();
 	public:
-		T* ptr = nullptr;
+		T* ptr; // = nullptr
 
 		inline defaultable_ref() : defaultable_ref(default_value) {}
 		inline defaultable_ref(T& value) : ptr(&value) {}
@@ -54,6 +59,11 @@ class defaultable_ref
 		inline T& operator*() const
 		{
 			return *ptr;
+		}
+
+		inline T& operator->() const
+		{
+			return ptr;
 		}
 
 		inline T& operator=(T& new_ref)

@@ -50,9 +50,14 @@ namespace graphics
 
 	PixelMap PixelMap::Load(const std::string& path, int desired_channels)
 	{
+		return Load(path.c_str(), desired_channels);
+	}
+
+	PixelMap PixelMap::Load(raw_string path, int desired_channels)
+	{
 		int width, height, color_channels;
 
-		RawPtr data = reinterpret_cast<RawPtr>(stbi_load(path.c_str(), &width, &height, &color_channels, desired_channels));
+		RawPtr data = reinterpret_cast<RawPtr>(stbi_load(path, &width, &height, &color_channels, desired_channels));
 
 		if (desired_channels <= 0)
 		{
@@ -60,7 +65,7 @@ namespace graphics
 		}
 
 		// TODO: Add proper handling for invalid 'PixelMap' objects.
-		ASSERT(data);
+		///ASSERT(data);
 
 		return PixelMap(std::move(data), width, height, desired_channels);
 	}

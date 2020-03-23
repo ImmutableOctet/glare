@@ -5,6 +5,7 @@
 
 #include <debug.hpp>
 
+#include <types.hpp>
 #include "resource.hpp"
 
 namespace graphics
@@ -27,6 +28,7 @@ namespace graphics
 			static TextureFormat get_format_for(int channels);
 
 			static PixelMap Load(const std::string& path, int color_channels=0);
+			static PixelMap Load(raw_string path, int color_channels=0);
 
 			inline int width()    const { return image_width;    }
 			inline int height()   const { return image_height;   }

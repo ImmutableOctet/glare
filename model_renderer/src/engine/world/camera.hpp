@@ -6,10 +6,10 @@
 
 namespace engine
 {
-	struct CameraParameters
+	struct CameraParameters // Component type.
 	{
 		static constexpr float NEAR = 0.1f;
-		static constexpr float FAR  = 1000.0f;
+		static constexpr float FAR  = 4000.0f;
 		static constexpr float ASPECT = (16.0f / 9.0f); // 16:9
 
 		static constexpr float DEFAULT_FOV = 75.0f;

@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 
 #include "context.hpp"
+
 #include "shader.hpp"
 
 namespace graphics
@@ -17,6 +18,11 @@ namespace graphics
 	Shader::~Shader()
 	{
 		get_context()->release_shader(std::move(handle));
+	}
+
+	Uniform Shader::operator[](const std::string& str)
+	{
+		return { *this, str };
 	}
 
 	// ShaderSource:
