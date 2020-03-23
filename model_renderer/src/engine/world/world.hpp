@@ -1,6 +1,8 @@
 #pragma once
 
 #include <engine/types.hpp>
+#include <engine/messages/messages.hpp>
+
 #include <app/delta_time.hpp>
 
 #include <vector>
@@ -14,8 +16,6 @@ namespace app
 	namespace input
 	{
 		class InputHandler;
-		struct MouseState;
-		struct KeyboardState;
 	}
 }
 

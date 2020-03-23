@@ -5,4 +5,5 @@
 #include "application.hpp"
 #include "graphics_application.hpp"
 #include "delta_time.hpp"
+#include "timer.hpp"
 #include "input/input.hpp"

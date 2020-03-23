@@ -68,7 +68,7 @@ namespace graphics
 			using UniformLocationMap       = std::unordered_map<std::string_view, gl_uniform_location>;
 			using UniformLocationContainer = std::unordered_map<Handle, UniformLocationMap>;
 
-			UniformLocationContainer _uniform_cache;
+			UniformLocationContainer uniform_location_cache;
 		protected:
 			static int gl_texture_id_to_index(GLenum texture_id)
 			{
@@ -92,9 +92,24 @@ namespace graphics
 			*/
 
 			// Utility Code:
-			gl_uniform_location get_uniform(Shader& shader, raw_string name)
+
+			// NOTE: 'name' must be a null-terminated string.
+			gl_uniform_location get_uniform(Shader& shader, std::string_view name)
 			{
-				return glGetUniformLocation(shader.get_handle(), name);
+				auto& uniform_location_map = uniform_location_cache[shader.get_handle()];
+
+				auto it = uniform_location_map.find(name);
+
+				if (it != uniform_location_map.end())
+				{
+					return it->second;
+				}
+
+				auto uniform_location = glGetUniformLocation(shader.get_handle(), name.data());
+
+				uniform_location_map[name] = uniform_location;
+
+				return uniform_location;
 			}
 
 			// Applies texture flags to the currently bound texture.
@@ -481,6 +496,14 @@ namespace graphics
 
 				gl_texture_id = BASE_TEXTURE_INDEX;
 			}
+			
+			void bind_shader(Handle shader)
+			{
+				// Bind the shader to the current graphical context.
+				glUseProgram(shader);
+
+				//uniform_location_map = uniform_location_cache[shader];
+			}
 		protected:
 			// Returns a reference to an internal buffer, populated with the indices requested.
 			const std::vector<int>& get_texture_indices(const TextureArray& textures, std::size_t texture_count)
@@ -606,7 +629,7 @@ namespace graphics
 		glDrawArrays(primitive_type, offset, count);
 	}
 
-	bool Context::set_uniform(Shader& shader, raw_string name, int value)
+	bool Context::set_uniform(Shader& shader, std::string_view name, int value)
 	{
 		auto& driver = get_driver(*this);
 
@@ -622,7 +645,7 @@ namespace graphics
 		return true;
 	}
 
-	bool Context::set_uniform(Shader& shader, raw_string name, float value)
+	bool Context::set_uniform(Shader& shader, std::string_view name, float value)
 	{
 		auto& driver = get_driver(*this);
 
@@ -638,12 +661,12 @@ namespace graphics
 		return true;
 	}
 
-	bool Context::set_uniform(Shader& shader, raw_string name, bool value)
+	bool Context::set_uniform(Shader& shader, std::string_view name, bool value)
 	{
 		return set_uniform(shader, name, static_cast<int>(value));
 	}
 
-	bool Context::set_uniform(Shader& shader, raw_string name, const math::Vector2D& value)
+	bool Context::set_uniform(Shader& shader, std::string_view name, const math::Vector2D& value)
 	{
 		auto& driver = get_driver(*this);
 
@@ -659,7 +682,7 @@ namespace graphics
 		return true;
 	}
 
-	bool Context::set_uniform(Shader& shader, raw_string name, const math::Vector3D& value)
+	bool Context::set_uniform(Shader& shader, std::string_view name, const math::Vector3D& value)
 	{
 		auto& driver = get_driver(*this);
 
@@ -675,7 +698,7 @@ namespace graphics
 		return true;
 	}
 
-	bool Context::set_uniform(Shader& shader, raw_string name, const math::Vector4D& value)
+	bool Context::set_uniform(Shader& shader, std::string_view name, const math::Vector4D& value)
 	{
 		auto& driver = get_driver(*this);
 
@@ -691,7 +714,7 @@ namespace graphics
 		return true;
 	}
 
-	bool Context::set_uniform(Shader& shader, raw_string name, const math::Matrix2x2& value)
+	bool Context::set_uniform(Shader& shader, std::string_view name, const math::Matrix2x2& value)
 	{
 		auto& driver = get_driver(*this);
 
@@ -707,7 +730,7 @@ namespace graphics
 		return true;
 	}
 
-	bool Context::set_uniform(Shader& shader, raw_string name, const math::Matrix3x3& value)
+	bool Context::set_uniform(Shader& shader, std::string_view name, const math::Matrix3x3& value)
 	{
 		auto& driver = get_driver(*this);
 
@@ -723,7 +746,7 @@ namespace graphics
 		return true;
 	}
 
-	bool Context::set_uniform(Shader& shader, raw_string name, const math::Matrix4x4& value)
+	bool Context::set_uniform(Shader& shader, std::string_view name, const math::Matrix4x4& value)
 	{
 		auto& driver = get_driver(*this);
 
@@ -739,7 +762,7 @@ namespace graphics
 		return true;
 	}
 
-	bool Context::set_uniform(Shader& shader, raw_string name, const TextureArray& textures)
+	bool Context::set_uniform(Shader& shader, std::string_view name, const TextureArray& textures)
 	{
 		auto& driver = get_driver(*this);
 
@@ -768,12 +791,12 @@ namespace graphics
 		return true;
 	}
 
-	bool Context::set_uniform(Shader& shader, raw_string name, const pass_ref<Texture> texture)
+	bool Context::set_uniform(Shader& shader, std::string_view name, const pass_ref<Texture> texture)
 	{
 		return set_uniform(shader, name, *texture);
 	}
 
-	bool Context::set_uniform(Shader& shader, raw_string name, Texture& texture)
+	bool Context::set_uniform(Shader& shader, std::string_view name, Texture& texture)
 	{
 		auto& driver = get_driver(*this);
 
@@ -787,7 +810,7 @@ namespace graphics
 		return false;
 	}
 
-	bool Context::set_uniform(Shader& shader, const std::string& name, const UniformData& uniform)
+	bool Context::set_uniform(Shader& shader, std::string_view name, const UniformData& uniform)
 	{
 		bool result = false;
 
@@ -803,7 +826,7 @@ namespace graphics
 	{
 		for (const auto& uniform : uniforms)
 		{
-			const auto* name = uniform.first.c_str();
+			const auto& name = uniform.first;
 			const auto& data = uniform.second;
 
 			if (!set_uniform(shader, name, data))
@@ -845,8 +868,9 @@ namespace graphics
 			return shader;
 		}
 
-		// Bind the shader to the current graphical context.
-		glUseProgram(shader.get_handle());
+		auto& driver = get_driver(this);
+
+		driver.bind_shader(shader.get_handle());
 
 		// Assign the newly bound shader.
 		state->shader = shader;

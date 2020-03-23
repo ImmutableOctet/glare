@@ -5,6 +5,7 @@
 
 #include <utility>
 
+#include <string_view>
 #include <string>
 #include <unordered_map>
 #include <type_traits>
@@ -183,7 +184,7 @@ namespace graphics
 	using TextureArray = std::vector<ref<Texture>>;
 
 	using UniformData = std::variant<bool, int, float, math::Vector2D, math::Vector3D, math::Vector4D, math::Matrix2x2, math::Matrix3x3, math::Matrix4x4, ref<Texture>, TextureArray>;
-	using UniformMap = std::unordered_map<std::string, UniformData>;
+	using UniformMap = std::unordered_map<std::string_view, UniformData>; // std::string
 
 	template <typename fn_type>
 	void enumerate_texture_types(fn_type&& fn)

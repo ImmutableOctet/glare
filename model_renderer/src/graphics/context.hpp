@@ -3,6 +3,7 @@
 #include <utility>
 #include <functional>
 #include <string>
+#include <string_view>
 
 #include <math/math.hpp>
 
@@ -163,30 +164,24 @@ namespace graphics
 			// Draw using the currently bound 'Mesh' object, but with a different primitive type.
 			void draw(Primitive primitive);
 
-			bool set_uniform(Shader& shader, raw_string name, int value); // std::int32_t
-			bool set_uniform(Shader& shader, raw_string name, bool value);
-			bool set_uniform(Shader& shader, raw_string name, float value);
+			bool set_uniform(Shader& shader, std::string_view name, int value); // std::int32_t
+			bool set_uniform(Shader& shader, std::string_view name, bool value);
+			bool set_uniform(Shader& shader, std::string_view name, float value);
 
-			bool set_uniform(Shader& shader, raw_string name, const math::Vector2D& value);
-			bool set_uniform(Shader& shader, raw_string name, const math::Vector3D& value);
-			bool set_uniform(Shader& shader, raw_string name, const math::Vector4D& value);
+			bool set_uniform(Shader& shader, std::string_view name, const math::Vector2D& value);
+			bool set_uniform(Shader& shader, std::string_view name, const math::Vector3D& value);
+			bool set_uniform(Shader& shader, std::string_view name, const math::Vector4D& value);
 
-			bool set_uniform(Shader& shader, raw_string name, const math::Matrix2x2& value);
-			bool set_uniform(Shader& shader, raw_string name, const math::Matrix3x3& value);
-			bool set_uniform(Shader& shader, raw_string name, const math::Matrix4x4& value);
+			bool set_uniform(Shader& shader, std::string_view name, const math::Matrix2x2& value);
+			bool set_uniform(Shader& shader, std::string_view name, const math::Matrix3x3& value);
+			bool set_uniform(Shader& shader, std::string_view name, const math::Matrix4x4& value);
 
 
-			bool set_uniform(Shader& shader, raw_string name, const TextureArray& textures);
-			bool set_uniform(Shader& shader, raw_string name, const pass_ref<Texture> texture);
-			bool set_uniform(Shader& shader, raw_string name, Texture& texture); // std::int32_t
+			bool set_uniform(Shader& shader, std::string_view name, const TextureArray& textures);
+			bool set_uniform(Shader& shader, std::string_view name, const pass_ref<Texture> texture);
+			bool set_uniform(Shader& shader, std::string_view name, Texture& texture); // std::int32_t
 
-			bool set_uniform(Shader& shader, const std::string& name, const UniformData& uniform);
-
-			template <typename T>
-			inline bool set_uniform(Shader& shader, const std::string& name, const T& value)
-			{
-				return set_uniform(shader, name.c_str(), value);
-			}
+			bool set_uniform(Shader& shader, std::string_view name, const UniformData& uniform);
 
 			//bool set_uniform(Shader& shader, const std::string& name, const pass_ref<Texture> texture); // std::int32_t
 			//bool set_uniform(Shader& shader, const std::string& name, Texture& texture); // std::int32_t

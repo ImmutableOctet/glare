@@ -9,6 +9,7 @@
 
 #include "src/unit_test/model_test/model_test.hpp"
 //#include "src/unit_test/signal_test/signal_test.hpp"
+#include "src/unit_test/timer_test/timer_test.hpp"
 
 int main(int argc, char** argv)
 {
@@ -19,6 +20,8 @@ int main(int argc, char** argv)
 	//DeferredTest();
 
 	ModelTest();
+
+	//TimerTest();
 
 	//SignalTest();
 	//DispatcherTest();

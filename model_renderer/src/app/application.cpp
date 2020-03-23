@@ -6,7 +6,17 @@
 
 namespace app
 {
-	Application::Application(DeltaTime::Rate update_rate) : init_libraries(), delta_time(update_rate) {}
+	Application::Application(UpdateRate update_rate) : init_libraries(), delta_time(update_rate), fixed_update_rate(update_rate)
+	{
+		auto time = milliseconds();
+
+		*this << Timer::make_continuous(fixed_update_duration(), time, [this](Timer& timer, Duration time_elapsed)
+		{
+			fixed_update();
+
+			return fixed_update_duration();
+		});
+	}
 
 	bool Application::start()
 	{
@@ -42,6 +52,8 @@ namespace app
 
 	void Application::run()
 	{
+		auto time = milliseconds();
+
 		while (is_running())
 		{
 			if (!handle_events())
@@ -51,10 +63,13 @@ namespace app
 				break; // return;
 			}
 
-			float frame_delta;
+			time = milliseconds();
 
-			delta_time << milliseconds();
-			delta_time >> frame_delta;
+			// Update timed events.
+			*this << time;
+
+			// Update the delta-timer.
+			delta_time << time;
 
 			update(delta_time); update_counter++;
 			render(); render_counter++;
@@ -130,7 +145,7 @@ namespace app
 		return std::chrono::system_clock::now();
 	}
 
-	Application::duration Application::time() const
+	Application::clock_duration Application::time() const
 	{
 		return now().time_since_epoch();
 	}
@@ -143,6 +158,11 @@ namespace app
 	Milliseconds Application::milliseconds() const
 	{
 		return std::chrono::duration_cast<std::chrono::milliseconds>(now() - start_point).count();
+	}
+
+	void Application::fixed_update()
+	{
+		// Empty implementation.
 	}
 
 	void Application::retrieve_start_time()

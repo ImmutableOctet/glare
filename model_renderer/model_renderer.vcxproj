@@ -174,6 +174,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\app\input\input_handler\input_handler.cpp" />
     <ClCompile Include="src\app\input\keyboard\keyboard.cpp" />
     <ClCompile Include="src\app\input\mouse\mouse.cpp" />
+    <ClCompile Include="src\app\timer.cpp" />
     <ClCompile Include="src\app\window.cpp" />
     <ClCompile Include="src\engine\engine.cpp" />
     <ClCompile Include="src\engine\free_look.cpp" />
@@ -201,6 +202,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\math\math.cpp" />
     <ClCompile Include="src\unit_test\model_test\model_test.cpp" />
     <ClCompile Include="src\unit_test\signal_test\signal_test.cpp" />
+    <ClCompile Include="src\unit_test\timer_test\timer_test.cpp" />
     <ClCompile Include="src\util\io.cpp" />
     <ClCompile Include="src\util\lib.cpp" />
   </ItemGroup>
@@ -219,14 +221,18 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\app\input\keyboard\keycodes.hpp" />
     <ClInclude Include="src\app\input\mouse\mouse.hpp" />
     <ClInclude Include="src\app\input\types.hpp" />
+    <ClInclude Include="src\app\timer.hpp" />
     <ClInclude Include="src\app\types.hpp" />
     <ClInclude Include="src\app\window.hpp" />
     <ClInclude Include="src\core.hpp" />
     <ClInclude Include="src\debug.hpp" />
+    <ClInclude Include="src\engine\components\components.hpp" />
     <ClInclude Include="src\engine\components\graphics\graphics.hpp" />
     <ClInclude Include="src\engine\components\graphics\model_component.hpp" />
     <ClInclude Include="src\engine\engine.hpp" />
     <ClInclude Include="src\engine\free_look.hpp" />
+    <ClInclude Include="src\engine\messages\input.hpp" />
+    <ClInclude Include="src\engine\messages\messages.hpp" />
     <ClInclude Include="src\engine\name.hpp" />
     <ClInclude Include="src\engine\relationship.hpp" />
     <ClInclude Include="src\engine\resource_manager.hpp" />
@@ -263,6 +269,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\types.hpp" />
     <ClInclude Include="src\unit_test\model_test\model_test.hpp" />
     <ClInclude Include="src\unit_test\signal_test\signal_test.hpp" />
+    <ClInclude Include="src\unit_test\timer_test\timer_test.hpp" />
     <ClInclude Include="src\unit_test\vertex_element_types.cpp" />
     <ClInclude Include="src\util\algorithm.hpp" />
     <ClInclude Include="src\util\bitfield.hpp" />

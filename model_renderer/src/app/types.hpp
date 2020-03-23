@@ -2,9 +2,17 @@
 
 #include <types.hpp>
 
+///#include <entt/signal/delegate.hpp>
+#include <functional>
+
 namespace app
 {
+	template <typename T>
+	using Delegate = std::function<T>; ///entt::delegate<T>;
+
+	using FrameCounter = std::uint64_t;
 	using Milliseconds = std::int64_t;
+	using Duration     = Milliseconds;
 
 	enum class WindowFlags : std::uint32_t
 	{

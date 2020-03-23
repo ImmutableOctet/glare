@@ -24,9 +24,9 @@ namespace graphics
 	bool transparent_material(const Material& material);
 
 	template <typename T>
-	Material& set_material_var(Material& material, const std::string_view& material_var, const T& value)
+	Material& set_material_var(Material& material, std::string_view material_var, const T& value)
 	{
-		material[std::string(material_var)] = value;
+		material[material_var] = value; // std::string(material_var)
 
 		return material;
 	}
