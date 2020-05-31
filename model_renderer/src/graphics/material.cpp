@@ -1,18 +1,23 @@
 #include "material.hpp"
 
+#include <util/variant.hpp>
+
 namespace graphics
 {
-	bool transparent_material(const Material& material)
-	{
-		auto it = material.find(std::string(MATERIAL_VAR_ALPHA));
+	Material::Material(pass_ref<Shader> shader)
+		: shader(shader) {}
 
-		if (it != material.end())
+	bool Material::transparent() const
+	{
+		auto it = uniforms.find(std::string(ALPHA));
+
+		if (it != uniforms.end())
 		{
 			const auto& value_raw = it->second;
 
 			auto value = util::get_value(value_raw, 1.0f);
 
-			if (value <= MATERIAL_TRANSPARENCY_THRESHOLD)
+			if (value_is_transparent(value))
 			{
 				return true;
 			}
@@ -20,14 +25,4 @@ namespace graphics
 
 		return false;
 	}
-	
-	/*
-	Material::Material(pass_ref<Shader> shader)
-		: shader(shader) {}
-
-	inline Shader& Material::get_shader() { return *shader; }
-
-	ForwardMaterial::ForwardMaterial(pass_ref<Shader> shader)
-		: Material(shader) {}
-	*/
 }

@@ -14,7 +14,7 @@ namespace engine
 
 		static constexpr float DEFAULT_FOV = 75.0f;
 
-		CameraParameters(float v_fov_deg=DEFAULT_FOV, float aspect_ratio=ASPECT, float near=NEAR, float far=FAR);
+		CameraParameters(float v_fov_deg=DEFAULT_FOV, float near=NEAR, float far=FAR, float aspect_ratio=ASPECT);
 
 		float fov; // Vertical FOV (Radians)
 		float aspect_ratio;
@@ -22,5 +22,5 @@ namespace engine
 		float far;
 	};
 
-	Entity create_camera(World& world, float v_fov_deg=CameraParameters::DEFAULT_FOV, Entity parent=null);
+	Entity create_camera(World& world, CameraParameters params={}, Entity parent=null);
 }

@@ -29,10 +29,12 @@ namespace app
 		Maximized         = (1 << 9),
 
 		// TODO: Review input-related flags:
+		/*
 		Input_Grabbed     = (1 << 10),
 		Input_Focus       = (1 << 11),
 		Mouse_Focus       = (1 << 12),
 		Mouse_Capture     = (1 << 13),
+		*/
 
 		Default = (OpenGL|Resizable),
 	};

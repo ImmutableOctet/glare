@@ -19,6 +19,12 @@ namespace app
 	}
 }
 
+namespace graphics
+{
+	class Canvas;
+	class Shader;
+}
+
 namespace engine
 {
 	class World
@@ -28,6 +34,10 @@ namespace engine
 
 			Registry registry;
 			EventHandler event_handler;
+
+			// Scene root-node; parent to all world-bound entities.
+			Entity root   = null;
+			Entity camera = null;
 		public:
 			std::vector<Entity> cameras;
 
@@ -41,13 +51,32 @@ namespace engine
 				event_handler.sink<EventType>().connect<fn>(*this);
 			}
 
+			// Renders the scene using the last bound camera. If no camera has been bound/assinged, then this routine will return 'false'.
+			// Returns 'false' if an essential rendering component is missing.
+			bool render(graphics::Canvas& canvas, bool forward_rendering);
+
+			// Renders the scene using the camera specified.
+			// Returns 'false' if an essential rendering component is missing. (e.g. 'camera')
+			bool render(graphics::Canvas& canvas, Entity camera, bool forward_rendering);
+
 			//void on_child_removed(const Event_ChildRemoved& e);
 
 			Transform get_transform(Entity entity);
 
 			inline Registry& get_registry() { return registry; }
 			inline EventHandler& get_event_handler() { return event_handler; }
-			inline float delta() { return delta_time; }
+			
+			// Retrieves the root scene-node; parent to all world-scoped entities.
+			inline Entity get_root() const { return root; }
+
+			// The actively bound camera. (Does not always represent the rendering camera)
+			inline Entity get_camera() const { return camera; }
+
+			inline float delta() const { return delta_time; }
+			inline operator Entity() const { return get_root(); }
+
+			void add_camera(Entity camera);
+			void remove_camera(Entity camera);
 
 			void on_mouse_input(const app::input::MouseState& mouse);
 			void on_keyboard_input(const app::input::KeyboardState& keyboard);

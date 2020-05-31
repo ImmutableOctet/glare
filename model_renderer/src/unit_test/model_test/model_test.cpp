@@ -20,11 +20,8 @@
 namespace unit_test
 {
 	ModelTest::ModelTest(bool auto_execute)
-		: GraphicsApplication("Model Test", 1600, 900, app::WindowFlags::OpenGL), world(delta_time)
+		: GraphicsApplication("Model Test", 1600, 900, app::WindowFlags::OpenGL, 60, true), world(delta_time)
 	{
-		// Uncap framerate.
-		SDL_GL_SetSwapInterval(0);
-
 		test_shader = memory::allocate<graphics::Shader>
 		(
 			graphics.context,
@@ -33,13 +30,25 @@ namespace unit_test
 			"assets/unit_tests/model_test/test.fs"
 		);
 
+		input.get_mouse().lock();
+
+		setup_world(world);
+
+		if (auto_execute)
+		{
+			execute();
+		}
+	}
+
+	void ModelTest::setup_world(engine::World& world)
+	{
 		loaded_model = memory::allocate<graphics::Model>();
 
 		std::string path;
 
 		//path = "Q:\\Projects\\BlitzSonic Projects\\Blitzsonic Related\\Genesis Redux Project 1.1\\Stages\\GreenHill\\Stage\\Stage.b3d";
 		//path = "Q:\\Projects\\BlitzSonic Projects\\Blitzsonic-backups\\BlitzSonicv02\\Stages\\GreenHill\\Stage\\Stage.b3d";
-		//path = "Q:\\Projects\\BlitzSonic Projects\\Blitzsonic Related\\HAXY EDIT OF DOOM\\Stages\\Emerald Coast\\1\\EC1.b3d";
+		path = "Q:\\Projects\\BlitzSonic Projects\\Blitzsonic Related\\HAXY EDIT OF DOOM\\Stages\\Emerald Coast\\1\\EC1.b3d";
 		//path = "model_renderer/assets/unit_tests/model_test/Bianco/Stage2.b3d";
 
 		//path = "assets\\unit_tests\\model_test\\Checkpoint\\Checkpoint.b3d";
@@ -48,26 +57,20 @@ namespace unit_test
 		//path = "assets/unit_tests/model_test/Stage.obj";
 		//path = "assets/unit_tests/model_test/Young Samus/rtm_zero_samus_old.obj";
 		//path = "assets\\unit_tests\\deferred_test\\nanosuit\\nanosuit.obj";
-		//path = "assets/unit_tests/model_test/SeasideShortcut/Stage.b3d";
-		path = "assets/unit_tests/model_test/sphere.obj";
+		//path = "assets/unit_tests/model_test/SeasideShortcut/Stage.obj";
+		//path = "assets/unit_tests/model_test/sphere.obj";
 		//path = "assets/unit_tests/model_test/Sonic.obj";
+		//path = "assets/unit_tests/model_test/Sonic/Sonic.obj";
 
-		*loaded_model = graphics::Model::Load(graphics.context, resource_manager, path);
+		*loaded_model = graphics::Model::Load(graphics.context, resource_manager, path, test_shader);
 
 		model_entity = engine::create_model(world, loaded_model);
 
-		//world.get_registry().assign<engine::FreeLook>(model_entity);
+		auto debug_camera = engine::debug::create_debug_camera(world, engine::CameraParameters::DEFAULT_FOV);
 
-		auto model_transform = world.get_transform(model_entity);
+		auto transform = world.get_transform(debug_camera);
 
-		model_transform.move({0.0f, 0.0f, -30.0f});
-
-		input.get_mouse().lock();
-
-		if (auto_execute)
-		{
-			execute();
-		}
+		transform.move({ 0.0f, 0.0f, -30.0f });
 	}
 
 	void ModelTest::update(const app::DeltaTime& delta_time)
@@ -90,40 +93,11 @@ namespace unit_test
 		//std::sinf(milliseconds())
 		graphics.context->clear(0.1f, 0.33f, 0.25f, 1.0f, graphics::BufferType::Color|graphics::BufferType::Depth); // gfx
 
-		//graphics.canvas.draw();
-
-		//loaded_model.draw();
-
-		auto& registry = world.get_registry();
-
-		//auto& camera_transform = registry.get<engine::TransformComponent>(camera);
-		//auto inverse_world = camera_transform.inverse_world;
-
-		auto camera_transform = world.get_transform(camera);
-
-		auto& camera_params = registry.get<engine::CameraParameters>(camera);
-
-		camera_params.aspect_ratio = window->horizontal_aspect_ratio();
-
-		auto rotation = glm::degrees(camera_transform.get_rotation());
-		
-		//std::cout << rotation.x << ", " << rotation.y << ", " << rotation.z << '\r';
-
-		math::Matrix inverse_world = camera_transform.get_inverse_matrix();
-
 		auto& shader = *test_shader;
 
 		graphics.context->use(shader, [&]()
 		{
-			shader["projection"] = glm::perspective(camera_params.fov, camera_params.aspect_ratio, camera_params.near, camera_params.far);
-			shader["view"] = inverse_world;
-
-			auto model_transform = world.get_transform(model_entity);
-			auto model_matrix    = model_transform.get_matrix();
-
-			shader["model"] = model_matrix;
-
-			graphics.canvas->draw(*loaded_model);
+			world.render(*graphics.canvas, true);
 		});
 
 		gfx.flip(wnd);

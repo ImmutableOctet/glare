@@ -10,6 +10,9 @@
 
 namespace graphics
 {
+	class Context;
+	class ContextState;
+
 	class PixelMap;
 
 	class Texture : public Resource

@@ -5,11 +5,13 @@
 
 namespace util
 {
+	// TODO: Implement variadic template to wrap 'std::visit'.
+
 	// Calls 'fn' with a value of type 'T' if 'v' contains said value.
 	template <typename T, typename VariantType, typename FunctionType>
 	bool peek_value(const VariantType& v, FunctionType fn)
 	{
-		if (const auto value = std::get_if<T>(&v))
+		if (const auto* value = std::get_if<T>(&v))
 		{
 			fn(*value);
 

@@ -2,7 +2,7 @@
 
 namespace graphics
 {
-	Texture& ContextState::get_current_texture()
+	const Texture& ContextState::get_current_texture()
 	{
 		if (textures.size() > 0)
 		{
@@ -12,12 +12,12 @@ namespace graphics
 		return null_texture;
 	}
 
-	void ContextState::push_texture(Texture& texture)
+	void ContextState::push_texture(const Texture& texture)
 	{
 		textures.push_back(&texture);
 	}
 
-	Texture& ContextState::pop_texture()
+	const Texture& ContextState::pop_texture()
 	{
 		if (textures.size() > 0)
 		{

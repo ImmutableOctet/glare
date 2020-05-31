@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include <core.hpp>
 #include <math/math.hpp>
 
@@ -12,16 +14,18 @@ namespace unit_test
 	{
 		public:
 			ref<graphics::Shader> test_shader;
+			std::vector<ref<graphics::Shader>> shaders;
 
 			ref<graphics::Model> loaded_model;
 
 			engine::World world;
 			engine::ResourceManager resource_manager;
 
-			engine::Entity& camera = world.cameras[0];
 			engine::Entity model_entity;
 
 			ModelTest(bool auto_execute=true);
+
+			void setup_world(engine::World& world);
 
 			void update(const app::DeltaTime& delta_time) override;
 			void render() override;

@@ -21,6 +21,7 @@ namespace graphics
 	using ResourceManager = engine::ResourceManager;
 
 	class Texture;
+	class Material;
 
 	using NativeContext = void*;
 	using ContextHandle = unsigned int; // GLint;
@@ -147,9 +148,20 @@ namespace graphics
 		None             = (1 << 0),
 		DepthTest        = (1 << 1),
 		FaceCulling      = (1 << 2),
+		VSync            = (1 << 3),
 
-		Default          = (DepthTest), // FaceCulling
+		Default          = (DepthTest|FaceCulling|VSync),
 	}; FLAG_ENUM(std::uint32_t, ContextFlags);
+
+	enum class CanvasDrawMode : std::uint32_t
+	{
+		None = (1 << 0),
+
+		Opaque = (1 << 1),
+		Transparent = (1 << 2),
+
+		All = (Opaque | Transparent),
+	}; FLAG_ENUM(std::uint32_t, CanvasDrawMode);
 
 	enum class TextureFormat
 	{
@@ -182,9 +194,13 @@ namespace graphics
 	};
 
 	using TextureArray = std::vector<ref<Texture>>;
+	using TextureGroup = std::variant<ref<Texture>, TextureArray>; // Used to represent a single texture object or vector of textures objects. (Represents a 'TextureType')
 
-	using UniformData = std::variant<bool, int, float, math::Vector2D, math::Vector3D, math::Vector4D, math::Matrix2x2, math::Matrix3x3, math::Matrix4x4, ref<Texture>, TextureArray>;
-	using UniformMap = std::unordered_map<std::string_view, UniformData>; // std::string
+	// Map of string-identifiers to 'TextureGroup' objects.
+	using TextureMap   = std::unordered_map<std::string_view, TextureGroup>;
+
+	using UniformData  = std::variant<bool, int, float, math::Vector2D, math::Vector3D, math::Vector4D, math::Matrix2x2, math::Matrix3x3, math::Matrix4x4>;
+	using UniformMap   = std::unordered_map<std::string_view, UniformData>; // std::string
 
 	template <typename fn_type>
 	void enumerate_texture_types(fn_type&& fn)

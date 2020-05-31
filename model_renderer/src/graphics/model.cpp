@@ -13,7 +13,7 @@
 #include <assimp/postprocess.h>
 #include <assimp/material.h>
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 static math::Vector3D to_vector(const aiVector3D& v)
 {
@@ -28,8 +28,8 @@ namespace graphics
 		return static_cast<aiTextureType>(type);
 	}
 
-	Model::Model(const Meshes& meshes)
-		: meshes(meshes) {}
+	Model::Model(Meshes&& meshes)
+		: meshes(std::move(meshes)) {}
 
 	Model::Model(Model&& model)
 		: Model() { swap(*this, model); }
@@ -86,7 +86,7 @@ namespace graphics
 		return {};
 	}
 
-	Model Model::Load(pass_ref<Context> context, ResourceManager& resource_manager, const std::string& path)
+	Model Model::Load(pass_ref<Context> context, ResourceManager& resource_manager, const std::string& path, pass_ref<Shader> default_shader)
 	{
 		Model model;
 
@@ -112,16 +112,34 @@ namespace graphics
 		auto model_path = filesystem::path(path);
 		auto root_path = model_path.parent_path();
 
-		model.process_node(context, importer, root_path, scene, scene->mRootNode);
+		model.process_node(context, importer, root_path, scene, scene->mRootNode, default_shader);
 
 		return model;
 	}
 
-	// Assimp:
-	ref<Material> Model::process_material(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiMaterial* native_material, bool load_textures, bool load_values)
+	ref<Texture> Model::process_texture(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const filesystem::path& texture_path)
 	{
-		auto material_obj = memory::allocate<Material>();
-		auto& material = (*material_obj);
+		bool file_exists = filesystem::exists(texture_path);
+
+		if (file_exists)
+		{
+			// TODO: Review management of 'Texture' resources.
+			return memory::allocate<Texture>(context, texture_path.string());
+		}
+		else
+		{
+			auto alternate_path = (root_path / (texture_path.filename()));
+
+			alternate_path.make_preferred();
+
+			return memory::allocate<Texture>(context, alternate_path.string());
+		}
+	}
+
+	// Assimp:
+	Material Model::process_material(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiMaterial* native_material, pass_ref<Shader> default_shader, bool load_textures, bool load_values)
+	{
+		auto material = Material(default_shader);
 
 		//auto texture_types = 0;
 		
@@ -138,38 +156,37 @@ namespace graphics
 					return;
 				}
 
-				//texture_types++;
+				auto texture_type_var = get_texture_type_variable(texture_type);
 
-				auto& texture_container = textures[texture_type];
+				if (texture_count > 1)
+				{
+					auto texture_container = TextureArray(texture_count, nullptr);
 
-				texture_container = TextureArray(texture_count, nullptr);
+					for (auto i = 0; i < texture_count; i++)
+					{
+						aiString path_raw;
 
-				for (auto i = 0; i < texture_count; i++)
+						native_material->GetTexture(native_type, i, &path_raw);
+
+						filesystem::path texture_path = path_raw.C_Str();
+						
+						texture_container[i] = process_texture(context, importer, root_path, texture_path);
+					}
+
+					material.textures[texture_type_var] = std::move(texture_container);
+				}
+				else
 				{
 					aiString path_raw;
 
-					native_material->GetTexture(native_type, i, &path_raw);
+					native_material->GetTexture(native_type, 0, &path_raw);
 
 					filesystem::path texture_path = path_raw.C_Str();
-					bool file_exists = boost::filesystem::exists(texture_path);
 
-					auto& texture_out = texture_container[i];
-
-					if (file_exists)
-					{
-						// TODO: Review management of 'Texture' resources.
-						texture_out = memory::allocate<Texture>(context, path_raw.C_Str());
-					}
-					else
-					{
-						auto alternate_path = (root_path / (texture_path.filename()));
-						texture_out = memory::allocate<Texture>(context, alternate_path.string());
-					}
+					material.textures[texture_type_var] = process_texture(context, importer, root_path, texture_path);
 				}
 
-				auto texture_type_var = get_texture_type_variable(texture_type);
-
-				material[texture_type_var] = texture_container;
+				//texture_types++;
 			});
 		}
 
@@ -178,9 +195,9 @@ namespace graphics
 			// 'alpha':
 			if (float transparency; native_material->Get(AI_MATKEY_OPACITY, transparency) == aiReturn_SUCCESS) // AI_MATKEY_COLOR_TRANSPARENT
 			{
-				auto alpha = transparency; // (1.0f - transparency);
+				auto alpha = (1.0f - transparency); // transparency;
 
-				set_material_var(material, MATERIAL_VAR_ALPHA, alpha);
+				material.set_var(Material::ALPHA, alpha);
 			}
 
 			// 'diffuse_color':
@@ -188,23 +205,23 @@ namespace graphics
 			{
 				auto diffuse_color = (*reinterpret_cast<ColorRGBA*>(&_diffuse_color));
 
-				set_material_var(material, MATERIAL_VAR_DIFFUSE_COLOR, (diffuse_color));
+				material.set_var(Material::DIFFUSE_COLOR, (diffuse_color));
 			}
 		}
 
-		return material_obj;
+		return material;
 	}
 
-	void Model::process_node(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node)
+	void Model::process_node(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, pass_ref<Shader> default_shader)
 	{
 		// First node (root):
 		if (node == scene->mRootNode)
 		{
-			for (auto i = 0; i < scene->mNumMaterials; i++)
+			for (auto i = 0; i < scene->mNumMaterials; i++) // unsigned int
 			{
 				const auto* material = scene->mMaterials[i];
 
-				materials.push_back(process_material(context, importer, root_path, scene, material));
+				meshes.push_back({ process_material(context, importer, root_path, scene, material, default_shader, true, true), {} });
 			}
 		}
 
@@ -216,28 +233,26 @@ namespace graphics
 			auto mesh_index = node->mMeshes[i];
 			aiMesh* mesh = scene->mMeshes[mesh_index];
 
-			meshes.push_back(process_mesh(context, importer, root_path, scene, mesh));
+			// TODO: Review use of unsigned integer for indexing.
+			auto material_index = mesh->mMaterialIndex;
+
+			// TODO: Review concept of 'optional materials'.
+			auto& mesh_descriptor = meshes[material_index];
+
+			mesh_descriptor.meshes.push_back(process_mesh(context, importer, root_path, scene, mesh));
 		}
 
 		// Recursively process each child node:
 		for (unsigned int i = 0; i < node->mNumChildren; i++)
 		{
 			auto* child = node->mChildren[i];
-			process_node(context, importer, root_path, scene, child);
+			process_node(context, importer, root_path, scene, child, default_shader);
 		}
 	}
 
-	Model::MeshDescriptor Model::process_mesh(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiMesh* mesh)
+	Mesh Model::process_mesh(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiMesh* mesh)
 	{
 		using VertexType = StandardVertex;
-
-		// TODO: Review use of unsigned integer for indexing.
-		auto material_index = mesh->mMaterialIndex;
-
-		// TODO: Review concept of 'optional materials'.
-		auto& material = materials[material_index];
-		
-		// Material handling here.
 
 		const auto vertex_count = (mesh->mNumVertices);
 
@@ -284,9 +299,6 @@ namespace graphics
 			}
 		}
 
-		auto mesh_instance = memory::allocate<Mesh>();
-		*mesh_instance = Mesh::Generate(context, data);
-
-		return { mesh_instance, material };
+		return Mesh::Generate(context, data);
 	}
 }

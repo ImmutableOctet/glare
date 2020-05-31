@@ -396,6 +396,8 @@ namespace graphics
 				// (Data driven solution vs. code driven solution)
 				handle_flag(state, flags, Flags::DepthTest, GL_DEPTH_TEST, value);
 
+				SDL_GL_SetSwapInterval(static_cast<int>(flags & Flags::VSync));
+
 				// Depth-testing:
 				if ((flags & Flags::DepthTest))
 				{
@@ -403,13 +405,14 @@ namespace graphics
 				}
 
 				// Face culling:
+				handle_flag(state, flags, Flags::FaceCulling, GL_CULL_FACE, value);
+
 				if ((flags & Flags::FaceCulling))
 				{
 					// Discard back-faces, keep front-faces.
-					glCullFace(GL_FRONT_AND_BACK); // GL_FRONT // GL_BACK
+					//glCullFace(GL_FRONT_AND_BACK); // GL_FRONT // GL_BACK
+					glCullFace(GL_FRONT);
 				}
-
-				handle_flag(state, flags, Flags::FaceCulling, GL_CULL_FACE, value);
 
 				return state.get_flags();
 			}
@@ -473,7 +476,7 @@ namespace graphics
 			// If the specified texture-handle could not be found, '-1' is returned.
 			int get_texture_index(Handle texture)
 			{
-				for (auto i = 0; i < texture_stack.size(); i++)
+				for (std::size_t i = 0; i < texture_stack.size(); i++) // auto
 				{
 					if (texture_stack[i] == texture)
 					{
@@ -796,7 +799,7 @@ namespace graphics
 		return set_uniform(shader, name, *texture);
 	}
 
-	bool Context::set_uniform(Shader& shader, std::string_view name, Texture& texture)
+	bool Context::set_uniform(Shader& shader, std::string_view name, const Texture& texture)
 	{
 		auto& driver = get_driver(*this);
 
@@ -879,7 +882,7 @@ namespace graphics
 		return prev_shader;
 	}
 
-	Texture& Context::bind(Texture& texture)
+	const Texture& Context::bind(const Texture& texture)
 	{
 		auto& driver = get_driver(this);
 		auto& prev_texture = state->get_current_texture();

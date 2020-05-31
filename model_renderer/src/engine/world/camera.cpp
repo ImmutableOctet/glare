@@ -5,16 +5,18 @@
 
 namespace engine
 {
-	CameraParameters::CameraParameters(float v_fov_deg, float aspect_ratio, float near, float far)
-		: fov(glm::radians(v_fov_deg)), aspect_ratio(aspect_ratio), near(near), far(far) {}
+	CameraParameters::CameraParameters(float v_fov_deg, float near, float far, float aspect_ratio)
+		: fov(glm::radians(v_fov_deg)), near(near), far(far), aspect_ratio(aspect_ratio) {}
 
-	Entity create_camera(World& world, float v_fov_deg, Entity parent)
+	Entity create_camera(World& world, CameraParameters params, Entity parent)
 	{
 		auto& registry = world.get_registry();
 		
 		auto entity = create_entity(world, parent);
 
-		registry.assign<CameraParameters>(entity, v_fov_deg);
+		registry.assign<CameraParameters>(entity, params);
+
+		world.add_camera(entity);
 
 		return entity;
 	}

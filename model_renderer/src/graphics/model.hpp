@@ -16,7 +16,7 @@ namespace Assimp
 	class Importer;
 }
 
-namespace boost
+namespace std
 {
 	namespace filesystem
 	{
@@ -24,7 +24,7 @@ namespace boost
 	}
 }
 
-namespace filesystem = boost::filesystem;
+namespace filesystem = std::filesystem;
 
 // Assimp:
 struct aiScene;
@@ -43,10 +43,21 @@ namespace graphics
 	class Model
 	{
 		public:
-			using MeshDescriptor = std::pair<ref<Mesh>, ref<Material>>;
+			struct MeshDescriptor
+			{
+				Material material;
+				std::vector<Mesh> meshes;
+
+				MeshDescriptor(Material&& material, std::vector<Mesh>&& meshes)
+					: material(std::move(material)), meshes(std::move(meshes)) {}
+
+				MeshDescriptor() = default;
+
+				MeshDescriptor(MeshDescriptor&&) = default;
+				MeshDescriptor(const MeshDescriptor&) = delete;
+			};
+
 			using Meshes = std::vector<MeshDescriptor>;
-			using Materials = std::vector<ref<Material>>;
-			using Textures = std::unordered_map<TextureType, TextureArray>;
 
 			friend Canvas;
 			friend Context;
@@ -55,10 +66,8 @@ namespace graphics
 			std::string get_texture_type_variable(TextureType type);
 
 			Meshes meshes;
-			Materials materials;
-			Textures textures;
 		public:
-			static Model Load(pass_ref<Context> context, ResourceManager& resource_manager, const std::string& path);
+			static Model Load(pass_ref<Context> context, ResourceManager& resource_manager, const std::string& path, pass_ref<Shader> default_shader);
 
 			friend void swap(Model& x, Model& y);
 
@@ -67,7 +76,7 @@ namespace graphics
 			// TODO: Handle copies.
 			Model(const Model&) = delete;
 
-			Model(const Meshes& meshes);
+			Model(Meshes&& meshes);
 			Model(Model&& model);
 
 			inline Model& operator=(Model model)
@@ -80,8 +89,9 @@ namespace graphics
 			// TODO: Verify non-const access.
 			inline Meshes& get_meshes() { return meshes; };
 		protected:
-			ref<Material> process_material(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiMaterial* native_material, bool load_textures=true, bool load_values=true);
-			void process_node(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node);
-			MeshDescriptor process_mesh(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiMesh* mesh);
+			ref<Texture> process_texture(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const filesystem::path& texture_path);
+			Material process_material(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiMaterial* native_material, pass_ref<Shader> default_shader, bool load_textures=true, bool load_values=true);
+			void process_node(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, pass_ref<Shader> default_shader);
+			Mesh process_mesh(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiMesh* mesh);
 	};
 }

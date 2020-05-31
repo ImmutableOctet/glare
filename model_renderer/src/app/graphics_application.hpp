@@ -22,11 +22,22 @@ namespace app
 			struct Graphics
 			{
 				public:
-					Graphics(app::Window& window, WindowFlags flags)
+					Graphics(app::Window& window, WindowFlags flags, bool vsync=true)
 					{
 						if (!(flags & WindowFlags::OpenGL))
 						{
 							throw std::runtime_error("OpenGL is currently the only supported graphics-backend.");
+						}
+
+						auto graphics_flags = graphics::ContextFlags::Default;
+
+						if (vsync)
+						{
+							graphics_flags |= graphics::ContextFlags::VSync;
+						}
+						else
+						{
+							graphics_flags &= ~graphics::ContextFlags::VSync;
 						}
 
 						context = memory::allocate<graphics::Context>(window, graphics::Backend::OpenGL, graphics::ContextFlags::Default);
@@ -43,8 +54,8 @@ namespace app
 
 			Graphics graphics;
 
-			GraphicsApplication(const std::string& title, int width, int height, WindowFlags flags=app::WindowFlags::OpenGL|app::WindowFlags::Resizable, UpdateRate update_rate=DEFAULT_FRAMERATE)
-				: Application(update_rate), graphics(make_window(width, height, title, flags), flags)
+			GraphicsApplication(const std::string& title, int width, int height, WindowFlags flags=app::WindowFlags::OpenGL|app::WindowFlags::Resizable, UpdateRate update_rate=DEFAULT_FRAMERATE, bool vsync=true)
+				: Application(update_rate), graphics(make_window(width, height, title, flags), flags, vsync)
 			{
 				auto time = milliseconds();
 

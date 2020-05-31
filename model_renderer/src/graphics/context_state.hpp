@@ -36,13 +36,13 @@ namespace graphics
 			defaultable_ref<FrameBuffer> framebuffer;
 			defaultable_ref<Mesh> mesh;
 
-			std::vector<Texture*> textures; // std::stack<Texture>
+			std::vector<const Texture*> textures; // std::stack<Texture>
 
 			// There is no guarantee of the lifetime for the object returned by this method.
-			Texture& get_current_texture();
+			const Texture& get_current_texture();
 			
-			void push_texture(Texture& texture);
-			Texture& pop_texture();
+			void push_texture(const Texture& texture);
+			const Texture& pop_texture();
 
 			void clear_textures();
 		public:

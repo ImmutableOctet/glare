@@ -1,35 +1,69 @@
 #pragma once
 
-#include <string>
+//#include <string>
 #include <string_view>
-
-#include <util/variant.hpp>
+//#include <util/variant.hpp>
 //#include <math/math.hpp>
-
 #include "types.hpp"
-#include "shader.hpp"
+//#include "shader.hpp"
 
 namespace graphics
 {
-	//class Shader;
+	class Context;
+	class Canvas;
+	class Shader;
+	class Mesh;
+	class Model;
 
-	using Material = UniformMap;
-
-	constexpr std::string_view MATERIAL_VAR_ALPHA = "alpha"; // sv
-	constexpr std::string_view MATERIAL_VAR_DIFFUSE_COLOR = "diffuse_color"; // sv
-
-	constexpr float MATERIAL_TRANSPARENCY_THRESHOLD = 0.99f;
-
-	// Returns whether 'material' is considered transparent or not.
-	bool transparent_material(const Material& material);
-
-	template <typename T>
-	Material& set_material_var(Material& material, std::string_view material_var, const T& value)
+	class Material
 	{
-		material[material_var] = value; // std::string(material_var)
+		public:
+			static constexpr std::string_view ALPHA = "alpha"; // sv
+			static constexpr std::string_view DIFFUSE_COLOR = "diffuse_color"; // sv
 
-		return material;
-	}
+			static constexpr float TRANSPARENCY_THRESHOLD = 0.99f; // <=
+
+			inline static bool value_is_transparent(float value)
+			{
+				return (value <= TRANSPARENCY_THRESHOLD);
+			}
+
+			inline static bool value_is_transparent(const ColorRGBA& color)
+			{
+				return value_is_transparent(color.a);
+			}
+		protected:
+			friend Context;
+			friend Canvas;
+			friend Shader;
+			friend Mesh;
+			friend Model;
+
+			TextureMap textures;
+			UniformMap uniforms;
+
+			ref<Shader> shader;
+		public:
+			Material(const Material&) = default;
+
+			Material(pass_ref<Shader> shader);
+
+			template <typename T>
+			inline Material& set_var(std::string_view material_var, const T& value)
+			{
+				uniforms[material_var] = value; // std::string(material_var)
+
+				return *this;
+			}
+
+			inline const UniformMap& get_uniforms() const { return uniforms; }
+			inline const TextureMap& get_textures() const { return textures; }
+
+			inline Shader& get_shader() { return *shader; }
+
+			// Returns whether 'material' is considered transparent or not.
+			bool transparent() const;
+	};
 
 	/*
 	// TODO: Break this interface into multiple material types.

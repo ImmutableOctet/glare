@@ -1,5 +1,6 @@
 #pragma once
 
+#include <type_traits>
 #include <utility>
 #include <functional>
 #include <string>
@@ -96,7 +97,7 @@ namespace graphics
 				For this reason, each bind texture bind-operation
 				results in a new allocation of a texture slot.
 			*/
-			Texture& bind(Texture& texture);
+			const Texture& bind(const Texture& texture);
 
 			// Binds the mesh specified, returning
 			// a reference to the previously bound mesh.
@@ -132,14 +133,14 @@ namespace graphics
 			void clear_textures(bool force=false);
 
 			// Creates a safe bind operation for the resource specified.
-			template <typename ResourceType>
+			template <typename ResourceType> // typename = typename std::enable_if<!std::is_const_v<ResourceType>>::type
 			inline auto use(ResourceType& resource)
 			{
 				return bind_resource
 				(
 					*this, resource,
 
-					[this](ResourceType& res) -> ResourceType&
+					[this](auto& res) -> auto&
 					{
 						return bind(res);
 					}
@@ -151,7 +152,17 @@ namespace graphics
 			template <typename ResourceType, typename fn>
 			inline void use(ResourceType& resource, fn exec)
 			{
-				auto op = use(resource);
+				auto op = bind_resource
+				(
+					*this, resource,
+
+					[this](auto& res) -> auto& //decltype(res)
+					{
+						return bind(res);
+					}
+				);
+
+				//auto op = use(resource);
 
 				exec();
 
@@ -179,12 +190,12 @@ namespace graphics
 
 			bool set_uniform(Shader& shader, std::string_view name, const TextureArray& textures);
 			bool set_uniform(Shader& shader, std::string_view name, const pass_ref<Texture> texture);
-			bool set_uniform(Shader& shader, std::string_view name, Texture& texture); // std::int32_t
+			bool set_uniform(Shader& shader, std::string_view name, const Texture& texture); // std::int32_t
 
 			bool set_uniform(Shader& shader, std::string_view name, const UniformData& uniform);
 
 			//bool set_uniform(Shader& shader, const std::string& name, const pass_ref<Texture> texture); // std::int32_t
-			//bool set_uniform(Shader& shader, const std::string& name, Texture& texture); // std::int32_t
+			//bool set_uniform(Shader& shader, const std::string& name, const Texture& texture); // std::int32_t
 
 			bool apply_uniforms(Shader& shader, const UniformMap& uniforms);
 

@@ -6,6 +6,8 @@
 #include "types.hpp"
 #include "resource.hpp"
 
+#include "context.hpp"
+
 namespace graphics
 {
 	// Forward declarations:

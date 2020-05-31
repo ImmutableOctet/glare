@@ -222,6 +222,9 @@
     <ClCompile Include="src\app\timer.cpp">
       <Filter>Source Files\app</Filter>
     </ClCompile>
+    <ClCompile Include="src\engine\components\graphics\model_component.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\graphics\native\opengl.hpp">

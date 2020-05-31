@@ -54,10 +54,11 @@ namespace graphics
 			inline Mesh(weak_ref<Context> ctx, MeshComposition composition, Primitive primitive_type, std::size_t vertex_count, Index vertex_offset=0)
 				: context(ctx), composition(composition), primitive_type(primitive_type), vertex_count(vertex_count), vertex_offset(vertex_offset) {}
 
-			Mesh(const Mesh&) = delete;
-
 			virtual void on_bind(Context& context);
 		public:
+			Mesh(const Mesh&) = delete;
+			Mesh& operator = (const Mesh&) = delete;
+
 			inline ref<Context> get_context_ref() { return context.lock(); }
 			inline Context& get_context() { return *get_context_ref(); }
 			inline const MeshComposition& get_composition() const { return composition; }
@@ -97,6 +98,7 @@ namespace graphics
 			}
 
 			Mesh() = default;
+
 			inline Mesh(Mesh&& mesh) : Mesh() { swap(*this, mesh); }
 			
 			~Mesh();

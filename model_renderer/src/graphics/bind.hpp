@@ -1,5 +1,7 @@
 #pragma once
 
+#include <type_traits>
+
 namespace graphics
 {
 	class Context;
@@ -19,13 +21,14 @@ namespace graphics
 				bind(prev_resource);
 			}
 		private:
-			resource_t& prev_resource;
+			//resource_t& prev_resource;
+			std::invoke_result_t<bind_fn, resource_t&> prev_resource;
 			bind_fn bind;
 	};
 
 	template <typename resource_t, typename bind_fn>
 	auto bind_resource(Context& context, resource_t& resource, bind_fn bind)
 	{
-		return BindOperation<resource_t, bind_fn>(context, resource, bind);
+		return BindOperation(context, resource, bind);
 	}
 }

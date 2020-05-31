@@ -13,10 +13,13 @@ namespace engine
 
 		registry.assign<TransformComponent>(entity);
 		
+		if (parent == null)
+		{
+			parent = world;
+		}
+
 		if (parent != null)
 		{
-			//registry.assign<Relationship>(entity);
-
 			auto parent_relationship = registry.get_or_assign<Relationship>(parent);
 
 			parent_relationship.add_child(registry, parent, entity);

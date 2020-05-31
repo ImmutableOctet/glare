@@ -176,6 +176,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\app\input\mouse\mouse.cpp" />
     <ClCompile Include="src\app\timer.cpp" />
     <ClCompile Include="src\app\window.cpp" />
+    <ClCompile Include="src\engine\components\graphics\model_component.cpp" />
     <ClCompile Include="src\engine\engine.cpp" />
     <ClCompile Include="src\engine\free_look.cpp" />
     <ClCompile Include="src\engine\relationship.cpp" />
