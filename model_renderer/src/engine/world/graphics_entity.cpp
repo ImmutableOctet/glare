@@ -19,7 +19,7 @@ namespace engine
 
 		auto& registry = world.get_registry();
 
-		registry.assign<ModelComponent>(entity);
+		registry.assign<ModelComponent>(entity, model);
 
 		return entity;
 	}

@@ -57,7 +57,7 @@ namespace graphics
 			virtual void on_bind(Context& context);
 		public:
 			Mesh(const Mesh&) = delete;
-			Mesh& operator = (const Mesh&) = delete;
+			Mesh& operator=(const Mesh&) = delete;
 
 			inline ref<Context> get_context_ref() { return context.lock(); }
 			inline Context& get_context() { return *get_context_ref(); }
@@ -88,9 +88,9 @@ namespace graphics
 
 			static Mesh GenerateTexturedQuad(pass_ref<Context> ctx);
 
-			friend void swap(Mesh& x, Mesh& y);
+			friend void swap(Mesh& x, Mesh& y) noexcept;
 
-			inline Mesh& operator=(Mesh mesh)
+			inline Mesh& operator=(Mesh mesh) noexcept
 			{
 				swap(*this, mesh);
 
@@ -99,7 +99,7 @@ namespace graphics
 
 			Mesh() = default;
 
-			inline Mesh(Mesh&& mesh) : Mesh() { swap(*this, mesh); }
+			inline Mesh(Mesh&& mesh) noexcept : Mesh() { swap(*this, mesh); }
 			
 			~Mesh();
 	};

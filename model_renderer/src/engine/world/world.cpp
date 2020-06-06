@@ -3,6 +3,7 @@
 
 #include "debug/debug_camera.hpp"
 #include "debug/debug_move.hpp"
+#include "debug/spin_component.hpp"
 
 #include <graphics/canvas.hpp>
 #include <graphics/shader.hpp>
@@ -45,6 +46,9 @@ namespace engine
 	void World::update()
 	{
 		event_handler.update();
+
+		// Debugging related:
+		debug::SpinBehavior::update(*this);
 	}
 
 	bool World::render(graphics::Canvas& canvas, bool forward_rendering)
@@ -80,6 +84,15 @@ namespace engine
 		shader["projection"] = glm::perspective(camera_params.fov, camera_params.aspect_ratio, camera_params.near, camera_params.far);
 		shader["view"] = camera_matrix;
 
+		draw_models(graphics::CanvasDrawMode::Opaque, canvas, shader);
+		draw_models(graphics::CanvasDrawMode::Transparent, canvas, shader);
+		//draw_models(graphics::Canvas::DrawMode::All);
+
+		return true;
+	}
+
+	void World::draw_models(graphics::CanvasDrawMode draw_mode, graphics::Canvas& canvas, graphics::Shader& shader)
+	{
 		registry.view<ModelComponent, TransformComponent, Relationship>().each([&](auto entity, auto& model_component, auto& transform, const auto& relationship)
 		{
 			if (!model_component.visible)
@@ -105,12 +118,10 @@ namespace engine
 			shader["model"] = model_matrix;
 
 			auto& model = *model_component.model;
-			auto color = model_component.color;
+			auto color  = model_component.color;
 
-			canvas.draw(model, color, graphics::Canvas::DrawMode::All);
+			canvas.draw(model, color, draw_mode);
 		});
-
-		return true;
 	}
 
 	Transform World::get_transform(Entity entity)

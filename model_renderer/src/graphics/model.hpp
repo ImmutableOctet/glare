@@ -48,13 +48,22 @@ namespace graphics
 				Material material;
 				std::vector<Mesh> meshes;
 
-				MeshDescriptor(Material&& material, std::vector<Mesh>&& meshes)
+				MeshDescriptor(Material&& material, std::vector<Mesh>&& meshes) noexcept
 					: material(std::move(material)), meshes(std::move(meshes)) {}
 
-				MeshDescriptor() = default;
+				MeshDescriptor(Material&& material) noexcept
+					: material(std::move(material)) {}
 
+				MeshDescriptor() noexcept = default;
+
+				MeshDescriptor(const MeshDescriptor&) noexcept = delete;
 				MeshDescriptor(MeshDescriptor&&) = default;
-				MeshDescriptor(const MeshDescriptor&) = delete;
+
+				inline bool has_meshes() const { return (meshes.size() > 0); }
+				inline operator bool() const { return has_meshes(); }
+
+				MeshDescriptor& operator=(MeshDescriptor&&) noexcept(false) = default;
+				//MeshDescriptor& operator=(const MeshDescriptor&) = delete;
 			};
 
 			using Meshes = std::vector<MeshDescriptor>;
@@ -76,8 +85,8 @@ namespace graphics
 			// TODO: Handle copies.
 			Model(const Model&) = delete;
 
-			Model(Meshes&& meshes);
-			Model(Model&& model);
+			Model(Meshes&& meshes) noexcept;
+			Model(Model&& model) noexcept;
 
 			inline Model& operator=(Model model)
 			{
@@ -91,7 +100,7 @@ namespace graphics
 		protected:
 			ref<Texture> process_texture(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const filesystem::path& texture_path);
 			Material process_material(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiMaterial* native_material, pass_ref<Shader> default_shader, bool load_textures=true, bool load_values=true);
-			void process_node(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, pass_ref<Shader> default_shader);
-			Mesh process_mesh(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiMesh* mesh);
+			void process_node(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, pass_ref<Shader> default_shader, VertexWinding vert_direction);
+			Mesh process_mesh(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, const aiMesh* mesh, VertexWinding vert_direction);
 	};
 }

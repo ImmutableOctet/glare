@@ -28,10 +28,10 @@ namespace graphics
 		return static_cast<aiTextureType>(type);
 	}
 
-	Model::Model(Meshes&& meshes)
+	Model::Model(Meshes&& meshes) noexcept
 		: meshes(std::move(meshes)) {}
 
-	Model::Model(Model&& model)
+	Model::Model(Model&& model) noexcept
 		: Model() { swap(*this, model); }
 
 	void swap(Model& x, Model& y)
@@ -93,7 +93,18 @@ namespace graphics
 		Assimp::Importer importer;
 
 		// TODO: Implement 'flags' parameter.
-		unsigned int flags = (aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+		unsigned int flags = ( aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace ); // aiProcess_PreTransformVertices  // aiProcess_JoinIdenticalVertices
+
+		VertexWinding vert_direction = VertexWinding::Clockwise;
+
+		/*
+		if (!path.ends_with(".obj"))
+		{
+			vert_direction = VertexWinding::CounterClockwise;
+		}
+		*/
+
+		flags |= aiProcess_FlipWindingOrder;
 
 		// Load a scene from the path specified.
 		const aiScene* scene = importer.ReadFile(path, flags);
@@ -112,7 +123,7 @@ namespace graphics
 		auto model_path = filesystem::path(path);
 		auto root_path = model_path.parent_path();
 
-		model.process_node(context, importer, root_path, scene, scene->mRootNode, default_shader);
+		model.process_node(context, importer, root_path, scene, scene->mRootNode, default_shader, vert_direction);
 
 		return model;
 	}
@@ -162,7 +173,7 @@ namespace graphics
 				{
 					auto texture_container = TextureArray(texture_count, nullptr);
 
-					for (auto i = 0; i < texture_count; i++)
+					for (decltype(texture_count) i = 0; i < texture_count; i++) // auto
 					{
 						aiString path_raw;
 
@@ -195,7 +206,7 @@ namespace graphics
 			// 'alpha':
 			if (float transparency; native_material->Get(AI_MATKEY_OPACITY, transparency) == aiReturn_SUCCESS) // AI_MATKEY_COLOR_TRANSPARENT
 			{
-				auto alpha = (1.0f - transparency); // transparency;
+				auto alpha = transparency; // (1.0f - transparency);
 
 				material.set_var(Material::ALPHA, alpha);
 			}
@@ -212,16 +223,18 @@ namespace graphics
 		return material;
 	}
 
-	void Model::process_node(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, pass_ref<Shader> default_shader)
+	void Model::process_node(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, pass_ref<Shader> default_shader, VertexWinding vert_direction)
 	{
 		// First node (root):
 		if (node == scene->mRootNode)
 		{
-			for (auto i = 0; i < scene->mNumMaterials; i++) // unsigned int
+			meshes.reserve(scene->mNumMaterials);
+
+			for (decltype(scene->mNumMaterials) i = 0; i < scene->mNumMaterials; i++) // auto
 			{
 				const auto* material = scene->mMaterials[i];
 
-				meshes.push_back({ process_material(context, importer, root_path, scene, material, default_shader, true, true), {} });
+				meshes.emplace_back(process_material(context, importer, root_path, scene, material, default_shader, true, true)); // meshes[i] = ...
 			}
 		}
 
@@ -239,18 +252,45 @@ namespace graphics
 			// TODO: Review concept of 'optional materials'.
 			auto& mesh_descriptor = meshes[material_index];
 
-			mesh_descriptor.meshes.push_back(process_mesh(context, importer, root_path, scene, mesh));
+			mesh_descriptor.meshes.push_back(process_mesh(context, importer, root_path, scene, node, mesh, vert_direction));
 		}
 
 		// Recursively process each child node:
 		for (unsigned int i = 0; i < node->mNumChildren; i++)
 		{
 			auto* child = node->mChildren[i];
-			process_node(context, importer, root_path, scene, child, default_shader);
+
+			process_node(context, importer, root_path, scene, child, default_shader, vert_direction);
+		}
+
+		// First node (root):
+		if (node == scene->mRootNode)
+		{
+			meshes.erase
+			(
+				std::remove_if
+				(
+					meshes.begin(), meshes.end(),
+					[](const auto& descriptor) -> bool
+					{
+						bool res = (!descriptor);
+
+						return res;
+					}
+				),
+
+				meshes.end()
+			);
+
+			std::sort(meshes.begin(), meshes.end(),
+			[](const auto& a, const auto& b)
+			{
+				return (a.material.textures.size() > b.material.textures.size());
+			});
 		}
 	}
 
-	Mesh Model::process_mesh(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiMesh* mesh)
+	Mesh Model::process_mesh(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, const aiMesh* mesh, VertexWinding vert_direction)
 	{
 		using VertexType = StandardVertex;
 
@@ -268,7 +308,10 @@ namespace graphics
 		{
 			VertexType vertex;
 
-			vertex.position = to_vector(mesh->mVertices[i]);
+			//aiMatrix4x4 rm = node->mTransformation;
+			//aiMatrix4x4::Rotation(1.0f, { 1.0, 1.0, 1.0 }, rm);
+
+			vertex.position = to_vector(mesh->mVertices[i]); // rm * ...
 			vertex.normal   = to_vector(mesh->mNormals[i]);
 
 			auto uv_channels = mesh->mTextureCoords[0];

@@ -12,6 +12,8 @@ namespace engine
 {
 	struct ModelComponent
 	{
+		//ModelComponent(ref<graphics::Model> model);
+
 		ref<graphics::Model> model;
 
 		graphics::ColorRGBA color = { 1.0f, 1.0f, 1.0f, 1.0f };

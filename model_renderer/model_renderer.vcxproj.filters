@@ -70,12 +70,6 @@
     <Filter Include="Source Files\app\input\input_handler">
       <UniqueIdentifier>{563147ea-f5c1-476b-a417-6aaac9899f9b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Tests">
-      <UniqueIdentifier>{e6d9f2a6-488d-4fb0-9340-67d3be4d32ac}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Tests\model_test">
-      <UniqueIdentifier>{73aa88d3-f458-4e43-b02a-37c9f647c94c}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\engine\world">
       <UniqueIdentifier>{f3bb9c27-1a1a-4c04-b650-652a10c1ae62}</UniqueIdentifier>
     </Filter>
@@ -88,9 +82,6 @@
     <Filter Include="Source Files\engine\world\debug">
       <UniqueIdentifier>{9afa5e8d-afc2-445f-88ab-28788a857afd}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Tests\signal_test">
-      <UniqueIdentifier>{3101c4fb-22fa-4185-b150-a6377df4eda0}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\engine\components">
       <UniqueIdentifier>{b92a9c53-f103-4ac5-88c8-ca593afbb067}</UniqueIdentifier>
     </Filter>
@@ -100,8 +91,23 @@
     <Filter Include="Source Files\engine\messages">
       <UniqueIdentifier>{42c2424b-e68a-49e6-93e8-6a16cec8a9f3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Tests\timer_test">
+    <Filter Include="Source Files\unit_tests">
+      <UniqueIdentifier>{e6d9f2a6-488d-4fb0-9340-67d3be4d32ac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\unit_tests\model_test">
+      <UniqueIdentifier>{73aa88d3-f458-4e43-b02a-37c9f647c94c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\unit_tests\signal_test">
+      <UniqueIdentifier>{3101c4fb-22fa-4185-b150-a6377df4eda0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\unit_tests\timer_test">
       <UniqueIdentifier>{83cc14cb-5fd2-4130-85f7-372c374bea02}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\unit_tests\deferred_test">
+      <UniqueIdentifier>{f50bee7a-0d5c-4149-bcd5-13d15ec7bb45}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\engine\world\light">
+      <UniqueIdentifier>{f5bbc388-fa6d-4086-b5cb-3cab5bb1716a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -181,7 +187,7 @@
       <Filter>Source Files\app\input\input_handler</Filter>
     </ClCompile>
     <ClCompile Include="src\unit_test\model_test\model_test.cpp">
-      <Filter>Source Files\Tests\model_test</Filter>
+      <Filter>Source Files\unit_tests\model_test</Filter>
     </ClCompile>
     <ClCompile Include="src\engine\engine.cpp">
       <Filter>Source Files\engine</Filter>
@@ -208,7 +214,7 @@
       <Filter>Source Files\engine</Filter>
     </ClCompile>
     <ClCompile Include="src\unit_test\signal_test\signal_test.cpp">
-      <Filter>Source Files\Tests\signal_test</Filter>
+      <Filter>Source Files\unit_tests\signal_test</Filter>
     </ClCompile>
     <ClCompile Include="src\engine\world\debug\debug_move.cpp">
       <Filter>Source Files\engine\world\debug</Filter>
@@ -217,12 +223,18 @@
       <Filter>Source Files\engine\world</Filter>
     </ClCompile>
     <ClCompile Include="src\unit_test\timer_test\timer_test.cpp">
-      <Filter>Source Files\Tests\timer_test</Filter>
+      <Filter>Source Files\unit_tests\timer_test</Filter>
     </ClCompile>
     <ClCompile Include="src\app\timer.cpp">
       <Filter>Source Files\app</Filter>
     </ClCompile>
     <ClCompile Include="src\engine\components\graphics\model_component.cpp">
+      <Filter>Source Files\engine\components\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\debug\spin_component.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\light.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -231,7 +243,7 @@
       <Filter>Source Files\graphics\native</Filter>
     </ClInclude>
     <ClInclude Include="src\unit_test\vertex_element_types.cpp">
-      <Filter>Source Files\Tests</Filter>
+      <Filter>Source Files\unit_tests</Filter>
     </ClInclude>
     <ClInclude Include="src\app\app.hpp">
       <Filter>Source Files\app</Filter>
@@ -366,7 +378,7 @@
       <Filter>Source Files\app\input\input_handler</Filter>
     </ClInclude>
     <ClInclude Include="src\unit_test\model_test\model_test.hpp">
-      <Filter>Source Files\Tests\model_test</Filter>
+      <Filter>Source Files\unit_tests\model_test</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\engine.hpp">
       <Filter>Source Files\engine</Filter>
@@ -405,7 +417,7 @@
       <Filter>Source Files\util</Filter>
     </ClInclude>
     <ClInclude Include="src\unit_test\signal_test\signal_test.hpp">
-      <Filter>Source Files\Tests\signal_test</Filter>
+      <Filter>Source Files\unit_tests\signal_test</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\world\debug\debug_move.hpp">
       <Filter>Source Files\engine\world\debug</Filter>
@@ -441,10 +453,16 @@
       <Filter>Source Files\engine\messages</Filter>
     </ClInclude>
     <ClInclude Include="src\unit_test\timer_test\timer_test.hpp">
-      <Filter>Source Files\Tests\timer_test</Filter>
+      <Filter>Source Files\unit_tests\timer_test</Filter>
     </ClInclude>
     <ClInclude Include="src\app\timer.hpp">
       <Filter>Source Files\app</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\debug\spin_component.hpp">
+      <Filter>Source Files\engine\world\debug</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\light.hpp">
+      <Filter>Source Files\engine\world\light</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -454,5 +472,13 @@
     <None Include="assets\unit_tests\model_test\test.vs">
       <Filter>Assets\unit_tests\unit_tests\model_test</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="src\unit_test\deferred_test\deferred_test.cpp">
+      <Filter>Source Files\unit_tests\deferred_test</Filter>
+    </Text>
+    <Text Include="src\unit_test\deferred_test\deferred_test.hpp">
+      <Filter>Source Files\unit_tests\deferred_test</Filter>
+    </Text>
   </ItemGroup>
 </Project>

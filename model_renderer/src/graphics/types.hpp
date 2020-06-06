@@ -77,6 +77,12 @@ namespace graphics
 		Unknown = -1,
 	};
 
+	enum class VertexWinding
+	{
+		Clockwise,
+		CounterClockwise,
+	};
+
 	enum class TextureType : std::int32_t // int
 	{
 		StartType = 1,

@@ -14,5 +14,8 @@ void main()
     output_color *= diffuse_color;
     output_color.a *= alpha;
 
+    if (output_color.a < 0.01)
+        discard;
+
     FragColor = output_color;
 }

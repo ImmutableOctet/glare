@@ -32,7 +32,7 @@ namespace graphics
 		get_context().release_mesh(std::move(composition));
 	}
 
-	void swap(Mesh& x, Mesh& y)
+	void swap(Mesh& x, Mesh& y) noexcept
 	{
 		using std::swap;
 

@@ -2,14 +2,17 @@
 
 #include <engine/types.hpp>
 #include <engine/messages/messages.hpp>
+#include <graphics/types.hpp>
 
 #include <app/delta_time.hpp>
 
 #include <vector>
 
 #include "entity.hpp"
-#include "graphics_entity.hpp"
 #include "camera.hpp"
+#include "light.hpp"
+
+#include "graphics_entity.hpp"
 
 namespace app
 {
@@ -80,6 +83,9 @@ namespace engine
 
 			void on_mouse_input(const app::input::MouseState& mouse);
 			void on_keyboard_input(const app::input::KeyboardState& keyboard);
+		private:
+			// Renders models with the given draw-mode.
+			void draw_models(graphics::CanvasDrawMode draw_mode, graphics::Canvas& canvas, graphics::Shader& shader);
 	};
 
 	using Scene = World;

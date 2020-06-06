@@ -51,12 +51,12 @@ namespace graphics
 				return *this;
 			}
 
-			inline int get_width() const { return width; }
+			inline int get_width()  const { return width;  }
 			inline int get_height() const { return height; }
 
-			inline TextureFormat get_format() const { return format; }
+			inline TextureFormat get_format()     const { return format;       }
 			inline ElementType get_element_type() const { return element_type; }
-			inline TextureFlags get_flags() const { return flags;  }
+			inline TextureFlags get_flags()       const { return flags;        }
 		protected:
 			Texture(weak_ref<Context> ctx, ContextHandle&& resource_handle, int width, int height, TextureFormat format, ElementType element_type, TextureFlags flags);
 	};

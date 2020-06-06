@@ -61,6 +61,8 @@ namespace graphics
 
 			inline Shader& get_shader() { return *shader; }
 
+			inline bool has_textures() const { return (textures.size() > 0); }
+
 			// Returns whether 'material' is considered transparent or not.
 			bool transparent() const;
 	};

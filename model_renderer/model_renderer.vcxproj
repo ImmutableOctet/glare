@@ -184,8 +184,10 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\engine\world\camera.cpp" />
     <ClCompile Include="src\engine\world\debug\debug_camera.cpp" />
     <ClCompile Include="src\engine\world\debug\debug_move.cpp" />
+    <ClCompile Include="src\engine\world\debug\spin_component.cpp" />
     <ClCompile Include="src\engine\world\entity.cpp" />
     <ClCompile Include="src\engine\world\graphics_entity.cpp" />
+    <ClCompile Include="src\engine\world\light.cpp" />
     <ClCompile Include="src\engine\world\world.cpp" />
     <ClCompile Include="src\graphics\canvas.cpp" />
     <ClCompile Include="src\graphics\context_state.cpp" />
@@ -201,6 +203,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\graphics\texture.cpp" />
     <ClCompile Include="src\graphics\vertex.cpp" />
     <ClCompile Include="src\math\math.cpp" />
+    <Text Include="src\unit_test\deferred_test\deferred_test.cpp" />
     <ClCompile Include="src\unit_test\model_test\model_test.cpp" />
     <ClCompile Include="src\unit_test\signal_test\signal_test.cpp" />
     <ClCompile Include="src\unit_test\timer_test\timer_test.cpp" />
@@ -243,8 +246,10 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\engine\world\debug\debug.hpp" />
     <ClInclude Include="src\engine\world\debug\debug_camera.hpp" />
     <ClInclude Include="src\engine\world\debug\debug_move.hpp" />
+    <ClInclude Include="src\engine\world\debug\spin_component.hpp" />
     <ClInclude Include="src\engine\world\entity.hpp" />
     <ClInclude Include="src\engine\world\graphics_entity.hpp" />
+    <ClInclude Include="src\engine\world\light.hpp" />
     <ClInclude Include="src\engine\world\world.hpp" />
     <ClInclude Include="src\graphics\bind.hpp" />
     <ClInclude Include="src\graphics\canvas.hpp" />
@@ -268,6 +273,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\graphics\vertex.hpp" />
     <ClInclude Include="src\math\math.hpp" />
     <ClInclude Include="src\types.hpp" />
+    <Text Include="src\unit_test\deferred_test\deferred_test.hpp" />
     <ClInclude Include="src\unit_test\model_test\model_test.hpp" />
     <ClInclude Include="src\unit_test\signal_test\signal_test.hpp" />
     <ClInclude Include="src\unit_test\timer_test\timer_test.hpp" />

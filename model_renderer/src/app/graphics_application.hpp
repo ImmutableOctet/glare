@@ -40,7 +40,7 @@ namespace app
 							graphics_flags &= ~graphics::ContextFlags::VSync;
 						}
 
-						context = memory::allocate<graphics::Context>(window, graphics::Backend::OpenGL, graphics::ContextFlags::Default);
+						context = memory::allocate<graphics::Context>(window, graphics::Backend::OpenGL, graphics_flags);
 
 						// Create the default canvas.
 						canvas = memory::allocate<graphics::Canvas>(context);

@@ -100,6 +100,13 @@ namespace graphics
 		
 		for (auto& mesh_descriptor : model.get_meshes())
 		{
+			/*
+			if (!mesh_descriptor)
+			{
+				continue;
+			}
+			*/
+
 			auto& material = mesh_descriptor.material;
 
 			if (material.get_shader() != shader)
@@ -107,20 +114,23 @@ namespace graphics
 				continue;
 			}
 
-			context->clear_textures(); // (!has_material)
+			bool force_clear_textures = (!mesh_descriptor.material.has_textures());
+
+			context->clear_textures(force_clear_textures); // (!has_material)
 
 			for (auto& texture_group : material.textures)
 			{
 				auto& _data = texture_group.second;
 
 				// TODO: Implement as visit:
-				if (util::peek_value<TextureArray>(_data, [&](const TextureArray& textures)
+				if (util::peek_value<ref<Texture>>(_data, [&](const ref<Texture>& texture)
+					{
+						bind_texture(*texture);
+					})) {
+				}
+				else if (util::peek_value<TextureArray>(_data, [&](const TextureArray& textures)
 				{
 					bind_textures(textures);
-				})) {}
-				else if (util::peek_value<ref<Texture>>(_data, [&](const ref<Texture>& texture)
-				{
-					bind_texture(*texture);
 				})) {}
 			}
 

@@ -25,7 +25,7 @@ namespace engine
 	{
 		auto sens = this->sensitivity;
 
-		transform.rotate({ 0.0f, (sens * input.x), 0.0f }, true); // false
+		transform.rotate({ 0.0f, (sens * input.x), 0.0f }, true); // false <-- Need to verify if this behaves correctly when set to 'false'.
 		transform.rotateX((-sens * input.y), false); // true
 	}
 }

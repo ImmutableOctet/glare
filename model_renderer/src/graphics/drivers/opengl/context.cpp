@@ -396,7 +396,9 @@ namespace graphics
 				// (Data driven solution vs. code driven solution)
 				handle_flag(state, flags, Flags::DepthTest, GL_DEPTH_TEST, value);
 
-				SDL_GL_SetSwapInterval(static_cast<int>(flags & Flags::VSync));
+				bool swap_interval = (static_cast<int>(flags & Flags::VSync) > 0);
+
+				SDL_GL_SetSwapInterval(swap_interval);
 
 				// Depth-testing:
 				if ((flags & Flags::DepthTest))
@@ -411,7 +413,9 @@ namespace graphics
 				{
 					// Discard back-faces, keep front-faces.
 					//glCullFace(GL_FRONT_AND_BACK); // GL_FRONT // GL_BACK
-					glCullFace(GL_FRONT);
+					//glCullFace(GL_FRONT);
+					glFrontFace(GL_CW);
+					glCullFace(GL_BACK);
 				}
 
 				return state.get_flags();
@@ -491,7 +495,7 @@ namespace graphics
 			{
 				if (hard_reset)
 				{
-					for (GLenum i = BASE_TEXTURE_INDEX; i < MAX_TEXTURES; i++)
+					for (GLenum i = BASE_TEXTURE_INDEX; i < (BASE_TEXTURE_INDEX + MAX_TEXTURES); i++)
 					{
 						unbind_texture(gl_texture_id);
 					}
@@ -1078,7 +1082,7 @@ namespace graphics
 	{
 		const auto texture_format = Driver::get_texture_format(format, channel_type, _calculate_exact_format);
 		const auto texture_layout = Driver::get_texture_layout(format);
-		const auto element_type = Driver::get_element_type(channel_type);
+		const auto element_type   = Driver::get_element_type(channel_type);
 
 		glTexImage2D(GL_TEXTURE_2D, 0, texture_format, width, height, 0, texture_layout, element_type, raw_data);
 	}

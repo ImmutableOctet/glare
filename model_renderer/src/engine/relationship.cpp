@@ -9,7 +9,8 @@ namespace engine
 	{
 		auto* prev_rel = remove_previous_parent(registry, child);
 
-		auto& relationship = registry.assign_or_replace<Relationship>(child, self);
+		Relationship relationship = Relationship(self);
+
 		bool is_first = (child_count == 0); // (first == null);
 
 		if (is_first)
@@ -27,6 +28,8 @@ namespace engine
 
 			append_child(last_child_rel, relationship, last_child, child);
 		}
+
+		registry.assign_or_replace<Relationship>(child, relationship);
 
 		child_count++;
 

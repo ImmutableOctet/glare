@@ -16,14 +16,20 @@ namespace unit_test
 			ref<graphics::Shader> test_shader;
 			std::vector<ref<graphics::Shader>> shaders;
 
-			ref<graphics::Model> loaded_model;
-
 			engine::World world;
 			engine::ResourceManager resource_manager;
 
 			engine::Entity model_entity;
 
 			ModelTest(bool auto_execute=true);
+
+			engine::Entity load_model(const std::string& path);
+			engine::Transform model(const std::string& path);
+			engine::Transform transform(engine::Entity entity);
+
+			void make_camera(engine::World& world);
+			void make_lights(engine::World& world);
+			void make_models(engine::World& world);
 
 			void setup_world(engine::World& world);
 
