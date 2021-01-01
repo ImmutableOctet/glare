@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{F89C24DB-2B38-4899-854E-79FC5DD83CB5}</ProjectGuid>
-    <RootNamespace>modelrenderer</RootNamespace>
+    <RootNamespace>glare</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -70,20 +70,20 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>D:\Projects\model_renderer\model_renderer\src;D:\Projects\model_renderer\model_renderer\dependencies\include;D:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;D:\Projects\model_renderer\model_renderer\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\Projects\model_renderer\model_renderer\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\Projects\glare\glare\src;D:\Projects\glare\glare\dependencies\include;D:\Projects\glare\glare\dependencies\modules\fpm\include;D:\Projects\glare\glare\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\Projects\glare\glare\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>D:\Projects\model_renderer\model_renderer\src;D:\Projects\model_renderer\model_renderer\dependencies\include;D:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;D:\Projects\model_renderer\model_renderer\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\Projects\model_renderer\model_renderer\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\Projects\glare\glare\src;D:\Projects\glare\glare\dependencies\include;D:\Projects\glare\glare\dependencies\modules\fpm\include;D:\Projects\glare\glare\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\Projects\glare\glare\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>D:\Projects\model_renderer\model_renderer\src;D:\Projects\model_renderer\model_renderer\dependencies\include;D:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;D:\Projects\model_renderer\model_renderer\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\Projects\model_renderer\model_renderer\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\Projects\glare\glare\src;D:\Projects\glare\glare\dependencies\include;D:\Projects\glare\glare\dependencies\modules\fpm\include;D:\Projects\glare\glare\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\Projects\glare\glare\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>D:\Projects\model_renderer\model_renderer\src;D:\Projects\model_renderer\model_renderer\dependencies\include;D:\Projects\model_renderer\model_renderer\dependencies\modules\fpm\include;D:\Projects\model_renderer\model_renderer\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\Projects\model_renderer\model_renderer\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\Projects\glare\glare\src;D:\Projects\glare\glare\dependencies\include;D:\Projects\glare\glare\dependencies\modules\fpm\include;D:\Projects\glare\glare\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\Projects\glare\glare\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

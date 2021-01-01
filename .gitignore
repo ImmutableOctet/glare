@@ -259,20 +259,20 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
-/model_renderer/dependencies
-/model_renderer/assets/unit_tests/shader_test/texture1.png
-/model_renderer/assets/unit_tests/shader_test/texture2.jpg
+/glare/dependencies
+/glare/assets/unit_tests/shader_test/texture1.png
+/glare/assets/unit_tests/shader_test/texture2.jpg
 
 *.i
-/model_renderer/assets/unit_tests/model_test/Stage.b3d
-/model_renderer/assets/unit_tests/deferred_test/nanosuit
-/model_renderer/assets/unit_tests/model_test/Checkpoint
-/model_renderer/assets/unit_tests/model_test/Bianco
-/model_renderer/assets/unit_tests/model_test/SeasideShortcut
-/model_renderer/assets/unit_tests/model_test/Young Samus
-/model_renderer/assets/unit_tests/model_test/Sonic.mtl
-/model_renderer/assets/unit_tests/model_test/custom_sonic.b3d
-/model_renderer/assets/unit_tests/model_test/Stage.mtl
-/model_renderer/assets/unit_tests/model_test/Sonic
-/model_renderer/assets/unit_tests/model_test/That sounds interesting.jpg
-/model_renderer/assets/*
+/glare/assets/unit_tests/model_test/Stage.b3d
+/glare/assets/unit_tests/deferred_test/nanosuit
+/glare/assets/unit_tests/model_test/Checkpoint
+/glare/assets/unit_tests/model_test/Bianco
+/glare/assets/unit_tests/model_test/SeasideShortcut
+/glare/assets/unit_tests/model_test/Young Samus
+/glare/assets/unit_tests/model_test/Sonic.mtl
+/glare/assets/unit_tests/model_test/custom_sonic.b3d
+/glare/assets/unit_tests/model_test/Stage.mtl
+/glare/assets/unit_tests/model_test/Sonic
+/glare/assets/unit_tests/model_test/That sounds interesting.jpg
+/glare/assets/*
