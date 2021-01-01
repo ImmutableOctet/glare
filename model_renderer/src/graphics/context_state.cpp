@@ -38,6 +38,9 @@ namespace graphics
 		shader.make_default();
 		mesh.make_default();
 
+		read_framebuffer.make_default();
+		write_framebuffer.make_default();
+
 		clear_textures();
 	}
 
@@ -46,9 +49,32 @@ namespace graphics
 		return (get_flags() & check);
 	}
 
+	FrameBuffer& ContextState::get_read_framebuffer()
+	{
+		return read_framebuffer;
+	}
+
+	FrameBuffer& ContextState::get_write_framebuffer()
+	{
+		return write_framebuffer;
+	}
+
+	bool ContextState::has_read_framebuffer() const
+	{
+		return (!read_framebuffer.is_default());
+	}
+
+	bool ContextState::has_write_framebuffer() const
+	{
+		return (!write_framebuffer.is_default());
+	}
+
 	bool ContextState::has_framebuffer() const
 	{
-		return (!this->framebuffer.is_default());
+		return
+		(has_read_framebuffer())
+		||
+		(has_write_framebuffer());
 	}
 
 	bool ContextState::bound(const Shader& shader) const
@@ -58,7 +84,10 @@ namespace graphics
 
 	bool ContextState::bound(const FrameBuffer& buffer) const
 	{
-		return ((&(this->framebuffer)) == (&buffer));
+		return
+		((&(this->read_framebuffer)) == (&buffer))
+		||
+		((&(this->write_framebuffer)) == (&buffer));
 	}
 
 	bool ContextState::bound(const Mesh& mesh) const

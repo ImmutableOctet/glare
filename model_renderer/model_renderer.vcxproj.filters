@@ -109,6 +109,9 @@
     <Filter Include="Source Files\engine\world\light">
       <UniqueIdentifier>{f5bbc388-fa6d-4086-b5cb-3cab5bb1716a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Assets\unit_tests\unit_tests\model_test\shaders">
+      <UniqueIdentifier>{cf81cf47-3203-43a1-a577-cb099ce2c730}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\util\lib.cpp">
@@ -464,14 +467,9 @@
     <ClInclude Include="src\engine\world\light.hpp">
       <Filter>Source Files\engine\world\light</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="assets\unit_tests\model_test\test.fs">
-      <Filter>Assets\unit_tests\unit_tests\model_test</Filter>
-    </None>
-    <None Include="assets\unit_tests\model_test\test.vs">
-      <Filter>Assets\unit_tests\unit_tests\model_test</Filter>
-    </None>
+    <ClInclude Include="src\engine\components\name_component.hpp">
+      <Filter>Source Files\engine\world</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="src\unit_test\deferred_test\deferred_test.cpp">
@@ -480,5 +478,40 @@
     <Text Include="src\unit_test\deferred_test\deferred_test.hpp">
       <Filter>Source Files\unit_tests\deferred_test</Filter>
     </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="assets\unit_tests\model_test\shaders\8.1.deferred_light_box.fs">
+      <Filter>Assets\unit_tests\unit_tests\model_test\shaders</Filter>
+    </None>
+    <None Include="assets\unit_tests\model_test\shaders\8.1.deferred_light_box.vs">
+      <Filter>Assets\unit_tests\unit_tests\model_test\shaders</Filter>
+    </None>
+    <None Include="assets\unit_tests\model_test\shaders\8.1.deferred_shading.fs">
+      <Filter>Assets\unit_tests\unit_tests\model_test\shaders</Filter>
+    </None>
+    <None Include="assets\unit_tests\model_test\shaders\8.1.deferred_shading.vs">
+      <Filter>Assets\unit_tests\unit_tests\model_test\shaders</Filter>
+    </None>
+    <None Include="assets\unit_tests\model_test\shaders\8.1.fbo_debug.fs">
+      <Filter>Assets\unit_tests\unit_tests\model_test\shaders</Filter>
+    </None>
+    <None Include="assets\unit_tests\model_test\shaders\8.1.fbo_debug.vs">
+      <Filter>Assets\unit_tests\unit_tests\model_test\shaders</Filter>
+    </None>
+    <None Include="assets\unit_tests\model_test\shaders\8.1.g_buffer.fs">
+      <Filter>Assets\unit_tests\unit_tests\model_test\shaders</Filter>
+    </None>
+    <None Include="assets\unit_tests\model_test\shaders\8.1.g_buffer.vs">
+      <Filter>Assets\unit_tests\unit_tests\model_test\shaders</Filter>
+    </None>
+    <None Include="assets\unit_tests\model_test\shaders\forward.fs">
+      <Filter>Assets\unit_tests\unit_tests\model_test\shaders</Filter>
+    </None>
+    <None Include="assets\unit_tests\model_test\shaders\forward.vs">
+      <Filter>Assets\unit_tests\unit_tests\model_test\shaders</Filter>
+    </None>
+    <None Include="assets\unit_tests\model_test\shaders\forward_test.fs">
+      <Filter>Assets\unit_tests\unit_tests\model_test\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -7,6 +7,7 @@
 #include <app/delta_time.hpp>
 
 #include <vector>
+#include <string_view>
 
 #include "entity.hpp"
 #include "camera.hpp"
@@ -48,10 +49,16 @@ namespace engine
 
 			void update();
 
+			template <typename EventType, auto fn, typename obj_type>
+			inline void register_event(obj_type& obj)
+			{
+				event_handler.sink<EventType>().connect<fn>(obj);
+			}
+
 			template <typename EventType, auto fn>
 			inline void register_event()
 			{
-				event_handler.sink<EventType>().connect<fn>(*this);
+				register_event<EventType, fn>(*this);
 			}
 
 			// Renders the scene using the last bound camera. If no camera has been bound/assinged, then this routine will return 'false'.
@@ -65,6 +72,11 @@ namespace engine
 			//void on_child_removed(const Event_ChildRemoved& e);
 
 			Transform get_transform(Entity entity);
+
+			Entity get_parent(Entity entity) const;
+			void set_parent(Entity entity, Entity parent);
+
+			Entity get_by_name(std::string_view name); // const;
 
 			inline Registry& get_registry() { return registry; }
 			inline EventHandler& get_event_handler() { return event_handler; }

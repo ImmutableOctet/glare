@@ -7,9 +7,22 @@
 
 #include <string_view>
 #include <string>
+#include <map>
 #include <unordered_map>
 #include <type_traits>
 #include <variant>
+
+/*
+inline bool operator<(const std::string& a, const std::string_view& b) noexcept
+{
+	return (a < b);
+}
+*/
+
+inline bool operator<(const std::string_view& a, const std::string& b) noexcept
+{
+	return (a < b);
+}
 
 namespace engine
 {
@@ -33,6 +46,26 @@ namespace graphics
 
 	// TODO: Implement half-size indices for smaller meshes.
 	using MeshIndex = std::uint32_t; // GLuint;
+
+	struct Point
+	{
+		union
+		{
+			struct { int x, y; };
+			struct { int width, height; };
+		};
+	};
+
+	struct PointRect
+	{
+		Point start;
+
+		union
+		{
+			Point end;
+			struct { int width, height; };
+		};
+	};
 
 	enum class ElementType
 	{
@@ -119,6 +152,15 @@ namespace graphics
 		int offset = 0;
 	};
 
+	enum class FrameBufferType : std::uint32_t
+	{
+		Unknown = (1 << 0),
+		Read    = (1 << 1),
+		Write   = (1 << 2),
+
+		ReadWrite = (Read | Write),
+	}; FLAG_ENUM(std::uint32_t, FrameBufferType);
+
 	// NOTE: Support for texture flags is driver-dependent.
 	enum class TextureFlags : std::uint32_t
 	{
@@ -163,8 +205,11 @@ namespace graphics
 	{
 		None = (1 << 0),
 
-		Opaque = (1 << 1),
-		Transparent = (1 << 2),
+		Opaque         = (1 << 1),
+		Transparent    = (1 << 2),
+
+		// If enabled, the active shader will not be checked before drawing.
+		IgnoreShaders  = (1 << 3),
 
 		All = (Opaque | Transparent),
 	}; FLAG_ENUM(std::uint32_t, CanvasDrawMode);
@@ -203,10 +248,10 @@ namespace graphics
 	using TextureGroup = std::variant<ref<Texture>, TextureArray>; // Used to represent a single texture object or vector of textures objects. (Represents a 'TextureType')
 
 	// Map of string-identifiers to 'TextureGroup' objects.
-	using TextureMap   = std::unordered_map<std::string_view, TextureGroup>;
+	using TextureMap   = std::unordered_map<std::string, TextureGroup>; // string_view
 
-	using UniformData  = std::variant<bool, int, float, math::Vector2D, math::Vector3D, math::Vector4D, math::Matrix2x2, math::Matrix3x3, math::Matrix4x4>;
-	using UniformMap   = std::unordered_map<std::string_view, UniformData>; // std::string
+	using UniformData  = std::variant<bool, int, float, ContextHandle, math::Vector2D, math::Vector3D, math::Vector4D, math::Matrix2x2, math::Matrix3x3, math::Matrix4x4>;
+	using UniformMap   = std::map<std::string, UniformData, std::less<>>; // std::string_view // unordered_map
 
 	template <typename fn_type>
 	void enumerate_texture_types(fn_type&& fn)

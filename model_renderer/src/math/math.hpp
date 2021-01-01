@@ -4,6 +4,7 @@
 
 #include <types.hpp>
 
+//#include <cmath>
 #include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
 
@@ -25,6 +26,27 @@ namespace math
 	using RotationMatrix = Matrix3x3;
 
 	template <typename T>
+	static constexpr T _Pi = static_cast<T>(3.141592653589793); // M_PI
+
+	static constexpr auto Pi = _Pi<float>;
+
+	template <typename T>
+	inline T degrees(T r)
+	{
+		static constexpr T R_TO_DEG = (static_cast<T>(180) / _Pi<T>);
+
+		return (r * R_TO_DEG);
+	}
+
+	template <typename T>
+	inline T radians(T d)
+	{
+		static constexpr T DEG_TO_R = (_Pi<T> / static_cast<T>(180));
+
+		return (d * DEG_TO_R);
+	}
+
+	template <typename T>
 	inline T sq(T x)
 	{
 		return (x * x);
@@ -37,6 +59,16 @@ namespace math
 		const auto& translation = m[3];
 
 		return { translation[0], translation[1], translation[2] };
+	}
+
+	template <typename mat_type>
+	inline Vector3D get_scaling(const mat_type& m) // Matrix
+	{
+		auto i_l = glm::length(m[0]);
+		auto j_l = glm::length(m[1]);
+		auto k_l = glm::length(m[2]);
+
+		return { i_l, j_l, k_l };
 	}
 
 	template <typename matrix_type>
@@ -73,4 +105,12 @@ namespace math
 	RotationMatrix rotation_roll(float angle);
 
 	RotationMatrix rotation_from_vector(const Vector& rv);
+}
+
+template <typename OutStream>
+inline auto& operator<<(OutStream& os, const math::Vector& v)
+{
+	os << v.x << ", " << v.y << ", " << v.z;
+
+	return os;
 }

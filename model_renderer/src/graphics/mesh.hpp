@@ -57,7 +57,7 @@ namespace graphics
 			virtual void on_bind(Context& context);
 		public:
 			Mesh(const Mesh&) = delete;
-			Mesh& operator=(const Mesh&) = delete;
+			//Mesh& operator=(const Mesh&) = delete;
 
 			inline ref<Context> get_context_ref() { return context.lock(); }
 			inline Context& get_context() { return *get_context_ref(); }
@@ -86,7 +86,7 @@ namespace graphics
 				);
 			}
 
-			static Mesh GenerateTexturedQuad(pass_ref<Context> ctx);
+			static Mesh GenerateTexturedQuad(pass_ref<Context> ctx, VertexWinding winding=VertexWinding::Clockwise);
 
 			friend void swap(Mesh& x, Mesh& y) noexcept;
 

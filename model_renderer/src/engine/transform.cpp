@@ -26,6 +26,18 @@ namespace engine
 		return std::nullopt;
 	}
 
+	std::optional<Transform> Transform::get_transform_safe(Registry& registry, Entity entity)
+	{
+		bool has_transform = (registry.has<TransformComponent>(entity));
+
+		if (has_transform)
+		{
+			return Transform(registry, entity);
+		}
+
+		return std::nullopt;
+	}
+
 	std::optional<Transform> Transform::get_parent() const
 	{
 		if (!parent_data)
@@ -110,21 +122,21 @@ namespace engine
 		: Transform(registry, entity, relationship, registry.get<TransformComponent>(entity)) {}
 
 	Transform::Transform(Registry& registry, Entity entity, const Relationship& relationship, TransformComponent& transform)
-		: TransformViewData({registry, entity, relationship, transform }) {}
+		: Transform(TransformViewData({registry, entity, relationship, transform })) {}
 
 	Transform::~Transform()
 	{
 		recalculate(false);
 	}
 
-	math::Matrix Transform::get_matrix()
+	math::Matrix Transform::get_matrix(bool force_refresh)
 	{
-		return update_matrix();
+		return update_matrix(force_refresh);
 	}
 
-	math::Matrix Transform::get_inverse_matrix()
+	math::Matrix Transform::get_inverse_matrix(bool force_refresh)
 	{
-		return update_inverse_matrix();
+		return update_inverse_matrix(force_refresh);
 	}
 
 	math::Vector Transform::get_position()
@@ -212,6 +224,27 @@ namespace engine
 	void Transform::set_local_rotation(const math::Vector& rv)
 	{
 		set_local_basis(math::rotation_from_vector(rv));
+	}
+
+	void Transform::set_rx(float rx)
+	{
+		auto rotation = get_rotation();
+
+		set_rotation({rx, rotation.y, rotation.z});
+	}
+
+	void Transform::set_ry(float ry)
+	{
+		auto rotation = get_rotation();
+
+		set_rotation({ rotation.x, ry, rotation.z });
+	}
+
+	void Transform::set_rz(float rz)
+	{
+		auto rotation = get_rotation();
+
+		set_rotation({ rotation.x, rotation.y, rz });
 	}
 
 	void Transform::move(const math::Vector& tv, bool local)
@@ -326,6 +359,20 @@ namespace engine
 	math::Matrix Transform::get_local_matrix()
 	{
 		return update_local_matrix();
+	}
+
+	void Transform::set_matrix(const math::Matrix& m)
+	{
+		auto& matrix = transform._m;
+
+		auto scale = math::get_scaling(matrix);
+
+		set_basis(glm::scale(matrix, { (1.0 / scale.x), (1.0 / scale.y), (1.0 / scale.z) }));
+
+		auto translation = matrix[3];
+
+		set_position(translation);
+		set_scale(scale);
 	}
 
 	void Transform::set_local_matrix(const math::Matrix& m)

@@ -21,7 +21,12 @@ namespace graphics
 		: Texture(ctx, PixelMap::Load(path), flags) {}
 
 	Texture::Texture(pass_ref<Context> ctx, const std::string& path, Flags flags)
-		: Texture(ctx, PixelMap::Load(path), flags) {}
+		: Texture(ctx, PixelMap::Load(path), flags)
+	{
+		#ifdef _DEBUG
+			_path = path;
+		#endif
+	}
 
 	Texture::~Texture()
 	{

@@ -49,9 +49,9 @@ namespace graphics
 			Material(pass_ref<Shader> shader);
 
 			template <typename T>
-			inline Material& set_var(std::string_view material_var, const T& value)
+			inline Material& set_var(const std::string_view& material_var, const T& value)
 			{
-				uniforms[material_var] = value; // std::string(material_var)
+				uniforms[std::string(material_var)] = value;
 
 				return *this;
 			}

@@ -3,10 +3,11 @@
 
 namespace engine
 {
-	Entity create_light(World& world, Entity parent)
+	Entity create_light(World& world, const math::Vector& position, const graphics::ColorRGB& color, LightType type, Entity parent)
 	{
-		auto light = create_pivot(world, parent);
-		world.get_registry().assign<LightComponent>(light);
+		auto light = create_pivot(world, position, parent);
+
+		world.get_registry().assign<LightComponent>(light, type, color);
 
 		return light;
 	}

@@ -20,7 +20,14 @@ namespace graphics
 		get_context()->release_shader(std::move(handle));
 	}
 
-	Uniform Shader::operator[](const std::string& str)
+	/*
+	Uniform<const std::string&> Shader::operator[](const std::string& str)
+	{
+		return { *this, str };
+	}
+	*/
+
+	Uniform Shader::operator[](const std::string& str) // std::string_view // Uniform<std::string_view>
 	{
 		return { *this, str };
 	}

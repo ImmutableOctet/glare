@@ -6,12 +6,17 @@
 #include <string>
 #include <string_view>
 
+//#include <version>
+//#include <concepts>
+#include <type_traits>
+
 #include <math/math.hpp>
 
 #include "types.hpp"
 #include "bind.hpp"
 #include "shader.hpp"
 #include "texture.hpp"
+#include "framebuffer.hpp"
 
 //#include "context_state.hpp"
 
@@ -74,6 +79,31 @@ namespace graphics
 
 			// Constants:
 			static constexpr Handle NoHandle = {};
+
+			struct FrameBufferBindState
+			{
+				FrameBuffer* read_state = nullptr;
+				FrameBuffer* write_state = nullptr;
+
+				inline bool is_default() const { return ((read_state == nullptr) && is_readwrite()); }
+				inline bool is_readwrite() const
+				{
+					if (read_state == write_state)
+					{
+						return true;
+					}
+
+					if (read_state != nullptr)
+					{
+						if (write_state != nullptr)
+						{
+							return (read_state->get_handle() == write_state->get_handle());
+						}
+					}
+
+					return false;
+				}
+			};
 		private:
 			const Backend graphics_backend;
 
@@ -98,6 +128,7 @@ namespace graphics
 				results in a new allocation of a texture slot.
 			*/
 			const Texture& bind(const Texture& texture);
+			const Texture& bind(const Texture& texture, const std::string& uniform_sampler); // std::string_view
 
 			// Binds the mesh specified, returning
 			// a reference to the previously bound mesh.
@@ -110,7 +141,8 @@ namespace graphics
 				will only be bound for read operations.
 			*/
 
-			FrameBuffer& bind(FrameBuffer& buffer, bool read_only=false);
+			FrameBufferBindState bind(FrameBuffer& buffer, FrameBufferType bind_type=FrameBufferType::ReadWrite);
+			FrameBufferBindState bind(FrameBufferBindState state, FrameBufferType _ignored_bind_type={});
 		public:
 			Context(app::Window& wnd, Backend gfx, Flags flags=Flags::Default);
 			~Context();
@@ -122,6 +154,8 @@ namespace graphics
 
 			// Commands:
 			void flip(app::Window& wnd);
+
+			void clear(BufferType buffer_type=BufferType::ColorDepth);
 
 			// TODO: Add an overload for vectors.
 			void clear(float red, float green, float blue, float alpha, BufferType buffer_type=BufferType::ColorDepth);
@@ -149,9 +183,10 @@ namespace graphics
 
 			// Binds the resource specified, executes the function provided,
 			// then automatically unbinds the resource appropirately.
-			template <typename ResourceType, typename fn>
+			template <typename ResourceType, typename fn, typename = std::enable_if_t<std::is_invocable_v<fn>, fn>>
 			inline void use(ResourceType& resource, fn exec)
 			{
+				/*
 				auto op = bind_resource
 				(
 					*this, resource,
@@ -161,12 +196,71 @@ namespace graphics
 						return bind(res);
 					}
 				);
+				*/
 
-				//auto op = use(resource);
+				auto op = use(resource);
 
 				exec();
 
 				// ~op executes here.
+			}
+
+			inline auto use(const Texture& resource, const std::string& uniform_sampler) // std::string_view
+			{
+				return bind_resource
+				(
+					*this, resource,
+
+					[&, this](const auto& res) -> const auto&
+					{
+						return bind(res, uniform_sampler);
+					}
+				);
+			}
+
+			template <typename fn>
+			inline void use(const Texture& resource, const std::string& uniform_sampler, fn exec) // std::string_view
+			{
+				auto op = use(resource, uniform_sampler);
+
+				exec();
+
+				// ~op executes here.
+			}
+
+			inline auto use(FrameBuffer& resource, FrameBufferType bind_type=FrameBufferType::ReadWrite)
+			{
+				return bind_resource
+				(
+					*this, resource,
+
+					[&, this](auto& res) -> auto
+					{
+						return bind(res, bind_type);
+					}
+				);
+			}
+
+			template <typename fn>
+			inline void use(FrameBuffer& resource, FrameBufferType bind_type, fn exec) // requires std::is_invocable<fn>
+			{
+				auto op = use(resource, bind_type);
+
+				exec();
+
+				// ~op executes here.
+			}
+
+			FrameBuffer& get_default_framebuffer();
+
+			void copy_framebuffer(FrameBuffer& source, FrameBuffer& destination, const PointRect& src, const PointRect& dst, BufferType buffer_types=BufferType::Color, TextureFlags filter=TextureFlags::None);
+
+			// Transfers pixel data between the currently bound read and write framebuffers. (See 'copy_framebuffer')
+			void transfer_pixels(const PointRect& src, const PointRect& dst, BufferType buffer_types=BufferType::Color, TextureFlags filter=TextureFlags::None);
+
+			inline void copy_framebuffer(FrameBuffer& source, const PointRect& src, const PointRect& dst, BufferType buffer_types, TextureFlags filter=TextureFlags::None)
+			{
+				copy_framebuffer(source, get_default_framebuffer(), src, dst, buffer_types, filter);
 			}
 
 			// Draw using the currently bound 'Mesh' object.
@@ -178,6 +272,7 @@ namespace graphics
 			bool set_uniform(Shader& shader, std::string_view name, int value); // std::int32_t
 			bool set_uniform(Shader& shader, std::string_view name, bool value);
 			bool set_uniform(Shader& shader, std::string_view name, float value);
+			bool set_uniform(Shader& shader, std::string_view name, ContextHandle handle); // std::int32_t
 
 			bool set_uniform(Shader& shader, std::string_view name, const math::Vector2D& value);
 			bool set_uniform(Shader& shader, std::string_view name, const math::Vector3D& value);
@@ -231,14 +326,16 @@ namespace graphics
 			Handle generate_framebuffer(); // noexcept;
 			void release_framebuffer(Handle&& handle);
 
+			// NOTE: 'framebuffer' must be bound prior to calling this method.
 			// Attaches a texture to the currently bound framebuffer.
 			// NOTE: The 'texture' reference must be non-const, as attaching it
 			// to the currently bound framebuffer would indicate mutation.
-			bool framebuffer_attachment(Texture& texture);
+			bool framebuffer_attachment(FrameBuffer& framebuffer, Texture& texture);
 			
+			// NOTE: 'framebuffer' must be bound prior to calling this method.
 			// TODO: Look into alternatives to making this public.
 			// Links the current framebuffer to its attachments.
-			bool framebuffer_link_attachments();
+			bool framebuffer_link_attachments(FrameBuffer& framebuffer);
 
 			// Renderbuffer related:
 			Handle generate_renderbuffer(RenderBufferType type, int width, int height);

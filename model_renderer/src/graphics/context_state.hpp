@@ -2,6 +2,7 @@
 
 //#include <stack>
 #include <vector>
+//#include <utility>
 
 #include "types.hpp"
 #include "shader.hpp"
@@ -33,8 +34,10 @@ namespace graphics
 			Flags flags = Flags::Default;
 
 			defaultable_ref<Shader> shader;
-			defaultable_ref<FrameBuffer> framebuffer;
 			defaultable_ref<Mesh> mesh;
+
+			defaultable_ref<FrameBuffer> read_framebuffer;
+			defaultable_ref<FrameBuffer> write_framebuffer;
 
 			std::vector<const Texture*> textures; // std::stack<Texture>
 
@@ -48,6 +51,11 @@ namespace graphics
 		public:
 			inline Flags get_flags() const { return flags; }
 
+			FrameBuffer& get_read_framebuffer();
+			FrameBuffer& get_write_framebuffer();
+
+			bool has_read_framebuffer() const;
+			bool has_write_framebuffer() const;
 			bool has_framebuffer() const;
 
 			bool enabled(Flags check) const;

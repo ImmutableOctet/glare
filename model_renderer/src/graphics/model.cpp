@@ -7,6 +7,9 @@
 #include <algorithm>
 #include <iostream>
 
+
+#define AI_CONFIG_PP_PTV_NORMALIZE   "PP_PTV_NORMALIZE"
+
 #include <assimp/Importer.hpp>
 #include <assimp/vector3.h>
 #include <assimp/scene.h>
@@ -97,14 +100,12 @@ namespace graphics
 
 		VertexWinding vert_direction = VertexWinding::Clockwise;
 
-		/*
 		if (!path.ends_with(".obj"))
 		{
 			vert_direction = VertexWinding::CounterClockwise;
 		}
-		*/
 
-		flags |= aiProcess_FlipWindingOrder;
+		//flags |= aiProcess_FlipWindingOrder;
 
 		// Load a scene from the path specified.
 		const aiScene* scene = importer.ReadFile(path, flags);

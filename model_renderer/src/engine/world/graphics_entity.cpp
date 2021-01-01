@@ -13,13 +13,13 @@ namespace engine
 		return attach_model(world, entity, model);
 	}
 
-	Entity attach_model(World& world, Entity entity, pass_ref<graphics::Model> model)
+	Entity attach_model(World& world, Entity entity, pass_ref<graphics::Model> model, graphics::ColorRGBA color)
 	{
 		///ASSERT(model);
 
 		auto& registry = world.get_registry();
 
-		registry.assign<ModelComponent>(entity, model);
+		registry.assign<ModelComponent>(entity, model, color);
 
 		return entity;
 	}

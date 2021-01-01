@@ -76,6 +76,8 @@ namespace engine
 
 	struct Transform : public TransformViewData
 	{
+		public:
+			static std::optional<Transform> get_transform_safe(Registry& registry, Entity entity);
 		protected:
 			using Dirty = _TransformComponent_Dirty;
 
@@ -114,8 +116,8 @@ namespace engine
 			~Transform();
 
 			// Global transformations:
-			math::Matrix get_matrix();
-			math::Matrix get_inverse_matrix();
+			math::Matrix get_matrix(bool force_refresh=false);
+			math::Matrix get_inverse_matrix(bool force_refresh = false);
 
 			math::Vector get_position();
 			math::Vector get_scale();
@@ -124,12 +126,20 @@ namespace engine
 			math::Vector get_rotation();
 			math::Vector get_local_rotation();
 
+			inline float rx() { return get_rotation().x; }
+			inline float ry() { return get_rotation().y; }
+			inline float rz() { return get_rotation().z; }
+
 			void set_position(const math::Vector& position);
 			void set_scale(const math::Vector& scale);
 			void set_basis(const math::RotationMatrix& basis);
 
 			void set_rotation(const math::Vector& rv);
 			void set_local_rotation(const math::Vector& rv);
+
+			void set_rx(float rx);
+			void set_ry(float ry);
+			void set_rz(float rz);
 
 			void move(const math::Vector& tv, bool local=false);
 
@@ -149,6 +159,8 @@ namespace engine
 
 			// Returns a copy of the 'model' matrix.
 			math::Matrix get_local_matrix();
+
+			void set_matrix(const math::Matrix& m);
 
 			void set_local_matrix(const math::Matrix& m);
 			void set_local_position(const math::Vector& position);

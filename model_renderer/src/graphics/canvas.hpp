@@ -48,8 +48,8 @@ namespace graphics
 			void flip(app::Window& wnd);
 			void clear(float red, float green, float blue, float alpha);
 
-			void bind_textures(const TextureArray& textures);
-			void bind_texture(const Texture& texture);
+			void bind_textures(const TextureArray& textures, const std::string& name);
+			void bind_texture(const Texture& texture, const std::string& name);
 
 			// Retrieves the currently bound 'Shader' object.
 			Shader& get_shader();
@@ -70,7 +70,9 @@ namespace graphics
 
 				bool status = true;
 
-				for (const auto& uniform : material.get_uniforms())
+				const auto& material_uniforms = material.get_uniforms();
+
+				for (const auto& uniform : material_uniforms)
 				{
 					const auto& name = uniform.first;
 					const auto& data_raw = uniform.second;
@@ -96,7 +98,7 @@ namespace graphics
 				return true; // status
 			}
 
-			void draw(Model& model, const graphics::ColorRGBA& color={1.0f, 1.0f, 1.0f, 1.0f}, DrawMode draw_mode=DrawMode::All); // const math::Matrix& model_matrix
+			void draw(Model& model, const graphics::ColorRGBA& color={1.0f, 1.0f, 1.0f, 1.0f}, DrawMode draw_mode=DrawMode::All, bool auto_clear_textures=false); // const math::Matrix& model_matrix
 		private:
 			// Returns 'true' if the final diffuse is acceptable.
 			// 'has_diffuse_out' is set based on whether 'uniforms' has a valid diffuse-color.

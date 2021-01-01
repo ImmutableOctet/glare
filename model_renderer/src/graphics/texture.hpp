@@ -17,6 +17,11 @@ namespace graphics
 
 	class Texture : public Resource
 	{
+		private:
+#if _DEBUG
+			// Debugging related:
+			std::string _path;
+#endif
 		protected:
 			int width, height;
 

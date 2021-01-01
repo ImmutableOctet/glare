@@ -5,26 +5,51 @@
 
 namespace graphics
 {
-	Mesh Mesh::GenerateTexturedQuad(pass_ref<Context> ctx)
+	Mesh Mesh::GenerateTexturedQuad(pass_ref<Context> ctx, VertexWinding winding)
 	{
-		return Generate<TexturedVertex>
-		(
-			ctx,
+		constexpr auto primitive = Primitive::TriangleStrip;
 
-			{
-				// Vertices (Position + UV)
-				{
-					  // Positions:           // UV Coordinates:
-					{{{-1.0f,  1.0f, 0.0f}},  {0.0f, 1.0f}},
-					{{{-1.0f, -1.0f, 0.0f}},  {0.0f, 0.0f}},
-					{{{ 1.0f,  1.0f, 0.0f}},  {1.0f, 1.0f}},
-					{{{ 1.0f, -1.0f, 0.0f}},  {1.0f, 0.0f}}
-				},
+		switch (winding)
+		{
+			case VertexWinding::Clockwise:
+				return Generate<TexturedVertex>
+				(
+					ctx,
+
+					{
+						// Vertices (Position + UV)
+						{
+							// Positions:             // UV Coordinates:
+							{{{-1.0f,  1.0f, 0.0f}},  {0.0f, 1.0f}},
+							{{{ 1.0f,  1.0f, 0.0f}},  {1.0f, 1.0f}},
+							{{{-1.0f, -1.0f, 0.0f}},  {0.0f, 0.0f}},
+							{{{ 1.0f, -1.0f, 0.0f}},  {1.0f, 0.0f}}
+						},
 				
-				// Raw mesh; no need for indices.
-				{}
-			}, Primitive::TriangleStrip
-		);
+						// Raw mesh; no need for indices.
+						{}
+					}, primitive
+				);
+			default: // case VertexWinding::CounterClockwise:
+				return Generate<TexturedVertex>
+				(
+					ctx,
+
+					{
+						// Vertices (Position + UV)
+						{
+							// Positions:             // UV Coordinates:
+							{{{-1.0f,  1.0f, 0.0f}},  {0.0f, 1.0f}},
+							{{{-1.0f, -1.0f, 0.0f}},  {0.0f, 0.0f}},
+							{{{ 1.0f,  1.0f, 0.0f}},  {1.0f, 1.0f}},
+							{{{ 1.0f, -1.0f, 0.0f}},  {1.0f, 0.0f}}
+						},
+				
+						// Raw mesh; no need for indices.
+						{}
+					}, primitive
+				);
+		}
 	}
 
 	Mesh::~Mesh()

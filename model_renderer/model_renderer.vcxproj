@@ -233,6 +233,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\engine\components\components.hpp" />
     <ClInclude Include="src\engine\components\graphics\graphics.hpp" />
     <ClInclude Include="src\engine\components\graphics\model_component.hpp" />
+    <ClInclude Include="src\engine\components\name_component.hpp" />
     <ClInclude Include="src\engine\engine.hpp" />
     <ClInclude Include="src\engine\free_look.hpp" />
     <ClInclude Include="src\engine\messages\input.hpp" />
@@ -289,8 +290,19 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\util\variant.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="assets\unit_tests\model_test\test.fs" />
-    <None Include="assets\unit_tests\model_test\test.vs" />
+    <None Include="assets\unit_tests\model_test\shaders\8.1.deferred_light_box.fs">
+      <DeploymentContent>false</DeploymentContent>
+    </None>
+    <None Include="assets\unit_tests\model_test\shaders\8.1.deferred_light_box.vs" />
+    <None Include="assets\unit_tests\model_test\shaders\8.1.deferred_shading.fs" />
+    <None Include="assets\unit_tests\model_test\shaders\8.1.deferred_shading.vs" />
+    <None Include="assets\unit_tests\model_test\shaders\8.1.fbo_debug.fs" />
+    <None Include="assets\unit_tests\model_test\shaders\8.1.fbo_debug.vs" />
+    <None Include="assets\unit_tests\model_test\shaders\8.1.g_buffer.fs" />
+    <None Include="assets\unit_tests\model_test\shaders\8.1.g_buffer.vs" />
+    <None Include="assets\unit_tests\model_test\shaders\forward.fs" />
+    <None Include="assets\unit_tests\model_test\shaders\forward.vs" />
+    <None Include="assets\unit_tests\model_test\shaders\forward_test.fs" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

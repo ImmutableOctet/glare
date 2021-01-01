@@ -27,9 +27,15 @@
 //#include <stack>
 #include <type_traits>
 
+// Debugging related:
+#include <iostream>
+
 namespace graphics
 {
 	using Driver = Context::Driver;
+
+	// Default framebuffer object; meant to always represent 'NoHandle'.
+	static FrameBuffer _main_framebuffer;
 
 	// Most details of the active state is handled by OpenGL, but for
 	// higher-level details, we keep track of state with this data-structure.
@@ -80,6 +86,34 @@ namespace graphics
 				return static_cast<GLenum>((texture_index + BASE_TEXTURE_INDEX));
 			}
 		public:
+			static GLbitfield gl_get_buffer_flags(BufferType buffer_type, bool default_to_color_buffer=false, bool allow_depth=true)
+			{
+				GLbitfield buffer_flags = 0; // {};
+
+				if ((buffer_type & BufferType::Color))
+				{
+					buffer_flags |= GL_COLOR_BUFFER_BIT;
+				}
+
+				if (allow_depth)
+				{
+					if ((buffer_type & BufferType::Depth))
+					{
+						buffer_flags |= GL_DEPTH_BUFFER_BIT;
+					}
+				}
+
+				if (default_to_color_buffer)
+				{
+					if (buffer_flags == 0)
+					{
+						buffer_flags = GL_COLOR_BUFFER_BIT;
+					}
+				}
+
+				return buffer_flags;
+			}
+
 			/*
 			struct texture_format_properties
 			{
@@ -106,6 +140,11 @@ namespace graphics
 				}
 
 				auto uniform_location = glGetUniformLocation(shader.get_handle(), name.data());
+
+				if (uniform_location == -1)
+				{
+					std::cout << "Unable to resolve uniform for: " << '\"' << name << '\"' << '\n';
+				}
 
 				uniform_location_map[name] = uniform_location;
 
@@ -158,7 +197,7 @@ namespace graphics
 			}
 
 			// Returns the native OpenGL equivalent of 'ElementType'.
-			static GLenum get_element_type(ElementType type)
+			static GLenum get_element_type(ElementType type, bool _allow_type_half=false, bool _allow_type_double=true) // true
 			{
 				switch (type)
 				{
@@ -168,8 +207,10 @@ namespace graphics
 					case ElementType::UShort:  return GL_UNSIGNED_SHORT;
 					case ElementType::Int:     return GL_INT;
 					case ElementType::UInt:    return GL_UNSIGNED_INT;
-					case ElementType::Half:    return GL_HALF_FLOAT;
+					
+					case ElementType::Half:    if (_allow_type_half) return GL_HALF_FLOAT;
 					case ElementType::Float:   return GL_FLOAT;
+
 					case ElementType::Double:  return GL_DOUBLE;
 				}
 
@@ -414,9 +455,18 @@ namespace graphics
 					// Discard back-faces, keep front-faces.
 					//glCullFace(GL_FRONT_AND_BACK); // GL_FRONT // GL_BACK
 					//glCullFace(GL_FRONT);
-					glFrontFace(GL_CW);
+
+					// Default behavior:
+					glFrontFace(GL_CW); // VertexWinding::Clockwise
 					glCullFace(GL_BACK);
 				}
+
+				// Debugging related:
+				/*
+				//glFrontFace(GL_CCW);
+				glDisable(GL_CULL_FACE);
+				glDisable(GL_DEPTH_TEST);
+				*/
 
 				return state.get_flags();
 			}
@@ -478,7 +528,7 @@ namespace graphics
 			}
 
 			// If the specified texture-handle could not be found, '-1' is returned.
-			int get_texture_index(Handle texture)
+			int get_texture_index(Handle texture) const
 			{
 				for (std::size_t i = 0; i < texture_stack.size(); i++) // auto
 				{
@@ -489,6 +539,18 @@ namespace graphics
 				}
 
 				return -1;
+			}
+
+			GLenum get_active_texture_id() const
+			{
+				return (gl_texture_id - 1);
+			}
+
+			int get_active_texture_index() const
+			{
+				auto id = get_active_texture_id();
+
+				return static_cast<int>((id - BASE_TEXTURE_INDEX));
 			}
 
 			void reset_textures(bool hard_reset=false)
@@ -560,11 +622,18 @@ namespace graphics
 		glewInit();
 
 		// Initial configuration:
-		toggle(flags, true);
+		////toggle(flags, true);
+
+		glEnable(GL_DEPTH_TEST);
+
 
 		// TODO: Implement this using context-flags:
+
+		// Default configuration:
+		/*
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		*/
 		//glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
 	}
 
@@ -585,37 +654,59 @@ namespace graphics
 		SDL_GL_SwapWindow(wnd.get_handle());
 	}
 
+	void Context::clear(BufferType buffer_type)
+	{
+		GLbitfield buffer_flags = Driver::gl_get_buffer_flags
+		(
+			buffer_type,
+
+			true, state->enabled(Flags::DepthTest)
+		);
+
+		glClear(buffer_flags);
+	}
+
 	void Context::clear(float red, float green, float blue, float alpha, BufferType buffer_type)
 	{
 		// TODO: Look into clear color state. (Likely to be added to a 'Canvas' type)
 		glClearColor(red, green, blue, alpha);
 
-		GLbitfield buffer_flags = 0; // {};
-
-		if ((buffer_type & BufferType::Color))
-		{
-			buffer_flags |= GL_COLOR_BUFFER_BIT;
-		}
-
-		if (state->enabled(Flags::DepthTest))
-		{
-			if ((buffer_type & BufferType::Depth))
-			{
-				buffer_flags |= GL_DEPTH_BUFFER_BIT;
-			}
-		}
-
-		if (buffer_flags == 0)
-		{
-			buffer_flags = GL_COLOR_BUFFER_BIT;
-		}
-
-		glClear(buffer_flags);
+		clear(buffer_type);
 	}
 
 	void Context::set_viewport(int x, int y, int width, int height)
 	{
 		glViewport(x, y, width, height);
+	}
+
+	FrameBuffer& Context::get_default_framebuffer()
+	{
+		return _main_framebuffer;
+	}
+
+	void Context::copy_framebuffer(FrameBuffer& source, FrameBuffer& destination, const PointRect& src, const PointRect& dst, BufferType buffer_types, TextureFlags filter)
+	{
+		use(source, FrameBufferType::Read, [&]()
+		{
+			use(destination, FrameBufferType::Write, [&]()
+			{
+				transfer_pixels(src, dst, buffer_types, filter);
+			});
+		});
+	}
+
+	void Context::transfer_pixels(const PointRect& src, const PointRect& dst, BufferType buffer_types, TextureFlags filter)
+	{
+		auto gl_buffer_flags = Driver::gl_get_buffer_flags(buffer_types);
+
+		GLenum gl_filter = GL_NEAREST;
+
+		if ((filter & TextureFlags::LinearFiltering))
+		{
+			gl_filter = GL_LINEAR;
+		}
+
+		glBlitFramebuffer(src.start.x, src.start.y, src.end.x, src.end.y, dst.start.x, dst.start.y, dst.end.x, dst.end.y, gl_buffer_flags, gl_filter);
 	}
 
 	void Context::draw()
@@ -666,6 +757,11 @@ namespace graphics
 		glUniform1f(uniform, value);
 
 		return true;
+	}
+
+	bool Context::set_uniform(Shader& shader, std::string_view name, ContextHandle handle)
+	{
+		return set_uniform(shader, name, static_cast<int>(handle));
 	}
 
 	bool Context::set_uniform(Shader& shader, std::string_view name, bool value)
@@ -904,6 +1000,21 @@ namespace graphics
 		return prev_texture;
 	}
 
+	const Texture& Context::bind(const Texture& texture, const std::string& uniform_sampler) // std::string_view
+	{
+		auto& driver = get_driver(this);
+		auto& res = bind(texture);
+
+		auto bound_idx = driver.get_active_texture_index();
+
+		if (!uniform_sampler.empty())
+		{
+			static_cast<Shader&>(state->shader)[uniform_sampler] = bound_idx; // texture.get_handle();
+		}
+
+		return res;
+	}
+
 	Mesh& Context::bind(Mesh& mesh)
 	{
 		// Retrieve the currently bound mesh.
@@ -920,22 +1031,63 @@ namespace graphics
 		return prev_mesh;
 	}
 
-	FrameBuffer& Context::bind(FrameBuffer& buffer, bool read_only)
+	Context::FrameBufferBindState Context::bind(FrameBuffer& buffer, FrameBufferType bind_type)
 	{
-		// Retrieve the currently bound mesh.
-		FrameBuffer& prev = state->framebuffer;
+		GLenum target = 0; // (GL_FRAMEBUFFER);
+
+		if ((bind_type == FrameBufferType::ReadWrite))
+		{
+			target = GL_FRAMEBUFFER;
+		}
+		else if ((bind_type & FrameBufferType::Read))
+		{
+			target = GL_READ_FRAMEBUFFER;
+		}
+		else if ((bind_type & FrameBufferType::Write))
+		{
+			target = GL_DRAW_FRAMEBUFFER;
+		}
 
 		const auto& native_rep = buffer.get_handle();
 
-		const GLenum target = ((read_only) ? GL_READ_FRAMEBUFFER : GL_FRAMEBUFFER);
-
 		glBindFramebuffer(target, native_rep);
 
-		// Assign the newly bound mesh.
-		state->framebuffer = buffer;
+		FrameBuffer* prev_read = nullptr;
+		FrameBuffer* prev_write = nullptr;
 
-		// Return the previously bound mesh.
-		return prev;
+		if ((bind_type & FrameBufferType::Read))
+		{
+			prev_read = &(state->get_read_framebuffer());
+			state->read_framebuffer = buffer;
+		}
+
+		if ((bind_type & FrameBufferType::Write))
+		{
+			prev_write = &(state->get_write_framebuffer());
+			state->write_framebuffer = buffer;
+		}
+
+		return { prev_read, prev_write };
+	}
+
+	Context::FrameBufferBindState Context::bind(FrameBufferBindState state, FrameBufferType _ignored_bind_type) // FrameBufferType _ignored_bind_type={}
+	{
+		if (state.is_readwrite()) // If both are the same (Includes 'nullptr' scenario)
+		{
+			FrameBuffer& buffer = ((state.read_state == nullptr) ? (get_default_framebuffer()) : (*state.read_state));
+
+			return bind(buffer, FrameBufferType::ReadWrite);
+		}
+		else if (state.read_state != nullptr)
+		{
+			return bind(*state.read_state, FrameBufferType::Read);
+		}
+		else if (state.write_state != nullptr)
+		{
+			return bind(*state.write_state, FrameBufferType::Write);
+		}
+
+		return { nullptr, nullptr }; // {};
 	}
 
 	// Mesh related:
@@ -1030,9 +1182,6 @@ namespace graphics
 		// TODO: Add support for non-2D textures. (1D, 3D, etc)
 		glBindTexture(GL_TEXTURE_2D, texture);
 
-		// Apply texture flags:
-		Driver::apply_texture_flags(flags);
-
 		/*
 			// TODO: Review behavior for Depth and Stencil buffers.
 			bool is_depth_map = ((flags & TextureFlags::DepthMap));
@@ -1047,6 +1196,9 @@ namespace graphics
 		{
 			glGenerateMipmap(GL_TEXTURE_2D);
 		}
+
+		// Apply texture flags:
+		Driver::apply_texture_flags(flags);
 
 		if (!__keep_bound)
 		{
@@ -1065,10 +1217,10 @@ namespace graphics
 		// TODO: Add support for non-2D textures. (1D, 3D, etc)
 		glBindTexture(GL_TEXTURE_2D, texture);
 
+		allocate_texture(width, height, format, element_type);
+
 		// Apply texture flags.
 		Driver::apply_texture_flags(flags);
-
-		allocate_texture(width, height, format, element_type);
 
 		if (!__keep_bound)
 		{
@@ -1152,12 +1304,24 @@ namespace graphics
 
 	void Context::release_framebuffer(Context::Handle&& handle)
 	{
+		if (handle == Context::NoHandle)
+		{
+			return;
+		}
+
 		glDeleteFramebuffers(1, &handle);
 	}
 
-	bool Context::framebuffer_attachment(Texture& texture)
+	bool Context::framebuffer_attachment(FrameBuffer& framebuffer, Texture& texture)
 	{
-		FrameBuffer& framebuffer = state->framebuffer;
+		// Ensure that this framebuffer is appropriately bound.
+		//if (!state->bound(framebuffer))
+		if (state->get_write_framebuffer().get_handle() != framebuffer.get_handle())
+		{
+			return false;
+		}
+
+		//FrameBuffer& framebuffer = state->framebuffer;
 		const auto attachment_index = framebuffer.get_attachment_index();
 
 		const auto texture_handle = texture.get_handle();
@@ -1173,9 +1337,16 @@ namespace graphics
 		return true;
 	}
 
-	bool Context::framebuffer_link_attachments()
+	bool Context::framebuffer_link_attachments(FrameBuffer& framebuffer)
 	{
-		FrameBuffer& framebuffer = state->framebuffer;
+		//FrameBuffer& framebuffer = state->framebuffer;
+
+		// Ensure that this framebuffer is appropriately bound.
+		//if (!state->bound(framebuffer))
+		if (state->get_write_framebuffer().get_handle() != framebuffer.get_handle())
+		{
+			return false;
+		}
 
 		glDrawBuffers(framebuffer.attachment_indices.size(), framebuffer.attachment_indices.data());
 
@@ -1189,8 +1360,8 @@ namespace graphics
 			return NoHandle;
 		}
 
-		TextureFormat format;
-		ElementType element_type;
+		TextureFormat format     = TextureFormat::RGBA; // {};
+		ElementType element_type = ElementType::UByte; // {};
 
 		switch (type)
 		{
@@ -1217,6 +1388,8 @@ namespace graphics
 
 				// 24-bit depth, 8-bit stencil.
 				element_type = ElementType::UInt;
+
+				break;
 		}
 
 		return generate_renderbuffer(type, width, height, format, element_type);
@@ -1245,6 +1418,9 @@ namespace graphics
 		glRenderbufferStorage(GL_RENDERBUFFER, texture_format, width, height);
 		
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment_type, GL_RENDERBUFFER, buffer);
+
+		//if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		//	std::cout << "Framebuffer not complete!" << std::endl;
 
 		return buffer;
 	}

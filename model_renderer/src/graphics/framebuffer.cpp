@@ -31,13 +31,7 @@ namespace graphics
 	{
 		auto ctx = get_context();
 
-		// Ensure that this framebuffer is appropriately bound.
-		if (!ctx->state->bound(*this))
-		{
-			return false;
-		}
-
-		return ctx->framebuffer_attachment(texture);
+		return ctx->framebuffer_attachment(*this, texture);
 	}
 
 	bool FrameBuffer::attach(RenderBufferType type, int width, int height)
@@ -72,13 +66,7 @@ namespace graphics
 	{
 		auto ctx = get_context();
 
-		// Ensure that this framebuffer is appropriately bound.
-		if (!ctx->state->bound(*this))
-		{
-			return false;
-		}
-
-		return ctx->framebuffer_link_attachments();
+		return ctx->framebuffer_link_attachments(*this);
 	}
 
 	bool FrameBuffer::resize(int width, int height)

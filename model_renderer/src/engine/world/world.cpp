@@ -11,6 +11,7 @@
 #include <engine/free_look.hpp>
 #include <engine/relationship.hpp>
 #include <engine/transform.hpp>
+#include <engine/components/name_component.hpp>
 
 #include <engine/components/graphics/graphics.hpp>
 
@@ -59,7 +60,7 @@ namespace engine
 	bool World::render(graphics::Canvas& canvas, Entity camera, bool forward_rendering)
 	{
 		// Deferred referning is current unsupported.
-		ASSERT(forward_rendering);
+		//ASSERT(forward_rendering);
 
 		if (camera == null)
 		{
@@ -84,15 +85,26 @@ namespace engine
 		shader["projection"] = glm::perspective(camera_params.fov, camera_params.aspect_ratio, camera_params.near, camera_params.far);
 		shader["view"] = camera_matrix;
 
-		draw_models(graphics::CanvasDrawMode::Opaque, canvas, shader);
-		draw_models(graphics::CanvasDrawMode::Transparent, canvas, shader);
-		//draw_models(graphics::Canvas::DrawMode::All);
+		// TODO: Change/remove flag(s).
+		auto additional_draw_modes = (graphics::CanvasDrawMode::IgnoreShaders); // graphics::CanvasDrawMode::None;
+
+		if (forward_rendering)
+		{
+			draw_models((graphics::CanvasDrawMode::Opaque | additional_draw_modes), canvas, shader);
+			draw_models((graphics::CanvasDrawMode::Transparent | additional_draw_modes), canvas, shader);
+		}
+		else
+		{
+			draw_models((graphics::Canvas::DrawMode::All | additional_draw_modes), canvas, shader);
+		}
 
 		return true;
 	}
 
 	void World::draw_models(graphics::CanvasDrawMode draw_mode, graphics::Canvas& canvas, graphics::Shader& shader)
 	{
+		bool _auto_clear_textures = false; // true; // false;
+
 		registry.view<ModelComponent, TransformComponent, Relationship>().each([&](auto entity, auto& model_component, auto& transform, const auto& relationship)
 		{
 			if (!model_component.visible)
@@ -113,20 +125,57 @@ namespace engine
 			}
 
 			auto model_transform = Transform(registry, entity, relationship, transform);
-			auto model_matrix = model_transform.get_matrix();
+			auto model_matrix = model_transform.get_matrix(true); // get_local_matrix();
+			//auto model_matrix = model_transform.get_local_matrix();
 
 			shader["model"] = model_matrix;
 
 			auto& model = *model_component.model;
 			auto color  = model_component.color;
 
-			canvas.draw(model, color, draw_mode);
+			canvas.draw(model, color, draw_mode, _auto_clear_textures);
 		});
 	}
 
 	Transform World::get_transform(Entity entity)
 	{
 		return Transform(registry, entity);
+	}
+
+	Entity World::get_parent(Entity entity) const
+	{
+		auto* relationship = registry.try_get<Relationship>(entity);
+
+		if (relationship == nullptr)
+		{
+			return null;
+		}
+
+		return relationship->get_parent();
+	}
+
+	void World::set_parent(Entity entity, Entity parent)
+	{
+		Relationship::set_parent(registry, entity, parent);
+	}
+
+	Entity World::get_by_name(std::string_view name)
+	{
+		auto view = registry.view<NameComponent>();
+
+		for (auto it = view.begin(); it != view.end(); it++)
+		{
+			Entity entity = *it;
+
+			auto name_comp = registry.get<NameComponent>(entity);
+
+			if (name_comp.name == name)
+			{
+				return entity;
+			}
+		}
+
+		return null;
 	}
 
 	void World::add_camera(Entity camera)

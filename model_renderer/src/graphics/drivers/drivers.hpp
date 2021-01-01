@@ -14,7 +14,7 @@ namespace graphics
 {
 	// API:
 
-	// An object representing the native objects
+	// An object representing the native handles
 	// required to represent a complete mesh.
 	union MeshComposition
 	{

@@ -21,6 +21,8 @@ namespace graphics
 			friend Context;
 			friend ContextState;
 
+			using Type = FrameBufferType;
+
 			// The maximum number of attachments allowed by the underlying driver*
 			static constexpr unsigned int MAX_ATTACHMENTS = 8; // 32;
 
@@ -43,7 +45,9 @@ namespace graphics
 
 			// Attachments can only be altered when this framebuffer has been bound.
 			// In the event attachment fails, this method will return 'false'.
+			// NOTE: Attachments are handled by the underlying context, and are not enumerable from this interface.
 			bool attach(Texture& texture);
+
 			bool attach(RenderBuffer&& buffer);
 			bool attach(RenderBufferType type, int width, int height);
 

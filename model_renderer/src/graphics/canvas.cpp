@@ -59,17 +59,28 @@ namespace graphics
 		context->clear(red, green, blue, alpha);
 	}
 
-	void Canvas::bind_textures(const TextureArray& textures)
+	void Canvas::bind_textures(const TextureArray& textures, const std::string& name)
 	{
+		auto idx = 0;
+
+		if (textures.size() == 1)
+		{
+			bind_texture(*textures[0], name);
+
+			return;
+		}
+
 		for (auto& t : textures)
 		{
-			bind_texture(*t);
+			bind_texture(*t, name + "[" + std::to_string(idx) + "]");
+
+			idx++;
 		}
 	}
 
-	void Canvas::bind_texture(const Texture& texture)
+	void Canvas::bind_texture(const Texture& texture, const std::string& name)
 	{
-		context->bind(texture);
+		context->bind(texture, name);
 	}
 
 	Shader& Canvas::get_shader()
@@ -89,7 +100,7 @@ namespace graphics
 		return ctx.set_uniform(shader, Material::DIFFUSE_COLOR, color);
 	}
 	
-	void Canvas::draw(Model& model, const graphics::ColorRGBA& color, DrawMode draw_mode) // const math::Matrix& model_matrix
+	void Canvas::draw(Model& model, const graphics::ColorRGBA& color, DrawMode draw_mode, bool auto_clear_textures) // const math::Matrix& model_matrix
 	{
 		auto& ctx = get_context();
 
@@ -109,29 +120,42 @@ namespace graphics
 
 			auto& material = mesh_descriptor.material;
 
-			if (material.get_shader() != shader)
+			if (!(draw_mode & DrawMode::IgnoreShaders))
 			{
-				continue;
+				if (material.get_shader() != shader)
+				{
+					continue;
+				}
 			}
 
-			bool force_clear_textures = (!mesh_descriptor.material.has_textures());
+			bool material_has_textures = mesh_descriptor.material.has_textures();
+			bool force_clear_textures = (auto_clear_textures || (!material_has_textures));
 
 			context->clear_textures(force_clear_textures); // (!has_material)
 
+			bool specular_available = false;
+
 			for (auto& texture_group : material.textures)
 			{
-				auto& _data = texture_group.second;
+				const auto& texture_name = texture_group.first;
+				const auto& _data = texture_group.second;
+
+				if (texture_name == "specular") // (texture_name.find("specular") != std::string::npos)
+				{
+					specular_available = true;
+				}
 
 				// TODO: Implement as visit:
 				if (util::peek_value<ref<Texture>>(_data, [&](const ref<Texture>& texture)
 					{
-						bind_texture(*texture);
-					})) {
-				}
+						bind_texture(*texture, texture_name);
+					}))
+				{}
 				else if (util::peek_value<TextureArray>(_data, [&](const TextureArray& textures)
 				{
-					bind_textures(textures);
-				})) {}
+					bind_textures(textures, texture_name);
+				}))
+				{}
 			}
 
 			const auto& uniforms = material.get_uniforms();
@@ -154,6 +178,9 @@ namespace graphics
 
 				return value;
 			});
+
+			shader["texture_diffuse_enabled"] = material_has_textures; // has_diffuse();
+			shader["specular_available"]      = specular_available;
 
 			for (auto& mesh : mesh_descriptor.meshes)
 			{

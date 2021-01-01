@@ -15,6 +15,8 @@ int main(int argc, char** argv)
 {
 	using namespace unit_test;
 
+	auto application =
+
 	//test_vertex_element_types();
 	//ShaderTest();
 	//DeferredTest();

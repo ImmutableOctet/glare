@@ -1,6 +1,7 @@
 #pragma once
 
 #include <entt/entt.hpp>
+#include <math/math.hpp>
 #include <types.hpp>
 
 namespace engine

@@ -1,15 +1,49 @@
 #include "relationship.hpp"
+#include "transform.hpp"
+
+#include <math/math.hpp>
 
 namespace engine
 {
 	Relationship::Relationship(Entity parent)
 		: parent(parent), first(null), prev(null), next(null) {}
 
+	/*
+	void Relationship::set_parent(Registry& registry, Entity self, Entity parent)
+	{
+		auto parent_rel = registry.get_or_assign<Relationship>(parent);
+
+		parent_rel.add_child(registry, parent, self);
+
+		registry.replace<Relationship>(parent, [&](auto& r) { r = parent_rel; });
+	}
+	*/
+
+	void Relationship::set_parent(Registry& registry, Entity self, Entity parent)
+	{
+		auto parent_relationship = registry.get_or_assign<Relationship>(parent);
+
+		parent_relationship.add_child(registry, parent, self);
+
+		registry.replace<Relationship>(parent, [&](auto& r) { r = parent_relationship; });
+	}
+
 	Entity Relationship::add_child(Registry& registry, Entity self, Entity child)
 	{
 		auto* prev_rel = remove_previous_parent(registry, child);
 
-		Relationship relationship = Relationship(self);
+		Relationship relationship;
+		
+		if (prev_rel != nullptr)
+		{
+			relationship = Relationship(*prev_rel);
+
+			relationship.parent = self;
+		}
+		else
+		{
+			relationship = Relationship(self);
+		}
 
 		bool is_first = (child_count == 0); // (first == null);
 
@@ -38,11 +72,31 @@ namespace engine
 
 	Entity Relationship::remove_child(Registry& registry, Entity child, Entity self, bool remove_in_registry)
 	{
-		collapse_child(registry, child, self);
+		auto child_relationship = registry.get<Relationship>(child);
+
+		math::Matrix current_matrix;
+
+		std::optional<Transform> child_transform = Transform::get_transform_safe(registry, child);
+
+		if (child_transform)
+		{
+			current_matrix = child_transform->get_matrix();
+		}
+
+		collapse_child(registry, child_relationship, self); // ..., child, ...
 
 		if (remove_in_registry)
 		{
 			registry.remove<Relationship>(child);
+		}
+		else
+		{
+			registry.replace<Relationship>(child, [&](auto& r) { r = child_relationship; });
+		}
+
+		if (child_transform)
+		{
+			child_transform->set_matrix(current_matrix);
 		}
 
 		return child;
@@ -102,20 +156,19 @@ namespace engine
 		return self;
 	}
 
-	// Functions:
-	Relationship& Relationship::collapse_child(Registry& registry, Entity child, Entity self)
+	Relationship& Relationship::collapse_child(Registry& registry, Relationship& child_relationship, Entity self) // Entity child
 	{
-		ASSERT(registry.has<Relationship>(child));
+		//ASSERT(registry.has<Relationship>(child));
 
-		auto& relationship = registry.get<Relationship>(child);
+		//auto& child_relationship = registry.get<Relationship>(child);
 
-		ASSERT((self == null) || (relationship.parent == self));
+		//ASSERT((self == null) || (child_relationship.parent == self));
 
-		relationship.forward_previous(registry);
+		child_relationship.forward_previous(registry);
 
 		child_count--;
 
-		return relationship;
+		return child_relationship;
 	}
 
 	Relationship& Relationship::append_child(Relationship& prev_rel, Relationship& current_rel, Entity prev_child, Entity next_child)
@@ -139,7 +192,7 @@ namespace engine
 
 		if (parent == null)
 		{
-			return nullptr;
+			return relationship; // nullptr;
 		}
 
 		auto& parent_relationship = registry.get<Relationship>(parent);
