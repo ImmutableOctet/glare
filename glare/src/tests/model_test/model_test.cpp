@@ -21,7 +21,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-namespace unit_test
+namespace glare::tests
 {
 	ModelTest::ModelTest(bool auto_execute)
 		: GraphicsApplication("Model Test", 1600, 900, (app::WindowFlags::OpenGL|app::WindowFlags::Resizable), 60, true),

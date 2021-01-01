@@ -10,7 +10,7 @@
 
 #include <graphics/mesh.hpp>
 
-namespace unit_test
+namespace glare::tests
 {
 	class ModelTest : public app::GraphicsApplication
 	{

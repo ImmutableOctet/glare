@@ -15,7 +15,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-namespace unit_test
+namespace glare::tests
 {
 	ShaderTest::ShaderTest(bool auto_execute)
 		: GraphicsApplication("Shader Test", 1600, 900)
@@ -28,14 +28,14 @@ namespace unit_test
 		(
 			graphics.context,
 			
-			"assets/unit_tests/shader_test/test.vs",
-			"assets/unit_tests/shader_test/test.fs"
+			"assets/tests/shader_test/test.vs",
+			"assets/tests/shader_test/test.fs"
 		);
 
 		std::cout << "Loading textures...\n";
 
-		texture1 = graphics::Texture(graphics.context, "assets/unit_tests/shader_test/texture1.png");
-		texture2 = graphics::Texture(graphics.context, "assets/unit_tests/shader_test/texture2.jpg");
+		texture1 = graphics::Texture(graphics.context, "assets/tests/shader_test/texture1.png");
+		texture2 = graphics::Texture(graphics.context, "assets/tests/shader_test/texture2.jpg");
 
 		uniforms = {};
 

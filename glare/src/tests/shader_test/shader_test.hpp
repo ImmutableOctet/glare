@@ -6,7 +6,7 @@
 
 //#include <sdl2/SDL_stdinc.h>
 
-namespace unit_test
+namespace glare::tests
 {
 	class ShaderTest : public app::GraphicsApplication
 	{

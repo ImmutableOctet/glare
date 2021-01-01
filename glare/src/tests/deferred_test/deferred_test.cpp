@@ -14,7 +14,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-namespace unit_test
+namespace glare::tests
 {
 	DeferredTest::DeferredTest(bool auto_execute)
 		: GraphicsApplication("Deferred Shading", 1600, 900, app::WindowFlags::OpenGL)

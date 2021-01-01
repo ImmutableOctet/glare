@@ -6,7 +6,7 @@
 
 #include <app/input/input.hpp>
 
-namespace unit_test
+namespace glare::tests
 {
 	int f()
 	{

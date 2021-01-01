@@ -3,7 +3,7 @@
 #include <graphics/vertex.hpp>
 #include <debug.hpp>
 
-namespace unit_test
+namespace glare::tests
 {
 	void test_vertex_element_types()
 	{

@@ -1,6 +1,6 @@
 #pragma once
 
-namespace unit_test
+namespace glare::tests
 {
 	void SignalTest();
 	void DispatcherTest();

@@ -5,7 +5,7 @@
 
 #include <glm/vec3.hpp>
 
-namespace unit_test
+namespace glare::tests
 {
 	class DeferredTest : public app::GraphicsApplication
 	{
