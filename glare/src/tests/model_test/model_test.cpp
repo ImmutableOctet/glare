@@ -49,41 +49,41 @@ namespace glare::tests
 		(
 			graphics.context,
 			
-			"assets/unit_tests/model_test/shaders/forward.vs",
-			"assets/unit_tests/model_test/shaders/forward.fs"
+			"assets/tests/model_test/shaders/forward.vs",
+			"assets/tests/model_test/shaders/forward.fs"
 		);
 
 		shaders.forward_test = memory::allocate<Shader>
 		(
 			graphics.context,
 			
-			//"assets/unit_tests/model_test/shaders/forward.vs",
-			"assets/unit_tests/model_test/shaders/8.1.deferred_shading.vs",
-			"assets/unit_tests/model_test/shaders/forward_test.fs"
+			//"assets/tests/model_test/shaders/forward.vs",
+			"assets/tests/model_test/shaders/8.1.deferred_shading.vs",
+			"assets/tests/model_test/shaders/forward_test.fs"
 		);
 
 		shaders.geometry = memory::allocate<Shader>
 		(
 			graphics.context,
 
-			"assets/unit_tests/model_test/shaders/8.1.g_buffer.vs",
-			"assets/unit_tests/model_test/shaders/8.1.g_buffer.fs"
+			"assets/tests/model_test/shaders/8.1.g_buffer.vs",
+			"assets/tests/model_test/shaders/8.1.g_buffer.fs"
 		);
 
 		shaders.lighting_pass = memory::allocate<Shader>
 		(
 			graphics.context,
 
-			"assets/unit_tests/model_test/shaders/8.1.deferred_shading.vs",
-			"assets/unit_tests/model_test/shaders/8.1.deferred_shading.fs"
+			"assets/tests/model_test/shaders/8.1.deferred_shading.vs",
+			"assets/tests/model_test/shaders/8.1.deferred_shading.fs"
 		);
 
 		shaders.framebuffer_dbg = memory::allocate<Shader>
 		(
 			graphics.context,
 
-			"assets/unit_tests/model_test/shaders/8.1.fbo_debug.vs",
-			"assets/unit_tests/model_test/shaders/8.1.fbo_debug.fs"
+			"assets/tests/model_test/shaders/8.1.fbo_debug.vs",
+			"assets/tests/model_test/shaders/8.1.fbo_debug.fs"
 		);
 
 		/*
@@ -91,8 +91,8 @@ namespace glare::tests
 		(
 			graphics.context,
 
-			"assets/unit_tests/model_test/shaders/8.1.deferred_light_box.vs",
-			"assets/unit_tests/model_test/shaders/8.1.deferred_light_box.fs"
+			"assets/tests/model_test/shaders/8.1.deferred_light_box.vs",
+			"assets/tests/model_test/shaders/8.1.deferred_light_box.fs"
 		);
 		*/
 
@@ -104,7 +104,7 @@ namespace glare::tests
 
 		const auto gBuffer_flags = TextureFlags::None;
 
-		//test_texture = Texture(graphics.context, "assets/unit_tests/model_test/Bianco/T (1).png");
+		//test_texture = Texture(graphics.context, "assets/tests/model_test/Bianco/T (1).png");
 
 		gBuffer.framebuffer = FrameBuffer(graphics.context);
 
@@ -223,7 +223,7 @@ namespace glare::tests
 
 		auto& registry = world.get_registry();
 
-		//auto nanosuit = load_model("assets/unit_tests/model_test/Sonic/Sonic.b3d"); // assets/characters/nanosuit/nanosuit.obj // b3d
+		//auto nanosuit = load_model("assets/tests/model_test/Sonic/Sonic.b3d"); // assets/characters/nanosuit/nanosuit.obj // b3d
 		auto nanosuit = load_model("assets/characters/nanosuit/nanosuit.obj");
 		auto nanosuit_t = transform(nanosuit);
 
@@ -231,11 +231,11 @@ namespace glare::tests
 
 		//world.set_parent(camera, nanosuit);
 
-		//auto nanosuit = model("assets/unit_tests/model_test/cube_textured.b3d");
+		//auto nanosuit = model("assets/tests/model_test/cube_textured.b3d");
 		nanosuit_t.move({ 10.7f, 46.0f, -13.0f });
 		//nanosuit_t.set_scale(math::Vector {1.0, 1.0, 1.0} * 10.0f);
 
-		auto sphere = load_model("assets/unit_tests/model_test/Sonic/Sonic.b3d"); // model("assets/unit_tests/model_test/sphere.obj");
+		auto sphere = load_model("assets/tests/model_test/Sonic/Sonic.b3d"); // model("assets/tests/model_test/sphere.obj");
 		auto sphere_t = transform(sphere);
 
 		sphere_t.move({ 14.0f, 10.0f, 30.0f });
@@ -245,10 +245,10 @@ namespace glare::tests
 		///return;
 
 		auto cube_model = memory::allocate<graphics::Model>();
-		*cube_model = graphics::Model::Load(graphics.context, resource_manager, "assets/unit_tests/model_test/cube.b3d", shaders.forward);
+		*cube_model = graphics::Model::Load(graphics.context, resource_manager, "assets/tests/model_test/cube.b3d", shaders.forward);
 
 		auto cube = engine::create_model(world, cube_model, nanosuit);
-		//auto cube = load_model("assets/unit_tests/model_test/cube.b3d");
+		//auto cube = load_model("assets/tests/model_test/cube.b3d");
 
 		auto cube_rel = registry.get<engine::Relationship>(cube);
 		auto nanosuit_rel = registry.get<engine::Relationship>(nanosuit);
@@ -264,7 +264,7 @@ namespace glare::tests
 		});
 		*/
 
-		//auto geometry = model("assets/unit_tests/model_test/geometry.obj");
+		//auto geometry = model("assets/tests/model_test/geometry.obj");
 		//geometry.move({ 50.0f, 31.0f, 28.0f });
 	}
 
@@ -275,9 +275,9 @@ namespace glare::tests
 		//path = "Q:\\Projects\\BlitzSonic Projects\\Blitzsonic Related\\Genesis Redux Project 1.1\\Stages\\GreenHill\\Stage\\Stage.b3d";
 		//path = "Q:\\Projects\\BlitzSonic Projects\\Blitzsonic-backups\\BlitzSonicv02\\Stages\\GreenHill\\Stage\\Stage.b3d";
 		//path = "Q:\\Projects\\BlitzSonic Projects\\Blitzsonic Related\\HAXY EDIT OF DOOM\\Stages\\Chao World\\Stage\\Stage.b3d";
-		//path = "model_renderer/assets/unit_tests/model_test/Bianco/Stage2.b3d";
-		//path = "assets/unit_tests/model_test/SeasideShortcut/Stage.obj";
-		//path = "assets/unit_tests/model_test/stage.b3d";
+		//path = "model_renderer/assets/tests/model_test/Bianco/Stage2.b3d";
+		//path = "assets/tests/model_test/SeasideShortcut/Stage.obj";
+		//path = "assets/tests/model_test/stage.b3d";
 		//path = "Q:\\Projects\\BlitzSonic Projects\\Blitzsonic Related\\HAXY EDIT OF DOOM\\Stages\\Emerald Coast\\1\\EC1.b3d";
 		path = "assets/maps/test01/stage.b3d";
 

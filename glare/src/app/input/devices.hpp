@@ -4,14 +4,11 @@
 #include "mouse/mouse.hpp"
 #include "keyboard/keyboard.hpp"
 
-namespace app
+namespace app::input
 {
-	namespace input
+	struct InputDevices
 	{
-		struct InputDevices
-		{
-			Mouse mouse;
-			Keyboard keyboard;
-		};
-	}
+		Mouse mouse;
+		Keyboard keyboard;
+	};
 }

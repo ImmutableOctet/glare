@@ -21,7 +21,7 @@ namespace glare::tests
 	{
 		using namespace graphics;
 
-		static const std::string asset_folder = "assets/unit_tests/deferred_test/";
+		static const std::string asset_folder = "assets/tests/deferred_test/";
 
 		shaders.geometry_pass = Shader(graphics.context, (asset_folder + "g_buffer.vs"), (asset_folder + "g_buffer.fs"));
 		shaders.lighting_pass = Shader(graphics.context, (asset_folder + "deferred_shading.vs"), (asset_folder + "deferred_shading.fs"));
