@@ -7,7 +7,7 @@
 #include <cstdlib>
 
 #include <app/events.hpp>
-#include <app/input/keyboard/keycodes.hpp>
+#include <app/input/keycodes.hpp>
 #include <engine/engine.hpp>
 #include <graphics/native/opengl.hpp>
 
@@ -24,7 +24,7 @@
 namespace glare::tests
 {
 	ModelTest::ModelTest(bool auto_execute)
-		: GraphicsApplication("Model Test", 1600, 900, (app::WindowFlags::OpenGL|app::WindowFlags::Resizable), 60, true),
+		: GraphicsApplication("Project Glare", 1600, 900, (app::WindowFlags::OpenGL|app::WindowFlags::Resizable), 60, true),
 		  world(delta_time)
 	{
 		using namespace graphics;

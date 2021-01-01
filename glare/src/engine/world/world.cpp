@@ -11,9 +11,9 @@
 #include <engine/free_look.hpp>
 #include <engine/relationship.hpp>
 #include <engine/transform.hpp>
-#include <engine/components/name_component.hpp>
 
-#include <engine/components/graphics/graphics.hpp>
+//#include <engine/name_component.hpp>
+#include <engine/components.hpp>
 
 #include <app/input/input.hpp>
 

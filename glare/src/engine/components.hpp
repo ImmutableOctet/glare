@@ -1,4 +1,4 @@
 #pragma once
 
-#include "graphics/graphics.hpp"
+#include "model_component.hpp"
 #include "name_component.hpp"

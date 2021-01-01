@@ -1,11 +1,290 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <ClInclude Include="src\tests\model_test\model_test.hpp">
+      <Filter>tests\model_test</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\input\devices.hpp">
+      <Filter>app\input</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\input\input_device.hpp">
+      <Filter>app\input</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\input\input_handler.hpp">
+      <Filter>app\input</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\input\keyboard.hpp">
+      <Filter>app\input</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\input\keycodes.hpp">
+      <Filter>app\input</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\input\mouse.hpp">
+      <Filter>app\input</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\input\types.hpp">
+      <Filter>app\input</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\components.hpp">
+      <Filter>engine\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\free_look.hpp">
+      <Filter>engine\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\model_component.hpp">
+      <Filter>engine\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\name_component.hpp">
+      <Filter>engine\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\relationship.hpp">
+      <Filter>engine\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\resource_manager.hpp">
+      <Filter>engine\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\transform.hpp">
+      <Filter>engine\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\types.hpp">
+      <Filter>engine\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\debug\debug_camera.hpp">
+      <Filter>engine\world\debug</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\debug\debug_move.hpp">
+      <Filter>engine\world\debug</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\debug\spin_component.hpp">
+      <Filter>engine\world\debug</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\events\input.hpp">
+      <Filter>engine\events</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\bind.hpp">
+      <Filter>graphics\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\canvas.hpp">
+      <Filter>graphics\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\context.hpp">
+      <Filter>graphics\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\context_state.hpp">
+      <Filter>graphics\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\framebuffer.hpp">
+      <Filter>graphics\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\material.hpp">
+      <Filter>graphics\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\mesh.hpp">
+      <Filter>graphics\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\model.hpp">
+      <Filter>graphics\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\pixelmap.hpp">
+      <Filter>graphics\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\renderbuffer.hpp">
+      <Filter>graphics\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\resource.hpp">
+      <Filter>graphics\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\shader.hpp">
+      <Filter>graphics\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\texture.hpp">
+      <Filter>graphics\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\types.hpp">
+      <Filter>graphics\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\vertex.hpp">
+      <Filter>graphics\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\native\opengl.hpp">
+      <Filter>graphics\native</Filter>
+    </ClInclude>
+    <ClInclude Include="src\math\math.hpp">
+      <Filter>math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\tests\signal_test\signal_test.hpp">
+      <Filter>tests\signal_test</Filter>
+    </ClInclude>
+    <ClInclude Include="src\tests\timer_test\timer_test.hpp">
+      <Filter>tests\timer_test</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\application.hpp">
+      <Filter>app\app</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\delta_time.hpp">
+      <Filter>app\app</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\event_handler.hpp">
+      <Filter>app\app</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\events.hpp">
+      <Filter>app\app</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\graphics_application.hpp">
+      <Filter>app\app</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\timer.hpp">
+      <Filter>app\app</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\types.hpp">
+      <Filter>app\app</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\window.hpp">
+      <Filter>app\app</Filter>
+    </ClInclude>
     <ClInclude Include="src\app\app.hpp">
       <Filter>app</Filter>
     </ClInclude>
-    <ClInclude Include="src\tests\model_test\model_test.hpp">
-      <Filter>tests\model_test</Filter>
+    <ClInclude Include="src\engine\engine.hpp">
+      <Filter>engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\world.hpp">
+      <Filter>engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\events\events.hpp">
+      <Filter>engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\input\input.hpp">
+      <Filter>app</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\graphics.hpp">
+      <Filter>graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\variant.hpp">
+      <Filter>util\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\algorithm.hpp">
+      <Filter>util\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\bitfield.hpp">
+      <Filter>util\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\bitflag.hpp">
+      <Filter>util\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\io.hpp">
+      <Filter>util\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\lib.hpp">
+      <Filter>util\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\memory.hpp">
+      <Filter>util\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\shorthand.hpp">
+      <Filter>util\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\util.hpp">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\drivers\drivers.hpp">
+      <Filter>graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\drivers\driver.hpp">
+      <Filter>graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\drivers\opengl\gl_driver.hpp">
+      <Filter>graphics\drivers\opengl</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\camera.hpp">
+      <Filter>engine\world\world</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\entity.hpp">
+      <Filter>engine\world\world</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\graphics_entity.hpp">
+      <Filter>engine\world\world</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\light.hpp">
+      <Filter>engine\world\world</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\debug\debug.hpp">
+      <Filter>engine\world</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core.hpp">
+      <Filter>glare</Filter>
+    </ClInclude>
+    <ClInclude Include="src\debug.hpp">
+      <Filter>glare</Filter>
+    </ClInclude>
+    <ClInclude Include="src\types.hpp">
+      <Filter>glare</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\modules\stb\stb.h">
+      <Filter>lib\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\modules\stb\stb_c_lexer.h">
+      <Filter>lib\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\modules\stb\stb_connected_components.h">
+      <Filter>lib\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\modules\stb\stb_divide.h">
+      <Filter>lib\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\modules\stb\stb_ds.h">
+      <Filter>lib\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\modules\stb\stb_dxt.h">
+      <Filter>lib\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\modules\stb\stb_easy_font.h">
+      <Filter>lib\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\modules\stb\stb_herringbone_wang_tile.h">
+      <Filter>lib\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\modules\stb\stb_image.h">
+      <Filter>lib\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\modules\stb\stb_image_resize.h">
+      <Filter>lib\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\modules\stb\stb_image_write.h">
+      <Filter>lib\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\modules\stb\stb_include.h">
+      <Filter>lib\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\modules\stb\stb_leakcheck.h">
+      <Filter>lib\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\modules\stb\stb_perlin.h">
+      <Filter>lib\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\modules\stb\stb_rect_pack.h">
+      <Filter>lib\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\modules\stb\stb_sprintf.h">
+      <Filter>lib\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\modules\stb\stb_textedit.h">
+      <Filter>lib\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\modules\stb\stb_tilemap_editor.h">
+      <Filter>lib\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\modules\stb\stb_truetype.h">
+      <Filter>lib\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\modules\stb\stb_voxel_render.h">
+      <Filter>lib\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\modules\stb\stretchy_buffer.h">
+      <Filter>lib\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\modules\stb\deprecated\rrsprintf.h">
+      <Filter>lib\stb\deprecated</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -59,20 +338,197 @@
     <Filter Include="tests\model_test\shaders">
       <UniqueIdentifier>{cef71ef4-9ba5-40b9-af78-c64ab9e65119}</UniqueIdentifier>
     </Filter>
-    <Filter Include="graphics">
-      <UniqueIdentifier>{71baa3ff-6e9a-4f24-b0b3-ee10ba6112e8}</UniqueIdentifier>
-    </Filter>
     <Filter Include="math">
       <UniqueIdentifier>{6fea66a2-631d-49eb-8cc0-c6101ec69104}</UniqueIdentifier>
     </Filter>
+    <Filter Include="util">
+      <UniqueIdentifier>{2bdd65ae-be35-4849-97c4-f2c9e98ed892}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="app\input">
+      <UniqueIdentifier>{fa83bd8d-fcd1-449e-87e3-bcdbc404728b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\world">
+      <UniqueIdentifier>{ab6ffc8d-cabb-4491-8206-067a94ab1dd7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\world\debug">
+      <UniqueIdentifier>{5997e446-0ae7-423b-ae52-d5f5c1bb8e91}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\events">
+      <UniqueIdentifier>{9c69fb92-de3d-4bd6-8d55-4db32cfb898c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="graphics">
+      <UniqueIdentifier>{ea394a4d-8fb4-4ae8-b41a-a6ef9cc6526d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="graphics\graphics">
+      <UniqueIdentifier>{71baa3ff-6e9a-4f24-b0b3-ee10ba6112e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="graphics\native">
+      <UniqueIdentifier>{545509d7-9700-47f9-8661-250d9ebad9b8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="graphics\drivers">
+      <UniqueIdentifier>{1a175c80-1aeb-4d0f-b99a-e270e8d1c5a3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="graphics\drivers\opengl">
+      <UniqueIdentifier>{019380b6-c7fe-45f3-9187-5eeeeeef8698}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="tests\signal_test">
+      <UniqueIdentifier>{e2aab549-55cd-4750-989d-d0dd76e0d6eb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="tests\timer_test">
+      <UniqueIdentifier>{58f24538-cc99-4527-bc68-6a2607c3715d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="tests\vertex_element_types">
+      <UniqueIdentifier>{7ce784d9-e672-4ffd-a3ec-ce2deec692b8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="app\app">
+      <UniqueIdentifier>{aca3fee9-c67e-4668-a7cb-fd42e285d7b3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="util\util">
+      <UniqueIdentifier>{c0c7e464-e801-41cc-a18f-d232f1adc33d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\engine">
+      <UniqueIdentifier>{fe9b6ff3-4487-435d-9385-70b02c21879c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\world\world">
+      <UniqueIdentifier>{6f22a757-a9bf-40b4-82fe-d7c469f095a4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="glare">
+      <UniqueIdentifier>{ca31861a-2300-4c8f-bf00-b852c6e56bbe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lib">
+      <UniqueIdentifier>{c7990d45-94ad-45ed-bf31-73fccc52fe74}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lib\stb">
+      <UniqueIdentifier>{da68b12f-c056-4e6f-9355-490fe1f4846c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lib\stb\deprecated">
+      <UniqueIdentifier>{8fb11333-0e34-47c0-8db7-0dc3adac0fdb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
     <ClCompile Include="src\tests\model_test\model_test.cpp">
       <Filter>tests\model_test</Filter>
     </ClCompile>
-    <ClCompile Include="src\tests\vertex_element_types.cpp">
-      <Filter>tests</Filter>
+    <ClCompile Include="glare.cpp" />
+    <ClCompile Include="src\app\input\input_handler.cpp">
+      <Filter>app\input</Filter>
+    </ClCompile>
+    <ClCompile Include="src\app\input\keyboard.cpp">
+      <Filter>app\input</Filter>
+    </ClCompile>
+    <ClCompile Include="src\app\input\mouse.cpp">
+      <Filter>app\input</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\free_look.cpp">
+      <Filter>engine\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\model_component.cpp">
+      <Filter>engine\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\relationship.cpp">
+      <Filter>engine\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\transform.cpp">
+      <Filter>engine\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\debug\debug_camera.cpp">
+      <Filter>engine\world\debug</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\debug\debug_move.cpp">
+      <Filter>engine\world\debug</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\debug\spin_component.cpp">
+      <Filter>engine\world\debug</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\canvas.cpp">
+      <Filter>graphics\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\context_state.cpp">
+      <Filter>graphics\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\framebuffer.cpp">
+      <Filter>graphics\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\material.cpp">
+      <Filter>graphics\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\mesh.cpp">
+      <Filter>graphics\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\model.cpp">
+      <Filter>graphics\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\pixelmap.cpp">
+      <Filter>graphics\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\renderbuffer.cpp">
+      <Filter>graphics\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\resource.cpp">
+      <Filter>graphics\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\shader.cpp">
+      <Filter>graphics\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\texture.cpp">
+      <Filter>graphics\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\vertex.cpp">
+      <Filter>graphics\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\drivers\opengl\context.cpp">
+      <Filter>graphics\drivers\opengl</Filter>
+    </ClCompile>
+    <ClCompile Include="src\math\math.cpp">
+      <Filter>math</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tests\signal_test\signal_test.cpp">
+      <Filter>tests\signal_test</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tests\timer_test\timer_test.cpp">
+      <Filter>tests\timer_test</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tests\vertex_element_types\vertex_element_types.cpp">
+      <Filter>tests\vertex_element_types</Filter>
+    </ClCompile>
+    <ClCompile Include="src\app\application.cpp">
+      <Filter>app\app</Filter>
+    </ClCompile>
+    <ClCompile Include="src\app\event_handler.cpp">
+      <Filter>app\app</Filter>
+    </ClCompile>
+    <ClCompile Include="src\app\timer.cpp">
+      <Filter>app\app</Filter>
+    </ClCompile>
+    <ClCompile Include="src\app\window.cpp">
+      <Filter>app\app</Filter>
+    </ClCompile>
+    <ClCompile Include="src\util\io.cpp">
+      <Filter>util\util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\util\lib.cpp">
+      <Filter>util\util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\camera.cpp">
+      <Filter>engine\world\world</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\entity.cpp">
+      <Filter>engine\world\world</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\graphics_entity.cpp">
+      <Filter>engine\world\world</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\light.cpp">
+      <Filter>engine\world\world</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\world.cpp">
+      <Filter>engine\world\world</Filter>
+    </ClCompile>
+    <ClCompile Include="dependencies\modules\stb\stb_vorbis.c">
+      <Filter>lib\stb</Filter>
+    </ClCompile>
+    <ClCompile Include="dependencies\modules\stb\deprecated\stb_image.c">
+      <Filter>lib\stb\deprecated</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -1,7 +1,7 @@
 #include "graphics_entity.hpp"
 #include "world.hpp"
 
-#include <engine/components/graphics/graphics.hpp>
+#include <engine/model_component.hpp>
 #include <graphics/model.hpp>
 
 namespace engine
