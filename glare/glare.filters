@@ -189,7 +189,7 @@
     <ClCompile Include="src\app\input\input_handler\input_handler.cpp">
       <Filter>Source Files\app\input\input_handler</Filter>
     </ClCompile>
-    <ClCompile Include="src\unit_test\model_test\model_test.cpp">
+    <ClCompile Include="src\tests\model_test\model_test.cpp">
       <Filter>Source Files\tests\model_test</Filter>
     </ClCompile>
     <ClCompile Include="src\engine\engine.cpp">
@@ -216,7 +216,7 @@
     <ClCompile Include="src\engine\transform.cpp">
       <Filter>Source Files\engine</Filter>
     </ClCompile>
-    <ClCompile Include="src\unit_test\signal_test\signal_test.cpp">
+    <ClCompile Include="src\tests\signal_test\signal_test.cpp">
       <Filter>Source Files\tests\signal_test</Filter>
     </ClCompile>
     <ClCompile Include="src\engine\world\debug\debug_move.cpp">
@@ -225,7 +225,7 @@
     <ClCompile Include="src\engine\world\graphics_entity.cpp">
       <Filter>Source Files\engine\world</Filter>
     </ClCompile>
-    <ClCompile Include="src\unit_test\timer_test\timer_test.cpp">
+    <ClCompile Include="src\tests\timer_test\timer_test.cpp">
       <Filter>Source Files\tests\timer_test</Filter>
     </ClCompile>
     <ClCompile Include="src\app\timer.cpp">
@@ -245,7 +245,7 @@
     <ClInclude Include="src\graphics\native\opengl.hpp">
       <Filter>Source Files\graphics\native</Filter>
     </ClInclude>
-    <ClInclude Include="src\unit_test\vertex_element_types.cpp">
+    <ClInclude Include="src\tests\vertex_element_types.cpp">
       <Filter>Source Files\tests</Filter>
     </ClInclude>
     <ClInclude Include="src\app\app.hpp">
@@ -380,7 +380,7 @@
     <ClInclude Include="src\app\input\input_handler\input_handler.hpp">
       <Filter>Source Files\app\input\input_handler</Filter>
     </ClInclude>
-    <ClInclude Include="src\unit_test\model_test\model_test.hpp">
+    <ClInclude Include="src\tests\model_test\model_test.hpp">
       <Filter>Source Files\tests\model_test</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\engine.hpp">
@@ -419,7 +419,7 @@
     <ClInclude Include="src\util\bitflag.hpp">
       <Filter>Source Files\util</Filter>
     </ClInclude>
-    <ClInclude Include="src\unit_test\signal_test\signal_test.hpp">
+    <ClInclude Include="src\tests\signal_test\signal_test.hpp">
       <Filter>Source Files\tests\signal_test</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\world\debug\debug_move.hpp">
@@ -455,7 +455,7 @@
     <ClInclude Include="src\engine\messages\input.hpp">
       <Filter>Source Files\engine\messages</Filter>
     </ClInclude>
-    <ClInclude Include="src\unit_test\timer_test\timer_test.hpp">
+    <ClInclude Include="src\tests\timer_test\timer_test.hpp">
       <Filter>Source Files\tests\timer_test</Filter>
     </ClInclude>
     <ClInclude Include="src\app\timer.hpp">
@@ -472,10 +472,10 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="src\unit_test\deferred_test\deferred_test.cpp">
+    <Text Include="src\tests\deferred_test\deferred_test.cpp">
       <Filter>Source Files\tests\deferred_test</Filter>
     </Text>
-    <Text Include="src\unit_test\deferred_test\deferred_test.hpp">
+    <Text Include="src\tests\deferred_test\deferred_test.hpp">
       <Filter>Source Files\tests\deferred_test</Filter>
     </Text>
   </ItemGroup>
