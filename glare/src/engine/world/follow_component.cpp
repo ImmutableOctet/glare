@@ -22,6 +22,11 @@ namespace engine
 
 	void SimpleFollowComponent::apply(World& world, Entity entity, Transform& transform)
 	{
+		if (leader == null)
+		{
+			return;
+		}
+
 		auto delta = world.delta();
 		auto& registry = world.get_registry();
 
@@ -74,7 +79,11 @@ namespace engine
 			}
 			else
 			{
-				transform.set_position(pos + (movement_vector * delta));
+				//transform.set_position(pos + (movement_vector * delta));
+				transform.move((movement_vector * delta));
+
+				//transform.set_position(pos);
+				//transform.set_local_position(pos);
 			}
 		}
 		else

@@ -22,6 +22,7 @@ namespace engine
 
 		auto target_transform = world.get_transform(target);
 
-		transform.set_matrix(transform.get_matrix() * glm::lookAt(transform.get_position(), target_transform.get_position(), world.get_up_vector()));
+		//transform.set_matrix(transform.get_matrix() * glm::lookAt(transform.get_position(), target_transform.get_position(), world.get_up_vector()));
+		transform.look_at(target_transform); // world.get_up_vector()
 	}
 }

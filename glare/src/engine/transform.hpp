@@ -145,7 +145,7 @@ namespace engine
 			void move(const math::Vector& tv, bool local=false);
 
 			void look_at(const math::Vector& target, const math::Vector& up={0.0f, 1.0f, 0.0f});
-			void look_at(Transform& t);
+			void look_at(Transform& t, const math::Vector& up={0.0f, 1.0f, 0.0f});
 
 			// Rotation:
 			void rotate(const math::Vector& rv, bool local=false);

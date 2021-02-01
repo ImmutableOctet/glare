@@ -44,7 +44,7 @@ namespace engine
 			math::Vector prev_position = {};
 			math::Vector velocity = {};
 
-			float gravity_mag = 0.01f; // 1.0f;
+			float gravity_mag = 0.0f; // 1.0f; // 0.01f;
 			float deceleration = 0.0f;
 		};
 

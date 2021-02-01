@@ -7,6 +7,9 @@
 
 #include "spin_component.hpp"
 #include "target_component.hpp"
+#include "follow_component.hpp"
+#include "billboard_behavior.hpp"
+#include "rave_component.hpp"
 
 #include "debug/debug_camera.hpp"
 #include "debug/debug_move.hpp"
@@ -105,6 +108,7 @@ namespace engine
 		catch (std::exception& e)
 		{
 			con->error("Error parsing JSON file: {}", e.what());
+			ASSERT(false);
 		}
 
 		return null;
@@ -122,6 +126,9 @@ namespace engine
 
 		SpinBehavior::update(*this);
 		TargetComponent::update(*this);
+		SimpleFollowComponent::update(*this);
+		BillboardBehavior::update(*this);
+		RaveComponent::update(*this);
 	}
 
 	bool World::render(graphics::Canvas& canvas, bool forward_rendering)
@@ -280,18 +287,21 @@ namespace engine
 
 	Entity World::get_player(PlayerIndex player) const
 	{
-		Entity p = null;
+		auto view = registry.view<PlayerState>();
 
-		// TODO: Optimize. (Short-circuiting would help)
-		registry.view<PlayerState>().each([&](auto entity, const auto& player_state)
+		for (auto it = view.begin(); it != view.end(); it++)
 		{
+			Entity entity = *it;
+
+			const auto& player_state = registry.get<PlayerState>(entity);
+
 			if (player_state.index == player)
 			{
-				p = entity;
+				return entity;
 			}
-		});
+		}
 
-		return p;
+		return null;
 	}
 
 	void World::add_camera(Entity camera, bool make_active)

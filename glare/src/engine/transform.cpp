@@ -280,9 +280,9 @@ namespace engine
 		set_basis(m);
 	}
 
-	void Transform::look_at(Transform& t)
+	void Transform::look_at(Transform& t, const math::Vector& up)
 	{
-		look_at(t.get_position());
+		look_at(t.get_position(), up);
 	}
 
 	void Transform::rotate(const math::Vector& rv, bool local)

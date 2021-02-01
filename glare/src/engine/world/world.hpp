@@ -117,6 +117,8 @@ namespace engine
 			// The actively bound camera. (Does not always represent the rendering camera)
 			inline Entity get_camera() const { return camera; }
 
+			inline const app::DeltaTime& get_delta_time() const { return delta_time; }
+
 			Entity get_player(PlayerIndex player) const;
 
 			inline math::Vector gravity() const { return physics.get_gravity(); }

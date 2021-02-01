@@ -9,6 +9,7 @@
 
 #include <filesystem>
 #include <string>
+#include <tuple>
 
 //#define _ENFORCE_MATCHING_ALLOCATORS 0
 
@@ -24,21 +25,26 @@ namespace engine
 	class Stage
 	{
 		public:
-			using ObjectIndex = std::uint16_t; // PlayerIndex;
+			using ObjectIndex = std::uint16_t; // std::string; // PlayerIndex;
 
 			using ObjectMap       = std::unordered_map<ObjectIndex, Entity>;
 			using PlayerObjectMap = std::unordered_map<PlayerIndex, Entity>;
 			
 			//using ObjectCreationFunction = Entity(*)(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const util::json& data);
-			using ObjectCreationFunction = std::function<Entity(World& world, Entity parent, util::Logger&, const filesystem::path&, const PlayerObjectMap&, const util::json&)>;
+			using ObjectCreationFunction = std::function<Entity(World& world, Entity parent, util::Logger&, const filesystem::path&, const PlayerObjectMap&, const ObjectMap&, const util::json&)>;
 
 			using ObjectCreationMap = std::unordered_map<std::string, ObjectCreationFunction>;
 
 			static Entity Load(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const util::json& data);
 
-			static Entity CreateCamera(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const util::json& data);
 		protected:
 			static const ObjectCreationMap ObjectRoutines;
+
+			static Entity CreateCamera(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data);
+			static Entity CreateFollowSphere(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data);
+			static Entity CreateBillboard(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data);
+
+			static Entity resolve_object_reference(const std::string& query, World& world, const PlayerObjectMap& player_objects, const ObjectMap& objects); // std::tuple<std::string, std::string>
 
 			static inline math::TransformVectors get_transform_data(util::Logger& dbg, const util::json& cfg)
 			{

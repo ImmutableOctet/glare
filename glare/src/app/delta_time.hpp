@@ -74,6 +74,8 @@ namespace app
 			inline Interval get_interval()      const { return ideal_interval; }
 			inline Rate     get_rate()          const { return ideal_rate;     }
 
+			inline Time    current_frame_time() const { return time_current_frame; }
+
 			template <typename T>
 			T per_frame(const T& frame_diff)
 			{

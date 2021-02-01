@@ -319,6 +319,12 @@
     <ClInclude Include="src\util\string.hpp">
       <Filter>util\util</Filter>
     </ClInclude>
+    <ClInclude Include="src\engine\world\billboard_behavior.hpp">
+      <Filter>engine\world</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\rave_component.hpp">
+      <Filter>engine\world</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\tests\model_test\shaders\8.1.deferred_light_box.fs">
@@ -583,6 +589,12 @@
     </ClCompile>
     <ClCompile Include="src\util\string.cpp">
       <Filter>util\util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\billboard_behavior.cpp">
+      <Filter>engine\world</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\rave_component.cpp">
+      <Filter>engine\world</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

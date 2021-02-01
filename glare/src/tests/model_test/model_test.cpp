@@ -12,6 +12,7 @@
 #include <graphics/native/opengl.hpp>
 
 #include <engine/world/spin_component.hpp>
+#include <engine/world/follow_component.hpp>
 
 #include <engine/free_look.hpp>
 
@@ -552,7 +553,7 @@ namespace glare::tests
 
 			case SDLK_f:
 			{
-				auto target_entity = world.get_by_name("Spinning Cube"); // world.get_camera();
+				auto target_entity = world.get_camera(); // world.get_by_name("Moving Sphere"); // "Spinning Cube" // world.get_root()
 
 				if (target_entity != engine::null)
 				{
@@ -563,6 +564,8 @@ namespace glare::tests
 					std::cout << "Rotation: " << math::degrees(t.get_rotation()) << '\n';
 					std::cout << "Scale: " << t.get_scale() << '\n';
 				}
+
+				//engine::SimpleFollowComponent::update(world);
 
 				break;
 			}
