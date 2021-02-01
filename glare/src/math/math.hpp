@@ -8,6 +8,12 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
 
+#include <tuple>
+
+// Bullet types:
+class btVector3;
+class btTransform;
+
 namespace math
 {
 	// Types:
@@ -25,25 +31,37 @@ namespace math
 	using Matrix = AffineMatrix4;
 	using RotationMatrix = Matrix3x3;
 
+	using TransformVectors = std::tuple<Vector, Vector, Vector>; // Position, Rotation, Scale
+
 	template <typename T>
 	static constexpr T _Pi = static_cast<T>(3.141592653589793); // M_PI
 
 	static constexpr auto Pi = _Pi<float>;
 
 	template <typename T>
-	inline T degrees(T r)
+	inline constexpr T degrees(T r)
 	{
 		static constexpr T R_TO_DEG = (static_cast<T>(180) / _Pi<T>);
 
 		return (r * R_TO_DEG);
 	}
 
+	inline constexpr Vector degrees(Vector r)
+	{
+		return { degrees(r.x), degrees(r.y), degrees(r.z) };
+	}
+
 	template <typename T>
-	inline T radians(T d)
+	inline constexpr T radians(T d)
 	{
 		static constexpr T DEG_TO_R = (_Pi<T> / static_cast<T>(180));
 
 		return (d * DEG_TO_R);
+	}
+
+	inline constexpr Vector radians(Vector d)
+	{
+		return { radians(d.x), radians(d.y), radians(d.z) };
 	}
 
 	template <typename T>
@@ -105,6 +123,9 @@ namespace math
 	RotationMatrix rotation_roll(float angle);
 
 	RotationMatrix rotation_from_vector(const Vector& rv);
+
+	Vector3D to_vector(const btVector3& v);
+	Matrix to_matrix(const btTransform& t);
 }
 
 template <typename OutStream>

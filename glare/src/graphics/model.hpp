@@ -76,7 +76,7 @@ namespace graphics
 
 			Meshes meshes;
 		public:
-			static Model Load(pass_ref<Context> context, ResourceManager& resource_manager, const std::string& path, pass_ref<Shader> default_shader);
+			static Model Load(pass_ref<Context> context, const std::string& path, pass_ref<Shader> default_shader);
 
 			friend void swap(Model& x, Model& y);
 

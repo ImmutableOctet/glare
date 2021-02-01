@@ -55,9 +55,6 @@
     <ClInclude Include="src\engine\world\debug\debug_move.hpp">
       <Filter>engine\world\debug</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\world\debug\spin_component.hpp">
-      <Filter>engine\world\debug</Filter>
-    </ClInclude>
     <ClInclude Include="src\engine\events\input.hpp">
       <Filter>engine\events</Filter>
     </ClInclude>
@@ -196,18 +193,6 @@
     <ClInclude Include="src\graphics\drivers\opengl\gl_driver.hpp">
       <Filter>graphics\drivers\opengl</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\world\camera.hpp">
-      <Filter>engine\world\world</Filter>
-    </ClInclude>
-    <ClInclude Include="src\engine\world\entity.hpp">
-      <Filter>engine\world\world</Filter>
-    </ClInclude>
-    <ClInclude Include="src\engine\world\graphics_entity.hpp">
-      <Filter>engine\world\world</Filter>
-    </ClInclude>
-    <ClInclude Include="src\engine\world\light.hpp">
-      <Filter>engine\world\world</Filter>
-    </ClInclude>
     <ClInclude Include="src\engine\world\debug\debug.hpp">
       <Filter>engine\world</Filter>
     </ClInclude>
@@ -285,6 +270,54 @@
     </ClInclude>
     <ClInclude Include="dependencies\modules\stb\deprecated\rrsprintf.h">
       <Filter>lib\stb\deprecated</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\camera.hpp">
+      <Filter>engine\world</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\entity.hpp">
+      <Filter>engine\world</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\graphics_entity.hpp">
+      <Filter>engine\world</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\light.hpp">
+      <Filter>engine\world</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\movement_state.hpp">
+      <Filter>engine\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\physics.hpp">
+      <Filter>engine\world</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\player.hpp">
+      <Filter>engine\world</Filter>
+    </ClInclude>
+    <ClInclude Include="src\math\bullet.hpp">
+      <Filter>math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\collision.hpp">
+      <Filter>engine\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\json.hpp">
+      <Filter>util\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\log.hpp">
+      <Filter>util\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\stage.hpp">
+      <Filter>engine\world</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\spin_component.hpp">
+      <Filter>engine\world</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\target_component.hpp">
+      <Filter>engine\world</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\follow_component.hpp">
+      <Filter>engine\world</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\string.hpp">
+      <Filter>util\util</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -389,9 +422,6 @@
     <Filter Include="engine\engine">
       <UniqueIdentifier>{fe9b6ff3-4487-435d-9385-70b02c21879c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="engine\world\world">
-      <UniqueIdentifier>{6f22a757-a9bf-40b4-82fe-d7c469f095a4}</UniqueIdentifier>
-    </Filter>
     <Filter Include="glare">
       <UniqueIdentifier>{ca31861a-2300-4c8f-bf00-b852c6e56bbe}</UniqueIdentifier>
     </Filter>
@@ -435,9 +465,6 @@
       <Filter>engine\world\debug</Filter>
     </ClCompile>
     <ClCompile Include="src\engine\world\debug\debug_move.cpp">
-      <Filter>engine\world\debug</Filter>
-    </ClCompile>
-    <ClCompile Include="src\engine\world\debug\spin_component.cpp">
       <Filter>engine\world\debug</Filter>
     </ClCompile>
     <ClCompile Include="src\graphics\canvas.cpp">
@@ -509,26 +536,53 @@
     <ClCompile Include="src\util\lib.cpp">
       <Filter>util\util</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\world\camera.cpp">
-      <Filter>engine\world\world</Filter>
-    </ClCompile>
-    <ClCompile Include="src\engine\world\entity.cpp">
-      <Filter>engine\world\world</Filter>
-    </ClCompile>
-    <ClCompile Include="src\engine\world\graphics_entity.cpp">
-      <Filter>engine\world\world</Filter>
-    </ClCompile>
-    <ClCompile Include="src\engine\world\light.cpp">
-      <Filter>engine\world\world</Filter>
-    </ClCompile>
-    <ClCompile Include="src\engine\world\world.cpp">
-      <Filter>engine\world\world</Filter>
-    </ClCompile>
     <ClCompile Include="dependencies\modules\stb\stb_vorbis.c">
       <Filter>lib\stb</Filter>
     </ClCompile>
     <ClCompile Include="dependencies\modules\stb\deprecated\stb_image.c">
       <Filter>lib\stb\deprecated</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\world.cpp">
+      <Filter>engine\world</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\camera.cpp">
+      <Filter>engine\world</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\entity.cpp">
+      <Filter>engine\world</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\graphics_entity.cpp">
+      <Filter>engine\world</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\light.cpp">
+      <Filter>engine\world</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\physics.cpp">
+      <Filter>engine\world</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\resource_manager.cpp">
+      <Filter>engine\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\player.cpp">
+      <Filter>engine\world</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\collision.cpp">
+      <Filter>engine\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\spin_component.cpp">
+      <Filter>engine\world</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\stage.cpp">
+      <Filter>engine\world</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\target_component.cpp">
+      <Filter>engine\world</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\follow_component.cpp">
+      <Filter>engine\world</Filter>
+    </ClCompile>
+    <ClCompile Include="src\util\string.cpp">
+      <Filter>util\util</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

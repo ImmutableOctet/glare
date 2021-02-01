@@ -1,31 +1,50 @@
 #include "world.hpp"
+#include "entity.hpp"
 #include "camera.hpp"
+#include "physics.hpp"
+#include "player.hpp"
+#include "stage.hpp"
+
+#include "spin_component.hpp"
+#include "target_component.hpp"
 
 #include "debug/debug_camera.hpp"
 #include "debug/debug_move.hpp"
-#include "debug/spin_component.hpp"
+
+#include <math/math.hpp>
+
+#include <util/json.hpp>
+#include <util/io.hpp>
+#include <util/log.hpp>
 
 #include <graphics/canvas.hpp>
 #include <graphics/shader.hpp>
 
+#include <engine/collision.hpp>
+#include <engine/resource_manager.hpp>
 #include <engine/free_look.hpp>
 #include <engine/relationship.hpp>
 #include <engine/transform.hpp>
 
 //#include <engine/name_component.hpp>
 #include <engine/components.hpp>
-
 #include <app/input/input.hpp>
 
 #include <algorithm>
+#include <fstream>
+//#include <filesystem>
+
+// Debugging related:
+#include <iostream>
 
 namespace engine
 {
-	World::World(const app::DeltaTime& delta_time)
-		: delta_time(delta_time)
+	World::World(ResourceManager& resource_manager, UpdateRate update_rate)
+		: resource_manager(resource_manager), delta_time(update_rate)
 	{
 		register_event<app::input::MouseState,    &World::on_mouse_input>();
 		register_event<app::input::KeyboardState, &World::on_keyboard_input>();
+		register_event<OnComponentAdd<engine::CollisionComponent>, &World::on_new_collider>();
 
 		root = create_pivot(*this);
 	}
@@ -44,12 +63,65 @@ namespace engine
 	}
 	*/
 
-	void World::update()
+	World::World(ResourceManager& resource_manager, UpdateRate update_rate, const filesystem::path& path)
+		: World(resource_manager, update_rate)
 	{
+		load(path);
+	}
+
+	Entity World::load(const filesystem::path& root_path, bool override_current, const std::string& json_file)
+	{
+		auto con = util::log::get_console();
+
+		bool is_child_stage = (!override_current) && (stage != null);
+		auto parent = root;
+
+		if (is_child_stage)
+		{
+			parent = stage;
+		}
+
+		auto map_data_path = (root_path / json_file).string();
+		
+		con->info("Loading map from \"{}\"...", map_data_path);
+
+		con->info("Parsing JSON...");
+
+		std::ifstream map_data_stream(map_data_path);
+
+		try
+		{
+			util::json map_data = util::json::parse(map_data_stream);
+
+			auto map = Stage::Load(*this, parent, con, root_path, map_data);
+
+			if (!is_child_stage)
+			{
+				stage = map;
+			}
+
+			return map;
+		}
+		catch (std::exception& e)
+		{
+			con->error("Error parsing JSON file: {}", e.what());
+		}
+
+		return null;
+	}
+
+	void World::update(app::Milliseconds time)
+	{
+		// Update the delta-timer.
+		delta_time << time;
+
 		event_handler.update();
 
-		// Debugging related:
-		debug::SpinBehavior::update(*this);
+		// Update systems:
+		physics.update(*this, delta_time);
+
+		SpinBehavior::update(*this);
+		TargetComponent::update(*this);
 	}
 
 	bool World::render(graphics::Canvas& canvas, bool forward_rendering)
@@ -82,7 +154,7 @@ namespace engine
 
 		auto& shader = canvas.get_shader();
 
-		shader["projection"] = glm::perspective(camera_params.fov, camera_params.aspect_ratio, camera_params.near, camera_params.far);
+		shader["projection"] = glm::perspective(camera_params.fov, camera_params.aspect_ratio, camera_params.near_plane, camera_params.far_plane);
 		shader["view"] = camera_matrix;
 
 		// TODO: Change/remove flag(s).
@@ -137,9 +209,29 @@ namespace engine
 		});
 	}
 
+	Transform World::apply_transform(Entity entity, const math::TransformVectors& tform)
+	{
+		auto transform = get_transform(entity);
+
+		auto [position, rotation, scale] = tform;
+
+		transform.set_position(position);
+		transform.set_rotation(rotation);
+		transform.set_scale(scale);
+
+		return transform;
+	}
+
 	Transform World::get_transform(Entity entity)
 	{
 		return Transform(registry, entity);
+	}
+
+	math::Vector World::get_up_vector(math::Vector up) const
+	{
+		auto& m = registry.get<TransformComponent>(root);
+
+		return (m._w * math::Vector4D{ up, 1.0f });
 	}
 
 	Entity World::get_parent(Entity entity) const
@@ -154,8 +246,16 @@ namespace engine
 		return relationship->get_parent();
 	}
 
-	void World::set_parent(Entity entity, Entity parent)
+	void World::set_parent(Entity entity, Entity parent, bool _null_as_root)
 	{
+		if (_null_as_root)
+		{
+			if (parent == null)
+			{
+				parent = get_root();
+			}
+		}
+
 		Relationship::set_parent(registry, entity, parent);
 	}
 
@@ -178,11 +278,27 @@ namespace engine
 		return null;
 	}
 
-	void World::add_camera(Entity camera)
+	Entity World::get_player(PlayerIndex player) const
+	{
+		Entity p = null;
+
+		// TODO: Optimize. (Short-circuiting would help)
+		registry.view<PlayerState>().each([&](auto entity, const auto& player_state)
+		{
+			if (player_state.index == player)
+			{
+				p = entity;
+			}
+		});
+
+		return p;
+	}
+
+	void World::add_camera(Entity camera, bool make_active)
 	{
 		ASSERT(registry.has<CameraParameters>(camera));
 
-		if (this->camera == null)
+		if ((this->camera == null) || make_active)
 		{
 			this->camera = camera;
 		}
@@ -219,5 +335,10 @@ namespace engine
 	void World::on_keyboard_input(const app::input::KeyboardState& keyboard)
 	{
 		engine::debug::DebugMove::update(*this, keyboard);
+	}
+
+	void World::on_new_collider(OnComponentAdd<CollisionComponent> new_col)
+	{
+		physics.on_new_collider(*this, new_col);
 	}
 }

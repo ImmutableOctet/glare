@@ -35,13 +35,15 @@ namespace glare::tests
 
 				graphics::Mesh screen_quad;
 
-				//GBufferDisplayMode display_mode = GBufferDisplayMode::AlbedoSpecular;
-				GBufferDisplayMode display_mode = GBufferDisplayMode::None;
+				GBufferDisplayMode display_mode = GBufferDisplayMode::AlbedoSpecular;
+				//GBufferDisplayMode display_mode = GBufferDisplayMode::None;
 
 			} gBuffer;
 
-			struct
+			struct init_shaders
 			{
+				init_shaders(Graphics& graphics);
+
 				ref<graphics::Shader> forward;
 				ref<graphics::Shader> forward_test;
 				ref<graphics::Shader> geometry;
@@ -50,27 +52,29 @@ namespace glare::tests
 				ref<graphics::Shader> light_box;
 			} shaders;
 
-			graphics::Texture test_texture;
-
 			static constexpr auto NR_LIGHTS = 32;
+			static constexpr Application::UpdateRate TARGET_UPDATE_RATE = 60;
+
+			graphics::Texture test_texture;
 
 			//std::vector<ref<graphics::Shader>> shaders;
 
-			engine::World world;
 			engine::ResourceManager resource_manager;
+			engine::World world;
 
 			//engine::Entity model_entity;
 
 			ModelTest(bool auto_execute=true);
 
 			engine::Entity load_model(const std::string& path);
+
 			engine::Transform model(const std::string& path);
 			engine::Transform transform(engine::Entity entity);
 
 			engine::Entity make_camera(engine::World& world);
 
 			void make_lights(engine::World& world);
-			void make_models(engine::World& world, engine::Entity camera);
+			void make_models(engine::World& world, engine::Entity player);
 
 			void setup_world(engine::World& world);
 
@@ -78,7 +82,7 @@ namespace glare::tests
 
 			void on_user_keyboard_input(const app::input::KeyboardState& keyboard);
 
-			void update(const app::DeltaTime& delta_time) override;
+			void update(app::Milliseconds time) override;
 			void render() override;
 
 			void on_keyup(const keyboard_event_t& event) override;

@@ -11,7 +11,7 @@
 #include <engine/engine.hpp>
 #include <graphics/native/opengl.hpp>
 
-#include <engine/world/debug/spin_component.hpp>
+#include <engine/world/spin_component.hpp>
 
 #include <engine/free_look.hpp>
 
@@ -23,9 +23,66 @@
 
 namespace glare::tests
 {
+	ModelTest::init_shaders::init_shaders(Graphics& graphics)
+	{
+		// Not an initializer list for readability/testing purposes:
+		forward = memory::allocate<graphics::Shader>
+		(
+			graphics.context,
+			
+			"assets/tests/model_test/shaders/forward.vs",
+			"assets/tests/model_test/shaders/forward.fs"
+		);
+
+		forward_test = memory::allocate<graphics::Shader>
+		(
+			graphics.context,
+			
+			//"assets/tests/model_test/shaders/forward.vs",
+			"assets/tests/model_test/shaders/8.1.deferred_shading.vs",
+			"assets/tests/model_test/shaders/forward_test.fs"
+		);
+
+		geometry = memory::allocate<graphics::Shader>
+		(
+			graphics.context,
+
+			"assets/tests/model_test/shaders/8.1.g_buffer.vs",
+			"assets/tests/model_test/shaders/8.1.g_buffer.fs"
+		);
+
+		lighting_pass = memory::allocate<graphics::Shader>
+		(
+			graphics.context,
+
+			"assets/tests/model_test/shaders/8.1.deferred_shading.vs",
+			"assets/tests/model_test/shaders/8.1.deferred_shading.fs"
+		);
+
+		framebuffer_dbg = memory::allocate<graphics::Shader>
+		(
+			graphics.context,
+
+			"assets/tests/model_test/shaders/8.1.fbo_debug.vs",
+			"assets/tests/model_test/shaders/8.1.fbo_debug.fs"
+		);
+
+		/*
+		light_box = memory::allocate<graphics::Shader>
+		(
+			graphics.context,
+
+			"assets/tests/model_test/shaders/8.1.deferred_light_box.vs",
+			"assets/tests/model_test/shaders/8.1.deferred_light_box.fs"
+		);
+		*/
+	}
+
 	ModelTest::ModelTest(bool auto_execute)
-		: GraphicsApplication("Project Glare", 1600, 900, (app::WindowFlags::OpenGL|app::WindowFlags::Resizable), 60, true),
-		  world(delta_time)
+		: GraphicsApplication("Project Glare", 1600, 900, (app::WindowFlags::OpenGL|app::WindowFlags::Resizable), TARGET_UPDATE_RATE, true),
+		  shaders(graphics),
+		  resource_manager(graphics.context, shaders.forward),
+		  world(resource_manager, TARGET_UPDATE_RATE)
 	{
 		using namespace graphics;
 
@@ -43,57 +100,6 @@ namespace glare::tests
 			std::cout << "OpenGL (" << severity << "):" << '\n';
 			std::cout << message << '\n';
 		}, this);
-		*/
-
-		shaders.forward = memory::allocate<Shader>
-		(
-			graphics.context,
-			
-			"assets/tests/model_test/shaders/forward.vs",
-			"assets/tests/model_test/shaders/forward.fs"
-		);
-
-		shaders.forward_test = memory::allocate<Shader>
-		(
-			graphics.context,
-			
-			//"assets/tests/model_test/shaders/forward.vs",
-			"assets/tests/model_test/shaders/8.1.deferred_shading.vs",
-			"assets/tests/model_test/shaders/forward_test.fs"
-		);
-
-		shaders.geometry = memory::allocate<Shader>
-		(
-			graphics.context,
-
-			"assets/tests/model_test/shaders/8.1.g_buffer.vs",
-			"assets/tests/model_test/shaders/8.1.g_buffer.fs"
-		);
-
-		shaders.lighting_pass = memory::allocate<Shader>
-		(
-			graphics.context,
-
-			"assets/tests/model_test/shaders/8.1.deferred_shading.vs",
-			"assets/tests/model_test/shaders/8.1.deferred_shading.fs"
-		);
-
-		shaders.framebuffer_dbg = memory::allocate<Shader>
-		(
-			graphics.context,
-
-			"assets/tests/model_test/shaders/8.1.fbo_debug.vs",
-			"assets/tests/model_test/shaders/8.1.fbo_debug.fs"
-		);
-
-		/*
-		shaders.light_box = memory::allocate<Shader>
-		(
-			graphics.context,
-
-			"assets/tests/model_test/shaders/8.1.deferred_light_box.vs",
-			"assets/tests/model_test/shaders/8.1.deferred_light_box.fs"
-		);
 		*/
 
 		int screen_width, screen_height;
@@ -147,12 +153,7 @@ namespace glare::tests
 
 	engine::Entity ModelTest::load_model(const std::string& path)
 	{
-		ref<graphics::Model> loaded_model;
-
-		loaded_model = memory::allocate<graphics::Model>();
-		*loaded_model = graphics::Model::Load(graphics.context, resource_manager, path, shaders.forward);
-
-		return engine::create_model(world, loaded_model);
+		return engine::load_model(world, path);
 	}
 
 	engine::Transform ModelTest::model(const std::string& path)
@@ -165,27 +166,6 @@ namespace glare::tests
 	engine::Transform ModelTest::transform(engine::Entity entity)
 	{
 		return world.get_transform(entity);
-	}
-
-	engine::Entity ModelTest::make_camera(engine::World& world)
-	{
-		auto debug_camera = engine::debug::create_debug_camera(world, engine::CameraParameters::DEFAULT_FOV);
-
-		auto t = transform(debug_camera);
-
-		//t.set_position({ 1.14704f, 3.97591f, -8.47185f });
-		//t.set_rotation(math::radians(math::Vector{ -27.0993f, -175.95f, 0.0f }));
-
-		//t.set_position({ 16.3587f, 48.3307f, -1.65829f });
-		//t.set_rotation(math::radians(math::Vector { -7.54972f, 3.50007f, 0.0f }));
-
-		t.set_position({ 10.0781f, 59.5706f, 4.06396f });
-		t.set_rotation(math::radians(math::Vector{ -8.19875f, 1.60009f, 0.0f }));
-
-
-		//t.rotateY(math::radians(180.0f));
-
-		return debug_camera;
 	}
 
 	void ModelTest::make_lights(engine::World& world)
@@ -217,43 +197,24 @@ namespace glare::tests
 		}
 	}
 
-	void ModelTest::make_models(engine::World& world, engine::Entity camera)
+	void ModelTest::make_models(engine::World& world, engine::Entity player)
 	{
 		//return;
 
 		auto& registry = world.get_registry();
-
-		//auto nanosuit = load_model("assets/tests/model_test/Sonic/Sonic.b3d"); // assets/characters/nanosuit/nanosuit.obj // b3d
-		auto nanosuit = load_model("assets/characters/nanosuit/nanosuit.obj");
-		auto nanosuit_t = transform(nanosuit);
-
-		registry.assign<engine::NameComponent>(nanosuit, "Player");
-
-		//world.set_parent(camera, nanosuit);
-
-		//auto nanosuit = model("assets/tests/model_test/cube_textured.b3d");
-		nanosuit_t.move({ 10.7f, 46.0f, -13.0f });
-		//nanosuit_t.set_scale(math::Vector {1.0, 1.0, 1.0} * 10.0f);
 
 		auto sphere = load_model("assets/tests/model_test/Sonic/Sonic.b3d"); // model("assets/tests/model_test/sphere.obj");
 		auto sphere_t = transform(sphere);
 
 		sphere_t.move({ 14.0f, 10.0f, 30.0f });
 
-		//world.set_parent(sphere, nanosuit);
+		auto cube = load_model("assets/tests/model_test/cube.b3d");
+		
+		registry.emplace<engine::NameComponent>(cube, "Spinning Cube");
+		registry.emplace<engine::SpinBehavior>(cube);
 
-		///return;
+		world.set_parent(cube, player);
 
-		auto cube_model = memory::allocate<graphics::Model>();
-		*cube_model = graphics::Model::Load(graphics.context, resource_manager, "assets/tests/model_test/cube.b3d", shaders.forward);
-
-		auto cube = engine::create_model(world, cube_model, nanosuit);
-		//auto cube = load_model("assets/tests/model_test/cube.b3d");
-
-		auto cube_rel = registry.get<engine::Relationship>(cube);
-		auto nanosuit_rel = registry.get<engine::Relationship>(nanosuit);
-
-		registry.assign<engine::debug::SpinBehavior>(cube);
 		transform(cube).set_position({ 25.0f, 46.0f, -20.0f });
 
 		// Light boxes:
@@ -279,13 +240,16 @@ namespace glare::tests
 		//path = "assets/tests/model_test/SeasideShortcut/Stage.obj";
 		//path = "assets/tests/model_test/stage.b3d";
 		//path = "Q:\\Projects\\BlitzSonic Projects\\Blitzsonic Related\\HAXY EDIT OF DOOM\\Stages\\Emerald Coast\\1\\EC1.b3d";
-		path = "assets/maps/test01/stage.b3d";
+		//path = "assets/maps/test01/stage.b3d";
 
-		auto stage = load_model(path);
+		//auto stage = load_model(path);
 
-		auto camera = make_camera(world);
+		auto stage = world.load("assets/maps/test01");
+
+		auto player = world.get_player(1);
+
 		make_lights(world);
-		make_models(world, camera);
+		make_models(world, player);
 
 		world.register_event<app::input::KeyboardState, &ModelTest::on_user_keyboard_input>(*this);
 	}
@@ -300,7 +264,7 @@ namespace glare::tests
 
 	void ModelTest::on_user_keyboard_input(const app::input::KeyboardState& keyboard)
 	{
-		std::string_view target_obj = "Player";
+		std::string_view target_obj = engine::DEFAULT_PLAYER_NAME;
 
 		auto camera_t = transform(world.get_camera());
 		auto camera_pos = camera_t.get_position();
@@ -309,16 +273,18 @@ namespace glare::tests
 
 		auto angle = glm::normalize(camera_pos - transform.get_position());
 
-		float delta = delta_time;
+		float delta = world.delta();
 
 		if (keyboard.get_key(SDL_SCANCODE_Q))
 		{
-			
+			world.set_parent(world.get_camera(), world.get_by_name(engine::DEFAULT_PLAYER_NAME));
 		}
 
-		if (keyboard.get_key(SDL_SCANCODE_E))
+		if (keyboard.get_key(SDL_SCANCODE_V))
 		{
-			
+			auto t = world.get_transform(world.get_root());
+
+			t.rotateY(0.1f);
 		}
 
 		if (keyboard.get_key(SDL_SCANCODE_2))
@@ -335,11 +301,11 @@ namespace glare::tests
 		{
 			auto transform = get_named_transform("Player");
 
-			transform.rotateY(math::radians(10.0f * delta_time));
+			transform.rotateY(math::radians(10.0f * delta));
 		}
 	}
 
-	void ModelTest::update(const app::DeltaTime& delta_time)
+	void ModelTest::update(app::Milliseconds time)
 	{
 		auto& mouse = input.get_mouse();
 
@@ -348,7 +314,7 @@ namespace glare::tests
 			input.poll(world.get_event_handler());
 		}
 
-		world.update();
+		world.update(time);
 	}
 
 	void ModelTest::render()
@@ -561,14 +527,42 @@ namespace glare::tests
 				break;
 			}
 
+			case SDLK_e:
+			{
+				auto child_obj = world.get_by_name("Spinning Cube");
+
+				const auto& rel = world.get_registry().get<engine::Relationship>(child_obj);
+
+				auto rel_parent = rel.get_parent();
+				auto root = world.get_root();
+
+				if ((rel_parent == engine::null) || (rel_parent == root))
+				{
+					auto player_obj = world.get_by_name(engine::DEFAULT_PLAYER_NAME);
+
+					world.set_parent(child_obj, player_obj);
+				}
+				else
+				{
+					world.set_parent(child_obj, engine::null); // root
+				}
+
+				break;
+			}
+
 			case SDLK_f:
 			{
-				auto t = transform(world.get_camera());
+				auto target_entity = world.get_by_name("Spinning Cube"); // world.get_camera();
 
-				std::cout << "\nCamera:\n";
-				std::cout << "Position: " << t.get_position() << '\n';
-				std::cout << "Rotation: " << math::degrees(t.get_rotation()) << '\n';
-				std::cout << "Scale: "    << t.get_scale()    << '\n';
+				if (target_entity != engine::null)
+				{
+					auto t = transform(target_entity);
+
+					std::cout << "\nCamera:\n";
+					std::cout << "Position: " << t.get_position() << '\n';
+					std::cout << "Rotation: " << math::degrees(t.get_rotation()) << '\n';
+					std::cout << "Scale: " << t.get_scale() << '\n';
+				}
 
 				break;
 			}

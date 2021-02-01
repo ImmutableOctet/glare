@@ -181,7 +181,9 @@ namespace graphics
 		WrapST             = (WrapS|WrapT),
 
 		Default            = (LinearFiltering|WrapST),
-	}; FLAG_ENUM(std::uint32_t, TextureFlags);
+	};
+	
+	FLAG_ENUM(std::uint32_t, TextureFlags);
 
 	enum class BufferType : std::uint32_t
 	{
@@ -189,7 +191,9 @@ namespace graphics
 		Depth = (1 << 1),
 
 		ColorDepth = (Color | Depth),
-	}; FLAG_ENUM(std::uint32_t, BufferType);
+	};
+	
+	FLAG_ENUM(std::uint32_t, BufferType);
 
 	enum class ContextFlags : std::uint32_t
 	{
@@ -199,7 +203,9 @@ namespace graphics
 		VSync            = (1 << 3),
 
 		Default          = (DepthTest|FaceCulling|VSync),
-	}; FLAG_ENUM(std::uint32_t, ContextFlags);
+	};
+	
+	FLAG_ENUM(std::uint32_t, ContextFlags);
 
 	enum class CanvasDrawMode : std::uint32_t
 	{

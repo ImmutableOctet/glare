@@ -3,12 +3,15 @@
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/orthonormalize.hpp>
 
+// Debugging related:
+#include <iostream>
+
 using namespace math;
 
 namespace engine
 {
 	TransformViewData::TransformViewData(Registry& registry, Entity entity)
-		: TransformViewData(registry, entity, registry.get_or_assign<Relationship>(entity)) {}
+		: TransformViewData(registry, entity, registry.get_or_emplace<Relationship>(entity)) {}
 
 	TransformViewData::TransformViewData(Registry& registry, Entity entity, const Relationship& relationship)
 		: TransformViewData(registry, entity, relationship, registry.get<TransformComponent>(entity)) {}
@@ -116,7 +119,7 @@ namespace engine
 		: TransformViewData(data), parent_data(TransformViewData::get_parent_data(data)) {}
 
 	Transform::Transform(Registry& registry, Entity entity)
-		: Transform(registry, entity, registry.get_or_assign<Relationship>(entity)) {}
+		: Transform(registry, entity, registry.get_or_emplace<Relationship>(entity)) {}
 
 	Transform::Transform(Registry& registry, Entity entity, const Relationship& relationship)
 		: Transform(registry, entity, relationship, registry.get<TransformComponent>(entity)) {}
@@ -363,16 +366,26 @@ namespace engine
 
 	void Transform::set_matrix(const math::Matrix& m)
 	{
-		auto& matrix = transform._m;
+		auto& matrix = m; // transform._m;
 
 		auto scale = math::get_scaling(matrix);
 
-		set_basis(glm::scale(matrix, { (1.0 / scale.x), (1.0 / scale.y), (1.0 / scale.z) }));
 
-		auto translation = matrix[3];
+		math::Vector translation = math::get_translation(matrix); // matrix[3]
 
-		set_position(translation);
-		set_scale(scale);
+		std::cout << "Setting translation to: " << translation << '\n';
+
+		set_local_position(translation);
+
+		//std::cout << "Position is now: " << get_position() << '\n';
+		std::cout << "Position is now: " << get_local_position() << '\n';
+
+		//set_basis(glm::scale(matrix, { (1.0 / scale.x), (1.0 / scale.y), (1.0 / scale.z) }));
+		//set_scale(scale);
+		set_local_basis(glm::scale(matrix, { (1.0 / scale.x), (1.0 / scale.y), (1.0 / scale.z) }));
+		set_local_scale(scale);
+
+		//invalidate();
 	}
 
 	void Transform::set_local_matrix(const math::Matrix& m)

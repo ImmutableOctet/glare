@@ -11,7 +11,7 @@ namespace engine
 		auto& registry = world.get_registry();
 		auto entity = registry.create();
 
-		registry.assign<TransformComponent>(entity);
+		registry.emplace<TransformComponent>(entity);
 		
 		if (parent == null)
 		{
@@ -23,15 +23,15 @@ namespace engine
 			world.set_parent(entity, parent);
 
 			/*
-			auto rel = registry.get_or_assign<Relationship>(entity); // Relationship();
+			auto rel = registry.get_or_emplace<Relationship>(entity); // Relationship();
 
 			rel.set_parent(registry, entity, parent);
 
-			registry.assign_or_replace<Relationship>(entity, rel);
+			registry.emplace_or_replace<Relationship>(entity, rel);
 			*/
 
 			/*
-			auto parent_relationship = registry.get_or_assign<Relationship>(parent);
+			auto parent_relationship = registry.get_or_emplace<Relationship>(parent);
 
 			parent_relationship.add_child(registry, parent, entity);
 
@@ -69,7 +69,7 @@ namespace engine
 				return true;
 			});
 
-			registry.replace<Relationship>(parent, [&](auto& r) { r = parent_relationship; });
+			registry.replace<Relationship>(parent, std::move(parent_relationship)); // [&](auto& r) { r = parent_relationship; }
 		}
 
 		registry.destroy(entity);
@@ -80,13 +80,26 @@ namespace engine
 		return create_entity(world, parent);
 	}
 
-	Entity create_pivot(World& world, const math::Vector position, Entity parent)
+	Entity create_pivot(World& world, const math::Vector& position, Entity parent)
 	{
 		auto pivot = create_pivot(world, parent);
 
 		auto t = world.get_transform(pivot);
 
 		t.set_position(position);
+
+		return pivot;
+	}
+
+	Entity create_pivot(World& world, const math::Vector& position, const math::Vector& rotation, const math::Vector& scale, Entity parent)
+	{
+		auto pivot = create_pivot(world, parent);
+
+		auto t = world.get_transform(pivot);
+
+		t.set_position(position);
+		t.set_rotation(rotation);
+		t.set_scale(scale);
 
 		return pivot;
 	}

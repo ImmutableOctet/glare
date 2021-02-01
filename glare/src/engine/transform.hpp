@@ -134,6 +134,7 @@ namespace engine
 			void set_scale(const math::Vector& scale);
 			void set_basis(const math::RotationMatrix& basis);
 
+			// Euler angles. (Pitch, Yaw, Roll)
 			void set_rotation(const math::Vector& rv);
 			void set_local_rotation(const math::Vector& rv);
 

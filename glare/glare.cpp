@@ -1,4 +1,7 @@
 #include <core.hpp>
+#include <util/log.hpp>
+#include <spdlog/sinks/stdout_color_sinks.h>
+
 //#include "src/graphics/graphics.hpp"
 
 #include <iostream>
@@ -35,6 +38,9 @@ namespace glare
 
 	int exec(int argc, char** argv)
 	{
+		auto console = spdlog::stdout_color_mt("console");
+		auto err_logger = spdlog::stderr_color_mt("stderr");
+
 		return test(argc, argv);
 	}
 }

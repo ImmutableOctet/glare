@@ -89,7 +89,7 @@ namespace graphics
 		return {};
 	}
 
-	Model Model::Load(pass_ref<Context> context, ResourceManager& resource_manager, const std::string& path, pass_ref<Shader> default_shader)
+	Model Model::Load(pass_ref<Context> context, const std::string& path, pass_ref<Shader> default_shader)
 	{
 		Model model;
 

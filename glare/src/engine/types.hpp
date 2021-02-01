@@ -25,14 +25,18 @@ namespace engine
 		Pitch = (1 << 0),
 		Yaw   = (1 << 1),
 		Roll  = (1 << 2),
-	}; FLAG_ENUM(std::uint8_t, Axis);
+	};
+	
+	FLAG_ENUM(std::uint8_t, Axis);
 
 	enum class LightType : std::uint8_t
 	{
 		Point,
 		Directional,
 		Spotlight,
-	}; FLAG_ENUM(std::uint8_t, LightType);
+	};
+	
+	FLAG_ENUM(std::uint8_t, LightType);
 
 	constexpr auto& null = entt::null;
 }

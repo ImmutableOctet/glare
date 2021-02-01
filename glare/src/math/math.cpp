@@ -1,6 +1,9 @@
 #include "math.hpp"
+#include "bullet.hpp"
 
 #include <cmath>
+
+#include <glm/gtc/type_ptr.hpp>
 
 //#include <assimp/vector3.h>
 
@@ -70,5 +73,19 @@ namespace math
 	RotationMatrix rotation_from_vector(const Vector& rv)
 	{
 		return (rotation_yaw(rv.y) * rotation_pitch(rv.x) * rotation_roll(rv.z));
+	}
+
+	Vector3D to_vector(const btVector3& v)
+	{
+		return { v.getX(), v.getY(), v.getZ() };
+	}
+
+	Matrix to_matrix(const btTransform& t)
+	{
+		Matrix m;
+
+		t.getOpenGLMatrix(glm::value_ptr(m));
+
+		return m;
 	}
 }

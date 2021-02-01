@@ -53,7 +53,7 @@ namespace app
 			std::uint64_t update_counter = 0;
 			std::uint64_t render_counter = 0;
 
-			DeltaTime delta_time;
+			//DeltaTime delta_time;
 			input::InputHandler input;
 			UpdateRate fixed_update_rate;
 		protected:
@@ -74,7 +74,7 @@ namespace app
 
 			virtual void fixed_update();
 
-			virtual void update(const DeltaTime& delta_time) abstract;
+			virtual void update(Milliseconds time) abstract; // const DeltaTime& delta_time
 			virtual void render() abstract;
 
 			virtual void on_keydown(const keyboard_event_t& event);

@@ -21,7 +21,14 @@ namespace graphics
 			ContextHandle handle;
 		public:
 			inline ContextHandle get_handle() const { return handle; }
-			inline ref<Context> get_context() const { return context.lock(); }
+			inline ref<Context> get_context() const
+			{
+				auto ctx = context.lock();
+
+				//ASSERT(ctx);
+
+				return ctx;
+			}
 
 			bool operator==(const Resource& rhs) const;
 			inline bool operator!=(const Resource& rhs) const { return !operator==(rhs); }

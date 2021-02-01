@@ -6,7 +6,10 @@
 
 namespace app
 {
-	Application::Application(UpdateRate update_rate) : init_libraries(), delta_time(update_rate), fixed_update_rate(update_rate)
+	Application::Application(UpdateRate update_rate) :
+		init_libraries(),
+		//delta_time(update_rate),
+		fixed_update_rate(update_rate)
 	{
 		auto time = milliseconds();
 
@@ -52,8 +55,6 @@ namespace app
 
 	void Application::run()
 	{
-		auto time = milliseconds();
-
 		while (is_running())
 		{
 			if (!handle_events())
@@ -63,15 +64,12 @@ namespace app
 				break; // return;
 			}
 
-			time = milliseconds();
+			auto time = milliseconds();
 
 			// Update timed events.
 			*this << time;
 
-			// Update the delta-timer.
-			delta_time << time;
-
-			update(delta_time); update_counter++;
+			update(time); update_counter++;
 			render(); render_counter++;
 		}
 	}

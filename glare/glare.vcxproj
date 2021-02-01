@@ -93,6 +93,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <PreprocessToFile>false</PreprocessToFile>
+      <AdditionalIncludeDirectories>D:\vcpkg\installed\x86-windows\include\bullet;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -111,6 +112,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <PreprocessToFile>false</PreprocessToFile>
+      <AdditionalIncludeDirectories>D:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -131,6 +133,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <PreprocessToFile>false</PreprocessToFile>
+      <AdditionalIncludeDirectories>D:\vcpkg\installed\x86-windows\include\bullet;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -153,6 +156,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <PreprocessToFile>false</PreprocessToFile>
+      <AdditionalIncludeDirectories>D:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -207,6 +211,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\app\window.hpp" />
     <ClInclude Include="src\core.hpp" />
     <ClInclude Include="src\debug.hpp" />
+    <ClInclude Include="src\engine\collision.hpp" />
     <ClInclude Include="src\engine\components.hpp" />
     <ClInclude Include="src\engine\engine.hpp" />
     <ClInclude Include="src\engine\events\events.hpp" />
@@ -218,14 +223,20 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\engine\resource_manager.hpp" />
     <ClInclude Include="src\engine\transform.hpp" />
     <ClInclude Include="src\engine\types.hpp" />
+    <ClInclude Include="src\engine\movement_state.hpp" />
     <ClInclude Include="src\engine\world\camera.hpp" />
     <ClInclude Include="src\engine\world\debug\debug.hpp" />
     <ClInclude Include="src\engine\world\debug\debug_camera.hpp" />
     <ClInclude Include="src\engine\world\debug\debug_move.hpp" />
-    <ClInclude Include="src\engine\world\debug\spin_component.hpp" />
     <ClInclude Include="src\engine\world\entity.hpp" />
+    <ClInclude Include="src\engine\world\follow_component.hpp" />
     <ClInclude Include="src\engine\world\graphics_entity.hpp" />
     <ClInclude Include="src\engine\world\light.hpp" />
+    <ClInclude Include="src\engine\world\physics.hpp" />
+    <ClInclude Include="src\engine\world\player.hpp" />
+    <ClInclude Include="src\engine\world\spin_component.hpp" />
+    <ClInclude Include="src\engine\world\stage.hpp" />
+    <ClInclude Include="src\engine\world\target_component.hpp" />
     <ClInclude Include="src\engine\world\world.hpp" />
     <ClInclude Include="src\graphics\bind.hpp" />
     <ClInclude Include="src\graphics\canvas.hpp" />
@@ -247,6 +258,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\graphics\texture.hpp" />
     <ClInclude Include="src\graphics\types.hpp" />
     <ClInclude Include="src\graphics\vertex.hpp" />
+    <ClInclude Include="src\math\bullet.hpp" />
     <ClInclude Include="src\math\math.hpp" />
     <ClInclude Include="src\tests\model_test\model_test.hpp" />
     <ClInclude Include="src\tests\signal_test\signal_test.hpp" />
@@ -256,9 +268,12 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\util\bitfield.hpp" />
     <ClInclude Include="src\util\bitflag.hpp" />
     <ClInclude Include="src\util\io.hpp" />
+    <ClInclude Include="src\util\json.hpp" />
     <ClInclude Include="src\util\lib.hpp" />
+    <ClInclude Include="src\util\log.hpp" />
     <ClInclude Include="src\util\memory.hpp" />
     <ClInclude Include="src\util\shorthand.hpp" />
+    <ClInclude Include="src\util\string.hpp" />
     <ClInclude Include="src\util\util.hpp" />
     <ClInclude Include="src\util\variant.hpp" />
   </ItemGroup>
@@ -288,17 +303,24 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\app\input\mouse.cpp" />
     <ClCompile Include="src\app\timer.cpp" />
     <ClCompile Include="src\app\window.cpp" />
+    <ClCompile Include="src\engine\collision.cpp" />
     <ClCompile Include="src\engine\free_look.cpp" />
     <ClCompile Include="src\engine\model_component.cpp" />
     <ClCompile Include="src\engine\relationship.cpp" />
+    <ClCompile Include="src\engine\resource_manager.cpp" />
     <ClCompile Include="src\engine\transform.cpp" />
     <ClCompile Include="src\engine\world\camera.cpp" />
     <ClCompile Include="src\engine\world\debug\debug_camera.cpp" />
     <ClCompile Include="src\engine\world\debug\debug_move.cpp" />
-    <ClCompile Include="src\engine\world\debug\spin_component.cpp" />
     <ClCompile Include="src\engine\world\entity.cpp" />
+    <ClCompile Include="src\engine\world\follow_component.cpp" />
     <ClCompile Include="src\engine\world\graphics_entity.cpp" />
     <ClCompile Include="src\engine\world\light.cpp" />
+    <ClCompile Include="src\engine\world\physics.cpp" />
+    <ClCompile Include="src\engine\world\player.cpp" />
+    <ClCompile Include="src\engine\world\spin_component.cpp" />
+    <ClCompile Include="src\engine\world\stage.cpp" />
+    <ClCompile Include="src\engine\world\target_component.cpp" />
     <ClCompile Include="src\engine\world\world.cpp" />
     <ClCompile Include="src\graphics\canvas.cpp" />
     <ClCompile Include="src\graphics\context_state.cpp" />
@@ -320,6 +342,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\tests\vertex_element_types\vertex_element_types.cpp" />
     <ClCompile Include="src\util\io.cpp" />
     <ClCompile Include="src\util\lib.cpp" />
+    <ClCompile Include="src\util\string.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -2,6 +2,7 @@
 
 #include <app/window.hpp>
 
+#include "resource.hpp"
 #include "shader.hpp"
 #include "texture.hpp"
 #include "context.hpp"

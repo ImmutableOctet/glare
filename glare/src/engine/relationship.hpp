@@ -18,6 +18,12 @@ namespace engine
 			// Internal use only.
 			Relationship(Entity parent=null);
 
+			Relationship(Relationship&&) = default;
+			Relationship& operator=(Relationship&&) = default;
+
+			Relationship(const Relationship&) = default;
+			Relationship& operator=(const Relationship&) = default;
+
 			inline std::uint32_t children() const { return child_count; }
 			inline bool has_children() const { return (children() > 0); }
 			

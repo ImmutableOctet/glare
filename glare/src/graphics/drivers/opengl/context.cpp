@@ -624,9 +624,9 @@ namespace graphics
 		glewInit();
 
 		// Initial configuration:
-		////toggle(flags, true);
+		toggle(flags, true);
 
-		glEnable(GL_DEPTH_TEST);
+		//glEnable(GL_DEPTH_TEST);
 
 
 		// TODO: Implement this using context-flags:

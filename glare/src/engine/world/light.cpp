@@ -7,7 +7,7 @@ namespace engine
 	{
 		auto light = create_pivot(world, position, parent);
 
-		world.get_registry().assign<LightComponent>(light, type, color);
+		world.get_registry().emplace<LightComponent>(light, type, color);
 
 		return light;
 	}

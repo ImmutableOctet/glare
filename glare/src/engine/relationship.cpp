@@ -3,6 +3,9 @@
 
 #include <math/math.hpp>
 
+// Debugging related:
+#include <iostream>
+
 namespace engine
 {
 	Relationship::Relationship(Entity parent)
@@ -11,7 +14,7 @@ namespace engine
 	/*
 	void Relationship::set_parent(Registry& registry, Entity self, Entity parent)
 	{
-		auto parent_rel = registry.get_or_assign<Relationship>(parent);
+		auto parent_rel = registry.get_or_emplace<Relationship>(parent);
 
 		parent_rel.add_child(registry, parent, self);
 
@@ -21,11 +24,11 @@ namespace engine
 
 	void Relationship::set_parent(Registry& registry, Entity self, Entity parent)
 	{
-		auto parent_relationship = registry.get_or_assign<Relationship>(parent);
+		auto parent_relationship = registry.get_or_emplace<Relationship>(parent);
 
 		parent_relationship.add_child(registry, parent, self);
 
-		registry.replace<Relationship>(parent, [&](auto& r) { r = parent_relationship; });
+		registry.replace<Relationship>(parent, std::move(parent_relationship)); // [&](auto& r) { r = std::move(parent_relationship); }
 	}
 
 	Entity Relationship::add_child(Registry& registry, Entity self, Entity child)
@@ -63,15 +66,46 @@ namespace engine
 			append_child(last_child_rel, relationship, last_child, child);
 		}
 
-		registry.assign_or_replace<Relationship>(child, relationship);
+		math::Matrix current_matrix;
+
+		std::optional<Transform> child_transform = Transform::get_transform_safe(registry, child);
+
+		if (child_transform)
+		{
+			current_matrix = child_transform->get_matrix();
+		}
+
+		if ((self != null) && (((int)self) != 0))
+		{
+			std::cout << "Adding child (" << (int)child << ") to parent (" << (int)self << ")\n";
+
+			//_dbg_is_actual_add = true;
+		}
+
+		registry.emplace_or_replace<Relationship>(child, relationship);
 
 		child_count++;
+
+		if (child_transform)
+		{
+			child_transform->set_matrix(current_matrix);
+		}
 
 		return child;
 	}
 
 	Entity Relationship::remove_child(Registry& registry, Entity child, Entity self, bool remove_in_registry)
 	{
+		//bool _dbg_is_actual_removal = false;
+
+		// Debugging related:
+		if ((self != null) && (((int)self) != 0))
+		{
+			std::cout << "Removing child (" << (int)child << ") from parent (" << (int)self << ")\n";
+
+			//_dbg_is_actual_removal = true;
+		}
+
 		auto child_relationship = registry.get<Relationship>(child);
 
 		math::Matrix current_matrix;
@@ -91,11 +125,16 @@ namespace engine
 		}
 		else
 		{
-			registry.replace<Relationship>(child, [&](auto& r) { r = child_relationship; });
+			registry.replace<Relationship>(child, std::move(child_relationship)); // [&](auto& r) { r = child_relationship; }
 		}
 
 		if (child_transform)
 		{
+			//if (_dbg_is_actual_removal)
+			//{
+			std::cout << "Re-applying matrix...\n";
+			//}
+
 			child_transform->set_matrix(current_matrix);
 		}
 
@@ -179,6 +218,7 @@ namespace engine
 		return current_rel;
 	}
 
+	// Internal subroutine.
 	Relationship* Relationship::remove_previous_parent(Registry& registry, Entity entity)
 	{
 		auto* relationship = registry.try_get<Relationship>(entity);
