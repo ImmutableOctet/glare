@@ -270,6 +270,7 @@ namespace glare::tests
 		auto camera_t = transform(world.get_camera());
 		auto camera_pos = camera_t.get_position();
 
+		//auto transform = world.get_transform(world.get_camera());
 		auto transform = get_named_transform(target_obj);
 
 		auto angle = glm::normalize(camera_pos - transform.get_position());
@@ -295,11 +296,21 @@ namespace glare::tests
 
 		if (keyboard.get_key(SDL_SCANCODE_Z))
 		{
-			transform.move(delta * 0.1f * angle * -1.0f, true);
+			//dbg->info("Angle: {}", angle);
+
+			//transform.move(angle * delta * 0.001f * -1.0f, true);
+
+			//transform.move({0.0f, 0.01f * delta, 0.0f});
+
+			//transform.set_position({ 10.0f, 20.01f, 30.0f });
+			transform.set_position({ 84.0751f, 69.8489f, 71.7952f });
+
+			dbg->info("New Position: {}", transform.get_position());
 		}
 
 		if (keyboard.get_key(SDL_SCANCODE_R))
 		{
+			transform.set_position({ 10.7f, 46.0f, -13.0f });
 			auto transform = get_named_transform("Player");
 
 			transform.rotateY(math::radians(10.0f * delta));
@@ -560,6 +571,25 @@ namespace glare::tests
 					auto t = transform(target_entity);
 
 					std::cout << "\nCamera:\n";
+					std::cout << "Position: " << t.get_position() << '\n';
+					std::cout << "Rotation: " << math::degrees(t.get_rotation()) << '\n';
+					std::cout << "Scale: " << t.get_scale() << '\n';
+				}
+
+				//engine::SimpleFollowComponent::update(world);
+
+				break;
+			}
+
+			case SDLK_g:
+			{
+				auto target_entity = world.get_player(1);
+
+				if (target_entity != engine::null)
+				{
+					auto t = transform(target_entity);
+
+					std::cout << "\nPlayer:\n";
 					std::cout << "Position: " << t.get_position() << '\n';
 					std::cout << "Rotation: " << math::degrees(t.get_rotation()) << '\n';
 					std::cout << "Scale: " << t.get_scale() << '\n';

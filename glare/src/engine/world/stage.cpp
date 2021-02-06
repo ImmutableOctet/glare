@@ -59,6 +59,8 @@ namespace engine
 
 			dbg->info("Creating pivot...");
 
+			//parent = create_pivot(world, parent);
+
 			stage = create_pivot(world, position, rotation, scale, parent);
 
 			registry.emplace<NameComponent>(stage, util::get_value<std::string>(data, "title", util::get_value<std::string>(data, "name", "Unknown Stage")));
@@ -77,8 +79,9 @@ namespace engine
 			auto player_char  = get_character(util::get_value<std::string>(player_cfg, "character", "default"));
 			auto player_name  = util::get_value<std::string>(player_cfg, "name", DEFAULT_PLAYER_NAME);
 			auto player_idx   = util::get_value<PlayerIndex>(player_cfg, "index", player_idx_counter);
+			auto player_parent = stage; // null;
 
-			auto player = create_player(world, player_tform, player_char, player_name, stage, player_idx);
+			auto player = create_player(world, player_tform, player_char, player_name, player_parent, player_idx);
 
 			if (player_idx != NoPlayer)
 			{
@@ -182,7 +185,9 @@ namespace engine
 
 		bool make_active = util::get_value(camera_cfg, "make_active", false);
 
-		auto camera = create_camera(world, params, null, make_active); // stage <-- TODO: look into weird bug where camera goes flying when a parent is assigned.
+		auto camera_parent = null; // parent; // < --TODO: look into weird bug where camera goes flying when a parent is assigned.
+
+		auto camera = create_camera(world, params, camera_parent, make_active);
 
 		bool is_debug_camera = util::get_value(camera_cfg, "debug", false);
 

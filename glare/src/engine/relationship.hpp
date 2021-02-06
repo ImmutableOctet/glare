@@ -50,6 +50,11 @@ namespace engine
 
 					auto next_child = relationship.next;
 
+					if (next_child == child)
+					{
+						break;
+					}
+
 					if (!fn(child, relationship, next_child))
 					{
 						break;
@@ -83,9 +88,9 @@ namespace engine
 			}
 		protected:
 			// Returns the 'Entity' identifier representing this object.
-			Entity forward_previous(Registry& registry, bool remove_next=true);
+			Entity forward_previous(Registry& registry);
 
-			Relationship& collapse_child(Registry& registry, Relationship& child_relationship, Entity self=null);
+			Relationship& collapse_child(Registry& registry, Relationship& child_relationship, Entity self, Entity child);
 
 			static Relationship& append_child(Relationship& prev_rel, Relationship& current_rel, Entity child, Entity next_child);
 

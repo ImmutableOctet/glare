@@ -23,4 +23,9 @@ namespace util
 
         return {};
     }
+
+    std::smatch parse_regex(const std::string& str, const std::string& regex_str)
+    {
+        return get_regex_groups(str, std::regex(regex_str));
+    }
 }

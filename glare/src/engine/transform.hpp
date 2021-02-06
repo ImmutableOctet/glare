@@ -160,6 +160,7 @@ namespace engine
 
 			// Returns a copy of the 'model' matrix.
 			math::Matrix get_local_matrix();
+			math::Matrix get_inverse_local_matrix();
 
 			void set_matrix(const math::Matrix& m);
 

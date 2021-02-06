@@ -24,15 +24,34 @@ namespace engine
 
 	void Relationship::set_parent(Registry& registry, Entity self, Entity parent)
 	{
-		auto parent_relationship = registry.get_or_emplace<Relationship>(parent);
+		auto& parent_relationship = registry.get_or_emplace<Relationship>(parent);
 
 		parent_relationship.add_child(registry, parent, self);
 
-		registry.replace<Relationship>(parent, std::move(parent_relationship)); // [&](auto& r) { r = std::move(parent_relationship); }
+		//registry.replace<Relationship>(parent, std::move(parent_relationship)); // [&](auto& r) { r = std::move(parent_relationship); }
 	}
 
 	Entity Relationship::add_child(Registry& registry, Entity self, Entity child)
 	{
+		bool has_child = false;
+
+		enumerate_children(registry, [&](auto current, auto& relation, auto next)
+		{
+			if (current == child)
+			{
+				has_child = true;
+
+				return false;
+			}
+
+			return true;
+		});
+
+		if (has_child)
+		{
+			return child;
+		}
+
 		auto* prev_rel = remove_previous_parent(registry, child);
 
 		Relationship relationship;
@@ -66,14 +85,17 @@ namespace engine
 			append_child(last_child_rel, relationship, last_child, child);
 		}
 
+		///*
 		math::Matrix current_matrix;
 
+		std::optional<Transform> self_transform = Transform::get_transform_safe(registry, self);
 		std::optional<Transform> child_transform = Transform::get_transform_safe(registry, child);
 
 		if (child_transform)
 		{
-			current_matrix = child_transform->get_matrix();
+			current_matrix = self_transform->get_inverse_matrix() * child_transform->get_local_matrix();
 		}
+		//*/
 
 		if ((self != null) && (((int)self) != 0))
 		{
@@ -82,14 +104,16 @@ namespace engine
 			//_dbg_is_actual_add = true;
 		}
 
-		registry.emplace_or_replace<Relationship>(child, relationship);
+		registry.emplace_or_replace<Relationship>(child, std::move(relationship));
 
-		child_count++;
+		this->child_count++;
 
+		///*
 		if (child_transform)
 		{
 			child_transform->set_matrix(current_matrix);
 		}
+		//*/
 
 		return child;
 	}
@@ -108,6 +132,7 @@ namespace engine
 
 		auto child_relationship = registry.get<Relationship>(child);
 
+		///*
 		math::Matrix current_matrix;
 
 		std::optional<Transform> child_transform = Transform::get_transform_safe(registry, child);
@@ -116,8 +141,9 @@ namespace engine
 		{
 			current_matrix = child_transform->get_matrix();
 		}
+		//*/
 
-		collapse_child(registry, child_relationship, self); // ..., child, ...
+		collapse_child(registry, child_relationship, self, child);
 
 		if (remove_in_registry)
 		{
@@ -128,6 +154,7 @@ namespace engine
 			registry.replace<Relationship>(child, std::move(child_relationship)); // [&](auto& r) { r = child_relationship; }
 		}
 
+		///*
 		if (child_transform)
 		{
 			//if (_dbg_is_actual_removal)
@@ -137,6 +164,7 @@ namespace engine
 
 			child_transform->set_matrix(current_matrix);
 		}
+		//*/
 
 		return child;
 	}
@@ -174,28 +202,35 @@ namespace engine
 		return { child, relationship };
 	}
 
-	Entity Relationship::forward_previous(Registry& registry, bool remove_next)
+	Entity Relationship::forward_previous(Registry& registry)
 	{
-		if (prev == null)
+		if (this->prev == null)
 		{
+			if (this->next != null)
+			{
+				auto& next_rel = registry.get<Relationship>(this->next);
+
+				next_rel.prev = this->prev; // null;
+
+				this->next = null;
+			}
+
 			return null;
 		}
 
-		auto& previous_rel = registry.get<Relationship>(prev);
+		auto& previous_rel = registry.get<Relationship>(this->prev);
 
 		auto self = previous_rel.next;
 
 		previous_rel.next = this->next;
 
-		if (remove_next)
-		{
-			this->next = null;
-		}
+		this->next = null;
+		this->prev = null;
 
 		return self;
 	}
 
-	Relationship& Relationship::collapse_child(Registry& registry, Relationship& child_relationship, Entity self) // Entity child
+	Relationship& Relationship::collapse_child(Registry& registry, Relationship& child_relationship, Entity self, Entity child)
 	{
 		//ASSERT(registry.has<Relationship>(child));
 
@@ -203,9 +238,20 @@ namespace engine
 
 		//ASSERT((self == null) || (child_relationship.parent == self));
 
-		child_relationship.forward_previous(registry);
+		auto next_child = child_relationship.next;
 
-		child_count--;
+		child_relationship.forward_previous(registry);
+		child_relationship.parent = null;
+
+		// If this was the first child, set the new "first child"
+		// to the next child after the one we're collapsing.
+		// ('null' if no other children remain)
+		if (this->first == child)
+		{
+			this->first = next_child;
+		}
+
+		this->child_count--;
 
 		return child_relationship;
 	}

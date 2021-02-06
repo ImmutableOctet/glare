@@ -21,9 +21,11 @@ namespace engine
 
 	std::optional<TransformViewData> TransformViewData::get_parent_data(const TransformViewData& data)
 	{
-		if (data.relationship.get_parent() != null)
+		auto parent = data.relationship.get_parent();
+
+		if (parent != null)
 		{
-			return TransformViewData(data.registry, data.relationship.get_parent());
+			return TransformViewData(data.registry, parent);
 		}
 
 		return std::nullopt;
@@ -187,7 +189,7 @@ namespace engine
 
 		set_local_position((parent) ? (parent->get_inverse_matrix() * position) : position);
 
-		invalidate();
+		//invalidate();
 	}
 
 	void Transform::set_scale(const math::Vector& scale)
@@ -196,7 +198,7 @@ namespace engine
 
 		set_local_scale((parent) ? (scale / parent->get_scale()) : scale);
 
-		invalidate();
+		//invalidate();
 	}
 
 	void Transform::set_basis(const math::RotationMatrix& basis)
@@ -216,7 +218,7 @@ namespace engine
 
 		//set_local_basis((parent) ? (parent->get_basis()) : basis );
 
-		invalidate();
+		//invalidate();
 	}
 
 	void Transform::set_rotation(const math::Vector& rv)
@@ -362,6 +364,11 @@ namespace engine
 	math::Matrix Transform::get_local_matrix()
 	{
 		return update_local_matrix();
+	}
+
+	math::Matrix Transform::get_inverse_local_matrix()
+	{
+		return glm::inverse(get_local_matrix());
 	}
 
 	void Transform::set_matrix(const math::Matrix& m)

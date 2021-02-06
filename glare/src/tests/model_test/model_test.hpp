@@ -10,6 +10,8 @@
 
 #include <graphics/mesh.hpp>
 
+#include <util/log.hpp>
+
 namespace glare::tests
 {
 	class ModelTest : public app::GraphicsApplication
@@ -63,6 +65,8 @@ namespace glare::tests
 			engine::World world;
 
 			//engine::Entity model_entity;
+
+			util::Logger dbg = util::log::get_console();
 
 			ModelTest(bool auto_execute=true);
 
