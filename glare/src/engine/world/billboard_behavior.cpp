@@ -15,22 +15,25 @@ namespace engine
 		});
 	}
 
-	void BillboardBehavior::apply(World& world, Entity entity, Transform& transform)
+	void BillboardBehavior::apply(World& world, Entity entity, Transform& transform, bool update_target)
 	{
 		if (!enabled)
 		{
 			return;
 		}
 
-		auto camera = world.get_camera();
-
-		if (camera == null)
+		if (update_target)
 		{
-			return;
+			auto camera = world.get_camera();
+
+			if (camera == null)
+			{
+				return;
+			}
+
+			target = camera;
 		}
 
-		auto camera_transform = world.get_transform(camera);
-
-		transform.look_at(camera_transform); // world.get_up_vector()
+		TargetComponent::apply(world, entity, transform);
 	}
 }

@@ -7,6 +7,7 @@
 //#include <cmath>
 #include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
+#include <glm/mat3x4.hpp>
 
 #include <tuple>
 
@@ -25,11 +26,16 @@ namespace math
 	using Matrix3x3 = glm::mat3; using mat3f = Matrix3x3; using mat3 = mat3f;
 	using Matrix4x4 = glm::mat4; using mat4f = Matrix4x4; using mat4 = mat4f;
 
-	using AffineMatrix4 = glm::mat4x4; using affine_mat4 = AffineMatrix4; // glm::mat3x4
+	//using AffineMatrix4 = glm::mat4x4;
+	using AffineMatrix4 = glm::mat3x4;
+	using affine_mat4 = AffineMatrix4;
 
 	using Vector = Vector3D;
-	using Matrix = AffineMatrix4;
+	using Matrix = Matrix4x4; // AffineMatrix4;
 	using RotationMatrix = Matrix3x3;
+
+	using Quaternion = glm::quat;
+	using Quat = Quaternion;
 
 	using TransformVectors = std::tuple<Vector, Vector, Vector>; // Position, Rotation, Scale
 
@@ -126,6 +132,75 @@ namespace math
 
 	Vector3D to_vector(const btVector3& v);
 	Matrix to_matrix(const btTransform& t);
+
+	Vector abs(Vector v);
+
+	float direction_to_angle(const Vector2D& dir);
+	float direction_to_yaw(const Vector3D& dir);
+
+	template <typename T>
+	inline T clamp(T value, T min_value, T max_value)
+	{
+		if (value <= min_value)
+		{
+			return min_value;
+		}
+
+		if (value >= max_value)
+		{
+			return value;
+		}
+
+		return value;
+	}
+
+	template <typename T>
+	inline T wrap_angle(T angle)
+	{
+		while (angle < 0)
+		{
+			angle += 360;
+		}
+
+		return angle;
+	}
+
+	template <typename T_Value, typename T_Delta>
+	inline auto lerp(T_Value value, T_Value dest, T_Delta delta)
+	{
+		return (value + ((dest - value) * delta));
+	}
+
+	inline Vector nlerp(Vector a, Vector b, float speed)
+	{
+		return glm::normalize(lerp(a, b, speed));
+
+		//return (a + (glm::normalize(b - a) * speed));
+	}
+
+	float nlerp_radians(Vector origin, Vector destination, float speed);
+
+	inline float nlerp_degrees(Vector origin, Vector destination, float speed)
+	{
+		return degrees(nlerp_radians(origin, destination, speed));
+	}
+
+	float nlerp_radians(float origin, float destination, float speed);
+
+	inline float nlerp_degrees(float origin, float destination, float speed)
+	{
+		return degrees(nlerp_radians(degrees(origin), degrees(destination), speed));
+	}
+
+	Quaternion slerp(Quaternion v0, Quaternion v1, float t);
+}
+
+namespace graphics
+{
+	using ColorRGB = math::vec3f;
+	using ColorRGBA = math::vec4f;
+
+	using Color = ColorRGB;
 }
 
 template <typename OutStream>

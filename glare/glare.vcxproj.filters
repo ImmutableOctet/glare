@@ -440,6 +440,9 @@
     <Filter Include="lib\stb\deprecated">
       <UniqueIdentifier>{8fb11333-0e34-47c0-8db7-0dc3adac0fdb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shaders">
+      <UniqueIdentifier>{28e2a9dd-2b3f-4112-9615-ae281578f049}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\tests\model_test\model_test.cpp">

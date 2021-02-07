@@ -212,7 +212,7 @@ namespace glare::tests
 		auto cube = load_model("assets/tests/model_test/cube.b3d");
 		
 		registry.emplace<engine::NameComponent>(cube, "Spinning Cube");
-		registry.emplace<engine::SpinBehavior>(cube);
+		//registry.emplace<engine::SpinBehavior>(cube);
 
 		world.set_parent(cube, player);
 
@@ -277,10 +277,12 @@ namespace glare::tests
 
 		float delta = world.delta();
 
+		/*
 		if (keyboard.get_key(SDL_SCANCODE_Q))
 		{
 			world.set_parent(world.get_camera(), world.get_by_name(engine::DEFAULT_PLAYER_NAME));
 		}
+		*/
 
 		if (keyboard.get_key(SDL_SCANCODE_V))
 		{
@@ -539,9 +541,18 @@ namespace glare::tests
 				break;
 			}
 
+			case SDLK_q:
+			{
+				auto t = world.get_transform(world.get_root());
+
+				t.move({0.0f, 0.01f * world.get_delta_time(), 0.0f});
+
+				break;
+			}
+
 			case SDLK_e:
 			{
-				auto child_obj = world.get_by_name("Spinning Cube");
+				auto child_obj = world.get_player(1); // world.get_camera();
 
 				const auto& rel = world.get_registry().get<engine::Relationship>(child_obj);
 
@@ -550,9 +561,11 @@ namespace glare::tests
 
 				if ((rel_parent == engine::null) || (rel_parent == root))
 				{
-					auto player_obj = world.get_by_name(engine::DEFAULT_PLAYER_NAME);
+					//auto parent_obj = world.get_by_name(engine::DEFAULT_PLAYER_NAME);
 
-					world.set_parent(child_obj, player_obj);
+					auto parent_obj = world.get_by_name("Rotating Platform"); // "Spinning Cube"
+
+					world.set_parent(child_obj, parent_obj);
 				}
 				else
 				{

@@ -9,10 +9,12 @@
 #include "follow_component.hpp"
 #include "billboard_behavior.hpp"
 #include "rave_component.hpp"
+#include "spin_component.hpp"
 
 #include "debug/debug.hpp"
 
 #include <engine/name_component.hpp>
+#include <engine/model_component.hpp>
 
 #include <util/json.hpp>
 #include <util/log.hpp>
@@ -31,7 +33,8 @@ namespace engine
 	{
 		{ "camera", Stage::CreateCamera },
 		{ "follow_sphere", Stage::CreateFollowSphere },
-		{ "billboard", Stage::CreateBillboard }
+		{ "billboard", Stage::CreateBillboard },
+		{ "platform", Stage::CreatePlatform }
 	};
 
     Entity Stage::Load(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const util::json& data)
@@ -132,6 +135,7 @@ namespace engine
 					if (obj != null)
 					{
 						apply_transform(world, dbg, obj, obj_cfg);
+						apply_color(world, dbg, obj, obj_cfg);
 					}
 				}
 			}
@@ -185,7 +189,7 @@ namespace engine
 
 		bool make_active = util::get_value(camera_cfg, "make_active", false);
 
-		auto camera_parent = null; // parent; // < --TODO: look into weird bug where camera goes flying when a parent is assigned.
+		auto camera_parent = parent; // < --TODO: look into weird bug where camera goes flying when a parent is assigned.
 
 		auto camera = create_camera(world, params, camera_parent, make_active);
 
@@ -209,7 +213,7 @@ namespace engine
 				if ((!is_debug_camera))
 				{
 					registry.emplace<TargetComponent>(camera, player, 0.5f); // ((is_debug_camera) ? 0.0f : 0.5f)
-					registry.emplace<SimpleFollowComponent>(camera, player, 20.0f, 0.8f, 200.0f, true);
+					registry.emplace<SimpleFollowComponent>(camera, player, 25.0f, 0.7f, 100.0f, true);
 				}
 			}
 		}
@@ -247,18 +251,52 @@ namespace engine
 		auto& registry = world.get_registry();
 		auto obj = load_model(world, "assets/objects/billboard/billboard.b3d", parent);
 
-		registry.emplace<BillboardBehavior>(obj);
+		auto mode = BillboardBehavior::resolve_mode(util::get_value<std::string>(data, "mode"));
+
+		auto interp = util::get_value(data, "speed", 0.5f);
+
+		if (mode == BillboardBehavior::Mode::Yaw) // Pitch, Roll
+		{
+			interp = math::radians(interp);
+		}
+
+		bool allow_roll = util::get_value(data, "allow_roll", true); // false
+
+		auto bb = BillboardBehavior { { null, interp, mode, allow_roll } };
+
+		registry.emplace<BillboardBehavior>(obj, bb);
+
+		return obj;
+	}
+
+	Entity Stage::CreatePlatform(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
+	{
+		auto& registry = world.get_registry();
+		auto obj = load_model(world, "assets/objects/platform/platform.b3d", parent);
+
+		auto mode = util::get_value<std::string>(data, "mode", "static");
+
+		if (mode == "static")
+		{
+			// Nothing so far.
+		}
+		else if (mode == "rotate")
+		{
+			auto direction = util::get_vector(data, "direction", {0.0f, 0.05f, 0.0f});
+
+			registry.emplace<SpinBehavior>(obj, direction);
+		}
 
 		return obj;
 	}
 
 	Entity Stage::resolve_object_reference(const std::string& query, World& world, const PlayerObjectMap& player_objects, const ObjectMap& objects)
 	{
-		static const auto re = std::regex("(object|player)(\\@|\\#)\"?([\\w\\s\\d]+)\"?"); // constexpr
+		static const auto re = std::regex("(object|player)?(\\@|\\#)\"?([\\w\\s\\d\\-]+)\"?"); // constexpr
 
 		auto results = util::get_regex_groups(query, re);
 
-		auto target_pool = results[1];
+		std::string target_pool = results[1];
 
 		if (target_pool == "player")
 		{
@@ -276,7 +314,7 @@ namespace engine
 				return p->second;
 			}
 		}
-		else if (target_pool == "object")
+		else if ((target_pool.empty()) || (target_pool == "object"))
 		{
 			auto ref_type = results[2];
 
@@ -305,5 +343,30 @@ namespace engine
 	Transform Stage::apply_transform(World& world, util::Logger& dbg, Entity entity, const util::json& cfg)
 	{
 		return world.apply_transform(entity, get_transform_data(dbg, cfg));
-	};
+	}
+
+	std::optional<graphics::ColorRGBA> Stage::apply_color(World& world, util::Logger& dbg, Entity entity, const util::json& cfg)
+	{
+		//auto color = util::get_color(cfg, "color");
+
+		if (!cfg.contains("color"))
+		{
+			return std::nullopt;
+		}
+
+		auto& registry = world.get_registry();
+
+		auto* model = registry.try_get<ModelComponent>(entity);
+
+		if (model)
+		{
+			auto color = util::to_color(cfg["color"], 1.0f);
+
+			model->color = color;
+
+			return color;
+		}
+
+		return std::nullopt;
+	}
 }

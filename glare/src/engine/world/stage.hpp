@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <string>
 #include <tuple>
+#include <utility>
 
 //#define _ENFORCE_MATCHING_ALLOCATORS 0
 
@@ -43,6 +44,7 @@ namespace engine
 			static Entity CreateCamera(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data);
 			static Entity CreateFollowSphere(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data);
 			static Entity CreateBillboard(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data);
+			static Entity CreatePlatform(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data);
 
 			static Entity resolve_object_reference(const std::string& query, World& world, const PlayerObjectMap& player_objects, const ObjectMap& objects); // std::tuple<std::string, std::string>
 
@@ -62,6 +64,7 @@ namespace engine
 			};
 
 			static Transform apply_transform(World& world, util::Logger& dbg, Entity entity, const util::json& cfg);
+			static std::optional<graphics::ColorRGBA> apply_color(World& world, util::Logger& dbg, Entity entity, const util::json& cfg);
 
 			template <typename JsonArray, typename Pred>
 			static inline JsonArray ForEach(JsonArray&& arr, Pred&& pred)

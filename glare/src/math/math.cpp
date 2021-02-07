@@ -88,4 +88,71 @@ namespace math
 
 		return m;
 	}
+	
+	Vector abs(Vector v)
+	{
+		return { std::abs(v.x), std::abs(v.y), std::abs(v.z) };
+	}
+
+	float direction_to_angle(const Vector2D& dir)
+	{
+		//return std::atan2(std::cos(dir.y), std::sin(dir.x));
+		return std::atan2(dir.y, dir.x);
+	}
+
+	float direction_to_yaw(const Vector& dir)
+	{
+		return std::atan2(dir.x, -dir.z);
+	}
+
+	float nlerp_radians(Vector origin, Vector destination, float speed)
+	{
+		auto lerp_dir = nlerp(origin, destination, speed);
+
+		return direction_to_yaw(lerp_dir); // std::atan2(lerp_dir.x, -lerp_dir.z);
+	}
+
+	float nlerp_radians(float origin, float destination, float speed)
+	{
+		auto dir = Vector2D(std::cos(origin), std::sin(origin));
+		auto dest = Vector2D(std::cos(destination), std::sin(destination));
+
+		dir = lerp(dir, dest, speed);
+
+		return std::atan2(dir.y, dir.x);
+	}
+
+	Quaternion slerp(Quaternion v0, Quaternion v1, float t)
+	{
+		v0 = glm::normalize(v0);
+		v1 = glm::normalize(v1);
+
+		auto dot = glm::dot(v0, v1);
+
+		constexpr auto DOT_THRESHOLD = 0.9995f;
+
+		if (std::abs(dot) > DOT_THRESHOLD)
+		{
+			auto result = v0;
+
+			result += ((v1 - v0) * t);
+
+			return glm::normalize(result);
+		}
+
+		if (dot < 0.0f)
+		{
+			v1 = -v1;
+			dot = -dot;
+		}
+
+		dot = clamp(dot, -1.0f, 1.0f);
+
+		auto theta_0 = std::acos(dot);
+		auto theta   = (theta_0 * t);
+
+		auto v2 = glm::normalize(v1 - v0 * dot);
+
+		return (v0 * std::cos(theta) + v2 * std::sin(theta));
+	}
 }

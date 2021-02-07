@@ -78,6 +78,9 @@ namespace engine
 	{
 		public:
 			static std::optional<Transform> get_transform_safe(Registry& registry, Entity entity);
+
+			static math::RotationMatrix orientation(const math::Vector& origin, const math::Vector& target, const math::Vector& up={0.0f, 1.0f, 0.0f});
+			static math::Quaternion quat_orientation(const math::Vector& origin, const math::Vector& target, const math::Vector& up={0.0f, 1.0f, 0.0f});
 		protected:
 			using Dirty = _TransformComponent_Dirty;
 
@@ -118,13 +121,20 @@ namespace engine
 			// Global transformations:
 			math::Matrix get_matrix(bool force_refresh=false);
 			math::Matrix get_inverse_matrix(bool force_refresh = false);
+			math::Matrix get_camera_matrix();
 
 			math::Vector get_position();
 			math::Vector get_scale();
 			math::RotationMatrix get_basis();
 
+			// Retrieves the current rotation in the form of angles. (Pitch, Yaw, Roll)
 			math::Vector get_rotation();
+
+			// Retrieves the current local rotation in the form of angles. (Pitch, Yaw, Roll)
 			math::Vector get_local_rotation();
+
+			// Retrieves a normalized direction vector based on the transform's basis.
+			math::Vector get_direction_vector(const math::Vector forward={0.0f, 0.0f, -1.0f});
 
 			inline float rx() { return get_rotation().x; }
 			inline float ry() { return get_rotation().y; }
@@ -132,11 +142,15 @@ namespace engine
 
 			void set_position(const math::Vector& position);
 			void set_scale(const math::Vector& scale);
+
 			void set_basis(const math::RotationMatrix& basis);
+			void set_basis_q(const math::Quaternion& basis);
 
 			// Euler angles. (Pitch, Yaw, Roll)
 			void set_rotation(const math::Vector& rv);
 			void set_local_rotation(const math::Vector& rv);
+
+			math::Vector get_local_direction_vector(const math::Vector forward = { 0.0f, 0.0f, -1.0f }); // 1.0f
 
 			void set_rx(float rx);
 			void set_ry(float ry);
@@ -144,11 +158,15 @@ namespace engine
 
 			void move(const math::Vector& tv, bool local=false);
 
-			void look_at(const math::Vector& target, const math::Vector& up={0.0f, 1.0f, 0.0f});
-			void look_at(Transform& t, const math::Vector& up={0.0f, 1.0f, 0.0f});
+			// Orients this transform to look at 'target', then returns the new basis.
+			math::RotationMatrix look_at(const math::Vector& target, const math::Vector& up={0.0f, 1.0f, 0.0f});
+
+			// Orients this transform to look at the 't' Transform's position, then returns the new basis.
+			math::RotationMatrix look_at(Transform& t, const math::Vector& up={0.0f, 1.0f, 0.0f});
 
 			// Rotation:
 			void rotate(const math::Vector& rv, bool local=false);
+
 			void rotateX(float rx, bool local=false);
 			void rotateY(float ry, bool local=false);
 			void rotateZ(float rz, bool local=false);
@@ -167,6 +185,8 @@ namespace engine
 			void set_local_matrix(const math::Matrix& m);
 			void set_local_position(const math::Vector& position);
 			void set_local_scale(const math::Vector& scale);
+
 			void set_local_basis(const math::RotationMatrix& basis);
+			void set_local_basis_q(const math::Quaternion& basis);
 	};
 }

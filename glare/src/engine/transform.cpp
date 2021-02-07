@@ -43,6 +43,20 @@ namespace engine
 		return std::nullopt;
 	}
 
+	math::RotationMatrix Transform::orientation(const math::Vector& origin, const math::Vector& target, const math::Vector& up)
+	{
+		auto k = glm::normalize(origin - target);
+		auto i = glm::normalize(glm::cross(up, k));
+		auto j = glm::cross(k, i);
+
+		return RotationMatrix(i, j, k);
+	}
+
+	math::Quaternion Transform::quat_orientation(const math::Vector& origin, const math::Vector& target, const math::Vector& up)
+	{
+		return glm::quatLookAt((origin - target), up);
+	}
+
 	std::optional<Transform> Transform::get_parent() const
 	{
 		if (!parent_data)
@@ -144,6 +158,22 @@ namespace engine
 		return update_inverse_matrix(force_refresh);
 	}
 
+	math::Matrix Transform::get_camera_matrix()
+	{
+		constexpr auto world_up = glm::vec3(0.0f, 1.0f, 0.0f);
+		constexpr auto world_forward = glm::vec3(0.0f, 0.0f, -1.0f);
+
+		auto position = get_position();
+
+		auto front = glm::normalize(get_basis() * world_forward);
+		auto right = glm::normalize(glm::cross(front, world_up));
+		auto up = glm::normalize(glm::cross(right, front));
+
+		return glm::lookAt(position, position + front, up);
+
+		//return get_inverse_matrix();
+	}
+
 	math::Vector Transform::get_position()
 	{
 		return math::get_translation(get_matrix());
@@ -181,6 +211,11 @@ namespace engine
 	math::Vector Transform::get_local_rotation()
 	{
 		return math::get_rotation(get_local_basis());
+	}
+
+	math::Vector Transform::get_direction_vector(const math::Vector forward)
+	{
+		return (get_basis() * forward);
 	}
 
 	void Transform::set_position(const math::Vector& position)
@@ -221,6 +256,12 @@ namespace engine
 		//invalidate();
 	}
 
+	void Transform::set_basis_q(const math::Quaternion& basis)
+	{
+		//set_basis(glm::mat3_cast(basis));
+		set_basis(math::to_rotation_matrix((basis))); // TODO: Review use of 'conjugate'. // glm::conjugate
+	}
+
 	void Transform::set_rotation(const math::Vector& rv)
 	{
 		set_basis(math::rotation_from_vector(rv));
@@ -229,6 +270,11 @@ namespace engine
 	void Transform::set_local_rotation(const math::Vector& rv)
 	{
 		set_local_basis(math::rotation_from_vector(rv));
+	}
+
+	math::Vector Transform::get_local_direction_vector(const math::Vector forward)
+	{
+		return (get_local_basis() * forward);
 	}
 
 	void Transform::set_rx(float rx)
@@ -261,30 +307,29 @@ namespace engine
 		}
 		else
 		{
-			auto basis = get_basis();
+			auto basis = get_local_basis(); //get_basis();
 
 			auto movement = (basis * tv);
 
-			set_position(get_position() + movement);
+			//set_position(get_position() + movement);
+			set_local_position(get_local_position() + movement);
 		}
 	}
 
-	void Transform::look_at(const math::Vector& target, const math::Vector& up)
+	math::RotationMatrix Transform::look_at(const math::Vector& target, const math::Vector& up)
 	{
 		auto position = get_position();
 
-		auto k = glm::normalize(position - target);
-		auto i = glm::normalize(glm::cross(up, k));
-		auto j = glm::cross(k, i);
-
-		auto m = RotationMatrix(i, j, k);
+		auto m = orientation(position, target, up);
 
 		set_basis(m);
+
+		return m;
 	}
 
-	void Transform::look_at(Transform& t, const math::Vector& up)
+	math::RotationMatrix Transform::look_at(Transform& t, const math::Vector& up)
 	{
-		look_at(t.get_position(), up);
+		return look_at(t.get_position(), up);
 	}
 
 	void Transform::rotate(const math::Vector& rv, bool local)
@@ -410,7 +455,7 @@ namespace engine
 
 		set_local_position(translation);
 		set_local_scale(scale);
-		set_local_basis(math::to_rotation_matrix(glm::conjugate(rotation))); // <-- Review behavior with vs. without 'glm::conjugate'.
+		set_local_basis_q(rotation);
 
 		invalidate();
 	}
@@ -440,5 +485,11 @@ namespace engine
 		invalidate();
 
 		//update_local_matrix(get_local_position(), get_local_scale(), basis);
+	}
+
+	void Transform::set_local_basis_q(const math::Quaternion& basis)
+	{
+		//set_local_basis(glm::mat3_cast(basis));
+		set_local_basis(math::to_rotation_matrix(glm::conjugate(basis))); // TODO: Review use of 'conjugate'.
 	}
 }

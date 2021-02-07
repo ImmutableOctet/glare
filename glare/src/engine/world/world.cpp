@@ -154,7 +154,8 @@ namespace engine
 		auto camera_transform = get_transform(camera);
 		auto& camera_params = registry.get<engine::CameraParameters>(camera);
 
-		math::Matrix camera_matrix = camera_transform.get_inverse_matrix();
+		//math::Matrix camera_matrix = camera_transform.get_inverse_matrix();
+		math::Matrix camera_matrix = camera_transform.get_camera_matrix();
 
 		// TODO: Move this aspect-ratio update to an event triggered on window-resize.
 		///camera_params.aspect_ratio = window->horizontal_aspect_ratio();
