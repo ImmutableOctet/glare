@@ -136,6 +136,8 @@ namespace engine
 					{
 						apply_transform(world, dbg, obj, obj_cfg);
 						apply_color(world, dbg, obj, obj_cfg);
+
+						resolve_parent(world, obj, stage, dbg, root_path, player_objects, objects, obj_cfg);
 					}
 				}
 			}
@@ -292,9 +294,31 @@ namespace engine
 		return obj;
 	}
 
+	void Stage::resolve_parent(World& world, Entity entity, Entity stage, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
+	{
+		auto parent_query = util::get_value<std::string>(data, "parent"); // data["parent"].get<std::string>();
+
+		auto parent = resolve_object_reference(parent_query, world, player_objects, objects);
+
+		if (parent == null)
+		{
+			parent = stage;
+		}
+
+		if (parent != null)
+		{
+			world.set_parent(entity, parent);
+		}
+	}
+
 	Entity Stage::resolve_object_reference(const std::string& query, World& world, const PlayerObjectMap& player_objects, const ObjectMap& objects)
 	{
 		static const auto re = std::regex("(object|player)?(\\@|\\#)\"?([\\w\\s\\d\\-]+)\"?"); // constexpr
+
+		if (query.empty())
+		{
+			return null;
+		}
 
 		auto results = util::get_regex_groups(query, re);
 

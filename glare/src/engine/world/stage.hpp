@@ -46,6 +46,8 @@ namespace engine
 			static Entity CreateBillboard(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data);
 			static Entity CreatePlatform(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data);
 
+			static void resolve_parent(World& world, Entity entity, Entity stage, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data);
+
 			static Entity resolve_object_reference(const std::string& query, World& world, const PlayerObjectMap& player_objects, const ObjectMap& objects); // std::tuple<std::string, std::string>
 
 			static inline math::TransformVectors get_transform_data(util::Logger& dbg, const util::json& cfg)
