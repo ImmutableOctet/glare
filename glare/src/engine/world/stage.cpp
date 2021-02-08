@@ -184,7 +184,9 @@ namespace engine
 			util::get_value(camera_cfg, "fov", CameraParameters::DEFAULT_FOV),
 			util::get_value(camera_cfg, "near", CameraParameters::NEAR_PLANE),
 			util::get_value(camera_cfg, "far", CameraParameters::FAR_PLANE),
-			util::get_value(camera_cfg, "aspect_ratio", CameraParameters::ASPECT)
+			util::get_value(camera_cfg, "aspect_ratio", CameraParameters::ASPECT),
+
+			CameraParameters::resolve_projection_mode(util::get_value<std::string>(camera_cfg, "projection", "perspective"))
 		);
 
 		bool make_active = util::get_value(camera_cfg, "make_active", false);
@@ -225,7 +227,7 @@ namespace engine
 	{
 		auto& registry = world.get_registry();
 
-		auto obj = load_model(world, "assets/objects/follow_sphere/follow_sphere.b3d", parent);
+		auto obj = load_model(world, "assets/objects/follow_sphere/follow_sphere.b3d", parent, EntityType::Object);
 
 		auto target_query = data["target"].get<std::string>();
 
@@ -249,7 +251,7 @@ namespace engine
 	Entity Stage::CreateBillboard(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
 	{
 		auto& registry = world.get_registry();
-		auto obj = load_model(world, "assets/objects/billboard/billboard.b3d", parent);
+		auto obj = load_model(world, "assets/objects/billboard/billboard.b3d", parent, EntityType::Object);
 
 		auto mode = BillboardBehavior::resolve_mode(util::get_value<std::string>(data, "mode"));
 
@@ -272,7 +274,7 @@ namespace engine
 	Entity Stage::CreatePlatform(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
 	{
 		auto& registry = world.get_registry();
-		auto obj = load_model(world, "assets/objects/platform/platform.b3d", parent);
+		auto obj = load_model(world, "assets/objects/platform/platform.b3d", parent, EntityType::Object);
 
 		auto mode = util::get_value<std::string>(data, "mode", "static");
 

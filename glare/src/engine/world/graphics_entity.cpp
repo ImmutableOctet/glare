@@ -13,9 +13,9 @@ namespace graphics
 
 namespace engine
 {
-	Entity create_model(World& world, pass_ref<graphics::Model> model, Entity parent)
+	Entity create_model(World& world, pass_ref<graphics::Model> model, Entity parent, EntityType type)
 	{
-		auto entity = create_entity(world, parent);
+		auto entity = create_entity(world, parent, type);
 
 		return attach_model(world, entity, model);
 	}
@@ -32,11 +32,11 @@ namespace engine
 		return entity;
 	}
 
-	Entity load_model(World& world, const std::string& path, Entity parent)
+	Entity load_model(World& world, const std::string& path, Entity parent, EntityType type)
 	{
 		auto& resource_manager = world.get_resource_manager();
 		pass_ref<graphics::Model> loaded_model = resource_manager.load_model(path);
 
-		return engine::create_model(world, loaded_model, parent);
+		return engine::create_model(world, loaded_model, parent, type);
 	}
 }

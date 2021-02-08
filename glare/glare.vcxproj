@@ -224,6 +224,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\engine\transform.hpp" />
     <ClInclude Include="src\engine\types.hpp" />
     <ClInclude Include="src\engine\movement_state.hpp" />
+    <ClInclude Include="src\engine\type_component.hpp" />
     <ClInclude Include="src\engine\world\billboard_behavior.hpp" />
     <ClInclude Include="src\engine\world\camera.hpp" />
     <ClInclude Include="src\engine\world\debug\debug.hpp" />
@@ -338,6 +339,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\graphics\resource.cpp" />
     <ClCompile Include="src\graphics\shader.cpp" />
     <ClCompile Include="src\graphics\texture.cpp" />
+    <ClCompile Include="src\graphics\types.cpp" />
     <ClCompile Include="src\graphics\vertex.cpp" />
     <ClCompile Include="src\math\math.cpp" />
     <ClCompile Include="src\tests\model_test\model_test.cpp" />

@@ -17,9 +17,11 @@ namespace engine
 	{
 		None = 0,
 
-		M = 1, // Model
-		W = 2, // World
-		IW = 4, // Inverse World
+		M                    = 1, // Model
+		W                    = 2, // World
+		IW                   = 4, // Inverse World
+		
+		Collider = 8,
 
 		All = (M | W | IW),
 	};
@@ -29,9 +31,10 @@ namespace engine
 	// Data-only component; logic is stored in 'Transformation', as several operations require additional registry access.
 	struct TransformComponent
 	{
-		protected:
+		public:
 			using Dirty = _TransformComponent_Dirty;
 
+		protected:
 			friend Transform;
 			friend World;
 
@@ -53,6 +56,12 @@ namespace engine
 			math::Matrix _iw = glm::inverse(_w); // Inverse world
 
 			Dirty _dirty = Dirty::All; // Dirty::None;
+
+		public:
+			bool invalid(Dirty flag) const;
+
+			void invalidate(Dirty flag);
+			Dirty validate(Dirty flag);
 	};
 
 	struct TransformViewData
@@ -117,6 +126,11 @@ namespace engine
 			Transform(Registry& registry, Entity entity, const Relationship& relationship, TransformComponent& transform);
 
 			~Transform();
+
+			bool collision_invalid() const;
+			void validate_collision();
+
+			void validate_collision_shallow();
 
 			// Global transformations:
 			math::Matrix get_matrix(bool force_refresh=false);

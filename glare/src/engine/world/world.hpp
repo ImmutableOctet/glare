@@ -11,6 +11,7 @@
 #include <vector>
 #include <string_view>
 #include <filesystem>
+#include <utility>
 
 #include "entity.hpp"
 #include "camera.hpp"
@@ -84,15 +85,39 @@ namespace engine
 				register_event<EventType, fn>(*this);
 			}
 
+			template <typename EventType, typename... Args>
+			inline void queue_event(Args&&... args)
+			{
+				event_handler.enqueue<EventType>(std::forward<Args>(args)...);
+			}
+
+			template <typename EventType>
+			inline void queue_event(EventType&& event_obj)
+			{
+				event_handler.enqueue(std::forward<EventType>(event_obj));
+			}
+
+			template <typename EventType, typename... Args>
+			inline void event(Args&&... args)
+			{
+				event_handler.trigger<EventType>(std::forward<Args>(args)...);
+			}
+
+			template <typename EventType>
+			inline void event(EventType&& event_obj)
+			{
+				event_handler.trigger(std::forward<EventType>(event_obj));
+			}
+
 			void update(app::Milliseconds time);
 
 			// Renders the scene using the last bound camera. If no camera has been bound/assinged, then this routine will return 'false'.
 			// Returns 'false' if an essential rendering component is missing.
-			bool render(graphics::Canvas& canvas, bool forward_rendering);
+			bool render(graphics::Canvas& canvas, const graphics::Viewport& viewport, bool forward_rendering);
 
 			// Renders the scene using the camera specified.
 			// Returns 'false' if an essential rendering component is missing. (e.g. 'camera')
-			bool render(graphics::Canvas& canvas, Entity camera, bool forward_rendering);
+			bool render(graphics::Canvas& canvas, const graphics::Viewport& viewport, Entity camera, bool forward_rendering);
 
 			//void on_child_removed(const Event_ChildRemoved& e);
 

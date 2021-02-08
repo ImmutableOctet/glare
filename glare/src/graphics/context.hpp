@@ -163,6 +163,12 @@ namespace graphics
 			// Assigns the current rendering viewport.
 			void set_viewport(int x, int y, int width, int height);
 
+			// Assigns the current rendering viewport.
+			inline void set_viewport(Viewport viewport)
+			{
+				set_viewport(viewport.get_x(), viewport.get_y(), viewport.get_width(), viewport.get_height());
+			}
+
 			// NOTE: Unsafe; use at your own risk.
 			void clear_textures(bool force=false);
 

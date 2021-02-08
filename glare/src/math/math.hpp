@@ -22,6 +22,8 @@ namespace math
 	using Vector3D = glm::vec3; using vec3f = Vector3D; using vec3 = vec3f;
 	using Vector4D = glm::vec4; using vec4f = Vector4D; using vec4 = vec4f;
 
+	using vec2i = glm::ivec2;
+
 	using Matrix2x2 = glm::mat2; using mat2f = Matrix2x2; using mat2 = mat2f;
 	using Matrix3x3 = glm::mat3; using mat3f = Matrix3x3; using mat3 = mat3f;
 	using Matrix4x4 = glm::mat4; using mat4f = Matrix4x4; using mat4 = mat4f;

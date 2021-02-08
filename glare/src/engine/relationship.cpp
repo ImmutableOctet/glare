@@ -24,6 +24,13 @@ namespace engine
 
 	void Relationship::set_parent(Registry& registry, Entity self, Entity parent)
 	{
+		ASSERT(self != null);
+
+		if ((self == parent) || (parent == null))
+		{
+			return;
+		}
+
 		auto& parent_relationship = registry.get_or_emplace<Relationship>(parent);
 
 		parent_relationship.add_child(registry, parent, self);
@@ -33,6 +40,13 @@ namespace engine
 
 	Entity Relationship::add_child(Registry& registry, Entity self, Entity child)
 	{
+		ASSERT(self != null);
+
+		if ((self == child) || (child == null))
+		{
+			return null;
+		}
+
 		bool has_child = false;
 
 		enumerate_children(registry, [&](auto current, auto& relation, auto next)

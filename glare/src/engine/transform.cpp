@@ -107,7 +107,7 @@ namespace engine
 
 	void Transform::invalidate()
 	{
-		transform._dirty |= Dirty::M;
+		transform._dirty |= (Dirty::M | Dirty::Collider);
 
 		invalidate_world();
 	}
@@ -146,6 +146,44 @@ namespace engine
 	Transform::~Transform()
 	{
 		recalculate(false);
+	}
+
+	bool Transform::collision_invalid() const
+	{
+		bool collision_invalid = invalid(Dirty::Collider);
+
+		if (collision_invalid)
+		{
+			return true;
+		}
+
+		auto parent = get_parent();
+
+		if (parent)
+		{
+			collision_invalid = (collision_invalid || parent->collision_invalid());
+		}
+
+		return collision_invalid;
+	}
+
+	void Transform::validate_collision()
+	{
+		validate_collision_shallow();
+
+		auto parent = get_parent();
+
+		if (parent)
+		{
+			parent->validate_collision();
+		}
+	}
+
+	void Transform::validate_collision_shallow()
+	{
+		//validate(Dirty::Collider);
+
+		transform.validate(Dirty::Collider);
 	}
 
 	math::Matrix Transform::get_matrix(bool force_refresh)
@@ -491,5 +529,24 @@ namespace engine
 	{
 		//set_local_basis(glm::mat3_cast(basis));
 		set_local_basis(math::to_rotation_matrix(glm::conjugate(basis))); // TODO: Review use of 'conjugate'.
+	}
+
+
+	// TransformComponent:
+	bool TransformComponent::invalid(TransformComponent::Dirty flag) const
+	{
+		return (_dirty & flag);
+	}
+
+	void TransformComponent::invalidate(TransformComponent::Dirty flag)
+	{
+		_dirty |= flag;
+	}
+
+	TransformComponent::Dirty TransformComponent::validate(TransformComponent::Dirty flag)
+	{
+		_dirty &= (~flag);
+
+		return _dirty;
 	}
 }

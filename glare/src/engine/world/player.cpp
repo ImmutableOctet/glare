@@ -14,6 +14,9 @@
 #include <algorithm>
 #include <string>
 
+// Debugging related:
+#include <iostream>
+
 namespace engine
 {
 	const char* DEFAULT_PLAYER_NAME = "Player";
@@ -49,7 +52,17 @@ namespace engine
 				break;
 		}
 
-		auto player = load_model(world, model_path, parent);
+		auto player = load_model(world, "assets/tests/model_test/cube.b3d", parent, EntityType::Player); //create_pivot(world, parent, EntityType::Player);
+		auto player_model = load_model(world, model_path, player);
+
+		{
+			auto model_t = world.get_transform(player_model);
+			
+			std::cout << model_t.get_local_position() << std::endl;
+		}
+
+		//auto player = player_model;
+
 		registry.emplace<NameComponent>(player, name);
 
 		auto t = world.get_transform(player);

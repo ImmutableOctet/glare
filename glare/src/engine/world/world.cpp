@@ -131,12 +131,12 @@ namespace engine
 		RaveComponent::update(*this);
 	}
 
-	bool World::render(graphics::Canvas& canvas, bool forward_rendering)
+	bool World::render(graphics::Canvas& canvas, const graphics::Viewport& viewport, bool forward_rendering)
 	{
-		return render(canvas, this->camera, forward_rendering);
+		return render(canvas, viewport, this->camera, forward_rendering);
 	}
 
-	bool World::render(graphics::Canvas& canvas, Entity camera, bool forward_rendering)
+	bool World::render(graphics::Canvas& canvas, const graphics::Viewport& viewport, Entity camera, bool forward_rendering)
 	{
 		// Deferred referning is current unsupported.
 		//ASSERT(forward_rendering);
@@ -154,15 +154,46 @@ namespace engine
 		auto camera_transform = get_transform(camera);
 		auto& camera_params = registry.get<engine::CameraParameters>(camera);
 
-		//math::Matrix camera_matrix = camera_transform.get_inverse_matrix();
-		math::Matrix camera_matrix = camera_transform.get_camera_matrix();
+		math::Matrix camera_matrix;
+
+		if (camera_params.free_rotation)
+		{
+			camera_matrix = camera_transform.get_inverse_matrix();
+		}
+		else
+		{
+			camera_matrix = camera_transform.get_camera_matrix();
+		}
 
 		// TODO: Move this aspect-ratio update to an event triggered on window-resize.
 		///camera_params.aspect_ratio = window->horizontal_aspect_ratio();
 
 		auto& shader = canvas.get_shader();
 
-		shader["projection"] = glm::perspective(camera_params.fov, camera_params.aspect_ratio, camera_params.near_plane, camera_params.far_plane);
+		math::Matrix4x4 projection;
+
+		switch (camera_params.projection_mode)
+		{
+			case CameraProjection::Orthographic:
+			{
+				float width = static_cast<float>(viewport.get_width());
+				float height = static_cast<float>(viewport.get_height());
+
+				float hw = (width / 2.0f);
+				float hh = (height / 2.0f);
+
+				projection = glm::ortho(-hw, hw, hh, -hh, camera_params.near_plane, camera_params.far_plane);
+
+				break;
+			}
+			default:
+			//case CameraProjection::Perspective:
+				projection = glm::perspective(camera_params.fov, camera_params.aspect_ratio, camera_params.near_plane, camera_params.far_plane);
+
+				break;
+		}
+
+		shader["projection"] = projection;
 		shader["view"] = camera_matrix;
 
 		// TODO: Change/remove flag(s).
@@ -256,13 +287,15 @@ namespace engine
 
 	void World::set_parent(Entity entity, Entity parent, bool _null_as_root)
 	{
+		/*
 		if (_null_as_root)
 		{
-			if (parent == null)
+			if ((parent == null) && (entity != root))
 			{
-				parent = get_root();
+				parent = root;
 			}
 		}
+		*/
 
 		Relationship::set_parent(registry, entity, parent);
 	}

@@ -39,8 +39,8 @@ namespace engine
 	};
 
 	// Entity with 3D Model component.
-	Entity create_model(World& world, pass_ref<graphics::Model> model, Entity parent=null);
-	Entity attach_model(World& world, Entity entity, pass_ref<graphics::Model> model, graphics::ColorRGBA color = { 1.0f, 1.0f, 1.0f, 1.0f });
+	Entity create_model(World& world, pass_ref<graphics::Model> model, Entity parent=null, EntityType type=EntityType::Geometry);
+	Entity attach_model(World& world, Entity entity, pass_ref<graphics::Model> model, graphics::ColorRGBA color={1.0f, 1.0f, 1.0f, 1.0f});
 
-	Entity load_model(World& world, const std::string& path, Entity parent=null); // const std::string_view&
+	Entity load_model(World& world, const std::string& path, Entity parent=null, EntityType type=EntityType::Geometry); // const std::string_view&
 }

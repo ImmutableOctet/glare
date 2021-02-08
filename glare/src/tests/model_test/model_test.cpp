@@ -212,7 +212,7 @@ namespace glare::tests
 		auto cube = load_model("assets/tests/model_test/cube.b3d");
 		
 		registry.emplace<engine::NameComponent>(cube, "Spinning Cube");
-		//registry.emplace<engine::SpinBehavior>(cube);
+		registry.emplace<engine::SpinBehavior>(cube);
 
 		world.set_parent(cube, player);
 
@@ -401,7 +401,7 @@ namespace glare::tests
 
 					graphics.context->use(shader, [&, this]()
 					{
-						world.render(*graphics.canvas, false); // , true
+						world.render(*graphics.canvas, viewport, false); // , true
 
 						/*
 						auto texture = graphics.context->use(test_texture);
@@ -629,19 +629,23 @@ namespace glare::tests
 		*/
 	}
 	
-	graphics::PointRect ModelTest::update_viewport(engine::Entity camera)
+	graphics::Viewport ModelTest::update_viewport(engine::Entity camera)
 	{
-		graphics::PointRect viewport = {};
+		graphics::Viewport viewport = {};
 
-		window->get_size(viewport.end.x, viewport.end.y);
+		int w_width, w_height;
 
-		if ((viewport.width != 0) && (viewport.height != 0))
+		window->get_size(w_width, w_height);
+
+		viewport.set_size(static_cast<float>(w_width), static_cast<float>(w_height));
+
+		if ((w_width != 0) && (w_height != 0))
 		{
-			graphics.context->set_viewport(0, 0, viewport.width, viewport.height);
+			graphics.context->set_viewport(viewport);
 
 			auto& camera_params = world.get_registry().get<engine::CameraParameters>(camera);
 
-			camera_params.update_aspect_ratio(viewport.width, viewport.height);
+			camera_params.update_aspect_ratio(viewport.get_width(), viewport.get_height());
 		}
 
 		return viewport;

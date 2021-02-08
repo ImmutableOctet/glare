@@ -6,6 +6,7 @@
 
 #include <engine/events/events.hpp>
 #include <engine/collision.hpp>
+//#include <engine/transform.hpp>
 
 // Forward declarations:
 
@@ -22,6 +23,8 @@ class btCollisionShape;
 namespace engine
 {
 	class World;
+
+	struct Transform;
 
 	enum class MotionFlags : std::uint8_t
 	{
@@ -67,14 +70,17 @@ namespace engine
 			PhysicsSystem(math::Vector gravity={ 0.0f, -1.0f, 0.0f });
 			~PhysicsSystem();
 
-			void update(World& world, float dt);
+			void update(World& world, float delta);
 
 			inline math::Vector get_gravity() const { return gravity; }
 
 			void set_gravity(const math::Vector& g);
 
 			void on_new_collider(World& world, OnComponentAdd<CollisionComponent>& new_col);
+			void update_collision_object(Transform& transform, CollisionComponent& col);
+		protected:
 			void update_collision_object(btCollisionObject& obj, const math::Matrix& m);
+			void update_motion(World& world, Entity entity, Transform& transform, PhysicsComponent& ph, float delta);
 		private:
 			std::unique_ptr<btDefaultCollisionConfiguration> collision_configuration;
 			std::unique_ptr<btCollisionDispatcher> collision_dispatcher;

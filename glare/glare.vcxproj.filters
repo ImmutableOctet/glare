@@ -325,6 +325,9 @@
     <ClInclude Include="src\engine\world\rave_component.hpp">
       <Filter>engine\world</Filter>
     </ClInclude>
+    <ClInclude Include="src\engine\type_component.hpp">
+      <Filter>engine\engine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\tests\model_test\shaders\8.1.deferred_light_box.fs">
@@ -598,6 +601,9 @@
     </ClCompile>
     <ClCompile Include="src\engine\world\rave_component.cpp">
       <Filter>engine\world</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\types.cpp">
+      <Filter>graphics\graphics</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

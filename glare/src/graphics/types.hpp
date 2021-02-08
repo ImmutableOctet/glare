@@ -42,25 +42,57 @@ namespace graphics
 	// TODO: Implement half-size indices for smaller meshes.
 	using MeshIndex = std::uint32_t; // GLuint;
 
+	/*
 	struct Point
 	{
 		union
 		{
 			struct { int x, y; };
-			struct { int width, height; };
+			//struct { int width, height; };
 		};
 	};
+	*/
+
+	using Point = math::vec2i; // math::Vector2D;
 
 	struct PointRect
 	{
-		Point start;
+		//using Type = float;
+		using Type = int;
 
-		union
+		Point start = {};
+		Point end = {};
+
+		void set_width(Type value);
+		void set_height(Type value);
+
+		inline void set_size(Type width, Type height)
 		{
-			Point end;
-			struct { int width, height; };
-		};
+			set_width(width);
+			set_height(height);
+		}
+
+		inline void set_size(const Point& size)
+		{
+			set_size(size.x, size.y);
+		}
+
+		inline Type get_x() const
+		{
+			return start.x;
+		}
+
+		inline Type get_y() const
+		{
+			return start.y;
+		}
+
+		Type get_width() const; // inline auto
+		Type get_height() const; // inline auto
+		Type get_length() const; // inline auto
 	};
+
+	using Viewport = PointRect;
 
 	enum class ElementType
 	{

@@ -92,6 +92,6 @@ namespace glare::tests
 			void on_keyup(const keyboard_event_t& event) override;
 			void on_keydown(const keyboard_event_t& event) override;
 
-			graphics::PointRect update_viewport(engine::Entity camera);
+			graphics::Viewport update_viewport(engine::Entity camera);
 	};
 }
