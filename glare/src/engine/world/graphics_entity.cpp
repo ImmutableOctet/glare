@@ -32,7 +32,7 @@ namespace engine
 		return entity;
 	}
 
-	Entity load_model(World& world, const std::string& path, Entity parent, EntityType type)
+	Entity load_model(World& world, const std::string& path, Entity parent, EntityType type, bool attach_collision)
 	{
 		auto& resource_manager = world.get_resource_manager();
 		pass_ref<graphics::Model> loaded_model = resource_manager.load_model(path);

@@ -169,7 +169,9 @@ namespace engine
 
 			dbg->info("Loading model from \"{}\"...\n", model_path);
 
-			auto model = load_model(world, model_path, stage);
+			bool collision_enabled = util::get_value(model_cfg, "collision", true);
+
+			auto model = load_model(world, model_path, stage, EntityType::Geometry, collision_enabled);
 
 			apply_transform(world, dbg, model, model_cfg);
 		});
