@@ -273,7 +273,7 @@ namespace glare::tests
 		//auto transform = world.get_transform(world.get_camera());
 		auto transform = get_named_transform(target_obj);
 
-		auto angle = glm::normalize(camera_pos - transform.get_position());
+		auto angle = glm::normalize(transform.get_position() - camera_pos);
 
 		float delta = world.delta();
 
@@ -293,7 +293,7 @@ namespace glare::tests
 
 		if (keyboard.get_key(SDL_SCANCODE_2))
 		{
-			transform.move(delta * 0.1f * angle, true);
+			transform.move(delta * 0.5f * angle, false);
 		}
 
 		if (keyboard.get_key(SDL_SCANCODE_Z))
@@ -312,7 +312,7 @@ namespace glare::tests
 
 		if (keyboard.get_key(SDL_SCANCODE_R))
 		{
-			transform.set_position({ 10.7f, 46.0f, -13.0f });
+			//transform.set_position({ 10.7f, 46.0f, -13.0f });
 			auto transform = get_named_transform("Player");
 
 			transform.rotateY(math::radians(10.0f * delta));
