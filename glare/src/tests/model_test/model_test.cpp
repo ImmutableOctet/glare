@@ -80,7 +80,7 @@ namespace glare::tests
 	}
 
 	ModelTest::ModelTest(bool auto_execute)
-		: GraphicsApplication("Project Glare", 1600, 900, (app::WindowFlags::OpenGL|app::WindowFlags::Resizable), TARGET_UPDATE_RATE, true),
+		: GraphicsApplication("Project Glare", 1600, 900, (app::WindowFlags::OpenGL|app::WindowFlags::Resizable), TARGET_UPDATE_RATE, false), // true
 		  shaders(graphics),
 		  resource_manager(graphics.context, shaders.forward),
 		  world(resource_manager, TARGET_UPDATE_RATE)
