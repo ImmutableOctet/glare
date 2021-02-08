@@ -1,10 +1,34 @@
 #pragma once
 
+#include <engine/types.hpp>
 #include "input.hpp"
 
 namespace engine
 {
 	class World;
+
+	//template <EntityType type>
+	struct OnEntityCreated
+	{
+		//static constexpr auto Type = type;
+
+		inline EntityType get_type() const { return type; }
+
+		Entity entity;
+		Entity parent;
+		EntityType type;
+	};
+
+	//template <EntityType type>
+	struct OnEntityDestroyed
+	{
+		//static constexpr auto Type = type;
+		inline EntityType get_type() const { return type; }
+
+		Entity entity;
+		Entity parent;
+		EntityType type;
+	};
 
 	template <typename ComponentType>
 	struct OnComponentAdd
