@@ -106,15 +106,17 @@ namespace graphics
 			Model(Meshes&& meshes) noexcept;
 			Model(Model&& model) noexcept;
 
+			// TODO: Verify non-const access.
+			inline Meshes& get_meshes() { return meshes; };
+			inline bool has_meshes() const { return !meshes.empty(); }
+			inline explicit operator bool() const { return has_meshes(); }
+
 			inline Model& operator=(Model model)
 			{
 				swap(*this, model);
 
 				return *this;
 			}
-
-			// TODO: Verify non-const access.
-			inline Meshes& get_meshes() { return meshes; };
 		protected:
 			ref<Texture> process_texture(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const filesystem::path& texture_path);
 			Material process_material(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiMaterial* native_material, pass_ref<Shader> default_shader, bool load_textures=true, bool load_values=true);
