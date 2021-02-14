@@ -155,7 +155,7 @@ namespace engine
 
 			void on_mouse_input(const app::input::MouseState& mouse);
 			void on_keyboard_input(const app::input::KeyboardState& keyboard);
-			void on_new_collider(OnComponentAdd<CollisionComponent> new_col);
+			void on_new_collider(const OnComponentAdd<CollisionComponent>& new_col);
 		private:
 			// Renders models with the given draw-mode.
 			void draw_models(graphics::CanvasDrawMode draw_mode, graphics::Canvas& canvas, graphics::Shader& shader);

@@ -89,7 +89,7 @@ namespace engine
 		//collision_world->setGravity(math::to_bullet_vector(g));
 	}
 
-	void PhysicsSystem::on_new_collider(World& world, OnComponentAdd<CollisionComponent>& new_col)
+	void PhysicsSystem::on_new_collider(World& world, const OnComponentAdd<CollisionComponent>& new_col)
 	{
 		//auto& world = new_col.world;
 		auto entity = new_col.entity;

@@ -377,7 +377,7 @@ namespace engine
 		engine::debug::DebugMove::update(*this, keyboard);
 	}
 
-	void World::on_new_collider(OnComponentAdd<CollisionComponent> new_col)
+	void World::on_new_collider(const OnComponentAdd<CollisionComponent>& new_col)
 	{
 		physics.on_new_collider(*this, new_col);
 	}
