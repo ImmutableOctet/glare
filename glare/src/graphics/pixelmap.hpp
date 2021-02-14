@@ -40,7 +40,7 @@ namespace graphics
 			inline const RawPtr data() const { return raw_data; }
 
 			inline bool has_data() const { return ((data() != nullptr) && (size() > 0)); }
-			inline operator bool() const { return has_data(); }
+			inline explicit operator bool() const { return has_data(); }
 		protected:
 			PixelMap(RawPtr&& raw_data, int width, int height, int color_channels);
 			~PixelMap();

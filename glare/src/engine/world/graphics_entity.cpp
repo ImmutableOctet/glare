@@ -1,6 +1,8 @@
 #include "graphics_entity.hpp"
 #include "world.hpp"
 
+#include <tuple>
+
 #include <engine/resource_manager.hpp>
 #include <engine/model_component.hpp>
 #include <graphics/model.hpp>
@@ -32,11 +34,22 @@ namespace engine
 		return entity;
 	}
 
-	Entity load_model(World& world, const std::string& path, Entity parent, EntityType type, bool attach_collision)
+	Entity load_model(World& world, const std::string& path, Entity parent, EntityType type, bool collision_enabled, CollisionMask solid_mask, CollisionMask interaction_mask, float mass)
 	{
 		auto& resource_manager = world.get_resource_manager();
-		pass_ref<graphics::Model> loaded_model = resource_manager.load_model(path);
 
-		return engine::create_model(world, loaded_model, parent, type);
+		auto model_data = resource_manager.load_model(path, collision_enabled);
+
+		auto& loaded_model = std::get<0>(model_data);
+		auto collision_data = std::get<1>(model_data); // auto*
+
+		auto entity = engine::create_model(world, loaded_model, parent, type);
+
+		if (collision_enabled && collision_data)
+		{
+			attach_collision(world, entity, collision_data->collision_shape, mass, interaction_mask, solid_mask);
+		}
+
+		return entity;
 	}
 }

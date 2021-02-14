@@ -310,6 +310,15 @@ namespace engine
 		set_local_basis(math::rotation_from_vector(rv));
 	}
 
+	void Transform::apply(const math::TransformVectors& tform)
+	{
+		auto [position, rotation, scale] = tform;
+
+		set_position(position);
+		set_rotation(rotation);
+		set_scale(scale);
+	}
+
 	math::Vector Transform::get_local_direction_vector(const math::Vector forward)
 	{
 		return (get_local_basis() * forward);

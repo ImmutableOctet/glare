@@ -80,6 +80,11 @@ namespace math
 		return { v.getX(), v.getY(), v.getZ() };
 	}
 
+	Vector3D to_vector(const aiVector3D& v)
+	{
+		return { v.x, v.y, v.z };
+	}
+
 	Matrix to_matrix(const btTransform& t)
 	{
 		Matrix m;

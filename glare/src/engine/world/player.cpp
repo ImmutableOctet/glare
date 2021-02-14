@@ -55,21 +55,19 @@ namespace engine
 		auto player = load_model(world, "assets/tests/model_test/cube.b3d", parent, EntityType::Player); //create_pivot(world, parent, EntityType::Player);
 		auto player_model = load_model(world, model_path, player);
 
+		/*
 		{
 			auto model_t = world.get_transform(player_model);
 			
 			std::cout << model_t.get_local_position() << std::endl;
 		}
+		*/
 
 		//auto player = player_model;
 
 		registry.emplace<NameComponent>(player, name);
 
-		auto t = world.get_transform(player);
-
-		t.set_position(position);
-		t.set_rotation(rotation);
-		t.set_scale(scale);
+		world.apply_transform(player, tform);
 
 		attach_physics(world, player, MotionFlags::StandardMovement);
 
@@ -82,7 +80,7 @@ namespace engine
 		auto interaction_mask = CollisionMask::All;
 		auto solid_mask = CollisionMask::StandardObject;
 
-		attach_collision(world, player, collision_data, mass, interaction_mask, solid_mask);
+		attach_collision(world, player, collision_data.collision_shape, mass, interaction_mask, solid_mask);
 
 		registry.emplace<PlayerState>(player, PlayerState::Action::Default, index);
 

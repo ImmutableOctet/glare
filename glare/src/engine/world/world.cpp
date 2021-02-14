@@ -252,11 +252,7 @@ namespace engine
 	{
 		auto transform = get_transform(entity);
 
-		auto [position, rotation, scale] = tform;
-
-		transform.set_position(position);
-		transform.set_rotation(rotation);
-		transform.set_scale(scale);
+		transform.apply(tform);
 
 		return transform;
 	}

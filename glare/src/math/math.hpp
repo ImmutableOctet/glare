@@ -9,11 +9,16 @@
 #include <glm/gtx/quaternion.hpp>
 #include <glm/mat3x4.hpp>
 
+#include <assimp/vector3.h>
+
 #include <tuple>
 
 // Bullet types:
 class btVector3;
 class btTransform;
+
+// Assimp types:
+//class aiVector3D;
 
 namespace math
 {
@@ -132,7 +137,11 @@ namespace math
 
 	RotationMatrix rotation_from_vector(const Vector& rv);
 
+	inline Vector3D to_vector(const Vector3D& v) { return v; }
+
 	Vector3D to_vector(const btVector3& v);
+	Vector3D to_vector(const aiVector3D& v);
+
 	Matrix to_matrix(const btTransform& t);
 
 	Vector abs(Vector v);

@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 #include <utility>
+#include <optional>
+#include <tuple>
 #include <unordered_map>
 
 #include <util/memory.hpp>
@@ -32,6 +34,9 @@ struct aiNode;
 struct aiMesh;
 struct aiMaterial;
 
+// Bullet:
+class btTriangleIndexVertexArray;
+
 namespace graphics
 {
 	class Context;
@@ -43,6 +48,8 @@ namespace graphics
 	class Model
 	{
 		public:
+			using VertexType = StandardVertex;
+
 			struct MeshDescriptor
 			{
 				Material material;
@@ -60,13 +67,24 @@ namespace graphics
 				MeshDescriptor(MeshDescriptor&&) = default;
 
 				inline bool has_meshes() const { return (meshes.size() > 0); }
-				inline operator bool() const { return has_meshes(); }
+				inline explicit operator bool() const { return has_meshes(); }
 
 				MeshDescriptor& operator=(MeshDescriptor&&) noexcept(false) = default;
 				//MeshDescriptor& operator=(const MeshDescriptor&) = delete;
 			};
 
 			using Meshes = std::vector<MeshDescriptor>;
+
+			struct CollisionGeometry // CollisionData
+			{
+				using Descriptor = btTriangleIndexVertexArray;
+				using Container = std::vector<SimpleMeshData>;
+
+				CollisionGeometry(Container&& mesh_data);
+
+				std::unique_ptr<Descriptor> mesh_interface;
+				Container mesh_data;
+			};
 
 			friend Canvas;
 			friend Context;
@@ -76,7 +94,7 @@ namespace graphics
 
 			Meshes meshes;
 		public:
-			static Model Load(pass_ref<Context> context, const std::string& path, pass_ref<Shader> default_shader);
+			static std::tuple<Model, std::optional<CollisionGeometry>> Load(pass_ref<Context> context, const std::string& path, pass_ref<Shader> default_shader, bool load_collision=false);
 
 			friend void swap(Model& x, Model& y);
 
@@ -100,7 +118,7 @@ namespace graphics
 		protected:
 			ref<Texture> process_texture(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const filesystem::path& texture_path);
 			Material process_material(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiMaterial* native_material, pass_ref<Shader> default_shader, bool load_textures=true, bool load_values=true);
-			void process_node(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, pass_ref<Shader> default_shader, VertexWinding vert_direction);
-			Mesh process_mesh(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, const aiMesh* mesh, VertexWinding vert_direction);
+			void process_node(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, pass_ref<Shader> default_shader, VertexWinding vert_direction, CollisionGeometry::Container* opt_collision_out=nullptr);
+			MeshData<VertexType> process_mesh(Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, const aiMesh* mesh, VertexWinding vert_direction);
 	};
 }

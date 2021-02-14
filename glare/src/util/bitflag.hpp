@@ -30,7 +30,7 @@ namespace util
           constexpr bool any() const { return bits.any(); }
           constexpr bool all() const { return bits.all(); }
           constexpr bool none() const { return bits.none(); }
-          constexpr operator bool() { return any(); }
+          constexpr explicit operator bool() { return any(); }
 
           constexpr bool test(Enum value) const { return bits.test(1 << static_cast<std::size_t>(value)); }
           constexpr void set(Enum value) { bits.set(1 << static_cast<std::size_t>(value)); }

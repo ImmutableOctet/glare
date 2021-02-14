@@ -7,25 +7,55 @@
 #include "context.hpp"
 #include "vertex.hpp"
 
+// Assimp mesh object.
+struct aiMesh;
+
 namespace graphics
 {
 	template <typename VertexType>
 	struct MeshData
 	{
 		using Index = MeshIndex;
-		//using Vertex = VertexType;
+		using Vertex = VertexType;
+
+		//using SimpleVertex = graphics::SimpleVertex;
 
 		std::vector<VertexType> vertices;
-		std::vector<Index> indices;
+		std::shared_ptr<std::vector<Index>> indices;
 
 		inline bool has_vertices() const { return (vertices.count() > 0); }
-		inline bool has_indices() const { return (indices.count() > 0); }
+		inline bool has_indices() const
+		{
+			if (!indices)
+			{
+				return false;
+			}
+
+			return (indices->count() > 0);
+		}
 
 		inline bool is_complete() const { return (has_vertices() && has_indices()); }
 		inline bool is_usable() const { return has_vertices(); }
 
-		inline operator bool() const { return is_usable(); }
+		inline explicit operator bool() const { return is_usable(); }
+
+		// Creates a copy of the 'vertices' vector, containing only simple vertex attributes. (e.g. position)
+		inline std::vector<SimpleVertex> as_simple_vertices() const
+		{
+			std::vector<SimpleVertex> vertices_out;
+
+			vertices_out.reserve(vertices.size());
+
+			for (const auto& v : vertices)
+			{
+				vertices_out.push_back(v);
+			}
+
+			return vertices_out;
+		}
 	};
+
+	using SimpleMeshData = MeshData<SimpleVertex>;
 
 	// TODO: Review separation of 'MeshComposition' and 'Mesh'.
 	// Context-controlled 'MeshComposition' objects would allow proper
@@ -68,7 +98,7 @@ namespace graphics
 			inline Index offset() const { return vertex_offset; }
 
 			template <typename VertexType>
-			static Mesh Generate(pass_ref<Context> ctx, const Data<VertexType>& data, Primitive primitive_type=Primitive::Triangle)
+			inline static Mesh Generate(pass_ref<Context> ctx, const Data<VertexType>& data, Primitive primitive_type=Primitive::Triangle)
 			{
 				return Mesh
 				(
@@ -103,4 +133,6 @@ namespace graphics
 			
 			~Mesh();
 	};
+
+	std::vector<SimpleVertex> copy_simple_vertices(const aiMesh& mesh);
 }

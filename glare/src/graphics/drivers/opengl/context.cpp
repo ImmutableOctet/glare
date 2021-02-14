@@ -1102,7 +1102,7 @@ namespace graphics
 		GLComposition mesh = {};
 
 		const void* vertex_data_offset = 0;
-		const bool indices_available = (indices);
+		const bool indices_available = (indices.has_data());
 
 		glGenVertexArrays(1, &mesh.VAO);
 

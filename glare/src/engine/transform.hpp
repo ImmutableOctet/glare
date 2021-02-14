@@ -164,6 +164,8 @@ namespace engine
 			void set_rotation(const math::Vector& rv);
 			void set_local_rotation(const math::Vector& rv);
 
+			void apply(const math::TransformVectors& tform);
+
 			math::Vector get_local_direction_vector(const math::Vector forward = { 0.0f, 0.0f, -1.0f }); // 1.0f
 
 			void set_rx(float rx);

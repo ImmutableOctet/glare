@@ -39,7 +39,7 @@ namespace memory
 		inline bool has_data() const { return (data() != nullptr); }
 		inline bool valid() const { return (has_elements() && has_data()); }
 
-		inline operator bool() const { return valid(); }
+		inline explicit operator bool() const { return valid(); }
 		//inline operator const T*() const { return data; }
 
 		inline bool operator==(const T* rhs) const { return (data() == rhs); }

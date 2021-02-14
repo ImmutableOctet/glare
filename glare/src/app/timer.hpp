@@ -55,7 +55,7 @@ namespace app
 			inline Duration duration() const { return wait_duration; }
 
 			// Equivalent to 'valid'.
-			inline operator bool() const { return valid(); }
+			inline explicit operator bool() const { return valid(); }
 
 			// Retrieves the duration since the creation of this timer.
 			Duration time_elapsed(Time now);

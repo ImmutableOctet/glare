@@ -43,7 +43,10 @@ namespace engine
 	struct CollisionComponent
 	{
 		public:
-			CollisionComponent(const std::shared_ptr<btCollisionShape>& shape, float mass=0.0f, CollisionMask interaction_mask=CollisionMask::None, CollisionMask solid_mask=CollisionMask::None, bool auto_activate=true);
+			using RawShape = btCollisionShape;
+			using Shape = std::shared_ptr<RawShape>;
+
+			CollisionComponent(const Shape& shape, float mass=0.0f, CollisionMask interaction_mask=CollisionMask::None, CollisionMask solid_mask=CollisionMask::None, bool auto_activate=true);
 			~CollisionComponent();
 
 			CollisionComponent(CollisionComponent&&) = default;
@@ -59,11 +62,11 @@ namespace engine
 			void activate(bool force = false);
 			//void deactivate();
 
-			std::shared_ptr<btCollisionShape> shape;
+			Shape shape;
 
 			CollisionMask interaction_mask = CollisionMask::None;
 			CollisionMask solid_mask = CollisionMask::None;
 	};
 
-	Entity attach_collision(World& world, Entity entity, const std::shared_ptr<btCollisionShape>& collision_data, float mass = 0.0f, CollisionMask interaction_mask = CollisionMask::None, CollisionMask solid_mask = CollisionMask::None);
+	Entity attach_collision(World& world, Entity entity, const CollisionComponent::Shape& collision_data, float mass = 0.0f, CollisionMask interaction_mask = CollisionMask::None, CollisionMask solid_mask = CollisionMask::None);
 }

@@ -2,11 +2,13 @@
 #include "mesh.hpp"
 #include "material.hpp"
 
+#include <math/math.hpp>
 #include <engine/resource_manager.hpp>
 
 #include <algorithm>
 #include <iostream>
-
+#include <filesystem>
+#include <utility>
 
 #define AI_CONFIG_PP_PTV_NORMALIZE   "PP_PTV_NORMALIZE"
 
@@ -16,12 +18,7 @@
 #include <assimp/postprocess.h>
 #include <assimp/material.h>
 
-#include <filesystem>
-
-static math::Vector3D to_vector(const aiVector3D& v)
-{
-	return { v.x, v.y, v.z };
-}
+#include <bullet/btBulletCollisionCommon.h>
 
 namespace graphics
 {
@@ -89,7 +86,7 @@ namespace graphics
 		return {};
 	}
 
-	Model Model::Load(pass_ref<Context> context, const std::string& path, pass_ref<Shader> default_shader)
+	std::tuple<Model, std::optional<Model::CollisionGeometry>> Model::Load(pass_ref<Context> context, const std::string& path, pass_ref<Shader> default_shader, bool load_collision)
 	{
 		Model model;
 
@@ -124,9 +121,16 @@ namespace graphics
 		auto model_path = filesystem::path(path);
 		auto root_path = model_path.parent_path();
 
-		model.process_node(context, importer, root_path, scene, scene->mRootNode, default_shader, vert_direction);
+		CollisionGeometry::Container collision_out;
 
-		return model;
+		model.process_node(context, importer, root_path, scene, scene->mRootNode, default_shader, vert_direction, ((load_collision) ? &collision_out : nullptr));
+
+		if (load_collision)
+		{
+			return { std::move(model), std::move(collision_out) };
+		}
+
+		return { std::move(model), std::nullopt };
 	}
 
 	ref<Texture> Model::process_texture(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const filesystem::path& texture_path)
@@ -224,8 +228,10 @@ namespace graphics
 		return material;
 	}
 
-	void Model::process_node(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, pass_ref<Shader> default_shader, VertexWinding vert_direction)
+	void Model::process_node(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, pass_ref<Shader> default_shader, VertexWinding vert_direction, CollisionGeometry::Container* opt_collision_out)
 	{
+		bool collision_enabled = (opt_collision_out != nullptr);
+
 		// First node (root):
 		if (node == scene->mRootNode)
 		{
@@ -253,7 +259,14 @@ namespace graphics
 			// TODO: Review concept of 'optional materials'.
 			auto& mesh_descriptor = meshes[material_index];
 
-			mesh_descriptor.meshes.push_back(process_mesh(context, importer, root_path, scene, node, mesh, vert_direction));
+			auto mesh_data = process_mesh(importer, root_path, scene, node, mesh, vert_direction);
+
+			if (collision_enabled)
+			{
+				opt_collision_out->push_back({ copy_simple_vertices(*mesh), mesh_data.indices }); // TODO: Look into reducing unneeded copies.
+			}
+
+			mesh_descriptor.meshes.push_back(Mesh::Generate(context, mesh_data));
 		}
 
 		// Recursively process each child node:
@@ -261,7 +274,7 @@ namespace graphics
 		{
 			auto* child = node->mChildren[i];
 
-			process_node(context, importer, root_path, scene, child, default_shader, vert_direction);
+			process_node(context, importer, root_path, scene, child, default_shader, vert_direction, opt_collision_out);
 		}
 
 		// First node (root):
@@ -291,13 +304,11 @@ namespace graphics
 		}
 	}
 
-	Mesh Model::process_mesh(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, const aiMesh* mesh, VertexWinding vert_direction)
+	MeshData<Model::VertexType> Model::process_mesh(Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, const aiMesh* mesh, VertexWinding vert_direction)
 	{
-		using VertexType = StandardVertex;
-
 		const auto vertex_count = (mesh->mNumVertices);
 
-		MeshData<VertexType> data = {};
+		MeshData<VertexType> data = { {}, std::make_shared<std::vector<MeshIndex>>() };
 
 		data.vertices.reserve(vertex_count);
 
@@ -312,22 +323,22 @@ namespace graphics
 			//aiMatrix4x4 rm = node->mTransformation;
 			//aiMatrix4x4::Rotation(1.0f, { 1.0, 1.0, 1.0 }, rm);
 
-			vertex.position = to_vector(mesh->mVertices[i]); // rm * ...
-			vertex.normal   = to_vector(mesh->mNormals[i]);
+			vertex.position = math::to_vector(mesh->mVertices[i]); // rm * ...
+			vertex.normal   = math::to_vector(mesh->mNormals[i]);
 
 			auto uv_channels = mesh->mTextureCoords[0];
 
 			if (uv_channels)
 			{
-				vertex.uv = to_vector(uv_channels[i]);
+				vertex.uv = math::to_vector(uv_channels[i]);
 			}
 			else
 			{
 				vertex.uv = {};
 			}
 
-			vertex.tangent = to_vector(mesh->mTangents[i]);
-			vertex.bitangent = to_vector(mesh->mBitangents[i]);
+			vertex.tangent = math::to_vector(mesh->mTangents[i]);
+			vertex.bitangent = math::to_vector(mesh->mBitangents[i]);
 
 			data.vertices.push_back(vertex);
 		}
@@ -339,10 +350,35 @@ namespace graphics
 
 			for (unsigned int j = 0; j < face.mNumIndices; j++)
 			{
-				data.indices.push_back(face.mIndices[j]);
+				data.indices->push_back(face.mIndices[j]);
 			}
 		}
 
-		return Mesh::Generate(context, data);
+		return data;
+	}
+	
+	Model::CollisionGeometry::CollisionGeometry(Container&& mesh_data)
+		: mesh_interface(std::make_unique<Descriptor>()), mesh_data(std::move(mesh_data))
+	{
+		constexpr auto ph_index_type = ((sizeof(SimpleMeshData::Index) == 4) ? PHY_INTEGER : PHY_SHORT);
+
+		for (const auto& m : this->mesh_data)
+		{
+			btIndexedMesh part = {};
+
+			part.m_vertexBase = reinterpret_cast<const unsigned char*>(m.vertices.data());
+			part.m_vertexStride = sizeof(SimpleMeshData::Vertex); // SimpleVertex
+			part.m_numVertices = static_cast<int>(m.vertices.size());
+
+			if (m.indices)
+			{
+				part.m_triangleIndexBase = reinterpret_cast<const unsigned char*>(m.indices->data());
+				part.m_triangleIndexStride = (sizeof(SimpleMeshData::Index) * 3); // 3 indices per-triangle.
+				part.m_numTriangles = static_cast<int>(m.indices->size() / 3); // 3 indices per-triangle.
+				part.m_indexType = ph_index_type;
+			}
+
+			mesh_interface->addIndexedMesh(part, ph_index_type);
+		}
 	}
 }

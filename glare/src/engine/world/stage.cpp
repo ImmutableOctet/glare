@@ -49,25 +49,14 @@ namespace engine
 		// Global settings:
 
 		// Stage pivot:
-		Entity stage = null;
+		dbg->info("Creating pivot...");
 
-		{
-			auto [position, rotation, scale] = util::get_transform(data);
+		//parent = create_pivot(world, parent);
 
-			dbg->info("Transform:");
+		//Entity stage = null;
+		auto stage = create_pivot(world, parent);
 
-			dbg->info("Position: {}", position);
-			dbg->info("Rotation: {}", rotation);
-			dbg->info("Scale: {}\n", scale);
-
-			dbg->info("Creating pivot...");
-
-			//parent = create_pivot(world, parent);
-
-			stage = create_pivot(world, position, rotation, scale, parent);
-
-			registry.emplace<NameComponent>(stage, util::get_value<std::string>(data, "title", util::get_value<std::string>(data, "name", "Unknown Stage")));
-		}
+		registry.emplace<NameComponent>(stage, util::get_value<std::string>(data, "title", util::get_value<std::string>(data, "name", "Unknown Stage")));
 
 		// Players:
 		dbg->info("Loading players...");
@@ -171,10 +160,25 @@ namespace engine
 
 			bool collision_enabled = util::get_value(model_cfg, "collision", true);
 
-			auto model = load_model(world, model_path, stage, EntityType::Geometry, collision_enabled);
+			auto model = load_model(world, model_path, stage, EntityType::Geometry, collision_enabled, CollisionMask::LevelGeometry);
 
 			apply_transform(world, dbg, model, model_cfg);
 		});
+
+		// Apply stage transform, etc.
+		{
+			auto tform = util::get_transform(data);
+
+			auto [position, rotation, scale] = tform;
+
+			dbg->info("Stage Transform:");
+
+			dbg->info("Position: {}", position);
+			dbg->info("Rotation: {}", rotation);
+			dbg->info("Scale: {}\n", scale);
+
+			world.apply_transform(stage, tform);
+		}
 
 		return stage;
     }

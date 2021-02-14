@@ -1,7 +1,16 @@
-#include <algorithm>
-
 #include "mesh.hpp"
 #include "context.hpp"
+
+#include <math/math.hpp>
+
+#include <algorithm>
+
+#include <assimp/Importer.hpp>
+#include <assimp/vector3.h>
+#include <assimp/mesh.h>
+//#include <assimp/scene.h>
+//#include <assimp/postprocess.h>
+//#include <assimp/material.h>
 
 namespace graphics
 {
@@ -71,5 +80,25 @@ namespace graphics
 	void Mesh::on_bind(Context& context)
 	{
 		// Nothing so far.
+	}
+
+	std::vector<SimpleVertex> copy_simple_vertices(const aiMesh& mesh)
+	{
+		const auto vertex_count = mesh.mNumVertices;
+
+		std::vector<SimpleVertex> vertices_out;
+
+		vertices_out.reserve(vertex_count);
+
+		for (unsigned i = 0; i < vertex_count; i++)
+		{
+			SimpleVertex vertex;
+
+			vertex.position = math::to_vector(mesh.mVertices[i]);
+
+			vertices_out.push_back(vertex);
+		}
+
+		return vertices_out;
 	}
 }

@@ -43,11 +43,14 @@ namespace graphics
 
 		math::vec3f position;
 
+		//Vertex() = default;
+		//Vertex(const Vertex&) = default;
+
 		// Retrieves the primitive 'ElementType' assocaited with 'T'.
 		template <typename T>
 		inline static ElementType GetElementType() noexcept
 		{
-			const auto& type = typeid(T);
+			const auto& type = typeid(T); // constexpr
 
 			// Primitives:
 			if (type == typeid(std::int8_t))           return ElementType::Byte;
@@ -125,6 +128,7 @@ namespace graphics
 	VERTEX_ATTRIBUTE(Bitangent, math::vec3f, bitangent);
 
 	//using PositionVertex = Vertex;
+	using SimpleVertex = Vertex;
 	using TexturedVertex = A_TexCoords<Vertex>;
 	using StandardVertex = A_Bitangent<A_Tangent<A_TexCoords<A_Normal<Vertex>>>>;
 }
