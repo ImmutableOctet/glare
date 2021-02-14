@@ -84,7 +84,7 @@ namespace engine
 			inline pass_ref<graphics::Context> get_context() const { return context; }
 			inline pass_ref<graphics::Shader> get_default_shader() const { return default_shader; }
 
-			ModelData load_model(const std::string& path, bool load_collision=false, bool optimize_collision=true) const;
+			ModelData load_model(const std::string& path, bool load_collision=false, bool optimize_collision=true, bool force_reload=false) const;
 
 			// Optionally returns a pointer to a 'CollisionData' object for the 'model' specified.
 			//const CollisionData* get_collision(WeakModelRef model);

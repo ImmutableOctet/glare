@@ -33,56 +33,55 @@ namespace engine
 
 	ResourceManager::~ResourceManager() {}
 
-	ResourceManager::ModelData ResourceManager::load_model(const std::string& path, bool load_collision, bool optimize_collision) const
+	ResourceManager::ModelData ResourceManager::load_model(const std::string& path, bool load_collision, bool optimize_collision, bool force_reload) const
 	{
 		auto path_resolved = resolve_path(path);
 
-		//ModelData loaded_model;
-
-		auto model_data = graphics::Model::Load(get_context(), path, get_default_shader(), load_collision);
-
-		ModelRef loaded_model;
-
-		auto lm_it = loaded_models.find(path_resolved);
-
-		if (lm_it != loaded_models.end())
+		if (!force_reload)
 		{
-			loaded_model = lm_it->second;
+			auto lm_it = loaded_models.find(path_resolved);
 
-			if (load_collision)
+			if (lm_it != loaded_models.end())
 			{
-				auto cd_it = collision_data.find(loaded_model);
+				auto loaded_model = lm_it->second;
 
-				if (cd_it == collision_data.end())
+				if (load_collision)
 				{
-					// TODO: INSERT CODE TO LOAD COLLISION SEPARATELY HERE.
-					ASSERT(false);
+					auto cd_it = collision_data.find(loaded_model);
+
+					if (cd_it == collision_data.end())
+					{
+						// TODO: INSERT CODE TO LOAD COLLISION SEPARATELY HERE.
+						ASSERT(false);
+					}
+					else
+					{
+						return { std::move(loaded_model), &cd_it->second };
+					}
 				}
-				else
-				{
-					return { std::move(loaded_model), &cd_it->second };
-				}
+
+				return { std::move(loaded_model), nullptr };
 			}
 		}
-		else
+		
+		auto model_data = graphics::Model::Load(get_context(), path, get_default_shader(), load_collision);
+
+		auto loaded_model = memory::allocate<graphics::Model>(); // ModelRef
+		*loaded_model = std::move(std::get<0>(model_data));
+
+		ASSERT(loaded_model->has_meshes());
+
+		loaded_models[path_resolved] = loaded_model;
+
+		if (load_collision)
 		{
-			loaded_model = memory::allocate<graphics::Model>();
-			*loaded_model = std::move(std::get<0>(model_data));
+			auto collision_opt = std::move(std::get<1>(model_data));
 
-			ASSERT(loaded_model->has_meshes());
-
-			loaded_models[path_resolved] = loaded_model;
-
-			if (load_collision)
+			if (collision_opt)
 			{
-				auto collision_opt = std::move(std::get<1>(model_data));
+				auto& ref_out = (collision_data[loaded_model] = { std::move(collision_opt.value()), optimize_collision }); // CollisionData col_out = ... ; // [loaded_model.get()]
 
-				if (collision_opt)
-				{
-					auto& ref_out = (collision_data[loaded_model] = { std::move(collision_opt.value()), optimize_collision }); // CollisionData col_out = ... ; // [loaded_model.get()]
-
-					return { std::move(loaded_model), &ref_out };
-				}
+				return { std::move(loaded_model), &ref_out };
 			}
 		}
 
