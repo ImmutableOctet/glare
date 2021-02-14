@@ -21,6 +21,12 @@
 
 namespace engine
 {
+	ResourceManager::CollisionData::CollisionData(const Shape& collision_shape)
+		: collision_shape(collision_shape) {}
+
+	ResourceManager::CollisionData::CollisionData(Geometry&& geometry_storage, bool optimize)
+		: collision_shape(ResourceManager::build_mesh_shape(geometry_storage, optimize)), geometry_storage(std::move(geometry_storage)) {}
+
 	ResourceManager::ResourceManager(pass_ref<graphics::Context> context, pass_ref<graphics::Shader> default_shader)
 		: context(context), default_shader(default_shader)
 	{}
@@ -29,30 +35,54 @@ namespace engine
 
 	ResourceManager::ModelData ResourceManager::load_model(const std::string& path, bool load_collision, bool optimize_collision) const
 	{
+		auto path_resolved = resolve_path(path);
+
 		//ModelData loaded_model;
 
 		auto model_data = graphics::Model::Load(get_context(), path, get_default_shader(), load_collision);
 
 		ModelRef loaded_model;
 
-		loaded_model = memory::allocate<graphics::Model>();
-		*loaded_model = std::move(std::get<0>(model_data));
+		auto lm_it = loaded_models.find(path_resolved);
 
-		loaded_models[path] = loaded_model;
-
-		if (load_collision)
+		if (lm_it != loaded_models.end())
 		{
-			auto collision_opt = std::move(std::get<1>(model_data));
+			loaded_model = lm_it->second;
 
-			if (collision_opt)
+			if (load_collision)
 			{
-				auto col_in = std::move(collision_opt.value());
+				auto cd_it = collision_data.find(loaded_model);
 
-				auto shape = std::make_shared<btBvhTriangleMeshShape>(col_in.mesh_interface.get(), optimize_collision); // std::shared_ptr<btTriangleMeshShape>
+				if (cd_it == collision_data.end())
+				{
+					// TODO: INSERT CODE TO LOAD COLLISION SEPARATELY HERE.
+					ASSERT(false);
+				}
+				else
+				{
+					return { std::move(loaded_model), &cd_it->second };
+				}
+			}
+		}
+		else
+		{
+			loaded_model = memory::allocate<graphics::Model>();
+			*loaded_model = std::move(std::get<0>(model_data));
 
-				auto& ref_out = (collision_data[loaded_model] = { std::static_pointer_cast<CollisionRaw>(shape), std::move(col_in) }); // CollisionData col_out = ... ; // [loaded_model.get()]
+			ASSERT(loaded_model->has_meshes());
 
-				return { std::move(loaded_model), &ref_out };
+			loaded_models[path_resolved] = loaded_model;
+
+			if (load_collision)
+			{
+				auto collision_opt = std::move(std::get<1>(model_data));
+
+				if (collision_opt)
+				{
+					auto& ref_out = (collision_data[loaded_model] = { std::move(collision_opt.value()), optimize_collision }); // CollisionData col_out = ... ; // [loaded_model.get()]
+
+					return { std::move(loaded_model), &ref_out };
+				}
 			}
 		}
 
@@ -61,12 +91,23 @@ namespace engine
 
 	ResourceManager::CollisionData ResourceManager::get_capsule_collision(float radius, float height) // ref<btCapsuleShape>
 	{
-		return { std::static_pointer_cast<CollisionRaw>(std::make_shared<btCapsuleShape>(radius, height)), std::nullopt };
+		return { std::static_pointer_cast<CollisionRaw>(std::make_shared<btCapsuleShape>(radius, height)) };
 	}
 
 	std::string ResourceManager::resolve_path(const std::string& path)
 	{
 		// TODO: Implement logic to handle different paths to the same resource.
 		return path;
+	}
+
+	ResourceManager::CollisionShape ResourceManager::build_mesh_shape(const ResourceManager::CollisionGeometry& geometry_storage, bool optimize)
+	{
+		auto desc = geometry_storage.mesh_interface.get(); // auto*
+
+		ASSERT(desc);
+
+		auto shape = std::make_shared<btBvhTriangleMeshShape>(desc, optimize); // std::shared_ptr<btTriangleMeshShape>
+
+		return std::static_pointer_cast<CollisionRaw>(shape);
 	}
 }

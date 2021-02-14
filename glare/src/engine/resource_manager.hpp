@@ -38,6 +38,7 @@ namespace engine
 		public:
 			using CollisionRaw = CollisionComponent::RawShape; // btCollisionShape;
 			using CollisionShape = CollisionComponent::Shape; // ref<CollisionRaw>;
+			using CollisionGeometry = graphics::Model::CollisionGeometry;
 
 			//using CollisionData = CollisionShape;
 
@@ -46,15 +47,26 @@ namespace engine
 				using Shape = CollisionShape;
 				using Raw = CollisionRaw;
 
-				using Geometry = graphics::Model::CollisionGeometry;
+				using Geometry = CollisionGeometry;
+
+				CollisionData() = default;
+
+				CollisionData(CollisionData&&) = default;
+				CollisionData(const CollisionData&) = default;
+
+				CollisionData(const Shape& collision_shape);
+				CollisionData(Geometry&& geometry_storage, bool optimize=true);
+
+				CollisionData& operator=(CollisionData&&) = default;
 
 				Shape collision_shape;
-				std::optional<Geometry> geometry_storage;
+				std::optional<Geometry> geometry_storage = std::nullopt;
 
-				inline explicit operator bool() const { return collision_shape.operator bool(); }
-				inline bool operator==(const CollisionData& data) const { return (this->collision_shape == data.collision_shape); }
-
+				inline bool has_shape() const { return collision_shape.operator bool(); }
 				inline bool has_geometry() const { return geometry_storage.has_value(); }
+
+				inline explicit operator bool() const { return has_shape(); }
+				inline bool operator==(const CollisionData& data) const { return (this->collision_shape == data.collision_shape); }
 			};
 
 			// Reference to a 'Model' object; used internally for path lookups, etc.
@@ -100,14 +112,13 @@ namespace engine
 			//inline static std::string resolve_path(const std::string& path) { return path; }
 
 			static std::string resolve_path(const std::string& path);
+			static CollisionShape build_mesh_shape(const CollisionGeometry& geometry_storage, bool optimize=true);
 
 			mutable ref<graphics::Context> context;
 			mutable ref<graphics::Shader> default_shader;
 
 			mutable std::unordered_map<std::string, ModelRef> loaded_models; // ModelData // std::map
-			mutable
-				//std::unordered_map<WeakModelRef, CollisionData, std::hash<WeakModelRef>, std::owner_less<>>
-				std::map<WeakModelRef, CollisionData, std::owner_less<>> collision_data;
+			mutable std::map<WeakModelRef, CollisionData, std::owner_less<>> collision_data; //std::unordered_map<WeakModelRef, CollisionData, std::hash<WeakModelRef>, std::owner_less<>> collision_data;	
 
 			//std::unordered_map<std::string, TextureData> texture_data;
 	};
