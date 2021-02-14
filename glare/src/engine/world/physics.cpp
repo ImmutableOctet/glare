@@ -101,7 +101,7 @@ namespace engine
 		auto& component = registry.get<CollisionComponent>(entity);
 		auto* collision_obj = component.collision.get(); // new_col.component
 
-		collision_world->addCollisionObject(collision_obj, component.);
+		//collision_world->addCollisionObject(collision_obj, component.);
 
 		//update_collision_object(*collision_obj, transform.get_matrix());
 		update_collision_object(transform, component);

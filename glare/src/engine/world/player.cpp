@@ -77,8 +77,8 @@ namespace engine
 
 		float mass = 1.0f;
 
-		auto interaction_mask = CollisionMask::All;
-		auto solid_mask = CollisionMask::StandardObject;
+		auto interaction_mask = CollisionGroup::All;
+		auto solid_mask = CollisionGroup::StandardObject;
 
 		attach_collision(world, player, collision_data.collision_shape, mass, interaction_mask, solid_mask);
 

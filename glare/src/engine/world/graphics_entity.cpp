@@ -34,7 +34,7 @@ namespace engine
 		return entity;
 	}
 
-	Entity load_model(World& world, const std::string& path, Entity parent, EntityType type, bool collision_enabled, CollisionMask solid_mask, CollisionMask interaction_mask, float mass)
+	Entity load_model(World& world, const std::string& path, Entity parent, EntityType type, bool collision_enabled, CollisionGroup solid_mask, CollisionGroup interaction_mask, float mass)
 	{
 		auto& resource_manager = world.get_resource_manager();
 

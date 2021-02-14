@@ -160,7 +160,7 @@ namespace engine
 
 			bool collision_enabled = util::get_value(model_cfg, "collision", true);
 
-			auto model = load_model(world, model_path, stage, EntityType::Geometry, collision_enabled, CollisionMask::LevelGeometry);
+			auto model = load_model(world, model_path, stage, EntityType::Geometry, collision_enabled, CollisionGroup::LevelGeometry);
 
 			apply_transform(world, dbg, model, model_cfg);
 		});

@@ -12,7 +12,7 @@
 
 namespace engine
 {
-	CollisionComponent::CollisionComponent(const CollisionComponent::Shape& shape, float mass, CollisionMask interaction_mask, CollisionMask solid_mask, bool auto_activate) :
+	CollisionComponent::CollisionComponent(const CollisionComponent::Shape& shape, float mass, CollisionGroup interaction_mask, CollisionGroup solid_mask, bool auto_activate) :
 		mass(mass),
 
 		interaction_mask(interaction_mask),
@@ -40,7 +40,7 @@ namespace engine
 		collision->activate(force);
 	}
 	
-	Entity attach_collision(World& world, Entity entity, const CollisionComponent::Shape& collision_data, float mass, CollisionMask interaction_mask, CollisionMask solid_mask)
+	Entity attach_collision(World& world, Entity entity, const CollisionComponent::Shape& collision_data, float mass, CollisionGroup interaction_mask, CollisionGroup solid_mask)
 	{
 		auto& registry = world.get_registry();
 

@@ -19,7 +19,7 @@ namespace engine
 		//Sphere = 3,
 	};
 
-	enum class CollisionMask : std::uint32_t
+	enum class CollisionGroup : std::uint32_t
 	{
 		None = 0,
 
@@ -41,7 +41,9 @@ namespace engine
 		All = (UINT32_MAX),
 	};
 
-	FLAG_ENUM(std::uint32_t, CollisionMask);
+	FLAG_ENUM(std::uint32_t, CollisionGroup);
+
+	//using CollisionMask = CollisionGroup;
 
 	struct CollisionComponent
 	{
@@ -51,7 +53,7 @@ namespace engine
 			using RawShape = btCollisionShape;
 			using Shape = std::shared_ptr<RawShape>;
 
-			CollisionComponent(const Shape& shape, float mass=0.0f, CollisionMask interaction_mask=CollisionMask::None, CollisionMask solid_mask=CollisionMask::None, bool auto_activate=true);
+			CollisionComponent(const Shape& shape, float mass=0.0f, CollisionGroup interaction_mask=CollisionGroup::None, CollisionGroup solid_mask=CollisionGroup::None, bool auto_activate=true);
 			~CollisionComponent();
 
 			CollisionComponent(CollisionComponent&&) = default;
@@ -60,10 +62,10 @@ namespace engine
 			CollisionComponent(const CollisionComponent&) = delete;
 			CollisionComponent& operator=(const CollisionComponent&) = delete;
 
-			inline CollisionMask get_interactions() const { return interaction_mask; }
-			inline CollisionMask get_solids() const { return solid_mask; }
+			inline CollisionGroup get_interactions() const { return interaction_mask; }
+			inline CollisionGroup get_solids() const { return solid_mask; }
 
-			inline CollisionMask get_full_mask() const { return (get_interactions() | get_solids()); }
+			inline CollisionGroup get_full_mask() const { return (get_interactions() | get_solids()); }
 
 			float mass = 0.0f;
 			std::unique_ptr<btCollisionObject> collision;
@@ -73,9 +75,9 @@ namespace engine
 
 			Shape shape;
 
-			CollisionMask interaction_mask = CollisionMask::None;
-			CollisionMask solid_mask = CollisionMask::None;
+			CollisionGroup interaction_mask = CollisionGroup::None;
+			CollisionGroup solid_mask = CollisionGroup::None;
 	};
 
-	Entity attach_collision(World& world, Entity entity, const CollisionComponent::Shape& collision_data, float mass = 0.0f, CollisionMask interaction_mask = CollisionMask::None, CollisionMask solid_mask = CollisionMask::None);
+	Entity attach_collision(World& world, Entity entity, const CollisionComponent::Shape& collision_data, float mass = 0.0f, CollisionGroup interaction_mask = CollisionGroup::None, CollisionGroup solid_mask = CollisionGroup::None);
 }
