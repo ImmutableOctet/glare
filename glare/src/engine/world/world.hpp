@@ -135,6 +135,8 @@ namespace engine
 			inline Registry& get_registry() { return registry; }
 			inline EventHandler& get_event_handler() { return event_handler; }
 			inline ResourceManager& get_resource_manager() { return resource_manager; }
+
+			inline PhysicsSystem& get_physics() { return physics; }
 			
 			// Retrieves the root scene-node; parent to all world-scoped entities.
 			inline Entity get_root() const { return root; }

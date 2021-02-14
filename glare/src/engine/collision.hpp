@@ -10,6 +10,7 @@ class btCollisionObject;
 namespace engine
 {
 	class World;
+	class PhysicsSystem;
 
 	enum class CollisionShape
 	{
@@ -22,16 +23,18 @@ namespace engine
 	{
 		None = 0,
 
-		LevelGeometry = (1 << 0),
-		Player = (1 << 1),
-		Objects = (1 << 2),
-		Collectable = (1 << 3),
-		Water = (1 << 4),
+		// Bit 1 is reserved.
 
-		DamageZone = (1 << 5),
-		KillZone = (1 << 6),
+		LevelGeometry = (1 << 1),
+		Player = (1 << 2),
+		Objects = (1 << 3),
+		Collectable = (1 << 4),
+		Water = (1 << 5),
+
+		DamageZone = (1 << 6),
+		KillZone = (1 << 7),
 		
-		EventTrigger = (1 << 7),
+		EventTrigger = (1 << 8),
 
 		StandardObject = (LevelGeometry|Player|Objects),
 
@@ -43,6 +46,8 @@ namespace engine
 	struct CollisionComponent
 	{
 		public:
+			friend class PhysicsSystem;
+
 			using RawShape = btCollisionShape;
 			using Shape = std::shared_ptr<RawShape>;
 
@@ -55,9 +60,13 @@ namespace engine
 			CollisionComponent(const CollisionComponent&) = delete;
 			CollisionComponent& operator=(const CollisionComponent&) = delete;
 
+			inline CollisionMask get_interactions() const { return interaction_mask; }
+			inline CollisionMask get_solids() const { return solid_mask; }
+
+			inline CollisionMask get_full_mask() const { return (get_interactions() | get_solids()); }
+
 			float mass = 0.0f;
 			std::unique_ptr<btCollisionObject> collision;
-
 		protected:
 			void activate(bool force = false);
 			//void deactivate();

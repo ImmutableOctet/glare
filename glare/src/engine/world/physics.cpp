@@ -51,12 +51,12 @@ namespace engine
 		{
 			auto transform = world.get_transform(entity);
 
+			auto* col = registry.try_get<CollisionComponent>(entity);
+
 			update_motion(world, entity, transform, ph, delta);
 
 			if (transform.collision_invalid())
 			{
-				auto* col = registry.try_get<CollisionComponent>(entity);
-
 				if (col)
 				{
 					update_collision_object(transform, *col);
@@ -99,7 +99,9 @@ namespace engine
 		auto& registry = world.get_registry();
 
 		auto& component = registry.get<CollisionComponent>(entity);
-		//auto* collision_obj = component.collision.get(); // new_col.component
+		auto* collision_obj = component.collision.get(); // new_col.component
+
+		collision_world->addCollisionObject(collision_obj, component.);
 
 		//update_collision_object(*collision_obj, transform.get_matrix());
 		update_collision_object(transform, component);
