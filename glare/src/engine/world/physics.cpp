@@ -106,9 +106,10 @@ namespace engine
 			return;
 		}
 
+		auto c_group = static_cast<int>(component.get_group());
 		auto c_mask = static_cast<int>(component.get_full_mask());
 
-		collision_world->addCollisionObject(collision_obj, c_mask, c_mask);
+		collision_world->addCollisionObject(collision_obj, c_group, c_mask);
 
 		//update_collision_object(*collision_obj, transform.get_matrix());
 		update_collision_object(transform, component);
