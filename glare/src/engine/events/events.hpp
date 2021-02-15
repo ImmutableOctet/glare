@@ -28,6 +28,8 @@ namespace engine
 		Entity entity;
 		Entity parent;
 		EntityType type;
+
+		bool destroy_orphans = true;
 	};
 
 	template <typename ComponentType>

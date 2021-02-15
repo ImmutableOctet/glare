@@ -12,19 +12,121 @@
 
 namespace engine
 {
-	CollisionComponent::CollisionComponent(const CollisionComponent::Shape& shape, float mass, CollisionGroup interaction_mask, CollisionGroup solid_mask, bool auto_activate) :
-		mass(mass),
-
-		interaction_mask(interaction_mask),
-		solid_mask(solid_mask),
-
-		shape(shape),
-		collision(nullptr)
+	CollisionGroup CollisionConfig::resolve_collision_group(EntityType type)
 	{
-		if (shape != nullptr)
+		switch (type)
 		{
-			collision = std::make_unique<btCollisionObject>();
-			collision->setCollisionShape(shape.get());
+			case EntityType::Geometry: return CollisionGroup::StaticGeometry;
+			
+			case EntityType::Platform: return CollisionGroup::DynamicGeometry;
+			case EntityType::Crusher: return CollisionGroup::DynamicGeometry;
+			
+			case EntityType::Bone: return CollisionGroup::Bone;
+
+			case EntityType::Object: return CollisionGroup::Object;
+			case EntityType::Camera: return CollisionGroup::Object;
+			
+			case EntityType::Player: return CollisionGroup::Actor;
+			case EntityType::Enemy: return CollisionGroup::Actor;
+			case EntityType::FriendlyActor: return CollisionGroup::Actor;
+
+			case EntityType::Collectable: return CollisionGroup::Object;
+			
+			case EntityType::Particle: return CollisionGroup::Particle; // CollisionGroup::All;
+			
+			case EntityType::WaterZone: return CollisionGroup::Zone;
+			case EntityType::KillZone: return CollisionGroup::Zone;
+			case EntityType::DamageZone: return CollisionGroup::Zone;
+			case EntityType::EventTrigger: return CollisionGroup::Zone;
+
+			case EntityType::Projectile: return CollisionGroup::Projectile;
+
+			//case EntityType::Light: return CollisionGroup::StaticGeometry;
+			//case EntityType::Pivot: return CollisionGroup::None;
+			//case EntityType::Regulator: return CollisionGroup::None;
+			//case EntityType::Generator: return CollisionGroup::None;
+		}
+
+		return CollisionGroup::None;
+	}
+
+	CollisionGroup CollisionConfig::resolve_solid_mask(EntityType type)
+	{
+		switch (type)
+		{
+			case EntityType::Geometry: return CollisionGroup::GeometrySolids;
+			case EntityType::Platform: return CollisionGroup::GeometrySolids;
+			case EntityType::Crusher: return CollisionGroup::GeometrySolids; // (CollisionGroup::Actor | CollisionGroup::Projectile);
+			//case EntityType::Light: return CollisionGroup::None;
+			//case EntityType::Pivot: return CollisionGroup::None;
+			case EntityType::Bone: return CollisionGroup::BoneSolids;
+			case EntityType::Object: return CollisionGroup::ObjectSolids;
+			case EntityType::Player: return CollisionGroup::ActorSolids;
+			case EntityType::Camera: return CollisionGroup::ObjectSolids; // CollisionGroup::None;
+			case EntityType::Enemy: return CollisionGroup::ActorSolids;
+			case EntityType::FriendlyActor: return CollisionGroup::ActorSolids;
+			case EntityType::Collectable: return CollisionGroup::AllGeometry;
+			case EntityType::Particle: return CollisionGroup::AllGeometry; // CollisionGroup::ObjectSolids;
+			case EntityType::Projectile: return CollisionGroup::ProjectileSolids; // CollisionGroup::None
+			//case EntityType::EventTrigger: return CollisionGroup::None;
+
+			case EntityType::WaterZone: return CollisionGroup::None;
+			case EntityType::KillZone: return CollisionGroup::None;
+			case EntityType::DamageZone: return CollisionGroup::None;
+
+			case EntityType::Generator: return CollisionGroup::AllGeometry; // CollisionGroup::None
+		}
+
+		return CollisionGroup::None;
+	}
+
+	CollisionGroup CollisionConfig::resolve_interaction_mask(EntityType type)
+	{
+		switch (type)
+		{
+			case EntityType::Geometry: return CollisionGroup::None;
+			case EntityType::Platform: return CollisionGroup::ObjectInteractions;
+			case EntityType::Crusher: return (CollisionGroup::Actor | CollisionGroup::Object | CollisionGroup::AllGeometry);
+			//case EntityType::Light: return CollisionGroup::None;
+			//case EntityType::Pivot: return CollisionGroup::All;
+			//case EntityType::Bone: return CollisionGroup::None;
+			case EntityType::Object: return CollisionGroup::ObjectInteractions;
+			case EntityType::Player: return CollisionGroup::PlayerInteractions;
+			//case EntityType::Camera: return CollisionGroup::ObjectInteractions;
+			case EntityType::Enemy: return CollisionGroup::EnemyInteractions;
+			case EntityType::FriendlyActor: return CollisionGroup::ObjectInteractions;
+			case EntityType::Collectable: return CollisionGroup::CollectableInteractions;
+			case EntityType::Particle: return CollisionGroup::AllGeometry;
+			case EntityType::Projectile: return CollisionGroup::HitDetectionInteractions;
+			case EntityType::EventTrigger: return CollisionGroup::Actor;
+
+			case EntityType::WaterZone: return CollisionGroup::All;
+			case EntityType::KillZone: return CollisionGroup::All;
+			case EntityType::DamageZone: return CollisionGroup::All;
+
+			case EntityType::Generator: return CollisionGroup::None;
+		}
+
+		return CollisionGroup::None;
+	}
+
+	CollisionConfig::CollisionConfig(EntityType type) :
+		group(resolve_collision_group(type)),
+		solid_mask(resolve_solid_mask(type)),
+		interaction_mask(resolve_interaction_mask(type))
+	{}
+
+	CollisionComponent::CollisionComponent(const CollisionComponent::Shape& shape, const CollisionConfig& config, float mass, bool auto_activate) :
+		CollisionConfig(config),
+		mass(mass),
+		
+		collision(std::make_unique<btCollisionObject>()),
+
+		shape() // nullptr
+	{
+		if (shape)
+		{
+			set_shape(shape);
 
 			if (auto_activate)
 			{
@@ -35,16 +137,23 @@ namespace engine
 
 	CollisionComponent::~CollisionComponent() {}
 
+	void CollisionComponent::set_shape(const Shape& shape)
+	{
+		collision->setCollisionShape(shape.get());
+
+		this->shape = shape;
+	}
+
 	void CollisionComponent::activate(bool force)
 	{
 		collision->activate(force);
 	}
 	
-	Entity attach_collision(World& world, Entity entity, const CollisionComponent::Shape& collision_data, float mass, CollisionGroup interaction_mask, CollisionGroup solid_mask)
+	Entity attach_collision(World& world, Entity entity, const CollisionComponent::Shape& collision_data, const CollisionConfig& config, float mass)
 	{
 		auto& registry = world.get_registry();
 
-		auto& component = registry.emplace<CollisionComponent>(entity, collision_data, mass, interaction_mask, solid_mask);
+		auto& component = registry.emplace<CollisionComponent>(entity, collision_data, config, mass);
 
 		world.on_new_collider({ entity });
 

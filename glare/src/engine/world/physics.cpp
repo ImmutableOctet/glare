@@ -101,10 +101,27 @@ namespace engine
 		auto& component = registry.get<CollisionComponent>(entity);
 		auto* collision_obj = component.collision.get(); // new_col.component
 
-		//collision_world->addCollisionObject(collision_obj, component.);
+		if (!collision_obj) // component.collision
+		{
+			return;
+		}
+
+		auto c_mask = static_cast<int>(component.get_full_mask());
+
+		collision_world->addCollisionObject(collision_obj, c_mask, c_mask);
 
 		//update_collision_object(*collision_obj, transform.get_matrix());
 		update_collision_object(transform, component);
+	}
+
+	void PhysicsSystem::on_destroy_collider(World& world, Entity entity, CollisionComponent& col)
+	{
+		if (col.collision)
+		{
+			auto* collision_obj = col.collision.get();
+
+			collision_world->removeCollisionObject(collision_obj);
+		}
 	}
 
 	void PhysicsSystem::update_collision_object(Transform& transform, CollisionComponent& col) // World& world, Entity entity

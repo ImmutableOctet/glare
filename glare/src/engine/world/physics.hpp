@@ -77,6 +77,7 @@ namespace engine
 			void set_gravity(const math::Vector& g);
 
 			void on_new_collider(World& world, const OnComponentAdd<CollisionComponent>& new_col);
+			void on_destroy_collider(World& world, Entity entity, CollisionComponent& col); // const CollisionComponent&
 			void update_collision_object(Transform& transform, CollisionComponent& col);
 		protected:
 			void update_collision_object(btCollisionObject& obj, const math::Matrix& m);
