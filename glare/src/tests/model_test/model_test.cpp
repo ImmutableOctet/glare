@@ -433,9 +433,9 @@ namespace glare::tests
 					auto& registry = world.get_registry();
 
 					// update attenuation parameters and calculate radius
-					const float constant  = 1.0; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
-					const float linear    = 0.7;
-					const float quadratic = 1.8;
+					const float constant  = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
+					const float linear    = 0.7f;
+					const float quadratic = 1.8f;
 
 					unsigned int light_idx = 0;
 
@@ -637,7 +637,7 @@ namespace glare::tests
 
 		window->get_size(w_width, w_height);
 
-		viewport.set_size(static_cast<float>(w_width), static_cast<float>(w_height));
+		viewport.set_size(static_cast<graphics::PointRect::Type>(w_width), static_cast<graphics::PointRect::Type>(w_height));
 
 		if ((w_width != 0) && (w_height != 0))
 		{

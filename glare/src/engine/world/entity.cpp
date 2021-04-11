@@ -68,38 +68,8 @@ namespace engine
 			type = tp->type;
 		}
 
-		world.queue_event<OnEntityDestroyed>(entity, parent, type);
-
-		if (relationship) // <-- Null-check for 'relationship' isn't actually necessary. (MSVC complains)
-		{
-			// Make the assumption this object exists, as if it didn't, we would be in an invalid state.
-			auto* parent_relationship = registry.try_get<Relationship>(parent);
-
-			relationship->enumerate_child_entities(registry, [&](Entity child, Entity next_child) -> bool
-			{
-				if (destroy_orphans)
-				{
-					destory_entity(world, child, true);
-				}
-				else
-				{
-					if (parent_relationship)
-					{
-						parent_relationship->add_child(registry, parent, child);
-					}
-					else
-					{
-						world.set_parent(child, null);
-					}
-				}
-
-				return true;
-			});
-
-			//registry.replace<Relationship>(parent, std::move(parent_relationship)); // [&](auto& r) { r = parent_relationship; }
-		}
-
-		registry.destroy(entity);
+		// Actual destruction takes place once the 'World' object has received the event.
+		world.queue_event<OnEntityDestroyed>(entity, parent, type, destroy_orphans);
 	}
 
 	Entity create_pivot(World& world, Entity parent, EntityType type)

@@ -34,7 +34,16 @@ namespace engine
 		return entity;
 	}
 
-	Entity load_model(World& world, const std::string& path, Entity parent, EntityType type, bool collision_enabled, CollisionMask solid_mask, CollisionMask interaction_mask, float mass)
+	Entity load_model
+	(
+		World& world, const std::string& path, Entity parent, EntityType type,
+
+		bool collision_enabled, float mass,
+
+		std::optional<CollisionGroup> collision_group,
+		std::optional<CollisionGroup> collision_solid_mask,
+		std::optional<CollisionGroup> collision_interaction_mask
+	)
 	{
 		auto& resource_manager = world.get_resource_manager();
 
@@ -47,7 +56,7 @@ namespace engine
 
 		if (collision_enabled && collision_data)
 		{
-			attach_collision(world, entity, collision_data->collision_shape, mass, interaction_mask, solid_mask);
+			attach_collision(world, entity, collision_data->collision_shape, CollisionConfig(type), mass);
 		}
 
 		return entity;

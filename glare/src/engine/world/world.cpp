@@ -37,6 +37,8 @@
 #include <fstream>
 //#include <filesystem>
 
+#include <bullet/btBulletCollisionCommon.h>
+
 // Debugging related:
 #include <iostream>
 
@@ -48,6 +50,7 @@ namespace engine
 		register_event<app::input::MouseState,    &World::on_mouse_input>();
 		register_event<app::input::KeyboardState, &World::on_keyboard_input>();
 		register_event<OnComponentAdd<engine::CollisionComponent>, &World::on_new_collider>();
+		register_event<OnEntityDestroyed, &World::on_entity_destroyed>();
 
 		root = create_pivot(*this);
 	}
@@ -380,5 +383,54 @@ namespace engine
 	void World::on_new_collider(const OnComponentAdd<CollisionComponent>& new_col)
 	{
 		physics.on_new_collider(*this, new_col);
+	}
+
+	void World::on_entity_destroyed(const OnEntityDestroyed& destruct)
+	{
+		auto entity          = destruct.entity;
+		auto parent          = destruct.parent;
+		auto type            = destruct.type;
+		auto destroy_orphans = destruct.destroy_orphans;
+
+		// Handle collision:
+		auto* col = registry.try_get<CollisionComponent>(entity);
+
+		if (col)
+		{
+			physics.on_destroy_collider(*this, entity, *col);
+		}
+
+		// Handle entity relationships:
+		auto* relationship = registry.try_get<Relationship>(entity);
+
+		if (relationship) // <-- Null-check for 'relationship' isn't actually necessary. (MSVC complains)
+		{
+			// Make the assumption this object exists, as if it didn't, we would be in an invalid state.
+			auto* parent_relationship = registry.try_get<Relationship>(parent);
+
+			relationship->enumerate_child_entities(registry, [&](Entity child, Entity next_child) -> bool
+			{
+				if (parent_relationship)
+				{
+					parent_relationship->add_child(registry, parent, child);
+				}
+				else
+				{
+					set_parent(child, null);
+				}
+
+				if (destroy_orphans)
+				{
+					// Queue orphans to be destroyed on next event cycle.
+					destory_entity(*this, child, true);
+				}
+
+				return true;
+			});
+
+			//registry.replace<Relationship>(parent, std::move(parent_relationship)); // [&](auto& r) { r = parent_relationship; }
+		}
+
+		registry.destroy(entity);
 	}
 }

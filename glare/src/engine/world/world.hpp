@@ -135,6 +135,8 @@ namespace engine
 			inline Registry& get_registry() { return registry; }
 			inline EventHandler& get_event_handler() { return event_handler; }
 			inline ResourceManager& get_resource_manager() { return resource_manager; }
+
+			inline PhysicsSystem& get_physics() { return physics; }
 			
 			// Retrieves the root scene-node; parent to all world-scoped entities.
 			inline Entity get_root() const { return root; }
@@ -156,6 +158,7 @@ namespace engine
 			void on_mouse_input(const app::input::MouseState& mouse);
 			void on_keyboard_input(const app::input::KeyboardState& keyboard);
 			void on_new_collider(const OnComponentAdd<CollisionComponent>& new_col);
+			void on_entity_destroyed(const OnEntityDestroyed& destruct);
 		private:
 			// Renders models with the given draw-mode.
 			void draw_models(graphics::CanvasDrawMode draw_mode, graphics::Canvas& canvas, graphics::Shader& shader);

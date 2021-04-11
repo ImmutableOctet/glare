@@ -77,10 +77,10 @@ namespace engine
 
 		float mass = 1.0f;
 
-		auto interaction_mask = CollisionMask::All;
-		auto solid_mask = CollisionMask::StandardObject;
+		//auto interaction_mask = CollisionGroup::All;
+		auto solid_mask = CollisionGroup::Actor;
 
-		attach_collision(world, player, collision_data.collision_shape, mass, interaction_mask, solid_mask);
+		attach_collision(world, player, collision_data.collision_shape, EntityType::Player, mass);
 
 		registry.emplace<PlayerState>(player, PlayerState::Action::Default, index);
 

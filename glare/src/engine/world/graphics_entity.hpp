@@ -6,6 +6,7 @@
 
 #include "entity.hpp"
 
+#include <optional>
 #include <string>
 
 namespace graphics
@@ -44,5 +45,14 @@ namespace engine
 	Entity create_model(World& world, pass_ref<graphics::Model> model, Entity parent=null, EntityType type=EntityType::Geometry);
 	Entity attach_model(World& world, Entity entity, pass_ref<graphics::Model> model, graphics::ColorRGBA color={1.0f, 1.0f, 1.0f, 1.0f});
 
-	Entity load_model(World& world, const std::string& path, Entity parent=null, EntityType type=EntityType::Geometry, bool collision_enabled=false, CollisionMask solid_mask=CollisionMask::None, CollisionMask interaction_mask=CollisionMask::None, float mass=0.0f); // const std::string_view&
+	Entity load_model
+	(
+		World& world, const std::string& path, Entity parent=null, EntityType type=EntityType::Geometry, // const std::string_view& path,
+		
+		bool collision_enabled=false, float mass = 0.0f,
+
+		std::optional<CollisionGroup> collision_group=std::nullopt,
+		std::optional<CollisionGroup> collision_solid_mask=std::nullopt,
+		std::optional<CollisionGroup> collision_interaction_mask=std::nullopt
+	);
 }

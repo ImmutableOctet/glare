@@ -3,6 +3,7 @@
 
 #include <engine/types.hpp>
 #include <engine/transform.hpp>
+#include <engine/collision.hpp>
 //#include <engine/relationship.hpp>
 
 #include <math/bullet.hpp>
@@ -51,14 +52,23 @@ namespace engine
 		{
 			auto transform = world.get_transform(entity);
 
+			auto* col = registry.try_get<CollisionComponent>(entity);
+
+			auto from_matrix = transform.get_matrix();
+
 			update_motion(world, entity, transform, ph, delta);
 
 			if (transform.collision_invalid())
 			{
-				auto* col = registry.try_get<CollisionComponent>(entity);
-
 				if (col)
 				{
+					auto from = math::to_bullet_matrix(from_matrix);
+					auto to   = math::to_bullet_matrix(transform.get_matrix());
+
+					//collision_world->convexSweepTest(col->);
+
+					//col->collision;
+
 					update_collision_object(transform, *col);
 				}
 			}
@@ -99,10 +109,30 @@ namespace engine
 		auto& registry = world.get_registry();
 
 		auto& component = registry.get<CollisionComponent>(entity);
-		//auto* collision_obj = component.collision.get(); // new_col.component
+		auto* collision_obj = component.collision.get(); // new_col.component
+
+		if (!collision_obj) // component.collision
+		{
+			return;
+		}
+
+		auto c_group = static_cast<int>(component.get_group());
+		auto c_mask = static_cast<int>(component.get_full_mask());
+
+		collision_world->addCollisionObject(collision_obj, c_group, c_mask);
 
 		//update_collision_object(*collision_obj, transform.get_matrix());
 		update_collision_object(transform, component);
+	}
+
+	void PhysicsSystem::on_destroy_collider(World& world, Entity entity, CollisionComponent& col)
+	{
+		if (col.collision)
+		{
+			auto* collision_obj = col.collision.get();
+
+			collision_world->removeCollisionObject(collision_obj);
+		}
 	}
 
 	void PhysicsSystem::update_collision_object(Transform& transform, CollisionComponent& col) // World& world, Entity entity

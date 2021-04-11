@@ -26,6 +26,6 @@ namespace graphics
 
 	PointRect::Type PointRect::get_length() const
     {
-		return std::sqrt(math::sq(get_width()) + math::sq(get_height()));
+		return static_cast<PointRect::Type>(std::sqrt(math::sq(get_width()) + math::sq(get_height())));
     }
 }
