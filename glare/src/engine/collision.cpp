@@ -116,28 +116,23 @@ namespace engine
 		interaction_mask(resolve_interaction_mask(type))
 	{}
 
-	CollisionComponent::CollisionComponent(const CollisionComponent::Shape& shape, const CollisionConfig& config, float mass, bool auto_activate) :
-		CollisionConfig(config),
-		mass(mass),
-		
-		collision(std::make_unique<btCollisionObject>()),
-
-		shape() // nullptr
-	{
-		if (shape)
-		{
-			set_shape(shape);
-
-			if (auto_activate)
-			{
-				activate();
-			}
-		}
-	}
-
 	CollisionComponent::~CollisionComponent() {}
 
 	void CollisionComponent::set_shape(const Shape& shape)
+	{
+		collision->setCollisionShape(shape.get());
+
+		this->shape = shape;
+	}
+
+	void CollisionComponent::set_shape(const ConcaveShape& shape) // Same as 'Shape' implementation, but with specific type.
+	{
+		collision->setCollisionShape(shape.get());
+
+		this->shape = shape;
+	}
+
+	void CollisionComponent::set_shape(const ConvexShape& shape) // Same as 'Shape' implementation, but with specific type.
 	{
 		collision->setCollisionShape(shape.get());
 
@@ -148,12 +143,54 @@ namespace engine
 	{
 		collision->activate(force);
 	}
+
+	CollisionComponent::Shape CollisionComponent::get_shape() const
+	{
+		Shape out;
+
+		std::visit
+		(
+			[&](auto&& value)
+			{
+				out = std::static_pointer_cast<RawShape>(value);
+			},
+
+			this->shape
+		);
+
+		return out;
+	}
+
+	CollisionComponent::ConvexShape CollisionComponent::get_convex_shape() const
+	{
+		if (auto out = std::get_if<ConvexShape>(&shape))
+		{
+			return *out;
+		}
+
+		return {};
+	}
+
+	CollisionComponent::ConcaveShape CollisionComponent::get_concave_shape() const
+	{
+		if (auto out = std::get_if<ConcaveShape>(&shape))
+		{
+			return *out;
+		}
+
+		return {};
+	}
+
+	std::unique_ptr<btCollisionObject> CollisionComponent::make_collision_object()
+	{
+		return std::make_unique<btCollisionObject>();
+	}
 	
-	Entity attach_collision(World& world, Entity entity, const CollisionComponent::Shape& collision_data, const CollisionConfig& config, float mass)
+	Entity attach_collision_impl(World& world, Entity entity, CollisionComponent&& col)
 	{
 		auto& registry = world.get_registry();
 
-		auto& component = registry.emplace<CollisionComponent>(entity, collision_data, config, mass);
+		auto& component = registry.emplace<CollisionComponent>(entity, std::move(col));
 
 		world.on_new_collider({ entity });
 

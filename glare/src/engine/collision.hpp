@@ -2,11 +2,21 @@
 
 #include "types.hpp"
 
+#include <utility>
+#include <variant>
+#include <type_traits>
+//#include <optional>
+
 //#include <tuple>
 
 //#include <climits>
 
+#include <bullet/btBulletCollisionCommon.h>
+//#include <bullet/BulletCollision/CollisionDispatch/btCollisionObject.h>
+
 class btCollisionShape;
+class btConcaveShape;
+class btConvexShape;
 class btCollisionObject;
 
 namespace engine
@@ -91,9 +101,83 @@ namespace engine
 			friend class PhysicsSystem;
 
 			using RawShape = btCollisionShape;
-			using Shape = std::shared_ptr<RawShape>;
+			using ConcaveShapeRaw = btConcaveShape;
+			using ConvexShapeRaw = btConvexShape;
 
-			CollisionComponent(const Shape& shape, const CollisionConfig& config, float mass = 0.0f, bool auto_activate=true);
+			using Shape        = std::shared_ptr<RawShape>;
+			using ConcaveShape = std::shared_ptr<ConcaveShapeRaw>;
+			using ConvexShape  = std::shared_ptr<ConvexShapeRaw>;
+
+			//CollisionComponent(const Shape& shape, const CollisionConfig& config, float mass = 0.0f, bool auto_activate=true);
+		protected:
+			inline CollisionComponent(const CollisionConfig& config, float mass) :
+				CollisionConfig(config),
+				mass(mass),
+				collision(make_collision_object())
+			{}
+		public:
+			
+			/*
+			* For some reason, this template wasn't working:
+			template <typename ShapeType>
+			inline CollisionComponent(const ShapeType& shape, const CollisionConfig& config, float mass, bool auto_activate) :
+				CollisionComponent(config, mass)
+			{
+				if (shape)
+				{
+					set_shape(shape);
+
+					if (auto_activate)
+					{
+						activate();
+					}
+				}
+			}
+			*/
+
+			inline CollisionComponent(const Shape& shape, const CollisionConfig& config, float mass, bool auto_activate=true) :
+				CollisionComponent(config, mass)
+			{
+				if (shape)
+				{
+					set_shape(shape);
+
+					if (auto_activate)
+					{
+						activate();
+					}
+				}
+			}
+
+			inline CollisionComponent(const ConcaveShape& shape, const CollisionConfig& config, float mass, bool auto_activate=true) :
+				CollisionComponent(config, mass)
+			{
+				if (shape)
+				{
+					set_shape(shape);
+
+					if (auto_activate)
+					{
+						activate();
+					}
+				}
+			}
+
+			inline CollisionComponent(const ConvexShape& shape, const CollisionConfig& config, float mass, bool auto_activate=true) :
+				CollisionComponent(config, mass)
+			{
+				if (shape)
+				{
+					set_shape(shape);
+
+					if (auto_activate)
+					{
+						activate();
+					}
+				}
+			}
+
+
 			~CollisionComponent();
 
 			CollisionComponent(CollisionComponent&&) = default;
@@ -109,18 +193,36 @@ namespace engine
 
 			inline CollisionGroup get_full_mask() const { return (get_interactions() | get_solids()); }
 
-			void set_shape(const Shape& shape);
+			Shape get_shape() const;
 
+			ConvexShape get_convex_shape() const;
+			ConcaveShape get_concave_shape() const;
+
+			void set_shape(const Shape& shape);
+			void set_shape(const ConcaveShape& shape);
+			void set_shape(const ConvexShape& shape);
 		protected:
+			static std::unique_ptr<btCollisionObject> make_collision_object();
+			
 			float mass = 0.0f;
 
 			std::unique_ptr<btCollisionObject> collision;
-			Shape shape;
+
+			std::variant<Shape, ConcaveShape, ConvexShape> shape;
 
 			void activate(bool force = false);
 			//void deactivate();
 
 	};
 
-	Entity attach_collision(World& world, Entity entity, const CollisionComponent::Shape& collision_data, const CollisionConfig& config, float mass=0.0f);
+	Entity attach_collision_impl(World& world, Entity entity, CollisionComponent&& col);
+
+	template <typename ShapeType>
+	inline Entity attach_collision(World& world, Entity entity, const ShapeType& collision_data, const CollisionConfig& config, float mass=0.0f) // CollisionComponent::Shape
+	{
+		// TODO: Remove temporary.
+		auto col = CollisionComponent(collision_data, config, mass);
+
+		return attach_collision_impl(world, entity, std::move(col));
+	}
 }

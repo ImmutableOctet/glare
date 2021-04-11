@@ -56,7 +56,7 @@ namespace engine
 
 		if (collision_enabled && collision_data)
 		{
-			attach_collision(world, entity, collision_data->collision_shape, type, mass);
+			attach_collision(world, entity, collision_data->collision_shape, CollisionConfig(type), mass);
 		}
 
 		return entity;

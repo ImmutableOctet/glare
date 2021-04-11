@@ -3,6 +3,7 @@
 
 #include <engine/types.hpp>
 #include <engine/transform.hpp>
+#include <engine/collision.hpp>
 //#include <engine/relationship.hpp>
 
 #include <math/bullet.hpp>
@@ -53,12 +54,21 @@ namespace engine
 
 			auto* col = registry.try_get<CollisionComponent>(entity);
 
+			auto from_matrix = transform.get_matrix();
+
 			update_motion(world, entity, transform, ph, delta);
 
 			if (transform.collision_invalid())
 			{
 				if (col)
 				{
+					auto from = math::to_bullet_matrix(from_matrix);
+					auto to   = math::to_bullet_matrix(transform.get_matrix());
+
+					//collision_world->convexSweepTest(col->);
+
+					//col->collision;
+
 					update_collision_object(transform, *col);
 				}
 			}
