@@ -1,4 +1,4 @@
-#include "model_test.hpp"
+#include "game.hpp"
 
 #include <iostream>
 #include <string>
@@ -22,9 +22,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-namespace glare::tests
+namespace glare
 {
-	ModelTest::init_shaders::init_shaders(Graphics& graphics)
+	Glare::init_shaders::init_shaders(Graphics& graphics)
 	{
 		// Not an initializer list for readability/testing purposes:
 		forward = memory::allocate<graphics::Shader>
@@ -79,7 +79,7 @@ namespace glare::tests
 		*/
 	}
 
-	ModelTest::ModelTest(bool auto_execute)
+	Glare::Glare(bool auto_execute)
 		: GraphicsApplication("Project Glare", 1600, 900, (app::WindowFlags::OpenGL|app::WindowFlags::Resizable), TARGET_UPDATE_RATE, false), // true
 		  shaders(graphics),
 		  resource_manager(graphics.context, shaders.forward),
@@ -152,24 +152,24 @@ namespace glare::tests
 		}
 	}
 
-	engine::Entity ModelTest::load_model(const std::string& path)
+	engine::Entity Glare::load_model(const std::string& path)
 	{
 		return engine::load_model(world, path);
 	}
 
-	engine::Transform ModelTest::model(const std::string& path)
+	engine::Transform Glare::model(const std::string& path)
 	{
 		auto entity = load_model(path);
 
 		return transform(entity);
 	}
 
-	engine::Transform ModelTest::transform(engine::Entity entity)
+	engine::Transform Glare::transform(engine::Entity entity)
 	{
 		return world.get_transform(entity);
 	}
 
-	void ModelTest::make_lights(engine::World& world)
+	void Glare::make_lights(engine::World& world)
 	{
 		using namespace std;
 
@@ -198,7 +198,7 @@ namespace glare::tests
 		}
 	}
 
-	void ModelTest::make_models(engine::World& world, engine::Entity player)
+	void Glare::make_models(engine::World& world, engine::Entity player)
 	{
 		//return;
 
@@ -230,7 +230,7 @@ namespace glare::tests
 		//geometry.move({ 50.0f, 31.0f, 28.0f });
 	}
 
-	void ModelTest::setup_world(engine::World& world)
+	void Glare::setup_world(engine::World& world)
 	{
 		std::string path;
 
@@ -252,10 +252,10 @@ namespace glare::tests
 		make_lights(world);
 		make_models(world, player);
 
-		world.register_event<app::input::KeyboardState, &ModelTest::on_user_keyboard_input>(*this);
+		world.register_event<app::input::KeyboardState, &Glare::on_user_keyboard_input>(*this);
 	}
 
-	engine::Transform ModelTest::get_named_transform(std::string_view name)
+	engine::Transform Glare::get_named_transform(std::string_view name)
 	{
 		auto entity = world.get_by_name(name);
 		auto transform = world.get_transform(entity);
@@ -263,7 +263,7 @@ namespace glare::tests
 		return transform;
 	}
 
-	void ModelTest::on_user_keyboard_input(const app::input::KeyboardState& keyboard)
+	void Glare::on_user_keyboard_input(const app::input::KeyboardState& keyboard)
 	{
 		std::string_view target_obj = engine::DEFAULT_PLAYER_NAME;
 
@@ -319,7 +319,7 @@ namespace glare::tests
 		}
 	}
 
-	void ModelTest::update(app::Milliseconds time)
+	void Glare::update(app::Milliseconds time)
 	{
 		auto& mouse = input.get_mouse();
 
@@ -331,7 +331,7 @@ namespace glare::tests
 		world.update(time);
 	}
 
-	void ModelTest::render()
+	void Glare::render()
 	{
 		using namespace graphics;
 
@@ -524,7 +524,7 @@ namespace glare::tests
 		gfx.flip(wnd);
 	}
 
-	void ModelTest::on_keyup(const keyboard_event_t& event)
+	void Glare::on_keyup(const keyboard_event_t& event)
 	{
 		switch (event.keysym.sym)
 		{
@@ -620,7 +620,7 @@ namespace glare::tests
 		}
 	}
 
-	void ModelTest::on_keydown(const keyboard_event_t& event)
+	void Glare::on_keydown(const keyboard_event_t& event)
 	{
 		/*
 		switch (event.keysym.sym)
@@ -629,7 +629,7 @@ namespace glare::tests
 		*/
 	}
 	
-	graphics::Viewport ModelTest::update_viewport(engine::Entity camera)
+	graphics::Viewport Glare::update_viewport(engine::Entity camera)
 	{
 		graphics::Viewport viewport = {};
 

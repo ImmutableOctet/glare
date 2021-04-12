@@ -12,9 +12,9 @@
 
 #include <util/log.hpp>
 
-namespace glare::tests
+namespace glare
 {
-	class ModelTest : public app::GraphicsApplication
+	class Glare : public app::GraphicsApplication
 	{
 		public:
 			enum class GBufferDisplayMode : int
@@ -68,7 +68,7 @@ namespace glare::tests
 
 			util::Logger dbg = util::log::get_console();
 
-			ModelTest(bool auto_execute=true);
+			Glare(bool auto_execute=true);
 
 			engine::Entity load_model(const std::string& path);
 
