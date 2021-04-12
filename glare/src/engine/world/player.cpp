@@ -36,6 +36,7 @@ namespace engine
 		{
 			case engine::Character::Glare:
 				model_path = "assets/characters/test/character.b3d";
+				//model_path = "assets/characters/nanosuit/nanosuit.obj";
 
 				/*
 				model_path

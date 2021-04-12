@@ -37,8 +37,8 @@ namespace glare
 
 				graphics::Mesh screen_quad;
 
-				GBufferDisplayMode display_mode = GBufferDisplayMode::AlbedoSpecular;
-				//GBufferDisplayMode display_mode = GBufferDisplayMode::None;
+				//GBufferDisplayMode display_mode = GBufferDisplayMode::AlbedoSpecular;
+				GBufferDisplayMode display_mode = GBufferDisplayMode::None;
 
 			} gBuffer;
 

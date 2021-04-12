@@ -31,8 +31,8 @@ namespace glare
 		(
 			graphics.context,
 			
-			"assets/tests/model_test/shaders/forward.vs",
-			"assets/tests/model_test/shaders/forward.fs"
+			"assets/shaders/forward.vs",
+			"assets/shaders/forward.fs"
 		);
 
 		forward_test = memory::allocate<graphics::Shader>
@@ -40,32 +40,32 @@ namespace glare
 			graphics.context,
 			
 			//"assets/tests/model_test/shaders/forward.vs",
-			"assets/tests/model_test/shaders/8.1.deferred_shading.vs",
-			"assets/tests/model_test/shaders/forward_test.fs"
+			"assets/shaders/8.1.deferred_shading.vs",
+			"assets/shaders/forward_test.fs"
 		);
 
 		geometry = memory::allocate<graphics::Shader>
 		(
 			graphics.context,
 
-			"assets/tests/model_test/shaders/8.1.g_buffer.vs",
-			"assets/tests/model_test/shaders/8.1.g_buffer.fs"
+			"assets/shaders/8.1.g_buffer.vs",
+			"assets/shaders/8.1.g_buffer.fs"
 		);
 
 		lighting_pass = memory::allocate<graphics::Shader>
 		(
 			graphics.context,
 
-			"assets/tests/model_test/shaders/8.1.deferred_shading.vs",
-			"assets/tests/model_test/shaders/8.1.deferred_shading.fs"
+			"assets/shaders/8.1.deferred_shading.vs",
+			"assets/shaders/8.1.deferred_shading.fs"
 		);
 
 		framebuffer_dbg = memory::allocate<graphics::Shader>
 		(
 			graphics.context,
 
-			"assets/tests/model_test/shaders/8.1.fbo_debug.vs",
-			"assets/tests/model_test/shaders/8.1.fbo_debug.fs"
+			"assets/shaders/8.1.fbo_debug.vs",
+			"assets/shaders/8.1.fbo_debug.fs"
 		);
 
 		/*
@@ -73,8 +73,8 @@ namespace glare
 		(
 			graphics.context,
 
-			"assets/tests/model_test/shaders/8.1.deferred_light_box.vs",
-			"assets/tests/model_test/shaders/8.1.deferred_light_box.fs"
+			"assets/shaders/8.1.deferred_light_box.vs",
+			"assets/shaders/8.1.deferred_light_box.fs"
 		);
 		*/
 	}
@@ -175,23 +175,23 @@ namespace glare
 
 		math::Vector offset = { 0.0f, 0.0f, 0.0f }; // { 0.0f, 64.0f, 0.0f };
 
-		srand(13); // 100
+		srand(23); // 13
 
 		for (unsigned int i = 0; i < NR_LIGHTS; i++)
 		{
 			math::Vector position =
 			{
-				((static_cast<float>(rand() % 100) / 100.0f) * 60.0f - 30.0f), // 60.0f - 30.0f
-				((static_cast<float>(rand() % 100) / 100.0f) * 60.0f - 40.0f),
-				((static_cast<float>(rand() % 100) / 100.0f) * 60.0f - 30.0f)
+				(((static_cast<float>(rand() % 400)-200.0f) / 400.0f) * 400.0f), // 60.0f - 30.0f
+				((static_cast<float>(rand() % 200) / 200.0f) * 200.0f) + 25.0f,
+				(((static_cast<float>(rand() % 400)-200.0f) / 400.0f) * 400.0f)
 			};
 
 			// also calculate random color
 			graphics::ColorRGB color =
 			{
-				1.0f, // (static_cast<float>(rand() % 100) / 200.0f) + 0.5f, // between 0.5 and 1.0
-				1.0f, // (static_cast<float>(rand() % 100) / 200.0f) + 0.5f, // between 0.5 and 1.0
-				1.0f, // (static_cast<float>(rand() % 100) / 200.0f) + 0.5f // between 0.5 and 1.0
+				(static_cast<float>(rand() % 100) / 100.0f) + 0.5f, // between 0.5 and 1.0 // 1.0f
+				(static_cast<float>(rand() % 100) / 100.0f) + 0.5f, // between 0.5 and 1.0 // 1.0f
+				(static_cast<float>(rand() % 100) / 100.0f) + 0.5f // between 0.5 and 1.0 // 1.0f
 			};
 
 			engine::create_light(world, (position + offset), color);
@@ -245,7 +245,8 @@ namespace glare
 
 		//auto stage = load_model(path);
 
-		auto stage = world.load("assets/maps/test01");
+		//auto stage = world.load("assets/maps/test01");
+		auto stage = world.load("assets/maps/collision_test");
 
 		auto player = world.get_player(1);
 
@@ -434,8 +435,8 @@ namespace glare
 
 					// update attenuation parameters and calculate radius
 					const float constant  = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
-					const float linear    = 0.7f;
-					const float quadratic = 1.8f;
+					const float linear    = 0.005f; // 0.7f;
+					const float quadratic = 1.0/1000.0f; // 1.8f; // 0.0005f;
 
 					unsigned int light_idx = 0;
 
