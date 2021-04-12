@@ -241,6 +241,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\engine\world\stage.hpp" />
     <ClInclude Include="src\engine\world\target_component.hpp" />
     <ClInclude Include="src\engine\world\world.hpp" />
+    <ClInclude Include="src\game.hpp" />
     <ClInclude Include="src\graphics\bind.hpp" />
     <ClInclude Include="src\graphics\canvas.hpp" />
     <ClInclude Include="src\graphics\context.hpp" />
@@ -263,7 +264,6 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\graphics\vertex.hpp" />
     <ClInclude Include="src\math\bullet.hpp" />
     <ClInclude Include="src\math\math.hpp" />
-    <ClInclude Include="src\tests\model_test\model_test.hpp" />
     <ClInclude Include="src\tests\signal_test\signal_test.hpp" />
     <ClInclude Include="src\tests\timer_test\timer_test.hpp" />
     <ClInclude Include="src\types.hpp" />
@@ -327,6 +327,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\engine\world\stage.cpp" />
     <ClCompile Include="src\engine\world\target_component.cpp" />
     <ClCompile Include="src\engine\world\world.cpp" />
+    <ClCompile Include="src\game.cpp" />
     <ClCompile Include="src\graphics\canvas.cpp" />
     <ClCompile Include="src\graphics\context_state.cpp" />
     <ClCompile Include="src\graphics\drivers\opengl\context.cpp" />
@@ -342,7 +343,6 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\graphics\types.cpp" />
     <ClCompile Include="src\graphics\vertex.cpp" />
     <ClCompile Include="src\math\math.cpp" />
-    <ClCompile Include="src\tests\model_test\model_test.cpp" />
     <ClCompile Include="src\tests\signal_test\signal_test.cpp" />
     <ClCompile Include="src\tests\timer_test\timer_test.cpp" />
     <ClCompile Include="src\tests\vertex_element_types\vertex_element_types.cpp" />

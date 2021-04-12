@@ -1,9 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClInclude Include="src\tests\model_test\model_test.hpp">
-      <Filter>tests\model_test</Filter>
-    </ClInclude>
     <ClInclude Include="src\app\input\devices.hpp">
       <Filter>app\input</Filter>
     </ClInclude>
@@ -328,6 +325,9 @@
     <ClInclude Include="src\engine\type_component.hpp">
       <Filter>engine\engine</Filter>
     </ClInclude>
+    <ClInclude Include="src\game.hpp">
+      <Filter>glare</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\tests\model_test\shaders\8.1.deferred_light_box.fs">
@@ -448,9 +448,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\tests\model_test\model_test.cpp">
-      <Filter>tests\model_test</Filter>
-    </ClCompile>
     <ClCompile Include="glare.cpp" />
     <ClCompile Include="src\app\input\input_handler.cpp">
       <Filter>app\input</Filter>
@@ -604,6 +601,9 @@
     </ClCompile>
     <ClCompile Include="src\graphics\types.cpp">
       <Filter>graphics\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\game.cpp">
+      <Filter>glare</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

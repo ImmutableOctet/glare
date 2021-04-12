@@ -11,23 +11,21 @@
 //#include "src/tests/shader_test/shader_test.hpp"
 //#include "src/tests/deferred_test/deferred_test.hpp"
 
-#include "src/tests/model_test/model_test.hpp"
+#include "src/game.hpp"
 //#include "src/tests/signal_test/signal_test.hpp"
-#include "src/tests/timer_test/timer_test.hpp"
+//#include "src/tests/timer_test/timer_test.hpp"
 
 namespace glare
 {
 	int test(int argc, char** argv)
 	{
-		using namespace glare::tests;
-
 		auto application =
 
 			//test_vertex_element_types();
 			//ShaderTest();
 			//DeferredTest();
 
-			ModelTest();
+			Glare();
 
 		//TimerTest();
 
