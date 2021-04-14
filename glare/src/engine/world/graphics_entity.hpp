@@ -12,6 +12,7 @@
 namespace graphics
 {
 	class Model;
+	class Shader;
 	//class Context;
 }
 
@@ -53,6 +54,8 @@ namespace engine
 
 		std::optional<CollisionGroup> collision_group=std::nullopt,
 		std::optional<CollisionGroup> collision_solid_mask=std::nullopt,
-		std::optional<CollisionGroup> collision_interaction_mask=std::nullopt
+		std::optional<CollisionGroup> collision_interaction_mask=std::nullopt,
+
+		pass_ref<graphics::Shader> shader={}
 	);
 }

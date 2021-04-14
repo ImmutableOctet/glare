@@ -6,6 +6,7 @@
 #include <engine/resource_manager.hpp>
 #include <engine/model_component.hpp>
 #include <graphics/model.hpp>
+#include <graphics/shader.hpp>
 
 namespace graphics
 {
@@ -42,12 +43,14 @@ namespace engine
 
 		std::optional<CollisionGroup> collision_group,
 		std::optional<CollisionGroup> collision_solid_mask,
-		std::optional<CollisionGroup> collision_interaction_mask
+		std::optional<CollisionGroup> collision_interaction_mask,
+
+		pass_ref<graphics::Shader> shader
 	)
 	{
 		auto& resource_manager = world.get_resource_manager();
 
-		auto model_data = resource_manager.load_model(path, collision_enabled);
+		auto model_data = resource_manager.load_model(path, collision_enabled, shader);
 
 		auto& loaded_model = std::get<0>(model_data);
 		auto collision_data = std::get<1>(model_data); // auto*
