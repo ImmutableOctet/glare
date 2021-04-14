@@ -5,9 +5,23 @@
 #include <array>
 #include <utility>
 #include <tuple>
+#include <optional>
 
 namespace util
 {
+	template <typename ValueType, typename MapType, typename KeyType>
+	inline std::optional<ValueType> get_if_exists(const MapType& container, KeyType&& key)
+	{
+		auto it = container.find(key);
+
+		if (it != container.end())
+		{
+			return it->second;
+		}
+
+		return std::nullopt;
+	}
+
 	/*
 	template <class Target = void, class... TupleLike>
 	auto concatenate(TupleLike&&... tuples)
