@@ -328,6 +328,7 @@
     <ClInclude Include="src\game.hpp">
       <Filter>glare</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\tests\model_test\shaders\8.1.deferred_light_box.fs">
@@ -362,6 +363,39 @@
     </None>
     <None Include="assets\tests\model_test\shaders\forward_test.fs">
       <Filter>tests\model_test\shaders</Filter>
+    </None>
+    <None Include="assets\shaders\light_box.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="assets\shaders\light_box.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="assets\shaders\deferred_shading.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="assets\shaders\deferred_shading.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="assets\shaders\8.1.fbo_debug.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="assets\shaders\8.1.fbo_debug.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="assets\shaders\g_buffer.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="assets\shaders\g_buffer.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="assets\shaders\forward.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="assets\shaders\forward.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="assets\shaders\forward_test.frag">
+      <Filter>shaders</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -605,5 +639,8 @@
     <ClCompile Include="src\game.cpp">
       <Filter>glare</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="glare.rc" />
   </ItemGroup>
 </Project>

@@ -31,8 +31,8 @@ namespace glare
 		(
 			graphics.context,
 			
-			"assets/shaders/forward.vs",
-			"assets/shaders/forward.fs"
+			"assets/shaders/forward.vert",
+			"assets/shaders/forward.frag"
 		);
 
 		forward_test = memory::allocate<graphics::Shader>
@@ -40,32 +40,32 @@ namespace glare
 			graphics.context,
 			
 			//"assets/tests/model_test/shaders/forward.vs",
-			"assets/shaders/8.1.deferred_shading.vs",
-			"assets/shaders/forward_test.fs"
+			"assets/shaders/deferred_shading.vert",
+			"assets/shaders/forward_test.frag"
 		);
 
 		geometry = memory::allocate<graphics::Shader>
 		(
 			graphics.context,
 
-			"assets/shaders/8.1.g_buffer.vs",
-			"assets/shaders/8.1.g_buffer.fs"
+			"assets/shaders/g_buffer.vert",
+			"assets/shaders/g_buffer.frag"
 		);
 
 		lighting_pass = memory::allocate<graphics::Shader>
 		(
 			graphics.context,
 
-			"assets/shaders/8.1.deferred_shading.vs",
-			"assets/shaders/8.1.deferred_shading.fs"
+			"assets/shaders/deferred_shading.vert",
+			"assets/shaders/deferred_shading.frag"
 		);
 
 		framebuffer_dbg = memory::allocate<graphics::Shader>
 		(
 			graphics.context,
 
-			"assets/shaders/8.1.fbo_debug.vs",
-			"assets/shaders/8.1.fbo_debug.fs"
+			"assets/shaders/8.1.fbo_debug.vert",
+			"assets/shaders/8.1.fbo_debug.frag"
 		);
 
 		/*
@@ -73,8 +73,8 @@ namespace glare
 		(
 			graphics.context,
 
-			"assets/shaders/8.1.deferred_light_box.vs",
-			"assets/shaders/8.1.deferred_light_box.fs"
+			"assets/shaders/8.1.deferred_light_box.vert",
+			"assets/shaders/8.1.deferred_light_box.frag"
 		);
 		*/
 	}
@@ -175,14 +175,14 @@ namespace glare
 
 		math::Vector offset = { 0.0f, 0.0f, 0.0f }; // { 0.0f, 64.0f, 0.0f };
 
-		srand(23); // 13
+		srand(13); // 42
 
 		for (unsigned int i = 0; i < NR_LIGHTS; i++)
 		{
 			math::Vector position =
 			{
 				(((static_cast<float>(rand() % 400)-200.0f) / 400.0f) * 400.0f), // 60.0f - 30.0f
-				((static_cast<float>(rand() % 200) / 200.0f) * 200.0f) + 25.0f,
+				(static_cast<float>(rand() % 300) + 25.0f),
 				(((static_cast<float>(rand() % 400)-200.0f) / 400.0f) * 400.0f)
 			};
 
@@ -435,8 +435,8 @@ namespace glare
 
 					// update attenuation parameters and calculate radius
 					const float constant  = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
-					const float linear    = 0.005f; // 0.7f;
-					const float quadratic = 1.0/1000.0f; // 1.8f; // 0.0005f;
+					const float linear    = 0.00005f; // 0.7f; // 0.005f;
+					const float quadratic = 1.0f/1000.0f; // 1.8f; // 0.0005f;
 
 					unsigned int light_idx = 0;
 
