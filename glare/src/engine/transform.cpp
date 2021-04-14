@@ -82,14 +82,16 @@ namespace engine
 		return transform._dirty;
 	}
 
-	void Transform::recalculate(bool force)
+	Transform& Transform::recalculate(bool force)
 	{
 		update_local_matrix(force);
 		update_matrix(force);
 		update_inverse_matrix(force);
+
+		return *this;
 	}
 
-	void Transform::apply_basis(const math::RotationMatrix& basis, bool local)
+	Transform& Transform::apply_basis(const math::RotationMatrix& basis, bool local)
 	{
 		if (local)
 		{
@@ -103,20 +105,24 @@ namespace engine
 
 			set_basis((current_basis * basis));
 		}
+
+		return *this;
 	}
 
-	void Transform::invalidate()
+	Transform& Transform::invalidate()
 	{
 		transform._dirty |= (Dirty::M | Dirty::Collider);
 
 		invalidate_world();
+
+		return *this;
 	}
 
-	void Transform::invalidate_world()
+	Transform& Transform::invalidate_world()
 	{
 		if ((transform._dirty & Dirty::W))
 		{
-			return;
+			return *this;
 		}
 
 		transform._dirty |= (Dirty::W | Dirty::IW);
@@ -129,6 +135,8 @@ namespace engine
 
 			return true;
 		});
+
+		return *this;
 	}
 
 	Transform::Transform(TransformViewData data)
@@ -167,7 +175,7 @@ namespace engine
 		return collision_invalid;
 	}
 
-	void Transform::validate_collision()
+	Transform& Transform::validate_collision()
 	{
 		validate_collision_shallow();
 
@@ -177,13 +185,17 @@ namespace engine
 		{
 			parent->validate_collision();
 		}
+
+		return *this;
 	}
 
-	void Transform::validate_collision_shallow()
+	Transform& Transform::validate_collision_shallow()
 	{
 		//validate(Dirty::Collider);
 
 		transform.validate(Dirty::Collider);
+
+		return *this;
 	}
 
 	math::Matrix Transform::get_matrix(bool force_refresh)
@@ -256,25 +268,34 @@ namespace engine
 		return (get_basis() * forward);
 	}
 
-	void Transform::set_position(const math::Vector& position)
+	Transform& Transform::set_position(const math::Vector& position)
 	{
 		auto parent = get_parent();
 
 		set_local_position((parent) ? (parent->get_inverse_matrix() * position) : position);
 
 		//invalidate();
+
+		return *this;
 	}
 
-	void Transform::set_scale(const math::Vector& scale)
+	Transform& Transform::set_scale(const math::Vector& scale)
 	{
 		auto parent = get_parent();
 
 		set_local_scale((parent) ? (scale / parent->get_scale()) : scale);
 
 		//invalidate();
+
+		return *this;
 	}
 
-	void Transform::set_basis(const math::RotationMatrix& basis)
+	Transform& Transform::set_scale(float scale)
+	{
+		return set_scale({ scale, scale, scale });
+	}
+
+	Transform& Transform::set_basis(const math::RotationMatrix& basis)
 	{
 		auto parent = get_parent();
 
@@ -292,31 +313,35 @@ namespace engine
 		//set_local_basis((parent) ? (parent->get_basis()) : basis );
 
 		//invalidate();
+
+		return *this;
 	}
 
-	void Transform::set_basis_q(const math::Quaternion& basis)
+	Transform& Transform::set_basis_q(const math::Quaternion& basis)
 	{
-		//set_basis(glm::mat3_cast(basis));
-		set_basis(math::to_rotation_matrix((basis))); // TODO: Review use of 'conjugate'. // glm::conjugate
+		//return set_basis(glm::mat3_cast(basis));
+		return set_basis(math::to_rotation_matrix((basis))); // TODO: Review use of 'conjugate'. // glm::conjugate
 	}
 
-	void Transform::set_rotation(const math::Vector& rv)
+	Transform& Transform::set_rotation(const math::Vector& rv)
 	{
-		set_basis(math::rotation_from_vector(rv));
+		return set_basis(math::rotation_from_vector(rv));
 	}
 
-	void Transform::set_local_rotation(const math::Vector& rv)
+	Transform& Transform::set_local_rotation(const math::Vector& rv)
 	{
-		set_local_basis(math::rotation_from_vector(rv));
+		return set_local_basis(math::rotation_from_vector(rv));
 	}
 
-	void Transform::apply(const math::TransformVectors& tform)
+	Transform& Transform::apply(const math::TransformVectors& tform)
 	{
 		auto [position, rotation, scale] = tform;
 
 		set_position(position);
 		set_rotation(rotation);
 		set_scale(scale);
+
+		return *this;
 	}
 
 	math::Vector Transform::get_local_direction_vector(const math::Vector forward)
@@ -324,43 +349,41 @@ namespace engine
 		return (get_local_basis() * forward);
 	}
 
-	void Transform::set_rx(float rx)
+	Transform& Transform::set_rx(float rx)
 	{
 		auto rotation = get_rotation();
 
-		set_rotation({rx, rotation.y, rotation.z});
+		return set_rotation({rx, rotation.y, rotation.z});
 	}
 
-	void Transform::set_ry(float ry)
+	Transform& Transform::set_ry(float ry)
 	{
 		auto rotation = get_rotation();
 
-		set_rotation({ rotation.x, ry, rotation.z });
+		return set_rotation({ rotation.x, ry, rotation.z });
 	}
 
-	void Transform::set_rz(float rz)
+	Transform& Transform::set_rz(float rz)
 	{
 		auto rotation = get_rotation();
 
-		set_rotation({ rotation.x, rotation.y, rz });
+		return set_rotation({ rotation.x, rotation.y, rz });
 	}
 
-	void Transform::move(const math::Vector& tv, bool local)
+	Transform& Transform::move(const math::Vector& tv, bool local)
 	{
 		// TODO: Review behavior of 'local'.
 		if (!local)
 		{
-			set_local_position(get_local_position() + tv);
+			return set_local_position(get_local_position() + tv);
 		}
-		else
-		{
-			auto basis = get_local_basis(); //get_basis();
 
-			auto movement = (basis * tv);
+		auto basis = get_local_basis(); //get_basis();
 
-			//set_position(get_position() + movement);
-			set_local_position(get_local_position() + movement);
-		}
+		auto movement = (basis * tv);
+
+		//set_position(get_position() + movement);
+		return set_local_position(get_local_position() + movement);
 	}
 
 	math::RotationMatrix Transform::look_at(const math::Vector& target, const math::Vector& up)
@@ -379,24 +402,24 @@ namespace engine
 		return look_at(t.get_position(), up);
 	}
 
-	void Transform::rotate(const math::Vector& rv, bool local)
+	Transform& Transform::rotate(const math::Vector& rv, bool local)
 	{
-		apply_basis(math::rotation_from_vector(rv), local);
+		return apply_basis(math::rotation_from_vector(rv), local);
 	}
 
-	void Transform::rotateX(float rx, bool local)
+	Transform& Transform::rotateX(float rx, bool local)
 	{
-		apply_basis(math::rotation_pitch(rx), local);
+		return apply_basis(math::rotation_pitch(rx), local);
 	}
 
-	void Transform::rotateY(float ry, bool local)
+	Transform& Transform::rotateY(float ry, bool local)
 	{
-		apply_basis(math::rotation_yaw(ry), local);
+		return apply_basis(math::rotation_yaw(ry), local);
 	}
 
-	void Transform::rotateZ(float rz, bool local)
+	Transform& Transform::rotateZ(float rz, bool local)
 	{
-		apply_basis(math::rotation_roll(rz), local);
+		return apply_basis(math::rotation_roll(rz), local);
 	}
 
 	math::Matrix& Transform::update_local_matrix(const math::Vector& translation, const math::Vector& scale, const math::RotationMatrix& basis)
@@ -463,12 +486,11 @@ namespace engine
 		return glm::inverse(get_local_matrix());
 	}
 
-	void Transform::set_matrix(const math::Matrix& m)
+	Transform& Transform::set_matrix(const math::Matrix& m)
 	{
 		auto& matrix = m; // transform._m;
 
 		auto scale = math::get_scaling(matrix);
-
 
 		math::Vector translation = math::get_translation(matrix); // matrix[3]
 
@@ -485,9 +507,11 @@ namespace engine
 		set_local_scale(scale);
 
 		//invalidate();
+
+		return *this;
 	}
 
-	void Transform::set_local_matrix(const math::Matrix& m)
+	Transform& Transform::set_local_matrix(const math::Matrix& m)
 	{
 		glm::vec3 scale;
 		glm::vec3 translation;
@@ -504,40 +528,46 @@ namespace engine
 		set_local_scale(scale);
 		set_local_basis_q(rotation);
 
-		invalidate();
+		return invalidate();
 	}
 
-	void Transform::set_local_position(const math::Vector& position)
+	Transform& Transform::set_local_position(const math::Vector& position)
 	{
 		transform.translation = position;
 
 		invalidate();
 
 		//update_local_matrix(position, get_local_scale(), get_local_basis());
+
+		return *this;
 	}
 
-	void Transform::set_local_scale(const math::Vector& scale)
+	Transform& Transform::set_local_scale(const math::Vector& scale)
 	{
 		transform.scale = scale;
 
 		invalidate();
 
 		//update_local_matrix(get_local_position(), scale, get_local_basis());
+
+		return *this;
 	}
 
-	void Transform::set_local_basis(const math::RotationMatrix& basis)
+	Transform& Transform::set_local_basis(const math::RotationMatrix& basis)
 	{
 		transform.basis = basis; // glm::orthonormalize(basis);
 
 		invalidate();
 
 		//update_local_matrix(get_local_position(), get_local_scale(), basis);
+
+		return *this;
 	}
 
-	void Transform::set_local_basis_q(const math::Quaternion& basis)
+	Transform& Transform::set_local_basis_q(const math::Quaternion& basis)
 	{
-		//set_local_basis(glm::mat3_cast(basis));
-		set_local_basis(math::to_rotation_matrix(glm::conjugate(basis))); // TODO: Review use of 'conjugate'.
+		//return set_local_basis(glm::mat3_cast(basis));
+		return set_local_basis(math::to_rotation_matrix(glm::conjugate(basis))); // TODO: Review use of 'conjugate'.
 	}
 
 

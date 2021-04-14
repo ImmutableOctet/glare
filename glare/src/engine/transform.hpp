@@ -102,8 +102,8 @@ namespace engine
 			// Resolves 'parent_data' into a proper 'Transform' object, if applicable.
 			std::optional<Transform> get_parent() const;
 
-			void invalidate();
-			void invalidate_world();
+			Transform& invalidate();
+			Transform& invalidate_world();
 
 			// Updates the local 'model' matrix.
 			math::Matrix& update_local_matrix(const math::Vector& translation, const math::Vector& scale, const math::RotationMatrix& basis);
@@ -115,9 +115,9 @@ namespace engine
 			bool invalid(Dirty flag) const;
 			Dirty validate(Dirty flag);
 
-			void recalculate(bool force);
+			Transform& recalculate(bool force);
 
-			void apply_basis(const math::RotationMatrix& basis, bool local=false); // math::RotationMatrix&
+			Transform& apply_basis(const math::RotationMatrix& basis, bool local=false); // math::RotationMatrix&
 
 			Transform(TransformViewData data);
 		public:
@@ -128,9 +128,9 @@ namespace engine
 			~Transform();
 
 			bool collision_invalid() const;
-			void validate_collision();
+			Transform& validate_collision();
 
-			void validate_collision_shallow();
+			Transform& validate_collision_shallow();
 
 			// Global transformations:
 			math::Matrix get_matrix(bool force_refresh=false);
@@ -154,25 +154,26 @@ namespace engine
 			inline float ry() { return get_rotation().y; }
 			inline float rz() { return get_rotation().z; }
 
-			void set_position(const math::Vector& position);
-			void set_scale(const math::Vector& scale);
+			Transform& set_position(const math::Vector& position);
+			Transform& set_scale(const math::Vector& scale);
+			Transform& set_scale(float scale);
 
-			void set_basis(const math::RotationMatrix& basis);
-			void set_basis_q(const math::Quaternion& basis);
+			Transform& set_basis(const math::RotationMatrix& basis);
+			Transform& set_basis_q(const math::Quaternion& basis);
 
 			// Euler angles. (Pitch, Yaw, Roll)
-			void set_rotation(const math::Vector& rv);
-			void set_local_rotation(const math::Vector& rv);
+			Transform& set_rotation(const math::Vector& rv);
+			Transform& set_local_rotation(const math::Vector& rv);
 
-			void apply(const math::TransformVectors& tform);
+			Transform& apply(const math::TransformVectors& tform);
 
 			math::Vector get_local_direction_vector(const math::Vector forward = { 0.0f, 0.0f, -1.0f }); // 1.0f
 
-			void set_rx(float rx);
-			void set_ry(float ry);
-			void set_rz(float rz);
+			Transform& set_rx(float rx);
+			Transform& set_ry(float ry);
+			Transform& set_rz(float rz);
 
-			void move(const math::Vector& tv, bool local=false);
+			Transform& move(const math::Vector& tv, bool local=false);
 
 			// Orients this transform to look at 'target', then returns the new basis.
 			math::RotationMatrix look_at(const math::Vector& target, const math::Vector& up={0.0f, 1.0f, 0.0f});
@@ -181,11 +182,11 @@ namespace engine
 			math::RotationMatrix look_at(Transform& t, const math::Vector& up={0.0f, 1.0f, 0.0f});
 
 			// Rotation:
-			void rotate(const math::Vector& rv, bool local=false);
+			Transform& rotate(const math::Vector& rv, bool local=false);
 
-			void rotateX(float rx, bool local=false);
-			void rotateY(float ry, bool local=false);
-			void rotateZ(float rz, bool local=false);
+			Transform& rotateX(float rx, bool local=false);
+			Transform& rotateY(float ry, bool local=false);
+			Transform& rotateZ(float rz, bool local=false);
 
 			// Local transformations:
 			inline math::Vector         get_local_position() const { return transform.translation; } // math::get_translation(transform._m);
@@ -196,13 +197,13 @@ namespace engine
 			math::Matrix get_local_matrix();
 			math::Matrix get_inverse_local_matrix();
 
-			void set_matrix(const math::Matrix& m);
+			Transform& set_matrix(const math::Matrix& m);
 
-			void set_local_matrix(const math::Matrix& m);
-			void set_local_position(const math::Vector& position);
-			void set_local_scale(const math::Vector& scale);
+			Transform& set_local_matrix(const math::Matrix& m);
+			Transform& set_local_position(const math::Vector& position);
+			Transform& set_local_scale(const math::Vector& scale);
 
-			void set_local_basis(const math::RotationMatrix& basis);
-			void set_local_basis_q(const math::Quaternion& basis);
+			Transform& set_local_basis(const math::RotationMatrix& basis);
+			Transform& set_local_basis_q(const math::Quaternion& basis);
 	};
 }
