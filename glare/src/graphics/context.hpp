@@ -325,8 +325,21 @@ namespace graphics
 			void resize_texture(Texture& texture, int width, int height);
 
 			// Shader related:
+
+			// Builds & links a shader program using the source code specified.
 			Handle build_shader(const ShaderSource& source) noexcept; // generate_shader(...)
+
+			// Links individual shader objects into one program. (see also: 'build_shader')
+			Handle link_shader(const Handle& vertex_obj, const Handle& fragment_obj) noexcept;
+
+			// Releases a built shader program.
 			void release_shader(Handle&& handle);
+
+			// Builds a native shader object of the type specified.
+			Handle build_shader_source_obj(const ShaderSource::StringType& source_text, ShaderType type) noexcept;
+
+			// Releases a native shader object.
+			void release_shader_source_obj(Handle&& handle);
 
 			// Framebuffer related:
 			Handle generate_framebuffer(); // noexcept;

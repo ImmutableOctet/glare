@@ -380,6 +380,23 @@ namespace graphics
 				return GL_NONE;
 			}
 
+			static constexpr GLenum get_shader_type(ShaderType type) // noexcept
+			{
+				switch (type)
+				{
+					case ShaderType::Vertex:
+						return GL_VERTEX_SHADER;
+					case ShaderType::Fragment:
+						return GL_FRAGMENT_SHADER;
+					case ShaderType::Geometry:
+						return GL_GEOMETRY_SHADER;
+					//case ShaderType::Tessellation:
+					//	return GL_GEOMETRY_SHADER;
+				}
+
+				return GL_NONE;
+			}
+
 			static Context::Handle compile_shader(const std::string& source, GLenum type) noexcept
 			{
 				const GLchar* source_raw = reinterpret_cast<const GLchar*>(source.c_str());
@@ -1260,31 +1277,38 @@ namespace graphics
 	// Shader related:
 	Context::Handle Context::build_shader(const ShaderSource& source) noexcept
 	{
-		auto vertex   = Driver::compile_shader(source.vertex, GL_VERTEX_SHADER);
-		auto fragment = Driver::compile_shader(source.fragment, GL_FRAGMENT_SHADER);
+		auto vertex   = build_shader_source_obj(source.vertex, ShaderType::Vertex);
+		auto fragment = build_shader_source_obj(source.fragment, ShaderType::Fragment);
 
+		auto program = link_shader(vertex, fragment);
+
+		release_shader_source_obj(std::move(vertex));
+		release_shader_source_obj(std::move(fragment));
+
+		return program;
+	}
+
+	Context::Handle Context::link_shader(const Handle& vertex_obj, const Handle& fragment_obj) noexcept
+	{
 		// TODO: Look into proper error handling if possible.
-		ASSERT(vertex);
-		ASSERT(fragment);
+		ASSERT(vertex_obj);
+		ASSERT(fragment_obj);
 
 		// Allocate a shader-program object.
 		auto program = glCreateProgram();
 
 		// Attach our compiled shader objects.
-		glAttachShader(program, vertex);
-		glAttachShader(program, fragment);
+		glAttachShader(program, vertex_obj);
+		glAttachShader(program, fragment_obj);
 
 		// Link together the program.
 		glLinkProgram(program);
-		
+
 		GLint success;
 		glGetProgramiv(program, GL_LINK_STATUS, &success);
 
 		// TODO: Look into proper error handling for link-failure if possible.
 		ASSERT(success);
-
-		glDeleteShader(vertex);
-		glDeleteShader(fragment);
 
 		return program;
 	}
@@ -1292,6 +1316,16 @@ namespace graphics
 	void Context::release_shader(Context::Handle&& handle)
 	{
 		glDeleteProgram(handle);
+	}
+
+	Context::Handle Context::build_shader_source_obj(const ShaderSource::StringType& source_text, ShaderType type) noexcept
+	{
+		return Driver::compile_shader(source_text, Driver::get_shader_type(type));
+	}
+
+	void Context::release_shader_source_obj(Handle&& handle)
+	{
+		glDeleteShader(handle);
 	}
 
 	// Framebuffer related:
