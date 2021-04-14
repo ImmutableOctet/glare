@@ -68,21 +68,25 @@ namespace glare
 			"assets/shaders/8.1.fbo_debug.frag"
 		);
 
+		//light_box = res.get_shader("assets/shaders/light_box.vert", "assets/shaders/light_box.frag");
+
 		/*
 		light_box = memory::allocate<graphics::Shader>
 		(
 			graphics.context,
 
-			"assets/shaders/8.1.deferred_light_box.vert",
-			"assets/shaders/8.1.deferred_light_box.frag"
+			"assets/shaders/light_box.vert",
+			"assets/shaders/light_box.frag"
 		);
 		*/
+
+		light_box = forward;
 	}
 
 	Glare::Glare(bool auto_execute)
 		: GraphicsApplication("Project Glare", 1600, 900, (app::WindowFlags::OpenGL|app::WindowFlags::Resizable), TARGET_UPDATE_RATE, false), // true
 		  shaders(graphics),
-		  resource_manager(graphics.context, shaders.forward),
+		  resource_manager(graphics.context, shaders.geometry), // shaders.forward
 		  world(resource_manager, TARGET_UPDATE_RATE)
 	{
 		using namespace graphics;
@@ -107,27 +111,27 @@ namespace glare
 
 		window->get_size(screen_width, screen_height);
 
-		gBuffer.screen_quad = Mesh::GenerateTexturedQuad(graphics.context);
+		g_buffer.screen_quad = Mesh::GenerateTexturedQuad(graphics.context);
 
 		const auto gBuffer_flags = TextureFlags::None;
 
 		//test_texture = Texture(graphics.context, "assets/tests/model_test/Bianco/T (1).png");
 
-		gBuffer.framebuffer = FrameBuffer(graphics.context);
+		g_buffer.framebuffer = FrameBuffer(graphics.context);
 
-		auto& fb = gBuffer.framebuffer;
+		auto& fb = g_buffer.framebuffer;
 
 		graphics.context->use(fb, [&, this]()
 		{
-			gBuffer.position = Texture(graphics.context, screen_width, screen_height, TextureFormat::RGB, ElementType::Half, gBuffer_flags); // Float
-			//auto _pos = graphics.context->use(gBuffer.position);
-			fb.attach(gBuffer.position);
+			g_buffer.position = Texture(graphics.context, screen_width, screen_height, TextureFormat::RGB, ElementType::Half, gBuffer_flags); // Float
+			//auto _pos = graphics.context->use(g_buffer.position);
+			fb.attach(g_buffer.position);
 			
-			gBuffer.normal = Texture(graphics.context, screen_width, screen_height, TextureFormat::RGB, ElementType::Half, gBuffer_flags); // Float
-			fb.attach(gBuffer.normal);
+			g_buffer.normal = Texture(graphics.context, screen_width, screen_height, TextureFormat::RGB, ElementType::Half, gBuffer_flags); // Float
+			fb.attach(g_buffer.normal);
 
-			gBuffer.albedo_specular = Texture(graphics.context, screen_width, screen_height, TextureFormat::RGBA, ElementType::UByte, gBuffer_flags);
-			fb.attach(gBuffer.albedo_specular);
+			g_buffer.albedo_specular = Texture(graphics.context, screen_width, screen_height, TextureFormat::RGBA, ElementType::UByte, gBuffer_flags);
+			fb.attach(g_buffer.albedo_specular);
 
 			fb.link();
 
@@ -181,9 +185,9 @@ namespace glare
 		{
 			math::Vector position =
 			{
-				(((static_cast<float>(rand() % 400)-200.0f) / 400.0f) * 400.0f), // 60.0f - 30.0f
-				(static_cast<float>(rand() % 300) + 25.0f),
-				(((static_cast<float>(rand() % 400)-200.0f) / 400.0f) * 400.0f)
+				(static_cast<float>(rand() % 600) - 300.0f),
+				(static_cast<float>(rand() % 60) + 40.0f),
+				(static_cast<float>(rand() % 600) - 300.0f)
 			};
 
 			// also calculate random color
@@ -194,7 +198,7 @@ namespace glare
 				(static_cast<float>(rand() % 100) / 100.0f) + 0.5f // between 0.5 and 1.0 // 1.0f
 			};
 
-			engine::create_light(world, (position + offset), color);
+			engine::create_light(world, (position + offset), color, engine::LightType::Point, engine::null, true, shaders.light_box);
 		}
 	}
 
@@ -365,16 +369,16 @@ namespace glare
 
 			graphics.context->use(shader, [&]()
 			{
-				//graphics.context->use(gBuffer.screen_quad, [&, this]()
+				//graphics.context->use(g_buffer.screen_quad, [&, this]()
 				//{
 				//	graphics.context->draw();
 				//});
 
 				world.render(*graphics.canvas, true);
 
-				//graphics.context->use(gBuffer.screen_quad, [&, this]()
+				//graphics.context->use(g_buffer.screen_quad, [&, this]()
 				//{
-				//	auto gAlbedoSpec = graphics.context->use(gBuffer.albedo_specular, "diffuse");
+				//	auto gAlbedoSpec = graphics.context->use(g_buffer.albedo_specular, "diffuse");
 				//
 				//	graphics.context->draw();
 				//});
@@ -395,23 +399,14 @@ namespace glare
 
 				//graphics.context->clear_textures(false); // true // <-- May not be needed.
 
-				graphics.context->use(gBuffer.framebuffer, [&, this]()
+				graphics.context->use(g_buffer.framebuffer, [&, this]()
 				{
 					graphics.context->clear(0.0f, 0.0f, 0.0f, 1.0f, (graphics::BufferType::Color | graphics::BufferType::Depth)); // gfx // 1.0f, 0.0f, 0.0f
 					//graphics.context->clear(1.0f, 1.0f, 1.0f, 1.0f, (graphics::BufferType::Color | graphics::BufferType::Depth)); // gfx // 1.0f, 0.0f, 0.0f
 
 					graphics.context->use(shader, [&, this]()
 					{
-						world.render(*graphics.canvas, viewport, false); // , true
-
-						/*
-						auto texture = graphics.context->use(test_texture);
-
-						graphics.context->use(gBuffer.screen_quad, [&, this]()
-						{
-							graphics.context->draw();
-						});
-						*/
+						world.render(*graphics.canvas, viewport, false, true);
 					});
 				});
 			}
@@ -427,16 +422,16 @@ namespace glare
 				{
 					graphics.context->clear_textures(true); // false
 
-					auto gPosition   = graphics.context->use(gBuffer.position, "gPosition");
-					auto gNormal     = graphics.context->use(gBuffer.normal, "gNormal");
-					auto gAlbedoSpec = graphics.context->use(gBuffer.albedo_specular, "gAlbedoSpec");
+					auto gPosition   = graphics.context->use(g_buffer.position, "g_position");
+					auto gNormal     = graphics.context->use(g_buffer.normal, "g_normal");
+					auto gAlbedoSpec = graphics.context->use(g_buffer.albedo_specular, "g_albedo_specular");
 
 					auto& registry = world.get_registry();
 
 					// update attenuation parameters and calculate radius
 					const float constant  = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
-					const float linear    = 0.00005f; // 0.7f; // 0.005f;
-					const float quadratic = 1.0f/1000.0f; // 1.8f; // 0.0005f;
+					const float linear    = 0.1f; // 0.000005f; // 0.7f; // 0.005f;
+					const float quadratic = 1.0f/2000.0f; // 1.8f; // 0.0005f;
 
 					unsigned int light_idx = 0;
 
@@ -476,18 +471,18 @@ namespace glare
 
 					shader["viewPos"] = camera_transform.get_position();
 
-					graphics.context->use(gBuffer.screen_quad, [&, this]()
+					graphics.context->use(g_buffer.screen_quad, [&, this]()
 					{
 						graphics.context->draw();
 					});
 
-					graphics.context->copy_framebuffer(gBuffer.framebuffer, viewport, viewport, BufferType::Depth);
+					graphics.context->copy_framebuffer(g_buffer.framebuffer, viewport, viewport, BufferType::Depth);
 				});
 			}
 			
 
 			// Framebuffer test.
-			if (gBuffer.display_mode != GBufferDisplayMode::None)
+			if (g_buffer.display_mode != GBufferDisplayMode::None)
 			{
 				auto& shader = *shaders.framebuffer_dbg;
 
@@ -497,28 +492,33 @@ namespace glare
 				{
 					auto get_texture = [&, this]() -> const Texture&
 					{
-						switch (this->gBuffer.display_mode)
+						switch (this->g_buffer.display_mode)
 						{
 							case GBufferDisplayMode::Normal:
-								return gBuffer.normal;
+								return g_buffer.normal;
 							case GBufferDisplayMode::AlbedoSpecular:
-								return gBuffer.albedo_specular;
+								return g_buffer.albedo_specular;
 						}
 
-						return gBuffer.position;
+						return g_buffer.position;
 					};
 
-					auto fb_texture = graphics.context->use(get_texture()); // test_texture // gBuffer.normal
+					auto fb_texture = graphics.context->use(get_texture()); // test_texture // g_buffer.normal
 
-					//graphics.context->use(gBuffer.position, [&, this]() // normal // albedo_specular
+					//graphics.context->use(g_buffer.position, [&, this]() // normal // albedo_specular
 					//{
-						graphics.context->use(gBuffer.screen_quad, [&, this]()
+						graphics.context->use(g_buffer.screen_quad, [&, this]()
 						{
 							graphics.context->draw();
 						});
 					//});
 				});
 			}
+
+			graphics.context->use(*shaders.light_box, [&, this]()
+			{
+				world.render(*graphics.canvas, viewport, false, true);
+			});
 		}
 		//*/
 
@@ -615,7 +615,7 @@ namespace glare
 			}
 
 			case SDLK_c:
-				gBuffer.display_mode = static_cast<GBufferDisplayMode>((static_cast<int>(gBuffer.display_mode) + 1) % static_cast<int>(GBufferDisplayMode::Modes));
+				g_buffer.display_mode = static_cast<GBufferDisplayMode>((static_cast<int>(g_buffer.display_mode) + 1) % static_cast<int>(GBufferDisplayMode::Modes));
 
 				break;
 		}

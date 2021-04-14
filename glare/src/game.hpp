@@ -40,7 +40,7 @@ namespace glare
 				//GBufferDisplayMode display_mode = GBufferDisplayMode::AlbedoSpecular;
 				GBufferDisplayMode display_mode = GBufferDisplayMode::None;
 
-			} gBuffer;
+			} g_buffer;
 
 			struct init_shaders
 			{
@@ -54,7 +54,7 @@ namespace glare
 				ref<graphics::Shader> light_box;
 			} shaders;
 
-			static constexpr auto NR_LIGHTS = 32;
+			static constexpr auto NR_LIGHTS = 32; // 128; // 16;
 			static constexpr Application::UpdateRate TARGET_UPDATE_RATE = 60;
 
 			graphics::Texture test_texture;

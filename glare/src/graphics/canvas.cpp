@@ -103,7 +103,6 @@ namespace graphics
 	void Canvas::draw(Model& model, const graphics::ColorRGBA& color, DrawMode draw_mode, bool auto_clear_textures) // const math::Matrix& model_matrix
 	{
 		auto& ctx = get_context();
-
 		auto& state = ctx.get_state();
 		auto& shader = (*state.shader);
 
