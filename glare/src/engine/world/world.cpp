@@ -134,12 +134,12 @@ namespace engine
 		RaveComponent::update(*this);
 	}
 
-	bool World::render(graphics::Canvas& canvas, const graphics::Viewport& viewport, bool forward_rendering)
+	bool World::render(graphics::Canvas& canvas, const graphics::Viewport& viewport, bool multi_pass, bool use_active_shader, graphics::CanvasDrawMode additional_draw_modes)
 	{
-		return render(canvas, viewport, this->camera, forward_rendering);
+		return render(canvas, viewport, this->camera, multi_pass, use_active_shader, additional_draw_modes);
 	}
 
-	bool World::render(graphics::Canvas& canvas, const graphics::Viewport& viewport, Entity camera, bool forward_rendering)
+	bool World::render(graphics::Canvas& canvas, const graphics::Viewport& viewport, Entity camera, bool multi_pass, bool use_active_shader, graphics::CanvasDrawMode additional_draw_modes)
 	{
 		// Deferred referning is current unsupported.
 		//ASSERT(forward_rendering);
@@ -171,9 +171,7 @@ namespace engine
 		// TODO: Move this aspect-ratio update to an event triggered on window-resize.
 		///camera_params.aspect_ratio = window->horizontal_aspect_ratio();
 
-		auto& shader = canvas.get_shader();
-
-		math::Matrix4x4 projection;
+		math::Matrix projection;
 
 		switch (camera_params.projection_mode)
 		{
@@ -189,66 +187,94 @@ namespace engine
 
 				break;
 			}
-			default:
-			//case CameraProjection::Perspective:
+			default: // case CameraProjection::Perspective:
 				projection = glm::perspective(camera_params.fov, camera_params.aspect_ratio, camera_params.near_plane, camera_params.far_plane);
 
 				break;
 		}
 
-		shader["projection"] = projection;
-		shader["view"] = camera_matrix;
-
-		// TODO: Change/remove flag(s).
-		auto additional_draw_modes = (graphics::CanvasDrawMode::IgnoreShaders); // graphics::CanvasDrawMode::None;
-
-		if (forward_rendering)
+		if (multi_pass)
 		{
-			draw_models((graphics::CanvasDrawMode::Opaque | additional_draw_modes), canvas, shader);
-			draw_models((graphics::CanvasDrawMode::Transparent | additional_draw_modes), canvas, shader);
+			draw_models((graphics::CanvasDrawMode::Opaque | additional_draw_modes), canvas, projection, camera_matrix, use_active_shader);
+			draw_models((graphics::CanvasDrawMode::Transparent | additional_draw_modes), canvas, projection, camera_matrix, use_active_shader);
 		}
 		else
 		{
-			draw_models((graphics::Canvas::DrawMode::All | additional_draw_modes), canvas, shader);
+			draw_models((graphics::Canvas::DrawMode::All | additional_draw_modes), canvas, projection, camera_matrix, use_active_shader);
 		}
 
 		return true;
 	}
 
-	void World::draw_models(graphics::CanvasDrawMode draw_mode, graphics::Canvas& canvas, graphics::Shader& shader)
+	void World::draw_models(graphics::CanvasDrawMode draw_mode, graphics::Canvas& canvas, const math::Matrix& projection_matrix, const math::Matrix& view_matrix, bool use_active_shader) // graphics::Shader& shader
 	{
-		bool _auto_clear_textures = false; // true; // false;
-
-		registry.view<ModelComponent, TransformComponent, Relationship>().each([&](auto entity, auto& model_component, auto& transform, const auto& relationship)
+		auto draw = [&, this](auto& shader)
 		{
-			if (!model_component.visible)
+			shader["projection"] = projection_matrix;
+			shader["view"] = view_matrix;
+
+			bool _auto_clear_textures = false; // true;
+
+			registry.view<ModelComponent, TransformComponent, Relationship>().each([&](auto entity, auto& model_component, auto& transform, const auto& relationship)
 			{
-				return;
-			}
+				if (!model_component.visible)
+				{
+					return;
+				}
 
-			/*
-			if (model_component.transparent())
+				/*
+				if (model_component.transparent())
+				{
+					return;
+				}
+				*/
+
+				if (model_component.model == nullptr)
+				{
+					return;
+				}
+
+				auto model_transform = Transform(registry, entity, relationship, transform);
+				auto model_matrix = model_transform.get_matrix(true); // get_local_matrix();
+				//auto model_matrix = model_transform.get_local_matrix();
+
+				shader["model"] = model_matrix;
+
+				auto& model = *model_component.model;
+				auto color  = model_component.color;
+
+				canvas.draw(model, color, draw_mode, _auto_clear_textures);
+			});
+		};
+
+		if ((use_active_shader) || (draw_mode & graphics::CanvasDrawMode::IgnoreShaders))
+		{
+			auto& shader = canvas.get_shader();
+
+			draw(shader);
+		}
+		else
+		{
+			auto& shaders = resource_manager.loaded_shaders;
+
+			for (auto& shader_entry : shaders)
 			{
-				return;
+				auto& shader_ptr = shader_entry.second;
+
+				if (!shader_ptr)
+				{
+					continue;
+				}
+
+				auto& ctx = canvas.get_context();
+				auto& shader = *shader_ptr;
+
+				ctx.use(shader, [&, this]()
+				{
+					draw(shader);
+				});
 			}
-			*/
-
-			if (model_component.model == nullptr)
-			{
-				return;
-			}
-
-			auto model_transform = Transform(registry, entity, relationship, transform);
-			auto model_matrix = model_transform.get_matrix(true); // get_local_matrix();
-			//auto model_matrix = model_transform.get_local_matrix();
-
-			shader["model"] = model_matrix;
-
-			auto& model = *model_component.model;
-			auto color  = model_component.color;
-
-			canvas.draw(model, color, draw_mode, _auto_clear_textures);
-		});
+		}
 	}
 
 	Transform World::apply_transform(Entity entity, const math::TransformVectors& tform)
