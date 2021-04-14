@@ -20,7 +20,7 @@ namespace graphics
 
 		//using SimpleVertex = graphics::SimpleVertex;
 
-		std::vector<VertexType> vertices;
+		std::vector<VertexType> vertices; // std::shared_ptr<std::vector<VertexType>>
 		std::shared_ptr<std::vector<Index>> indices;
 
 		inline bool has_vertices() const { return (vertices.count() > 0); }
