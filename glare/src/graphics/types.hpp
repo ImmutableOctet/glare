@@ -94,6 +94,26 @@ namespace graphics
 
 	using Viewport = PointRect;
 
+	enum class ShaderType
+	{
+		Vertex,
+		Fragment,
+		Geometry,
+		Tessellation
+	};
+
+	class ShaderSource
+	{
+		public:
+			using StringType = std::string;
+
+			// Implementation found in "shader.cpp".
+			static ShaderSource Load(const std::string& vertex_path, const std::string& fragment_path); // StringType
+
+			StringType vertex;
+			StringType fragment;
+	};
+
 	enum class ElementType
 	{
 		Byte,

@@ -18,15 +18,6 @@ namespace graphics
 	class Shader;
 	class Uniform;
 
-	class ShaderSource
-	{
-		public:
-			static ShaderSource Load(const std::string& vertex_path, const std::string& fragment_path);
-
-			std::string vertex;
-			std::string fragment;
-	};
-
 	class Shader : public Resource
 	{
 		protected:
