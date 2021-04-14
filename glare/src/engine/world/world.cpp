@@ -260,6 +260,15 @@ namespace engine
 		return transform;
 	}
 
+	Transform World::set_position(Entity entity, const math::Vector& position)
+	{
+		auto transform = get_transform(entity);
+
+		transform.set_position(position);
+
+		return transform;
+	}
+
 	Transform World::get_transform(Entity entity)
 	{
 		return Transform(registry, entity);

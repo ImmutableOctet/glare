@@ -122,6 +122,7 @@ namespace engine
 			//void on_child_removed(const Event_ChildRemoved& e);
 
 			Transform apply_transform(Entity entity, const math::TransformVectors& tform);
+			Transform set_position(Entity entity, const math::Vector& position);
 
 			Transform get_transform(Entity entity);
 
