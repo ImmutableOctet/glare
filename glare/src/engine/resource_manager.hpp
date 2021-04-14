@@ -73,6 +73,9 @@ namespace engine
 			using ModelRef = ref<graphics::Model>;
 			using WeakModelRef = weak_ref<graphics::Model>; // const graphics::Model*
 
+			using ShaderRef = ref<graphics::Shader>;
+			using WeakShaderRef = weak_ref<graphics::Shader>;
+
 			// Output from load/creation function for models.
 			using ModelData = std::tuple<ModelRef, const CollisionData*>; // ModelRef // std::optional<...>
 
@@ -84,7 +87,9 @@ namespace engine
 			inline pass_ref<graphics::Context> get_context() const { return context; }
 			inline pass_ref<graphics::Shader> get_default_shader() const { return default_shader; }
 
-			ModelData load_model(const std::string& path, bool load_collision=false, bool optimize_collision=true, bool force_reload=false) const;
+			ModelData load_model(const std::string& path, bool load_collision=false, pass_ref<graphics::Shader> shader={}, bool optimize_collision=true, bool force_reload=false, bool cache_result=true) const;
+
+			ShaderRef get_shader(const std::string& vertex_path, const std::string& fragment_path, bool force_reload=false, bool cache_result=true) const; // const graphics::ShaderSource& shader_source
 
 			// Optionally returns a pointer to a 'CollisionData' object for the 'model' specified.
 			//const CollisionData* get_collision(WeakModelRef model);
@@ -118,6 +123,8 @@ namespace engine
 			mutable ref<graphics::Shader> default_shader;
 
 			mutable std::unordered_map<std::string, ModelRef> loaded_models; // ModelData // std::map
+			mutable std::unordered_map<std::string, ShaderRef> loaded_shaders; // std::map
+
 			mutable std::map<WeakModelRef, CollisionData, std::owner_less<>> collision_data; //std::unordered_map<WeakModelRef, CollisionData, std::hash<WeakModelRef>, std::owner_less<>> collision_data;	
 
 			//std::unordered_map<std::string, TextureData> texture_data;
