@@ -32,8 +32,10 @@ namespace engine
 		: collision_shape(ResourceManager::build_mesh_shape(geometry_storage, optimize)), geometry_storage(std::move(geometry_storage)) {}
 
 	ResourceManager::ResourceManager(pass_ref<graphics::Context> context, pass_ref<graphics::Shader> default_shader)
-		: context(context), default_shader(default_shader)
-	{}
+		: context(context) //, default_shader(default_shader)
+	{
+		set_default_shader(default_shader);
+	}
 
 	ResourceManager::~ResourceManager() {}
 
