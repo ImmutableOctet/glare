@@ -33,9 +33,13 @@ namespace graphics
 
 namespace engine
 {
+	class World;
+
 	class ResourceManager
 	{
 		public:
+			friend class World;
+
 			using CollisionRaw = CollisionComponent::RawShape; // btCollisionShape;
 			using CollisionShape = CollisionComponent::Shape; // ref<CollisionRaw>;
 			using CollisionGeometry = graphics::Model::CollisionGeometry;
@@ -85,7 +89,15 @@ namespace engine
 			~ResourceManager();
 
 			inline pass_ref<graphics::Context> get_context() const { return context; }
+
 			inline pass_ref<graphics::Shader> get_default_shader() const { return default_shader; }
+
+			inline void set_default_shader(pass_ref<graphics::Shader> shader)
+			{
+				default_shader = shader;
+
+				loaded_shaders["DEFAULT"] = shader;
+			}
 
 			ModelData load_model(const std::string& path, bool load_collision=false, pass_ref<graphics::Shader> shader={}, bool optimize_collision=true, bool force_reload=false, bool cache_result=true) const;
 
