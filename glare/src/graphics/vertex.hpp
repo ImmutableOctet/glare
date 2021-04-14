@@ -70,6 +70,11 @@ namespace graphics
 			else if (type == typeid(math::vec2f))      return ElementType::Float;
 			else if (type == typeid(math::vec3f))      return ElementType::Float;
 			else if (type == typeid(math::vec4f))      return ElementType::Float;
+
+			else if (type == typeid(math::vec2i))      return ElementType::Int;
+			else if (type == typeid(math::vec3i))      return ElementType::Int;
+			else if (type == typeid(math::vec4i))      return ElementType::Int;
+
 			else if (type == typeid(math::mat2f))      return ElementType::Float;
 			else if (type == typeid(math::mat3f))      return ElementType::Float;
 			else if (type == typeid(math::mat4f))      return ElementType::Float;
@@ -100,6 +105,11 @@ namespace graphics
 			else if (type == typeid(math::vec2f)) return 2;
 			else if (type == typeid(math::vec3f)) return 3;
 			else if (type == typeid(math::vec4f)) return 4;
+
+			else if (type == typeid(math::vec2i)) return 2;
+			else if (type == typeid(math::vec3i)) return 3;
+			else if (type == typeid(math::vec4i)) return 4;
+
 			else if (type == typeid(math::mat2f)) return 2*2;
 			else if (type == typeid(math::mat3f)) return 3*3;
 			else if (type == typeid(math::mat4f)) return 4*4;
@@ -126,9 +136,17 @@ namespace graphics
 	VERTEX_ATTRIBUTE(Normal, math::vec3f, normal);
 	VERTEX_ATTRIBUTE(Tangent, math::vec3f, tangent);
 	VERTEX_ATTRIBUTE(Bitangent, math::vec3f, bitangent);
+	VERTEX_ATTRIBUTE(BoneIndices, math::vec4i, bone_indices);
+	VERTEX_ATTRIBUTE(BoneWeights, math::vec4f, bone_weights);
+
+	// Adds 4 bone indices and 4 weight channels to the 'VertexType' specified.
+	template <typename VertexType>
+	using AnimatedVertex = A_BoneWeights<A_BoneIndices<VertexType>>;
 
 	//using PositionVertex = Vertex;
 	using SimpleVertex = Vertex;
 	using TexturedVertex = A_TexCoords<Vertex>;
 	using StandardVertex = A_Bitangent<A_Tangent<A_TexCoords<A_Normal<Vertex>>>>;
+	using StandardAnimationVertex = AnimatedVertex<StandardVertex>;
+
 }
