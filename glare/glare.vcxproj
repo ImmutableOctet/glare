@@ -192,6 +192,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="dependencies\modules\stb\stb_truetype.h" />
     <ClInclude Include="dependencies\modules\stb\stb_voxel_render.h" />
     <ClInclude Include="dependencies\modules\stb\stretchy_buffer.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="src\app\app.hpp" />
     <ClInclude Include="src\app\application.hpp" />
     <ClInclude Include="src\app\delta_time.hpp" />
@@ -281,6 +282,17 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\util\variant.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="assets\shaders\light_box.frag" />
+    <None Include="assets\shaders\light_box.vert" />
+    <None Include="assets\shaders\deferred_shading.frag" />
+    <None Include="assets\shaders\deferred_shading.vert" />
+    <None Include="assets\shaders\8.1.fbo_debug.frag" />
+    <None Include="assets\shaders\8.1.fbo_debug.vert" />
+    <None Include="assets\shaders\g_buffer.frag" />
+    <None Include="assets\shaders\g_buffer.vert" />
+    <None Include="assets\shaders\forward.frag" />
+    <None Include="assets\shaders\forward.vert" />
+    <None Include="assets\shaders\forward_test.frag" />
     <None Include="assets\tests\model_test\shaders\8.1.deferred_light_box.fs">
       <DeploymentContent>false</DeploymentContent>
     </None>
@@ -349,6 +361,9 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\util\io.cpp" />
     <ClCompile Include="src\util\lib.cpp" />
     <ClCompile Include="src\util\string.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="glare.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
