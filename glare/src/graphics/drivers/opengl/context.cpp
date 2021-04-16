@@ -254,10 +254,45 @@ namespace graphics
 						case GL_RGB:
 							switch (element_type)
 							{
+								case ElementType::Byte:
+								case ElementType::UByte:
+									return GL_RGB8;
+								
+								case ElementType::Short:
+								case ElementType::UShort:
+									return GL_RGB16;
+								
+								case ElementType::Int:
+								case ElementType::UInt:
+									return GL_RGB32I;
+
 								case ElementType::Half:
 									return GL_RGB16F;
 								case ElementType::Float:
 									return GL_RGB32F;
+							}
+
+							break;
+						case GL_RGBA:
+							switch (element_type)
+							{
+								case ElementType::Byte:
+								case ElementType::UByte:
+									return GL_RGBA8;
+								
+								case ElementType::Short:
+								case ElementType::UShort:
+									return GL_RGBA16;
+								
+								case ElementType::Int:
+								case ElementType::UInt:
+									return GL_RGBA32I;
+								
+								case ElementType::Half:
+									return GL_RGBA16F;
+								
+								case ElementType::Float:
+									return GL_RGBA32F;
 							}
 
 							break;
@@ -1209,12 +1244,7 @@ namespace graphics
 			ASSERT(!is_depth_map);
 		*/
 
-		allocate_texture(texture_data.width(), texture_data.height(), texture_data.format(), channel_type, texture_data.data(), false); // true;
-
-		if ((flags & TextureFlags::MipMap))
-		{
-			glGenerateMipmap(GL_TEXTURE_2D);
-		}
+		allocate_texture(texture_data.width(), texture_data.height(), texture_data.format(), channel_type, texture_data.data(), (flags & TextureFlags::Dynamic), (flags & TextureFlags::MipMap), false); // true;
 
 		// Apply texture flags:
 		Driver::apply_texture_flags(flags);
@@ -1249,13 +1279,26 @@ namespace graphics
 		return texture;
 	}
 
-	void Context::allocate_texture(int width, int height, TextureFormat format, ElementType channel_type, const memory::raw_ptr raw_data, bool _calculate_exact_format)
+	void Context::allocate_texture(int width, int height, TextureFormat format, ElementType channel_type, const memory::raw_ptr raw_data, bool is_dynamic, bool generate_mipmaps, bool _calculate_exact_format)
 	{
-		const auto texture_format = Driver::get_texture_format(format, channel_type, _calculate_exact_format);
-		const auto texture_layout = Driver::get_texture_layout(format);
+		const auto texture_format = Driver::get_texture_format(format, channel_type, ((_calculate_exact_format) || (!is_dynamic)));
 		const auto element_type   = Driver::get_element_type(channel_type);
+		const auto texture_layout = Driver::get_texture_layout(format);
 
-		glTexImage2D(GL_TEXTURE_2D, 0, texture_format, width, height, 0, texture_layout, element_type, raw_data);
+		if (is_dynamic)
+		{
+			glTexImage2D(GL_TEXTURE_2D, 0, texture_format, width, height, 0, texture_layout, element_type, raw_data); // TODO: Add option to specify mipmap levels.
+		}
+		else
+		{
+			glTexStorage2D(GL_TEXTURE_2D, 1, texture_format, width, height); // TODO: Add option to specify mipmap levels.
+			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, texture_layout, element_type, raw_data);
+		}
+
+		if (generate_mipmaps)
+		{
+			glGenerateMipmap(GL_TEXTURE_2D);
+		}
 	}
 
 	void Context::release_texture(Handle&& handle)
@@ -1263,11 +1306,13 @@ namespace graphics
 		glDeleteTextures(1, &handle);
 	}
 
-	void Context::resize_texture(Texture& texture, int width, int height)
+	void Context::resize_texture(Texture& texture, int width, int height, const memory::raw_ptr raw_data, bool generate_mipmaps)
 	{
+		ASSERT(texture.is_dynamic());
+
 		use(texture, [&]()
 		{
-			allocate_texture(width, height, texture.get_format(), texture.get_element_type(), nullptr);
+			allocate_texture(width, height, texture.get_format(), texture.get_element_type(), raw_data, true, generate_mipmaps);
 		});
 
 		texture.width = width;

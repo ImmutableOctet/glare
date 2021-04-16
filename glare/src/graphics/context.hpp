@@ -318,11 +318,11 @@ namespace graphics
 			Handle generate_texture(const PixelMap& texture_data, ElementType channel_type, TextureFlags flags=TextureFlags::Default, bool __keep_bound=true); // noexcept;
 			Handle generate_texture(int width, int height, TextureFormat format, ElementType channel_type, TextureFlags flags=TextureFlags::Default, bool __keep_bound=true); // noexcept;
 
-			void allocate_texture(int width, int height, TextureFormat texture_format, ElementType channel_type, const memory::raw_ptr raw_data=nullptr, bool _calculate_exact_format=true);
+			void allocate_texture(int width, int height, TextureFormat texture_format, ElementType channel_type, const memory::raw_ptr raw_data=nullptr, bool is_dynamic=true, bool generate_mipmaps=false, bool _calculate_exact_format=true);
 
 			void release_texture(Handle&& handle);
 
-			void resize_texture(Texture& texture, int width, int height);
+			void resize_texture(Texture& texture, int width, int height, const memory::raw_ptr raw_data=nullptr, bool generate_mipmaps=false);
 
 			// Shader related:
 

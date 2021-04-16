@@ -222,7 +222,6 @@ namespace graphics
 		WrapS              = (1 << 5),
 		WrapT              = (1 << 6),
 
-		// This flag currently does nothing, it simply states that a texture was a result of a custom allocation.
 		Dynamic            = (1 << 7),
 		
 		WrapST             = (WrapS|WrapT),
