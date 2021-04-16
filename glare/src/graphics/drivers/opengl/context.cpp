@@ -145,7 +145,7 @@ namespace graphics
 
 				if (uniform_location == -1)
 				{
-					std::cout << "Unable to resolve uniform for: " << '\"' << name << '\"' << '\n';
+					//std::cout << "Unable to resolve uniform for: " << '\"' << name << '\"' << '\n';
 				}
 
 				uniform_location_map[name] = uniform_location;

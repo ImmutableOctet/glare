@@ -18,8 +18,14 @@ struct Light
 };
 
 const int NR_LIGHTS = 32; // 16; // 128;
+const float specular_intensity = 16.0; // 8.0;
+const bool limit_to_radius = false; // true;
+
 uniform Light lights[NR_LIGHTS];
 uniform vec3 viewPos;
+
+//uniform float alpha = 1.0; // const
+//uniform bool specular_available = false;
 
 void main()
 {             
@@ -38,7 +44,7 @@ void main()
         // calculate distance between light source and current fragment
         float distance = length(lights[i].Position - FragPos);
 
-        if (distance < lights[i].Radius)
+        if ((!limit_to_radius) || (distance < lights[i].Radius))
         {
             // diffuse
             vec3 lightDir = normalize(lights[i].Position - FragPos);
@@ -46,7 +52,7 @@ void main()
 
             // specular
             vec3 halfwayDir = normalize(lightDir + viewDir);  
-            float spec = pow(max(dot(Normal, halfwayDir), 0.0), 16.0);
+            float spec = pow(max(dot(Normal, halfwayDir), 0.0), specular_intensity);
             vec3 specular = lights[i].Color * spec * Specular;
             
             // attenuation
@@ -57,5 +63,5 @@ void main()
         }
     }
 
-    FragColor = vec4(lighting, 1.0);
+    FragColor = vec4(lighting, 1.0); // alpha
 }
