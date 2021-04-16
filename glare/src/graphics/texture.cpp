@@ -15,7 +15,7 @@ namespace graphics
 		: Texture(ctx, ctx->generate_texture(data, ElementType::UByte, flags), data.width(), data.height(), data.format(), ElementType::UByte, flags) {}
 
 	Texture::Texture(pass_ref<Context> ctx, int width, int height, TextureFormat format, ElementType element_type, TextureFlags flags)
-		: Texture(ctx, ctx->generate_texture(width, height, format, element_type, (flags | TextureFlags::Dynamic)), width, height, format, element_type, flags) {}
+		: Texture(ctx, ctx->generate_texture(width, height, format, element_type, (flags | TextureFlags::Dynamic)), width, height, format, element_type, (flags | TextureFlags::Dynamic)) {}
 
 	Texture::Texture(pass_ref<Context> ctx, raw_string path, Flags flags)
 		: Texture(ctx, PixelMap::Load(path), flags) {}

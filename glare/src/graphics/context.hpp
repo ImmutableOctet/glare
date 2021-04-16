@@ -5,6 +5,7 @@
 #include <functional>
 #include <string>
 #include <string_view>
+#include <tuple>
 
 //#include <version>
 //#include <concepts>
@@ -143,7 +144,11 @@ namespace graphics
 
 			FrameBufferBindState bind(FrameBuffer& buffer, FrameBufferType bind_type=FrameBufferType::ReadWrite);
 			FrameBufferBindState bind(FrameBufferBindState state, FrameBufferType _ignored_bind_type={});
+
+			RenderBuffer& bind(RenderBuffer& texture);
 		public:
+			static std::tuple<TextureFormat, ElementType> resolve_renderbuffer_format(RenderBufferType type);
+
 			Context(app::Window& wnd, Backend gfx, Flags flags=Flags::Default);
 			~Context();
 
@@ -359,6 +364,8 @@ namespace graphics
 			// Renderbuffer related:
 			Handle generate_renderbuffer(RenderBufferType type, int width, int height);
 			Handle generate_renderbuffer(RenderBufferType type, int width, int height, TextureFormat format, ElementType element_type);
+
+			void resize_renderbuffer(RenderBuffer& renderbuffer, int width, int height);
 
 			void release_renderbuffer(Handle&& handle);
 	};

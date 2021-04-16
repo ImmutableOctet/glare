@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <tuple>
 
 #include <core.hpp>
 #include <math/math.hpp>
@@ -91,7 +92,9 @@ namespace glare
 
 			void on_keyup(const keyboard_event_t& event) override;
 			void on_keydown(const keyboard_event_t& event) override;
+			void on_window_resize(app::Window& window, int width, int height) override;
 
-			graphics::Viewport update_viewport(engine::Entity camera);
+			std::tuple<graphics::Viewport, math::vec2i> update_viewport(); // graphics::Viewport
+			std::tuple<graphics::Viewport, math::vec2i> update_viewport(engine::Entity camera); // graphics::Viewport
 	};
 }

@@ -7,6 +7,7 @@
 #include "types.hpp"
 #include "shader.hpp"
 #include "framebuffer.hpp"
+#include "renderbuffer.hpp"
 #include "texture.hpp"
 #include "mesh.hpp"
 
@@ -39,6 +40,8 @@ namespace graphics
 			defaultable_ref<FrameBuffer> read_framebuffer;
 			defaultable_ref<FrameBuffer> write_framebuffer;
 
+			defaultable_ref<RenderBuffer> renderbuffer;
+
 			std::vector<const Texture*> textures; // std::stack<Texture>
 
 			// There is no guarantee of the lifetime for the object returned by this method.
@@ -57,6 +60,7 @@ namespace graphics
 			bool has_read_framebuffer() const;
 			bool has_write_framebuffer() const;
 			bool has_framebuffer() const;
+			//bool has_renderbuffer() const;
 
 			bool enabled(Flags check) const;
 
@@ -65,6 +69,9 @@ namespace graphics
 
 			// Returns 'true' if the resource specified is currently bound.
 			bool bound(const FrameBuffer& buffer) const;
+
+			// Returns 'true' if the resource specified is currently bound.
+			bool bound(const RenderBuffer& buffer) const;
 
 			// Returns 'true' if the resource specified is currently bound.
 			bool bound(const Mesh& mesh) const;

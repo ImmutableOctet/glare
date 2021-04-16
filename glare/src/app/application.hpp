@@ -30,6 +30,7 @@ namespace app
 			using keyboard_event_t = SDL_KeyboardEvent;
 		protected:
 			friend EventHandler;
+			friend Window;
 
 			struct Libraries
 			{
@@ -79,6 +80,7 @@ namespace app
 
 			virtual void on_keydown(const keyboard_event_t& event);
 			virtual void on_keyup(const keyboard_event_t& event);
+			virtual void on_window_resize(Window& window, int width, int height);
 		public:
 			inline bool is_running() const { return running; }
 
