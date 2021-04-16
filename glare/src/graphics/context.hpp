@@ -45,7 +45,7 @@ namespace graphics
 	class FrameBuffer;
 	class RenderBuffer;
 
-	enum Backend
+	enum class Backend
 	{
 		OpenGL   = 1,
 		Direct3D = 2,
