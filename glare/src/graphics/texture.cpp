@@ -33,6 +33,11 @@ namespace graphics
 		get_context()->release_texture(std::move(handle));
 	}
 
+	void Texture::resize(int width, int height)
+	{
+		get_context()->resize_texture(*this, width, height); // , {}, false
+	}
+
 	void swap(Texture& x, Texture& y)
 	{
 		using std::swap;

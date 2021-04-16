@@ -39,6 +39,8 @@ namespace graphics
 			Texture(pass_ref<Context> ctx, raw_string path, Flags flags=Flags::Default);
 			Texture(pass_ref<Context> ctx, const std::string& path, Flags flags=Flags::Default);
 			Texture(pass_ref<Context> ctx, const PixelMap& data, Flags flags=Flags::Default);
+
+			// TextureFlags::Dynamic is automatically applied internally.
 			Texture(pass_ref<Context> ctx, int width, int height, TextureFormat format, ElementType element_type, TextureFlags flags=Flags::None);
 			
 			Texture(Texture&& texture) : Texture() { swap(*this, texture); }
@@ -59,9 +61,13 @@ namespace graphics
 			inline int get_width()  const { return width;  }
 			inline int get_height() const { return height; }
 
+			void resize(int width, int height);
+
 			inline TextureFormat get_format()     const { return format;       }
 			inline ElementType get_element_type() const { return element_type; }
 			inline TextureFlags get_flags()       const { return flags;        }
+
+			inline bool is_dynamic() const { return (flags & TextureFlags::Dynamic); }
 		protected:
 			Texture(weak_ref<Context> ctx, ContextHandle&& resource_handle, int width, int height, TextureFormat format, ElementType element_type, TextureFlags flags);
 	};
