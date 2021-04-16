@@ -14,6 +14,7 @@ struct SDL_WindowEvent;
 namespace app
 {
 	class Context;
+	class Application;
 
 	class Window
 	{
@@ -37,7 +38,7 @@ namespace app
 
 			// If this method returns 'false', then the window has received a 'close' message.
 			// It is up to the caller to handle the result of this message.
-			bool handle_event(const SDL_Event& event, const SDL_WindowEvent& window_event);
+			bool handle_event(const SDL_Event& event, const SDL_WindowEvent& window_event, Application& app);
 		private:
 			SDL_Window* handle; // = nullptr;
 			Flags creation_flags;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "window.hpp"
+#include "application.hpp"
 
 #include <sdl2/SDL_video.h>
 #include <sdl2/SDL_events.h>
@@ -71,17 +72,19 @@ namespace app
 		return (static_cast<float>(width) / static_cast<float>(height));
 	}
 
-	bool Window::handle_event(const SDL_Event& event, const SDL_WindowEvent& window_event)
+	bool Window::handle_event(const SDL_Event& event, const SDL_WindowEvent& window_event, Application& app)
 	{
-		//switch (event.window.event)
+		switch (event.window.event)
 		{
-			/*
 			case SDL_WINDOWEVENT_RESIZED:
+			{
 				auto width  = window_event.data1;
 				auto height = window_event.data2;
 
+				app.on_window_resize(*this, width, height);
+
 				break;
-			*/
+			}
 		}
 
 		return true;

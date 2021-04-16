@@ -90,7 +90,7 @@ namespace app
 
 					if (window->get_id() == window_event.windowID)
 					{
-						if (!window->handle_event(event, window_event))
+						if (!window->handle_event(event, window_event, *this))
 						{
 							return false;
 						}
@@ -135,7 +135,10 @@ namespace app
 
 	void Application::on_keyup(const keyboard_event_t& event)
 	{
-		
+	}
+
+	void Application::on_window_resize(Window& window, int width, int height)
+	{
 	}
 
 	Application::time_point Application::now() const

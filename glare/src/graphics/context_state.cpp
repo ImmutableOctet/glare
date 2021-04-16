@@ -90,6 +90,11 @@ namespace graphics
 		((&(this->write_framebuffer)) == (&buffer));
 	}
 
+	bool ContextState::bound(const RenderBuffer& renderbuffer) const
+	{
+		return ((&(this->renderbuffer)) == (&renderbuffer));
+	}
+
 	bool ContextState::bound(const Mesh& mesh) const
 	{
 		return ((&(this->mesh)) == (&mesh));

@@ -1144,6 +1144,57 @@ namespace graphics
 		return { nullptr, nullptr }; // {};
 	}
 
+	RenderBuffer& Context::bind(RenderBuffer& renderbuffer)
+	{
+		// Retrieve the currently bound render-buffer.
+		RenderBuffer& prev_renderbuffer = state->renderbuffer;
+
+		glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer.get_handle());
+
+		// Assign the newly bound mesh.
+		state->renderbuffer = renderbuffer;
+
+		// Return the previously bound mesh.
+		return prev_renderbuffer;
+	}
+
+	std::tuple<TextureFormat, ElementType> Context::resolve_renderbuffer_format(RenderBufferType type)
+	{
+		TextureFormat format     = TextureFormat::RGBA; // {};
+		ElementType element_type = ElementType::UByte; // {};
+
+		switch (type)
+		{
+			case RenderBufferType::Color:
+				format = TextureFormat::RGBA; // RGB;
+				element_type = ElementType::UByte;
+
+				break;
+			case RenderBufferType::Stencil:
+				format = TextureFormat::Stencil;
+				element_type = ElementType::UByte;
+
+				break;
+			case RenderBufferType::Depth:
+				format = TextureFormat::Depth;
+
+				// TODO: Verify that this resolves correctly to 24-bit depth.
+				// Driver-dependent depth bits.
+				element_type = ElementType::Unknown; // Int24
+
+				break;
+			case RenderBufferType::DepthStencil:
+				format = TextureFormat::DepthStencil;
+
+				// 24-bit depth, 8-bit stencil.
+				element_type = ElementType::UInt;
+
+				break;
+		}
+
+		return { format, element_type };
+	}
+
 	// Mesh related:
 	MeshComposition Context::generate_mesh(memory::memory_view vertices, std::size_t vertex_size, memory::array_view<VertexAttribute> attributes, memory::array_view<MeshIndex> indices) noexcept
 	{
@@ -1266,7 +1317,7 @@ namespace graphics
 		// TODO: Add support for non-2D textures. (1D, 3D, etc)
 		glBindTexture(GL_TEXTURE_2D, texture);
 
-		allocate_texture(width, height, format, element_type);
+		allocate_texture(width, height, format, element_type, nullptr, true, false);
 
 		// Apply texture flags.
 		Driver::apply_texture_flags(flags);
@@ -1441,37 +1492,7 @@ namespace graphics
 			return NoHandle;
 		}
 
-		TextureFormat format     = TextureFormat::RGBA; // {};
-		ElementType element_type = ElementType::UByte; // {};
-
-		switch (type)
-		{
-			case RenderBufferType::Color:
-				format = TextureFormat::RGBA; // RGB;
-				element_type = ElementType::UByte;
-
-				break;
-			case RenderBufferType::Stencil:
-				format = TextureFormat::Stencil;
-				element_type = ElementType::UByte;
-
-				break;
-			case RenderBufferType::Depth:
-				format = TextureFormat::Depth;
-
-				// TODO: Verify that this resolves correctly to 24-bit depth.
-				// Driver-dependent depth bits.
-				element_type = ElementType::Unknown; // Int24
-
-				break;
-			case RenderBufferType::DepthStencil:
-				format = TextureFormat::DepthStencil;
-
-				// 24-bit depth, 8-bit stencil.
-				element_type = ElementType::UInt;
-
-				break;
-		}
+		auto [format, element_type] = resolve_renderbuffer_format(type);
 
 		return generate_renderbuffer(type, width, height, format, element_type);
 	}
@@ -1504,6 +1525,20 @@ namespace graphics
 		//	std::cout << "Framebuffer not complete!" << std::endl;
 
 		return buffer;
+	}
+
+	void Context::resize_renderbuffer(RenderBuffer& renderbuffer, int width, int height)
+	{
+		use(renderbuffer, [&]()
+		{
+			auto [format, element_type] = resolve_renderbuffer_format(renderbuffer.get_type());
+			auto texture_format = Driver::get_texture_format(format, element_type, true);
+
+			glRenderbufferStorage(GL_RENDERBUFFER, texture_format, width, height);
+		});
+
+		renderbuffer.width = width;
+		renderbuffer.height = height;
 	}
 
 	void Context::release_renderbuffer(Handle&& handle)

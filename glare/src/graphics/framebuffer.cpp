@@ -74,15 +74,25 @@ namespace graphics
 		auto ctx = get_context();
 
 		// Ensure that this framebuffer is appropriately bound.
+		/*
 		if (!ctx->state->bound(*this))
 		{
 			return false;
 		}
+		*/
 
-		for (auto& texture : attachments)
+		ctx->use(*this, [&, this]()
 		{
-			ctx->resize_texture(texture, width, height);
-		}
+			for (auto& texture : attachments)
+			{
+				ctx->resize_texture(texture, width, height); // texture.resize(...)
+			}
+
+			for (auto& render_buffer : render_buffers)
+			{
+				ctx->resize_renderbuffer(render_buffer, width, height);
+			}
+		});
 
 		return true;
 	}

@@ -360,7 +360,8 @@ namespace glare
 
 		auto camera_transform = world.get_transform(camera);
 
-		auto viewport = update_viewport(camera);
+		//auto [viewport, window_size] = update_viewport();
+		auto [viewport, window_size] = update_viewport(camera);
 
 		// Forward rendering:
 		/*
@@ -629,8 +630,16 @@ namespace glare
 		}
 		*/
 	}
+
+	void Glare::on_window_resize(app::Window& window, int width, int height)
+	{
+		if (this->window.get() == &window)
+		{
+			g_buffer.framebuffer.resize(width, height);
+		}
+	}
 	
-	graphics::Viewport Glare::update_viewport(engine::Entity camera)
+	std::tuple<graphics::Viewport, math::vec2i> Glare::update_viewport() // graphics::Viewport
 	{
 		graphics::Viewport viewport = {};
 
@@ -643,12 +652,22 @@ namespace glare
 		if ((w_width != 0) && (w_height != 0))
 		{
 			graphics.context->set_viewport(viewport);
+		}
 
+		return { viewport, { w_width, w_height } };
+	}
+
+	std::tuple<graphics::Viewport, math::vec2i> Glare::update_viewport(engine::Entity camera)
+	{
+		auto [viewport, w_size] = update_viewport();
+
+		if ((w_size.x != 0) && (w_size.y != 0))
+		{
 			auto& camera_params = world.get_registry().get<engine::CameraParameters>(camera);
 
 			camera_params.update_aspect_ratio(viewport.get_width(), viewport.get_height());
 		}
 
-		return viewport;
+		return { viewport, w_size };
 	}
 }
