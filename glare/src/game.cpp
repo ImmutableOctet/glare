@@ -28,45 +28,45 @@ namespace glare
 	{
 		// Not an initializer list for readability/testing purposes:
 		forward = memory::allocate<graphics::Shader>
-		(
-			graphics.context,
-			
-			"assets/shaders/forward.vert",
-			"assets/shaders/forward.frag"
-		);
+			(
+				graphics.context,
+
+				"assets/shaders/forward.vert",
+				"assets/shaders/forward.frag"
+				);
 
 		forward_test = memory::allocate<graphics::Shader>
-		(
-			graphics.context,
-			
-			//"assets/tests/model_test/shaders/forward.vs",
-			"assets/shaders/deferred_shading.vert",
-			"assets/shaders/forward_test.frag"
-		);
+			(
+				graphics.context,
+
+				//"assets/tests/model_test/shaders/forward.vs",
+				"assets/shaders/deferred_shading.vert",
+				"assets/shaders/forward_test.frag"
+				);
 
 		geometry = memory::allocate<graphics::Shader>
-		(
-			graphics.context,
+			(
+				graphics.context,
 
-			"assets/shaders/g_buffer.vert",
-			"assets/shaders/g_buffer.frag"
-		);
+				"assets/shaders/g_buffer.vert",
+				"assets/shaders/g_buffer.frag"
+				);
 
 		lighting_pass = memory::allocate<graphics::Shader>
-		(
-			graphics.context,
+			(
+				graphics.context,
 
-			"assets/shaders/deferred_shading.vert",
-			"assets/shaders/deferred_shading.frag"
-		);
+				"assets/shaders/deferred_shading.vert",
+				"assets/shaders/deferred_shading.frag"
+				);
 
 		framebuffer_dbg = memory::allocate<graphics::Shader>
-		(
-			graphics.context,
+			(
+				graphics.context,
 
-			"assets/shaders/8.1.fbo_debug.vert",
-			"assets/shaders/8.1.fbo_debug.frag"
-		);
+				"assets/shaders/8.1.fbo_debug.vert",
+				"assets/shaders/8.1.fbo_debug.frag"
+				);
 
 		//light_box = res.get_shader("assets/shaders/light_box.vert", "assets/shaders/light_box.frag");
 
@@ -84,10 +84,11 @@ namespace glare
 	}
 
 	Glare::Glare(bool auto_execute)
-		: GraphicsApplication("Project Glare", 1600, 900, (app::WindowFlags::OpenGL|app::WindowFlags::Resizable), TARGET_UPDATE_RATE, false), // true
-		  shaders(graphics),
-		  resource_manager(graphics.context, shaders.geometry), // shaders.forward
-		  world(resource_manager, TARGET_UPDATE_RATE)
+		: GraphicsApplication("Project Glare", 1600, 900, (app::WindowFlags::OpenGL | app::WindowFlags::Resizable), TARGET_UPDATE_RATE, false), // true
+		shaders(graphics),
+		resource_manager(graphics.context, shaders.geometry), // shaders.forward
+		world(resource_manager, TARGET_UPDATE_RATE),
+		shadow_map(graphics, 2048, 2048)
 	{
 		using namespace graphics;
 
@@ -122,25 +123,25 @@ namespace glare
 		auto& fb = g_buffer.framebuffer;
 
 		graphics.context->use(fb, [&, this]()
-		{
-			g_buffer.position = Texture(graphics.context, screen_width, screen_height, TextureFormat::RGB, ElementType::Half, gBuffer_flags); // Float
-			//auto _pos = graphics.context->use(g_buffer.position);
-			fb.attach(g_buffer.position);
-			
-			g_buffer.normal = Texture(graphics.context, screen_width, screen_height, TextureFormat::RGB, ElementType::Half, gBuffer_flags); // Float
-			fb.attach(g_buffer.normal);
+			{
+				g_buffer.position = Texture(graphics.context, screen_width, screen_height, TextureFormat::RGB, ElementType::Half, gBuffer_flags); // Float
+				//auto _pos = graphics.context->use(g_buffer.position);
+				fb.attach(g_buffer.position);
 
-			g_buffer.albedo_specular = Texture(graphics.context, screen_width, screen_height, TextureFormat::RGBA, ElementType::UByte, gBuffer_flags);
-			fb.attach(g_buffer.albedo_specular);
+				g_buffer.normal = Texture(graphics.context, screen_width, screen_height, TextureFormat::RGB, ElementType::Half, gBuffer_flags); // Float
+				fb.attach(g_buffer.normal);
 
-			fb.link();
+				g_buffer.albedo_specular = Texture(graphics.context, screen_width, screen_height, TextureFormat::RGBA, ElementType::UByte, gBuffer_flags);
+				fb.attach(g_buffer.albedo_specular);
 
-			// TODO: Refactor
-			fb.attach(RenderBufferType::Depth, screen_width, screen_height);
+				fb.link();
 
-			//if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-			//	std::cout << "Framebuffer not complete!" << std::endl;
-		});
+				// TODO: Refactor
+				fb.attach(RenderBufferType::Depth, screen_width, screen_height);
+
+				//if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+				//	std::cout << "Framebuffer not complete!" << std::endl;
+			});
 
 		graphics.context->clear_textures(true);
 
@@ -208,13 +209,13 @@ namespace glare
 
 		auto& registry = world.get_registry();
 
-		auto sphere = load_model("assets/tests/model_test/Sonic/Sonic.b3d"); // model("assets/tests/model_test/sphere.obj");
-		auto sphere_t = transform(sphere);
+		//auto sphere = load_model("assets/tests/model_test/Sonic/Sonic.b3d"); // model("assets/tests/model_test/sphere.obj");
+		//auto sphere_t = transform(sphere);
 
-		sphere_t.move({ 14.0f, 10.0f, 30.0f });
+		//sphere_t.move({ 14.0f, 10.0f, 30.0f });
 
 		auto cube = load_model("assets/tests/model_test/cube.b3d");
-		
+
 		registry.emplace<engine::NameComponent>(cube, "Spinning Cube");
 		registry.emplace<engine::SpinBehavior>(cube);
 
@@ -401,15 +402,15 @@ namespace glare
 				//graphics.context->clear_textures(false); // true // <-- May not be needed.
 
 				graphics.context->use(g_buffer.framebuffer, [&, this]()
-				{
-					graphics.context->clear(0.0f, 0.0f, 0.0f, 1.0f, (graphics::BufferType::Color | graphics::BufferType::Depth)); // gfx // 1.0f, 0.0f, 0.0f
-					//graphics.context->clear(1.0f, 1.0f, 1.0f, 1.0f, (graphics::BufferType::Color | graphics::BufferType::Depth)); // gfx // 1.0f, 0.0f, 0.0f
-
-					graphics.context->use(shader, [&, this]()
 					{
-						world.render(*graphics.canvas, viewport, false, true);
+						graphics.context->clear(0.0f, 0.0f, 0.0f, 1.0f, (graphics::BufferType::Color | graphics::BufferType::Depth)); // gfx // 1.0f, 0.0f, 0.0f
+						//graphics.context->clear(1.0f, 1.0f, 1.0f, 1.0f, (graphics::BufferType::Color | graphics::BufferType::Depth)); // gfx // 1.0f, 0.0f, 0.0f
+
+						graphics.context->use(shader, [&, this]()
+							{
+								world.render(*graphics.canvas, viewport, false, true);
+							});
 					});
-				});
 			}
 
 			graphics.context->clear(0.0f, 0.0f, 0.0f, 1.0f, BufferType::Color | BufferType::Depth); // gfx
@@ -420,67 +421,67 @@ namespace glare
 				auto& shader = *shaders.lighting_pass;
 
 				graphics.context->use(shader, [&, this]()
-				{
-					graphics.context->clear_textures(true); // false
-
-					auto gPosition   = graphics.context->use(g_buffer.position, "g_position");
-					auto gNormal     = graphics.context->use(g_buffer.normal, "g_normal");
-					auto gAlbedoSpec = graphics.context->use(g_buffer.albedo_specular, "g_albedo_specular");
-
-					auto& registry = world.get_registry();
-
-					// update attenuation parameters and calculate radius
-					const float constant  = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
-					const float linear    = 0.1f; // 0.000005f; // 0.7f; // 0.005f;
-					const float quadratic = 1.0f/2000.0f; // 1.8f; // 0.0005f;
-
-					unsigned int light_idx = 0;
-
-					registry.view<engine::LightComponent, engine::TransformComponent, engine::Relationship>().each([&](auto entity, const auto& light, auto& transform, const auto& relationship) // const auto&
 					{
-						auto light_transform = engine::Transform(registry, entity, relationship, transform);
+						graphics.context->clear_textures(true); // false
 
-						auto uniform_prefix = ("lights[" + std::to_string(light_idx) + "].");
+						auto gPosition = graphics.context->use(g_buffer.position, "g_position");
+						auto gNormal = graphics.context->use(g_buffer.normal, "g_normal");
+						auto gAlbedoSpec = graphics.context->use(g_buffer.albedo_specular, "g_albedo_specular");
 
-						auto attr = [&](const std::string& attr_name, auto&& value) // std::string_view
-						{
-							shader[(uniform_prefix + attr_name)] = value;
-						};
+						auto& registry = world.get_registry();
 
-						const auto& light_color = light.color;
+						// update attenuation parameters and calculate radius
+						const float constant = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
+						const float linear = 0.1f; // 0.000005f; // 0.7f; // 0.005f;
+						const float quadratic = 1.0f / 2000.0f; // 1.8f; // 0.0005f;
 
-						auto light_position = light_transform.get_position();
+						unsigned int light_idx = 0;
 
-						//std::cout << light_position.x << ',' << light_position.y << ',' << light_position.z << '\n';
+						registry.view<engine::LightComponent, engine::TransformComponent, engine::Relationship>().each([&](auto entity, const auto& light, auto& transform, const auto& relationship) // const auto&
+							{
+								auto light_transform = engine::Transform(registry, entity, relationship, transform);
 
-						attr("Position", light_position);
-						attr("Color", light_color);
-						attr("Linear", linear); // light.linear
-						attr("Quadratic", quadratic); // light.linear
-						
-						///*
-						// then calculate radius of light volume/sphere
-						const float maxBrightness = std::fmaxf(std::fmaxf(light_color.r, light_color.g), light_color.b);
-						float radius = (-linear + std::sqrt(linear * linear - 4 * quadratic * (constant - (256.0f / 5.0f) * maxBrightness))) / (2.0f * quadratic);
+								auto uniform_prefix = ("lights[" + std::to_string(light_idx) + "].");
 
-						//std::cout << "Radius: " << radius << '\n';
-						attr("Radius", radius);
-						//*/
+								auto attr = [&](const std::string& attr_name, auto&& value) // std::string_view
+								{
+									shader[(uniform_prefix + attr_name)] = value;
+								};
 
-						light_idx++;
+								const auto& light_color = light.color;
+
+								auto light_position = light_transform.get_position();
+
+								//std::cout << light_position.x << ',' << light_position.y << ',' << light_position.z << '\n';
+
+								attr("Position", light_position);
+								attr("Color", light_color);
+								attr("Linear", linear); // light.linear
+								attr("Quadratic", quadratic); // light.linear
+
+								///*
+								// then calculate radius of light volume/sphere
+								const float maxBrightness = std::fmaxf(std::fmaxf(light_color.r, light_color.g), light_color.b);
+								float radius = (-linear + std::sqrt(linear * linear - 4 * quadratic * (constant - (256.0f / 5.0f) * maxBrightness))) / (2.0f * quadratic);
+
+								//std::cout << "Radius: " << radius << '\n';
+								attr("Radius", radius);
+								//*/
+
+								light_idx++;
+							});
+
+						shader["viewPos"] = camera_transform.get_position();
+
+						graphics.context->use(g_buffer.screen_quad, [&, this]()
+							{
+								graphics.context->draw();
+							});
+
+						graphics.context->copy_framebuffer(g_buffer.framebuffer, viewport, viewport, BufferType::Depth);
 					});
-
-					shader["viewPos"] = camera_transform.get_position();
-
-					graphics.context->use(g_buffer.screen_quad, [&, this]()
-					{
-						graphics.context->draw();
-					});
-
-					graphics.context->copy_framebuffer(g_buffer.framebuffer, viewport, viewport, BufferType::Depth);
-				});
 			}
-			
+
 
 			// Framebuffer test.
 			if (g_buffer.display_mode != GBufferDisplayMode::None)
@@ -490,36 +491,36 @@ namespace glare
 				graphics.context->clear_textures(false); // true
 
 				graphics.context->use(shader, [&, this]()
-				{
-					auto get_texture = [&, this]() -> const Texture&
 					{
-						switch (this->g_buffer.display_mode)
+						auto get_texture = [&, this]() -> const Texture&
 						{
+							switch (this->g_buffer.display_mode)
+							{
 							case GBufferDisplayMode::Normal:
 								return g_buffer.normal;
 							case GBufferDisplayMode::AlbedoSpecular:
 								return g_buffer.albedo_specular;
-						}
+							}
 
-						return g_buffer.position;
-					};
+							return g_buffer.position;
+						};
 
-					auto fb_texture = graphics.context->use(get_texture()); // test_texture // g_buffer.normal
+						auto fb_texture = graphics.context->use(get_texture()); // test_texture // g_buffer.normal
 
-					//graphics.context->use(g_buffer.position, [&, this]() // normal // albedo_specular
-					//{
+						//graphics.context->use(g_buffer.position, [&, this]() // normal // albedo_specular
+						//{
 						graphics.context->use(g_buffer.screen_quad, [&, this]()
-						{
-							graphics.context->draw();
-						});
-					//});
-				});
+							{
+								graphics.context->draw();
+							});
+						//});
+					});
 			}
 
 			graphics.context->use(*shaders.light_box, [&, this]()
-			{
-				world.render(*graphics.canvas, viewport, false, true);
-			});
+				{
+					world.render(*graphics.canvas, viewport, false, true);
+				});
 		}
 		//*/
 
@@ -530,95 +531,95 @@ namespace glare
 	{
 		switch (event.keysym.sym)
 		{
-			case SDLK_ESCAPE:
-				stop();
+		case SDLK_ESCAPE:
+			stop();
 
-				break;
-			case SDLK_TAB:
+			break;
+		case SDLK_TAB:
+		{
+			auto& mouse = input.get_mouse();
+
+			mouse.toggle_lock();
+
+			break;
+		}
+
+		case SDLK_q:
+		{
+			auto t = world.get_transform(world.get_root());
+
+			t.move({ 0.0f, 0.01f * world.get_delta_time(), 0.0f });
+
+			break;
+		}
+
+		case SDLK_e:
+		{
+			auto child_obj = world.get_player(1); // world.get_camera();
+
+			const auto& rel = world.get_registry().get<engine::Relationship>(child_obj);
+
+			auto rel_parent = rel.get_parent();
+			auto root = world.get_root();
+
+			if ((rel_parent == engine::null) || (rel_parent == root))
 			{
-				auto& mouse = input.get_mouse();
+				//auto parent_obj = world.get_by_name(engine::DEFAULT_PLAYER_NAME);
 
-				mouse.toggle_lock();
+				auto parent_obj = world.get_by_name("Rotating Platform"); // "Spinning Cube"
 
-				break;
+				world.set_parent(child_obj, parent_obj);
+			}
+			else
+			{
+				world.set_parent(child_obj, engine::null); // root
 			}
 
-			case SDLK_q:
+			break;
+		}
+
+		case SDLK_f:
+		{
+			auto target_entity = world.get_camera(); // world.get_by_name("Moving Sphere"); // "Spinning Cube" // world.get_root()
+
+			if (target_entity != engine::null)
 			{
-				auto t = world.get_transform(world.get_root());
+				auto t = transform(target_entity);
 
-				t.move({0.0f, 0.01f * world.get_delta_time(), 0.0f});
-
-				break;
+				std::cout << "\nCamera:\n";
+				std::cout << "Position: " << t.get_position() << '\n';
+				std::cout << "Rotation: " << math::degrees(t.get_rotation()) << '\n';
+				std::cout << "Scale: " << t.get_scale() << '\n';
 			}
 
-			case SDLK_e:
+			//engine::SimpleFollowComponent::update(world);
+
+			break;
+		}
+
+		case SDLK_g:
+		{
+			auto target_entity = world.get_player(1);
+
+			if (target_entity != engine::null)
 			{
-				auto child_obj = world.get_player(1); // world.get_camera();
+				auto t = transform(target_entity);
 
-				const auto& rel = world.get_registry().get<engine::Relationship>(child_obj);
-
-				auto rel_parent = rel.get_parent();
-				auto root = world.get_root();
-
-				if ((rel_parent == engine::null) || (rel_parent == root))
-				{
-					//auto parent_obj = world.get_by_name(engine::DEFAULT_PLAYER_NAME);
-
-					auto parent_obj = world.get_by_name("Rotating Platform"); // "Spinning Cube"
-
-					world.set_parent(child_obj, parent_obj);
-				}
-				else
-				{
-					world.set_parent(child_obj, engine::null); // root
-				}
-
-				break;
+				std::cout << "\nPlayer:\n";
+				std::cout << "Position: " << t.get_position() << '\n';
+				std::cout << "Rotation: " << math::degrees(t.get_rotation()) << '\n';
+				std::cout << "Scale: " << t.get_scale() << '\n';
 			}
 
-			case SDLK_f:
-			{
-				auto target_entity = world.get_camera(); // world.get_by_name("Moving Sphere"); // "Spinning Cube" // world.get_root()
+			//engine::SimpleFollowComponent::update(world);
 
-				if (target_entity != engine::null)
-				{
-					auto t = transform(target_entity);
+			break;
+		}
 
-					std::cout << "\nCamera:\n";
-					std::cout << "Position: " << t.get_position() << '\n';
-					std::cout << "Rotation: " << math::degrees(t.get_rotation()) << '\n';
-					std::cout << "Scale: " << t.get_scale() << '\n';
-				}
+		case SDLK_c:
+			g_buffer.display_mode = static_cast<GBufferDisplayMode>((static_cast<int>(g_buffer.display_mode) + 1) % static_cast<int>(GBufferDisplayMode::Modes));
 
-				//engine::SimpleFollowComponent::update(world);
-
-				break;
-			}
-
-			case SDLK_g:
-			{
-				auto target_entity = world.get_player(1);
-
-				if (target_entity != engine::null)
-				{
-					auto t = transform(target_entity);
-
-					std::cout << "\nPlayer:\n";
-					std::cout << "Position: " << t.get_position() << '\n';
-					std::cout << "Rotation: " << math::degrees(t.get_rotation()) << '\n';
-					std::cout << "Scale: " << t.get_scale() << '\n';
-				}
-
-				//engine::SimpleFollowComponent::update(world);
-
-				break;
-			}
-
-			case SDLK_c:
-				g_buffer.display_mode = static_cast<GBufferDisplayMode>((static_cast<int>(g_buffer.display_mode) + 1) % static_cast<int>(GBufferDisplayMode::Modes));
-
-				break;
+			break;
 		}
 	}
 
@@ -638,7 +639,7 @@ namespace glare
 			g_buffer.framebuffer.resize(width, height);
 		}
 	}
-	
+
 	std::tuple<graphics::Viewport, math::vec2i> Glare::update_viewport() // graphics::Viewport
 	{
 		graphics::Viewport viewport = {};
@@ -669,5 +670,29 @@ namespace glare
 		}
 
 		return { viewport, w_size };
+	}
+
+
+	ShadowMap::ShadowMap(app::GraphicsApplication::Graphics& graphics, int width, int height) :
+		depth_map
+		(
+			graphics.context,
+			width, height,
+			graphics::TextureFormat::Depth, graphics::ElementType::Float,
+			graphics::TextureFlags::Clamp, graphics::TextureType::CubeMap,
+			{{ 1.0, 1.0, 1.0, 1.0 }}
+		),
+
+		framebuffer(graphics.context)
+	{
+		auto& ctx = graphics.context;
+
+		ctx->use(framebuffer, [&, this]()
+		{
+			framebuffer.attach(depth_map);
+			//framebuffer.attach(graphics::RenderBufferType::Depth, width, height);
+
+			framebuffer.link();
+		});
 	}
 }
