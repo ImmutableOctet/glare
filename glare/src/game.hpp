@@ -17,15 +17,6 @@
 
 namespace glare
 {
-	class ShadowMap
-	{
-		public:
-			ShadowMap(app::GraphicsApplication::Graphics& graphics, int width, int height);
-
-			graphics::Texture depth_map;
-			graphics::FrameBuffer framebuffer;
-	};
-
 	class Glare : public app::GraphicsApplication
 	{
 		public:
@@ -65,8 +56,6 @@ namespace glare
 				ref<graphics::Shader> framebuffer_dbg;
 				ref<graphics::Shader> light_box;
 			} shaders;
-
-			ShadowMap shadow_map;
 
 			static constexpr auto NR_LIGHTS = 32; // 128; // 16;
 			static constexpr Application::UpdateRate TARGET_UPDATE_RATE = 60;

@@ -87,8 +87,7 @@ namespace glare
 		: GraphicsApplication("Project Glare", 1600, 900, (app::WindowFlags::OpenGL | app::WindowFlags::Resizable), TARGET_UPDATE_RATE, false), // true
 		shaders(graphics),
 		resource_manager(graphics.context, shaders.geometry), // shaders.forward
-		world(resource_manager, TARGET_UPDATE_RATE),
-		shadow_map(graphics, 2048, 2048)
+		world(resource_manager, TARGET_UPDATE_RATE)
 	{
 		using namespace graphics;
 
@@ -670,29 +669,5 @@ namespace glare
 		}
 
 		return { viewport, w_size };
-	}
-
-
-	ShadowMap::ShadowMap(app::GraphicsApplication::Graphics& graphics, int width, int height) :
-		depth_map
-		(
-			graphics.context,
-			width, height,
-			graphics::TextureFormat::Depth, graphics::ElementType::Float,
-			graphics::TextureFlags::Clamp, graphics::TextureType::CubeMap,
-			{{ 1.0, 1.0, 1.0, 1.0 }}
-		),
-
-		framebuffer(graphics.context)
-	{
-		auto& ctx = graphics.context;
-
-		ctx->use(framebuffer, [&, this]()
-		{
-			framebuffer.attach(depth_map);
-			//framebuffer.attach(graphics::RenderBufferType::Depth, width, height);
-
-			framebuffer.link();
-		});
 	}
 }

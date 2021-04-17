@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <type_traits>
 #include <variant>
+//#include <array>
 
 /*
 inline bool operator<(const std::string& a, const std::string_view& b) noexcept
@@ -163,6 +164,14 @@ namespace graphics
 		CounterClockwise,
 	};
 
+	struct VertexAttribute
+	{
+		ElementType type;
+
+		int num_elements; // unsigned int
+		int offset = 0;
+	};
+
 	enum class TextureType
 	{
 		Texture2D = 0,
@@ -202,23 +211,6 @@ namespace graphics
 		EndType = MaxTypes
 	};
 
-	struct VertexAttribute
-	{
-		ElementType type;
-
-		int num_elements; // unsigned int
-		int offset = 0;
-	};
-
-	enum class FrameBufferType : std::uint32_t
-	{
-		Unknown = (1 << 0),
-		Read    = (1 << 1),
-		Write   = (1 << 2),
-
-		ReadWrite = (Read | Write),
-	}; FLAG_ENUM(std::uint32_t, FrameBufferType);
-
 	// NOTE: Support for texture flags is driver-dependent.
 	enum class TextureFlags : std::uint32_t
 	{
@@ -242,6 +234,34 @@ namespace graphics
 	};
 	
 	FLAG_ENUM(std::uint32_t, TextureFlags);
+
+	enum class TextureFormat
+	{
+		Unknown = 0,
+
+		R,
+		RG,
+		RGB,
+		RGBA,
+
+		// Context sensitive; equivalent to the driver's default depth-format.
+		Depth,
+
+		// Context sensitive; equivalent to the driver's default stencil-format.
+		Stencil,
+
+		// Context sensitive; equivalent to a depth + stencil buffer.
+		DepthStencil,
+	};
+
+	enum class FrameBufferType : std::uint32_t
+	{
+		Unknown = (1 << 0),
+		Read    = (1 << 1),
+		Write   = (1 << 2),
+
+		ReadWrite = (Read | Write),
+	}; FLAG_ENUM(std::uint32_t, FrameBufferType);
 
 	enum class BufferType : std::uint32_t
 	{
@@ -277,25 +297,6 @@ namespace graphics
 
 		All = (Opaque | Transparent),
 	}; FLAG_ENUM(std::uint32_t, CanvasDrawMode);
-
-	enum class TextureFormat
-	{
-		Unknown = 0,
-
-		R,
-		RG,
-		RGB,
-		RGBA,
-
-		// Context sensitive; equivalent to the driver's default depth-format.
-		Depth,
-
-		// Context sensitive; equivalent to the driver's default stencil-format.
-		Stencil,
-
-		// Context sensitive; equivalent to a depth + stencil buffer.
-		DepthStencil,
-	};
 
 	// Types of integrated render buffers.
 	enum class RenderBufferType
