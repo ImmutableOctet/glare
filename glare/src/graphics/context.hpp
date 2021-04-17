@@ -6,6 +6,7 @@
 #include <string>
 #include <string_view>
 #include <tuple>
+#include <optional>
 
 //#include <version>
 //#include <concepts>
@@ -320,10 +321,11 @@ namespace graphics
 			// Texture related:
 
 			// TODO: Work-out mixed formats between input and native driver format.
-			Handle generate_texture(const PixelMap& texture_data, ElementType channel_type, TextureFlags flags=TextureFlags::Default, bool __keep_bound=true); // noexcept;
-			Handle generate_texture(int width, int height, TextureFormat format, ElementType channel_type, TextureFlags flags=TextureFlags::Default, bool __keep_bound=true); // noexcept;
+			Handle generate_texture(const PixelMap& texture_data, ElementType channel_type, TextureFlags flags=TextureFlags::Default, TextureType type=TextureType::Default, bool __keep_bound=true); // noexcept;
+			Handle generate_texture(int width, int height, TextureFormat format, ElementType channel_type, TextureFlags flags=TextureFlags::Default, TextureType type=TextureType::Default, std::optional<ColorRGBA> _border_color=std::nullopt, bool __keep_bound=true); // noexcept;
 
-			void allocate_texture(int width, int height, TextureFormat texture_format, ElementType channel_type, const memory::raw_ptr raw_data=nullptr, bool is_dynamic=true, bool generate_mipmaps=false, bool _calculate_exact_format=true);
+			void allocate_texture_2d(int width, int height, TextureFormat format, ElementType channel_type, const memory::raw_ptr raw_data=nullptr, bool is_dynamic=true, bool generate_mipmaps=false, bool _calculate_exact_format=true); // TextureType type
+			void allocate_texture_cubemap(int width, int height, TextureFormat format, ElementType channel_type, const memory::raw_ptr raw_data=nullptr, bool is_dynamic=true, bool generate_mipmaps=false, bool _calculate_exact_format=true); // TextureType type
 
 			void release_texture(Handle&& handle);
 
@@ -354,7 +356,7 @@ namespace graphics
 			// Attaches a texture to the currently bound framebuffer.
 			// NOTE: The 'texture' reference must be non-const, as attaching it
 			// to the currently bound framebuffer would indicate mutation.
-			bool framebuffer_attachment(FrameBuffer& framebuffer, Texture& texture);
+			bool framebuffer_attachment(FrameBuffer& framebuffer, Texture& textur, bool force_attachment_data=false);
 			
 			// NOTE: 'framebuffer' must be bound prior to calling this method.
 			// TODO: Look into alternatives to making this public.

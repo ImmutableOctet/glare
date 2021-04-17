@@ -22,8 +22,8 @@
 
 namespace graphics
 {
-	// Internal TextureTypes are currently consistent with Assimp.
-	static aiTextureType to_aiTextureType(TextureType type)
+	// Internal TextureClasss are currently consistent with Assimp.
+	static aiTextureType to_aiTextureType(TextureClass type)
 	{
 		return static_cast<aiTextureType>(type);
 	}
@@ -41,45 +41,45 @@ namespace graphics
 		swap(x.meshes, y.meshes);
 	}
 
-	std::string Model::get_texture_type_variable(TextureType type)
+	std::string Model::get_texture_class_variable(TextureClass type)
 	{
 		switch (type)
 		{
-			case TextureType::Diffuse:
+			case TextureClass::Diffuse:
 				return "diffuse";
-			case TextureType::Specular:
+			case TextureClass::Specular:
 				return "specular";
-			case TextureType::Ambient:
+			case TextureClass::Ambient:
 				return "ambient";
-			case TextureType::Emissive:
+			case TextureClass::Emissive:
 				return "emissive";
-			case TextureType::Height:
+			case TextureClass::Height:
 				return "height";
-			case TextureType::Normals:
+			case TextureClass::Normals:
 				return "normal";
-			case TextureType::Shininess:
+			case TextureClass::Shininess:
 				return "shininess";
-			case TextureType::Opacity:
+			case TextureClass::Opacity:
 				return "opacity";
-			case TextureType::Displacement:
+			case TextureClass::Displacement:
 				return "displacement";
-			case TextureType::Lightmap:
+			case TextureClass::Lightmap:
 				return "light_map";
-			case TextureType::Reflection:
+			case TextureClass::Reflection:
 				return "reflection";
-			case TextureType::BaseColor:
+			case TextureClass::BaseColor:
 				return "base_color";
-			case TextureType::NormalCamera:
+			case TextureClass::NormalCamera:
 				return "normal_camera";
-			case TextureType::EmissionColor:
+			case TextureClass::EmissionColor:
 				return "emission_color";
-			case TextureType::Metalness:
+			case TextureClass::Metalness:
 				return "metalness";
-			case TextureType::DiffuseRoughness:
+			case TextureClass::DiffuseRoughness:
 				return "diffuse_roughness";
-			case TextureType::AmbientOcclusion:
+			case TextureClass::AmbientOcclusion:
 				return "ambient_occlusion";
-			case TextureType::Unknown:
+			case TextureClass::Unknown:
 				return "other";
 		}
 
@@ -162,9 +162,9 @@ namespace graphics
 		if (load_textures)
 		{
 			// Load and store each texture according to its type:
-			enumerate_texture_types([&](TextureType texture_type)
+			enumerate_texture_types([&](TextureClass texture_type)
 			{
-				auto native_type = to_aiTextureType(static_cast<TextureType>(texture_type));
+				auto native_type = to_aiTextureType(static_cast<TextureClass>(texture_type));
 				auto texture_count = native_material->GetTextureCount(native_type);
 
 				if (texture_count == 0)
@@ -172,7 +172,7 @@ namespace graphics
 					return;
 				}
 
-				auto texture_type_var = get_texture_type_variable(texture_type);
+				auto texture_type_var = get_texture_class_variable(texture_type);
 
 				if (texture_count > 1)
 				{

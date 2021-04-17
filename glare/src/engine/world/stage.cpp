@@ -3,6 +3,7 @@
 #include "world.hpp"
 #include "entity.hpp"
 #include "camera.hpp"
+#include "light.hpp"
 #include "player.hpp"
 
 #include "target_component.hpp"
@@ -31,10 +32,11 @@ namespace engine
 	const Stage::ObjectCreationMap Stage::ObjectRoutines
 	=
 	{
-		{ "camera", Stage::CreateCamera },
+		{ "camera",        Stage::CreateCamera       },
 		{ "follow_sphere", Stage::CreateFollowSphere },
-		{ "billboard", Stage::CreateBillboard },
-		{ "platform", Stage::CreatePlatform }
+		{ "billboard",     Stage::CreateBillboard    },
+		{ "platform",      Stage::CreatePlatform     },
+		{ "light",         Stage::CreateLight        }
 	};
 
     Entity Stage::Load(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const util::json& data)
@@ -119,6 +121,8 @@ namespace engine
 				{
 					auto obj_fn = o->second;
 
+					dbg->info("Creating object of type \"{}\"...", obj_type);
+
 					obj = obj_fn(world, stage, dbg, root_path, player_objects, objects, obj_cfg);
 
 					if (obj != null)
@@ -127,6 +131,8 @@ namespace engine
 						apply_color(world, dbg, obj, obj_cfg);
 
 						resolve_parent(world, obj, stage, dbg, root_path, player_objects, objects, obj_cfg);
+
+						dbg->info("\"{}\" object created.", obj_type);
 					}
 				}
 			}
@@ -187,15 +193,7 @@ namespace engine
 	{
 		auto& registry = world.get_registry();
 
-		auto params = CameraParameters
-		(
-			util::get_value(camera_cfg, "fov", CameraParameters::DEFAULT_FOV),
-			util::get_value(camera_cfg, "near", CameraParameters::NEAR_PLANE),
-			util::get_value(camera_cfg, "far", CameraParameters::FAR_PLANE),
-			util::get_value(camera_cfg, "aspect_ratio", CameraParameters::ASPECT),
-
-			CameraParameters::resolve_projection_mode(util::get_value<std::string>(camera_cfg, "projection", "perspective"))
-		);
+		auto params = CameraParameters(camera_cfg);
 
 		bool make_active = util::get_value(camera_cfg, "make_active", false);
 
@@ -229,6 +227,15 @@ namespace engine
 		}
 
 		return camera;
+	}
+
+	Entity Stage::CreateLight(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
+	{
+		constexpr bool debug_mode = true;
+
+		auto light = create_light(world, {}, util::get_color(data, "color"), LightComponent::resolve_light_mode(util::get_value<std::string>(data, "mode", "directional")), parent, debug_mode);
+
+		return light;
 	}
 
 	Entity Stage::CreateFollowSphere(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)

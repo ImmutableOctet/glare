@@ -44,5 +44,10 @@ namespace graphics
 
 			inline int get_width() const { return width; }
 			inline int get_height() const { return height; }
+
+			inline PointRect rect() const // Viewport
+			{
+				return PointRect{ {}, { width, height } };
+			}
 	};
 }

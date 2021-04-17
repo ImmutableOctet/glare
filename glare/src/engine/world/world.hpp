@@ -113,11 +113,11 @@ namespace engine
 
 			// Renders the scene using the last bound camera. If no camera has been bound/assinged, then this routine will return 'false'.
 			// Returns 'false' if an essential rendering component is missing.
-			bool render(graphics::Canvas& canvas, const graphics::Viewport& viewport, bool multi_pass=false, bool use_active_shader=false, graphics::CanvasDrawMode additional_draw_modes=graphics::CanvasDrawMode::None); // (graphics::CanvasDrawMode::IgnoreShaders)
+			bool render(graphics::Canvas& canvas, const graphics::Viewport& viewport, bool multi_pass=false, bool use_active_shader=false, graphics::CanvasDrawMode additional_draw_modes=graphics::CanvasDrawMode::None, bool _combine_view_proj_matrices=false); // (graphics::CanvasDrawMode::IgnoreShaders)
 
 			// Renders the scene using the camera specified.
 			// Returns 'false' if an essential rendering component is missing. (e.g. 'camera')
-			bool render(graphics::Canvas& canvas, const graphics::Viewport& viewport, Entity camera, bool multi_pass=false, bool use_active_shader=false, graphics::CanvasDrawMode additional_draw_modes=graphics::CanvasDrawMode::None);
+			bool render(graphics::Canvas& canvas, const graphics::Viewport& viewport, Entity camera, bool multi_pass=false, bool use_active_shader=false, graphics::CanvasDrawMode additional_draw_modes=graphics::CanvasDrawMode::None, bool _combine_view_proj_matrices=false);
 
 			//void on_child_removed(const Event_ChildRemoved& e);
 
@@ -162,7 +162,7 @@ namespace engine
 			void on_entity_destroyed(const OnEntityDestroyed& destruct);
 		private:
 			// Renders models with the given draw-mode.
-			void draw_models(graphics::CanvasDrawMode draw_mode, graphics::Canvas& canvas, const math::Matrix& projection_matrix, const math::Matrix& view_matrix, bool use_active_shader=false); // graphics::Shader& shader
+			void draw_models(graphics::CanvasDrawMode draw_mode, graphics::Canvas& canvas, const math::Matrix& projection_matrix, const math::Matrix& view_matrix, bool use_active_shader=false, bool combine_matrices=false); // graphics::Shader& shader
 	};
 
 	using Scene = World;

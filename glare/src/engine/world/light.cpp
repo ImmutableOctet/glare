@@ -7,6 +7,8 @@
 
 #include <engine/model_component.hpp>
 
+#include <util/string.hpp>
+
 //#include <graphics/shader.hpp>
 
 namespace engine
@@ -37,5 +39,29 @@ namespace engine
 		world.get_registry().emplace<LightComponent>(light, type, color);
 
 		return light;
+	}
+
+	LightType LightComponent::resolve_light_mode(const std::string& mode)
+	{
+		auto m = util::lowercase(mode);
+
+		if (m.starts_with("direction"))
+		{
+			return LightType::Directional;
+		}
+
+		if (m.starts_with("spot"))
+		{
+			return LightType::Spotlight;
+		}
+
+		/*
+		if (m.starts_with("point"))
+		{
+			return LightType::Point;
+		}
+		*/
+
+		return LightType::Point;
 	}
 }

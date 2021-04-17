@@ -4,6 +4,9 @@
 
 #include "entity.hpp"
 
+// Forward declaration not used due to templates.
+#include <util/json.hpp>
+
 namespace engine
 {
 	enum class CameraProjection : std::uint8_t
@@ -42,6 +45,7 @@ namespace engine
 
 		bool free_rotation;
 
+		CameraParameters(const util::json& camera_cfg);
 		CameraParameters(float v_fov_deg=DEFAULT_FOV, float near_plane=NEAR_PLANE, float far_plane=FAR_PLANE, float aspect_ratio=ASPECT, Projection projection_mode=Projection::Default, bool free_rotation=DEFAULT_FREE_ROTATION);
 
 		inline auto update_aspect_ratio(int width, int height)

@@ -134,12 +134,12 @@ namespace engine
 		RaveComponent::update(*this);
 	}
 
-	bool World::render(graphics::Canvas& canvas, const graphics::Viewport& viewport, bool multi_pass, bool use_active_shader, graphics::CanvasDrawMode additional_draw_modes)
+	bool World::render(graphics::Canvas& canvas, const graphics::Viewport& viewport, bool multi_pass, bool use_active_shader, graphics::CanvasDrawMode additional_draw_modes, bool _combine_view_proj_matrices)
 	{
-		return render(canvas, viewport, this->camera, multi_pass, use_active_shader, additional_draw_modes);
+		return render(canvas, viewport, this->camera, multi_pass, use_active_shader, additional_draw_modes, _combine_view_proj_matrices);
 	}
 
-	bool World::render(graphics::Canvas& canvas, const graphics::Viewport& viewport, Entity camera, bool multi_pass, bool use_active_shader, graphics::CanvasDrawMode additional_draw_modes)
+	bool World::render(graphics::Canvas& canvas, const graphics::Viewport& viewport, Entity camera, bool multi_pass, bool use_active_shader, graphics::CanvasDrawMode additional_draw_modes, bool _combine_view_proj_matrices)
 	{
 		// Deferred referning is current unsupported.
 		//ASSERT(forward_rendering);
@@ -195,23 +195,30 @@ namespace engine
 
 		if (multi_pass)
 		{
-			draw_models((graphics::CanvasDrawMode::Opaque | additional_draw_modes), canvas, projection, camera_matrix, use_active_shader);
-			draw_models((graphics::CanvasDrawMode::Transparent | additional_draw_modes), canvas, projection, camera_matrix, use_active_shader);
+			draw_models((graphics::CanvasDrawMode::Opaque | additional_draw_modes), canvas, projection, camera_matrix, use_active_shader, _combine_view_proj_matrices);
+			draw_models((graphics::CanvasDrawMode::Transparent | additional_draw_modes), canvas, projection, camera_matrix, use_active_shader, _combine_view_proj_matrices);
 		}
 		else
 		{
-			draw_models((graphics::Canvas::DrawMode::All | additional_draw_modes), canvas, projection, camera_matrix, use_active_shader);
+			draw_models((graphics::Canvas::DrawMode::All | additional_draw_modes), canvas, projection, camera_matrix, use_active_shader, _combine_view_proj_matrices);
 		}
 
 		return true;
 	}
 
-	void World::draw_models(graphics::CanvasDrawMode draw_mode, graphics::Canvas& canvas, const math::Matrix& projection_matrix, const math::Matrix& view_matrix, bool use_active_shader) // graphics::Shader& shader
+	void World::draw_models(graphics::CanvasDrawMode draw_mode, graphics::Canvas& canvas, const math::Matrix& projection_matrix, const math::Matrix& view_matrix, bool use_active_shader, bool combine_matrices) // graphics::Shader& shader
 	{
 		auto draw = [&, this](auto& shader)
 		{
-			shader["projection"] = projection_matrix;
-			shader["view"] = view_matrix;
+			if (combine_matrices)
+			{
+				shader["view_projection"] = (projection_matrix * view_matrix);
+			}
+			else
+			{
+				shader["projection"] = projection_matrix;
+				shader["view"] = view_matrix;
+			}
 
 			bool _auto_clear_textures = false; // true;
 

@@ -494,12 +494,12 @@ namespace engine
 
 		math::Vector translation = math::get_translation(matrix); // matrix[3]
 
-		std::cout << "Setting translation to: " << translation << '\n';
+		////std::cout << "Setting translation to: " << translation << '\n';
 
 		set_local_position(translation);
 
 		//std::cout << "Position is now: " << get_position() << '\n';
-		std::cout << "Position is now: " << get_local_position() << '\n';
+		////std::cout << "Position is now: " << get_local_position() << '\n';
 
 		//set_basis(glm::scale(matrix, { (1.0 / scale.x), (1.0 / scale.y), (1.0 / scale.z) }));
 		//set_scale(scale);

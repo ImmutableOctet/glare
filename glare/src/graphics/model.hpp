@@ -89,8 +89,8 @@ namespace graphics
 			friend Canvas;
 			friend Context;
 		private:
-			// Retrieves a string containing the name of 'type' to be used to link with shaders.
-			std::string get_texture_type_variable(TextureType type);
+			// Retrieves a string containing the name of 'class' to be used to link with shaders.
+			std::string get_texture_class_variable(TextureClass type);
 
 			Meshes meshes;
 		public:

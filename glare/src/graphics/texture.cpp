@@ -8,20 +8,20 @@
 namespace graphics
 {
 	// Texture:
-	Texture::Texture(weak_ref<Context> ctx, ContextHandle&& handle, int width, int height, TextureFormat format, ElementType element_type, TextureFlags flags)
-		: Resource(ctx, std::move(handle)), width(width), height(height), format(format), element_type(element_type), flags(flags) {}
+	Texture::Texture(weak_ref<Context> ctx, ContextHandle&& handle, int width, int height, TextureFormat format, ElementType element_type, TextureFlags flags, TextureType type)
+		: Resource(ctx, std::move(handle)), width(width), height(height), format(format), element_type(element_type), flags(flags), type(type) {}
 
-	Texture::Texture(pass_ref<Context> ctx, const PixelMap& data, Flags flags)
-		: Texture(ctx, ctx->generate_texture(data, ElementType::UByte, flags), data.width(), data.height(), data.format(), ElementType::UByte, flags) {}
+	Texture::Texture(pass_ref<Context> ctx, const PixelMap& data, Flags flags, TextureType type)
+		: Texture(ctx, ctx->generate_texture(data, ElementType::UByte, flags, type), data.width(), data.height(), data.format(), ElementType::UByte, flags, type) {}
 
-	Texture::Texture(pass_ref<Context> ctx, int width, int height, TextureFormat format, ElementType element_type, TextureFlags flags)
-		: Texture(ctx, ctx->generate_texture(width, height, format, element_type, (flags | TextureFlags::Dynamic)), width, height, format, element_type, (flags | TextureFlags::Dynamic)) {}
+	Texture::Texture(pass_ref<Context> ctx, int width, int height, TextureFormat format, ElementType element_type, TextureFlags flags, TextureType type, std::optional<ColorRGBA> _border_color)
+		: Texture(ctx, ctx->generate_texture(width, height, format, element_type, (flags | TextureFlags::Dynamic), type, _border_color), width, height, format, element_type, (flags | TextureFlags::Dynamic), type) {}
 
-	Texture::Texture(pass_ref<Context> ctx, raw_string path, Flags flags)
-		: Texture(ctx, PixelMap::Load(path), flags) {}
+	Texture::Texture(pass_ref<Context> ctx, raw_string path, Flags flags, TextureType type)
+		: Texture(ctx, PixelMap::Load(path), flags, type) {}
 
-	Texture::Texture(pass_ref<Context> ctx, const std::string& path, Flags flags)
-		: Texture(ctx, PixelMap::Load(path), flags)
+	Texture::Texture(pass_ref<Context> ctx, const std::string& path, Flags flags, TextureType type)
+		: Texture(ctx, PixelMap::Load(path), flags, type)
 	{
 		#ifdef _DEBUG
 			_path = path;

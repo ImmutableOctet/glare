@@ -163,7 +163,18 @@ namespace graphics
 		CounterClockwise,
 	};
 
-	enum class TextureType : std::int32_t // int
+	enum class TextureType
+	{
+		Texture2D = 0,
+
+		CubeMap,
+		//Texture3D,
+
+		Normal  = Texture2D,
+		Default = Texture2D,
+	};
+
+	enum class TextureClass : std::int32_t // int
 	{
 		StartType = 1,
 
@@ -214,8 +225,9 @@ namespace graphics
 		None               = (1 << 0),
 
 		// TODO: Review the best way to handle depth and stencil data:
-		DepthMap           = (1 << 1),
-		DepthStencilMap    = (1 << 2),
+		//DepthMap           = (1 << 1),
+		//DepthStencilMap    = (1 << 2),
+		Clamp = (1 << 2),
 
 		LinearFiltering    = (1 << 3),
 		MipMap             = (1 << 4),
@@ -297,7 +309,7 @@ namespace graphics
 	};
 
 	using TextureArray = std::vector<ref<Texture>>;
-	using TextureGroup = std::variant<ref<Texture>, TextureArray>; // Used to represent a single texture object or vector of textures objects. (Represents a 'TextureType')
+	using TextureGroup = std::variant<ref<Texture>, TextureArray>; // Used to represent a single texture object or vector of textures objects. (Represents a 'TextureClass')
 
 	// Map of string-identifiers to 'TextureGroup' objects.
 	using TextureMap   = std::unordered_map<std::string, TextureGroup>; // string_view
@@ -308,9 +320,9 @@ namespace graphics
 	template <typename fn_type>
 	void enumerate_texture_types(fn_type&& fn)
 	{
-		for (auto type = static_cast<int>(TextureType::StartType); type < static_cast<decltype(type)>(TextureType::EndType); type++)
+		for (auto type = static_cast<int>(TextureClass::StartType); type < static_cast<decltype(type)>(TextureClass::EndType); type++)
 		{
-			auto texture_type = static_cast<TextureType>(type);
+			auto texture_type = static_cast<TextureClass>(type);
 
 			fn(texture_type);
 		}

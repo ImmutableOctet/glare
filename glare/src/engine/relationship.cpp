@@ -113,7 +113,8 @@ namespace engine
 
 		if ((self != null) && (((int)self) != 0))
 		{
-			std::cout << "Adding child (" << (int)child << ") to parent (" << (int)self << ")\n";
+			//auto con = util::log::get_console();
+			////std::cout << "Adding child (" << (int)child << ") to parent (" << (int)self << ")\n";
 
 			//_dbg_is_actual_add = true;
 		}
@@ -139,7 +140,8 @@ namespace engine
 		// Debugging related:
 		if ((self != null) && (((int)self) != 0))
 		{
-			std::cout << "Removing child (" << (int)child << ") from parent (" << (int)self << ")\n";
+			//auto con = util::log::get_console();
+			////std::cout << "Removing child (" << (int)child << ") from parent (" << (int)self << ")\n";
 
 			//_dbg_is_actual_removal = true;
 		}

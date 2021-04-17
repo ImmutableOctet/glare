@@ -100,7 +100,8 @@ namespace graphics
 	// This method returns the next index used for texture attachment.
 	unsigned int FrameBuffer::get_attachment_index() const
 	{
-		return static_cast<unsigned int>(attachments.size());
+		//return static_cast<unsigned int>(attachments.size());
+		return static_cast<unsigned int>(attachment_indices.size());
 	}
 
 	void swap(FrameBuffer& x, FrameBuffer& y)
