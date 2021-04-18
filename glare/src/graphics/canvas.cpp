@@ -127,59 +127,68 @@ namespace graphics
 				}
 			}
 
-			bool material_has_textures = mesh_descriptor.material.has_textures();
-			bool force_clear_textures = (auto_clear_textures || (!material_has_textures));
-
-			context->clear_textures(force_clear_textures); // (!has_material)
-
+			bool material_has_textures = false;
 			bool specular_available = false;
 
-			for (auto& texture_group : material.textures)
+			if (!(draw_mode & DrawMode::IgnoreTextures))
 			{
-				const auto& texture_name = texture_group.first;
-				const auto& _data = texture_group.second;
+				material_has_textures = mesh_descriptor.material.has_textures();
+				bool force_clear_textures = (auto_clear_textures || (!material_has_textures));
 
-				if (texture_name == "specular") // (texture_name.find("specular") != std::string::npos)
+				context->clear_textures(force_clear_textures); // (!has_material)
+
+				specular_available = false;
+
+				for (auto& texture_group : material.textures)
 				{
-					specular_available = true;
-				}
+					const auto& texture_name = texture_group.first;
+					const auto& _data = texture_group.second;
 
-				// TODO: Implement as visit:
-				if (util::peek_value<ref<Texture>>(_data, [&](const ref<Texture>& texture)
+					if (texture_name == "specular") // (texture_name.find("specular") != std::string::npos)
 					{
-						bind_texture(*texture, texture_name);
+						specular_available = true;
+					}
+
+					// TODO: Implement as visit:
+					if (util::peek_value<ref<Texture>>(_data, [&](const ref<Texture>& texture)
+						{
+							bind_texture(*texture, texture_name);
+						}))
+					{}
+					else if (util::peek_value<TextureArray>(_data, [&](const TextureArray& textures)
+					{
+						bind_textures(textures, texture_name);
 					}))
-				{}
-				else if (util::peek_value<TextureArray>(_data, [&](const TextureArray& textures)
-				{
-					bind_textures(textures, texture_name);
-				}))
-				{}
+					{}
+				}
 			}
 
-			const auto& uniforms = material.get_uniforms();
-
-			bool is_transparent = false;
-
-			bool render_mesh = handle_diffuse(uniforms, color, draw_mode, is_transparent);
-
-			if (!render_mesh)
+			if (!(draw_mode & DrawMode::IgnoreMaterials))
 			{
-				continue;
-			}
+				const auto& uniforms = material.get_uniforms();
 
-			bind_material_values(material, [&](std::string_view name, const UniformData& value, bool& status) -> std::optional<UniformData>
-			{
-				if (name == Material::DIFFUSE_COLOR)
+				bool is_transparent = false;
+
+				bool render_mesh = handle_diffuse(uniforms, color, draw_mode, is_transparent);
+
+				if (!render_mesh)
 				{
-					return std::nullopt;
+					continue;
 				}
 
-				return value;
-			});
+				bind_material_values(material, [&](std::string_view name, const UniformData& value, bool& status) -> std::optional<UniformData>
+				{
+					if (name == Material::DIFFUSE_COLOR)
+					{
+						return std::nullopt;
+					}
 
-			shader["texture_diffuse_enabled"] = material_has_textures; // has_diffuse();
-			shader["specular_available"]      = specular_available;
+					return value;
+				});
+
+				shader["texture_diffuse_enabled"] = material_has_textures; // has_diffuse();
+				shader["specular_available"]      = specular_available;
+			}
 
 			for (auto& mesh : mesh_descriptor.meshes)
 			{

@@ -111,7 +111,7 @@ namespace engine
 
 	Transform& Transform::invalidate()
 	{
-		transform._dirty |= (Dirty::M | Dirty::Collider);
+		transform._dirty |= (Dirty::M | Dirty::EventFlag);
 
 		invalidate_world();
 
@@ -158,7 +158,7 @@ namespace engine
 
 	bool Transform::collision_invalid() const
 	{
-		bool collision_invalid = invalid(Dirty::Collider);
+		bool collision_invalid = invalid(Dirty::EventFlag);
 
 		if (collision_invalid)
 		{
@@ -191,9 +191,9 @@ namespace engine
 
 	Transform& Transform::validate_collision_shallow()
 	{
-		//validate(Dirty::Collider);
+		//validate(Dirty::EventFlag);
 
-		transform.validate(Dirty::Collider);
+		transform.validate(Dirty::EventFlag);
 
 		return *this;
 	}
@@ -266,6 +266,16 @@ namespace engine
 	math::Vector Transform::get_direction_vector(const math::Vector forward)
 	{
 		return (get_basis() * forward);
+	}
+
+	math::TransformVectors Transform::get_vectors()
+	{
+		return
+		{
+			get_position(),
+			get_rotation(),
+			get_scale()
+		};
 	}
 
 	Transform& Transform::set_position(const math::Vector& position)

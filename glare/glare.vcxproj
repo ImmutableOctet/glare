@@ -214,6 +214,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\debug.hpp" />
     <ClInclude Include="src\engine\collision.hpp" />
     <ClInclude Include="src\engine\components.hpp" />
+    <ClInclude Include="src\engine\config.hpp" />
     <ClInclude Include="src\engine\engine.hpp" />
     <ClInclude Include="src\engine\events\events.hpp" />
     <ClInclude Include="src\engine\events\input.hpp" />
@@ -247,6 +248,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\graphics\canvas.hpp" />
     <ClInclude Include="src\graphics\context.hpp" />
     <ClInclude Include="src\graphics\context_state.hpp" />
+    <ClInclude Include="src\graphics\cubemap_transform.hpp" />
     <ClInclude Include="src\graphics\drivers\driver.hpp" />
     <ClInclude Include="src\graphics\drivers\drivers.hpp" />
     <ClInclude Include="src\graphics\drivers\opengl\gl_driver.hpp" />
@@ -260,6 +262,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\graphics\renderbuffer.hpp" />
     <ClInclude Include="src\graphics\resource.hpp" />
     <ClInclude Include="src\graphics\shader.hpp" />
+    <ClInclude Include="src\graphics\shadow_map.hpp" />
     <ClInclude Include="src\graphics\texture.hpp" />
     <ClInclude Include="src\graphics\types.hpp" />
     <ClInclude Include="src\graphics\vertex.hpp" />
@@ -293,6 +296,9 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <None Include="assets\shaders\forward.frag" />
     <None Include="assets\shaders\forward.vert" />
     <None Include="assets\shaders\forward_test.frag" />
+    <None Include="assets\shaders\shadow_mapping\3.2.2.point_shadows_depth.frag" />
+    <None Include="assets\shaders\shadow_mapping\3.2.2.point_shadows_depth.geom" />
+    <None Include="assets\shaders\shadow_mapping\3.2.2.point_shadows_depth.vert" />
     <None Include="assets\tests\model_test\shaders\8.1.deferred_light_box.fs">
       <DeploymentContent>false</DeploymentContent>
     </None>
@@ -342,6 +348,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\game.cpp" />
     <ClCompile Include="src\graphics\canvas.cpp" />
     <ClCompile Include="src\graphics\context_state.cpp" />
+    <ClCompile Include="src\graphics\cubemap_transform.cpp" />
     <ClCompile Include="src\graphics\drivers\opengl\context.cpp" />
     <ClCompile Include="src\graphics\framebuffer.cpp" />
     <ClCompile Include="src\graphics\material.cpp" />
@@ -351,6 +358,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\graphics\renderbuffer.cpp" />
     <ClCompile Include="src\graphics\resource.cpp" />
     <ClCompile Include="src\graphics\shader.cpp" />
+    <ClCompile Include="src\graphics\shadow_map.cpp" />
     <ClCompile Include="src\graphics\texture.cpp" />
     <ClCompile Include="src\graphics\types.cpp" />
     <ClCompile Include="src\graphics\vertex.cpp" />

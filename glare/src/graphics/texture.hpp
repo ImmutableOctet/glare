@@ -62,10 +62,11 @@ namespace graphics
 
 			inline int get_width()  const { return width;  }
 			inline int get_height() const { return height; }
+			inline math::vec2i get_size() const { return { width, height }; };
 
 			inline PointRect rect() const // Viewport
 			{
-				return PointRect{ {}, { width, height } };
+				return PointRect{ { 0, 0 }, get_size() };
 			}
 
 			void resize(int width, int height);

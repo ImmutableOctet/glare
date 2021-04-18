@@ -482,6 +482,11 @@ namespace graphics
 
 			static Context::Handle compile_shader(const std::string& source, GLenum type) noexcept
 			{
+				if (source.empty())
+				{
+					return {};
+				}
+
 				const GLchar* source_raw = reinterpret_cast<const GLchar*>(source.c_str());
 
 				// Allocate a native OpenGL shader source container.
@@ -1468,16 +1473,18 @@ namespace graphics
 	{
 		auto vertex   = build_shader_source_obj(source.vertex, ShaderType::Vertex);
 		auto fragment = build_shader_source_obj(source.fragment, ShaderType::Fragment);
+		auto geometry = build_shader_source_obj(source.geometry, ShaderType::Geometry);
 
-		auto program = link_shader(vertex, fragment);
+		auto program = link_shader(vertex, fragment, geometry);
 
 		release_shader_source_obj(std::move(vertex));
 		release_shader_source_obj(std::move(fragment));
+		release_shader_source_obj(std::move(geometry));
 
 		return program;
 	}
 
-	Context::Handle Context::link_shader(const Handle& vertex_obj, const Handle& fragment_obj) noexcept
+	Context::Handle Context::link_shader(const Handle& vertex_obj, const Handle& fragment_obj, const Handle& geometry_obj) noexcept
 	{
 		// TODO: Look into proper error handling if possible.
 		ASSERT(vertex_obj);
@@ -1489,6 +1496,11 @@ namespace graphics
 		// Attach our compiled shader objects.
 		glAttachShader(program, vertex_obj);
 		glAttachShader(program, fragment_obj);
+
+		if (geometry_obj != NoHandle)
+		{
+			glAttachShader(program, geometry_obj);
+		}
 
 		// Link together the program.
 		glLinkProgram(program);
@@ -1514,7 +1526,11 @@ namespace graphics
 
 	void Context::release_shader_source_obj(Handle&& handle)
 	{
-		glDeleteShader(handle);
+		// 'NoHandle' is a valid input for this function, whereas it may not be for OpenGL.
+		if (handle != NoHandle)
+		{
+			glDeleteShader(handle);
+		}
 	}
 
 	// Framebuffer related:

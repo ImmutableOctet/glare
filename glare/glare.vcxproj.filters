@@ -329,6 +329,15 @@
       <Filter>glare</Filter>
     </ClInclude>
     <ClInclude Include="resource.h" />
+    <ClInclude Include="src\graphics\cubemap_transform.hpp">
+      <Filter>graphics\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\config.hpp">
+      <Filter>engine\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\shadow_map.hpp">
+      <Filter>graphics\graphics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\tests\model_test\shaders\8.1.deferred_light_box.fs">
@@ -396,6 +405,15 @@
     </None>
     <None Include="assets\shaders\forward_test.frag">
       <Filter>shaders</Filter>
+    </None>
+    <None Include="assets\shaders\shadow_mapping\3.2.2.point_shadows_depth.frag">
+      <Filter>shaders\shadow_mapping</Filter>
+    </None>
+    <None Include="assets\shaders\shadow_mapping\3.2.2.point_shadows_depth.geom">
+      <Filter>shaders\shadow_mapping</Filter>
+    </None>
+    <None Include="assets\shaders\shadow_mapping\3.2.2.point_shadows_depth.vert">
+      <Filter>shaders\shadow_mapping</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -479,6 +497,9 @@
     </Filter>
     <Filter Include="shaders">
       <UniqueIdentifier>{28e2a9dd-2b3f-4112-9615-ae281578f049}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\shadow_mapping">
+      <UniqueIdentifier>{454375aa-b93b-4b8f-8f48-5f9a48257587}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -638,6 +659,12 @@
     </ClCompile>
     <ClCompile Include="src\game.cpp">
       <Filter>glare</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\cubemap_transform.cpp">
+      <Filter>graphics\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\shadow_map.cpp">
+      <Filter>graphics\graphics</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

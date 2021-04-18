@@ -10,6 +10,11 @@ namespace util
 	{
 		std::string load_string(const std::string& path)
 		{
+			if (path.empty())
+			{
+				return {};
+			}
+
 			std::ifstream file;
 			file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 

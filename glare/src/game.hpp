@@ -55,6 +55,7 @@ namespace glare
 				ref<graphics::Shader> lighting_pass;
 				ref<graphics::Shader> framebuffer_dbg;
 				ref<graphics::Shader> light_box;
+				ref<graphics::Shader> shadow_depth;
 			} shaders;
 
 			static constexpr auto NR_LIGHTS = 32; // 128; // 16;
@@ -70,6 +71,9 @@ namespace glare
 			//engine::Entity model_entity;
 
 			util::Logger dbg = util::log::get_console();
+
+			//ref<engine::Config> cfg;
+			engine::Config cfg;
 
 			Glare(bool auto_execute=true);
 

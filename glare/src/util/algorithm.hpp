@@ -9,6 +9,20 @@
 
 namespace util
 {
+	template <typename T>
+	inline bool equal_or_nullopt(const std::optional<T>& value, T&& comparison)
+	{
+		//return ((!value.has_value()) || (*value == comparison));
+
+
+		if (!value.has_value())
+		{
+			return true;
+		}
+
+		return (*value == comparison);
+	}
+
 	template <typename ValueType, typename MapType, typename KeyType>
 	inline std::optional<ValueType> get_if_exists(const MapType& container, KeyType&& key)
 	{
@@ -20,6 +34,31 @@ namespace util
 		}
 
 		return std::nullopt;
+	}
+
+	// Returns a T& to the value held in 'opt', if one exists.
+	// If no value is present, then 'fallback' is returned instead.
+	template <typename T>
+	inline T& get_mutable(std::optional<T>& opt, T& fallback)
+	{
+		if (opt.has_value())
+		{
+			return *opt;
+		}
+
+		return fallback;
+	}
+
+	// Same as 'get_mutable', but allows for 'nullptr' on 'fallback'.
+	template <typename T>
+	inline T* get_mutable(std::optional<T>& opt, T* fallback=nullptr)
+	{
+		if (opt.has_value())
+		{
+			return &(*opt); // Pointer to 'T'.
+		}
+
+		return fallback;
 	}
 
 	/*

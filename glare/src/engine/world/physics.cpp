@@ -73,23 +73,6 @@ namespace engine
 				}
 			}
 		});
-
-
-		// Another pass is required, in order to ensure all of the hierarchy has a chance to validate collision representation:
-		registry.view<TransformComponent>().each([](auto entity, auto& tf)
-		{
-			tf.validate(TransformComponent::Dirty::Collider);
-		});
-
-		/*
-		registry.view<TransformComponent, Relationship>().each([&](auto entity, auto& tf, auto& rel)
-		{
-			auto transform = Transform(registry, entity, rel, tf);
-
-			//transform.validate_collision();
-			transform.validate_collision_shallow();
-		});
-		*/
 	}
 
 	void PhysicsSystem::set_gravity(const math::Vector& g)

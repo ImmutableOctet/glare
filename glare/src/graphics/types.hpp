@@ -11,7 +11,6 @@
 #include <unordered_map>
 #include <type_traits>
 #include <variant>
-//#include <array>
 
 /*
 inline bool operator<(const std::string& a, const std::string_view& b) noexcept
@@ -109,10 +108,11 @@ namespace graphics
 			using StringType = std::string;
 
 			// Implementation found in "shader.cpp".
-			static ShaderSource Load(const std::string& vertex_path, const std::string& fragment_path); // StringType
+			static ShaderSource Load(const std::string& vertex_path, const std::string& fragment_path, const std::string& geometry_path={}); // StringType
 
 			StringType vertex;
 			StringType fragment;
+			StringType geometry;
 	};
 
 	enum class ElementType
@@ -287,16 +287,23 @@ namespace graphics
 
 	enum class CanvasDrawMode : std::uint32_t
 	{
-		None = (1 << 0),
+		None            = (1 << 0),
 
-		Opaque         = (1 << 1),
-		Transparent    = (1 << 2),
+		Opaque          = (1 << 1),
+		Transparent     = (1 << 2),
 
 		// If enabled, the active shader will not be checked before drawing.
-		IgnoreShaders  = (1 << 3),
+		IgnoreShaders   = (1 << 3),
+		IgnoreTextures  = (1 << 4),
+		IgnoreMaterials = (1 << 5),
+
+		Shadow = (Opaque|IgnoreShaders|IgnoreTextures|IgnoreMaterials), // Transparent
+		//Shadow          = (1 << 6),
 
 		All = (Opaque | Transparent),
-	}; FLAG_ENUM(std::uint32_t, CanvasDrawMode);
+	};
+	
+	FLAG_ENUM(std::uint32_t, CanvasDrawMode);
 
 	// Types of integrated render buffers.
 	enum class RenderBufferType

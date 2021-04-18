@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <utility>
 
 #include "types.hpp"
 #include "relationship.hpp"
@@ -21,7 +22,14 @@ namespace engine
 		W                    = 2, // World
 		IW                   = 4, // Inverse World
 		
-		Collider = 8,
+		/*
+			Indicates that a change has taken place;
+			used for collision, dynamic cubemap matrices (shadows, reflections), etc.
+			
+			Order of operations is essentially a mark-and-sweep approach:
+			Modify Transform (flag triggered; mark) -> Detect flags -> Trigger events -> Disable flags (sweep) -> Repeat
+		*/
+		EventFlag = 8,
 
 		All = (M | W | IW),
 	};
@@ -33,7 +41,7 @@ namespace engine
 	{
 		public:
 			using Dirty = _TransformComponent_Dirty;
-
+			using Flag  = Dirty;
 		protected:
 			friend Transform;
 			friend World;
@@ -62,6 +70,21 @@ namespace engine
 
 			void invalidate(Dirty flag);
 			Dirty validate(Dirty flag);
+
+			// Helper function for event-flags, etc.
+			template <typename Event>
+			inline bool on_flag(Flag flag, Event&& event_fn)
+			{
+				if (invalid(flag))
+				{
+					validate(flag);
+					event_fn();
+
+					return true;
+				}
+
+				return false;
+			}
 	};
 
 	struct TransformViewData
@@ -121,12 +144,25 @@ namespace engine
 
 			Transform(TransformViewData data);
 		public:
+			using Flag = Dirty;
+
 			Transform(Registry& registry, Entity entity);
 			Transform(Registry& registry, Entity entity, const Relationship& relationship);
 			Transform(Registry& registry, Entity entity, const Relationship& relationship, TransformComponent& transform);
 
 			~Transform();
 
+			// Alias to helper function in 'TransformComponent'.
+			/*
+			template <typename Event>
+			inline bool on_flag(Flag flag, Event&& event_fn)
+			{
+				return transform.on_flag(flag, std::forward<Event>(fn));
+			}
+			*/
+
+			// TODO: Rename these routines to be more generic.
+			// (i.e. collision is not the only use-case of event flags)
 			bool collision_invalid() const;
 			Transform& validate_collision();
 
@@ -149,6 +185,8 @@ namespace engine
 
 			// Retrieves a normalized direction vector based on the transform's basis.
 			math::Vector get_direction_vector(const math::Vector forward={0.0f, 0.0f, -1.0f});
+
+			math::TransformVectors get_vectors(); // const
 
 			inline float rx() { return get_rotation().x; }
 			inline float ry() { return get_rotation().y; }

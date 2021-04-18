@@ -28,6 +28,7 @@
 #include <engine/free_look.hpp>
 #include <engine/relationship.hpp>
 #include <engine/transform.hpp>
+#include <engine/type_component.hpp>
 
 //#include <engine/name_component.hpp>
 #include <engine/components.hpp>
@@ -44,12 +45,13 @@
 
 namespace engine
 {
-	World::World(ResourceManager& resource_manager, UpdateRate update_rate)
-		: resource_manager(resource_manager), delta_time(update_rate)
+	World::World(Config& config, ResourceManager& resource_manager, UpdateRate update_rate)
+		: config(config), resource_manager(resource_manager), delta_time(update_rate)
 	{
 		register_event<app::input::MouseState,    &World::on_mouse_input>();
 		register_event<app::input::KeyboardState, &World::on_keyboard_input>();
 		register_event<OnComponentAdd<engine::CollisionComponent>, &World::on_new_collider>();
+		register_event<OnTransformChange, &World::on_transform_change>();
 		register_event<OnEntityDestroyed, &World::on_entity_destroyed>();
 
 		root = create_pivot(*this);
@@ -69,8 +71,8 @@ namespace engine
 	}
 	*/
 
-	World::World(ResourceManager& resource_manager, UpdateRate update_rate, const filesystem::path& path)
-		: World(resource_manager, update_rate)
+	World::World(Config& config, ResourceManager& resource_manager, UpdateRate update_rate, const filesystem::path& path)
+		: World(config, resource_manager, update_rate)
 	{
 		load(path);
 	}
@@ -132,6 +134,32 @@ namespace engine
 		SimpleFollowComponent::update(*this);
 		BillboardBehavior::update(*this);
 		RaveComponent::update(*this);
+
+		handle_transform_events(delta_time);
+	}
+
+	void World::handle_transform_events(float delta)
+	{
+		// Another pass is required, in order to ensure all of the hierarchy has a chance to validate collision representation:
+		registry.view<TransformComponent>().each([this](auto entity, auto& tf)
+		{
+			tf.on_flag(TransformComponent::Flag::EventFlag, [this, entity]()
+			{
+				this->queue_event<OnTransformChange>(entity);
+			});
+
+			//tf.validate(TransformComponent::Dirty::EventFlag);
+		});
+
+		/*
+		registry.view<TransformComponent, Relationship>().each([&](auto entity, auto& tf, auto& rel)
+		{
+			auto transform = Transform(registry, entity, rel, tf);
+
+			//transform.validate_collision();
+			transform.validate_collision_shallow();
+		});
+		*/
 	}
 
 	bool World::render(graphics::Canvas& canvas, const graphics::Viewport& viewport, bool multi_pass, bool use_active_shader, graphics::CanvasDrawMode additional_draw_modes, bool _combine_view_proj_matrices)
@@ -195,29 +223,77 @@ namespace engine
 
 		if (multi_pass)
 		{
-			draw_models((graphics::CanvasDrawMode::Opaque | additional_draw_modes), canvas, projection, camera_matrix, use_active_shader, _combine_view_proj_matrices);
-			draw_models((graphics::CanvasDrawMode::Transparent | additional_draw_modes), canvas, projection, camera_matrix, use_active_shader, _combine_view_proj_matrices);
+			draw_models((graphics::CanvasDrawMode::Opaque | additional_draw_modes), canvas, &projection, &camera_matrix, use_active_shader, _combine_view_proj_matrices);
+			draw_models((graphics::CanvasDrawMode::Transparent | additional_draw_modes), canvas, &projection, &camera_matrix, use_active_shader, _combine_view_proj_matrices);
 		}
 		else
 		{
-			draw_models((graphics::Canvas::DrawMode::All | additional_draw_modes), canvas, projection, camera_matrix, use_active_shader, _combine_view_proj_matrices);
+			draw_models((graphics::Canvas::DrawMode::All | additional_draw_modes), canvas, &projection, &camera_matrix, use_active_shader, _combine_view_proj_matrices);
 		}
 
 		return true;
 	}
 
-	void World::draw_models(graphics::CanvasDrawMode draw_mode, graphics::Canvas& canvas, const math::Matrix& projection_matrix, const math::Matrix& view_matrix, bool use_active_shader, bool combine_matrices) // graphics::Shader& shader
+	bool World::render_shadows(graphics::Canvas& canvas, graphics::Shader& shader)
+	{
+		auto& ctx = canvas.get_context();
+
+		registry.view<LightComponent, PointLightShadows>().each([&](auto entity, LightComponent& light_component, PointLightShadows& shadows)
+		{
+			auto viewport = shadows.shadow_map.get_viewport();
+			auto& framebuffer = *shadows.shadow_map.get_framebuffer();
+
+			auto light_tform = get_transform(entity);
+			auto light_position = light_tform.get_position();
+
+			ctx.use(framebuffer, [&, this]()
+			{
+				ctx.clear(graphics::BufferType::Depth);
+
+				ctx.use(shader, [&, this]()
+				{
+					const auto& tforms = shadows.transforms;
+
+					for (std::size_t i = 0; i < tforms.size(); ++i) // auto
+						shader["shadowMatrices[" + std::to_string(i) + "]"] = tforms.transforms[i];
+
+					shader["far_plane"] = shadows.shadow_perspective.far_plane;
+					shader["lightPos"] = light_position;
+
+					draw_models
+					(
+						(graphics::Canvas::DrawMode::Shadow), // graphics::Canvas::DrawMode::Opaque
+						canvas, {}, {},
+						true
+					);
+				});
+			});
+		});
+
+		//render(canvas, shadow_viewport);
+
+		return true;
+	}
+
+	void World::draw_models(graphics::CanvasDrawMode draw_mode, graphics::Canvas& canvas, const math::Matrix* projection_matrix, const math::Matrix* view_matrix, bool use_active_shader, bool combine_matrices) // graphics::Shader& shader
 	{
 		auto draw = [&, this](auto& shader)
 		{
-			if (combine_matrices)
+			if ((combine_matrices) && ((projection_matrix) && (view_matrix))) // ((projection_matrix != nullptr) && (view_matrix != nullptr))
 			{
-				shader["view_projection"] = (projection_matrix * view_matrix);
+				shader["view_projection"] = ((*projection_matrix) * (*view_matrix));
 			}
 			else
 			{
-				shader["projection"] = projection_matrix;
-				shader["view"] = view_matrix;
+				if (projection_matrix)
+				{
+					shader["projection"] = *projection_matrix;
+				}
+
+				if (view_matrix)
+				{
+					shader["view"] = *view_matrix;
+				}
 			}
 
 			bool _auto_clear_textures = false; // true;
@@ -425,6 +501,38 @@ namespace engine
 	void World::on_new_collider(const OnComponentAdd<CollisionComponent>& new_col)
 	{
 		physics.on_new_collider(*this, new_col);
+	}
+
+	void World::on_transform_change(const OnTransformChange& tform_change)
+	{
+		auto con = util::log::get_console();
+		auto entity = tform_change.entity;
+		
+
+		// TODO: Make this routine more generic for other cube-map entities.
+		auto* point_shadows = registry.try_get<PointLightShadows>(entity);
+
+		if (point_shadows)
+		{
+			attach_shadows(*this, entity); // *point_shadows
+		}
+
+		// Debugging related:
+		/*
+		auto* type_component = registry.try_get<TypeComponent>(entity);
+		auto entity_type = ((type_component) ? type_component->type : EntityType::Default);
+
+		std::string name_label;
+
+		auto* name_component = registry.try_get<NameComponent>(entity);
+
+		if (name_component)
+		{
+			name_label = " \"" + name_component->name +"\"";
+		}
+
+		con->info("Entity #{}{} ({}) - Transform Changed: {}", entity, name_label, entity_type, get_transform(entity).get_vectors());
+		*/
 	}
 
 	void World::on_entity_destroyed(const OnEntityDestroyed& destruct)

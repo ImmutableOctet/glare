@@ -7,6 +7,8 @@ namespace engine
 {
 	class World;
 
+	struct TransformComponent;
+
 	//template <EntityType type>
 	struct OnEntityCreated
 	{
@@ -49,4 +51,16 @@ namespace engine
 		//ComponentType& component;
 		Entity entity;
 	};
+
+	template <typename ComponentType>
+	struct OnComponentChange
+	{
+		using Type = ComponentType;
+
+		//World& world;
+		//ComponentType& component;
+		Entity entity;
+	};
+
+	using OnTransformChange = OnComponentChange<TransformComponent>;
 }

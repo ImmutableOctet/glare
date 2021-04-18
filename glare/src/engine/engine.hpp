@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.hpp"
+#include "config.hpp"
 #include "transform.hpp"
 #include "resource_manager.hpp"
 #include "relationship.hpp"

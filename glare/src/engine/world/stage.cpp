@@ -14,6 +14,7 @@
 
 #include "debug/debug.hpp"
 
+#include <engine/config.hpp>
 #include <engine/name_component.hpp>
 #include <engine/model_component.hpp>
 
@@ -231,9 +232,18 @@ namespace engine
 
 	Entity Stage::CreateLight(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
 	{
-		constexpr bool debug_mode = true;
-
+		auto debug_mode = util::get_value(data, "debug", false);
 		auto light = create_light(world, {}, util::get_color(data, "color"), LightComponent::resolve_light_mode(util::get_value<std::string>(data, "mode", "directional")), parent, debug_mode);
+
+		auto shadows_enabled = util::get_value(data, "shadows", false);
+
+		if (shadows_enabled)
+		{
+			const auto& cfg = world.get_config();
+			auto shadow_resolution = util::get_vec2i(data, "shadow_resolution", cfg.get_shadow_resolution());
+
+			attach_shadows(world, light, shadow_resolution);
+		}
 
 		return light;
 	}

@@ -223,3 +223,13 @@ inline auto& operator<<(OutStream& os, const math::Vector& v)
 
 	return os;
 }
+
+template <typename OutStream>
+inline auto& operator<<(OutStream& os, const math::TransformVectors& v)
+{
+	os << "{" << std::get<0>(v) << "}, ";
+	os << "{" << std::get<1>(v) << "}, ";
+	os << "{" << std::get<2>(v) << "}";
+
+	return os;
+}

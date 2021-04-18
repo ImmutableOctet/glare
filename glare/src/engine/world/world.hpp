@@ -40,12 +40,14 @@ namespace graphics
 namespace engine
 {
 	class ResourceManager;
+	class Config;
 
 	class World
 	{
 		public:
 			using UpdateRate = app::DeltaTime::Rate;
 		protected:
+			Config& config;
 			ResourceManager& resource_manager;
 			
 			app::DeltaTime delta_time;
@@ -66,10 +68,10 @@ namespace engine
 		public:
 			std::vector<Entity> cameras;
 
-			World(ResourceManager& resource_manager, UpdateRate update_rate);
+			World(Config& config, ResourceManager& resource_manager, UpdateRate update_rate);
 
 			// Constructs a 'World' object, then immediately loads a map from the 'path' specified.
-			World(ResourceManager& resource_manager, UpdateRate update_rate, const filesystem::path& path);
+			World(Config& config, ResourceManager& resource_manager, UpdateRate update_rate, const filesystem::path& path);
 
 			Entity load(const filesystem::path& root_path, bool override_current=false, const std::string& json_file="map.json");
 
@@ -111,6 +113,8 @@ namespace engine
 
 			void update(app::Milliseconds time);
 
+			void handle_transform_events(float delta);
+
 			// Renders the scene using the last bound camera. If no camera has been bound/assinged, then this routine will return 'false'.
 			// Returns 'false' if an essential rendering component is missing.
 			bool render(graphics::Canvas& canvas, const graphics::Viewport& viewport, bool multi_pass=false, bool use_active_shader=false, graphics::CanvasDrawMode additional_draw_modes=graphics::CanvasDrawMode::None, bool _combine_view_proj_matrices=false); // (graphics::CanvasDrawMode::IgnoreShaders)
@@ -118,6 +122,9 @@ namespace engine
 			// Renders the scene using the camera specified.
 			// Returns 'false' if an essential rendering component is missing. (e.g. 'camera')
 			bool render(graphics::Canvas& canvas, const graphics::Viewport& viewport, Entity camera, bool multi_pass=false, bool use_active_shader=false, graphics::CanvasDrawMode additional_draw_modes=graphics::CanvasDrawMode::None, bool _combine_view_proj_matrices=false);
+
+			// Renders the scene multiple times for each shadow-enabled light.
+			bool render_shadows(graphics::Canvas& canvas, graphics::Shader& shader);
 
 			//void on_child_removed(const Event_ChildRemoved& e);
 
@@ -138,6 +145,8 @@ namespace engine
 			inline ResourceManager& get_resource_manager() { return resource_manager; }
 
 			inline PhysicsSystem& get_physics() { return physics; }
+
+			inline const Config& get_config() const { return config; }
 			
 			// Retrieves the root scene-node; parent to all world-scoped entities.
 			inline Entity get_root() const { return root; }
@@ -159,10 +168,11 @@ namespace engine
 			void on_mouse_input(const app::input::MouseState& mouse);
 			void on_keyboard_input(const app::input::KeyboardState& keyboard);
 			void on_new_collider(const OnComponentAdd<CollisionComponent>& new_col);
+			void on_transform_change(const OnTransformChange& tform_change);
 			void on_entity_destroyed(const OnEntityDestroyed& destruct);
 		private:
 			// Renders models with the given draw-mode.
-			void draw_models(graphics::CanvasDrawMode draw_mode, graphics::Canvas& canvas, const math::Matrix& projection_matrix, const math::Matrix& view_matrix, bool use_active_shader=false, bool combine_matrices=false); // graphics::Shader& shader
+			void draw_models(graphics::CanvasDrawMode draw_mode, graphics::Canvas& canvas, const math::Matrix* projection_matrix=nullptr, const math::Matrix* view_matrix=nullptr, bool use_active_shader=false, bool combine_matrices=false); // graphics::Shader& shader
 	};
 
 	using Scene = World;

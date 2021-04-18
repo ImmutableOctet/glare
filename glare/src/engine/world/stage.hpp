@@ -19,6 +19,11 @@
 
 namespace filesystem = std::filesystem;
 
+namespace graphics
+{
+	class Context;
+}
+
 namespace engine
 {
 	class World;

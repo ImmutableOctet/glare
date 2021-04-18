@@ -12,8 +12,8 @@ namespace graphics
 	Shader::Shader(weak_ref<Context> ctx, ContextHandle&& handle)
 		: Resource(ctx, std::move(handle)) {}
 
-	Shader::Shader(pass_ref<Context> ctx, const std::string& vertex_path, const std::string& fragment_path)
-		: Shader(ctx, ctx->build_shader(Source::Load(vertex_path, fragment_path))) {}
+	Shader::Shader(pass_ref<Context> ctx, const std::string& vertex_path, const std::string& fragment_path, const std::string& geometry_path)
+		: Shader(ctx, ctx->build_shader(Source::Load(vertex_path, fragment_path, geometry_path))) {}
 
 	Shader::~Shader()
 	{
@@ -33,8 +33,8 @@ namespace graphics
 	}
 
 	// ShaderSource:
-	ShaderSource ShaderSource::Load(const std::string& vertex_path, const std::string& fragment_path)
+	ShaderSource ShaderSource::Load(const std::string& vertex_path, const std::string& fragment_path, const std::string& geometry_path)
 	{
-		return { util::io::load_string(vertex_path), util::io::load_string(fragment_path) };
+		return { util::io::load_string(vertex_path), util::io::load_string(fragment_path), util::io::load_string(geometry_path) };
 	}
 }

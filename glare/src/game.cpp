@@ -28,45 +28,45 @@ namespace glare
 	{
 		// Not an initializer list for readability/testing purposes:
 		forward = memory::allocate<graphics::Shader>
-			(
-				graphics.context,
+		(
+			graphics.context,
 
-				"assets/shaders/forward.vert",
-				"assets/shaders/forward.frag"
-				);
+			"assets/shaders/forward.vert",
+			"assets/shaders/forward.frag"
+		);
 
 		forward_test = memory::allocate<graphics::Shader>
-			(
-				graphics.context,
+		(
+			graphics.context,
 
-				//"assets/tests/model_test/shaders/forward.vs",
-				"assets/shaders/deferred_shading.vert",
-				"assets/shaders/forward_test.frag"
-				);
+			//"assets/tests/model_test/shaders/forward.vs",
+			"assets/shaders/deferred_shading.vert",
+			"assets/shaders/forward_test.frag"
+		);
 
 		geometry = memory::allocate<graphics::Shader>
-			(
-				graphics.context,
+		(
+			graphics.context,
 
-				"assets/shaders/g_buffer.vert",
-				"assets/shaders/g_buffer.frag"
-				);
+			"assets/shaders/g_buffer.vert",
+			"assets/shaders/g_buffer.frag"
+		);
 
 		lighting_pass = memory::allocate<graphics::Shader>
-			(
-				graphics.context,
+		(
+			graphics.context,
 
-				"assets/shaders/deferred_shading.vert",
-				"assets/shaders/deferred_shading.frag"
-				);
+			"assets/shaders/deferred_shading.vert",
+			"assets/shaders/deferred_shading.frag"
+		);
 
 		framebuffer_dbg = memory::allocate<graphics::Shader>
-			(
-				graphics.context,
+		(
+			graphics.context,
 
-				"assets/shaders/8.1.fbo_debug.vert",
-				"assets/shaders/8.1.fbo_debug.frag"
-				);
+			"assets/shaders/8.1.fbo_debug.vert",
+			"assets/shaders/8.1.fbo_debug.frag"
+		);
 
 		//light_box = res.get_shader("assets/shaders/light_box.vert", "assets/shaders/light_box.frag");
 
@@ -81,13 +81,23 @@ namespace glare
 		*/
 
 		light_box = forward;
+
+		shadow_depth = memory::allocate<graphics::Shader>
+		(
+			graphics.context,
+
+			"assets/shaders/shadow_mapping/3.2.2.point_shadows_depth.vert",
+			"assets/shaders/shadow_mapping/3.2.2.point_shadows_depth.frag",
+			"assets/shaders/shadow_mapping/3.2.2.point_shadows_depth.geom"
+		);
 	}
 
 	Glare::Glare(bool auto_execute)
 		: GraphicsApplication("Project Glare", 1600, 900, (app::WindowFlags::OpenGL | app::WindowFlags::Resizable), TARGET_UPDATE_RATE, false), // true
+		cfg(), // cfg(std::make_shared<engine::Config>()),
 		shaders(graphics),
 		resource_manager(graphics.context, shaders.geometry), // shaders.forward
-		world(resource_manager, TARGET_UPDATE_RATE)
+		world(cfg, resource_manager, TARGET_UPDATE_RATE)
 	{
 		using namespace graphics;
 
@@ -122,25 +132,25 @@ namespace glare
 		auto& fb = g_buffer.framebuffer;
 
 		graphics.context->use(fb, [&, this]()
-			{
-				g_buffer.position = Texture(graphics.context, screen_width, screen_height, TextureFormat::RGB, ElementType::Half, gBuffer_flags); // Float
-				//auto _pos = graphics.context->use(g_buffer.position);
-				fb.attach(g_buffer.position);
+		{
+			g_buffer.position = Texture(graphics.context, screen_width, screen_height, TextureFormat::RGB, ElementType::Half, gBuffer_flags); // Float
+			//auto _pos = graphics.context->use(g_buffer.position);
+			fb.attach(g_buffer.position);
 
-				g_buffer.normal = Texture(graphics.context, screen_width, screen_height, TextureFormat::RGB, ElementType::Half, gBuffer_flags); // Float
-				fb.attach(g_buffer.normal);
+			g_buffer.normal = Texture(graphics.context, screen_width, screen_height, TextureFormat::RGB, ElementType::Half, gBuffer_flags); // Float
+			fb.attach(g_buffer.normal);
 
-				g_buffer.albedo_specular = Texture(graphics.context, screen_width, screen_height, TextureFormat::RGBA, ElementType::UByte, gBuffer_flags);
-				fb.attach(g_buffer.albedo_specular);
+			g_buffer.albedo_specular = Texture(graphics.context, screen_width, screen_height, TextureFormat::RGBA, ElementType::UByte, gBuffer_flags);
+			fb.attach(g_buffer.albedo_specular);
 
-				fb.link();
+			fb.link();
 
-				// TODO: Refactor
-				fb.attach(RenderBufferType::Depth, screen_width, screen_height);
+			// TODO: Refactor
+			fb.attach(RenderBufferType::Depth, screen_width, screen_height);
 
-				//if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-				//	std::cout << "Framebuffer not complete!" << std::endl;
-			});
+			//if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+			//	std::cout << "Framebuffer not complete!" << std::endl;
+		});
 
 		graphics.context->clear_textures(true);
 
@@ -394,6 +404,11 @@ namespace glare
 
 		///*
 		{
+			// Shadow-map pass:
+			{
+				world.render_shadows(*graphics.canvas, *shaders.geometry);
+			}
+
 			// Geometry pass:
 			{
 				auto& shader = *shaders.geometry;
@@ -401,15 +416,15 @@ namespace glare
 				//graphics.context->clear_textures(false); // true // <-- May not be needed.
 
 				graphics.context->use(g_buffer.framebuffer, [&, this]()
-					{
-						graphics.context->clear(0.0f, 0.0f, 0.0f, 1.0f, (graphics::BufferType::Color | graphics::BufferType::Depth)); // gfx // 1.0f, 0.0f, 0.0f
-						//graphics.context->clear(1.0f, 1.0f, 1.0f, 1.0f, (graphics::BufferType::Color | graphics::BufferType::Depth)); // gfx // 1.0f, 0.0f, 0.0f
+				{
+					graphics.context->clear(0.0f, 0.0f, 0.0f, 1.0f, (graphics::BufferType::Color | graphics::BufferType::Depth)); // gfx // 1.0f, 0.0f, 0.0f
+					//graphics.context->clear(1.0f, 1.0f, 1.0f, 1.0f, (graphics::BufferType::Color | graphics::BufferType::Depth)); // gfx // 1.0f, 0.0f, 0.0f
 
-						graphics.context->use(shader, [&, this]()
-							{
-								world.render(*graphics.canvas, viewport, false, true);
-							});
+					graphics.context->use(shader, [&, this]()
+					{
+						world.render(*graphics.canvas, viewport, false, true);
 					});
+				});
 			}
 
 			graphics.context->clear(0.0f, 0.0f, 0.0f, 1.0f, BufferType::Color | BufferType::Depth); // gfx
@@ -490,30 +505,30 @@ namespace glare
 				graphics.context->clear_textures(false); // true
 
 				graphics.context->use(shader, [&, this]()
+				{
+					auto get_texture = [&, this]() -> const Texture&
 					{
-						auto get_texture = [&, this]() -> const Texture&
+						switch (this->g_buffer.display_mode)
 						{
-							switch (this->g_buffer.display_mode)
-							{
-							case GBufferDisplayMode::Normal:
-								return g_buffer.normal;
-							case GBufferDisplayMode::AlbedoSpecular:
-								return g_buffer.albedo_specular;
-							}
+						case GBufferDisplayMode::Normal:
+							return g_buffer.normal;
+						case GBufferDisplayMode::AlbedoSpecular:
+							return g_buffer.albedo_specular;
+						}
 
-							return g_buffer.position;
-						};
+						return g_buffer.position;
+					};
 
-						auto fb_texture = graphics.context->use(get_texture()); // test_texture // g_buffer.normal
+					auto fb_texture = graphics.context->use(get_texture()); // test_texture // g_buffer.normal
 
-						//graphics.context->use(g_buffer.position, [&, this]() // normal // albedo_specular
-						//{
-						graphics.context->use(g_buffer.screen_quad, [&, this]()
-							{
-								graphics.context->draw();
-							});
-						//});
-					});
+					//graphics.context->use(g_buffer.position, [&, this]() // normal // albedo_specular
+					//{
+					graphics.context->use(g_buffer.screen_quad, [&, this]()
+						{
+							graphics.context->draw();
+						});
+					//});
+				});
 			}
 
 			graphics.context->use(*shaders.light_box, [&, this]()

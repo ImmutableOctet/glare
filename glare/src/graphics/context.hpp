@@ -337,7 +337,7 @@ namespace graphics
 			Handle build_shader(const ShaderSource& source) noexcept; // generate_shader(...)
 
 			// Links individual shader objects into one program. (see also: 'build_shader')
-			Handle link_shader(const Handle& vertex_obj, const Handle& fragment_obj) noexcept;
+			Handle link_shader(const Handle& vertex_obj, const Handle& fragment_obj, const Handle& geometry_obj={}) noexcept;
 
 			// Releases a built shader program.
 			void release_shader(Handle&& handle);

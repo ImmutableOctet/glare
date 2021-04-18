@@ -26,6 +26,11 @@ namespace engine
 			return (static_cast<float>(width) / static_cast<float>(height));
 		}
 
+		inline static constexpr float calculate_aspect_ratio(const math::vec2i& size)
+		{
+			return calculate_aspect_ratio(size.x, size.y);
+		}
+
 		static Projection resolve_projection_mode(const std::string& mode);
 
 		static constexpr float NEAR_PLANE = 0.1f;
