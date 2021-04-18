@@ -13,6 +13,7 @@
 
 #include <engine/world/spin_component.hpp>
 #include <engine/world/follow_component.hpp>
+#include <engine/world/light.hpp>
 
 #include <engine/free_look.hpp>
 
@@ -90,13 +91,25 @@ namespace glare
 			"assets/shaders/shadow_mapping/3.2.2.point_shadows_depth.frag",
 			"assets/shaders/shadow_mapping/3.2.2.point_shadows_depth.geom"
 		);
+
+		/*
+		shadow_test = memory::allocate<graphics::Shader>
+		(
+			graphics.context,
+
+			"assets/shaders/shadow_mapping/3.2.2.point_shadows.vert",
+			"assets/shaders/shadow_mapping/3.2.2.point_shadows.frag"
+		);
+		*/
+
+		default_shader = geometry; // shadow_test
 	}
 
 	Glare::Glare(bool auto_execute)
 		: GraphicsApplication("Project Glare", 1600, 900, (app::WindowFlags::OpenGL | app::WindowFlags::Resizable), TARGET_UPDATE_RATE, false), // true
 		cfg(), // cfg(std::make_shared<engine::Config>()),
 		shaders(graphics),
-		resource_manager(graphics.context, shaders.geometry), // shaders.forward
+		resource_manager(graphics.context, shaders.default_shader), // shaders.forward
 		world(cfg, resource_manager, TARGET_UPDATE_RATE)
 	{
 		using namespace graphics;
@@ -259,8 +272,8 @@ namespace glare
 
 		//auto stage = load_model(path);
 
-		//auto stage = world.load("assets/maps/test01");
-		auto stage = world.load("assets/maps/collision_test");
+		auto stage = world.load("assets/maps/test01");
+		//auto stage = world.load("assets/maps/collision_test");
 
 		auto player = world.get_player(1);
 
@@ -370,9 +383,6 @@ namespace glare
 
 		auto camera_transform = world.get_transform(camera);
 
-		//auto [viewport, window_size] = update_viewport();
-		auto [viewport, window_size] = update_viewport(camera);
-
 		// Forward rendering:
 		/*
 		{
@@ -406,8 +416,15 @@ namespace glare
 		{
 			// Shadow-map pass:
 			{
-				world.render_shadows(*graphics.canvas, *shaders.geometry);
+				shadow_maps.clear();
+				shadow_light_positions.clear();
+				shadow_light_far_planes.clear();
+
+				world.render_shadows(*graphics.canvas, *shaders.shadow_depth, &shadow_maps, &shadow_light_positions, &shadow_light_far_planes);
 			}
+
+			//auto [viewport, window_size] = update_viewport();
+			auto [viewport, window_size] = update_viewport(camera);
 
 			// Geometry pass:
 			{
@@ -422,7 +439,24 @@ namespace glare
 
 					graphics.context->use(shader, [&, this]()
 					{
-						world.render(*graphics.canvas, viewport, false, true);
+						world.render(*graphics.canvas, viewport, false, true, &shadow_maps, &shadow_light_positions, &shadow_light_far_planes);
+
+						/*
+						const auto n_maps = shadow_maps.size();
+
+						if (n_maps == 1)
+						{
+							world.render(*graphics.canvas, viewport, false, true, shadow_maps[0]);
+						}
+						else if (n_maps > 1)
+						{
+							world.render(*graphics.canvas, viewport, false, true, &shadow_maps);
+						}
+						else
+						{
+							world.render(*graphics.canvas, viewport, false, true, std::nullopt);
+						}
+						*/
 					});
 				});
 			}
@@ -488,9 +522,9 @@ namespace glare
 						shader["viewPos"] = camera_transform.get_position();
 
 						graphics.context->use(g_buffer.screen_quad, [&, this]()
-							{
-								graphics.context->draw();
-							});
+						{
+							graphics.context->draw();
+						});
 
 						graphics.context->copy_framebuffer(g_buffer.framebuffer, viewport, viewport, BufferType::Depth);
 					});
@@ -510,10 +544,30 @@ namespace glare
 					{
 						switch (this->g_buffer.display_mode)
 						{
-						case GBufferDisplayMode::Normal:
-							return g_buffer.normal;
-						case GBufferDisplayMode::AlbedoSpecular:
-							return g_buffer.albedo_specular;
+							case GBufferDisplayMode::Normal:
+								return g_buffer.normal;
+							case GBufferDisplayMode::AlbedoSpecular:
+								return g_buffer.albedo_specular;
+
+							/*
+							case GBufferDisplayMode::ShadowMap:
+								auto light = world.get_by_name("shadow_test");
+
+								if (light != engine::null)
+								{
+									auto& registry = world.get_registry();
+									auto* shadows = registry.try_get<engine::PointLightShadows>(light);
+
+									if (shadows)
+									{
+										const auto& depth = *shadows->shadow_map.get_depth_map();
+
+										return depth;
+									}
+								}
+
+								break;
+							*/
 						}
 
 						return g_buffer.position;
@@ -524,17 +578,17 @@ namespace glare
 					//graphics.context->use(g_buffer.position, [&, this]() // normal // albedo_specular
 					//{
 					graphics.context->use(g_buffer.screen_quad, [&, this]()
-						{
-							graphics.context->draw();
-						});
+					{
+						graphics.context->draw();
+					});
 					//});
 				});
 			}
 
 			graphics.context->use(*shaders.light_box, [&, this]()
-				{
-					world.render(*graphics.canvas, viewport, false, true);
-				});
+			{
+				world.render(*graphics.canvas, viewport, false, true);
+			});
 		}
 		//*/
 
@@ -626,6 +680,23 @@ namespace glare
 			}
 
 			//engine::SimpleFollowComponent::update(world);
+
+			break;
+		}
+
+		case SDLK_h:
+		{
+			static int cubemap_face = 0;
+
+			auto& registry = world.get_registry();
+
+			auto light = world.get_by_name("shadow_test");
+			//auto& shadows = registry.get<engine::PointLightShadows>(light);
+
+			auto lt = world.get_transform(light);
+			auto ct = world.get_transform(world.get_camera());
+
+			lt.set_position(ct.get_position());
 
 			break;
 		}

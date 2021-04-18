@@ -297,8 +297,11 @@ namespace graphics
 		IgnoreTextures  = (1 << 4),
 		IgnoreMaterials = (1 << 5),
 
-		Shadow = (Opaque|IgnoreShaders|IgnoreTextures|IgnoreMaterials), // Transparent
-		//Shadow          = (1 << 6),
+		// When rendering a scene normally, this disables receiving shadows.
+		IgnoreShadows   = (1 << 6),
+
+		Shadow          = (1 << 7) | (Opaque|IgnoreShaders|IgnoreTextures|IgnoreMaterials), // Transparent
+		//Shadow        = (1 << 7),
 
 		All = (Opaque | Transparent),
 	};
@@ -316,13 +319,30 @@ namespace graphics
 		Unknown,
 	};
 
-	using TextureArray = std::vector<ref<Texture>>;
-	using TextureGroup = std::variant<ref<Texture>, TextureArray>; // Used to represent a single texture object or vector of textures objects. (Represents a 'TextureClass')
+	using Vector = math::Vector;
+	using VectorArray = std::vector<Vector>;
+	using FloatArray = std::vector<float>;
+	using LightPositions = std::variant<Vector*, VectorArray*>; // const
+	using FloatValues = std::variant<float*, FloatArray*>;
+
+	using TextureArray    = std::vector<ref<Texture>>;
+	using TextureArrayRaw = std::vector<Texture*>;
+
+	using TextureGroup    = std::variant<ref<Texture>, TextureArray>; // Used to represent a single texture object or vector of textures objects. (Represents a 'TextureClass')
+	using TextureGroupRaw = std::variant<Texture*, TextureArrayRaw*>;
 
 	// Map of string-identifiers to 'TextureGroup' objects.
 	using TextureMap   = std::unordered_map<std::string, TextureGroup>; // string_view
 
-	using UniformData  = std::variant<bool, int, float, ContextHandle, math::Vector2D, math::Vector3D, math::Vector4D, math::Matrix2x2, math::Matrix3x3, math::Matrix4x4>;
+	using UniformData  = std::variant
+		<
+			bool, int, float, ContextHandle,
+			math::Vector2D, math::Vector3D, math::Vector4D,
+			math::Matrix2x2, math::Matrix3x3, math::Matrix4x4,
+			
+			graphics::VectorArray,
+			graphics::FloatArray
+		>;
 	using UniformMap   = std::map<std::string, UniformData, std::less<>>; // std::string_view // unordered_map
 
 	template <typename fn_type>

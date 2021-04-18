@@ -591,19 +591,25 @@ namespace graphics
 			}
 		public:
 			// OpenGL API:
-			static void bind_texture(GLenum gl_texture_id, Handle texture)
+			static void bind_texture(GLenum gl_texture_id, Handle texture, GLenum texture_type)
 			{
 				// TODO: Add support for non-2D textures:
 				glActiveTexture(gl_texture_id);
-				glBindTexture(GL_TEXTURE_2D, texture);
+				glBindTexture(texture_type, texture); // GL_TEXTURE_2D
 			}
 
 			static void unbind_texture(GLenum gl_texture_id)
 			{
-				bind_texture(gl_texture_id, NoHandle);
+				// TODO: Test whether we actually need to do both 'GL_TEXTURE_2D' & 'GL_TEXTURE_CUBE_MAP', or one is sufficient.
+				glActiveTexture(gl_texture_id);
+				glBindTexture(GL_TEXTURE_2D, NoHandle);
+				glBindTexture(GL_TEXTURE_CUBE_MAP, NoHandle);
+
+				//bind_texture(gl_texture_id, NoHandle, GL_TEXTURE_2D);
+				//bind_texture(gl_texture_id, NoHandle, GL_TEXTURE_CUBE_MAP);
 			}
 
-			GLenum push_texture(Handle texture)
+			GLenum push_texture(Handle texture, GLenum texture_type)
 			{
 				///ASSERT(gl_texture_id < MAX_TEXTURE_INDEX);
 
@@ -614,7 +620,7 @@ namespace graphics
 					return GL_NONE;
 				}
 
-				bind_texture(gl_texture_id, texture);
+				bind_texture(gl_texture_id, texture, texture_type);
 
 				texture_stack[gl_texture_id_to_index(gl_texture_id)] = texture;
 
@@ -924,6 +930,42 @@ namespace graphics
 		return true;
 	}
 
+	bool Context::set_uniform(Shader& shader, std::string_view name, const graphics::VectorArray& values)
+	{
+		auto& driver = get_driver(*this);
+
+		auto uniform = driver.get_uniform(shader, name);
+
+		if (uniform == Driver::InvalidUniform)
+		{
+			return false;
+		}
+
+		const auto* data_ptr = reinterpret_cast<const GLfloat*>(values.data());
+
+		glUniform3fv(uniform, values.size(), data_ptr);
+
+		return true;
+	}
+
+	bool Context::set_uniform(Shader& shader, std::string_view name, const graphics::FloatArray& values)
+	{
+		auto& driver = get_driver(*this);
+
+		auto uniform = driver.get_uniform(shader, name);
+
+		if (uniform == Driver::InvalidUniform)
+		{
+			return false;
+		}
+
+		const auto* data_ptr = reinterpret_cast<const GLfloat*>(values.data());
+
+		glUniform1fv(uniform, values.size(), data_ptr);
+
+		return true;
+	}
+
 	bool Context::set_uniform(Shader& shader, std::string_view name, const math::Matrix2x2& value)
 	{
 		auto& driver = get_driver(*this);
@@ -1101,7 +1143,9 @@ namespace graphics
 			return state->pop_texture();
 		}
 
-		driver.push_texture(texture.handle);
+		auto texture_type = Driver::get_texture_type(texture.type);
+
+		driver.push_texture(texture.handle, texture_type);
 		state->push_texture(texture);
 		
 		return prev_texture;

@@ -12,6 +12,8 @@
 #include <string_view>
 #include <filesystem>
 #include <utility>
+#include <variant>
+#include <optional>
 
 #include "entity.hpp"
 #include "camera.hpp"
@@ -117,14 +119,54 @@ namespace engine
 
 			// Renders the scene using the last bound camera. If no camera has been bound/assinged, then this routine will return 'false'.
 			// Returns 'false' if an essential rendering component is missing.
-			bool render(graphics::Canvas& canvas, const graphics::Viewport& viewport, bool multi_pass=false, bool use_active_shader=false, graphics::CanvasDrawMode additional_draw_modes=graphics::CanvasDrawMode::None, bool _combine_view_proj_matrices=false); // (graphics::CanvasDrawMode::IgnoreShaders)
+			bool render
+			(
+				graphics::Canvas& canvas,
+				const graphics::Viewport& viewport,
+				bool multi_pass=false,
+				bool use_active_shader=false,
+				std::optional<graphics::TextureGroupRaw> shadow_maps=std::nullopt,
+				std::optional<graphics::LightPositions> shadow_light_positions=std::nullopt,
+				std::optional<graphics::FloatValues> shadow_far_planes=std::nullopt,
+				graphics::CanvasDrawMode additional_draw_modes=graphics::CanvasDrawMode::None, // (graphics::CanvasDrawMode::IgnoreShaders)
+				bool _combine_view_proj_matrices=false
+			);
 
 			// Renders the scene using the camera specified.
 			// Returns 'false' if an essential rendering component is missing. (e.g. 'camera')
-			bool render(graphics::Canvas& canvas, const graphics::Viewport& viewport, Entity camera, bool multi_pass=false, bool use_active_shader=false, graphics::CanvasDrawMode additional_draw_modes=graphics::CanvasDrawMode::None, bool _combine_view_proj_matrices=false);
+			bool render
+			(
+				graphics::Canvas& canvas,
+				const graphics::Viewport& viewport,
+				Entity camera,
+				bool multi_pass=false,
+				bool use_active_shader=false,
+				std::optional<graphics::TextureGroupRaw> shadow_maps=std::nullopt,
+				std::optional<graphics::LightPositions> shadow_light_positions=std::nullopt,
+				std::optional<graphics::FloatValues> shadow_far_planes=std::nullopt,
+				graphics::CanvasDrawMode additional_draw_modes=graphics::CanvasDrawMode::None,
+				bool _combine_view_proj_matrices=false
+			);
 
 			// Renders the scene multiple times for each shadow-enabled light.
-			bool render_shadows(graphics::Canvas& canvas, graphics::Shader& shader);
+			bool render_shadows
+			(
+				graphics::Canvas& canvas,
+				graphics::Shader& shader,
+				graphics::TextureArrayRaw* shadow_maps_out=nullptr,
+				graphics::VectorArray* light_positions_out=nullptr,
+				graphics::FloatArray* shadow_far_planes_out=nullptr
+			);
+
+			bool render_shadows
+			(
+				graphics::Canvas& canvas,
+				graphics::Shader& shader,
+				Entity camera,
+				graphics::TextureArrayRaw* shadow_maps_out=nullptr,
+				graphics::VectorArray* light_positions_out=nullptr,
+				graphics::FloatArray* shadow_far_planes_out=nullptr
+			);
 
 			//void on_child_removed(const Event_ChildRemoved& e);
 
@@ -172,7 +214,24 @@ namespace engine
 			void on_entity_destroyed(const OnEntityDestroyed& destruct);
 		private:
 			// Renders models with the given draw-mode.
-			void draw_models(graphics::CanvasDrawMode draw_mode, graphics::Canvas& canvas, const math::Matrix* projection_matrix=nullptr, const math::Matrix* view_matrix=nullptr, bool use_active_shader=false, bool combine_matrices=false); // graphics::Shader& shader
+			void draw_models
+			(
+				graphics::CanvasDrawMode draw_mode,
+				graphics::Canvas& canvas,
+				// graphics::Shader& shader,
+				
+				const math::Matrix* projection_matrix=nullptr,
+				const math::Matrix* view_matrix=nullptr,
+				const math::Vector* camera_position=nullptr,
+				
+				bool use_active_shader=false,
+				
+				std::optional<graphics::TextureGroupRaw> shadow_maps=std::nullopt,
+				std::optional<graphics::LightPositions> shadow_light_positions=std::nullopt,
+				std::optional<graphics::FloatValues> shadow_far_planes=std::nullopt,
+
+				bool combine_matrices=false
+			);
 	};
 
 	using Scene = World;

@@ -59,25 +59,6 @@ namespace graphics
 		context->clear(red, green, blue, alpha);
 	}
 
-	void Canvas::bind_textures(const TextureArray& textures, const std::string& name)
-	{
-		auto idx = 0;
-
-		if (textures.size() == 1)
-		{
-			bind_texture(*textures[0], name);
-
-			return;
-		}
-
-		for (auto& t : textures)
-		{
-			bind_texture(*t, name + "[" + std::to_string(idx) + "]");
-
-			idx++;
-		}
-	}
-
 	void Canvas::bind_texture(const Texture& texture, const std::string& name)
 	{
 		context->bind(texture, name);
@@ -100,13 +81,26 @@ namespace graphics
 		return ctx.set_uniform(shader, Material::DIFFUSE_COLOR, color);
 	}
 	
-	void Canvas::draw(Model& model, const graphics::ColorRGBA& color, DrawMode draw_mode, bool auto_clear_textures) // const math::Matrix& model_matrix
+	void Canvas::draw
+	(
+		Model& model,
+		// const math::Matrix& model_matrix,
+
+		const graphics::ColorRGBA& color,
+		
+		DrawMode draw_mode,
+		
+		bool auto_clear_textures,
+		
+		std::optional<TextureGroupRaw> shadow_maps//,
+		//std::optional<graphics::LightPositions> shadow_light_positions
+	)
 	{
 		auto& ctx = get_context();
 		auto& state = ctx.get_state();
 		auto& shader = (*state.shader);
 
-		// TODO: Add additional outer-loop for available shaders.
+		shader["shadows_enabled"] = !(draw_mode & DrawMode::IgnoreShadows);
 		
 		for (auto& mesh_descriptor : model.get_meshes())
 		{
@@ -158,6 +152,26 @@ namespace graphics
 					else if (util::peek_value<TextureArray>(_data, [&](const TextureArray& textures)
 					{
 						bind_textures(textures, texture_name);
+					}))
+					{}
+				}
+
+				if (shadow_maps.has_value())
+				{
+					const auto& shadow_maps_v = *shadow_maps;
+					static const std::string texture_name = "depth_map"; // constexpr
+
+					// TODO: Implement as visit:
+					if (util::peek_value<Texture*>(shadow_maps_v, [&](const Texture* texture)
+					{
+						ASSERT(texture);
+						bind_texture(*texture, texture_name);
+					}))
+					{}
+					else if (util::peek_value<TextureArrayRaw*>(shadow_maps_v, [&](const TextureArrayRaw* textures)
+					{
+						ASSERT(textures);
+						bind_textures(*textures, texture_name);
 					}))
 					{}
 				}

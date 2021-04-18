@@ -48,7 +48,7 @@ namespace engine
 
 	void attach_shadows(World& world, Entity light, const math::vec2i& resolution)
 	{
-		CameraParameters perspective_cfg = CameraParameters(90.0f, 1.0f, 300.0f, 0.0, CameraProjection::Perspective);
+		CameraParameters perspective_cfg = CameraParameters(90.0f, 1.0f, 1000.0f, 0.0, CameraProjection::Perspective);
 
 		attach_shadows(world, light, resolution, perspective_cfg);
 	}

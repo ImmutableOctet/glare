@@ -232,7 +232,7 @@ namespace engine
 
 	Entity Stage::CreateLight(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
 	{
-		auto debug_mode = util::get_value(data, "debug", false);
+		auto debug_mode = util::get_value(data, "debug", false); // true
 		auto light = create_light(world, {}, util::get_color(data, "color"), LightComponent::resolve_light_mode(util::get_value<std::string>(data, "mode", "directional")), parent, debug_mode);
 
 		auto shadows_enabled = util::get_value(data, "shadows", false);

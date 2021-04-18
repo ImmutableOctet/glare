@@ -290,6 +290,9 @@ namespace graphics
 			bool set_uniform(Shader& shader, std::string_view name, const math::Vector3D& value);
 			bool set_uniform(Shader& shader, std::string_view name, const math::Vector4D& value);
 
+			bool set_uniform(Shader& shader, std::string_view name, const graphics::VectorArray& values);
+			bool set_uniform(Shader& shader, std::string_view name, const graphics::FloatArray& values);
+
 			bool set_uniform(Shader& shader, std::string_view name, const math::Matrix2x2& value);
 			bool set_uniform(Shader& shader, std::string_view name, const math::Matrix3x3& value);
 			bool set_uniform(Shader& shader, std::string_view name, const math::Matrix4x4& value);

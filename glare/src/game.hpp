@@ -26,6 +26,7 @@ namespace glare
 				Position,
 				Normal,
 				AlbedoSpecular,
+				//ShadowMap,
 
 				Modes,
 			};
@@ -42,6 +43,7 @@ namespace glare
 
 				//GBufferDisplayMode display_mode = GBufferDisplayMode::AlbedoSpecular;
 				GBufferDisplayMode display_mode = GBufferDisplayMode::None;
+				//GBufferDisplayMode display_mode = GBufferDisplayMode::ShadowMap;
 
 			} g_buffer;
 
@@ -56,12 +58,19 @@ namespace glare
 				ref<graphics::Shader> framebuffer_dbg;
 				ref<graphics::Shader> light_box;
 				ref<graphics::Shader> shadow_depth;
+				//ref<graphics::Shader> shadow_test;
+
+				ref<graphics::Shader> default_shader;
 			} shaders;
 
 			static constexpr auto NR_LIGHTS = 32; // 128; // 16;
 			static constexpr Application::UpdateRate TARGET_UPDATE_RATE = 60;
 
 			graphics::Texture test_texture;
+
+			graphics::TextureArrayRaw shadow_maps;
+			graphics::VectorArray shadow_light_positions; // std::vector<math::Vector>
+			graphics::FloatArray shadow_light_far_planes; // std::vector<float>
 
 			//std::vector<ref<graphics::Shader>> shaders;
 

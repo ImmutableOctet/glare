@@ -29,6 +29,7 @@ namespace graphics
 	class Context;
 	class Model;
 	class Shader;
+	class Texture;
 
 	class Canvas
 	{
@@ -48,8 +49,34 @@ namespace graphics
 			void flip(app::Window& wnd);
 			void clear(float red, float green, float blue, float alpha);
 
-			void bind_textures(const TextureArray& textures, const std::string& name);
 			void bind_texture(const Texture& texture, const std::string& name);
+
+			template <typename TextureArrayType>
+			inline void bind_textures(const TextureArrayType& textures, const std::string& name)
+			{
+				auto n_textures = textures.size();
+
+				if (n_textures == 0)
+				{
+					return;
+				}
+
+				if (n_textures == 1)
+				{
+					bind_texture(*(textures[0]), name);
+
+					return;
+				}
+				
+				auto idx = 0;
+
+				for (const auto& t : textures)
+				{
+					bind_texture(*t, name + "[" + std::to_string(idx) + "]");
+
+					idx++;
+				}
+			}
 
 			// Retrieves the currently bound 'Shader' object.
 			Shader& get_shader();
@@ -98,7 +125,18 @@ namespace graphics
 				return true; // status
 			}
 
-			void draw(Model& model, const graphics::ColorRGBA& color={1.0f, 1.0f, 1.0f, 1.0f}, DrawMode draw_mode=DrawMode::All, bool auto_clear_textures=false); // const math::Matrix& model_matrix
+			void draw
+			(
+				Model& model,
+
+				const graphics::ColorRGBA& color={1.0f, 1.0f, 1.0f, 1.0f},
+				DrawMode draw_mode=DrawMode::All,
+				
+				bool auto_clear_textures=false,
+
+				std::optional<TextureGroupRaw> shadow_maps=std::nullopt//,
+				//std::optional<graphics::LightPositions> shadow_light_positions=std::nullopt
+			); // const math::Matrix& model_matrix
 		private:
 			// Returns 'true' if the final diffuse is acceptable.
 			// 'has_diffuse_out' is set based on whether 'uniforms' has a valid diffuse-color.
