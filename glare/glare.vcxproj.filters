@@ -338,6 +338,12 @@
     <ClInclude Include="src\graphics\shadow_map.hpp">
       <Filter>graphics\graphics</Filter>
     </ClInclude>
+    <ClInclude Include="src\graphics\world_render_state.hpp">
+      <Filter>graphics\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\gbuffer.hpp">
+      <Filter>graphics\graphics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\tests\model_test\shaders\8.1.deferred_light_box.fs">
@@ -406,14 +412,20 @@
     <None Include="assets\shaders\forward_test.frag">
       <Filter>shaders</Filter>
     </None>
-    <None Include="assets\shaders\shadow_mapping\3.2.2.point_shadows_depth.frag">
-      <Filter>shaders\shadow_mapping</Filter>
+    <None Include="assets\shaders\shadow_mapping\point_shadows_depth.frag">
+      <Filter>shaders\shadow_mapping\point</Filter>
     </None>
-    <None Include="assets\shaders\shadow_mapping\3.2.2.point_shadows_depth.geom">
-      <Filter>shaders\shadow_mapping</Filter>
+    <None Include="assets\shaders\shadow_mapping\point_shadows_depth.geom">
+      <Filter>shaders\shadow_mapping\point</Filter>
     </None>
-    <None Include="assets\shaders\shadow_mapping\3.2.2.point_shadows_depth.vert">
-      <Filter>shaders\shadow_mapping</Filter>
+    <None Include="assets\shaders\shadow_mapping\point_shadows_depth.vert">
+      <Filter>shaders\shadow_mapping\point</Filter>
+    </None>
+    <None Include="assets\shaders\shadow_mapping\directional_shadows_depth.frag">
+      <Filter>shaders\shadow_mapping\directional</Filter>
+    </None>
+    <None Include="assets\shaders\shadow_mapping\directional_shadows_depth.vert">
+      <Filter>shaders\shadow_mapping\directional</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -500,6 +512,12 @@
     </Filter>
     <Filter Include="shaders\shadow_mapping">
       <UniqueIdentifier>{454375aa-b93b-4b8f-8f48-5f9a48257587}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\shadow_mapping\point">
+      <UniqueIdentifier>{31c22125-31c7-45f9-82f6-fedf202e9e02}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\shadow_mapping\directional">
+      <UniqueIdentifier>{799c067e-77a1-4eb7-ae2f-ffecf86d00af}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

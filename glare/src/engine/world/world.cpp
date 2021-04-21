@@ -23,6 +23,7 @@
 
 #include <graphics/canvas.hpp>
 #include <graphics/shader.hpp>
+#include <graphics/world_render_state.hpp>
 
 #include <engine/collision.hpp>
 #include <engine/resource_manager.hpp>
@@ -167,47 +168,10 @@ namespace engine
 	(
 		graphics::Canvas& canvas,
 		const graphics::Viewport& viewport,
-		bool multi_pass,
-		bool use_active_shader,
-
-		std::optional<graphics::TextureGroupRaw> shadow_maps,
-		std::optional<graphics::LightPositions> shadow_light_positions,
-		std::optional<graphics::FloatValues> shadow_far_planes,
-
-		graphics::CanvasDrawMode additional_draw_modes,
-		bool _combine_view_proj_matrices
-	)
-	{
-		return render
-		(
-			canvas,
-			viewport,
-			this->camera,
-			multi_pass,
-			use_active_shader,
-
-			shadow_maps,
-			shadow_light_positions,
-			shadow_far_planes,
-
-			additional_draw_modes,
-
-			_combine_view_proj_matrices
-		);
-	}
-
-	bool World::render
-	(
-		graphics::Canvas& canvas,
-		const graphics::Viewport& viewport,
 		Entity camera,
 		bool multi_pass,
 		bool use_active_shader,
-
-		std::optional<graphics::TextureGroupRaw> shadow_maps,
-		std::optional<graphics::LightPositions> shadow_light_positions,
-		std::optional<graphics::FloatValues> shadow_far_planes,
-
+		const WorldRenderState& render_state,
 		graphics::CanvasDrawMode additional_draw_modes,
 
 		bool _combine_view_proj_matrices
@@ -257,7 +221,10 @@ namespace engine
 				float hw = (width / 2.0f);
 				float hh = (height / 2.0f);
 
-				projection = glm::ortho(-hw, hw, hh, -hh, camera_params.near_plane, camera_params.far_plane);
+				//projection = glm::ortho(-hw, hw, hh, -hh, camera_params.near_plane, camera_params.far_plane);
+				projection = glm::ortho(-hw, hw, -hh, hh, camera_params.near_plane, camera_params.far_plane);
+				//camera_matrix = glm::inverse(camera_transform.get_matrix());
+				//camera_matrix = glm::inverse(camera_matrix);
 
 				break;
 			}
@@ -269,23 +236,28 @@ namespace engine
 
 		if (multi_pass)
 		{
-			draw_models((graphics::CanvasDrawMode::Opaque | additional_draw_modes), canvas, &projection, &camera_matrix, &camera_position, use_active_shader, shadow_maps, shadow_light_positions, shadow_far_planes, _combine_view_proj_matrices);
-			draw_models((graphics::CanvasDrawMode::Transparent | additional_draw_modes), canvas, &projection, &camera_matrix, &camera_position, use_active_shader, shadow_maps, shadow_light_positions, shadow_far_planes, _combine_view_proj_matrices);
+			draw_models((graphics::CanvasDrawMode::Opaque | additional_draw_modes), canvas, &projection, &camera_matrix, &camera_position, &properties.ambient_light, use_active_shader, render_state, _combine_view_proj_matrices);
+			draw_models((graphics::CanvasDrawMode::Transparent | additional_draw_modes), canvas, &projection, &camera_matrix, &camera_position, &properties.ambient_light, use_active_shader, render_state, _combine_view_proj_matrices);
 		}
 		else
 		{
-			draw_models((graphics::Canvas::DrawMode::All | additional_draw_modes), canvas, &projection, &camera_matrix, &camera_position, use_active_shader, shadow_maps, shadow_light_positions, shadow_far_planes, _combine_view_proj_matrices);
+			draw_models((graphics::Canvas::DrawMode::All | additional_draw_modes), canvas, &projection, &camera_matrix, &camera_position, &properties.ambient_light, use_active_shader, render_state, _combine_view_proj_matrices);
 		}
 
 		return true;
 	}
 
-	bool World::render_shadows(graphics::Canvas& canvas, graphics::Shader& shader, graphics::TextureArrayRaw* shadow_maps_out, graphics::VectorArray* light_positions_out, graphics::FloatArray* shadow_far_planes_out)
-	{
-		return render_shadows(canvas, shader, this->camera, shadow_maps_out, light_positions_out, shadow_far_planes_out);
-	}
+	bool World::render_point_shadows
+	(
+		graphics::Canvas& canvas,
+		graphics::Shader& shader,
 
-	bool World::render_shadows(graphics::Canvas& canvas, graphics::Shader& shader, Entity camera, graphics::TextureArrayRaw* shadow_maps_out, graphics::VectorArray* light_positions_out, graphics::FloatArray* shadow_far_planes_out)
+		Entity camera,
+
+		graphics::TextureArrayRaw* shadow_maps_out,
+		graphics::VectorArray* light_positions_out,
+		graphics::FloatArray* shadow_far_planes_out
+	)
 	{
 		auto& ctx = canvas.get_context();
 
@@ -308,17 +280,17 @@ namespace engine
 					const auto& tforms = shadows.transforms;
 
 					for (std::size_t i = 0; i < tforms.size(); ++i) // auto
-						shader["shadowMatrices[" + std::to_string(i) + "]"] = tforms.transforms[i];
+						shader["cube_matrices[" + std::to_string(i) + "]"] = tforms.transforms[i];
 
 					auto far_plane = shadows.shadow_perspective.far_plane;
 
 					shader["far_plane"] = far_plane;
-					shader["lightPos"] = light_position;
+					shader["light_position"] = light_position;
 
 					draw_models
 					(
 						(graphics::Canvas::DrawMode::Shadow), // graphics::Canvas::DrawMode::Opaque
-						canvas, {}, {}, {},
+						canvas, {}, {}, {}, {}
 						true
 					);
 
@@ -340,7 +312,91 @@ namespace engine
 			});
 		});
 
-		//render(canvas, shadow_viewport);
+		return true;
+	}
+
+	bool World::render_directional_shadows
+	(
+		graphics::Canvas& canvas,
+		graphics::Shader& shader,
+		
+		Entity camera,
+		
+		graphics::TextureArrayRaw* shadow_maps_out,
+		graphics::VectorArray* light_positions_out,
+		graphics::MatrixArray* light_matrices_out
+	)
+	{
+		auto& ctx = canvas.get_context();
+
+		ctx.use(shader, [&, this]()
+		{
+			registry.view<LightComponent, DirectionLightShadows>().each([&](auto entity, LightComponent& light_component, DirectionLightShadows& shadows)
+			{
+				auto viewport = shadows.shadow_map.get_viewport();
+				auto& framebuffer = *(shadows.shadow_map.get_framebuffer());
+				const auto& depth_texture = *(shadows.shadow_map.get_depth_map());
+
+				auto light_tform = get_transform(entity);
+				auto light_position = light_tform.get_position();
+
+				//auto light_space_matrix = glm::ortho(-2048.0f, 2048.0f, -2048.0f, 2048.0f, 1.0f, 4000.0f) * glm::lookAt(light_position, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+
+				const auto& light_space_matrix = shadows.transforms;
+				
+				/*
+				auto camera_transform = get_transform(camera);
+
+				const auto& light_space_matrix
+					= camera_transform.get_camera_matrix();
+					//= camera_transform.get_inverse_matrix();
+				*/
+
+				//std::cout << light_position << std::endl;
+
+				shader["light_space_matrix"] = light_space_matrix;
+
+				ctx.set_viewport(viewport);
+
+				ctx.use(framebuffer, [&, this]()
+				{
+					ctx.clear(graphics::BufferType::Depth);
+
+					//ctx.use(depth_texture, [&, this]
+					{
+						/*
+						auto far_plane = shadows.shadow_perspective.far_plane;
+
+						shader["far_plane"] = far_plane;
+
+						shader["light_position"] = light_position;
+						*/
+
+						draw_models
+						(
+							(graphics::Canvas::DrawMode::Shadow), // graphics::Canvas::DrawMode::Opaque
+							canvas, {}, {}, {}, {},
+							true
+						);
+					}//);
+				});
+
+				if (shadow_maps_out)
+				{
+					shadow_maps_out->push_back(&depth_texture);
+				}
+
+				if (light_positions_out)
+				{
+					light_positions_out->push_back(light_position);
+				}
+
+				if (light_matrices_out)
+				{
+					light_matrices_out->push_back(light_space_matrix);
+				}
+			});
+		});
 
 		return true;
 	}
@@ -354,12 +410,11 @@ namespace engine
 		const math::Matrix* projection_matrix,
 		const math::Matrix* view_matrix,
 		const math::Vector* camera_position,
+		const graphics::ColorRGB* ambient_light,
 		
 		bool use_active_shader,
 		
-		std::optional<graphics::TextureGroupRaw> shadow_maps,
-		std::optional<graphics::LightPositions> shadow_light_positions,
-		std::optional<graphics::FloatValues> shadow_far_planes,
+		const WorldRenderState& render_state,
 
 		bool combine_matrices
 	)
@@ -385,52 +440,106 @@ namespace engine
 
 			if (camera_position)
 			{
-				// TODO: Rename uniform.
-				shader["viewPos"] = camera_position;
+				shader["view_position"] = *camera_position;
 			}
 
-			if (shadow_light_positions.has_value())
+			if (ambient_light)
 			{
-				const auto& light_pos_v = *shadow_light_positions;
+				shader["ambient_light"] = *ambient_light;
+			}
+
+			// Point shadows:
+			const auto& point_shadow_lp = render_state.point_shadows.light_positions;
+
+			if (point_shadow_lp.has_value())
+			{
+				const auto& light_pos_v = *point_shadow_lp;
 
 				// TODO: Implement as visit:
 				if (util::peek_value<graphics::Vector*>(light_pos_v, [&](const graphics::Vector* vec)
 				{
 					ASSERT(vec);
 					
-					shader["shadow_light_position"] = *vec;
+					shader["point_shadow_light_position"] = *vec;
 				}))
 				{}
 				else if (util::peek_value<graphics::VectorArray*>(light_pos_v, [&](const graphics::VectorArray* vec)
 				{
 					ASSERT(vec);
 
-					shader["shadow_light_position"] = *vec;
+					shader["point_shadow_light_position"] = *vec;
 				}))
 				{}
 			}
 
-			if (shadow_far_planes.has_value())
+			const auto& point_shadow_fp = render_state.point_shadows.far_planes;
+
+			if (point_shadow_fp.has_value())
 			{
-				const auto& far_v = *shadow_far_planes;
+				const auto& far_v = *point_shadow_fp;
 
 				// TODO: Implement as visit:
 				if (util::peek_value<float*>(far_v, [&](const float* far_plane)
-					{
-						ASSERT(far_plane);
-
-						shader["shadow_far_plane"] = *far_plane;
-					}))
 				{
-				}
+					ASSERT(far_plane);
+
+					shader["point_shadow_far_plane"] = *far_plane;
+				}))
+				{}
 				else if (util::peek_value<graphics::FloatArray*>(far_v, [&](const graphics::FloatArray* far_plane)
-					{
-						ASSERT(far_plane);
-
-						shader["shadow_far_plane"] = *far_plane;
-					}))
 				{
-				}
+					ASSERT(far_plane);
+
+					shader["point_shadow_far_plane"] = *far_plane;
+				}))
+				{}
+			}
+
+			// Directional shadows:
+			const auto& directional_shadow_lp = render_state.directional_shadows.light_positions;
+
+			if (directional_shadow_lp.has_value())
+			{
+				const auto& light_pos_v = *directional_shadow_lp;
+
+				// TODO: Implement as visit:
+				if (util::peek_value<graphics::Vector*>(light_pos_v, [&](const graphics::Vector* vec)
+				{
+					ASSERT(vec);
+					
+					shader["directional_shadow_light_position"] = *vec;
+				}))
+				{}
+				else if (util::peek_value<graphics::VectorArray*>(light_pos_v, [&](const graphics::VectorArray* vec)
+				{
+					ASSERT(vec);
+
+					shader["directional_shadow_light_position"] = *vec;
+				}))
+				{}
+			}
+
+			const auto& directional_shadow_mat = render_state.directional_shadows.light_matrices;
+
+			if (directional_shadow_mat.has_value())
+			{
+				const auto& mat_v = *directional_shadow_mat;
+
+				// TODO: Implement as visit:
+				if (util::peek_value<graphics::Matrix*>(mat_v, [&](const graphics::Matrix* matrix)
+				{
+					ASSERT(matrix);
+
+					shader["directional_light_space_matrix"] = *matrix;
+				}))
+				{}
+				else if (util::peek_value<graphics::MatrixArray*>(mat_v, [&](const graphics::MatrixArray* matrices)
+				{
+					ASSERT(matrices);
+
+					shader["directional_light_space_matrix"] = *matrices;
+				}))
+				{}
 			}
 
 			bool _auto_clear_textures = false; // true;
@@ -475,7 +584,7 @@ namespace engine
 					model_draw_mode |= (graphics::CanvasDrawMode::IgnoreShadows);
 				}
 
-				canvas.draw(model, color, draw_mode, _auto_clear_textures, shadow_maps);
+				canvas.draw(model, color, draw_mode, _auto_clear_textures, render_state.dynamic_textures);
 			});
 		};
 
@@ -656,15 +765,9 @@ namespace engine
 	{
 		auto con = util::log::get_console();
 		auto entity = tform_change.entity;
-		
 
-		// TODO: Make this routine more generic for other cube-map entities.
-		auto* point_shadows = registry.try_get<PointLightShadows>(entity);
-
-		if (point_shadows)
-		{
-			attach_shadows(*this, entity); // *point_shadows
-		}
+		// Update shadow-maps for light entities.
+		update_shadows(*this, entity); // *point_shadows
 
 		// Debugging related:
 		/*

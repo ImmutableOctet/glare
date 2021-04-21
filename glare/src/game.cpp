@@ -83,13 +83,21 @@ namespace glare
 
 		light_box = forward;
 
-		shadow_depth = memory::allocate<graphics::Shader>
+		point_shadow_depth = memory::allocate<graphics::Shader>
 		(
 			graphics.context,
 
-			"assets/shaders/shadow_mapping/3.2.2.point_shadows_depth.vert",
-			"assets/shaders/shadow_mapping/3.2.2.point_shadows_depth.frag",
-			"assets/shaders/shadow_mapping/3.2.2.point_shadows_depth.geom"
+			"assets/shaders/shadow_mapping/point_shadows_depth.vert",
+			"assets/shaders/shadow_mapping/point_shadows_depth.frag",
+			"assets/shaders/shadow_mapping/point_shadows_depth.geom"
+		);
+
+		directional_shadow_depth = memory::allocate<graphics::Shader>
+		(
+			graphics.context,
+
+			"assets/shaders/shadow_mapping/directional_shadows_depth.vert",
+			"assets/shaders/shadow_mapping/directional_shadows_depth.frag"
 		);
 
 		/*
@@ -414,13 +422,46 @@ namespace glare
 
 		///*
 		{
-			// Shadow-map pass:
+			// Shadow pass (Point lights):
 			{
-				shadow_maps.clear();
-				shadow_light_positions.clear();
-				shadow_light_far_planes.clear();
+				auto& point_shadows = dynamic_texture_maps["shadow_cubemap"];
 
-				world.render_shadows(*graphics.canvas, *shaders.shadow_depth, &shadow_maps, &shadow_light_positions, &shadow_light_far_planes);
+				point_shadows.clear();
+
+				point_light_shadows.positions.clear();
+				point_light_shadows.far_planes.clear();
+
+				world.render_point_shadows
+				(
+					*graphics.canvas,
+					*shaders.point_shadow_depth,
+
+					&point_shadows,
+					
+					&point_light_shadows.positions,
+					&point_light_shadows.far_planes
+				);
+			}
+
+			// Shadow pass (directional lights):
+			{
+				auto& directional_shadows = dynamic_texture_maps["directional_shadow_map"];
+
+				directional_shadows.clear();
+
+				directional_light_shadows.positions.clear();
+				directional_light_shadows.matrices.clear();
+
+				world.render_directional_shadows
+				(
+					*graphics.canvas,
+					*shaders.directional_shadow_depth,
+					
+					&directional_shadows,
+
+					&directional_light_shadows.positions,
+					&directional_light_shadows.matrices
+				);
 			}
 
 			//auto [viewport, window_size] = update_viewport();
@@ -439,24 +480,30 @@ namespace glare
 
 					graphics.context->use(shader, [&, this]()
 					{
-						world.render(*graphics.canvas, viewport, false, true, &shadow_maps, &shadow_light_positions, &shadow_light_far_planes);
+						auto render_state = WorldRenderState
+						{
+							.dynamic_textures { &dynamic_texture_maps },
 
-						/*
-						const auto n_maps = shadow_maps.size();
+							.point_shadows
+							{
+								&point_light_shadows.positions,
+								&point_light_shadows.far_planes
+							},
 
-						if (n_maps == 1)
-						{
-							world.render(*graphics.canvas, viewport, false, true, shadow_maps[0]);
-						}
-						else if (n_maps > 1)
-						{
-							world.render(*graphics.canvas, viewport, false, true, &shadow_maps);
-						}
-						else
-						{
-							world.render(*graphics.canvas, viewport, false, true, std::nullopt);
-						}
-						*/
+							.directional_shadows
+							{
+								&directional_light_shadows.positions,
+								&directional_light_shadows.matrices
+							}
+						};
+
+						world.render
+						(
+							*graphics.canvas, viewport,
+							false, true,
+
+							render_state
+						);
 					});
 				});
 			}
@@ -486,40 +533,40 @@ namespace glare
 						unsigned int light_idx = 0;
 
 						registry.view<engine::LightComponent, engine::TransformComponent, engine::Relationship>().each([&](auto entity, const auto& light, auto& transform, const auto& relationship) // const auto&
+						{
+							auto light_transform = engine::Transform(registry, entity, relationship, transform);
+
+							auto uniform_prefix = ("lights[" + std::to_string(light_idx) + "].");
+
+							auto attr = [&](const std::string& attr_name, auto&& value) // std::string_view
 							{
-								auto light_transform = engine::Transform(registry, entity, relationship, transform);
+								shader[(uniform_prefix + attr_name)] = value;
+							};
 
-								auto uniform_prefix = ("lights[" + std::to_string(light_idx) + "].");
+							const auto& light_color = light.color;
 
-								auto attr = [&](const std::string& attr_name, auto&& value) // std::string_view
-								{
-									shader[(uniform_prefix + attr_name)] = value;
-								};
+							auto light_position = light_transform.get_position();
 
-								const auto& light_color = light.color;
+							//std::cout << light_position.x << ',' << light_position.y << ',' << light_position.z << '\n';
 
-								auto light_position = light_transform.get_position();
+							attr("Position", light_position);
+							attr("Color", light_color);
+							attr("Linear", linear); // light.linear
+							attr("Quadratic", quadratic); // light.linear
 
-								//std::cout << light_position.x << ',' << light_position.y << ',' << light_position.z << '\n';
+							///*
+							// then calculate radius of light volume/sphere
+							const float maxBrightness = std::fmaxf(std::fmaxf(light_color.r, light_color.g), light_color.b);
+							float radius = (-linear + std::sqrt(linear * linear - 4 * quadratic * (constant - (256.0f / 5.0f) * maxBrightness))) / (2.0f * quadratic);
 
-								attr("Position", light_position);
-								attr("Color", light_color);
-								attr("Linear", linear); // light.linear
-								attr("Quadratic", quadratic); // light.linear
+							//std::cout << "Radius: " << radius << '\n';
+							attr("Radius", radius);
+							//*/
 
-								///*
-								// then calculate radius of light volume/sphere
-								const float maxBrightness = std::fmaxf(std::fmaxf(light_color.r, light_color.g), light_color.b);
-								float radius = (-linear + std::sqrt(linear * linear - 4 * quadratic * (constant - (256.0f / 5.0f) * maxBrightness))) / (2.0f * quadratic);
+							light_idx++;
+						});
 
-								//std::cout << "Radius: " << radius << '\n';
-								attr("Radius", radius);
-								//*/
-
-								light_idx++;
-							});
-
-						shader["viewPos"] = camera_transform.get_position();
+						shader["view_position"] = camera_transform.get_position();
 
 						graphics.context->use(g_buffer.screen_quad, [&, this]()
 						{
@@ -549,14 +596,15 @@ namespace glare
 							case GBufferDisplayMode::AlbedoSpecular:
 								return g_buffer.albedo_specular;
 
-							/*
+							///*
 							case GBufferDisplayMode::ShadowMap:
+							{
 								auto light = world.get_by_name("shadow_test");
 
 								if (light != engine::null)
 								{
 									auto& registry = world.get_registry();
-									auto* shadows = registry.try_get<engine::PointLightShadows>(light);
+									auto* shadows = registry.try_get<engine::DirectionLightShadows>(light);
 
 									if (shadows)
 									{
@@ -567,7 +615,8 @@ namespace glare
 								}
 
 								break;
-							*/
+							}
+							//*/
 						}
 
 						return g_buffer.position;
@@ -686,8 +735,6 @@ namespace glare
 
 		case SDLK_h:
 		{
-			static int cubemap_face = 0;
-
 			auto& registry = world.get_registry();
 
 			auto light = world.get_by_name("shadow_test");
@@ -696,7 +743,8 @@ namespace glare
 			auto lt = world.get_transform(light);
 			auto ct = world.get_transform(world.get_camera());
 
-			lt.set_position(ct.get_position());
+			lt.set_position(ct.get_local_position());
+			lt.set_rotation(ct.get_rotation());
 
 			break;
 		}

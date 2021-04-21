@@ -253,6 +253,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\graphics\drivers\drivers.hpp" />
     <ClInclude Include="src\graphics\drivers\opengl\gl_driver.hpp" />
     <ClInclude Include="src\graphics\framebuffer.hpp" />
+    <ClInclude Include="src\graphics\gbuffer.hpp" />
     <ClInclude Include="src\graphics\graphics.hpp" />
     <ClInclude Include="src\graphics\material.hpp" />
     <ClInclude Include="src\graphics\mesh.hpp" />
@@ -266,6 +267,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\graphics\texture.hpp" />
     <ClInclude Include="src\graphics\types.hpp" />
     <ClInclude Include="src\graphics\vertex.hpp" />
+    <ClInclude Include="src\graphics\world_render_state.hpp" />
     <ClInclude Include="src\math\bullet.hpp" />
     <ClInclude Include="src\math\math.hpp" />
     <ClInclude Include="src\tests\signal_test\signal_test.hpp" />
@@ -296,9 +298,11 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <None Include="assets\shaders\forward.frag" />
     <None Include="assets\shaders\forward.vert" />
     <None Include="assets\shaders\forward_test.frag" />
-    <None Include="assets\shaders\shadow_mapping\3.2.2.point_shadows_depth.frag" />
-    <None Include="assets\shaders\shadow_mapping\3.2.2.point_shadows_depth.geom" />
-    <None Include="assets\shaders\shadow_mapping\3.2.2.point_shadows_depth.vert" />
+    <None Include="assets\shaders\shadow_mapping\directional_shadows_depth.frag" />
+    <None Include="assets\shaders\shadow_mapping\directional_shadows_depth.vert" />
+    <None Include="assets\shaders\shadow_mapping\point_shadows_depth.frag" />
+    <None Include="assets\shaders\shadow_mapping\point_shadows_depth.geom" />
+    <None Include="assets\shaders\shadow_mapping\point_shadows_depth.vert" />
     <None Include="assets\tests\model_test\shaders\8.1.deferred_light_box.fs">
       <DeploymentContent>false</DeploymentContent>
     </None>

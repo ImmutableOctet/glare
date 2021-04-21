@@ -2,11 +2,15 @@
 
 #include <engine/types.hpp>
 #include <engine/events/events.hpp>
+
 #include <graphics/types.hpp>
+#include <graphics/world_render_state.hpp>
 
 #include <app/delta_time.hpp>
 
 #include <math/math.hpp>
+
+#include <util/json.hpp>
 
 #include <vector>
 #include <string_view>
@@ -37,12 +41,16 @@ namespace graphics
 {
 	class Canvas;
 	class Shader;
+
+	//struct WorldRenderState;
 }
 
 namespace engine
 {
 	class ResourceManager;
 	class Config;
+
+	using WorldRenderState = graphics::WorldRenderState;
 
 	class World
 	{
@@ -69,6 +77,18 @@ namespace engine
 			Entity camera = null;
 		public:
 			std::vector<Entity> cameras;
+
+			struct _properties
+			{
+				graphics::ColorRGB ambient_light = { 0.8f, 0.8f, 0.8f };
+
+				_properties() = default;
+
+				inline _properties(const util::json& data) : _properties()
+				{
+					ambient_light = util::get_color_rgb(data, "ambient_light", ambient_light);
+				}
+			} properties;
 
 			World(Config& config, ResourceManager& resource_manager, UpdateRate update_rate);
 
@@ -119,18 +139,29 @@ namespace engine
 
 			// Renders the scene using the last bound camera. If no camera has been bound/assinged, then this routine will return 'false'.
 			// Returns 'false' if an essential rendering component is missing.
-			bool render
+			inline bool render
 			(
 				graphics::Canvas& canvas,
 				const graphics::Viewport& viewport,
 				bool multi_pass=false,
 				bool use_active_shader=false,
-				std::optional<graphics::TextureGroupRaw> shadow_maps=std::nullopt,
-				std::optional<graphics::LightPositions> shadow_light_positions=std::nullopt,
-				std::optional<graphics::FloatValues> shadow_far_planes=std::nullopt,
+				const WorldRenderState& render_state={},
 				graphics::CanvasDrawMode additional_draw_modes=graphics::CanvasDrawMode::None, // (graphics::CanvasDrawMode::IgnoreShaders)
 				bool _combine_view_proj_matrices=false
-			);
+			)
+			{
+				return render
+				(
+					canvas,
+					viewport,
+					this->camera,
+					multi_pass,
+					use_active_shader,
+					render_state,
+					additional_draw_modes,
+					_combine_view_proj_matrices
+				);
+			}
 
 			// Renders the scene using the camera specified.
 			// Returns 'false' if an essential rendering component is missing. (e.g. 'camera')
@@ -141,31 +172,83 @@ namespace engine
 				Entity camera,
 				bool multi_pass=false,
 				bool use_active_shader=false,
-				std::optional<graphics::TextureGroupRaw> shadow_maps=std::nullopt,
-				std::optional<graphics::LightPositions> shadow_light_positions=std::nullopt,
-				std::optional<graphics::FloatValues> shadow_far_planes=std::nullopt,
+				const WorldRenderState& render_state={},
 				graphics::CanvasDrawMode additional_draw_modes=graphics::CanvasDrawMode::None,
 				bool _combine_view_proj_matrices=false
 			);
 
-			// Renders the scene multiple times for each shadow-enabled light.
-			bool render_shadows
+			inline bool render_point_shadows
 			(
 				graphics::Canvas& canvas,
 				graphics::Shader& shader,
+
+				graphics::TextureArrayRaw* shadow_maps_out=nullptr,
+				graphics::VectorArray* light_positions_out=nullptr,
+				graphics::FloatArray* shadow_far_planes_out=nullptr
+			)
+			{
+				return render_point_shadows
+				(
+					canvas,
+					shader,
+					
+					this->camera,
+
+					shadow_maps_out,
+					light_positions_out,
+					shadow_far_planes_out
+				);
+			}
+
+			// Renders the scene multiple times for each shadow-enabled point-light.
+			bool render_point_shadows
+			(
+				graphics::Canvas& canvas,
+				graphics::Shader& shader,
+				
+				Entity camera,
+
 				graphics::TextureArrayRaw* shadow_maps_out=nullptr,
 				graphics::VectorArray* light_positions_out=nullptr,
 				graphics::FloatArray* shadow_far_planes_out=nullptr
 			);
 
-			bool render_shadows
+			inline bool render_directional_shadows
 			(
 				graphics::Canvas& canvas,
 				graphics::Shader& shader,
-				Entity camera,
+
 				graphics::TextureArrayRaw* shadow_maps_out=nullptr,
 				graphics::VectorArray* light_positions_out=nullptr,
-				graphics::FloatArray* shadow_far_planes_out=nullptr
+				graphics::MatrixArray* light_matrices_out=nullptr
+			)
+			{
+				return render_directional_shadows
+				(
+					canvas,
+					shader,
+					
+					this->camera,
+
+					shadow_maps_out,
+
+					light_positions_out,
+					light_matrices_out
+				);
+			}
+
+			// Renders the scene once for each shadow-enabled directional-light.
+			bool render_directional_shadows
+			(
+				graphics::Canvas& canvas,
+				graphics::Shader& shader,
+
+				Entity camera,
+
+				graphics::TextureArrayRaw* shadow_maps_out=nullptr,
+
+				graphics::VectorArray* light_positions_out=nullptr,
+				graphics::MatrixArray* light_matrices_out=nullptr
 			);
 
 			//void on_child_removed(const Event_ChildRemoved& e);
@@ -223,12 +306,11 @@ namespace engine
 				const math::Matrix* projection_matrix=nullptr,
 				const math::Matrix* view_matrix=nullptr,
 				const math::Vector* camera_position=nullptr,
+				const graphics::ColorRGB* ambient_light=nullptr,
 				
 				bool use_active_shader=false,
 				
-				std::optional<graphics::TextureGroupRaw> shadow_maps=std::nullopt,
-				std::optional<graphics::LightPositions> shadow_light_positions=std::nullopt,
-				std::optional<graphics::FloatValues> shadow_far_planes=std::nullopt,
+				const WorldRenderState& render_state={},
 
 				bool combine_matrices=false
 			);

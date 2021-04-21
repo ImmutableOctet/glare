@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <type_traits>
 #include <variant>
+#include <tuple>
 
 /*
 inline bool operator<(const std::string& a, const std::string_view& b) noexcept
@@ -320,29 +321,48 @@ namespace graphics
 	};
 
 	using Vector = math::Vector;
+	using Matrix = math::Matrix; // 4x4
 	using VectorArray = std::vector<Vector>;
+	using MatrixArray = std::vector<Matrix>;
 	using FloatArray = std::vector<float>;
-	using LightPositions = std::variant<Vector*, VectorArray*>; // const
 	using FloatValues = std::variant<float*, FloatArray*>;
 
+	using LightPositions = std::variant<Vector*, VectorArray*>; // const
+	using LightMatrices  = std::variant<Matrix*, MatrixArray*>;
+
 	using TextureArray    = std::vector<ref<Texture>>;
-	using TextureArrayRaw = std::vector<Texture*>;
+
+	// Names are owning views.
+	using NamedTextureArray = std::vector<std::tuple<std::string, ref<Texture>>>; // string_view
+
+	using TextureArrayRaw = std::vector<const Texture*>;
+
+	// Names are non-owning views.
+	//using NamedTextureArrayRaw = std::vector<std::tuple<std::string_view, const Texture*>>;
+	using NamedTextureArrayRaw = std::unordered_map<std::string, std::vector<const Texture*>>;
 
 	using TextureGroup    = std::variant<ref<Texture>, TextureArray>; // Used to represent a single texture object or vector of textures objects. (Represents a 'TextureClass')
-	using TextureGroupRaw = std::variant<Texture*, TextureArrayRaw*>;
+	//using NamedTextureGroup = std::tuple<std::string, TextureGroup>;
+
+	using TextureGroupRaw = std::variant<const Texture*, TextureArrayRaw*>;
+
+	//using NamedTextureGroupRaw = std::tuple<std::string, TextureGroup>;
+	using NamedTextureGroupRaw = std::variant<std::tuple<std::string_view, const Texture*>, const NamedTextureArrayRaw*>;
 
 	// Map of string-identifiers to 'TextureGroup' objects.
 	using TextureMap   = std::unordered_map<std::string, TextureGroup>; // string_view
 
 	using UniformData  = std::variant
-		<
-			bool, int, float, ContextHandle,
-			math::Vector2D, math::Vector3D, math::Vector4D,
-			math::Matrix2x2, math::Matrix3x3, math::Matrix4x4,
+	<
+		bool, int, float, ContextHandle,
+		math::Vector2D, math::Vector3D, math::Vector4D,
+		math::Matrix2x2, math::Matrix3x3, math::Matrix4x4,
 			
-			graphics::VectorArray,
-			graphics::FloatArray
-		>;
+		graphics::VectorArray,
+		graphics::MatrixArray,
+		graphics::FloatArray
+	>;
+
 	using UniformMap   = std::map<std::string, UniformData, std::less<>>; // std::string_view // unordered_map
 
 	template <typename fn_type>

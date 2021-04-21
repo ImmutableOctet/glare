@@ -10,7 +10,7 @@ namespace graphics
 		: depth_map(depth_map), framebuffer(framebuffer)
 	{}
 
-	ShadowMap::ShadowMap(pass_ref<graphics::Context>& context, int width, int height) :
+	ShadowMap::ShadowMap(pass_ref<graphics::Context>& context, int width, int height, TextureType texture_type) :
 		depth_map
 		(
 			std::make_shared<graphics::Texture>
@@ -18,7 +18,7 @@ namespace graphics
 				context,
 				width, height,
 				graphics::TextureFormat::Depth, graphics::ElementType::Float,
-				graphics::TextureFlags::Clamp, graphics::TextureType::CubeMap,
+				graphics::TextureFlags::Clamp, texture_type, // graphics::TextureType::CubeMap
 				graphics::ColorRGBA { 1.0, 1.0, 1.0, 1.0 }
 			)
 		),

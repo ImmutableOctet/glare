@@ -50,11 +50,13 @@ namespace engine
 		//auto dest_q = glm::quat_cast(dest_m);
 
 		auto dest_q = Transform::quat_orientation(target_transform.get_position(), transform.get_position());
+		//auto dest_q = Transform::quat_orientation(target_transform.get_local_position(), transform.get_local_position());
 		auto src_q = glm::quat_cast(transform.get_basis());
 
 		auto q = math::slerp(src_q, dest_q, (interpolation * delta));
 
 		transform.set_basis_q(q);
+		//transform.set_local_basis_q(q);
 
 		return q;
 	}

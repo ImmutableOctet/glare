@@ -11,7 +11,7 @@ namespace graphics
 	class ShadowMap
 	{
 		public:
-			ShadowMap(pass_ref<graphics::Context>& context, int width, int height);
+			ShadowMap(pass_ref<graphics::Context>& context, int width, int height, TextureType texture_type=TextureType::Texture2D);
 			ShadowMap(pass_ref<graphics::Texture> depth_map, pass_ref<graphics::FrameBuffer> framebuffer={});
 
 			ShadowMap(ShadowMap&&) noexcept = default;

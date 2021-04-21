@@ -948,6 +948,24 @@ namespace graphics
 		return true;
 	}
 
+	bool Context::set_uniform(Shader& shader, std::string_view name, const graphics::MatrixArray& values)
+	{
+		auto& driver = get_driver(*this);
+
+		auto uniform = driver.get_uniform(shader, name);
+
+		if (uniform == Driver::InvalidUniform)
+		{
+			return false;
+		}
+
+		const auto* data_ptr = reinterpret_cast<const GLfloat*>(values.data());
+
+		glUniformMatrix4fv(uniform, values.size(), GL_FALSE, data_ptr);
+
+		return true;
+	}
+
 	bool Context::set_uniform(Shader& shader, std::string_view name, const graphics::FloatArray& values)
 	{
 		auto& driver = get_driver(*this);

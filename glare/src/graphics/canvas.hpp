@@ -50,7 +50,17 @@ namespace graphics
 			void clear(float red, float green, float blue, float alpha);
 
 			void bind_texture(const Texture& texture, const std::string& name);
+			void bind_texture(const Texture& texture, const std::string_view& name);
 
+			inline void bind_texture(std::tuple<std::string_view, const Texture*> tdata)
+			{
+				const auto& name = std::get<0>(tdata);
+				const auto* texture = std::get<1>(tdata);
+
+				bind_texture(*texture, name);
+			}
+
+			// TODO: Optimize uniform assignment.
 			template <typename TextureArrayType>
 			inline void bind_textures(const TextureArrayType& textures, const std::string& name)
 			{
@@ -63,7 +73,11 @@ namespace graphics
 
 				if (n_textures == 1)
 				{
-					bind_texture(*(textures[0]), name);
+					const auto t_ptr = (textures[0]); // auto
+
+					ASSERT(t_ptr);
+
+					bind_texture(*t_ptr, name);
 
 					return;
 				}
@@ -72,9 +86,22 @@ namespace graphics
 
 				for (const auto& t : textures)
 				{
+					ASSERT(t);
+
 					bind_texture(*t, name + "[" + std::to_string(idx) + "]");
 
 					idx++;
+				}
+			}
+
+			inline void bind_textures(const NamedTextureArrayRaw& tdata)
+			{
+				for (auto kv : tdata)
+				{
+					const auto& name = kv.first;
+					const auto& textures = kv.second;
+
+					bind_textures(textures, name);
 				}
 			}
 
@@ -128,15 +155,15 @@ namespace graphics
 			void draw
 			(
 				Model& model,
+				// const math::Matrix& model_matrix,
 
 				const graphics::ColorRGBA& color={1.0f, 1.0f, 1.0f, 1.0f},
 				DrawMode draw_mode=DrawMode::All,
 				
 				bool auto_clear_textures=false,
 
-				std::optional<TextureGroupRaw> shadow_maps=std::nullopt//,
-				//std::optional<graphics::LightPositions> shadow_light_positions=std::nullopt
-			); // const math::Matrix& model_matrix
+				std::optional<NamedTextureGroupRaw> dynamic_textures=std::nullopt
+			);
 		private:
 			// Returns 'true' if the final diffuse is acceptable.
 			// 'has_diffuse_out' is set based on whether 'uniforms' has a valid diffuse-color.

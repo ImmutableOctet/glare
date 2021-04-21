@@ -64,6 +64,12 @@ namespace graphics
 		context->bind(texture, name);
 	}
 
+	void Canvas::bind_texture(const Texture& texture, const std::string_view& name)
+	{
+		// Currently constructs a 'std::string' due to 'Context' requiring it.
+		bind_texture(texture, std::string(name));
+	}
+
 	Shader& Canvas::get_shader()
 	{
 		auto& ctx = *context;
@@ -92,8 +98,7 @@ namespace graphics
 		
 		bool auto_clear_textures,
 		
-		std::optional<TextureGroupRaw> shadow_maps//,
-		//std::optional<graphics::LightPositions> shadow_light_positions
+		std::optional<NamedTextureGroupRaw> dynamic_textures
 	)
 	{
 		auto& ctx = get_context();
@@ -156,22 +161,25 @@ namespace graphics
 					{}
 				}
 
-				if (shadow_maps.has_value())
+				if (dynamic_textures.has_value())
 				{
-					const auto& shadow_maps_v = *shadow_maps;
-					static const std::string texture_name = "depth_map"; // constexpr
+					//static const std::string texture_name = "depth_map"; // constexpr
+					const auto& dynamic_textures_v = *dynamic_textures;
 
 					// TODO: Implement as visit:
-					if (util::peek_value<Texture*>(shadow_maps_v, [&](const Texture* texture)
+					if (util::peek_value<std::tuple<std::string_view, const Texture*>>(dynamic_textures_v, [&](const std::tuple<std::string_view, const Texture*>& tdata)
 					{
+						const auto& texture_name = std::get<0>(tdata);
+						const auto* texture = std::get<1>(tdata);
+
 						ASSERT(texture);
-						bind_texture(*texture, texture_name);
+						bind_texture(*texture, texture_name); // bind_texture(tdata);
 					}))
 					{}
-					else if (util::peek_value<TextureArrayRaw*>(shadow_maps_v, [&](const TextureArrayRaw* textures)
+					else if (util::peek_value<const NamedTextureArrayRaw*>(dynamic_textures_v, [&](const NamedTextureArrayRaw* tdata)
 					{
-						ASSERT(textures);
-						bind_textures(*textures, texture_name);
+						ASSERT(tdata);
+						bind_textures(*tdata);
 					}))
 					{}
 				}

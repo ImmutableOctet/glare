@@ -61,6 +61,8 @@ namespace engine
 
 		registry.emplace<NameComponent>(stage, util::get_value<std::string>(data, "title", util::get_value<std::string>(data, "name", "Unknown Stage")));
 
+		world.properties = {data};
+
 		// Players:
 		dbg->info("Loading players...");
 
@@ -70,10 +72,10 @@ namespace engine
 		{
 			auto& registry = world.get_registry();
 
-			auto player_tform = get_transform_data(dbg, player_cfg);
-			auto player_char  = get_character(util::get_value<std::string>(player_cfg, "character", "default"));
-			auto player_name  = util::get_value<std::string>(player_cfg, "name", DEFAULT_PLAYER_NAME);
-			auto player_idx   = util::get_value<PlayerIndex>(player_cfg, "index", player_idx_counter);
+			auto player_tform  = get_transform_data(dbg, player_cfg);
+			auto player_char   = get_character(util::get_value<std::string>(player_cfg, "character", "default"));
+			auto player_name   = util::get_value<std::string>(player_cfg, "name", DEFAULT_PLAYER_NAME);
+			auto player_idx    = util::get_value<PlayerIndex>(player_cfg, "index", player_idx_counter);
 			auto player_parent = stage; // null;
 
 			auto player = create_player(world, player_tform, player_char, player_name, player_parent, player_idx);

@@ -26,7 +26,7 @@ namespace glare
 				Position,
 				Normal,
 				AlbedoSpecular,
-				//ShadowMap,
+				ShadowMap,
 
 				Modes,
 			};
@@ -41,8 +41,8 @@ namespace glare
 
 				graphics::Mesh screen_quad;
 
-				//GBufferDisplayMode display_mode = GBufferDisplayMode::AlbedoSpecular;
-				GBufferDisplayMode display_mode = GBufferDisplayMode::None;
+				GBufferDisplayMode display_mode = GBufferDisplayMode::AlbedoSpecular;
+				//GBufferDisplayMode display_mode = GBufferDisplayMode::None;
 				//GBufferDisplayMode display_mode = GBufferDisplayMode::ShadowMap;
 
 			} g_buffer;
@@ -57,7 +57,8 @@ namespace glare
 				ref<graphics::Shader> lighting_pass;
 				ref<graphics::Shader> framebuffer_dbg;
 				ref<graphics::Shader> light_box;
-				ref<graphics::Shader> shadow_depth;
+				ref<graphics::Shader> point_shadow_depth;
+				ref<graphics::Shader> directional_shadow_depth;
 				//ref<graphics::Shader> shadow_test;
 
 				ref<graphics::Shader> default_shader;
@@ -68,9 +69,19 @@ namespace glare
 
 			graphics::Texture test_texture;
 
-			graphics::TextureArrayRaw shadow_maps;
-			graphics::VectorArray shadow_light_positions; // std::vector<math::Vector>
-			graphics::FloatArray shadow_light_far_planes; // std::vector<float>
+			graphics::NamedTextureArrayRaw dynamic_texture_maps;
+
+			struct
+			{
+				graphics::VectorArray positions; // std::vector<math::Vector>
+				graphics::FloatArray  far_planes; // std::vector<float>
+			} point_light_shadows;
+
+			struct
+			{
+				graphics::VectorArray positions; // std::vector<math::Vector>
+				graphics::MatrixArray matrices;
+			} directional_light_shadows;
 
 			//std::vector<ref<graphics::Shader>> shaders;
 
