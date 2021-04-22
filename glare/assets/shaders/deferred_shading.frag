@@ -26,7 +26,7 @@ uniform PointLight point_lights[point_lights_count];
 uniform vec3 view_position;
 
 //uniform float ambient_light = 0.8; // 0.1;
-uniform vec3 ambient_light = vec3(0.8, 0.8, 0.8);
+uniform vec3 ambient_light = vec3(0.1, 0.1, 0.1);
 
 //uniform float alpha = 1.0; // const
 //uniform bool specular_available = false;

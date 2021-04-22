@@ -389,13 +389,13 @@ namespace glare
 			};
 
 			// Geometry pass.
-			auto& gbuffer = render_geometry(this->world, viewport, this->gbuffer, render_state);
+			auto& gbuffer = render_geometry(world, viewport, this->gbuffer, render_state);
 
 			graphics.context->clear(0.0f, 0.0f, 0.0f, 1.0f, BufferType::Color | BufferType::Depth); // gfx
 			//graphics.context->clear(1.0f, 1.0f, 1.0f, 1.0f, BufferType::Color | BufferType::Depth); // gfx
 
 			// Lighting pass.
-			render_lighting(viewport, gbuffer, render_state);
+			render_lighting(world, viewport, gbuffer, render_state);
 
 			render_screen(viewport, gbuffer, gbuffer_display_mode);
 
@@ -432,13 +432,15 @@ namespace glare
 		return gbuffer;
 	}
 
-	graphics::GBuffer& Glare::render_lighting(const graphics::Viewport& viewport, graphics::GBuffer& gbuffer, const graphics::WorldRenderState& render_state)
+	graphics::GBuffer& Glare::render_lighting(engine::World& world, const graphics::Viewport& viewport, graphics::GBuffer& gbuffer, const graphics::WorldRenderState& render_state)
 	{
 		auto& shader = *shaders.lighting_pass;
 
 		graphics.context->use(shader, [&, this]()
 		{
 			graphics.context->clear_textures(true); // false
+
+			shader["ambient_light"] = world.properties.ambient_light;
 
 			auto gPosition = graphics.context->use(gbuffer.position, "g_position");
 			auto gNormal = graphics.context->use(gbuffer.normal, "g_normal");
