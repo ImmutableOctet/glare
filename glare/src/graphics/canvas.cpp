@@ -104,8 +104,6 @@ namespace graphics
 		auto& ctx = get_context();
 		auto& state = ctx.get_state();
 		auto& shader = (*state.shader);
-
-		shader["shadows_enabled"] = !(draw_mode & DrawMode::IgnoreShadows);
 		
 		for (auto& mesh_descriptor : model.get_meshes())
 		{
@@ -129,7 +127,9 @@ namespace graphics
 			bool material_has_textures = false;
 			bool specular_available = false;
 
-			if (!(draw_mode & DrawMode::IgnoreTextures))
+			bool ignore_textures = (draw_mode & DrawMode::IgnoreTextures);
+
+			if (!ignore_textures)
 			{
 				material_has_textures = mesh_descriptor.material.has_textures();
 				bool force_clear_textures = (auto_clear_textures || (!material_has_textures));
@@ -166,11 +166,22 @@ namespace graphics
 					//static const std::string texture_name = "depth_map"; // constexpr
 					const auto& dynamic_textures_v = *dynamic_textures;
 
+					bool shadows_enabled = !(draw_mode & DrawMode::IgnoreShadows);
+
 					// TODO: Implement as visit:
 					if (util::peek_value<std::tuple<std::string_view, const Texture*>>(dynamic_textures_v, [&](const std::tuple<std::string_view, const Texture*>& tdata)
 					{
 						const auto& texture_name = std::get<0>(tdata);
 						const auto* texture = std::get<1>(tdata);
+
+						if (!shadows_enabled)
+						{
+							if ((texture_name.find("shadow") != std::string::npos))
+							{
+								// Don't bind this texture.
+								return; // From lambda.
+							}
+						}
 
 						ASSERT(texture);
 						bind_texture(*texture, texture_name); // bind_texture(tdata);
@@ -181,7 +192,20 @@ namespace graphics
 						//ASSERT(tdata);
 						if (tdata)
 						{
-							bind_textures(*tdata);
+							bind_textures(*tdata, [shadows_enabled](const std::string& texture_name, const graphics::TextureArrayRaw& textures)
+							{
+								if (!shadows_enabled) // tolower(...)
+								{
+									if ((texture_name.find("shadow") != std::string::npos))
+									{
+										// Don't bind this texture.
+										return false;
+									}
+								}
+
+								// Bind this texture.
+								return true;
+							});
 						}
 					}))
 					{}
@@ -211,8 +235,11 @@ namespace graphics
 					return value;
 				});
 
-				shader["texture_diffuse_enabled"] = material_has_textures; // has_diffuse();
-				shader["specular_available"]      = specular_available;
+				if (!ignore_textures)
+				{
+					shader["texture_diffuse_enabled"] = material_has_textures; // has_diffuse();
+					shader["specular_available"] = specular_available;
+				}
 			}
 
 			for (auto& mesh : mesh_descriptor.meshes)

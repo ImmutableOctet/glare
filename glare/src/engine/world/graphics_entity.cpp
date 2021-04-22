@@ -30,7 +30,7 @@ namespace engine
 		auto& registry = world.get_registry();
 
 		registry.emplace_or_replace<ModelComponent>(entity, model, color);
-		registry.emplace_or_replace<RenderFlagsComponent>(entity);
+		//registry.emplace_or_replace<RenderFlagsComponent>(entity);
 
 		return entity;
 	}

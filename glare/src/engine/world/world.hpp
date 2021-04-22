@@ -305,8 +305,6 @@ namespace engine
 				
 				const math::Matrix* projection_matrix=nullptr,
 				const math::Matrix* view_matrix=nullptr,
-				const math::Vector* camera_position=nullptr,
-				const graphics::ColorRGB* ambient_light=nullptr,
 				
 				bool use_active_shader=false,
 				

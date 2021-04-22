@@ -12,20 +12,31 @@ namespace graphics
 
 		struct
 		{
-			std::optional<LightPositions> light_positions  = std::nullopt;
-			std::optional<FloatValues>    far_planes       = std::nullopt;
+			std::optional<LightPositions> light_positions;
+			std::optional<FloatValues>    far_planes;
+
+			bool enabled = false;
+
+			inline operator bool() const { return enabled; }
+			//inline operator bool() const { return (light_positions.has_value() || far_planes.has_value()); }
 		} point_shadows;
 
 		struct
 		{
-			std::optional<LightPositions> light_positions  = std::nullopt;
-			std::optional<LightMatrices>  light_matrices   = std::nullopt;
+			std::optional<LightPositions> light_positions;
+			std::optional<LightMatrices>  light_matrices;
+
+			bool enabled = false;
+
+			inline operator bool() const { return enabled; }
+			//inline operator bool() const { return (light_positions.has_value() || light_matrices.has_value()); }
 		} directional_shadows;
 
 		struct
 		{
 			// Position of camera/view being rendered.
-			const Vector* view_position = nullptr;
+			std::optional<Vector> view_position;
+			std::optional<graphics::ColorRGB> ambient_light;
 		} meta;
 	};
 }

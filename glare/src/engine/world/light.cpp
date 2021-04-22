@@ -37,6 +37,7 @@ namespace engine
 			auto& model = registry.get<ModelComponent>(light);
 
 			model.color = { color, 1.0f };
+			model.casts_shadow = false;
 		}
 		else
 		{
@@ -138,8 +139,8 @@ namespace engine
 					r = shadows->shadow_map.get_resolution();
 				}
 
-				auto width = r.x; // std::sqrtf(r.x); // 20.0f; // 200.0f;
-				auto height = r.y; // std::sqrtf(r.y);; // 20.0f; // 200.0f;
+				auto width = r.x/10; // std::sqrtf(r.x); // 20.0f; // 200.0f;
+				auto height = r.y/10; // std::sqrtf(r.y);; // 20.0f; // 200.0f;
 
 				auto hw = (width / 2.0f);
 				auto hh = (height / 2.0f);

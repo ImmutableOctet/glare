@@ -301,7 +301,8 @@ namespace graphics
 		// When rendering a scene normally, this disables receiving shadows.
 		IgnoreShadows   = (1 << 6),
 
-		Shadow          = (1 << 7) | (Opaque|IgnoreShaders|IgnoreTextures|IgnoreMaterials), // Transparent
+		_Shadow         = (1 << 7),
+		Shadow          = _Shadow | (Opaque|IgnoreShaders|IgnoreTextures|IgnoreMaterials), // Transparent
 		//Shadow        = (1 << 7),
 
 		All = (Opaque | Transparent),

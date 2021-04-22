@@ -112,7 +112,7 @@ namespace glare
 			void update(app::Milliseconds time) override;
 			void render() override;
 
-			graphics::NamedTextureArrayRaw& render_shadows(bool point_lights=true, bool directional_lights=true);
+			std::tuple<bool, bool> render_shadows(bool point_lights=true, bool directional_lights=true);
 			graphics::GBuffer& render_geometry(engine::World& world, const graphics::Viewport& viewport, graphics::GBuffer& gbuffer, graphics::WorldRenderState& render_state);
 			graphics::GBuffer& render_lighting(engine::World& world, const graphics::Viewport& viewport, graphics::GBuffer& gbuffer, const graphics::WorldRenderState& render_state);
 			graphics::GBuffer& render_screen(const graphics::Viewport& viewport, graphics::GBuffer& gbuffer, GBufferDisplayMode display_mode);

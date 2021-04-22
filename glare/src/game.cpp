@@ -361,7 +361,7 @@ namespace glare
 		///*
 		{
 			// Execute shadow-pass first.
-			render_shadows();
+			auto [point_shadows_enabled, directional_shadows_enabled] = render_shadows();
 
 			auto [viewport, window_size] = update_viewport(camera);
 
@@ -373,18 +373,22 @@ namespace glare
 				.point_shadows
 				{
 					&point_light_shadows.positions,
-					&point_light_shadows.far_planes
+					&point_light_shadows.far_planes,
+
+					point_shadows_enabled
 				},
 
 				.directional_shadows
 				{
 					&directional_light_shadows.positions,
-					&directional_light_shadows.matrices
+					&directional_light_shadows.matrices,
+
+					directional_shadows_enabled
 				},
 
 				.meta
 				{
-					&view_position
+					view_position
 				}
 			};
 
@@ -459,7 +463,7 @@ namespace glare
 			{
 				auto light_transform = engine::Transform(registry, entity, relationship, transform);
 
-				auto uniform_prefix = ("lights[" + std::to_string(light_idx) + "].");
+				auto uniform_prefix = ("point_lights[" + std::to_string(light_idx) + "].");
 
 				auto attr = [&](const std::string& attr_name, auto&& value) // std::string_view
 				{
@@ -472,10 +476,10 @@ namespace glare
 
 				//std::cout << light_position.x << ',' << light_position.y << ',' << light_position.z << '\n';
 
-				attr("Position", light_position);
-				attr("Color", light_color);
-				attr("Linear", linear); // light.linear
-				attr("Quadratic", quadratic); // light.linear
+				attr("position", light_position);
+				attr("color", light_color);
+				attr("linear", linear); // light.linear
+				attr("quadratic", quadratic); // light.linear
 
 				///*
 				// then calculate radius of light volume/sphere
@@ -483,7 +487,7 @@ namespace glare
 				float radius = (-linear + std::sqrt(linear * linear - 4 * quadratic * (constant - (256.0f / 5.0f) * maxBrightness))) / (2.0f * quadratic);
 
 				//std::cout << "Radius: " << radius << '\n';
-				attr("Radius", radius);
+				attr("radius", radius);
 				//*/
 
 				light_idx++;
@@ -646,6 +650,11 @@ namespace glare
 				std::cout << "Position: " << t.get_position() << '\n';
 				std::cout << "Rotation: " << math::degrees(t.get_rotation()) << '\n';
 				std::cout << "Scale: " << t.get_scale() << '\n';
+
+				auto& registry = world.get_registry();
+				auto& m = registry.get<engine::ModelComponent>(target_entity);
+
+				m.receives_shadow = false;
 			}
 
 			//engine::SimpleFollowComponent::update(world);
@@ -725,7 +734,7 @@ namespace glare
 		return { viewport, w_size };
 	}
 
-	graphics::NamedTextureArrayRaw& Glare::render_shadows(bool point_lights, bool directional_lights)
+	std::tuple<bool, bool> Glare::render_shadows(bool point_lights, bool directional_lights)
 	{
 		// Point-light shadows:
 		if (point_lights)
@@ -737,7 +746,7 @@ namespace glare
 			point_light_shadows.positions.clear();
 			point_light_shadows.far_planes.clear();
 
-			world.render_point_shadows
+			point_lights = world.render_point_shadows
 			(
 				*graphics.canvas,
 				*shaders.point_shadow_depth,
@@ -759,7 +768,7 @@ namespace glare
 			directional_light_shadows.positions.clear();
 			directional_light_shadows.matrices.clear();
 
-			world.render_directional_shadows
+			directional_lights = world.render_directional_shadows
 			(
 				*graphics.canvas,
 				*shaders.directional_shadow_depth,
@@ -771,7 +780,7 @@ namespace glare
 			);
 		}
 
-		return dynamic_texture_maps;
+		return { point_lights, directional_lights };
 	}
 
 	graphics::GBuffer& Glare::render_debug(const graphics::Viewport& viewport, graphics::GBuffer& gbuffer)

@@ -21,6 +21,7 @@ namespace engine
 	class World;
 	//class ResourceManager;
 
+	/*
 	enum class RenderFlags : std::uint32_t
 	{
 		None = 0,
@@ -41,6 +42,7 @@ namespace engine
 		inline bool is_visible() const { return !(flags & Flags::IsHidden); }
 		inline bool casts_shadow() const { return !(flags & Flags::CastsShadow); }
 	};
+	*/
 
 	// Entity with 3D Model component.
 	Entity create_model(World& world, pass_ref<graphics::Model> model, Entity parent=null, EntityType type=EntityType::Geometry);

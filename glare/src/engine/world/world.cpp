@@ -204,7 +204,20 @@ namespace engine
 			camera_matrix = camera_transform.get_camera_matrix();
 		}
 
-		auto camera_position = camera_transform.get_position();
+		if (render_state)
+		{
+			if (!render_state->meta.view_position.has_value())
+			{
+				auto camera_position = camera_transform.get_position();
+
+				render_state->meta.view_position = camera_position;
+			}
+
+			if (!render_state->meta.ambient_light.has_value())
+			{
+				render_state->meta.ambient_light = properties.ambient_light;
+			}
+		}
 
 		// TODO: Move this aspect-ratio update to an event triggered on window-resize.
 		///camera_params.aspect_ratio = window->horizontal_aspect_ratio();
@@ -236,12 +249,12 @@ namespace engine
 
 		if (multi_pass)
 		{
-			draw_models((graphics::CanvasDrawMode::Opaque | additional_draw_modes), canvas, &projection, &camera_matrix, &camera_position, &properties.ambient_light, use_active_shader, render_state, _combine_view_proj_matrices);
-			draw_models((graphics::CanvasDrawMode::Transparent | additional_draw_modes), canvas, &projection, &camera_matrix, &camera_position, &properties.ambient_light, use_active_shader, render_state, _combine_view_proj_matrices);
+			draw_models((graphics::CanvasDrawMode::Opaque | additional_draw_modes), canvas, &projection, &camera_matrix, use_active_shader, render_state, _combine_view_proj_matrices);
+			draw_models((graphics::CanvasDrawMode::Transparent | additional_draw_modes), canvas, &projection, &camera_matrix, use_active_shader, render_state, _combine_view_proj_matrices);
 		}
 		else
 		{
-			draw_models((graphics::Canvas::DrawMode::All | additional_draw_modes), canvas, &projection, &camera_matrix, &camera_position, &properties.ambient_light, use_active_shader, render_state, _combine_view_proj_matrices);
+			draw_models((graphics::Canvas::DrawMode::All | additional_draw_modes), canvas, &projection, &camera_matrix, use_active_shader, render_state, _combine_view_proj_matrices);
 		}
 
 		return true;
@@ -260,6 +273,8 @@ namespace engine
 	)
 	{
 		auto& ctx = canvas.get_context();
+
+		bool light_found = false;
 
 		ctx.use(shader, [&, this]()
 		{
@@ -290,9 +305,11 @@ namespace engine
 					draw_models
 					(
 						(graphics::Canvas::DrawMode::Shadow), // graphics::Canvas::DrawMode::Opaque
-						canvas, {}, {}, {}, {},
+						canvas, {}, {},
 						true
 					);
+
+					light_found = true;
 
 					if (shadow_maps_out)
 					{
@@ -312,7 +329,7 @@ namespace engine
 			});
 		});
 
-		return true;
+		return light_found;
 	}
 
 	bool World::render_directional_shadows
@@ -328,6 +345,8 @@ namespace engine
 	)
 	{
 		auto& ctx = canvas.get_context();
+
+		bool light_found = false;
 
 		ctx.use(shader, [&, this]()
 		{
@@ -375,11 +394,13 @@ namespace engine
 						draw_models
 						(
 							(graphics::Canvas::DrawMode::Shadow), // graphics::Canvas::DrawMode::Opaque
-							canvas, {}, {}, {}, {},
+							canvas, {}, {},
 							true
 						);
 					}//);
 				});
+
+				light_found = true;
 
 				if (shadow_maps_out)
 				{
@@ -398,7 +419,7 @@ namespace engine
 			});
 		});
 
-		return true;
+		return light_found;
 	}
 
 	void World::draw_models
@@ -409,8 +430,6 @@ namespace engine
 		
 		const math::Matrix* projection_matrix,
 		const math::Matrix* view_matrix,
-		const math::Vector* camera_position,
-		const graphics::ColorRGB* ambient_light,
 		
 		bool use_active_shader,
 		
@@ -438,18 +457,19 @@ namespace engine
 				}
 			}
 
-			if (camera_position)
-			{
-				shader["view_position"] = *camera_position;
-			}
-
-			if (ambient_light)
-			{
-				shader["ambient_light"] = *ambient_light;
-			}
 
 			if (render_state)
 			{
+				if (render_state->meta.view_position.has_value())
+				{
+					shader["view_position"] = *render_state->meta.view_position;
+				}
+
+				if (render_state->meta.ambient_light.has_value())
+				{
+					shader["ambient_light"] = *render_state->meta.ambient_light;
+				}
+
 				// Point shadows:
 				const auto& point_shadow_lp = render_state->point_shadows.light_positions;
 
@@ -582,12 +602,22 @@ namespace engine
 
 				auto model_draw_mode = draw_mode;
 
-				if (!model_component.receives_shadow)
+				if (model_component.receives_shadow)
+				{
+					// TODO: Refactor to N-textures.
+					shader["point_shadows_enabled"] = ((render_state) ? static_cast<bool>(render_state->point_shadows) : true);
+					shader["directional_shadows_enabled"] = ((render_state) ? static_cast<bool>(render_state->directional_shadows) : true);
+				}
+				else
 				{
 					model_draw_mode |= (graphics::CanvasDrawMode::IgnoreShadows);
+
+					// TODO: Refactor to N-textures as 0.
+					shader["point_shadows_enabled"] = false;
+					shader["directional_shadows_enabled"] = false;
 				}
 
-				canvas.draw(model, color, draw_mode, _auto_clear_textures, ((render_state) ? render_state->dynamic_textures : nullptr));
+				canvas.draw(model, color, model_draw_mode, _auto_clear_textures, ((render_state) ? render_state->dynamic_textures : nullptr));
 			});
 		};
 

@@ -96,12 +96,27 @@ namespace graphics
 
 			inline void bind_textures(const NamedTextureArrayRaw& tdata)
 			{
-				for (auto kv : tdata)
+				for (const auto& kv : tdata)
 				{
 					const auto& name = kv.first;
 					const auto& textures = kv.second;
 
 					bind_textures(textures, name);
+				}
+			}
+
+			template <typename pred>
+			inline void bind_textures(const NamedTextureArrayRaw& tdata, pred&& pred_fn)
+			{
+				for (const auto& kv : tdata)
+				{
+					const auto& name = kv.first;
+					const auto& textures = kv.second;
+
+					if (pred_fn(name, textures))
+					{
+						bind_textures(textures, name);
+					}
 				}
 			}
 
