@@ -12,8 +12,14 @@
 #include <graphics/mesh.hpp>
 #include <graphics/texture.hpp>
 #include <graphics/framebuffer.hpp>
+#include <graphics/gbuffer.hpp>
 
 #include <util/log.hpp>
+
+namespace graphics
+{
+	struct WorldRenderState;
+}
 
 namespace glare
 {
@@ -31,21 +37,11 @@ namespace glare
 				Modes,
 			};
 
-			struct
-			{
-				graphics::FrameBuffer framebuffer;
+			GBufferDisplayMode gbuffer_display_mode = GBufferDisplayMode::AlbedoSpecular;
+			//GBufferDisplayMode display_mode = GBufferDisplayMode::None;
+			//GBufferDisplayMode display_mode = GBufferDisplayMode::ShadowMap;
 
-				graphics::Texture position;
-				graphics::Texture normal;
-				graphics::Texture albedo_specular;
-
-				graphics::Mesh screen_quad;
-
-				GBufferDisplayMode display_mode = GBufferDisplayMode::AlbedoSpecular;
-				//GBufferDisplayMode display_mode = GBufferDisplayMode::None;
-				//GBufferDisplayMode display_mode = GBufferDisplayMode::ShadowMap;
-
-			} g_buffer;
+			graphics::GBuffer gbuffer;
 
 			struct init_shaders
 			{
@@ -53,10 +49,10 @@ namespace glare
 
 				ref<graphics::Shader> forward;
 				ref<graphics::Shader> forward_test;
-				ref<graphics::Shader> geometry;
+				ref<graphics::Shader> geometry_pass;
 				ref<graphics::Shader> lighting_pass;
 				ref<graphics::Shader> framebuffer_dbg;
-				ref<graphics::Shader> light_box;
+				ref<graphics::Shader> light_debug;
 				ref<graphics::Shader> point_shadow_depth;
 				ref<graphics::Shader> directional_shadow_depth;
 				//ref<graphics::Shader> shadow_test;
@@ -115,6 +111,12 @@ namespace glare
 
 			void update(app::Milliseconds time) override;
 			void render() override;
+
+			graphics::NamedTextureArrayRaw& render_shadows(bool point_lights=true, bool directional_lights=true);
+			graphics::GBuffer& render_geometry(engine::World& world, const graphics::Viewport& viewport, graphics::GBuffer& gbuffer, graphics::WorldRenderState& render_state);
+			graphics::GBuffer& render_lighting(const graphics::Viewport& viewport, graphics::GBuffer& gbuffer, const graphics::WorldRenderState& render_state);
+			graphics::GBuffer& render_screen(const graphics::Viewport& viewport, graphics::GBuffer& gbuffer, GBufferDisplayMode display_mode);
+			graphics::GBuffer& render_debug(const graphics::Viewport& viewport, graphics::GBuffer& gbuffer);
 
 			void on_keyup(const keyboard_event_t& event) override;
 			void on_keydown(const keyboard_event_t& event) override;

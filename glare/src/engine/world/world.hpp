@@ -145,7 +145,7 @@ namespace engine
 				const graphics::Viewport& viewport,
 				bool multi_pass=false,
 				bool use_active_shader=false,
-				const WorldRenderState& render_state={},
+				WorldRenderState* render_state=nullptr,
 				graphics::CanvasDrawMode additional_draw_modes=graphics::CanvasDrawMode::None, // (graphics::CanvasDrawMode::IgnoreShaders)
 				bool _combine_view_proj_matrices=false
 			)
@@ -172,7 +172,7 @@ namespace engine
 				Entity camera,
 				bool multi_pass=false,
 				bool use_active_shader=false,
-				const WorldRenderState& render_state={},
+				WorldRenderState* render_state=nullptr,
 				graphics::CanvasDrawMode additional_draw_modes=graphics::CanvasDrawMode::None,
 				bool _combine_view_proj_matrices=false
 			);
@@ -310,7 +310,7 @@ namespace engine
 				
 				bool use_active_shader=false,
 				
-				const WorldRenderState& render_state={},
+				WorldRenderState* render_state=nullptr,
 
 				bool combine_matrices=false
 			);

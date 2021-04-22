@@ -178,8 +178,11 @@ namespace graphics
 					{}
 					else if (util::peek_value<const NamedTextureArrayRaw*>(dynamic_textures_v, [&](const NamedTextureArrayRaw* tdata)
 					{
-						ASSERT(tdata);
-						bind_textures(*tdata);
+						//ASSERT(tdata);
+						if (tdata)
+						{
+							bind_textures(*tdata);
+						}
 					}))
 					{}
 				}

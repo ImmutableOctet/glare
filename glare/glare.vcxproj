@@ -293,8 +293,8 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <None Include="assets\shaders\deferred_shading.vert" />
     <None Include="assets\shaders\8.1.fbo_debug.frag" />
     <None Include="assets\shaders\8.1.fbo_debug.vert" />
-    <None Include="assets\shaders\g_buffer.frag" />
-    <None Include="assets\shaders\g_buffer.vert" />
+    <None Include="assets\shaders\gbuffer.frag" />
+    <None Include="assets\shaders\gbuffer.vert" />
     <None Include="assets\shaders\forward.frag" />
     <None Include="assets\shaders\forward.vert" />
     <None Include="assets\shaders\forward_test.frag" />
@@ -355,6 +355,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\graphics\cubemap_transform.cpp" />
     <ClCompile Include="src\graphics\drivers\opengl\context.cpp" />
     <ClCompile Include="src\graphics\framebuffer.cpp" />
+    <ClCompile Include="src\graphics\gbuffer.cpp" />
     <ClCompile Include="src\graphics\material.cpp" />
     <ClCompile Include="src\graphics\mesh.cpp" />
     <ClCompile Include="src\graphics\model.cpp" />

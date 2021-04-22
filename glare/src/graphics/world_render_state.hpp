@@ -21,5 +21,11 @@ namespace graphics
 			std::optional<LightPositions> light_positions  = std::nullopt;
 			std::optional<LightMatrices>  light_matrices   = std::nullopt;
 		} directional_shadows;
+
+		struct
+		{
+			// Position of camera/view being rendered.
+			const Vector* view_position = nullptr;
+		} meta;
 	};
 }

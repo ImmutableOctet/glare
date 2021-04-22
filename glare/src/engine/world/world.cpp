@@ -171,7 +171,7 @@ namespace engine
 		Entity camera,
 		bool multi_pass,
 		bool use_active_shader,
-		const WorldRenderState& render_state,
+		WorldRenderState* render_state,
 		graphics::CanvasDrawMode additional_draw_modes,
 
 		bool _combine_view_proj_matrices
@@ -290,7 +290,7 @@ namespace engine
 					draw_models
 					(
 						(graphics::Canvas::DrawMode::Shadow), // graphics::Canvas::DrawMode::Opaque
-						canvas, {}, {}, {}, {}
+						canvas, {}, {}, {}, {},
 						true
 					);
 
@@ -414,7 +414,7 @@ namespace engine
 		
 		bool use_active_shader,
 		
-		const WorldRenderState& render_state,
+		WorldRenderState* render_state,
 
 		bool combine_matrices
 	)
@@ -448,98 +448,101 @@ namespace engine
 				shader["ambient_light"] = *ambient_light;
 			}
 
-			// Point shadows:
-			const auto& point_shadow_lp = render_state.point_shadows.light_positions;
-
-			if (point_shadow_lp.has_value())
+			if (render_state)
 			{
-				const auto& light_pos_v = *point_shadow_lp;
+				// Point shadows:
+				const auto& point_shadow_lp = render_state->point_shadows.light_positions;
 
-				// TODO: Implement as visit:
-				if (util::peek_value<graphics::Vector*>(light_pos_v, [&](const graphics::Vector* vec)
+				if (point_shadow_lp.has_value())
 				{
-					ASSERT(vec);
+					const auto& light_pos_v = *point_shadow_lp;
+
+					// TODO: Implement as visit:
+					if (util::peek_value<graphics::Vector*>(light_pos_v, [&](const graphics::Vector* vec)
+					{
+						ASSERT(vec);
 					
-					shader["point_shadow_light_position"] = *vec;
-				}))
-				{}
-				else if (util::peek_value<graphics::VectorArray*>(light_pos_v, [&](const graphics::VectorArray* vec)
+						shader["point_shadow_light_position"] = *vec;
+					}))
+					{}
+					else if (util::peek_value<graphics::VectorArray*>(light_pos_v, [&](const graphics::VectorArray* vec)
+					{
+						ASSERT(vec);
+
+						shader["point_shadow_light_position"] = *vec;
+					}))
+					{}
+				}
+
+				const auto& point_shadow_fp = render_state->point_shadows.far_planes;
+
+				if (point_shadow_fp.has_value())
 				{
-					ASSERT(vec);
+					const auto& far_v = *point_shadow_fp;
 
-					shader["point_shadow_light_position"] = *vec;
-				}))
-				{}
-			}
+					// TODO: Implement as visit:
+					if (util::peek_value<float*>(far_v, [&](const float* far_plane)
+					{
+						ASSERT(far_plane);
 
-			const auto& point_shadow_fp = render_state.point_shadows.far_planes;
+						shader["point_shadow_far_plane"] = *far_plane;
+					}))
+					{}
+					else if (util::peek_value<graphics::FloatArray*>(far_v, [&](const graphics::FloatArray* far_plane)
+					{
+						ASSERT(far_plane);
 
-			if (point_shadow_fp.has_value())
-			{
-				const auto& far_v = *point_shadow_fp;
+						shader["point_shadow_far_plane"] = *far_plane;
+					}))
+					{}
+				}
 
-				// TODO: Implement as visit:
-				if (util::peek_value<float*>(far_v, [&](const float* far_plane)
+				// Directional shadows:
+				const auto& directional_shadow_lp = render_state->directional_shadows.light_positions;
+
+				if (directional_shadow_lp.has_value())
 				{
-					ASSERT(far_plane);
+					const auto& light_pos_v = *directional_shadow_lp;
 
-					shader["point_shadow_far_plane"] = *far_plane;
-				}))
-				{}
-				else if (util::peek_value<graphics::FloatArray*>(far_v, [&](const graphics::FloatArray* far_plane)
-				{
-					ASSERT(far_plane);
-
-					shader["point_shadow_far_plane"] = *far_plane;
-				}))
-				{}
-			}
-
-			// Directional shadows:
-			const auto& directional_shadow_lp = render_state.directional_shadows.light_positions;
-
-			if (directional_shadow_lp.has_value())
-			{
-				const auto& light_pos_v = *directional_shadow_lp;
-
-				// TODO: Implement as visit:
-				if (util::peek_value<graphics::Vector*>(light_pos_v, [&](const graphics::Vector* vec)
-				{
-					ASSERT(vec);
+					// TODO: Implement as visit:
+					if (util::peek_value<graphics::Vector*>(light_pos_v, [&](const graphics::Vector* vec)
+					{
+						ASSERT(vec);
 					
-					shader["directional_shadow_light_position"] = *vec;
-				}))
-				{}
-				else if (util::peek_value<graphics::VectorArray*>(light_pos_v, [&](const graphics::VectorArray* vec)
+						shader["directional_shadow_light_position"] = *vec;
+					}))
+					{}
+					else if (util::peek_value<graphics::VectorArray*>(light_pos_v, [&](const graphics::VectorArray* vec)
+					{
+						ASSERT(vec);
+
+						shader["directional_shadow_light_position"] = *vec;
+					}))
+					{}
+				}
+
+				const auto& directional_shadow_mat = render_state->directional_shadows.light_matrices;
+
+				if (directional_shadow_mat.has_value())
 				{
-					ASSERT(vec);
+					const auto& mat_v = *directional_shadow_mat;
 
-					shader["directional_shadow_light_position"] = *vec;
-				}))
-				{}
-			}
+					// TODO: Implement as visit:
+					if (util::peek_value<graphics::Matrix*>(mat_v, [&](const graphics::Matrix* matrix)
+					{
+						ASSERT(matrix);
 
-			const auto& directional_shadow_mat = render_state.directional_shadows.light_matrices;
+						shader["directional_light_space_matrix"] = *matrix;
+					}))
+					{}
+					else if (util::peek_value<graphics::MatrixArray*>(mat_v, [&](const graphics::MatrixArray* matrices)
+					{
+						ASSERT(matrices);
 
-			if (directional_shadow_mat.has_value())
-			{
-				const auto& mat_v = *directional_shadow_mat;
-
-				// TODO: Implement as visit:
-				if (util::peek_value<graphics::Matrix*>(mat_v, [&](const graphics::Matrix* matrix)
-				{
-					ASSERT(matrix);
-
-					shader["directional_light_space_matrix"] = *matrix;
-				}))
-				{}
-				else if (util::peek_value<graphics::MatrixArray*>(mat_v, [&](const graphics::MatrixArray* matrices)
-				{
-					ASSERT(matrices);
-
-					shader["directional_light_space_matrix"] = *matrices;
-				}))
-				{}
+						shader["directional_light_space_matrix"] = *matrices;
+					}))
+					{}
+				}
 			}
 
 			bool _auto_clear_textures = false; // true;
@@ -584,7 +587,7 @@ namespace engine
 					model_draw_mode |= (graphics::CanvasDrawMode::IgnoreShadows);
 				}
 
-				canvas.draw(model, color, draw_mode, _auto_clear_textures, render_state.dynamic_textures);
+				canvas.draw(model, color, draw_mode, _auto_clear_textures, ((render_state) ? render_state->dynamic_textures : nullptr));
 			});
 		};
 

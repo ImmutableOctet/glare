@@ -77,7 +77,7 @@ namespace util
 	template <typename UIDType>
 	inline graphics::ColorRGB get_color_rgb(const json& data, const UIDType& color_name, graphics::ColorRGB default_value = { 1.0f, 1.0f, 1.0f})
 	{
-		return (data.contains(color_name) ? to_color_rgb(data[color_name] : default_value);
+		return (data.contains(color_name) ? to_color_rgb(data[color_name]) : default_value);
 	}
 
 	inline math::TransformVectors get_transform(const json& data)

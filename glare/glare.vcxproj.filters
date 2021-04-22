@@ -397,10 +397,10 @@
     <None Include="assets\shaders\8.1.fbo_debug.vert">
       <Filter>shaders</Filter>
     </None>
-    <None Include="assets\shaders\g_buffer.frag">
+    <None Include="assets\shaders\gbuffer.frag">
       <Filter>shaders</Filter>
     </None>
-    <None Include="assets\shaders\g_buffer.vert">
+    <None Include="assets\shaders\gbuffer.vert">
       <Filter>shaders</Filter>
     </None>
     <None Include="assets\shaders\forward.frag">
@@ -682,6 +682,9 @@
       <Filter>graphics\graphics</Filter>
     </ClCompile>
     <ClCompile Include="src\graphics\shadow_map.cpp">
+      <Filter>graphics\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\gbuffer.cpp">
       <Filter>graphics\graphics</Filter>
     </ClCompile>
   </ItemGroup>

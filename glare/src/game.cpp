@@ -45,12 +45,12 @@ namespace glare
 			"assets/shaders/forward_test.frag"
 		);
 
-		geometry = memory::allocate<graphics::Shader>
+		geometry_pass = memory::allocate<graphics::Shader>
 		(
 			graphics.context,
 
-			"assets/shaders/g_buffer.vert",
-			"assets/shaders/g_buffer.frag"
+			"assets/shaders/gbuffer.vert",
+			"assets/shaders/gbuffer.frag"
 		);
 
 		lighting_pass = memory::allocate<graphics::Shader>
@@ -69,10 +69,10 @@ namespace glare
 			"assets/shaders/8.1.fbo_debug.frag"
 		);
 
-		//light_box = res.get_shader("assets/shaders/light_box.vert", "assets/shaders/light_box.frag");
+		//light_debug = res.get_shader("assets/shaders/light_box.vert", "assets/shaders/light_box.frag");
 
 		/*
-		light_box = memory::allocate<graphics::Shader>
+		light_debug = memory::allocate<graphics::Shader>
 		(
 			graphics.context,
 
@@ -81,7 +81,7 @@ namespace glare
 		);
 		*/
 
-		light_box = forward;
+		light_debug = forward;
 
 		point_shadow_depth = memory::allocate<graphics::Shader>
 		(
@@ -110,11 +110,12 @@ namespace glare
 		);
 		*/
 
-		default_shader = geometry; // shadow_test
+		default_shader = geometry_pass; // shadow_test
 	}
 
 	Glare::Glare(bool auto_execute)
 		: GraphicsApplication("Project Glare", 1600, 900, (app::WindowFlags::OpenGL | app::WindowFlags::Resizable), TARGET_UPDATE_RATE, false), // true
+		gbuffer(graphics.context, window->get_size()),
 		cfg(), // cfg(std::make_shared<engine::Config>()),
 		shaders(graphics),
 		resource_manager(graphics.context, shaders.default_shader), // shaders.forward
@@ -141,41 +142,6 @@ namespace glare
 		int screen_width, screen_height;
 
 		window->get_size(screen_width, screen_height);
-
-		g_buffer.screen_quad = Mesh::GenerateTexturedQuad(graphics.context);
-
-		const auto gBuffer_flags = TextureFlags::None;
-
-		//test_texture = Texture(graphics.context, "assets/tests/model_test/Bianco/T (1).png");
-
-		g_buffer.framebuffer = FrameBuffer(graphics.context);
-
-		auto& fb = g_buffer.framebuffer;
-
-		graphics.context->use(fb, [&, this]()
-		{
-			g_buffer.position = Texture(graphics.context, screen_width, screen_height, TextureFormat::RGB, ElementType::Half, gBuffer_flags); // Float
-			//auto _pos = graphics.context->use(g_buffer.position);
-			fb.attach(g_buffer.position);
-
-			g_buffer.normal = Texture(graphics.context, screen_width, screen_height, TextureFormat::RGB, ElementType::Half, gBuffer_flags); // Float
-			fb.attach(g_buffer.normal);
-
-			g_buffer.albedo_specular = Texture(graphics.context, screen_width, screen_height, TextureFormat::RGBA, ElementType::UByte, gBuffer_flags);
-			fb.attach(g_buffer.albedo_specular);
-
-			fb.link();
-
-			// TODO: Refactor
-			fb.attach(RenderBufferType::Depth, screen_width, screen_height);
-
-			//if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-			//	std::cout << "Framebuffer not complete!" << std::endl;
-		});
-
-		graphics.context->clear_textures(true);
-
-		//auto op = graphics.context->use(graphics.context->get_default_framebuffer());
 
 		input.get_mouse().lock();
 
@@ -229,7 +195,7 @@ namespace glare
 				(static_cast<float>(rand() % 100) / 100.0f) + 0.5f // between 0.5 and 1.0 // 1.0f
 			};
 
-			engine::create_light(world, (position + offset), color, engine::LightType::Point, engine::null, true, shaders.light_box);
+			engine::create_light(world, (position + offset), color, engine::LightType::Point, engine::null, true, shaders.light_debug);
 		}
 	}
 
@@ -390,258 +356,210 @@ namespace glare
 		}
 
 		auto camera_transform = world.get_transform(camera);
-
-		// Forward rendering:
-		/*
-		{
-			auto& shader = *shaders.forward;
-
-			graphics.context->use(shader, [&]()
-			{
-				//graphics.context->use(g_buffer.screen_quad, [&, this]()
-				//{
-				//	graphics.context->draw();
-				//});
-
-				world.render(*graphics.canvas, true);
-
-				//graphics.context->use(g_buffer.screen_quad, [&, this]()
-				//{
-				//	auto gAlbedoSpec = graphics.context->use(g_buffer.albedo_specular, "diffuse");
-				//
-				//	graphics.context->draw();
-				//});
-			});
-		}
-
-		gfx.flip(wnd);
-
-		return;
-
-		*/
+		auto view_position = camera_transform.get_position();
 
 		///*
 		{
-			// Shadow pass (Point lights):
-			{
-				auto& point_shadows = dynamic_texture_maps["shadow_cubemap"];
+			// Execute shadow-pass first.
+			render_shadows();
 
-				point_shadows.clear();
-
-				point_light_shadows.positions.clear();
-				point_light_shadows.far_planes.clear();
-
-				world.render_point_shadows
-				(
-					*graphics.canvas,
-					*shaders.point_shadow_depth,
-
-					&point_shadows,
-					
-					&point_light_shadows.positions,
-					&point_light_shadows.far_planes
-				);
-			}
-
-			// Shadow pass (directional lights):
-			{
-				auto& directional_shadows = dynamic_texture_maps["directional_shadow_map"];
-
-				directional_shadows.clear();
-
-				directional_light_shadows.positions.clear();
-				directional_light_shadows.matrices.clear();
-
-				world.render_directional_shadows
-				(
-					*graphics.canvas,
-					*shaders.directional_shadow_depth,
-					
-					&directional_shadows,
-
-					&directional_light_shadows.positions,
-					&directional_light_shadows.matrices
-				);
-			}
-
-			//auto [viewport, window_size] = update_viewport();
 			auto [viewport, window_size] = update_viewport(camera);
 
 			// Geometry pass:
+			auto render_state = WorldRenderState
 			{
-				auto& shader = *shaders.geometry;
+				.dynamic_textures { &dynamic_texture_maps },
 
-				//graphics.context->clear_textures(false); // true // <-- May not be needed.
-
-				graphics.context->use(g_buffer.framebuffer, [&, this]()
+				.point_shadows
 				{
-					graphics.context->clear(0.0f, 0.0f, 0.0f, 1.0f, (graphics::BufferType::Color | graphics::BufferType::Depth)); // gfx // 1.0f, 0.0f, 0.0f
-					//graphics.context->clear(1.0f, 1.0f, 1.0f, 1.0f, (graphics::BufferType::Color | graphics::BufferType::Depth)); // gfx // 1.0f, 0.0f, 0.0f
+					&point_light_shadows.positions,
+					&point_light_shadows.far_planes
+				},
 
-					graphics.context->use(shader, [&, this]()
-					{
-						auto render_state = WorldRenderState
-						{
-							.dynamic_textures { &dynamic_texture_maps },
+				.directional_shadows
+				{
+					&directional_light_shadows.positions,
+					&directional_light_shadows.matrices
+				},
 
-							.point_shadows
-							{
-								&point_light_shadows.positions,
-								&point_light_shadows.far_planes
-							},
+				.meta
+				{
+					&view_position
+				}
+			};
 
-							.directional_shadows
-							{
-								&directional_light_shadows.positions,
-								&directional_light_shadows.matrices
-							}
-						};
-
-						world.render
-						(
-							*graphics.canvas, viewport,
-							false, true,
-
-							render_state
-						);
-					});
-				});
-			}
+			// Geometry pass.
+			auto& gbuffer = render_geometry(this->world, viewport, this->gbuffer, render_state);
 
 			graphics.context->clear(0.0f, 0.0f, 0.0f, 1.0f, BufferType::Color | BufferType::Depth); // gfx
 			//graphics.context->clear(1.0f, 1.0f, 1.0f, 1.0f, BufferType::Color | BufferType::Depth); // gfx
 
-			// Lighting pass:
-			{
-				auto& shader = *shaders.lighting_pass;
+			// Lighting pass.
+			render_lighting(viewport, gbuffer, render_state);
 
-				graphics.context->use(shader, [&, this]()
-					{
-						graphics.context->clear_textures(true); // false
+			render_screen(viewport, gbuffer, gbuffer_display_mode);
 
-						auto gPosition = graphics.context->use(g_buffer.position, "g_position");
-						auto gNormal = graphics.context->use(g_buffer.normal, "g_normal");
-						auto gAlbedoSpec = graphics.context->use(g_buffer.albedo_specular, "g_albedo_specular");
-
-						auto& registry = world.get_registry();
-
-						// update attenuation parameters and calculate radius
-						const float constant = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
-						const float linear = 0.1f; // 0.000005f; // 0.7f; // 0.005f;
-						const float quadratic = 1.0f / 2000.0f; // 1.8f; // 0.0005f;
-
-						unsigned int light_idx = 0;
-
-						registry.view<engine::LightComponent, engine::TransformComponent, engine::Relationship>().each([&](auto entity, const auto& light, auto& transform, const auto& relationship) // const auto&
-						{
-							auto light_transform = engine::Transform(registry, entity, relationship, transform);
-
-							auto uniform_prefix = ("lights[" + std::to_string(light_idx) + "].");
-
-							auto attr = [&](const std::string& attr_name, auto&& value) // std::string_view
-							{
-								shader[(uniform_prefix + attr_name)] = value;
-							};
-
-							const auto& light_color = light.color;
-
-							auto light_position = light_transform.get_position();
-
-							//std::cout << light_position.x << ',' << light_position.y << ',' << light_position.z << '\n';
-
-							attr("Position", light_position);
-							attr("Color", light_color);
-							attr("Linear", linear); // light.linear
-							attr("Quadratic", quadratic); // light.linear
-
-							///*
-							// then calculate radius of light volume/sphere
-							const float maxBrightness = std::fmaxf(std::fmaxf(light_color.r, light_color.g), light_color.b);
-							float radius = (-linear + std::sqrt(linear * linear - 4 * quadratic * (constant - (256.0f / 5.0f) * maxBrightness))) / (2.0f * quadratic);
-
-							//std::cout << "Radius: " << radius << '\n';
-							attr("Radius", radius);
-							//*/
-
-							light_idx++;
-						});
-
-						shader["view_position"] = camera_transform.get_position();
-
-						graphics.context->use(g_buffer.screen_quad, [&, this]()
-						{
-							graphics.context->draw();
-						});
-
-						graphics.context->copy_framebuffer(g_buffer.framebuffer, viewport, viewport, BufferType::Depth);
-					});
-			}
-
-
-			// Framebuffer test.
-			if (g_buffer.display_mode != GBufferDisplayMode::None)
-			{
-				auto& shader = *shaders.framebuffer_dbg;
-
-				graphics.context->clear_textures(false); // true
-
-				graphics.context->use(shader, [&, this]()
-				{
-					auto get_texture = [&, this]() -> const Texture&
-					{
-						switch (this->g_buffer.display_mode)
-						{
-							case GBufferDisplayMode::Normal:
-								return g_buffer.normal;
-							case GBufferDisplayMode::AlbedoSpecular:
-								return g_buffer.albedo_specular;
-
-							///*
-							case GBufferDisplayMode::ShadowMap:
-							{
-								auto light = world.get_by_name("shadow_test");
-
-								if (light != engine::null)
-								{
-									auto& registry = world.get_registry();
-									auto* shadows = registry.try_get<engine::DirectionLightShadows>(light);
-
-									if (shadows)
-									{
-										const auto& depth = *shadows->shadow_map.get_depth_map();
-
-										return depth;
-									}
-								}
-
-								break;
-							}
-							//*/
-						}
-
-						return g_buffer.position;
-					};
-
-					auto fb_texture = graphics.context->use(get_texture()); // test_texture // g_buffer.normal
-
-					//graphics.context->use(g_buffer.position, [&, this]() // normal // albedo_specular
-					//{
-					graphics.context->use(g_buffer.screen_quad, [&, this]()
-					{
-						graphics.context->draw();
-					});
-					//});
-				});
-			}
-
-			graphics.context->use(*shaders.light_box, [&, this]()
-			{
-				world.render(*graphics.canvas, viewport, false, true);
-			});
+			render_debug(viewport, gbuffer);
 		}
 		//*/
 
 		gfx.flip(wnd);
+	}
+
+	graphics::GBuffer& Glare::render_geometry(engine::World& world, const graphics::Viewport& viewport, graphics::GBuffer& gbuffer, graphics::WorldRenderState& render_state)
+	{
+		auto& shader = *shaders.geometry_pass;
+
+		//graphics.context->clear_textures(false); // true // <-- May not be needed.
+
+		graphics.context->use(gbuffer.framebuffer, [&, this]()
+		{
+			graphics.context->clear(0.0f, 0.0f, 0.0f, 1.0f, (graphics::BufferType::Color | graphics::BufferType::Depth)); // gfx // 1.0f, 0.0f, 0.0f
+			//graphics.context->clear(1.0f, 1.0f, 1.0f, 1.0f, (graphics::BufferType::Color | graphics::BufferType::Depth)); // gfx // 1.0f, 0.0f, 0.0f
+
+			graphics.context->use(shader, [&, this]()
+			{
+				world.render
+				(
+					*graphics.canvas, viewport,
+					false, true,
+
+					&render_state
+				);
+			});
+		});
+
+		return gbuffer;
+	}
+
+	graphics::GBuffer& Glare::render_lighting(const graphics::Viewport& viewport, graphics::GBuffer& gbuffer, const graphics::WorldRenderState& render_state)
+	{
+		auto& shader = *shaders.lighting_pass;
+
+		graphics.context->use(shader, [&, this]()
+		{
+			graphics.context->clear_textures(true); // false
+
+			auto gPosition = graphics.context->use(gbuffer.position, "g_position");
+			auto gNormal = graphics.context->use(gbuffer.normal, "g_normal");
+			auto gAlbedoSpec = graphics.context->use(gbuffer.albedo_specular, "g_albedo_specular");
+
+			auto& registry = world.get_registry();
+
+			// update attenuation parameters and calculate radius
+			const float constant = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
+			const float linear = 0.1f; // 0.000005f; // 0.7f; // 0.005f;
+			const float quadratic = 1.0f / 2000.0f; // 1.8f; // 0.0005f;
+
+			unsigned int light_idx = 0;
+
+			registry.view<engine::LightComponent, engine::TransformComponent, engine::Relationship>().each([&](auto entity, const auto& light, auto& transform, const auto& relationship) // const auto&
+			{
+				auto light_transform = engine::Transform(registry, entity, relationship, transform);
+
+				auto uniform_prefix = ("lights[" + std::to_string(light_idx) + "].");
+
+				auto attr = [&](const std::string& attr_name, auto&& value) // std::string_view
+				{
+					shader[(uniform_prefix + attr_name)] = value;
+				};
+
+				const auto& light_color = light.color;
+
+				auto light_position = light_transform.get_position();
+
+				//std::cout << light_position.x << ',' << light_position.y << ',' << light_position.z << '\n';
+
+				attr("Position", light_position);
+				attr("Color", light_color);
+				attr("Linear", linear); // light.linear
+				attr("Quadratic", quadratic); // light.linear
+
+				///*
+				// then calculate radius of light volume/sphere
+				const float maxBrightness = std::fmaxf(std::fmaxf(light_color.r, light_color.g), light_color.b);
+				float radius = (-linear + std::sqrt(linear * linear - 4 * quadratic * (constant - (256.0f / 5.0f) * maxBrightness))) / (2.0f * quadratic);
+
+				//std::cout << "Radius: " << radius << '\n';
+				attr("Radius", radius);
+				//*/
+
+				light_idx++;
+			});
+
+			shader["view_position"] = *render_state.meta.view_position;
+
+			graphics.context->use(gbuffer.screen_quad, [&, this]()
+			{
+				graphics.context->draw();
+			});
+
+			graphics.context->copy_framebuffer(gbuffer.framebuffer, viewport, viewport, graphics::BufferType::Depth);
+		});
+
+		return gbuffer;
+	}
+
+	graphics::GBuffer& Glare::render_screen(const graphics::Viewport& viewport, graphics::GBuffer& gbuffer, GBufferDisplayMode display_mode)
+	{
+		if (display_mode == GBufferDisplayMode::None)
+		{
+			return gbuffer;
+		}
+
+		auto& shader = *shaders.framebuffer_dbg;
+
+		graphics.context->clear_textures(false); // true
+
+		graphics.context->use(shader, [&, this]()
+		{
+			auto get_texture = [&, this]() -> const graphics::Texture&
+			{
+				switch (display_mode)
+				{
+					case GBufferDisplayMode::Normal:
+						return gbuffer.normal;
+					case GBufferDisplayMode::AlbedoSpecular:
+						return gbuffer.albedo_specular;
+
+					///*
+					case GBufferDisplayMode::ShadowMap:
+					{
+						auto light = world.get_by_name("shadow_test");
+
+						if (light != engine::null)
+						{
+							auto& registry = world.get_registry();
+							auto* shadows = registry.try_get<engine::DirectionLightShadows>(light);
+
+							if (shadows)
+							{
+								const auto& depth = *shadows->shadow_map.get_depth_map();
+
+								return depth;
+							}
+						}
+
+						break;
+					}
+					//*/
+				}
+
+				return gbuffer.position;
+			};
+
+			auto fb_texture = graphics.context->use(get_texture()); // test_texture // gbuffer.normal
+
+			//graphics.context->use(gbuffer.position, [&, this]() // normal // albedo_specular
+			//{
+			graphics.context->use(gbuffer.screen_quad, [&, this]()
+			{
+				graphics.context->draw();
+			});
+			//});
+		});
+
+		return gbuffer;
 	}
 
 	void Glare::on_keyup(const keyboard_event_t& event)
@@ -750,7 +668,7 @@ namespace glare
 		}
 
 		case SDLK_c:
-			g_buffer.display_mode = static_cast<GBufferDisplayMode>((static_cast<int>(g_buffer.display_mode) + 1) % static_cast<int>(GBufferDisplayMode::Modes));
+			gbuffer_display_mode = static_cast<GBufferDisplayMode>((static_cast<int>(gbuffer_display_mode) + 1) % static_cast<int>(GBufferDisplayMode::Modes));
 
 			break;
 		}
@@ -769,7 +687,7 @@ namespace glare
 	{
 		if (this->window.get() == &window)
 		{
-			g_buffer.framebuffer.resize(width, height);
+			gbuffer.framebuffer.resize(width, height);
 		}
 	}
 
@@ -803,5 +721,65 @@ namespace glare
 		}
 
 		return { viewport, w_size };
+	}
+
+	graphics::NamedTextureArrayRaw& Glare::render_shadows(bool point_lights, bool directional_lights)
+	{
+		// Point-light shadows:
+		if (point_lights)
+		{
+			auto& point_shadows = dynamic_texture_maps["shadow_cubemap"];
+
+			point_shadows.clear();
+
+			point_light_shadows.positions.clear();
+			point_light_shadows.far_planes.clear();
+
+			world.render_point_shadows
+			(
+				*graphics.canvas,
+				*shaders.point_shadow_depth,
+
+				&point_shadows,
+
+				&point_light_shadows.positions,
+				&point_light_shadows.far_planes
+			);
+		}
+
+		// Shadow pass (directional lights):
+		if (directional_lights)
+		{
+			auto& directional_shadows = dynamic_texture_maps["directional_shadow_map"];
+
+			directional_shadows.clear();
+
+			directional_light_shadows.positions.clear();
+			directional_light_shadows.matrices.clear();
+
+			world.render_directional_shadows
+			(
+				*graphics.canvas,
+				*shaders.directional_shadow_depth,
+					
+				&directional_shadows,
+
+				&directional_light_shadows.positions,
+				&directional_light_shadows.matrices
+			);
+		}
+
+		return dynamic_texture_maps;
+	}
+
+	graphics::GBuffer& Glare::render_debug(const graphics::Viewport& viewport, graphics::GBuffer& gbuffer)
+	{
+		// Render debug meshes for lights.
+		graphics.context->use(*shaders.light_debug, [&, this]()
+		{
+			world.render(*graphics.canvas, viewport, false, true);
+		});
+
+		return gbuffer;
 	}
 }
