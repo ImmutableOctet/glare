@@ -49,8 +49,8 @@ namespace glare
 		(
 			graphics.context,
 
-			"assets/shaders/gbuffer.vert",
-			"assets/shaders/gbuffer.frag"
+			"assets/shaders/geometry_pass.vert",
+			"assets/shaders/geometry_pass.frag"
 		);
 
 		lighting_pass = memory::allocate<graphics::Shader>

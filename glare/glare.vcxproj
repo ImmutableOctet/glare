@@ -293,8 +293,8 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <None Include="assets\shaders\deferred_shading.vert" />
     <None Include="assets\shaders\8.1.fbo_debug.frag" />
     <None Include="assets\shaders\8.1.fbo_debug.vert" />
-    <None Include="assets\shaders\gbuffer.frag" />
-    <None Include="assets\shaders\gbuffer.vert" />
+    <None Include="assets\shaders\geometry_pass.frag" />
+    <None Include="assets\shaders\geometry_pass.vert" />
     <None Include="assets\shaders\forward.frag" />
     <None Include="assets\shaders\forward.vert" />
     <None Include="assets\shaders\forward_test.frag" />
