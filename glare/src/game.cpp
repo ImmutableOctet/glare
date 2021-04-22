@@ -687,7 +687,7 @@ namespace glare
 	{
 		if (this->window.get() == &window)
 		{
-			gbuffer.framebuffer.resize(width, height);
+			gbuffer.resize(width, height);
 		}
 	}
 

@@ -26,6 +26,8 @@ namespace graphics
 			GBuffer(GBuffer&&) = default;
 			GBuffer& operator=(GBuffer&&) = default;
 
+			void resize(int width, int height);
+
 			graphics::FrameBuffer framebuffer;
 
 			graphics::Texture position;

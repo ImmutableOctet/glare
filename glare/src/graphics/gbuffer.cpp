@@ -32,4 +32,9 @@ namespace graphics
 
 		//auto op = context->use(graphics.context->get_default_framebuffer());
 	}
+
+	void GBuffer::resize(int width, int height)
+	{
+		framebuffer.resize(width, height);
+	}
 }
