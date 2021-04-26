@@ -33,13 +33,15 @@ namespace glare
 				Normal,
 				ShadowMap,
 				AlbedoSpecular,
+				Depth,
 
 				Modes,
 			};
 
-			GBufferDisplayMode gbuffer_display_mode = GBufferDisplayMode::AlbedoSpecular;
-			//GBufferDisplayMode display_mode = GBufferDisplayMode::None;
-			//GBufferDisplayMode display_mode = GBufferDisplayMode::ShadowMap;
+			GBufferDisplayMode gbuffer_display_mode
+				//= GBufferDisplayMode::AlbedoSpecular;
+				//= GBufferDisplayMode::None;
+				= GBufferDisplayMode::ShadowMap;
 
 			graphics::GBuffer gbuffer;
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <optional>
 //#include <utility>
 
 #include <debug.hpp>
@@ -47,6 +48,8 @@ namespace graphics
 			// In the event attachment fails, this method will return 'false'.
 			// NOTE: Attachments are handled by the underlying context, and are not enumerable from this interface.
 			bool attach(Texture& texture);
+
+			bool attach_depth(Texture& texture);
 
 			bool attach(RenderBuffer&& buffer);
 			bool attach(RenderBufferType type, int width, int height);

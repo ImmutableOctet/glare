@@ -4,6 +4,7 @@
 #include <math/math.hpp>
 
 #include <utility>
+#include <optional>
 
 #include "types.hpp"
 #include "resource.hpp"
@@ -39,7 +40,8 @@ namespace graphics
 				swap(x.uniforms, y.uniforms);
 			}
 
-			Shader(pass_ref<Context> ctx, const std::string& vertex_path, const std::string& fragment_path, const std::string& geometry_path={});
+			Shader(pass_ref<Context> ctx, const std::string& vertex_path, const std::string& fragment_path, const std::string& geometry_path={}, std::optional<std::string_view> preprocessor=std::nullopt);
+			Shader(pass_ref<Context> ctx, const Source& source, std::optional<std::string_view> preprocessor=std::nullopt);
 
 			inline Shader() : Shader({}, {}) {}
 			inline Shader(Shader&& shader) noexcept : Shader() { swap(*this, shader); }

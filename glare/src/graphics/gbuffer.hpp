@@ -18,10 +18,10 @@ namespace graphics
 	class GBuffer
 	{
 		public:
-			GBuffer(pass_ref<Context> context, int width, int height, TextureFlags flags=TextureFlags::None);
+			GBuffer(pass_ref<Context> context, int width, int height, GBufferFlags flags=GBufferFlags::Default, TextureFlags texture_flags=TextureFlags::None);
 
-			inline GBuffer(pass_ref<Context> context, std::tuple<int, int> resolution, TextureFlags flags=TextureFlags::None)
-				: GBuffer(context, std::get<0>(resolution), std::get<1>(resolution), flags) {}
+			inline GBuffer(pass_ref<Context> context, std::tuple<int, int> resolution, GBufferFlags flags=GBufferFlags::Default, TextureFlags texture_flags=TextureFlags::None)
+				: GBuffer(context, std::get<0>(resolution), std::get<1>(resolution), flags, texture_flags) {}
 
 			GBuffer(GBuffer&&) = default;
 			GBuffer& operator=(GBuffer&&) = default;
@@ -30,9 +30,11 @@ namespace graphics
 
 			graphics::FrameBuffer framebuffer;
 
-			graphics::Texture position;
 			graphics::Texture normal;
 			graphics::Texture albedo_specular;
+
+			std::optional<graphics::Texture> position;
+			std::optional<graphics::Texture> depth;
 
 			graphics::Mesh screen_quad;
 	};

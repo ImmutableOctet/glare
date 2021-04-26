@@ -1,9 +1,7 @@
 #include <util/io.hpp>
-
 #include <glm/glm.hpp>
 
 #include "context.hpp"
-
 #include "shader.hpp"
 
 namespace graphics
@@ -12,8 +10,11 @@ namespace graphics
 	Shader::Shader(weak_ref<Context> ctx, ContextHandle&& handle)
 		: Resource(ctx, std::move(handle)) {}
 
-	Shader::Shader(pass_ref<Context> ctx, const std::string& vertex_path, const std::string& fragment_path, const std::string& geometry_path)
-		: Shader(ctx, ctx->build_shader(Source::Load(vertex_path, fragment_path, geometry_path))) {}
+	Shader::Shader(pass_ref<Context> ctx, const std::string& vertex_path, const std::string& fragment_path, const std::string& geometry_path, std::optional<std::string_view> preprocessor)
+		: Shader(ctx, Source::Load(vertex_path, fragment_path, geometry_path), preprocessor) {}
+
+	Shader::Shader(pass_ref<Context> ctx, const Source& source, std::optional<std::string_view> preprocessor)
+		: Shader(ctx, ctx->build_shader(source, preprocessor)) {}
 
 	Shader::~Shader()
 	{

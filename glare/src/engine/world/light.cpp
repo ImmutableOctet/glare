@@ -139,8 +139,8 @@ namespace engine
 					r = shadows->shadow_map.get_resolution();
 				}
 
-				auto width = r.x/10; // std::sqrtf(r.x); // 20.0f; // 200.0f;
-				auto height = r.y/10; // std::sqrtf(r.y);; // 20.0f; // 200.0f;
+				auto width = r.x/12; // std::sqrtf(r.x); // 20.0f; // 200.0f;
+				auto height = r.y/12; // std::sqrtf(r.y);; // 20.0f; // 200.0f;
 
 				auto hw = (width / 2.0f);
 				auto hh = (height / 2.0f);

@@ -5,6 +5,7 @@
 #include <string_view>
 #include <cmath>
 #include <cstdlib>
+#include <optional>
 
 #include <app/events.hpp>
 #include <app/input/keycodes.hpp>
@@ -446,7 +447,13 @@ namespace glare
 
 			shader["ambient_light"] = world.properties.ambient_light;
 
+			//auto gPosition = graphics.context->use(*gbuffer.position, "g_position");
+			//std::optional<decltype(graphics.context->use(*gbuffer.position, "g_position"))> gPosition =
+			//	(gbuffer.position.has_value()) ? std::optional { graphics.context->use(*gbuffer.position, "g_position") } : std::nullopt;
+
 			auto gPosition = graphics.context->use(gbuffer.position, "g_position");
+			auto gDepth = graphics.context->use(gbuffer.depth, "g_depth");
+
 			auto gNormal = graphics.context->use(gbuffer.normal, "g_normal");
 			auto gAlbedoSpec = graphics.context->use(gbuffer.albedo_specular, "g_albedo_specular");
 
@@ -500,7 +507,10 @@ namespace glare
 				graphics.context->draw();
 			});
 
-			graphics.context->copy_framebuffer(gbuffer.framebuffer, viewport, viewport, graphics::BufferType::Depth);
+			if (!gbuffer.depth.has_value())
+			{
+				graphics.context->copy_framebuffer(gbuffer.framebuffer, viewport, viewport, graphics::BufferType::Depth);
+			}
 		});
 
 		return gbuffer;
@@ -512,6 +522,8 @@ namespace glare
 		{
 			return gbuffer;
 		}
+
+		graphics.context->toggle(graphics::ContextFlags::DepthTest, false);
 
 		auto& shader = *shaders.framebuffer_dbg;
 
@@ -527,6 +539,14 @@ namespace glare
 						return gbuffer.normal;
 					case GBufferDisplayMode::AlbedoSpecular:
 						return gbuffer.albedo_specular;
+
+					case GBufferDisplayMode::Depth:
+						if (gbuffer.depth)
+						{
+							return *gbuffer.depth;
+						}
+
+						break;
 
 					///*
 					case GBufferDisplayMode::ShadowMap:
@@ -551,7 +571,12 @@ namespace glare
 					//*/
 				}
 
-				return gbuffer.position;
+				if (gbuffer.position)
+				{
+					return *(gbuffer.position);
+				}
+
+				return gbuffer.albedo_specular;
 			};
 
 			auto fb_texture = graphics.context->use(get_texture()); // test_texture // gbuffer.normal
@@ -564,6 +589,8 @@ namespace glare
 			});
 			//});
 		});
+
+		graphics.context->toggle(graphics::ContextFlags::DepthTest, true);
 
 		return gbuffer;
 	}

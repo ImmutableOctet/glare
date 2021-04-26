@@ -30,6 +30,7 @@
 #include <unordered_map>
 //#include <stack>
 #include <type_traits>
+#include <optional>
 #include <tuple>
 
 // Debugging related:
@@ -480,14 +481,21 @@ namespace graphics
 				return GL_NONE;
 			}
 
-			static Context::Handle compile_shader(const std::string& source, GLenum type) noexcept
+			static Context::Handle compile_shader(std::string_view source, GLenum type, std::optional<std::string_view> preprocessor=std::nullopt) noexcept // const std::string& source
 			{
 				if (source.empty())
 				{
 					return {};
 				}
 
-				const GLchar* source_raw = reinterpret_cast<const GLchar*>(source.c_str());
+				bool has_preprocessor = (preprocessor.has_value());
+				GLsizei n_source_strings = (1 + static_cast<GLsizei>(has_preprocessor));
+
+				const GLchar* source_raw[] =
+				{
+					reinterpret_cast<const GLchar*>(source.data()),
+					reinterpret_cast<const GLchar*>((preprocessor) ? preprocessor->data() : nullptr)
+				};
 
 				// Allocate a native OpenGL shader source container.
 				auto obj = glCreateShader(type);
@@ -498,7 +506,7 @@ namespace graphics
 				}
 
 				// Upload our shader source code.
-				glShaderSource(obj, 1, &source_raw, nullptr); // source.length;
+				glShaderSource(obj, n_source_strings, source_raw, nullptr); // source.length;
 
 				// Compile the source code associated with our container.
 				glCompileShader(obj);
@@ -1531,11 +1539,11 @@ namespace graphics
 	}
 
 	// Shader related:
-	Context::Handle Context::build_shader(const ShaderSource& source) noexcept
+	Context::Handle Context::build_shader(const ShaderSource& source, std::optional<std::string_view> preprocessor) noexcept
 	{
-		auto vertex   = build_shader_source_obj(source.vertex, ShaderType::Vertex);
-		auto fragment = build_shader_source_obj(source.fragment, ShaderType::Fragment);
-		auto geometry = build_shader_source_obj(source.geometry, ShaderType::Geometry);
+		auto vertex   = build_shader_source_obj(source.vertex, ShaderType::Vertex, preprocessor);
+		auto fragment = build_shader_source_obj(source.fragment, ShaderType::Fragment, preprocessor);
+		auto geometry = build_shader_source_obj(source.geometry, ShaderType::Geometry, preprocessor);
 
 		auto program = link_shader(vertex, fragment, geometry);
 
@@ -1581,9 +1589,9 @@ namespace graphics
 		glDeleteProgram(handle);
 	}
 
-	Context::Handle Context::build_shader_source_obj(const ShaderSource::StringType& source_text, ShaderType type) noexcept
+	Context::Handle Context::build_shader_source_obj(std::string_view source_text, ShaderType type, std::optional<std::string_view> preprocessor) noexcept
 	{
-		return Driver::compile_shader(source_text, Driver::get_shader_type(type));
+		return Driver::compile_shader(source_text, Driver::get_shader_type(type), ((preprocessor) ? preprocessor : std::nullopt));
 	}
 
 	void Context::release_shader_source_obj(Handle&& handle)

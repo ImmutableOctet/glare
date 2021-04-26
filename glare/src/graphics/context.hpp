@@ -11,7 +11,6 @@
 //#include <version>
 //#include <concepts>
 #include <type_traits>
-
 #include <math/math.hpp>
 
 #include "types.hpp"
@@ -230,6 +229,18 @@ namespace graphics
 				);
 			}
 
+			inline auto use(const std::optional<Texture>& opt_texture, const std::string& uniform_sampler) // std::string_view
+			//-> std::optional<decltype(use(*opt_texture, uniform_sampler))>
+			{
+				if (opt_texture.has_value())
+				{
+					return std::optional { use(*opt_texture, uniform_sampler) };
+				}
+				
+				return std::optional<decltype(use(static_cast<const Texture&>(*opt_texture), uniform_sampler))> {};
+				//return std::nullopt;
+			}
+
 			template <typename fn>
 			inline void use(const Texture& resource, const std::string& uniform_sampler, fn exec) // std::string_view
 			{
@@ -338,7 +349,7 @@ namespace graphics
 			// Shader related:
 
 			// Builds & links a shader program using the source code specified.
-			Handle build_shader(const ShaderSource& source) noexcept; // generate_shader(...)
+			Handle build_shader(const ShaderSource& source, std::optional<std::string_view> preprocessor=std::nullopt) noexcept; // generate_shader(...)
 
 			// Links individual shader objects into one program. (see also: 'build_shader')
 			Handle link_shader(const Handle& vertex_obj, const Handle& fragment_obj, const Handle& geometry_obj={}) noexcept;
@@ -347,7 +358,8 @@ namespace graphics
 			void release_shader(Handle&& handle);
 
 			// Builds a native shader object of the type specified.
-			Handle build_shader_source_obj(const ShaderSource::StringType& source_text, ShaderType type) noexcept;
+			// The string(s) passed to this function must be null-terminated
+			Handle build_shader_source_obj(std::string_view source_text, ShaderType type, std::optional<std::string_view> preprocessor=std::nullopt) noexcept;
 
 			// Releases a native shader object.
 			void release_shader_source_obj(Handle&& handle);

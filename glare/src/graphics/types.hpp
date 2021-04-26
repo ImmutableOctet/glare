@@ -95,6 +95,18 @@ namespace graphics
 
 	using Viewport = PointRect;
 
+	enum class GBufferFlags : std::uint32_t
+	{
+		None = 0,
+		
+		DepthTexture = (1 << 0),
+		Position     = (1 << 1),
+
+		Default = Position // DepthTexture | Position
+	};
+
+	FLAG_ENUM(std::uint32_t, GBufferFlags);
+
 	enum class ShaderType
 	{
 		Vertex,

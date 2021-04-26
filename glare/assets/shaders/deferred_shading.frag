@@ -3,7 +3,17 @@ out vec4 output_color;
 
 in vec2 TexCoords;
 
-uniform sampler2D g_position;
+#define LAYER_POSITION_ENABLED 1
+//#define LAYER_DEPTH_ENABLED 1
+
+#if LAYER_POSITION_ENABLED
+    uniform sampler2D g_position;
+#endif
+
+#if LAYER_DEPTH_ENABLED
+    uniform sampler2D g_depth;
+#endif
+
 uniform sampler2D g_normal;
 uniform sampler2D g_albedo_specular;
 
@@ -31,10 +41,9 @@ uniform vec3 ambient_light = vec3(0.1, 0.1, 0.1);
 //uniform float alpha = 1.0; // const
 //uniform bool specular_available = false;
 
-void main()
-{             
+vec4 exec(vec3 fragment_position)
+{
     // G-Buffer Layers:
-    vec3  fragment_position  = texture(g_position, TexCoords).rgb;
     vec3  normal   = texture(g_normal, TexCoords).rgb;
     vec3  diffuse  = texture(g_albedo_specular, TexCoords).rgb;
     float specular = texture(g_albedo_specular, TexCoords).a;
@@ -67,6 +76,21 @@ void main()
         }
     }
 
+    return vec4(lighting, 1.0); // alpha
+}
 
-    output_color = vec4(lighting, 1.0); // alpha
+
+void main()
+{
+    #if LAYER_POSITION_ENABLED
+        vec3 fragment_position = texture(g_position, TexCoords).rgb;
+    #else
+        #if LAYER_DEPTH_ENABLED
+            vec3 fragment_position = vec3(0.0, 1.0, 0.0);
+        #else
+            vec3 fragment_position = vec3(0.0, 0.0, 0.0);
+        #endif
+    #endif
+
+    output_color = exec(fragment_position);
 }
