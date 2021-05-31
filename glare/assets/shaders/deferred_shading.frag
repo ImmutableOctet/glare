@@ -45,6 +45,7 @@ const int MAX_POINT_LIGHTS = 32; // 16; // 128;
 
 uniform int point_lights_count = 0;
 uniform PointLight point_lights[MAX_POINT_LIGHTS];
+
 uniform vec3 view_position;
 
 //uniform float ambient_light = 0.8; // 0.1;
@@ -53,16 +54,9 @@ uniform vec3 ambient_light = vec3(0.1, 0.1, 0.1);
 //uniform float alpha = 1.0; // const
 //uniform bool specular_available = false;
 
-vec4 exec(vec3 world_position)
+vec3 compute_point_lights(in vec3 world_position, in vec3 normal, in vec3 diffuse, float specular, vec3 view_direction)
 {
-    // G-Buffer Layers:
-    vec3  normal   = texture(g_normal, TexCoords).rgb;
-    vec3  diffuse  = texture(g_albedo_specular, TexCoords).rgb;
-    float specular = texture(g_albedo_specular, TexCoords).a;
-    
-    // then calculate lighting as usual
-    vec3 lighting  = diffuse * ambient_light;
-    vec3 view_direction  = normalize(view_position - world_position); // normalize(view_position) - normalize(world_position);
+    vec3 lighting = diffuse * ambient_light;
 
     for (int i = 0; i < point_lights_count; ++i)
     {
@@ -88,23 +82,28 @@ vec4 exec(vec3 world_position)
         }
     }
 
+    return lighting;
+}
+
+vec4 shade_pixel(in vec3 world_position, in vec3 normal, in vec3 diffuse, float specular)
+{
+    // then calculate lighting as usual
+    vec3 view_direction = normalize(view_position - world_position); // normalize(view_position) - normalize(world_position);
+
+    vec3 lighting = compute_point_lights(world_position, normal, diffuse, specular, view_direction);
+
     return vec4(lighting, 1.0); // alpha
 }
 
-vec3 calculate_view_position(vec2 texture_coordinate, float depth, vec2 scale_factor)  // "scale_factor" is "v_fov_scale".
-{
-    vec2 half_ndc_position = vec2(0.5) - texture_coordinate;    // No need to multiply by two, because we already baked that into "v_tan_fov.xy".
-    vec3 view_space_position = vec3(half_ndc_position * scale_factor.xy * -depth, -depth); // "-depth" because in OpenGL the camera is staring down the -z axis (and we're storing the unsigned depth).
-    return(view_space_position);
-}
-
-float get_depth(float z_ndc)
+/*
+float get_linear_depth(float z_ndc)
 {
     float farZ = depth_range.y;
     float nearZ = depth_range.x;
     
     return (((farZ-nearZ) * z_ndc) + nearZ + farZ) / 2.0;
 }
+*/
 
 vec4 clip_from_depth(float depth, in vec2 tex_coord)
 {
@@ -149,12 +148,10 @@ vec4 CalcEyeFromWindow(in float windowZ, in vec3 eyeDirection, in mat4 perspecti
     //return vec4(TexCoords * 2.0 - 1.0, eyeZ, 1.0);
 }
 
-void main()
+vec3 get_world_position()
 {
     #if LAYER_POSITION_ENABLED
-        vec3 world_position = texture(g_position, TexCoords).rgb;
-        output_color = exec(world_position);
-        //output_color = vec4(1.0, 1.0, 1.0, 1.0);
+        return texture(g_position, TexCoords).rgb;
     #else
         #if LAYER_DEPTH_ENABLED
             float depth = texture(g_depth, TexCoords).x; // .r;
@@ -165,11 +162,22 @@ void main()
             vec3 eye_ray = eye_direction;
 
             vec4 view_position = CalcEyeFromWindow(depth, eye_ray, projection);
-            vec3 world_position = (inv_view * view_position).xyz;
-
-            output_color = exec(world_position);
+            return (inv_view * view_position).xyz;
         #else
-            discard;
+            return vec3(0.0, 0.0, 0.0);
         #endif
     #endif
+}
+
+void main()
+{
+    vec3 world_position = get_world_position();
+
+    // G-Buffer Layers:
+    vec3  normal   = texture(g_normal, TexCoords).rgb;
+    vec3  diffuse  = texture(g_albedo_specular, TexCoords).rgb;
+    float specular = texture(g_albedo_specular, TexCoords).a;
+
+    output_color = shade_pixel(world_position, normal, diffuse, specular);
+    //output_color = vec4(1.0, 1.0, 1.0, 1.0);
 }
