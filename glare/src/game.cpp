@@ -482,30 +482,22 @@ namespace glare
 				const auto& screen = *render_state.screen;
 
 				auto fov_y = screen.fov_y;
-				//auto fov_x = std::atanf((16.0f/9.0f) * std::tan(fov_y));
 
 				auto aspect = screen.aspect_ratio;
 
-				//aspect = 1600.0f / 900.0f;
-				//aspect = 900.0f / 1600.0f;
-
-				// Included for now:
 				shader["inv_view"] = glm::inverse(matrices.view);
-				shader["inv_projection"] = glm::inverse(matrices.projection);
-
-				shader["inv_projview"] = glm::inverse(matrices.projection * matrices.view);
+				//shader["inv_projection"] = glm::inverse(matrices.projection);
+				//shader["inv_projview"] = glm::inverse(matrices.projection * matrices.view);
 
 
 				shader["projection"] = matrices.projection;
 
 				auto hs_near_plane = math::vec2{ (std::tan(fov_y / 2.0f) * aspect), (std::tan(fov_y / 2.0f)) };
-				//auto hs_near_plane = math::vec2{ (std::tan(fov_x / 2.0f) * aspect), (std::tan(fov_y / 2.0f)) * 2.0f };
-
-				auto depth_range = screen.depth_range;
 
 				shader["half_size_near_plane"] = hs_near_plane;
 
-				shader["depth_range"] = math::vec2(0.0, 1.0); // depth_range
+				//auto depth_range = screen.depth_range;
+				//shader["depth_range"] = math::vec2(0.0, 1.0); // depth_range
 			}
 
 			if (render_state.meta.ambient_light.has_value())

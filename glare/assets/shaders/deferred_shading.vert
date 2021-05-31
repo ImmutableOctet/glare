@@ -19,12 +19,8 @@ void main()
         vec2 clipPos = aPos.xy; // xz;
 
         vec2 tc = aTexCoords;
-        //vec2 tc = aTexCoords * 2.0 - 1.0;
 
         eye_direction = -vec3(((2.0 * half_size_near_plane * tc) - half_size_near_plane), -1.0);
-        //eye_direction = vec3(((2.0 * half_size_near_plane * tc) - half_size_near_plane), -1.0);
-        //eye_direction = vec3(((half_size_near_plane * tc) - half_size_near_plane), -1.0);
-        //eye_direction = vec3(tc * 2.0 - 1.0, -1.0);
     #endif
 
     //gl_Position = vec4(aPos, 1.0);

@@ -15,14 +15,14 @@ uniform sampler2D g_albedo_specular;
     uniform sampler2D g_position;
 #else
     uniform mat4 inv_view;
-    uniform mat4 inv_projection;
+    //uniform mat4 inv_projection;
 
     // TODO: Determine if we need to pass only one inverse matrix.
-    uniform mat4 inv_projview;
+    //uniform mat4 inv_projview;
 
     uniform mat4 projection;
 
-    uniform vec2 depth_range;
+    uniform vec2 depth_range = vec2(0.0, 1.0);
     uniform vec2 half_size_near_plane;
 
     in vec3 eye_direction;
@@ -159,81 +159,15 @@ void main()
         #if LAYER_DEPTH_ENABLED
             float depth = texture(g_depth, TexCoords).x; // .r;
 
-            //depth = depth*2.0-1.0;
-
             // Slow, but stable method.
             ////vec3 world_position = world_from_depth(depth, TexCoords, inv_projection, inv_view);
 
-            // Linearize depth:
-            //depth = ((2.0 + 0.1) / (1000.0 + 0.1 - depth * (1000.0 - 0.1)));
-            //depth = (2.0 * depth - depth_range.x - depth_range.y) / (depth_range.y - depth_range.x);
-            //depth = ((2.0 + depth_range.x) / (depth_range.y + depth_range.x - depth * (depth_range.y - depth_range.x)));
-            //depth = 2.0 * depth - 1.0;
-
-            /*
-
-            vec4 position = vec4(TexCoords*2.0 - 1.0, depth, 1.0);
-
-            //position = ((inv_view*inv_projection)*position);
-            position = (inv_projview * position);
-
-            position /= position.w;
-
-            vec3 world_position = (position.xyz);
-            */
-
-            ///*
             vec3 eye_ray = eye_direction;
 
-            //vec3 eye_ray = (eye_direction + 1.0) * 0.5;
-
             vec4 view_position = CalcEyeFromWindow(depth, eye_ray, projection);
+            vec3 world_position = (inv_view * view_position).xyz;
 
-            vec4 wp = (inv_view * view_position);
-
-            //vec3 world_position = view_position.xyz;
-            vec3 world_position = wp.xyz;
-
-            //world_position = world_from_depth(depth, TexCoords, inv_projection, inv_view);
-
-            //vec3 world_position = (world_position / world_position.w).xyz;
-            //*/
-
-            //vec4 eye_position = CalcEyeFromWindow((texture(g_depth, TexCoords).x), eye_direction); // vec3((eye_direction * 0.5) + 1.0)
-            //vec4 eye_position = vec4(eye_direction, 1.0);
-            //vec4 eye_position = vec4(calculate_view_position(TexCoords, texture(g_depth, TexCoords).x, half_size_near_plane * (depth_range.y - depth_range.x)), 1.0);
-            //vec4 test = ((inv_view * eye_position));
-            //vec3 world_position = (test.xyz / test.w);
-            
-            //vec3 world_position = ((inv_view * eye_position)).xyz;
-            //vec3 world_position = (inv_projection * inv_view * eye_position).xyz;
-            //vec3 world_position = (inv_projection * eye_position).xyz;
-            //vec3 world_position = eye_position.xyz;
-
-            //float depth = texture(g_depth, TexCoords).r;
-            //output_color = vec4(depth, 0.0, 0.0, 1.0);
-            //output_color = vec4(depth, depth, depth, 1.0);
-
-            //output_color = eye_position;
-            //output_color = vec4(eye_direction * (texture(g_depth, TexCoords).x), 1.0);
-            //output_color = vec4(eye_position.xyz, 1.0);
-            
-            //output_color = vec4((eye_direction * 0.5) + 1.0, 1.0);
-
-
-            //output_color = test;
-            //output_color = vec4(1.0, 1.0, 0.0, 1.0);
-            //output_color = vec4(gl_FragCoord.xyz, 1.0);
-            //output_color = vec4(_test.x, _test.y, 0.0, 1.0);
-            //output_color = vec4(TexCoords.x, TexCoords.y, 0.0, 1.0);
-            //output_color = vec4(eye_direction.xyz, 1.0);
-            
-            //output_color = vec4(depth_range.x, depth_range.y / 8000.0, 0.0, 1.0);
-            //output_color = vec4((eye_direction + 1.0) * 0.5, 1.0);
-            
-            output_color = vec4(world_position, 1.0);
-
-            //output_color = exec(world_position);
+            output_color = exec(world_position);
         #else
             discard;
         #endif
