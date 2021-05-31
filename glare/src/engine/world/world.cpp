@@ -473,6 +473,8 @@ namespace engine
 				}
 			}
 
+			std::size_t point_shadow_n_layers = 0;
+			std::size_t directional_shadow_n_layers = 0;
 
 			if (render_state)
 			{
@@ -494,6 +496,8 @@ namespace engine
 						ASSERT(vec);
 					
 						shader["point_shadow_light_position"] = *vec;
+
+						point_shadow_n_layers = 1;
 					}))
 					{}
 					else if (util::peek_value<graphics::VectorArray*>(light_pos_v, [&](const graphics::VectorArray* vec)
@@ -501,6 +505,8 @@ namespace engine
 						ASSERT(vec);
 
 						shader["point_shadow_light_position"] = *vec;
+
+						point_shadow_n_layers = vec->size();
 					}))
 					{}
 				}
@@ -517,6 +523,8 @@ namespace engine
 						ASSERT(far_plane);
 
 						shader["point_shadow_far_plane"] = *far_plane;
+
+						//point_shadow_n_layers = std::min(point_shadow_n_layers, static_cast<std::size_t>(1));
 					}))
 					{}
 					else if (util::peek_value<graphics::FloatArray*>(far_v, [&](const graphics::FloatArray* far_plane)
@@ -524,6 +532,8 @@ namespace engine
 						ASSERT(far_plane);
 
 						shader["point_shadow_far_plane"] = *far_plane;
+
+						//point_shadow_n_layers = std::min(point_shadow_n_layers, far_plane->size());
 					}))
 					{}
 				}
@@ -541,6 +551,8 @@ namespace engine
 						ASSERT(vec);
 					
 						shader["directional_shadow_light_position"] = *vec;
+
+						directional_shadow_n_layers = 1;
 					}))
 					{}
 					else if (util::peek_value<graphics::VectorArray*>(light_pos_v, [&](const graphics::VectorArray* vec)
@@ -548,6 +560,8 @@ namespace engine
 						ASSERT(vec);
 
 						shader["directional_shadow_light_position"] = *vec;
+
+						directional_shadow_n_layers = vec->size();
 					}))
 					{}
 				}
@@ -564,6 +578,8 @@ namespace engine
 						ASSERT(matrix);
 
 						shader["directional_light_space_matrix"] = *matrix;
+
+						//directional_shadow_n_layers = std::min(directional_shadow_n_layers, static_cast<std::size_t>(1));
 					}))
 					{}
 					else if (util::peek_value<graphics::MatrixArray*>(mat_v, [&](const graphics::MatrixArray* matrices)
@@ -571,6 +587,8 @@ namespace engine
 						ASSERT(matrices);
 
 						shader["directional_light_space_matrix"] = *matrices;
+
+						//directional_shadow_n_layers = std::min(directional_shadow_n_layers, matrices->size());
 					}))
 					{}
 				}
@@ -616,16 +634,22 @@ namespace engine
 				if (model_component.receives_shadow)
 				{
 					// TODO: Refactor to N-textures.
-					shader["point_shadows_enabled"] = ((render_state) ? static_cast<bool>(render_state->point_shadows) : true);
-					shader["directional_shadows_enabled"] = ((render_state) ? static_cast<bool>(render_state->directional_shadows) : true);
+					//shader["point_shadows_enabled"] = ((render_state) ? static_cast<bool>(render_state->point_shadows) : true);
+					//shader["directional_shadows_enabled"] = ((render_state) ? static_cast<bool>(render_state->directional_shadows) : true);
+
+					shader["point_shadows_count"] = point_shadow_n_layers;
+					shader["directional_shadows_count"] = directional_shadow_n_layers;
 				}
 				else
 				{
 					model_draw_mode |= (graphics::CanvasDrawMode::IgnoreShadows);
 
 					// TODO: Refactor to N-textures as 0.
-					shader["point_shadows_enabled"] = false;
-					shader["directional_shadows_enabled"] = false;
+					//shader["point_shadows_enabled"] = false;
+					//shader["directional_shadows_enabled"] = false;
+
+					shader["point_shadows_count"] = 0;
+					shader["directional_shadows_count"] = 0;
 				}
 
 				canvas.draw(model, color, model_draw_mode, _auto_clear_textures, ((render_state) ? render_state->dynamic_textures : nullptr));

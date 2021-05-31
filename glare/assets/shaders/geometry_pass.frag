@@ -1,3 +1,4 @@
+#version 330 core
 
 #if LAYER_POSITION_ENABLED
     layout (location = 0) out vec3 g_position;
@@ -12,31 +13,21 @@ in vec2 uv;
 in vec3 fragment_position;
 in vec3 normal;
 
-in DIR_SHADOWS
-{
-    vec4 fragment_position;
-} directional_shadows;
-
 uniform sampler2D diffuse;
 uniform sampler2D specular;
-uniform samplerCube shadow_cubemap;
-uniform sampler2D directional_shadow_map;
 
-uniform bool texture_diffuse_enabled = false;
-uniform bool specular_available = false;
-
-uniform bool directional_shadows_enabled = true; // false;
-uniform bool point_shadows_enabled = false;
-
-uniform vec3 directional_shadow_light_position;
-
-uniform vec3 point_shadow_light_position; // lightPos;
 uniform vec3 view_position;
 
-uniform float point_shadow_far_plane; // far_plane;
 
-uniform vec4 diffuse_color = vec4(1.0, 1.0, 1.0, 1.0);
-uniform float alpha = 1.0;
+// Point shadows:
+const int MAX_POINT_SHADOWS = 1;
+
+uniform int point_shadows_count;
+
+uniform vec3 point_shadow_light_position[MAX_POINT_SHADOWS]; // lightPos;
+uniform float point_shadow_far_plane[MAX_POINT_SHADOWS]; // far_plane;
+
+uniform samplerCube point_shadow_cubemap[MAX_POINT_SHADOWS];
 
 // array of offset direction for sampling
 vec3 gridSamplingDisk[20] = vec3[]
@@ -47,6 +38,28 @@ vec3 gridSamplingDisk[20] = vec3[]
    vec3(1, 0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1, 0, -1),
    vec3(0, 1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0, 1, -1)
 );
+
+
+// Directional shadows:
+const int MAX_DIR_SHADOWS   = 4;
+
+uniform int directional_shadows_count;
+
+uniform vec3 directional_shadow_light_position[MAX_DIR_SHADOWS];
+uniform sampler2D directional_shadow_map[MAX_DIR_SHADOWS];
+
+in DIR_SHADOWS
+{
+    vec4 fragment_position[MAX_DIR_SHADOWS];
+} directional_shadows;
+
+
+uniform bool texture_diffuse_enabled = false;
+uniform bool specular_available = false;
+
+uniform vec4 diffuse_color = vec4(1.0, 1.0, 1.0, 1.0);
+uniform float alpha = 1.0;
+
 
 float point_shadow_calculation(samplerCube shadow_map, vec3 fragPos, vec3 lightPos, vec3 viewPos, float far_plane)
 {
@@ -177,14 +190,20 @@ void main()
     
     float shadow = 0.0;
 
-    if (point_shadows_enabled)
+    if (point_shadows_count > 0)
     {
-        shadow += point_shadow_calculation(shadow_cubemap, fragment_position, point_shadow_light_position, view_position, point_shadow_far_plane); // g_position
+        for (int layer = 0; layer < point_shadows_count; layer++)
+        {
+            shadow += point_shadow_calculation(point_shadow_cubemap[layer], fragment_position, point_shadow_light_position[layer], view_position, point_shadow_far_plane[layer]); // g_position
+        }
     }
 
-    if (directional_shadows_enabled)
+    if (directional_shadows_count > 0)
     {
-        shadow += directional_shadow_calculation(directional_shadow_map, directional_shadows.fragment_position, directional_shadow_light_position, fragment_position, normal);
+        for (int layer = 0; layer < directional_shadows_count; layer++)
+        {
+            shadow += directional_shadow_calculation(directional_shadow_map[layer], directional_shadows.fragment_position[layer], directional_shadow_light_position[layer], fragment_position, normal);
+        }
     }
 
     float light = (1.0 - min(shadow, 0.85));

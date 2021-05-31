@@ -826,7 +826,7 @@ namespace glare
 		// Point-light shadows:
 		if (point_lights)
 		{
-			auto& point_shadows = dynamic_texture_maps["shadow_cubemap"];
+			auto& point_shadows = dynamic_texture_maps["point_shadow_cubemap"];
 
 			point_shadows.clear();
 

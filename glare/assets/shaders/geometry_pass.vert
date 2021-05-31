@@ -1,3 +1,4 @@
+#version 330 core
 
 layout (location = 0) in vec3 a_position;
 layout (location = 1) in vec3 a_normal;
@@ -10,15 +11,19 @@ out vec3 fragment_position;
 out vec3 normal;
 out vec2 uv;
 
+const int MAX_DIR_SHADOWS = 4;
+uniform int directional_shadows_count; // = 0;
+
 out DIR_SHADOWS
 {
-    vec4 fragment_position;
+    vec4 fragment_position[MAX_DIR_SHADOWS];
 } directional_shadows;
+
+uniform mat4 directional_light_space_matrix[MAX_DIR_SHADOWS];
 
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
-uniform mat4 directional_light_space_matrix;
 
 void main()
 {
@@ -28,8 +33,11 @@ void main()
         fragment_position = worldPos.xyz; // normalize(worldPos.xyz); // normalize(worldPos.xyz);
     #endif
     
-    //directional_shadows.fragment_position = (directional_light_space_matrix * vec4(vec3(model * vec4(a_position, 1.0)), 1.0));
-    directional_shadows.fragment_position = (directional_light_space_matrix * vec4(worldPos.xyz, 1.0));
+    for (int i = 0; i < directional_shadows_count; i++)
+    {
+        //directional_shadows.fragment_position = (directional_light_space_matrix * vec4(vec3(model * vec4(a_position, 1.0)), 1.0));
+        directional_shadows.fragment_position[i] = (directional_light_space_matrix[i] * vec4(worldPos.xyz, 1.0));
+    }
 
     uv = a_uv;
     
