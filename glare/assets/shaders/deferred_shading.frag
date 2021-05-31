@@ -54,6 +54,56 @@ uniform vec3 ambient_light = vec3(0.1, 0.1, 0.1);
 //uniform float alpha = 1.0; // const
 //uniform bool specular_available = false;
 
+
+// Directional shadows:
+const int MAX_DIR_SHADOWS = 4;
+
+uniform int directional_shadows_count; // = 0;
+
+uniform vec3 directional_shadow_light_position[MAX_DIR_SHADOWS];
+uniform sampler2D directional_shadow_map[MAX_DIR_SHADOWS];
+
+uniform mat4 directional_shadow_light_space_matrix[MAX_DIR_SHADOWS];
+
+float directional_shadow_calculation(sampler2D shadow_map, vec4 fragPosLightSpace, vec3 lightPos, vec3 fragPos, vec3 fragNormal)
+{
+    // perform perspective divide
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    // transform to [0,1] range
+    projCoords = projCoords * 0.5 + 0.5;
+    // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
+    float closestDepth = texture(shadow_map, projCoords.xy).r; 
+    // get depth of current fragment from light's perspective
+    float currentDepth = projCoords.z;
+    // calculate bias (based on depth map resolution and slope)
+    vec3 normal = normalize(fragNormal);
+    vec3 lightDir = normalize(lightPos - fragPos);
+    float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
+    // check whether current frag pos is in shadow
+    // float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
+    // PCF
+    float shadow = 0.0;
+    vec2 texelSize = 1.0 / textureSize(shadow_map, 0);
+
+    for (int x = -1; x <= 1; ++x)
+    {
+        for (int y = -1; y <= 1; ++y)
+        {
+            float pcfDepth = texture(shadow_map, projCoords.xy + vec2(x, y) * texelSize).r;
+
+            shadow += currentDepth - bias > pcfDepth  ? 1.0 : 0.0;        
+        }    
+    }
+
+    shadow /= 9.0;
+    
+    // keep the shadow at 0.0 when outside the far_plane region of the light's frustum.
+    if (projCoords.z > 1.0)
+        shadow = 0.0;
+        
+    return shadow;
+}
+
 vec3 compute_point_lights(in vec3 world_position, in vec3 normal, in vec3 diffuse, float specular, vec3 view_direction)
 {
     vec3 lighting = diffuse * ambient_light;
@@ -85,10 +135,28 @@ vec3 compute_point_lights(in vec3 world_position, in vec3 normal, in vec3 diffus
     return lighting;
 }
 
-vec4 shade_pixel(in vec3 world_position, in vec3 normal, in vec3 diffuse, float specular)
+vec4 shade_pixel(in vec3 world_position, in vec3 normal, vec3 diffuse, float specular)
 {
     // then calculate lighting as usual
     vec3 view_direction = normalize(view_position - world_position); // normalize(view_position) - normalize(world_position);
+
+    float shadow = 0.0;
+
+    if (directional_shadows_count > 0)
+    {
+        for (int layer = 0; layer < directional_shadows_count; layer++)
+        {
+            vec4 dir_shadow_frag_position = (directional_shadow_light_space_matrix[layer] * vec4(world_position.xyz, 1.0));
+            //vec4 dir_shadow_frag_position = (directional_shadow_light_space_matrix[layer] * vec4(vec3(model * vec4(a_position, 1.0)), 1.0));
+
+            shadow += directional_shadow_calculation(directional_shadow_map[layer], dir_shadow_frag_position, directional_shadow_light_position[layer], world_position, normal);
+        }
+    }
+
+    float light = (1.0 - min(shadow, 0.85));
+
+    diffuse = (light * diffuse);
+    specular = (pow(light, 2) * specular);
 
     vec3 lighting = compute_point_lights(world_position, normal, diffuse, specular, view_direction);
 

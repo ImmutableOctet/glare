@@ -10,7 +10,11 @@
 #include <app/events.hpp>
 #include <app/input/keycodes.hpp>
 #include <engine/engine.hpp>
+
+#include <util/variant.hpp>
+
 #include <graphics/native/opengl.hpp>
+#include <graphics/world_render_state.hpp>
 
 #include <engine/world/spin_component.hpp>
 #include <engine/world/follow_component.hpp>
@@ -505,7 +509,180 @@ namespace glare
 				shader["ambient_light"] = *render_state.meta.ambient_light;
 			}
 
-			shader["view_position"] = *render_state.meta.view_position;
+			if (render_state.meta.view_position.has_value())
+			{
+				shader["view_position"] = *render_state.meta.view_position;
+			}
+
+
+			std::size_t point_shadow_n_layers = 0;
+			std::size_t directional_shadow_n_layers = 0;
+
+			// Shadow-maps:
+			{
+				// Point shadows:
+				const auto& point_shadow_lp = render_state.point_shadows.light_positions;
+
+				if (point_shadow_lp.has_value())
+				{
+					const auto& light_pos_v = *point_shadow_lp;
+
+					// TODO: Implement as visit:
+					if (util::peek_value<graphics::Vector*>(light_pos_v, [&](const graphics::Vector* vec)
+					{
+						ASSERT(vec);
+					
+						shader["point_shadow_light_position"] = *vec;
+
+						point_shadow_n_layers = 1;
+					}))
+					{}
+					else if (util::peek_value<graphics::VectorArray*>(light_pos_v, [&](const graphics::VectorArray* vec)
+					{
+						ASSERT(vec);
+
+						shader["point_shadow_light_position"] = *vec;
+
+						point_shadow_n_layers = vec->size();
+					}))
+					{}
+				}
+
+				const auto& point_shadow_fp = render_state.point_shadows.far_planes;
+
+				if (point_shadow_fp.has_value())
+				{
+					const auto& far_v = *point_shadow_fp;
+
+					// TODO: Implement as visit:
+					if (util::peek_value<float*>(far_v, [&](const float* far_plane)
+					{
+						ASSERT(far_plane);
+
+						shader["point_shadow_far_plane"] = *far_plane;
+
+						//point_shadow_n_layers = std::min(point_shadow_n_layers, static_cast<std::size_t>(1));
+					}))
+					{}
+					else if (util::peek_value<graphics::FloatArray*>(far_v, [&](const graphics::FloatArray* far_plane)
+					{
+						ASSERT(far_plane);
+
+						shader["point_shadow_far_plane"] = *far_plane;
+
+						//point_shadow_n_layers = std::min(point_shadow_n_layers, far_plane->size());
+					}))
+					{}
+				}
+
+				// Directional shadows:
+				const auto& directional_shadow_lp = render_state.directional_shadows.light_positions;
+
+				if (directional_shadow_lp.has_value())
+				{
+					const auto& light_pos_v = *directional_shadow_lp;
+
+					// TODO: Implement as visit:
+					if (util::peek_value<graphics::Vector*>(light_pos_v, [&](const graphics::Vector* vec)
+					{
+						ASSERT(vec);
+					
+						shader["directional_shadow_light_position"] = *vec;
+
+						directional_shadow_n_layers = 1;
+					}))
+					{}
+					else if (util::peek_value<graphics::VectorArray*>(light_pos_v, [&](const graphics::VectorArray* vec)
+					{
+						ASSERT(vec);
+
+						shader["directional_shadow_light_position"] = *vec;
+
+						directional_shadow_n_layers = vec->size();
+					}))
+					{}
+				}
+
+				const auto& directional_shadow_mat = render_state.directional_shadows.light_matrices;
+
+				if (directional_shadow_mat.has_value())
+				{
+					const auto& mat_v = *directional_shadow_mat;
+
+					// TODO: Implement as visit:
+					if (util::peek_value<graphics::Matrix*>(mat_v, [&](const graphics::Matrix* matrix)
+					{
+						ASSERT(matrix);
+
+						shader["directional_shadow_light_space_matrix"] = *matrix;
+
+						//directional_shadow_n_layers = std::min(directional_shadow_n_layers, static_cast<std::size_t>(1));
+					}))
+					{}
+					else if (util::peek_value<graphics::MatrixArray*>(mat_v, [&](const graphics::MatrixArray* matrices)
+					{
+						ASSERT(matrices);
+
+						shader["directional_shadow_light_space_matrix"] = *matrices;
+
+						//directional_shadow_n_layers = std::min(directional_shadow_n_layers, matrices->size());
+					}))
+					{}
+				}
+			}
+
+			shader["directional_shadows_count"] = directional_shadow_n_layers;
+			shader["point_shadows_count"] = point_shadow_n_layers;
+
+			if (render_state.dynamic_textures.has_value())
+			{
+				//static const std::string texture_name = "depth_map"; // constexpr
+				const auto& dynamic_textures_v = *render_state.dynamic_textures;
+
+				bool shadows_enabled = true; //!(draw_mode & DrawMode::IgnoreShadows);
+
+				// TODO: Implement as visit:
+				if (util::peek_value<std::tuple<std::string_view, const graphics::Texture*>>(dynamic_textures_v, [&](const std::tuple<std::string_view, const graphics::Texture*>& tdata)
+				{
+					const auto& texture_name = std::get<0>(tdata);
+					const auto* texture = std::get<1>(tdata);
+
+					if (!shadows_enabled)
+					{
+						if ((texture_name.find("shadow") != std::string::npos))
+						{
+							// Don't bind this texture.
+							return; // From lambda.
+						}
+					}
+
+					ASSERT(texture);
+					graphics.canvas->bind_texture(*texture, texture_name); // bind_texture(tdata);
+				}))
+				{}
+				else if (util::peek_value<const graphics::NamedTextureArrayRaw*>(dynamic_textures_v, [&](const graphics::NamedTextureArrayRaw* tdata)
+				{
+					//ASSERT(tdata);
+					if (tdata)
+					{
+						graphics.canvas->bind_textures(*tdata, [shadows_enabled](const std::string& texture_name, const graphics::TextureArrayRaw& textures)
+						{
+							if (!shadows_enabled) // tolower(...)
+							{
+								if ((texture_name.find("shadow") != std::string::npos))
+								{
+									// Don't bind this texture.
+									return false;
+								}
+							}
+
+							// Bind this texture.
+							return true;
+						});
+					}
+				}))
+				{}
+			}
 
 			auto& registry = world.get_registry();
 
@@ -518,6 +695,13 @@ namespace glare
 
 			registry.view<engine::LightComponent, engine::TransformComponent, engine::Relationship>().each([&](auto entity, const auto& light, auto& transform, const auto& relationship) // const auto&
 			{
+				/*
+				if (light.type != engine::LightType::Directional)
+				{
+					return;
+				}
+				*/
+
 				auto light_transform = engine::Transform(registry, entity, relationship, transform);
 
 				auto uniform_prefix = ("point_lights[" + std::to_string(light_idx) + "].");
@@ -569,6 +753,8 @@ namespace glare
 			{
 				graphics.context->copy_framebuffer(gbuffer.framebuffer, viewport, viewport, graphics::BufferType::Depth);
 			}
+
+			graphics.context->clear_textures(false); // true
 		});
 
 		return gbuffer;

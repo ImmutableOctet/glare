@@ -40,20 +40,6 @@ vec3 gridSamplingDisk[20] = vec3[]
 );
 
 
-// Directional shadows:
-const int MAX_DIR_SHADOWS   = 4;
-
-uniform int directional_shadows_count;
-
-uniform vec3 directional_shadow_light_position[MAX_DIR_SHADOWS];
-uniform sampler2D directional_shadow_map[MAX_DIR_SHADOWS];
-
-in DIR_SHADOWS
-{
-    vec4 fragment_position[MAX_DIR_SHADOWS];
-} directional_shadows;
-
-
 uniform bool texture_diffuse_enabled = false;
 uniform bool specular_available = false;
 
@@ -118,44 +104,6 @@ float point_shadow_calculation(samplerCube shadow_map, vec3 fragPos, vec3 lightP
     return shadow;
 }
 
-float directional_shadow_calculation(sampler2D shadow_map, vec4 fragPosLightSpace, vec3 lightPos, vec3 fragPos, vec3 fragNormal)
-{
-    // perform perspective divide
-    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-    // transform to [0,1] range
-    projCoords = projCoords * 0.5 + 0.5;
-    // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
-    float closestDepth = texture(shadow_map, projCoords.xy).r; 
-    // get depth of current fragment from light's perspective
-    float currentDepth = projCoords.z;
-    // calculate bias (based on depth map resolution and slope)
-    vec3 normal = normalize(fragNormal);
-    vec3 lightDir = normalize(lightPos - fragPos);
-    float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
-    // check whether current frag pos is in shadow
-    // float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
-    // PCF
-    float shadow = 0.0;
-    vec2 texelSize = 1.0 / textureSize(shadow_map, 0);
-
-    for (int x = -1; x <= 1; ++x)
-    {
-        for (int y = -1; y <= 1; ++y)
-        {
-            float pcfDepth = texture(shadow_map, projCoords.xy + vec2(x, y) * texelSize).r; 
-            shadow += currentDepth - bias > pcfDepth  ? 1.0 : 0.0;        
-        }    
-    }
-
-    shadow /= 9.0;
-    
-    // keep the shadow at 0.0 when outside the far_plane region of the light's frustum.
-    if (projCoords.z > 1.0)
-        shadow = 0.0;
-        
-    return shadow;
-}
-
 void main()
 {
     #if LAYER_POSITION_ENABLED
@@ -198,18 +146,10 @@ void main()
         }
     }
 
-    if (directional_shadows_count > 0)
-    {
-        for (int layer = 0; layer < directional_shadows_count; layer++)
-        {
-            shadow += directional_shadow_calculation(directional_shadow_map[layer], directional_shadows.fragment_position[layer], directional_shadow_light_position[layer], fragment_position, normal);
-        }
-    }
-
     float light = (1.0 - min(shadow, 0.85));
+    g_albedo_specular = vec4((light * albedo_specular.rgb), (pow(light, 2) * albedo_specular.a));
 
     ////g_albedo_specular = (light * albedo_specular);
-    g_albedo_specular = vec4((light * albedo_specular.rgb), (pow(light, 2) * albedo_specular.a));
 
     // Tests:
     //g_albedo_specular = texture(directional_shadow_map, uv);

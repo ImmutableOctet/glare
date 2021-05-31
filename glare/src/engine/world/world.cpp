@@ -174,7 +174,8 @@ namespace engine
 		WorldRenderState* render_state,
 		graphics::CanvasDrawMode additional_draw_modes,
 
-		bool _combine_view_proj_matrices
+		bool _combine_view_proj_matrices,
+		bool _bind_dynamic_textures
 	)
 	{
 		// Deferred referning is current unsupported.
@@ -249,12 +250,12 @@ namespace engine
 
 		if (multi_pass)
 		{
-			draw_models((graphics::CanvasDrawMode::Opaque | additional_draw_modes), canvas, &projection, &camera_matrix, use_active_shader, render_state, _combine_view_proj_matrices);
-			draw_models((graphics::CanvasDrawMode::Transparent | additional_draw_modes), canvas, &projection, &camera_matrix, use_active_shader, render_state, _combine_view_proj_matrices);
+			draw_models((graphics::CanvasDrawMode::Opaque | additional_draw_modes), canvas, &projection, &camera_matrix, use_active_shader, render_state, _combine_view_proj_matrices, _bind_dynamic_textures);
+			draw_models((graphics::CanvasDrawMode::Transparent | additional_draw_modes), canvas, &projection, &camera_matrix, use_active_shader, render_state, _combine_view_proj_matrices, _bind_dynamic_textures);
 		}
 		else
 		{
-			draw_models((graphics::Canvas::DrawMode::All | additional_draw_modes), canvas, &projection, &camera_matrix, use_active_shader, render_state, _combine_view_proj_matrices);
+			draw_models((graphics::Canvas::DrawMode::All | additional_draw_modes), canvas, &projection, &camera_matrix, use_active_shader, render_state, _combine_view_proj_matrices, _bind_dynamic_textures);
 		}
 
 		if (render_state)
@@ -451,7 +452,8 @@ namespace engine
 		
 		WorldRenderState* render_state,
 
-		bool combine_matrices
+		bool combine_matrices,
+		bool bind_dynamic_textures
 	)
 	{
 		auto draw = [&, this](auto& shader)
@@ -473,126 +475,15 @@ namespace engine
 				}
 			}
 
-			std::size_t point_shadow_n_layers = 0;
-			std::size_t directional_shadow_n_layers = 0;
-
+			/*
 			if (render_state)
 			{
 				if (render_state->meta.view_position.has_value())
 				{
 					shader["view_position"] = *render_state->meta.view_position;
 				}
-
-				// Point shadows:
-				const auto& point_shadow_lp = render_state->point_shadows.light_positions;
-
-				if (point_shadow_lp.has_value())
-				{
-					const auto& light_pos_v = *point_shadow_lp;
-
-					// TODO: Implement as visit:
-					if (util::peek_value<graphics::Vector*>(light_pos_v, [&](const graphics::Vector* vec)
-					{
-						ASSERT(vec);
-					
-						shader["point_shadow_light_position"] = *vec;
-
-						point_shadow_n_layers = 1;
-					}))
-					{}
-					else if (util::peek_value<graphics::VectorArray*>(light_pos_v, [&](const graphics::VectorArray* vec)
-					{
-						ASSERT(vec);
-
-						shader["point_shadow_light_position"] = *vec;
-
-						point_shadow_n_layers = vec->size();
-					}))
-					{}
-				}
-
-				const auto& point_shadow_fp = render_state->point_shadows.far_planes;
-
-				if (point_shadow_fp.has_value())
-				{
-					const auto& far_v = *point_shadow_fp;
-
-					// TODO: Implement as visit:
-					if (util::peek_value<float*>(far_v, [&](const float* far_plane)
-					{
-						ASSERT(far_plane);
-
-						shader["point_shadow_far_plane"] = *far_plane;
-
-						//point_shadow_n_layers = std::min(point_shadow_n_layers, static_cast<std::size_t>(1));
-					}))
-					{}
-					else if (util::peek_value<graphics::FloatArray*>(far_v, [&](const graphics::FloatArray* far_plane)
-					{
-						ASSERT(far_plane);
-
-						shader["point_shadow_far_plane"] = *far_plane;
-
-						//point_shadow_n_layers = std::min(point_shadow_n_layers, far_plane->size());
-					}))
-					{}
-				}
-
-				// Directional shadows:
-				const auto& directional_shadow_lp = render_state->directional_shadows.light_positions;
-
-				if (directional_shadow_lp.has_value())
-				{
-					const auto& light_pos_v = *directional_shadow_lp;
-
-					// TODO: Implement as visit:
-					if (util::peek_value<graphics::Vector*>(light_pos_v, [&](const graphics::Vector* vec)
-					{
-						ASSERT(vec);
-					
-						shader["directional_shadow_light_position"] = *vec;
-
-						directional_shadow_n_layers = 1;
-					}))
-					{}
-					else if (util::peek_value<graphics::VectorArray*>(light_pos_v, [&](const graphics::VectorArray* vec)
-					{
-						ASSERT(vec);
-
-						shader["directional_shadow_light_position"] = *vec;
-
-						directional_shadow_n_layers = vec->size();
-					}))
-					{}
-				}
-
-				const auto& directional_shadow_mat = render_state->directional_shadows.light_matrices;
-
-				if (directional_shadow_mat.has_value())
-				{
-					const auto& mat_v = *directional_shadow_mat;
-
-					// TODO: Implement as visit:
-					if (util::peek_value<graphics::Matrix*>(mat_v, [&](const graphics::Matrix* matrix)
-					{
-						ASSERT(matrix);
-
-						shader["directional_light_space_matrix"] = *matrix;
-
-						//directional_shadow_n_layers = std::min(directional_shadow_n_layers, static_cast<std::size_t>(1));
-					}))
-					{}
-					else if (util::peek_value<graphics::MatrixArray*>(mat_v, [&](const graphics::MatrixArray* matrices)
-					{
-						ASSERT(matrices);
-
-						shader["directional_light_space_matrix"] = *matrices;
-
-						//directional_shadow_n_layers = std::min(directional_shadow_n_layers, matrices->size());
-					}))
-					{}
-				}
 			}
+			*/
 
 			bool _auto_clear_textures = false; // true;
 
@@ -631,6 +522,8 @@ namespace engine
 
 				auto model_draw_mode = draw_mode;
 
+				// TODO: Implement 'receives_shadow' flag using stencil buffer.
+				/*
 				if (model_component.receives_shadow)
 				{
 					// TODO: Refactor to N-textures.
@@ -651,8 +544,9 @@ namespace engine
 					shader["point_shadows_count"] = 0;
 					shader["directional_shadows_count"] = 0;
 				}
+				*/
 
-				canvas.draw(model, color, model_draw_mode, _auto_clear_textures, ((render_state) ? render_state->dynamic_textures : nullptr));
+				canvas.draw(model, color, model_draw_mode, _auto_clear_textures, (((render_state) && (bind_dynamic_textures)) ? render_state->dynamic_textures : nullptr));
 			});
 		};
 

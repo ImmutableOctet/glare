@@ -147,7 +147,8 @@ namespace engine
 				bool use_active_shader=false,
 				WorldRenderState* render_state=nullptr,
 				graphics::CanvasDrawMode additional_draw_modes=graphics::CanvasDrawMode::None, // (graphics::CanvasDrawMode::IgnoreShaders)
-				bool _combine_view_proj_matrices=false
+				bool _combine_view_proj_matrices=false,
+				bool _bind_dynamic_textures=false
 			)
 			{
 				return render
@@ -159,7 +160,8 @@ namespace engine
 					use_active_shader,
 					render_state,
 					additional_draw_modes,
-					_combine_view_proj_matrices
+					_combine_view_proj_matrices,
+					_bind_dynamic_textures
 				);
 			}
 
@@ -174,7 +176,8 @@ namespace engine
 				bool use_active_shader=false,
 				WorldRenderState* render_state=nullptr,
 				graphics::CanvasDrawMode additional_draw_modes=graphics::CanvasDrawMode::None,
-				bool _combine_view_proj_matrices=false
+				bool _combine_view_proj_matrices=false,
+				bool _bind_dynamic_textures=false
 			);
 
 			inline bool render_point_shadows
@@ -312,7 +315,8 @@ namespace engine
 				
 				WorldRenderState* render_state=nullptr,
 
-				bool combine_matrices=false
+				bool combine_matrices=false,
+				bool bind_dynamic_textures=false
 			);
 	};
 
