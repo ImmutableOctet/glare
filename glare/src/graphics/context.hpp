@@ -359,7 +359,7 @@ namespace graphics
 
 			// Builds a native shader object of the type specified.
 			// The string(s) passed to this function must be null-terminated
-			Handle build_shader_source_obj(std::string_view source_text, ShaderType type, std::optional<std::string_view> preprocessor=std::nullopt) noexcept;
+			Handle build_shader_source_obj(std::string_view source_text, ShaderType type, std::optional<std::string_view> preprocessor=std::nullopt, std::optional<std::string_view> version=std::nullopt) noexcept;
 
 			// Releases a native shader object.
 			void release_shader_source_obj(Handle&& handle);

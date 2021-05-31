@@ -40,8 +40,8 @@ namespace glare
 
 			GBufferDisplayMode gbuffer_display_mode
 				//= GBufferDisplayMode::AlbedoSpecular;
-				//= GBufferDisplayMode::None;
-				= GBufferDisplayMode::ShadowMap;
+				= GBufferDisplayMode::None;
+				//= GBufferDisplayMode::ShadowMap;
 
 			graphics::GBuffer gbuffer;
 

@@ -29,10 +29,10 @@ namespace graphics
 						// Vertices (Position + UV)
 						{
 							// Positions:             // UV Coordinates:
-							{{{-1.0f,  1.0f, 0.0f}},  {0.0f, 1.0f}},
-							{{{ 1.0f,  1.0f, 0.0f}},  {1.0f, 1.0f}},
-							{{{-1.0f, -1.0f, 0.0f}},  {0.0f, 0.0f}},
-							{{{ 1.0f, -1.0f, 0.0f}},  {1.0f, 0.0f}}
+							{{{-1.0f,  1.0f, 0.0f}},  {0.0f, 1.0f}}, // Top Left
+							{{{ 1.0f,  1.0f, 0.0f}},  {1.0f, 1.0f}}, // Top Right
+							{{{-1.0f, -1.0f, 0.0f}},  {0.0f, 0.0f}}, // Bottom Left
+							{{{ 1.0f, -1.0f, 0.0f}},  {1.0f, 0.0f}}  // Bottom Right
 						},
 				
 						// Raw mesh; no need for indices.

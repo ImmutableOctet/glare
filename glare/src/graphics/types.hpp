@@ -102,7 +102,7 @@ namespace graphics
 		DepthTexture = (1 << 0),
 		Position     = (1 << 1),
 
-		Default = Position // DepthTexture | Position
+		Default = DepthTexture // | Position
 	};
 
 	FLAG_ENUM(std::uint32_t, GBufferFlags);
@@ -120,12 +120,16 @@ namespace graphics
 		public:
 			using StringType = std::string;
 
+			static StringType load_source_string(const std::string& path, bool check_for_version=true, std::string* version_out=nullptr); // false
+
 			// Implementation found in "shader.cpp".
 			static ShaderSource Load(const std::string& vertex_path, const std::string& fragment_path, const std::string& geometry_path={}); // StringType
 
 			StringType vertex;
 			StringType fragment;
 			StringType geometry;
+
+			StringType version;
 	};
 
 	enum class ElementType
@@ -334,7 +338,9 @@ namespace graphics
 	};
 
 	using Vector = math::Vector;
+	using Vector2D = math::Vector2D;
 	using Matrix = math::Matrix; // 4x4
+
 	using VectorArray = std::vector<Vector>;
 	using MatrixArray = std::vector<Matrix>;
 	using FloatArray = std::vector<float>;

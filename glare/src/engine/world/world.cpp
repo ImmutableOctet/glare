@@ -257,6 +257,22 @@ namespace engine
 			draw_models((graphics::Canvas::DrawMode::All | additional_draw_modes), canvas, &projection, &camera_matrix, use_active_shader, render_state, _combine_view_proj_matrices);
 		}
 
+		if (render_state)
+		{
+			render_state->matrices =
+			{
+				.view       { camera_matrix },
+				.projection { projection }
+			};
+
+			render_state->screen =
+			{
+				.fov_y        = camera_params.fov,
+				.aspect_ratio = camera_params.aspect_ratio,
+				.depth_range  = { camera_params.near_plane, camera_params.far_plane }
+			};
+		}
+
 		return true;
 	}
 
@@ -465,11 +481,6 @@ namespace engine
 					shader["view_position"] = *render_state->meta.view_position;
 				}
 
-				if (render_state->meta.ambient_light.has_value())
-				{
-					shader["ambient_light"] = *render_state->meta.ambient_light;
-				}
-
 				// Point shadows:
 				const auto& point_shadow_lp = render_state->point_shadows.light_positions;
 
@@ -649,6 +660,17 @@ namespace engine
 				});
 			}
 		}
+	}
+
+	void World::update_camera_parameters(int width, int height)
+	{
+		registry.view<CameraParameters>().each([&](auto entity, auto& camera_component)
+		{
+			if (camera_component.dynamic_aspect_ratio)
+			{
+				camera_component.update_aspect_ratio(width, height);
+			}
+		});
 	}
 
 	Transform World::apply_transform(Entity entity, const math::TransformVectors& tform)

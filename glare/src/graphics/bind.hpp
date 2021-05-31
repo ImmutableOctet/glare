@@ -16,6 +16,12 @@ namespace graphics
 				resource.on_bind(context);
 			}
 
+			BindOperation(BindOperation&&) = default;
+			BindOperation(const BindOperation&) = delete;
+
+			BindOperation& operator=(BindOperation&&) = default;
+			BindOperation& operator=(const BindOperation&) = delete;
+
 			~BindOperation()
 			{
 				bind(prev_resource);

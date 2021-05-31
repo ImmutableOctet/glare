@@ -1,8 +1,12 @@
-#version 330 core
 
-layout (location = 0) out vec3 g_position;
-layout (location = 1) out vec3 g_normal;
-layout (location = 2) out vec4 g_albedo_specular;
+#if LAYER_POSITION_ENABLED
+    layout (location = 0) out vec3 g_position;
+    layout (location = 1) out vec3 g_normal;
+    layout (location = 2) out vec4 g_albedo_specular;
+#else
+    layout (location = 0) out vec3 g_normal;
+    layout (location = 1) out vec4 g_albedo_specular;
+#endif
 
 in vec2 uv;
 in vec3 fragment_position;
@@ -141,8 +145,10 @@ float directional_shadow_calculation(sampler2D shadow_map, vec4 fragPosLightSpac
 
 void main()
 {
-    // store the fragment position vector in the first gbuffer texture
-    g_position = fragment_position; // vec3(1.0, 0.0, 0.0);
+    #if LAYER_POSITION_ENABLED
+        // store the fragment position vector in the first gbuffer texture
+        g_position = fragment_position; // vec3(1.0, 0.0, 0.0);
+    #endif
 
     // also store the per-fragment normals into the gbuffer
     g_normal = normalize(normal);

@@ -32,11 +32,29 @@ namespace graphics
 			//inline operator bool() const { return (light_positions.has_value() || light_matrices.has_value()); }
 		} directional_shadows;
 
+		struct _matrices
+		{
+			Matrix view;
+			Matrix projection;
+		};
+
+		std::optional<_matrices> matrices;
+
 		struct
 		{
 			// Position of camera/view being rendered.
 			std::optional<Vector> view_position;
 			std::optional<graphics::ColorRGB> ambient_light;
 		} meta;
+
+		struct _screen
+		{
+			float fov_y;
+			float aspect_ratio;
+
+			Vector2D depth_range;
+		};
+
+		std::optional<_screen> screen;
 	};
 }

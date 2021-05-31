@@ -4,6 +4,7 @@
 
 #include <app/window.hpp>
 #include <util/lib.hpp>
+#include <util/string.hpp>
 
 #include <graphics/context_state.hpp>
 #include <graphics/context.hpp>
@@ -481,7 +482,42 @@ namespace graphics
 				return GL_NONE;
 			}
 
-			static Context::Handle compile_shader(std::string_view source, GLenum type, std::optional<std::string_view> preprocessor=std::nullopt) noexcept // const std::string& source
+			static void output_shader_build_errors(const Context::Handle& shader)
+			{
+				static constexpr GLsizei reserve_size = 1024;
+
+				GLchar debug_output[reserve_size] = {};
+				//std::string debug_output;
+				//debug_output.reserve(reserve_size);
+
+				GLsizei length = 0;
+
+				//glGetProgramInfoLog(shader, reserve_size, NULL, reinterpret_cast<GLchar*>(debug_output.data()));
+				//glGetProgramInfoLog(shader, reserve_size, &length, debug_output);
+				glGetShaderInfoLog(shader, reserve_size, &length, debug_output);
+				//auto e = glGetError();
+
+				std::cout << debug_output << std::endl;
+			}
+
+			static void output_shader_link_errors(const Context::Handle& shader)
+			{
+				static constexpr GLsizei reserve_size = 1024;
+
+				GLchar debug_output[reserve_size] = {};
+				//std::string debug_output;
+				//debug_output.reserve(reserve_size);
+
+				GLsizei length = 0;
+
+				//glGetProgramInfoLog(shader, reserve_size, NULL, reinterpret_cast<GLchar*>(debug_output.data()));
+				glGetProgramInfoLog(shader, reserve_size, &length, debug_output);
+				//auto e = glGetError();
+
+				std::cout << debug_output << std::endl;
+			}
+
+			static Context::Handle compile_shader(std::string_view source, GLenum type, std::optional<std::string_view> preprocessor=std::nullopt, std::optional<std::string_view> version=std::nullopt) noexcept // const std::string& source
 			{
 				if (source.empty())
 				{
@@ -489,13 +525,27 @@ namespace graphics
 				}
 
 				bool has_preprocessor = (preprocessor.has_value());
-				GLsizei n_source_strings = (1 + static_cast<GLsizei>(has_preprocessor));
 
-				const GLchar* source_raw[] =
+				auto* actual_source = reinterpret_cast<const GLchar*>(source.data());
+
+				const GLchar* source_raw[3];
+				GLsizei n_source_strings = 0;
+				
+				if (version)
 				{
-					reinterpret_cast<const GLchar*>(source.data()),
-					reinterpret_cast<const GLchar*>((preprocessor) ? preprocessor->data() : nullptr)
-				};
+					source_raw[n_source_strings++] = version->data();
+				}
+				else
+				{
+					source_raw[n_source_strings++] = "\n#version 330 core\n";
+				}
+
+				if (preprocessor.has_value())
+				{
+					source_raw[n_source_strings++] = reinterpret_cast<const GLchar*>(preprocessor->data());
+				}
+
+				source_raw[n_source_strings++] = actual_source;
 
 				// Allocate a native OpenGL shader source container.
 				auto obj = glCreateShader(type);
@@ -517,6 +567,7 @@ namespace graphics
 
 				if (!success)
 				{
+					output_shader_build_errors(obj);
 					glDeleteShader(obj);
 
 					return {};
@@ -560,6 +611,7 @@ namespace graphics
 				if ((flags & Flags::DepthTest))
 				{
 					glDepthFunc(GL_LESS);
+					//glDepthRange(0.0, 1.0);
 				}
 
 				// Face culling:
@@ -1541,9 +1593,11 @@ namespace graphics
 	// Shader related:
 	Context::Handle Context::build_shader(const ShaderSource& source, std::optional<std::string_view> preprocessor) noexcept
 	{
-		auto vertex   = build_shader_source_obj(source.vertex, ShaderType::Vertex, preprocessor);
-		auto fragment = build_shader_source_obj(source.fragment, ShaderType::Fragment, preprocessor);
-		auto geometry = build_shader_source_obj(source.geometry, ShaderType::Geometry, preprocessor);
+		auto version = util::opt_str(source.version);
+
+		auto vertex   = build_shader_source_obj(source.vertex, ShaderType::Vertex, preprocessor, version);
+		auto fragment = build_shader_source_obj(source.fragment, ShaderType::Fragment, preprocessor, version);
+		auto geometry = build_shader_source_obj(source.geometry, ShaderType::Geometry, preprocessor, version);
 
 		auto program = link_shader(vertex, fragment, geometry);
 
@@ -1578,6 +1632,11 @@ namespace graphics
 		GLint success;
 		glGetProgramiv(program, GL_LINK_STATUS, &success);
 
+		if (!success)
+		{
+			Driver::output_shader_link_errors(program);
+		}
+
 		// TODO: Look into proper error handling for link-failure if possible.
 		ASSERT(success);
 
@@ -1589,9 +1648,9 @@ namespace graphics
 		glDeleteProgram(handle);
 	}
 
-	Context::Handle Context::build_shader_source_obj(std::string_view source_text, ShaderType type, std::optional<std::string_view> preprocessor) noexcept
+	Context::Handle Context::build_shader_source_obj(std::string_view source_text, ShaderType type, std::optional<std::string_view> preprocessor, std::optional<std::string_view> version) noexcept
 	{
-		return Driver::compile_shader(source_text, Driver::get_shader_type(type), ((preprocessor) ? preprocessor : std::nullopt));
+		return Driver::compile_shader(source_text, Driver::get_shader_type(type), preprocessor, version);
 	}
 
 	void Context::release_shader_source_obj(Handle&& handle)

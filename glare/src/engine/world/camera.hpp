@@ -40,6 +40,7 @@ namespace engine
 		static constexpr float DEFAULT_FOV = 75.0f;
 
 		static constexpr bool DEFAULT_FREE_ROTATION = true; // false;
+		static constexpr bool DEFAULT_DYNAMIC_ASPECT_RATIO = true; // false;
 
 		float fov; // Vertical FOV (Radians)
 		float aspect_ratio;
@@ -49,9 +50,10 @@ namespace engine
 		Projection projection_mode;
 
 		bool free_rotation;
+		bool dynamic_aspect_ratio;
 
 		CameraParameters(const util::json& camera_cfg);
-		CameraParameters(float v_fov_deg=DEFAULT_FOV, float near_plane=NEAR_PLANE, float far_plane=FAR_PLANE, float aspect_ratio=ASPECT, Projection projection_mode=Projection::Default, bool free_rotation=DEFAULT_FREE_ROTATION);
+		CameraParameters(float v_fov_deg=DEFAULT_FOV, float near_plane=NEAR_PLANE, float far_plane=FAR_PLANE, float aspect_ratio=ASPECT, Projection projection_mode=Projection::Default, bool free_rotation=DEFAULT_FREE_ROTATION, bool dynamic_aspect_ratio=DEFAULT_DYNAMIC_ASPECT_RATIO);
 
 		inline auto update_aspect_ratio(int width, int height)
 		{

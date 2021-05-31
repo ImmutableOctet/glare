@@ -3,6 +3,7 @@
 #include <string>
 #include <regex>
 #include <utility>
+#include <optional>
 
 namespace util
 {
@@ -20,5 +21,15 @@ namespace util
 	inline std::string concat(First&& first, Second&& second, Remaining&&... strs)
 	{
 		return first + concat<Second, Remaining...>(std::forward<Second&&>(second), strs...);
+	}
+
+	inline std::optional<std::string> opt_str(const std::string& str)
+	{
+		if (str.empty())
+		{
+			return std::nullopt;
+		}
+
+		return str;
 	}
 }

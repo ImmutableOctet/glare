@@ -28,6 +28,18 @@ namespace glare
 {
 	Glare::init_shaders::init_shaders(Graphics& graphics)
 	{
+		auto preprocessor = std::string_view{ "\n#define LAYER_DEPTH_ENABLED 1\n" }; // //#define LAYER_POSITION_ENABLED 1\n
+
+		lighting_pass = memory::allocate<graphics::Shader>
+		(
+			graphics.context,
+
+			"assets/shaders/deferred_shading.vert",
+			"assets/shaders/deferred_shading.frag",
+			std::string {},
+			preprocessor
+		);
+
 		// Not an initializer list for readability/testing purposes:
 		forward = memory::allocate<graphics::Shader>
 		(
@@ -51,15 +63,11 @@ namespace glare
 			graphics.context,
 
 			"assets/shaders/geometry_pass.vert",
-			"assets/shaders/geometry_pass.frag"
-		);
+			"assets/shaders/geometry_pass.frag",
 
-		lighting_pass = memory::allocate<graphics::Shader>
-		(
-			graphics.context,
+			std::string {},
 
-			"assets/shaders/deferred_shading.vert",
-			"assets/shaders/deferred_shading.frag"
+			preprocessor
 		);
 
 		framebuffer_dbg = memory::allocate<graphics::Shader>
@@ -394,9 +402,12 @@ namespace glare
 			};
 
 			// Geometry pass.
+
+			//glDepthRange(0.1, 4000.0);
+
 			auto& gbuffer = render_geometry(world, viewport, this->gbuffer, render_state);
 
-			graphics.context->clear(0.0f, 0.0f, 0.0f, 1.0f, BufferType::Color | BufferType::Depth); // gfx
+			//graphics.context->clear(0.0f, 0.0f, 0.0f, 1.0f, BufferType::Color | BufferType::Depth); // gfx
 			//graphics.context->clear(1.0f, 1.0f, 1.0f, 1.0f, BufferType::Color | BufferType::Depth); // gfx
 
 			// Lighting pass.
@@ -448,14 +459,61 @@ namespace glare
 			shader["ambient_light"] = world.properties.ambient_light;
 
 			//auto gPosition = graphics.context->use(*gbuffer.position, "g_position");
-			//std::optional<decltype(graphics.context->use(*gbuffer.position, "g_position"))> gPosition =
-			//	(gbuffer.position.has_value()) ? std::optional { graphics.context->use(*gbuffer.position, "g_position") } : std::nullopt;
+			
+			std::optional<decltype(graphics.context->use(*gbuffer.position, "g_position"))> gPosition =
+				(gbuffer.position.has_value()) ? std::optional { graphics.context->use(*gbuffer.position, "g_position") } : std::nullopt;
 
-			auto gPosition = graphics.context->use(gbuffer.position, "g_position");
-			auto gDepth = graphics.context->use(gbuffer.depth, "g_depth");
+			//auto gPosition = graphics.context->use(gbuffer.position, "g_position");
+			 
+			//auto gDepth = graphics.context->use(gbuffer.depth, "g_depth");
+
+			std::optional<decltype(graphics.context->use(*gbuffer.depth, "g_depth"))> gDepth =
+				(gbuffer.depth.has_value()) ? std::optional { graphics.context->use(*gbuffer.depth, "g_depth") } : std::nullopt;
 
 			auto gNormal = graphics.context->use(gbuffer.normal, "g_normal");
 			auto gAlbedoSpec = graphics.context->use(gbuffer.albedo_specular, "g_albedo_specular");
+
+			if (!gbuffer.position.has_value())
+			{
+				ASSERT(render_state.matrices.has_value());
+				ASSERT(render_state.screen.has_value());
+
+				const auto& matrices = *render_state.matrices;
+				const auto& screen = *render_state.screen;
+
+				auto fov_y = screen.fov_y;
+				//auto fov_x = std::atanf((16.0f/9.0f) * std::tan(fov_y));
+
+				auto aspect = screen.aspect_ratio;
+
+				//aspect = 1600.0f / 900.0f;
+				//aspect = 900.0f / 1600.0f;
+
+				// Included for now:
+				shader["inv_view"] = glm::inverse(matrices.view);
+				shader["inv_projection"] = glm::inverse(matrices.projection);
+
+				shader["inv_projview"] = glm::inverse(matrices.projection * matrices.view);
+
+
+				shader["projection"] = matrices.projection;
+
+				auto hs_near_plane = math::vec2{ (std::tan(fov_y / 2.0f) * aspect), (std::tan(fov_y / 2.0f)) };
+				//auto hs_near_plane = math::vec2{ (std::tan(fov_x / 2.0f) * aspect), (std::tan(fov_y / 2.0f)) * 2.0f };
+
+				auto depth_range = screen.depth_range;
+
+				shader["half_size_near_plane"] = hs_near_plane;
+
+				shader["depth_range"] = math::vec2(0.0, 1.0); // depth_range
+			}
+
+			if (render_state.meta.ambient_light.has_value())
+			{
+				shader["ambient_light"] = *render_state.meta.ambient_light;
+			}
+
+			shader["view_position"] = *render_state.meta.view_position;
 
 			auto& registry = world.get_registry();
 
@@ -500,12 +558,20 @@ namespace glare
 				light_idx++;
 			});
 
-			shader["view_position"] = *render_state.meta.view_position;
+			shader["point_lights_count"] = (light_idx-1);
+
+			//graphics.context->toggle(graphics::ContextFlags::FaceCulling, false);
+
+			//glFrontFace(GL_CCW);
 
 			graphics.context->use(gbuffer.screen_quad, [&, this]()
 			{
 				graphics.context->draw();
 			});
+
+			//glFrontFace(GL_CW);
+
+			//graphics.context->toggle(graphics::ContextFlags::FaceCulling, true);
 
 			if (!gbuffer.depth.has_value())
 			{
@@ -725,6 +791,8 @@ namespace glare
 	{
 		if (this->window.get() == &window)
 		{
+			world.update_camera_parameters(width, height);
+
 			gbuffer.resize(width, height);
 		}
 	}
