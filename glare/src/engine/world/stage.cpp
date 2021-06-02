@@ -244,7 +244,7 @@ namespace engine
 		{
 			.ambient  { util::get_color_rgb(data, "ambient", { 0.0f, 0.0f, 0.0f }) },
 			.diffuse  { util::get_color_rgb(data, "color", util::get_color_rgb(data, "diffuse", { 1.0f, 1.0f, 1.0f })) },
-			.specular { util::get_color_rgb(data, "specular") }
+			.specular { util::get_color_rgb(data, "specular", { 0.1f, 0.1f, 0.1f }) }
 		};
 
 		switch (type)
@@ -312,8 +312,13 @@ namespace engine
 		{
 			const auto& cfg = world.get_config();
 			auto shadow_resolution = util::get_vec2i(data, "shadow_resolution", cfg.get_shadow_resolution());
+			auto shadow_range = util::get_value(data, "shadow_range", 1000.0f);
 
-			attach_shadows(world, light, shadow_resolution);
+			auto shadow_light_type_str = util::get_value<std::string>(data, "shadow_type", {});
+
+			auto shadow_light_type = ((shadow_light_type_str.empty()) ? std::nullopt : std::optional<LightType> { LightComponent::resolve_light_mode(shadow_light_type_str) }); // std::optional<LightType> {}
+
+			attach_shadows(world, light, shadow_resolution, shadow_range, shadow_light_type);
 		}
 
 		return light;

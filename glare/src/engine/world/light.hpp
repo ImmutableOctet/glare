@@ -46,8 +46,8 @@ namespace engine
 
 	struct PointLightComponent
 	{
-		static constexpr float DEFAULT_LINEAR = 0.007f; // 0.1f;
-		static constexpr float DEFAULT_QUADRATIC = 0.0002f; //(1.0f / 2000.0f);
+		static constexpr float DEFAULT_LINEAR = 0.001f; // 0.1f;
+		static constexpr float DEFAULT_QUADRATIC = 0.000005f; //(1.0f / 2000.0f);
 
 		float linear = DEFAULT_LINEAR;
 		float quadratic = DEFAULT_QUADRATIC;
@@ -70,7 +70,7 @@ namespace engine
 
 		graphics::ColorRGB ambient = { 0.1f, 0.1f, 0.1f };
 		graphics::ColorRGB diffuse = { 1.0f, 1.0f, 1.0f }; // color;
-		graphics::ColorRGB specular = {};
+		graphics::ColorRGB specular = { 0.1f, 0.1f, 0.1f };
 
 		float max_brightness() const;
 	};
@@ -119,8 +119,8 @@ namespace engine
 	Entity create_point_light(World& world, const math::Vector& position, const LightProperties& properties={}, const LightProperties::Point& advanced_properties={}, Entity parent=null, bool debug_mode=false, pass_ref<graphics::Shader> debug_shader={});
 
 	// Attaches light-point shadows to the 'light' entity specified.
-	void attach_shadows(World& world, Entity light, const math::vec2i& resolution);
-	void attach_shadows(World& world, Entity light, LightType light_type, std::optional<math::vec2i> resolution=std::nullopt, std::optional<CameraParameters> perspective_cfg=std::nullopt, bool update_aspect_ratio=true);
+	bool attach_shadows(World& world, Entity light, const math::vec2i& resolution, float shadow_range=1000.0f, std::optional<LightType> shadow_light_type=std::nullopt);
+	bool attach_shadows(World& world, Entity light, LightType light_type, std::optional<math::vec2i> resolution=std::nullopt, std::optional<CameraParameters> perspective_cfg=std::nullopt, bool update_aspect_ratio=true, bool conform_to_light_type=false);
 
 	// Update shadow-map state (LightShadows, etc.) based on the type of light specified.
 	void update_shadows(World& world, Entity light);

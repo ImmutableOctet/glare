@@ -9,6 +9,7 @@
 
 #include <util/string.hpp>
 #include <util/algorithm.hpp>
+#include <util/optional.hpp>
 
 #include <graphics/context.hpp>
 //#include <graphics/shader.hpp>
@@ -101,30 +102,39 @@ namespace engine
 		return light;
 	}
 
-	void attach_shadows(World& world, Entity light, const math::vec2i& resolution)
+	bool attach_shadows(World& world, Entity light, const math::vec2i& resolution, float shadow_range, std::optional<LightType> shadow_light_type)
 	{
 		auto& registry = world.get_registry();
 
-		const auto& light_cfg = registry.get<LightComponent>(light);
-		auto light_type = light_cfg.type;
+		LightType light_type = util::value_or
+		(
+			shadow_light_type,
+
+			[&registry, &light]()
+			{
+				const auto& light_cfg = registry.get<LightComponent>(light);
+
+				return light_cfg.type;
+			}
+		);
 
 		CameraParameters perspective_cfg;
 		
 		switch (light_type)
 		{
 			case LightType::Point:
-				perspective_cfg = CameraParameters(90.0f, 1.0f, 1000.0f, 0.0, CameraProjection::Perspective);
+				perspective_cfg = CameraParameters(90.0f, 1.0f, shadow_range, 0.0, CameraProjection::Perspective);
 
 				break;
 
 			case LightType::Directional:
-				perspective_cfg = CameraParameters(90.0f, 0.0f, 1000.0f, 1.0f, CameraProjection::Orthographic); // 1.0f
-				//perspective_cfg = CameraParameters(45.0f, 1.0f, 1000.0f, 1.0, CameraProjection::Perspective);
+				perspective_cfg = CameraParameters(90.0f, 0.0f, shadow_range, 1.0f, CameraProjection::Orthographic); // 1.0f
+				//perspective_cfg = CameraParameters(45.0f, 1.0f, shadow_range, 1.0, CameraProjection::Perspective);
 
 				break;
 		}
 
-		attach_shadows(world, light, light_type, resolution, perspective_cfg);
+		return attach_shadows(world, light, light_type, resolution, perspective_cfg, true, true);
 	}
 
 	template <typename TFormData>
@@ -149,7 +159,7 @@ namespace engine
 	}
 
 	template <LightType light_type, typename ShadowType, typename TFormData>
-	static void attach_shadows_impl(World& world, Entity light, const math::Vector& light_position, std::optional<math::vec2i> resolution, std::optional<CameraParameters> perspective_cfg, bool update_aspect_ratio)
+	static bool attach_shadows_impl(World& world, Entity light, const math::Vector& light_position, std::optional<math::vec2i> resolution, std::optional<CameraParameters> perspective_cfg, bool update_aspect_ratio)
 	{
 		auto& registry = world.get_registry();
 
@@ -162,7 +172,7 @@ namespace engine
 		//ASSERT(pcfg_ptr); // <-- This should only fail if you're trying to attach shadows to a light without any parameters.
 		if (!pcfg_ptr)
 		{
-			return;
+			return false;
 		}
 
 		auto& pcfg = *pcfg_ptr;
@@ -193,6 +203,9 @@ namespace engine
 
 				auto width = r.x/12; // std::sqrtf(r.x); // 20.0f; // 200.0f;
 				auto height = r.y/12; // std::sqrtf(r.y);; // 20.0f; // 200.0f;
+
+				//auto width = r.x / 4;
+				//auto height = r.y / 4;
 
 				auto hw = (width / 2.0f);
 				auto hh = (height / 2.0f);
@@ -230,29 +243,42 @@ namespace engine
 		{
 			registry.emplace_or_replace<ShadowType>(light, world.get_resource_manager().get_context(), pcfg, tform, *resolution);
 		}
+
+		return true;
 	}
 	
-	void attach_shadows(World& world, Entity light, LightType light_type, std::optional<math::vec2i> resolution, std::optional<CameraParameters> perspective_cfg, bool update_aspect_ratio)
+	bool attach_shadows(World& world, Entity light, LightType light_type, std::optional<math::vec2i> resolution, std::optional<CameraParameters> perspective_cfg, bool update_aspect_ratio, bool conform_to_light_type)
 	{
 		auto& registry = world.get_registry();
 
 		auto light_tform = world.get_transform(light);
 		auto light_position = light_tform.get_position();
 
-		switch (light_type)
+		if (conform_to_light_type)
 		{
-			case LightType::Point:
-				attach_shadows_impl<LightType::Point, PointLightShadows, PointLightShadows::TFormData>(world, light, light_position, resolution, perspective_cfg, update_aspect_ratio);
+			switch (light_type)
+			{
+				case LightType::Point:
+					return attach_shadows_impl<LightType::Point, PointLightShadows, PointLightShadows::TFormData>(world, light, light_position, resolution, perspective_cfg, update_aspect_ratio);
 
-				break;
-			case LightType::Directional:
-				attach_shadows_impl<LightType::Directional, DirectionLightShadows, DirectionLightShadows::TFormData>(world, light, light_position, resolution, perspective_cfg, update_aspect_ratio);
+					//break;
+				case LightType::Directional:
+					return attach_shadows_impl<LightType::Directional, DirectionLightShadows, DirectionLightShadows::TFormData>(world, light, light_position, resolution, perspective_cfg, update_aspect_ratio);
 
-				break;
-			default:
-				// Other light types are not currently supported. (Spotlights, etc.)
-				ASSERT(false);
+					//break;
+				//default:
+					// Other light types are not currently supported. (Spotlights, etc.)
+					//ASSERT(false);
+					//break;
+			}
 		}
+		else
+		{
+			if (attach_shadows_impl<LightType::Point, PointLightShadows, PointLightShadows::TFormData>(world, light, light_position, resolution, perspective_cfg, update_aspect_ratio)) return true;
+			if (attach_shadows_impl<LightType::Directional, DirectionLightShadows, DirectionLightShadows::TFormData>(world, light, light_position, resolution, perspective_cfg, update_aspect_ratio)) return true;
+		}
+
+		return false;
 	}
 
 	void update_shadows(World& world, Entity light)

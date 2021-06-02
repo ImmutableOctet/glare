@@ -344,6 +344,9 @@
     <ClInclude Include="src\graphics\gbuffer.hpp">
       <Filter>graphics\graphics</Filter>
     </ClInclude>
+    <ClInclude Include="src\util\optional.hpp">
+      <Filter>util\util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\tests\model_test\shaders\8.1.deferred_light_box.fs">

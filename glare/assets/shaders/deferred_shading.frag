@@ -234,7 +234,7 @@ uniform PointLight point_lights[MAX_POINT_LIGHTS];
 
 vec3 compute_point_lights(in vec3 world_position, in vec3 normal, in vec3 diffuse_in, float specular_in, vec3 view_direction)
 {
-    vec3 lighting = diffuse_in;
+    vec3 lighting = vec3(0.0, 0.0, 0.0); //diffuse_in;
     vec3 diffuse = diffuse_in;
 
     for (int i = 0; i < point_lights_count; ++i)
@@ -327,11 +327,11 @@ vec3 calculate_directional_light(in vec3 lighting, in vec3 world_position, in ve
 }
 */
 
-const float max_shadow = 0.95; // 0.85;
+const float max_shadow = 0.99; // 0.95; // 0.85;
 
 vec3 shade_pixel(in vec3 world_position, in vec3 view_position, in vec3 normal, vec3 diffuse_in, float specular)
 {
-    vec3 diffuse = diffuse_in; // (diffuse_in * ambient_light);
+    vec3 diffuse = vec3(0.0, 0.0, 0.0); //diffuse_in; // (diffuse_in * ambient_light);
 
     //diffuse *= 1.0 - ambient_light;
 
@@ -353,24 +353,25 @@ vec3 shade_pixel(in vec3 world_position, in vec3 view_position, in vec3 normal, 
     }
 
     //float light = (1.0 - min(shadow, max_shadow));
-    float ambient_strength = min(length(ambient_light), max_shadow);
-    float light =  (1.0 - min(shadow, (1.0 - ambient_strength)));
+    float ambient_strength = min(length(ambient_light), (1.0 - max_shadow));
+    //float ambient_strength = max_shadow;
+    float light = (1.0 - min(shadow, (1.0 - ambient_strength)));
 
+    specular = (pow(light, 2) * specular);
     //float dir_light_intensity = 0.5; // 1.0; //(ambient * 2.0);
 
     for (int i = 0; i < directional_lights_count; i++)
     {
-        diffuse = calculate_directional_light(world_position, normal, view_direction, directional_lights[i], diffuse_in, light);
+        diffuse += calculate_directional_light(world_position, normal, view_direction, directional_lights[i], diffuse_in, light);
     }
 
-    diffuse = (light * diffuse);
     //diffuse = (light * diffuse);
 
     //vec3 lighting =
     diffuse += compute_point_lights(world_position, normal, diffuse_in, specular, view_direction); // , diffuse
 
+    diffuse = (light * diffuse);
 
-    specular = (pow(light, 2) * specular);
     
     //lighting = (light * lighting);
 

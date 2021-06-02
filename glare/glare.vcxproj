@@ -281,6 +281,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClInclude Include="src\util\lib.hpp" />
     <ClInclude Include="src\util\log.hpp" />
     <ClInclude Include="src\util\memory.hpp" />
+    <ClInclude Include="src\util\optional.hpp" />
     <ClInclude Include="src\util\shorthand.hpp" />
     <ClInclude Include="src\util\string.hpp" />
     <ClInclude Include="src\util\util.hpp" />
