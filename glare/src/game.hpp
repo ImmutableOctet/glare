@@ -116,7 +116,53 @@ namespace glare
 
 			std::tuple<bool, bool> render_shadows(bool point_lights=true, bool directional_lights=true);
 			graphics::GBuffer& render_geometry(engine::World& world, const graphics::Viewport& viewport, graphics::GBuffer& gbuffer, graphics::WorldRenderState& render_state);
-			graphics::GBuffer& render_lighting(engine::World& world, const graphics::Viewport& viewport, graphics::GBuffer& gbuffer, const graphics::WorldRenderState& render_state);
+			
+			graphics::GBuffer& render_scene(engine::World& world, const graphics::Viewport& viewport, graphics::GBuffer& gbuffer, const graphics::WorldRenderState& render_state);
+			
+			graphics::GBuffer& render_lights(engine::World& world, const graphics::WorldRenderState& render_state, graphics::Shader& shader);
+			
+			engine::Entity render_directional_light
+			(
+				engine::World& world,
+				const graphics::WorldRenderState& render_state,
+				graphics::Shader& shader,
+
+				engine::Entity entity,
+				const engine::LightComponent& light,
+				engine::TransformComponent& transform,
+				const engine::Relationship& relationship,
+
+				unsigned int directional_light_idx
+			);
+
+			engine::Entity render_spot_light
+			(
+				engine::World& world,
+				const graphics::WorldRenderState& render_state,
+				graphics::Shader& shader,
+
+				engine::Entity entity,
+				const engine::LightComponent& light,
+				engine::TransformComponent& transform,
+				const engine::Relationship& relationship,
+
+				unsigned int directional_light_idx
+			);
+
+			engine::Entity render_point_light
+			(
+				engine::World& world,
+				const graphics::WorldRenderState& render_state,
+				graphics::Shader& shader,
+				
+				engine::Entity entity,
+				const engine::LightComponent& light,
+				engine::TransformComponent& transform,
+				const engine::Relationship& relationship,
+				
+				unsigned int point_light_idx
+			);
+
 			graphics::GBuffer& render_screen(const graphics::Viewport& viewport, graphics::GBuffer& gbuffer, GBufferDisplayMode display_mode);
 			graphics::GBuffer& render_debug(const graphics::Viewport& viewport, graphics::GBuffer& gbuffer);
 

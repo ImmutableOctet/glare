@@ -235,7 +235,76 @@ namespace engine
 	Entity Stage::CreateLight(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
 	{
 		auto debug_mode = util::get_value(data, "debug", false); // true
-		auto light = create_light(world, {}, util::get_color(data, "color"), LightComponent::resolve_light_mode(util::get_value<std::string>(data, "mode", "directional")), parent, debug_mode);
+
+		auto type = LightComponent::resolve_light_mode(util::get_value<std::string>(data, "mode", "directional"));
+
+		Entity light = null;
+
+		auto properties = LightProperties
+		{
+			.ambient  { util::get_color_rgb(data, "ambient", { 0.0f, 0.0f, 0.0f }) },
+			.diffuse  { util::get_color_rgb(data, "color", util::get_color_rgb(data, "diffuse", { 1.0f, 1.0f, 1.0f })) },
+			.specular { util::get_color_rgb(data, "specular") }
+		};
+
+		switch (type)
+		{
+			case LightType::Directional:
+			{
+				auto advanced_properties = LightProperties::Directional
+				{
+					/*
+						.direction { util::get_vector(data, "direction") }
+					*/
+
+					.use_position { util::get_value(data, "use_position", false) }
+				};
+
+				light = create_directional_light(world, {}, properties, advanced_properties, parent, debug_mode);
+
+				break;
+			}
+			case LightType::Point:
+			{
+				auto advanced_properties = LightProperties::Point
+				{
+					.linear { util::get_value(data, "linear", LightProperties::Point::DEFAULT_LINEAR) },
+					.quadratic { util::get_value(data, "quadratic", LightProperties::Point::DEFAULT_QUADRATIC) }
+				};
+
+				light = create_point_light(world, {}, properties, advanced_properties, parent, debug_mode);
+
+				break;
+			}
+
+			case LightType::Spotlight:
+			{
+				auto advanced_properties = LightProperties::Spot
+				{
+					.cutoff { util::get_value(data, "cutoff", LightProperties::Spot::DEFAULT_CUTOFF()) },
+					.outer_cutoff { util::get_value(data, "outer_cutoff", LightProperties::Spot::DEFAULT_OUTER_CUTOFF()) },
+
+					.constant { util::get_value(data, "constant", LightProperties::Spot::DEFAULT_CONSTANT) },
+					.linear { util::get_value(data, "linear", LightProperties::Spot::DEFAULT_LINEAR) },
+					.quadratic { util::get_value(data, "quadratic", LightProperties::Spot::DEFAULT_QUADRATIC) }
+				};
+
+				light = create_spot_light(world, {}, properties, advanced_properties, parent, debug_mode);
+
+				break;
+			}
+
+			//default:
+			//	// Unsupported.
+			//	ASSERT(false);
+
+			//	break;
+		}
+
+		if (light == null)
+		{
+			return null;
+		}
 
 		auto shadows_enabled = util::get_value(data, "shadows", false);
 

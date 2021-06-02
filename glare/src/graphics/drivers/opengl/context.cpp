@@ -79,7 +79,7 @@ namespace graphics
 			// Used internally to mitigate constant allocation of buffers for texture-array description.
 			std::vector<int> _texture_assignment_buffer;
 
-			using UniformLocationMap       = std::unordered_map<std::string_view, gl_uniform_location>;
+			using UniformLocationMap       = std::unordered_map<std::string, gl_uniform_location>; // std::string_view
 			using UniformLocationContainer = std::unordered_map<Handle, UniformLocationMap>;
 
 			UniformLocationContainer uniform_location_cache;
@@ -138,23 +138,31 @@ namespace graphics
 			// NOTE: 'name' must be a null-terminated string.
 			gl_uniform_location get_uniform(Shader& shader, std::string_view name)
 			{
+				//return glGetUniformLocation(shader.get_handle(), name.data());
+
+				///*
 				auto& uniform_location_map = uniform_location_cache[shader.get_handle()];
 
-				auto it = uniform_location_map.find(name);
+				auto name_safe = std::string(name);
+
+				auto it = uniform_location_map.find(name_safe);
 
 				if (it != uniform_location_map.end())
 				{
 					return it->second;
 				}
+				//*/
 
-				auto uniform_location = glGetUniformLocation(shader.get_handle(), name.data());
+				auto uniform_location = glGetUniformLocation(shader.get_handle(), name.data()); // name_safe.data()
 
 				if (uniform_location == -1)
 				{
-					//std::cout << "Unable to resolve uniform for: " << '\"' << name << '\"' << '\n';
+					std::cout << "Unable to resolve uniform for: " << '\"' << name << '\"' << '\n';
+					//auto e = glGetError();
+					//std::cout << e << std::endl;
 				}
 
-				uniform_location_map[name] = uniform_location;
+				uniform_location_map[name_safe] = uniform_location;
 
 				return uniform_location;
 			}
@@ -966,6 +974,8 @@ namespace graphics
 
 		if (uniform == Driver::InvalidUniform)
 		{
+			//std::cout << "Unable to find uniform: " << name << '\n';
+
 			return false;
 		}
 

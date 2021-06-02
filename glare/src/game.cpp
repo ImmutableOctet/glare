@@ -203,12 +203,26 @@ namespace glare
 			// also calculate random color
 			graphics::ColorRGB color =
 			{
-				(static_cast<float>(rand() % 100) / 100.0f) + 0.5f, // between 0.5 and 1.0 // 1.0f
-				(static_cast<float>(rand() % 100) / 100.0f) + 0.5f, // between 0.5 and 1.0 // 1.0f
-				(static_cast<float>(rand() % 100) / 100.0f) + 0.5f // between 0.5 and 1.0 // 1.0f
+				(static_cast<float>(rand() % 100) / 255.0f) + 0.5f, // between 0.5 and 1.0 // 1.0f
+				(static_cast<float>(rand() % 100) / 255.0f) + 0.5f, // between 0.5 and 1.0 // 1.0f
+				(static_cast<float>(rand() % 100) / 255.0f) + 0.5f // between 0.5 and 1.0 // 1.0f
 			};
 
-			engine::create_light(world, (position + offset), color, engine::LightType::Point, engine::null, true, shaders.light_debug);
+			engine::create_point_light
+			(
+				world,
+				(position + offset),
+				
+				{
+					.diffuse{color}
+				},
+
+				{},
+
+				engine::null,
+				true,
+				shaders.light_debug
+			);
 		}
 	}
 
@@ -264,7 +278,7 @@ namespace glare
 
 		auto player = world.get_player(1);
 
-		make_lights(world);
+		//make_lights(world);
 		make_models(world, player);
 
 		world.register_event<app::input::KeyboardState, &Glare::on_user_keyboard_input>(*this);
@@ -414,8 +428,7 @@ namespace glare
 			//graphics.context->clear(0.0f, 0.0f, 0.0f, 1.0f, BufferType::Color | BufferType::Depth); // gfx
 			//graphics.context->clear(1.0f, 1.0f, 1.0f, 1.0f, BufferType::Color | BufferType::Depth); // gfx
 
-			// Lighting pass.
-			render_lighting(world, viewport, gbuffer, render_state);
+			render_scene(world, viewport, gbuffer, render_state);
 
 			render_screen(viewport, gbuffer, gbuffer_display_mode);
 
@@ -452,15 +465,13 @@ namespace glare
 		return gbuffer;
 	}
 
-	graphics::GBuffer& Glare::render_lighting(engine::World& world, const graphics::Viewport& viewport, graphics::GBuffer& gbuffer, const graphics::WorldRenderState& render_state)
+	graphics::GBuffer& Glare::render_scene(engine::World& world, const graphics::Viewport& viewport, graphics::GBuffer& gbuffer, const graphics::WorldRenderState& render_state)
 	{
 		auto& shader = *shaders.lighting_pass;
 
 		graphics.context->use(shader, [&, this]()
 		{
 			graphics.context->clear_textures(true); // false
-
-			shader["ambient_light"] = world.properties.ambient_light;
 
 			//auto gPosition = graphics.context->use(*gbuffer.position, "g_position");
 			
@@ -503,6 +514,9 @@ namespace glare
 				//auto depth_range = screen.depth_range;
 				//shader["depth_range"] = math::vec2(0.0, 1.0); // depth_range
 			}
+			
+			// Ambient light lookup is handled in previous phase, upload happens here:
+			//shader["ambient_light"] = world.properties.ambient_light;
 
 			if (render_state.meta.ambient_light.has_value())
 			{
@@ -684,57 +698,7 @@ namespace glare
 				{}
 			}
 
-			auto& registry = world.get_registry();
-
-			// update attenuation parameters and calculate radius
-			const float constant = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
-			const float linear = 0.1f; // 0.000005f; // 0.7f; // 0.005f;
-			const float quadratic = 1.0f / 2000.0f; // 1.8f; // 0.0005f;
-
-			unsigned int light_idx = 0;
-
-			registry.view<engine::LightComponent, engine::TransformComponent, engine::Relationship>().each([&](auto entity, const auto& light, auto& transform, const auto& relationship) // const auto&
-			{
-				/*
-				if (light.type != engine::LightType::Directional)
-				{
-					return;
-				}
-				*/
-
-				auto light_transform = engine::Transform(registry, entity, relationship, transform);
-
-				auto uniform_prefix = ("point_lights[" + std::to_string(light_idx) + "].");
-
-				auto attr = [&](const std::string& attr_name, auto&& value) // std::string_view
-				{
-					shader[(uniform_prefix + attr_name)] = value;
-				};
-
-				const auto& light_color = light.color;
-
-				auto light_position = light_transform.get_position();
-
-				//std::cout << light_position.x << ',' << light_position.y << ',' << light_position.z << '\n';
-
-				attr("position", light_position);
-				attr("color", light_color);
-				attr("linear", linear); // light.linear
-				attr("quadratic", quadratic); // light.linear
-
-				///*
-				// then calculate radius of light volume/sphere
-				const float maxBrightness = std::fmaxf(std::fmaxf(light_color.r, light_color.g), light_color.b);
-				float radius = (-linear + std::sqrt(linear * linear - 4 * quadratic * (constant - (256.0f / 5.0f) * maxBrightness))) / (2.0f * quadratic);
-
-				//std::cout << "Radius: " << radius << '\n';
-				attr("radius", radius);
-				//*/
-
-				light_idx++;
-			});
-
-			shader["point_lights_count"] = (light_idx-1);
+			render_lights(world, render_state, shader);
 
 			//graphics.context->toggle(graphics::ContextFlags::FaceCulling, false);
 
@@ -753,13 +717,208 @@ namespace glare
 			{
 				graphics.context->copy_framebuffer(gbuffer.framebuffer, viewport, viewport, graphics::BufferType::Depth);
 			}
-
-			graphics.context->clear_textures(false); // true
 		});
 
 		return gbuffer;
 	}
 
+	graphics::GBuffer& Glare::render_lights(engine::World& world, const graphics::WorldRenderState& render_state, graphics::Shader& shader)
+	{
+		auto& registry = world.get_registry();
+
+		unsigned int directional_light_idx = 0;
+		unsigned int spot_light_idx        = 0;
+		unsigned int point_light_idx       = 0;
+
+		registry.view<engine::LightComponent, engine::TransformComponent, engine::Relationship>().each([&](auto entity, const auto& light, auto& transform, const auto& relationship) // const auto&
+		{
+			switch (light.type)
+			{
+				case engine::LightType::Directional:
+					if (render_directional_light(world, render_state, shader, entity, light, transform, relationship, directional_light_idx) != engine::null)
+					{
+						directional_light_idx++;
+					}
+
+					break;
+				case engine::LightType::Spotlight:
+					if (render_spot_light(world, render_state, shader, entity, light, transform, relationship, spot_light_idx) != engine::null)
+					{
+						spot_light_idx++;
+					}
+
+					break;
+				case engine::LightType::Point:
+					if (render_point_light(world, render_state, shader, entity, light, transform, relationship, point_light_idx) != engine::null)
+					{
+						point_light_idx++;
+					}
+
+					break;
+			}
+		});
+
+		shader["directional_lights_count"] = directional_light_idx;
+		shader["spot_lights_count"]        = spot_light_idx;
+		shader["point_lights_count"]       = point_light_idx;
+
+		return gbuffer;
+	}
+
+	engine::Entity Glare::render_directional_light
+	(
+		engine::World& world,
+		const graphics::WorldRenderState& render_state,
+		graphics::Shader& shader,
+		
+		engine::Entity entity,
+		const engine::LightComponent& light,
+		engine::TransformComponent& transform,
+		const engine::Relationship& relationship,
+		
+		unsigned int directional_light_idx
+	)
+	{
+		auto& registry = world.get_registry();
+
+		auto light_transform = engine::Transform(registry, entity, relationship, transform);
+		//"directional_lights[0].color"
+		auto uniform_prefix = ("directional_lights[" + std::to_string(directional_light_idx) + "].");
+
+		auto attr = [&](const std::string& attr_name, auto&& value) // std::string_view
+		{
+			shader[(uniform_prefix + attr_name)] = value;
+		};
+
+		auto light_position = light_transform.get_position();
+		auto light_direction = glm::normalize(-light_position);
+		//auto light_direction = light_transform.get_direction_vector();
+
+		//std::cout << light_position.x << ',' << light_position.y << ',' << light_position.z << '\n';
+
+		attr("position", light_position); // <-- TODO: Remove (Not needed for directional lights)
+
+		attr("direction", light_direction);
+
+		attr("ambient",  light.properties.ambient);
+		attr("diffuse",  light.properties.diffuse);
+		attr("specular", light.properties.specular);
+
+		auto* dir = registry.try_get<engine::DirectionalLightComponent>(entity);
+		
+		ASSERT(dir);
+
+		attr("use_position", dir->use_position);
+
+		return entity;
+	}
+
+	engine::Entity Glare::render_spot_light
+	(
+		engine::World& world,
+		const graphics::WorldRenderState& render_state,
+		graphics::Shader& shader,
+		
+		engine::Entity entity,
+		const engine::LightComponent& light,
+		engine::TransformComponent& transform,
+		const engine::Relationship& relationship,
+		
+		unsigned int spot_light_idx
+	)
+	{
+		auto& registry = world.get_registry();
+
+		auto light_transform = engine::Transform(registry, entity, relationship, transform);
+
+		auto uniform_prefix = ("spot_lights[" + std::to_string(spot_light_idx) + "].");
+
+		auto attr = [&](const std::string& attr_name, auto&& value) // std::string_view
+		{
+			shader[(uniform_prefix + attr_name)] = value;
+		};
+
+		auto light_position = light_transform.get_position();
+		auto light_direction = light_transform.get_direction_vector();
+
+		//std::cout << light_position.x << ',' << light_position.y << ',' << light_position.z << '\n';
+
+		attr("position", light_position);
+		attr("direction", light_direction);
+
+		attr("ambient",  light.properties.ambient);
+		attr("diffuse",  light.properties.diffuse);
+		attr("specular", light.properties.specular);
+
+		auto* spot = registry.try_get<engine::SpotLightComponent>(entity);
+		
+		ASSERT(spot);
+
+		attr("cutoff", spot->cutoff);
+		attr("outer_cutoff", spot->outer_cutoff);
+
+		attr("constant", spot->constant);
+		attr("linear", spot->linear);
+		attr("quadratic", spot->quadratic);
+
+		return entity;
+	}
+
+	engine::Entity Glare::render_point_light
+	(
+		engine::World& world,
+		const graphics::WorldRenderState& render_state,
+		graphics::Shader& shader,
+		
+		engine::Entity entity,
+		const engine::LightComponent& light,
+		engine::TransformComponent& transform,
+		const engine::Relationship& relationship,
+		
+		unsigned int point_light_idx
+	)
+	{
+		auto& registry = world.get_registry();
+
+		auto light_transform = engine::Transform(registry, entity, relationship, transform);
+
+		auto uniform_prefix = ("point_lights[" + std::to_string(point_light_idx) + "].");
+
+		auto attr = [&](const std::string& attr_name, auto&& value) // std::string_view
+		{
+			shader[(uniform_prefix + attr_name)] = value;
+		};
+
+		auto light_position = light_transform.get_position();
+
+		//std::cout << light_position.x << ',' << light_position.y << ',' << light_position.z << '\n';
+
+		attr("position", light_position);
+		
+		//attr("ambient", light.properties.ambient);
+		attr("diffuse", light.properties.diffuse);
+		//attr("specular", light.properties.specular);
+
+		auto* point_light = registry.try_get<engine::PointLightComponent>(entity);
+
+		ASSERT(point_light);
+
+		// update attenuation parameters and calculate radius
+		//const float constant = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
+
+		attr("linear", point_light->linear); // light.linear
+		attr("quadratic", point_light->quadratic); // light.linear
+
+		///*
+		float radius = point_light->get_radius(light.properties);
+
+		//std::cout << "Radius: " << radius << '\n';
+		attr("radius", radius);
+		//*/
+
+		return entity;
+	}
+	
 	graphics::GBuffer& Glare::render_screen(const graphics::Viewport& viewport, graphics::GBuffer& gbuffer, GBufferDisplayMode display_mode)
 	{
 		if (display_mode == GBufferDisplayMode::None)

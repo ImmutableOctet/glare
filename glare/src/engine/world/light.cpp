@@ -20,14 +20,29 @@
 
 namespace engine
 {
-	Entity create_light(World& world, const math::Vector& position, const graphics::ColorRGB& color, LightType type, Entity parent, bool debug_mode, pass_ref<graphics::Shader> debug_shader)
+	float PointLightComponent::get_radius(const LightProperties& properties, float constant) const
 	{
-		const auto& res = world.get_resource_manager();
+		return get_radius(properties.max_brightness(), constant);
+	}
 
+	float LightProperties::calculate_max_brightness(const graphics::ColorRGB& diffuse)
+	{
+		return std::fmaxf(std::fmaxf(diffuse.r, diffuse.g), diffuse.b);
+	}
+
+	float LightProperties::max_brightness() const
+	{
+		return calculate_max_brightness(diffuse);
+	}
+
+	static Entity create_light_impl(World& world, const math::Vector& position, LightType type, const LightProperties& properties, Entity parent=null, bool debug_mode=false, pass_ref<graphics::Shader> debug_shader={})
+	{
 		Entity light = null;
 
 		if (debug_mode) // (debug_shader)
 		{
+			//const auto& res = world.get_resource_manager();
+
 			light = load_model(world, "assets/geometry/cube.b3d", parent, EntityType::Light, false, 0.0f, std::nullopt, std::nullopt, std::nullopt, debug_shader); // {}
 
 			auto t = world.set_position(light, position);
@@ -36,7 +51,7 @@ namespace engine
 			auto& registry = world.get_registry();
 			auto& model = registry.get<ModelComponent>(light);
 
-			model.color = { color, 1.0f };
+			model.color = { properties.diffuse, 1.0f };
 			model.casts_shadow = false;
 		}
 		else
@@ -44,7 +59,44 @@ namespace engine
 			light = create_pivot(world, position, parent, EntityType::Light);
 		}
 
-		world.get_registry().emplace<LightComponent>(light, type, color);
+		world.get_registry().emplace<LightComponent>
+		(
+			light,
+
+			LightComponent
+			{
+				.type { type },
+				.properties { properties }
+			}
+		);
+
+		return light;
+	}
+
+	Entity create_directional_light(World& world, const math::Vector& position, const LightProperties& properties, const LightProperties::Directional& advanced_properties, Entity parent, bool debug_mode, pass_ref<graphics::Shader> debug_shader)
+	{
+		auto light = create_light_impl(world, position, LightType::Directional, properties, parent, debug_mode, debug_shader);
+
+		// Currently disabled due to zero members in 'DirectionalLightComponent'.
+		world.get_registry().emplace<DirectionalLightComponent>(light, advanced_properties);
+
+		return light;
+	}
+
+	Entity create_spot_light(World& world, const math::Vector& position, const LightProperties& properties, const LightProperties::Spot& advanced_properties, Entity parent, bool debug_mode, pass_ref<graphics::Shader> debug_shader)
+	{
+		auto light = create_light_impl(world, position, LightType::Spotlight, properties, parent, debug_mode, debug_shader);
+
+		world.get_registry().emplace<SpotLightComponent>(light, advanced_properties);
+
+		return light;
+	}
+
+	Entity create_point_light(World& world, const math::Vector& position, const LightProperties& properties, const LightProperties::Point& advanced_properties, Entity parent, bool debug_mode, pass_ref<graphics::Shader> debug_shader)
+	{
+		auto light = create_light_impl(world, position, LightType::Point, properties, parent, debug_mode, debug_shader);
+
+		world.get_registry().emplace<PointLightComponent>(light, advanced_properties);
 
 		return light;
 	}
@@ -198,6 +250,7 @@ namespace engine
 
 				break;
 			default:
+				// Other light types are not currently supported. (Spotlights, etc.)
 				ASSERT(false);
 		}
 	}
