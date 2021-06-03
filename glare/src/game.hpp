@@ -34,6 +34,7 @@ namespace glare
 				ShadowMap,
 				AlbedoSpecular,
 				Depth,
+				//RenderFlags,
 
 				Modes,
 			};

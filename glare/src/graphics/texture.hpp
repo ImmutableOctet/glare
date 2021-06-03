@@ -43,7 +43,16 @@ namespace graphics
 			Texture(pass_ref<Context> ctx, const PixelMap& data, Flags flags=Flags::Default, TextureType type=TextureType::Default);
 
 			// TextureFlags::Dynamic is automatically applied internally.
-			Texture(pass_ref<Context> ctx, int width, int height, TextureFormat format, ElementType element_type, TextureFlags flags=Flags::None, TextureType type=TextureType::Default, std::optional<ColorRGBA> _border_color=std::nullopt);
+			Texture
+			(
+				pass_ref<Context> ctx,
+				int width, int height,
+				TextureFormat format, ElementType element_type,
+				TextureFlags flags=Flags::None, TextureType type=TextureType::Default,
+				
+				std::optional<ColorRGBA> _border_color=std::nullopt,
+				bool _loose_internal_format=true
+			);
 			
 			Texture(Texture&& texture) : Texture() { swap(*this, texture); }
 

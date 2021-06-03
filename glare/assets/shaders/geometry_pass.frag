@@ -4,9 +4,11 @@
     layout (location = 0) out vec3 g_position;
     layout (location = 1) out vec3 g_normal;
     layout (location = 2) out vec4 g_albedo_specular;
+    layout (location = 3) out uint g_render_flags;
 #else
     layout (location = 0) out vec3 g_normal;
     layout (location = 1) out vec4 g_albedo_specular;
+    layout (location = 2) out uint g_render_flags;
 #endif
 
 in vec2 uv;
@@ -23,6 +25,8 @@ uniform bool specular_available = false;
 
 uniform vec4 diffuse_color = vec4(1.0, 1.0, 1.0, 1.0);
 uniform float alpha = 1.0;
+
+uniform uint render_flags = 255u; // 0xFFu; // 0u;
 
 void main()
 {
@@ -59,6 +63,8 @@ void main()
     ////g_albedo_specular = (light * albedo_specular);
 
     g_albedo_specular = albedo_specular;
+
+    g_render_flags = render_flags;
 
     // Tests:
     //g_albedo_specular = texture(directional_shadow_map, uv);

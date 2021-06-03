@@ -487,6 +487,7 @@ namespace glare
 
 			auto gNormal = graphics.context->use(gbuffer.normal, "g_normal");
 			auto gAlbedoSpec = graphics.context->use(gbuffer.albedo_specular, "g_albedo_specular");
+			auto g_render_flags = graphics.context->use(gbuffer.render_flags, "g_render_flags");
 
 			if (!gbuffer.position.has_value())
 			{
@@ -712,6 +713,8 @@ namespace glare
 			//glFrontFace(GL_CW);
 
 			//graphics.context->toggle(graphics::ContextFlags::FaceCulling, true);
+
+			//auto e = glGetError();
 
 			if (!gbuffer.depth.has_value())
 			{
@@ -972,6 +975,16 @@ namespace glare
 						break;
 					}
 					//*/
+
+					/*
+					case GBufferDisplayMode::RenderFlags:
+						if (gbuffer.render_flags.has_value())
+						{
+							return *gbuffer.render_flags;
+						}
+
+						break;
+					*/
 				}
 
 				if (gbuffer.position)

@@ -21,6 +21,7 @@
 #include <util/log.hpp>
 #include <util/variant.hpp>
 
+#include <graphics/types.hpp>
 #include <graphics/canvas.hpp>
 #include <graphics/shader.hpp>
 #include <graphics/world_render_state.hpp>
@@ -521,6 +522,17 @@ namespace engine
 				auto color  = model_component.color;
 
 				auto model_draw_mode = draw_mode;
+
+				auto render_flags = graphics::GBufferRenderFlags::Default;
+
+				if (!model_component.receives_shadow)
+				{
+					render_flags &= ~graphics::GBufferRenderFlags::ShadowMap;
+				}
+
+				auto render_flags_raw = static_cast<std::uint8_t>(render_flags); // std::uint32_t
+
+				shader["render_flags"] = render_flags_raw;
 
 				// TODO: Implement 'receives_shadow' flag using stencil buffer.
 				/*

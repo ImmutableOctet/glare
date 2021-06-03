@@ -38,6 +38,10 @@ uniform sampler2D g_albedo_specular;
     in vec3 eye_direction;
 #endif
 
+uniform usampler2D g_render_flags;
+
+const uint FLAG_SHADOWMAP = (1u << 0u);
+
 //uniform float alpha = 1.0; // const
 //uniform bool specular_available = false;
 
@@ -329,7 +333,7 @@ vec3 calculate_directional_light(in vec3 lighting, in vec3 world_position, in ve
 
 const float max_shadow = 0.99; // 0.95; // 0.85;
 
-vec3 shade_pixel(in vec3 world_position, in vec3 view_position, in vec3 normal, vec3 diffuse_in, float specular)
+vec3 shade_pixel(in vec3 world_position, in vec3 view_position, in vec3 normal, vec3 diffuse_in, float specular, uint render_flags)
 {
     vec3 diffuse = vec3(0.0, 0.0, 0.0); //diffuse_in; // (diffuse_in * ambient_light);
 
@@ -339,22 +343,32 @@ vec3 shade_pixel(in vec3 world_position, in vec3 view_position, in vec3 normal, 
 
     float shadow = 0.0;
 
-    for (int layer = 0; layer < directional_shadows_count; layer++)
+    if ((render_flags & FLAG_SHADOWMAP) > 0u)
+    //if (true)
     {
-        vec4 dir_shadow_frag_position = (directional_shadow_light_space_matrix[layer] * vec4(world_position.xyz, 1.0));
-        //vec4 dir_shadow_frag_position = (directional_shadow_light_space_matrix[layer] * vec4(vec3(model * vec4(a_position, 1.0)), 1.0));
+        for (int layer = 0; layer < directional_shadows_count; layer++)
+        {
+            vec4 dir_shadow_frag_position = (directional_shadow_light_space_matrix[layer] * vec4(world_position.xyz, 1.0));
+            //vec4 dir_shadow_frag_position = (directional_shadow_light_space_matrix[layer] * vec4(vec3(model * vec4(a_position, 1.0)), 1.0));
 
-        shadow += directional_shadow_calculation(directional_shadow_map[layer], dir_shadow_frag_position, directional_shadow_light_position[layer], world_position, normal);
+            shadow += directional_shadow_calculation(directional_shadow_map[layer], dir_shadow_frag_position, directional_shadow_light_position[layer], world_position, normal);
+        }
+
+        for (int layer = 0; layer < point_shadows_count; layer++)
+        {
+            shadow += point_shadow_calculation(point_shadow_cubemap[layer], world_position, point_shadow_light_position[layer], view_position, point_shadow_far_plane[layer]);
+        }
     }
-
-    for (int layer = 0; layer < point_shadows_count; layer++)
+    /*
+    else
     {
-        shadow += point_shadow_calculation(point_shadow_cubemap[layer], world_position, point_shadow_light_position[layer], view_position, point_shadow_far_plane[layer]);
+        shadow = 1.0;
     }
+    */
 
-    //float light = (1.0 - min(shadow, max_shadow));
     float ambient_strength = min(length(ambient_light), (1.0 - max_shadow));
     //float ambient_strength = max_shadow;
+    //float light = (1.0 - min(shadow, max_shadow));
     float light = (1.0 - min(shadow, (1.0 - ambient_strength)));
 
     specular = (pow(light, 2) * specular);
@@ -367,7 +381,6 @@ vec3 shade_pixel(in vec3 world_position, in vec3 view_position, in vec3 normal, 
 
     //diffuse = (light * diffuse);
 
-    //vec3 lighting =
     diffuse += compute_point_lights(world_position, normal, diffuse_in, specular, view_direction); // , diffuse
 
     diffuse = (light * diffuse);
@@ -452,16 +465,16 @@ vec4 CalcEyeFromWindow(in float windowZ, in vec3 eyeDirection, in mat4 perspecti
     //return vec4(TexCoords * 2.0 - 1.0, eyeZ, 1.0);
 }
 
-vec3 get_world_position()
+vec3 get_world_position(vec2 uv)
 {
     #if LAYER_POSITION_ENABLED
-        return texture(g_position, TexCoords).rgb;
+        return texture(g_position, uv).rgb;
     #else
         #if LAYER_DEPTH_ENABLED
-            float depth = texture(g_depth, TexCoords).x; // .r;
+            float depth = texture(g_depth, uv).x; // .r;
 
             // Slow, but stable method.
-            ////vec3 world_position = world_from_depth(depth, TexCoords, inv_projection, inv_view);
+            ////vec3 world_position = world_from_depth(depth, uv, inv_projection, inv_view);
 
             vec3 eye_ray = eye_direction;
 
@@ -475,13 +488,29 @@ vec3 get_world_position()
 
 void main()
 {
-    vec3 world_position = get_world_position();
+    vec2 uv = TexCoords;
+    vec3 world_position = get_world_position(uv);
 
     // G-Buffer Layers:
-    vec3  normal   = texture(g_normal, TexCoords).rgb;
-    vec3  diffuse  = texture(g_albedo_specular, TexCoords).rgb;
-    float specular = texture(g_albedo_specular, TexCoords).a;
+    vec3  normal       = texture(g_normal, uv).rgb;
+    vec3  diffuse      = texture(g_albedo_specular, uv).rgb;
+    float specular     = texture(g_albedo_specular, uv).a;
+    uint  render_flags = texture(g_render_flags, uv).r;
 
-    output_color = vec4(shade_pixel(world_position, view_position, normal, diffuse, specular), 1.0);
+    /*
+    if (render_flags < 255u)
+    {
+        diffuse = vec3(1.0, 1.0, 1.0);
+        //diffuse = vec3(0.8, 0.0, 0.0);
+    }
+    else
+    {
+        diffuse = vec3(0.1, 0.1, 0.1);
+    }
+    */
+
+    //output_color = vec4(diffuse, 1.0); return;
+
+    output_color = vec4(shade_pixel(world_position, view_position, normal, diffuse, specular, render_flags), 1.0);
     //output_color = vec4(1.0, 1.0, 1.0, 1.0);
 }

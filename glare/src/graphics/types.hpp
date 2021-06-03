@@ -101,8 +101,9 @@ namespace graphics
 		
 		DepthTexture = (1 << 0),
 		Position     = (1 << 1),
+		RenderFlags  = (1 << 2),
 
-		Default = DepthTexture // | Position
+		Default = (DepthTexture | RenderFlags) // | Position
 	};
 
 	FLAG_ENUM(std::uint32_t, GBufferFlags);
@@ -325,6 +326,16 @@ namespace graphics
 	};
 	
 	FLAG_ENUM(std::uint32_t, CanvasDrawMode);
+
+	enum class GBufferRenderFlags : std::uint8_t // std::uint32_t
+	{
+		ShadowMap = (1 << 0),
+
+		All = 255,
+		Default = All,
+	};
+
+	FLAG_ENUM(std::uint8_t, GBufferRenderFlags);
 
 	// Types of integrated render buffers.
 	enum class RenderBufferType

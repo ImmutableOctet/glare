@@ -248,7 +248,8 @@ namespace graphics
 					case ElementType::Int:     return GL_INT;
 					case ElementType::UInt:    return GL_UNSIGNED_INT;
 					
-					case ElementType::Half:    if (_allow_type_half) return GL_HALF_FLOAT;
+					case ElementType::Half:    return (_allow_type_half) ? GL_HALF_FLOAT : GL_FLOAT;
+					//case ElementType::Half:    if (_allow_type_half) return GL_HALF_FLOAT;
 					case ElementType::Float:   return GL_FLOAT;
 
 					case ElementType::Double:  return GL_DOUBLE;
@@ -257,18 +258,35 @@ namespace graphics
 				return GL_NONE;
 			}
 
-			static GLenum get_format_from_channels(int channels)
+			static GLenum get_format_from_channels(int channels, bool integer_format=false)
 			{
-				switch (channels)
+				if (integer_format)
 				{
-					case 1:
-						return GL_RED;
-					case 2:
-						return GL_RG;
-					case 3:
-						return GL_RGB;
-					case 4:
-						return GL_RGBA;
+					switch (channels)
+					{
+						case 1:
+							return GL_RED_INTEGER;
+						case 2:
+							return GL_RG_INTEGER;
+						case 3:
+							return GL_RGB_INTEGER;
+						case 4:
+							return GL_RGBA_INTEGER;
+					}
+				}
+				else
+				{
+					switch (channels)
+					{
+						case 1:
+							return GL_RED; // GL_R
+						case 2:
+							return GL_RG;
+						case 3:
+							return GL_RGB;
+						case 4:
+							return GL_RGBA;
+					}
 				}
 
 				return GL_NONE;
@@ -279,8 +297,46 @@ namespace graphics
 				return PixelMap::get_format_channels(format);
 			}
 
+			static bool is_integer_format(GLenum texture_format)
+			{
+				switch (texture_format)
+				{
+					case GL_R8I:
+					case GL_R8UI:
+					case GL_R16I:
+					case GL_R16UI:
+					case GL_R32I:
+					case GL_R32UI:
+					
+					case GL_RG8I:
+					case GL_RG8UI:
+					case GL_RG16I:
+					case GL_RG16UI:
+					case GL_RG32I:
+					case GL_RG32UI:
+					
+					case GL_RGB8I:
+					case GL_RGB8UI:
+					case GL_RGB16I:
+					case GL_RGB16UI:
+					case GL_RGB32I:
+					case GL_RGB32UI:
+
+					case GL_RGBA8I:
+					case GL_RGBA8UI:
+					case GL_RGBA16I:
+					case GL_RGBA16UI:
+					case GL_RGBA32I:
+					case GL_RGBA32UI:
+
+						return true;
+				}
+
+				return false;
+			}
+
 			// TODO: Review other potential formats if needed. (May already work as intended)
-			static GLenum get_texture_format(TextureFormat format, ElementType element_type, bool exact_format)
+			static GLenum get_texture_format(TextureFormat format, ElementType element_type, bool exact_format, bool loose_internal_format=true)
 			{
 				//auto native_format_raw = get_format_from_channels(get_format_channels(format));
 				auto native_format_raw = get_texture_layout(format);
@@ -289,48 +345,149 @@ namespace graphics
 				{
 					switch (native_format_raw)
 					{
-						case GL_RGB:
-							switch (element_type)
+						case GL_RED:
+						case GL_R:
+							if (!loose_internal_format)
 							{
-								case ElementType::Byte:
-								case ElementType::UByte:
-									return GL_RGB8;
-								
-								case ElementType::Short:
-								case ElementType::UShort:
-									return GL_RGB16;
-								
-								case ElementType::Int:
-								case ElementType::UInt:
-									return GL_RGB32I;
+								switch (element_type)
+								{
+									case ElementType::Byte:
+										return GL_R8I;
+									case ElementType::UByte:
+										return GL_R8UI;
+									case ElementType::Short:
+										return GL_R16I;
+									case ElementType::UShort:
+										return GL_R16UI;
+									case ElementType::Int:
+										return GL_R32I;
+									case ElementType::UInt:
+										return GL_R32UI;
+									case ElementType::Half:
+										return GL_R16F;
+									case ElementType::Float:
+										return GL_R32F;
+								}
+							}
 
-								case ElementType::Half:
-									return GL_RGB16F;
-								case ElementType::Float:
-									return GL_RGB32F;
+							break;
+						case GL_RG:
+							if (!loose_internal_format)
+							{
+								switch (element_type)
+								{
+									case ElementType::Byte:
+										return GL_RG8I;
+									case ElementType::UByte:
+										return GL_RG8UI;
+									case ElementType::Short:
+										return GL_RG16I;
+									case ElementType::UShort:
+										return GL_RG16UI;
+									case ElementType::Int:
+										return GL_RG32I;
+									case ElementType::UInt:
+										return GL_RG32UI;
+									case ElementType::Half:
+										return GL_RG16F;
+									case ElementType::Float:
+										return GL_RG32F;
+								}
+							}
+
+							break;
+						case GL_RGB:
+							if (loose_internal_format)
+							{
+								switch (element_type)
+								{
+									case ElementType::Byte:
+									case ElementType::UByte:
+										return GL_RGB8;
+								
+									case ElementType::Short:
+									case ElementType::UShort:
+										return GL_RGB16;
+								
+									case ElementType::Int:
+									case ElementType::UInt:
+										return GL_RGB32I;
+
+									case ElementType::Half:
+										return GL_RGB16F;
+									case ElementType::Float:
+										return GL_RGB32F;
+								}
+							}
+							else
+							{
+								switch (element_type)
+								{
+									case ElementType::Byte:
+										return GL_RGB8I;
+									case ElementType::UByte:
+										return GL_RGB8UI;
+									case ElementType::Short:
+										return GL_RGB16I;
+									case ElementType::UShort:
+										return GL_RGB16UI;
+									case ElementType::Int:
+										return GL_RGB32I;
+									case ElementType::UInt:
+										return GL_RGB32UI;
+									case ElementType::Half:
+										return GL_RGB16F;
+									case ElementType::Float:
+										return GL_RGB32F;
+								}
 							}
 
 							break;
 						case GL_RGBA:
-							switch (element_type)
+							if (loose_internal_format)
 							{
-								case ElementType::Byte:
-								case ElementType::UByte:
-									return GL_RGBA8;
+								switch (element_type)
+								{
+									case ElementType::Byte:
+									case ElementType::UByte:
+										return GL_RGBA8;
 								
-								case ElementType::Short:
-								case ElementType::UShort:
-									return GL_RGBA16;
+									case ElementType::Short:
+									case ElementType::UShort:
+										return GL_RGBA16;
 								
-								case ElementType::Int:
-								case ElementType::UInt:
-									return GL_RGBA32I;
+									case ElementType::Int:
+									case ElementType::UInt:
+										return GL_RGBA32I;
 								
-								case ElementType::Half:
-									return GL_RGBA16F;
+									case ElementType::Half:
+										return GL_RGBA16F;
 								
-								case ElementType::Float:
-									return GL_RGBA32F;
+									case ElementType::Float:
+										return GL_RGBA32F;
+								}
+							}
+							else
+							{
+								switch (element_type)
+								{
+									case ElementType::Byte:
+										return GL_RGBA8I;
+									case ElementType::UByte:
+										return GL_RGBA8UI;
+									case ElementType::Short:
+										return GL_RGBA16I;
+									case ElementType::UShort:
+										return GL_RGBA16UI;
+									case ElementType::Int:
+										return GL_RGBA32I;
+									case ElementType::UInt:
+										return GL_RGBA32UI;
+									case ElementType::Half:
+										return GL_RGBA16F;
+									case ElementType::Float:
+										return GL_RGBA32F;
+								}
 							}
 
 							break;
@@ -389,18 +546,18 @@ namespace graphics
 				return get_texture_format(texture_data.format(), element_type, exact_format);
 			}
 
-			static GLenum get_texture_layout(TextureFormat format)
+			static GLenum get_texture_layout(TextureFormat format, bool integer_format=false)
 			{
 				switch (format)
 				{
 					case TextureFormat::R:
-						return get_format_from_channels(1);
+						return get_format_from_channels(1, integer_format);
 					case TextureFormat::RG:
-						return get_format_from_channels(2);
+						return get_format_from_channels(2, integer_format);
 					case TextureFormat::RGB:
-						return get_format_from_channels(3);
+						return get_format_from_channels(3, integer_format);
 					case TextureFormat::RGBA:
-						return get_format_from_channels(4);
+						return get_format_from_channels(4, integer_format);
 					case TextureFormat::Depth:
 						return GL_DEPTH_COMPONENT;
 					case TextureFormat::Stencil:
@@ -1460,7 +1617,7 @@ namespace graphics
 	// Texture related:
 
 	// TODO: Implement cubemaps, etc. for this overload.
-	Context::Handle Context::generate_texture(const PixelMap& texture_data, ElementType channel_type, TextureFlags flags, TextureType type, bool __keep_bound)
+	Context::Handle Context::generate_texture(const PixelMap& texture_data, ElementType channel_type, TextureFlags flags, TextureType type, bool _keep_bound, bool _loose_internal_format)
 	{
 		///ASSERT(texture_data);
 
@@ -1484,12 +1641,12 @@ namespace graphics
 			ASSERT(!is_depth_map);
 		*/
 
-		allocate_texture_2d(texture_data.width(), texture_data.height(), texture_data.format(), channel_type, texture_data.data(), (flags & TextureFlags::Dynamic), (flags & TextureFlags::MipMap), false); // true; // texture_type
+		allocate_texture_2d(texture_data.width(), texture_data.height(), texture_data.format(), channel_type, texture_data.data(), (flags & TextureFlags::Dynamic), (flags & TextureFlags::MipMap), false, _loose_internal_format); // true; // texture_type
 
 		// Apply texture flags:
 		Driver::apply_texture_flags(flags, type);
 
-		if (!__keep_bound)
+		if (!_keep_bound)
 		{
 			glBindTexture(texture_type, 0);
 		}
@@ -1497,7 +1654,7 @@ namespace graphics
 		return texture;
 	}
 
-	Context::Handle Context::generate_texture(int width, int height, TextureFormat format, ElementType element_type, TextureFlags flags, TextureType type, std::optional<ColorRGBA> _border_color, bool __keep_bound)
+	Context::Handle Context::generate_texture(int width, int height, TextureFormat format, ElementType element_type, TextureFlags flags, TextureType type, std::optional<ColorRGBA> _border_color, bool _keep_bound, bool _loose_internal_format)
 	{
 		Handle texture = NoHandle;
 
@@ -1511,11 +1668,11 @@ namespace graphics
 		switch (type)
 		{
 			case TextureType::Texture2D:
-				allocate_texture_2d(width, height, format, element_type, nullptr, true, false); // texture_type
+				allocate_texture_2d(width, height, format, element_type, nullptr, true, false, true, _loose_internal_format); // texture_type
 
 				break;
 			case TextureType::CubeMap:
-				allocate_texture_cubemap(width, height, format, element_type, nullptr, true, false);
+				allocate_texture_cubemap(width, height, format, element_type, nullptr, true, false, true); // , _loose_internal_format
 
 				break;
 		}
@@ -1528,7 +1685,7 @@ namespace graphics
 			glTexParameterfv(texture_type, GL_TEXTURE_BORDER_COLOR, glm::value_ptr(*_border_color));
 		}
 
-		if (!__keep_bound)
+		if (!_keep_bound)
 		{
 			glBindTexture(texture_type, 0);
 		}
@@ -1536,14 +1693,16 @@ namespace graphics
 		return texture;
 	}
 
-	void Context::allocate_texture_2d(int width, int height, TextureFormat format, ElementType channel_type, const memory::raw_ptr raw_data, bool is_dynamic, bool generate_mipmaps, bool _calculate_exact_format) // TextureType type
+	void Context::allocate_texture_2d(int width, int height, TextureFormat format, ElementType channel_type, const memory::raw_ptr raw_data, bool is_dynamic, bool generate_mipmaps, bool _calculate_exact_format, bool _loose_internal_format) // TextureType type
 	{
 		const GLenum texture_type = GL_TEXTURE_2D;
 		//const auto texture_type = Driver::get_texture_type(type);
 
-		const auto texture_format = Driver::get_texture_format(format, channel_type, ((_calculate_exact_format) || (!is_dynamic)));
+		const auto texture_format = Driver::get_texture_format(format, channel_type, ((_calculate_exact_format) || (!is_dynamic)), _loose_internal_format);
 		const auto element_type   = Driver::get_element_type(channel_type);
-		const auto texture_layout = Driver::get_texture_layout(format);
+		const auto texture_layout = Driver::get_texture_layout(format, Driver::is_integer_format(texture_format));
+
+		//auto e1 = glGetError();
 
 		if (is_dynamic)
 		{
@@ -1554,6 +1713,8 @@ namespace graphics
 			glTexStorage2D(texture_type, 1, texture_format, width, height); // TODO: Add option to specify mipmap levels.
 			glTexSubImage2D(texture_type, 0, 0, 0, width, height, texture_layout, element_type, raw_data);
 		}
+
+		//auto e2 = glGetError();
 
 		if (generate_mipmaps)
 		{
@@ -1717,6 +1878,8 @@ namespace graphics
 			native_attachment_index += (attachment_index % Driver::MAX_FB_COLOR_ATTACHMENTS);
 		}
 
+		//auto e1 = glGetError();
+
 		switch (texture.type)
 		{
 			case TextureType::Texture2D:
@@ -1729,6 +1892,8 @@ namespace graphics
 
 				break;
 		}
+
+		//auto e2 = glGetError();
 
 		if ((is_color_attachment) || force_attachment_data)
 		{

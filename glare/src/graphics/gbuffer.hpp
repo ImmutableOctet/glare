@@ -36,6 +36,8 @@ namespace graphics
 			std::optional<graphics::Texture> position;
 			std::optional<graphics::Texture> depth;
 
+			std::optional<graphics::Texture> render_flags;
+
 			graphics::Mesh screen_quad;
 	};
 }

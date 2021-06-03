@@ -40,6 +40,19 @@ namespace graphics
 				fb.attach(RenderBufferType::Depth, width, height);
 			}
 
+			if ((flags & GBufferFlags::RenderFlags))
+			{
+				render_flags = Texture
+				(
+					context, width, height,
+					TextureFormat::R, ElementType::UByte,
+					(texture_flags | graphics::TextureFlags::Clamp),
+					TextureType::Texture2D, std::nullopt, false
+				);
+
+				fb.attach(*render_flags);
+			}
+
 			fb.link();
 
 			//if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -58,6 +71,11 @@ namespace graphics
 		if (depth)
 		{
 			depth->resize(width, height);
+		}
+
+		if (render_flags)
+		{
+			render_flags->resize(width, height);
 		}
 	}
 }

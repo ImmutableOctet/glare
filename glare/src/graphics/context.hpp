@@ -336,10 +336,10 @@ namespace graphics
 			// Texture related:
 
 			// TODO: Work-out mixed formats between input and native driver format.
-			Handle generate_texture(const PixelMap& texture_data, ElementType channel_type, TextureFlags flags=TextureFlags::Default, TextureType type=TextureType::Default, bool __keep_bound=true); // noexcept;
-			Handle generate_texture(int width, int height, TextureFormat format, ElementType channel_type, TextureFlags flags=TextureFlags::Default, TextureType type=TextureType::Default, std::optional<ColorRGBA> _border_color=std::nullopt, bool __keep_bound=true); // noexcept;
+			Handle generate_texture(const PixelMap& texture_data, ElementType channel_type, TextureFlags flags=TextureFlags::Default, TextureType type=TextureType::Default, bool _keep_bound=true, bool _loose_internal_format=true); // noexcept;
+			Handle generate_texture(int width, int height, TextureFormat format, ElementType channel_type, TextureFlags flags=TextureFlags::Default, TextureType type=TextureType::Default, std::optional<ColorRGBA> _border_color=std::nullopt, bool _keep_bound=true, bool _loose_internal_format=true); // noexcept;
 
-			void allocate_texture_2d(int width, int height, TextureFormat format, ElementType channel_type, const memory::raw_ptr raw_data=nullptr, bool is_dynamic=true, bool generate_mipmaps=false, bool _calculate_exact_format=true); // TextureType type
+			void allocate_texture_2d(int width, int height, TextureFormat format, ElementType channel_type, const memory::raw_ptr raw_data=nullptr, bool is_dynamic=true, bool generate_mipmaps=false, bool _calculate_exact_format=true, bool _loose_internal_format=true); // TextureType type
 			void allocate_texture_cubemap(int width, int height, TextureFormat format, ElementType channel_type, const memory::raw_ptr raw_data=nullptr, bool is_dynamic=true, bool generate_mipmaps=false, bool _calculate_exact_format=true); // TextureType type
 
 			void release_texture(Handle&& handle);

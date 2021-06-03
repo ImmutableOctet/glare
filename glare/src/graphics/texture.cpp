@@ -14,8 +14,16 @@ namespace graphics
 	Texture::Texture(pass_ref<Context> ctx, const PixelMap& data, Flags flags, TextureType type)
 		: Texture(ctx, ctx->generate_texture(data, ElementType::UByte, flags, type), data.width(), data.height(), data.format(), ElementType::UByte, flags, type) {}
 
-	Texture::Texture(pass_ref<Context> ctx, int width, int height, TextureFormat format, ElementType element_type, TextureFlags flags, TextureType type, std::optional<ColorRGBA> _border_color)
-		: Texture(ctx, ctx->generate_texture(width, height, format, element_type, (flags | TextureFlags::Dynamic), type, _border_color), width, height, format, element_type, (flags | TextureFlags::Dynamic), type) {}
+	Texture::Texture
+	(
+		pass_ref<Context> ctx,
+		int width, int height,
+		TextureFormat format, ElementType element_type,
+		TextureFlags flags, TextureType type,
+		std::optional<ColorRGBA> _border_color,
+		bool _loose_internal_format
+	)
+		: Texture(ctx, ctx->generate_texture(width, height, format, element_type, (flags | TextureFlags::Dynamic), type, _border_color, true, _loose_internal_format), width, height, format, element_type, (flags | TextureFlags::Dynamic), type) {}
 
 	Texture::Texture(pass_ref<Context> ctx, raw_string path, Flags flags, TextureType type)
 		: Texture(ctx, PixelMap::Load(path), flags, type) {}
