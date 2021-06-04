@@ -1,3 +1,5 @@
+#version 330 core
+
 in vec4 FragPos;
 
 uniform vec3 light_position;

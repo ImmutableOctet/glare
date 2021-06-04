@@ -62,7 +62,7 @@ namespace graphics
 
 			// TODO: Optimize uniform assignment.
 			template <typename TextureArrayType>
-			inline void bind_textures(const TextureArrayType& textures, const std::string& name)
+			inline void bind_textures(const TextureArrayType& textures, const std::string& name, bool account_for_single_texture=true)
 			{
 				auto n_textures = textures.size();
 
@@ -71,15 +71,18 @@ namespace graphics
 					return;
 				}
 
-				if (n_textures == 1)
+				if (account_for_single_texture)
 				{
-					const auto t_ptr = (textures[0]); // auto
+					if (n_textures == 1)
+					{
+						const auto t_ptr = (textures[0]); // auto
 
-					ASSERT(t_ptr);
+						ASSERT(t_ptr);
 
-					bind_texture(*t_ptr, name);
+						bind_texture(*t_ptr, name);
 
-					return;
+						return;
+					}
 				}
 				
 				auto idx = 0;
@@ -106,7 +109,7 @@ namespace graphics
 			}
 
 			template <typename pred>
-			inline void bind_textures(const NamedTextureArrayRaw& tdata, pred&& pred_fn)
+			inline void bind_textures(const NamedTextureArrayRaw& tdata, pred&& pred_fn, bool account_for_single_texture=true)
 			{
 				for (const auto& kv : tdata)
 				{
@@ -115,7 +118,7 @@ namespace graphics
 
 					if (pred_fn(name, textures))
 					{
-						bind_textures(textures, name);
+						bind_textures(textures, name, account_for_single_texture);
 					}
 				}
 			}

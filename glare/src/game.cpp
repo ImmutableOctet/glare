@@ -390,6 +390,8 @@ namespace glare
 			// Execute shadow-pass first.
 			auto [point_shadows_enabled, directional_shadows_enabled] = render_shadows();
 
+			//gfx.flip(wnd); return;
+
 			auto [viewport, window_size] = update_viewport(camera);
 
 			// Geometry pass:
@@ -695,7 +697,7 @@ namespace glare
 
 							// Bind this texture.
 							return true;
-						});
+						}); // false
 					}
 				}))
 				{}
@@ -1109,8 +1111,8 @@ namespace glare
 				auto& registry = world.get_registry();
 				auto& m = registry.get<engine::ModelComponent>(target_entity);
 
-				//m.receives_shadow = !m.receives_shadow;
-				m.receives_light = !m.receives_light;
+				m.receives_shadow = !m.receives_shadow;
+				//m.receives_light = !m.receives_light;
 			}
 
 			//engine::SimpleFollowComponent::update(world);

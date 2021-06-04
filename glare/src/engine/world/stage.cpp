@@ -311,12 +311,24 @@ namespace engine
 		if (shadows_enabled)
 		{
 			const auto& cfg = world.get_config();
-			auto shadow_resolution = util::get_vec2i(data, "shadow_resolution", cfg.get_shadow_resolution());
-			auto shadow_range = util::get_value(data, "shadow_range", 1000.0f);
 
 			auto shadow_light_type_str = util::get_value<std::string>(data, "shadow_type", {});
 
 			auto shadow_light_type = ((shadow_light_type_str.empty()) ? std::nullopt : std::optional<LightType> { LightComponent::resolve_light_mode(shadow_light_type_str) }); // std::optional<LightType> {}
+
+			auto shadow_resolution = util::get_vec2i
+			(
+				data,
+				"shadow_resolution",
+
+				(shadow_light_type == LightType::Point)
+				?
+				cfg.get_shadow_cubemap_resolution()
+				:
+				cfg.get_shadow_resolution()
+			);
+
+			auto shadow_range = util::get_value(data, "shadow_range", 1000.0f);
 
 			attach_shadows(world, light, shadow_resolution, shadow_range, shadow_light_type);
 		}

@@ -120,7 +120,7 @@ float directional_shadow_calculation(sampler2D shadow_map, vec4 fragPosLightSpac
 
 
 // Point-light shadows:
-const int MAX_POINT_SHADOWS = 1;
+const int MAX_POINT_SHADOWS = 2;
 
 uniform int point_shadows_count;
 
@@ -139,7 +139,7 @@ vec3 gridSamplingDisk[20] = vec3[]
    vec3(0, 1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0, 1, -1)
 );
 
-float point_shadow_calculation(samplerCube shadow_map, vec3 fragPos, vec3 lightPos, vec3 viewPos, float far_plane)
+float point_shadow_calculation(samplerCube shadow_map, vec3 fragPos, vec3 lightPos, vec3 viewPos, float far_plane) // out vec3 dbg_color
 {
     // get vector between fragment position and light position
     vec3 fragToLight = (fragPos - lightPos);
@@ -191,7 +191,7 @@ float point_shadow_calculation(samplerCube shadow_map, vec3 fragPos, vec3 lightP
     shadow /= float(samples);
         
     // display closestDepth as debug (to visualize depth cubemap)
-    // FragColor = vec4(vec3(closestDepth / far_plane), 1.0);    
+    //dbg_color = vec3(closestDepth / far_plane);
         
     return shadow;
 }
