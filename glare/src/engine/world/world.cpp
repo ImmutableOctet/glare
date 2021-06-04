@@ -530,6 +530,11 @@ namespace engine
 					render_flags &= ~graphics::GBufferRenderFlags::ShadowMap;
 				}
 
+				if (!model_component.receives_light)
+				{
+					render_flags &= ~graphics::GBufferRenderFlags::Lighting;
+				}
+
 				auto render_flags_raw = static_cast<std::uint8_t>(render_flags); // std::uint32_t
 
 				shader["render_flags"] = render_flags_raw;

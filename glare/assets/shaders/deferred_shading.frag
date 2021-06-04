@@ -1,4 +1,5 @@
 #version 330 core
+//#version 400
 
 // Layer sample UVs.
 in vec2 TexCoords;
@@ -38,9 +39,13 @@ uniform sampler2D g_albedo_specular;
     in vec3 eye_direction;
 #endif
 
-uniform usampler2D g_render_flags;
+uniform usampler2D g_render_flags; // highp
 
-const uint FLAG_SHADOWMAP = (1u << 0u);
+const uint FLAG_SHADOWMAP = 1u; // (1u << 0u);
+const uint FLAG_LIGHTING = 2u; // (1u << 1u);
+
+const bool render_flags_enabled = true; // uniform
+//const bool render_flags_enabled = false;
 
 //uniform float alpha = 1.0; // const
 //uniform bool specular_available = false;
@@ -345,6 +350,7 @@ vec3 shade_pixel(in vec3 world_position, in vec3 view_position, in vec3 normal, 
 
     if ((render_flags & FLAG_SHADOWMAP) > 0u)
     //if (true)
+    //if (false)
     {
         for (int layer = 0; layer < directional_shadows_count; layer++)
         {
@@ -374,16 +380,39 @@ vec3 shade_pixel(in vec3 world_position, in vec3 view_position, in vec3 normal, 
     specular = (pow(light, 2) * specular);
     //float dir_light_intensity = 0.5; // 1.0; //(ambient * 2.0);
 
-    for (int i = 0; i < directional_lights_count; i++)
+    bool test = ((render_flags & FLAG_LIGHTING) > 0u);
+
+    /*
+    if (test)
     {
-        diffuse += calculate_directional_light(world_position, normal, view_direction, directional_lights[i], diffuse_in, light);
+        return vec3(1.0, 0.0, 0.0);
     }
+    else
+    {
+        return vec3(0.0, 0.0, 0.0);
+    }
+    */
 
-    //diffuse = (light * diffuse);
+    if ((render_flags & FLAG_LIGHTING) > 0u)
+    //if (true)
+    //if (false)
+    //if (test)
+    {
+        for (int i = 0; i < directional_lights_count; i++)
+        {
+            diffuse += calculate_directional_light(world_position, normal, view_direction, directional_lights[i], diffuse_in, light);
+        }
 
-    diffuse += compute_point_lights(world_position, normal, diffuse_in, specular, view_direction); // , diffuse
+        //diffuse = (light * diffuse);
 
-    diffuse = (light * diffuse);
+        diffuse += compute_point_lights(world_position, normal, diffuse_in, specular, view_direction); // , diffuse
+
+        diffuse = (light * diffuse);
+    }
+    else
+    {
+       diffuse = diffuse_in;
+    }
 
     
     //lighting = (light * lighting);
@@ -486,6 +515,43 @@ vec3 get_world_position(vec2 uv)
     #endif
 }
 
+uint texture2DLinear(vec2 imageSize, usampler2D texSampler, vec2 uv)
+{
+    vec2 pixelOff = vec2(0.5,0.5)/imageSize;
+
+    vec2 imagePosCenterity = fract(uv * imageSize);
+    if (abs(imagePosCenterity.x-0.5) < 0.001 || abs(imagePosCenterity.y-0.5) < 0.001) {
+        pixelOff = pixelOff-vec2(0.00001,0.00001);
+    }
+
+    vec4 tl = vec4(texture(texSampler, uv + vec2(-pixelOff.x,-pixelOff.y))) * 255.0;
+    vec4 tr = vec4(texture(texSampler, uv + vec2(pixelOff.x,-pixelOff.y))) * 255.0;
+    vec4 bl = vec4(texture(texSampler, uv + vec2(-pixelOff.x,pixelOff.y))) * 255.0;
+    vec4 br = vec4(texture(texSampler, uv + vec2(pixelOff.x,pixelOff.y))) * 255.0;
+    vec2 f = fract( (uv.xy-pixelOff) * imageSize );
+    vec4 tA = mix( tl, tr, f.x );
+    vec4 tB = mix( bl, br, f.x );
+    return uint((mix( tA, tB, f.y ).r) / 255.0);
+}
+
+uint get_render_flags(vec2 uv)
+{
+    if (render_flags_enabled)
+    {
+        vec2 size = textureSize(g_render_flags, 0);
+        ivec2 pixel_position = ivec2(gl_FragCoord.xy); //ivec2(int(uv.x * size.x), int(uv.y * size.y));
+
+        return texelFetch(g_render_flags, pixel_position, 0).r;
+
+        //return textureGather(g_render_flags, uv).r;
+        //return texture(g_render_flags, uv).r;
+        //return texture2DLinear(textureSize(g_render_flags, 0), g_render_flags, uv);
+        //return texelFetchOffset(g_render_flags, ivec2(int(uv.x), int(uv.y)), 0, ivec2(0, 0)).r;
+    }
+
+    return 255u;
+}
+
 void main()
 {
     vec2 uv = TexCoords;
@@ -495,13 +561,14 @@ void main()
     vec3  normal       = texture(g_normal, uv).rgb;
     vec3  diffuse      = texture(g_albedo_specular, uv).rgb;
     float specular     = texture(g_albedo_specular, uv).a;
-    uint  render_flags = texture(g_render_flags, uv).r;
+    uint  render_flags = get_render_flags(uv);
 
     /*
     if (render_flags < 255u)
     {
-        diffuse = vec3(1.0, 1.0, 1.0);
+        //diffuse = vec3(1.0, 1.0, 1.0);
         //diffuse = vec3(0.8, 0.0, 0.0);
+        diffuse = (vec3(float(render_flags)/1.0, float(render_flags)/1.0, float(render_flags)/1.0) * diffuse);
     }
     else
     {

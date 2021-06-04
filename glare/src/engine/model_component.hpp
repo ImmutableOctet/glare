@@ -20,8 +20,11 @@ namespace engine
 
 		bool visible = true;
 		bool always_transparent = false;
+		
 		bool casts_shadow = true;
+
 		bool receives_shadow = true;
+		bool receives_light = true;
 
 		inline bool transparent() const;
 	};
