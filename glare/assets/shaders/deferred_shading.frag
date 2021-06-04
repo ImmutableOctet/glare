@@ -303,40 +303,6 @@ vec3 calculate_directional_light(in vec3 world_position, in vec3 normal, in vec3
     return (ambient + lighting * (diffuse + specular)) * diffuse_in;
 }
 
-// Old:
-/*
-vec3 calculate_directional_light(in vec3 lighting, in vec3 world_position, in vec3 normal, in vec3 view_direction, in DirectionalLight light, float base_dist=1000.0) // vec4
-{
-    vec3 delta = (light.position - world_position);
-
-    float dist = abs(length(delta));
-    vec3 light_dir = normalize(delta);
-
-    float diff = max(dot(light_dir, normal), 0.0);
-    vec3 diffuse = diff * light.color;
-
-    vec3 reflectDir = reflect(-light_dir, normal);
-    
-    vec3 halfwayDir = normalize(light_dir + view_direction);
-
-    float specular = pow(max(dot(normal, halfwayDir), 0.0), 64.0);
-    
-    float constant = 1.0; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
-	float linear = 0.1; // 0.000005f; // 0.7f; // 0.005f;
-	float quadratic = 1.0 / 2000.0; // 2000.0; // 1.8f; // 0.0005f;
-
-    float attenuation = 1.0 / (1.0 + linear * dist + quadratic * dist * dist);
-
-    diffuse *= attenuation;
-    specular *= attenuation;
-    lighting += diffuse + specular;
-
-    //return vec4((diffuse * light.intensity * ((base_dist - dist) / base_dist)), specular);
-
-    return lighting;
-}
-*/
-
 const float max_shadow = 0.99; // 0.95; // 0.85;
 
 vec3 shade_pixel(in vec3 world_position, in vec3 view_position, in vec3 normal, vec3 diffuse_in, float specular, uint render_flags)
@@ -350,8 +316,6 @@ vec3 shade_pixel(in vec3 world_position, in vec3 view_position, in vec3 normal, 
     float shadow = 0.0;
 
     if ((render_flags & FLAG_SHADOWMAP) > 0u)
-    //if (true)
-    //if (false)
     {
         for (int layer = 0; layer < directional_shadows_count; layer++)
         {
@@ -381,23 +345,9 @@ vec3 shade_pixel(in vec3 world_position, in vec3 view_position, in vec3 normal, 
     specular = (pow(light, 2) * specular);
     //float dir_light_intensity = 0.5; // 1.0; //(ambient * 2.0);
 
-    //bool test = ((render_flags & FLAG_LIGHTING) > 0u);
-
-    /*
-    if (test)
-    {
-        return vec3(1.0, 0.0, 0.0);
-    }
-    else
-    {
-        return vec3(0.0, 0.0, 0.0);
-    }
-    */
+    vec3 ambient;
 
     if ((render_flags & FLAG_LIGHTING) > 0u)
-    //if (true)
-    //if (false)
-    //if (test)
     {
         for (int i = 0; i < directional_lights_count; i++)
         {
@@ -409,10 +359,13 @@ vec3 shade_pixel(in vec3 world_position, in vec3 view_position, in vec3 normal, 
         diffuse += compute_point_lights(world_position, normal, diffuse_in, specular, view_direction); // , diffuse
 
         diffuse = (light * diffuse);
+
+        ambient = (ambient_light * diffuse_in); // diffuse
     }
     else
     {
        diffuse = diffuse_in;
+       ambient = vec3(0.0, 0.0, 0.0);
     }
 
     
@@ -432,8 +385,6 @@ vec3 shade_pixel(in vec3 world_position, in vec3 view_position, in vec3 normal, 
     //float ambient_strength = length(ambient_light);
 
     //specular = pow(light, 2);
-
-    vec3 ambient = (ambient_light * diffuse_in);
 
     vec3 lighting = ambient + (light * (diffuse));
 
