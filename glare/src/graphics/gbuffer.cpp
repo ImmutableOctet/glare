@@ -29,7 +29,7 @@ namespace graphics
 				(
 					context, width, height,
 					TextureFormat::Depth, ElementType::Float,
-					(texture_flags), //| graphics::TextureFlags::Clamp | graphics::TextureFlags::WrapST),
+					(texture_flags | graphics::TextureFlags::Clamp | graphics::TextureFlags::WrapST),
 					TextureType::Texture2D, graphics::ColorRGBA{ 1.0, 1.0, 1.0, 1.0 }
 				);
 
