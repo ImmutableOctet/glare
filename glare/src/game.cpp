@@ -487,7 +487,9 @@ namespace glare
 
 			auto gNormal = graphics.context->use(gbuffer.normal, "g_normal");
 			auto gAlbedoSpec = graphics.context->use(gbuffer.albedo_specular, "g_albedo_specular");
-			auto g_render_flags = graphics.context->use(gbuffer.render_flags, "g_render_flags");
+
+			std::optional<decltype(graphics.context->use(*gbuffer.render_flags, "g_render_flags"))> g_render_flags =
+				(gbuffer.render_flags.has_value()) ? std::optional{ graphics.context->use(*gbuffer.render_flags, "g_render_flags") } : std::nullopt;
 
 			if (!gbuffer.position.has_value())
 			{
@@ -1091,21 +1093,24 @@ namespace glare
 
 		case SDLK_g:
 		{
-			auto target_entity = world.get_player(1);
+			auto target_entity = world.get_by_name("Rotating Platform"); //world.get_player(1);
 
 			if (target_entity != engine::null)
 			{
 				auto t = transform(target_entity);
 
+				/*
 				std::cout << "\nPlayer:\n";
 				std::cout << "Position: " << t.get_position() << '\n';
 				std::cout << "Rotation: " << math::degrees(t.get_rotation()) << '\n';
 				std::cout << "Scale: " << t.get_scale() << '\n';
+				*/
 
 				auto& registry = world.get_registry();
 				auto& m = registry.get<engine::ModelComponent>(target_entity);
 
-				m.receives_shadow = false;
+				//m.receives_shadow = !m.receives_shadow;
+				m.receives_light = !m.receives_light;
 			}
 
 			//engine::SimpleFollowComponent::update(world);

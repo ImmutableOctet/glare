@@ -138,7 +138,7 @@ namespace graphics
 			// NOTE: 'name' must be a null-terminated string.
 			gl_uniform_location get_uniform(Shader& shader, std::string_view name)
 			{
-				//return glGetUniformLocation(shader.get_handle(), name.data());
+				return glGetUniformLocation(shader.get_handle(), name.data());
 
 				///*
 				auto& uniform_location_map = uniform_location_cache[shader.get_handle()];
@@ -1077,6 +1077,40 @@ namespace graphics
 		}
 
 		glUniform1i(uniform, value);
+
+		return true;
+	}
+
+	/*
+	bool Context::set_uniform(Shader& shader, std::string_view name, unsigned int value)
+	{
+		auto& driver = get_driver(*this);
+
+		auto uniform = driver.get_uniform(shader, name);
+
+		if (uniform == Driver::InvalidUniform)
+		{
+			return false;
+		}
+
+		glUniform1ui(uniform, value);
+
+		return true;
+	}
+	*/
+
+	bool Context::set_uniform(Shader& shader, std::string_view name, std::uint8_t value)
+	{
+		auto& driver = get_driver(*this);
+
+		auto uniform = driver.get_uniform(shader, name);
+
+		if (uniform == Driver::InvalidUniform)
+		{
+			return false;
+		}
+
+		glUniform1ui(uniform, value);
 
 		return true;
 	}

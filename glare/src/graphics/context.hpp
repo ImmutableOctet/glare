@@ -293,9 +293,13 @@ namespace graphics
 			void draw(Primitive primitive);
 
 			bool set_uniform(Shader& shader, std::string_view name, int value); // std::int32_t
+			//bool set_uniform(Shader& shader, std::string_view name, unsigned int value); // std::uint32_t
+			bool set_uniform(Shader& shader, std::string_view name, ContextHandle handle); // std::uint32_t
+
+			bool set_uniform(Shader& shader, std::string_view name, std::uint8_t value); // std::uint32_t
+
 			bool set_uniform(Shader& shader, std::string_view name, bool value);
 			bool set_uniform(Shader& shader, std::string_view name, float value);
-			bool set_uniform(Shader& shader, std::string_view name, ContextHandle handle); // std::int32_t
 
 			bool set_uniform(Shader& shader, std::string_view name, const math::Vector2D& value);
 			bool set_uniform(Shader& shader, std::string_view name, const math::Vector3D& value);

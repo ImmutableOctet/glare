@@ -39,7 +39,8 @@ uniform sampler2D g_albedo_specular;
     in vec3 eye_direction;
 #endif
 
-uniform usampler2D g_render_flags; // highp
+//uniform sampler2D g_render_flags; // highp
+uniform usampler2D g_render_flags;
 
 const uint FLAG_SHADOWMAP = 1u; // (1u << 0u);
 const uint FLAG_LIGHTING = 2u; // (1u << 1u);
@@ -380,7 +381,7 @@ vec3 shade_pixel(in vec3 world_position, in vec3 view_position, in vec3 normal, 
     specular = (pow(light, 2) * specular);
     //float dir_light_intensity = 0.5; // 1.0; //(ambient * 2.0);
 
-    bool test = ((render_flags & FLAG_LIGHTING) > 0u);
+    //bool test = ((render_flags & FLAG_LIGHTING) > 0u);
 
     /*
     if (test)
@@ -436,6 +437,18 @@ vec3 shade_pixel(in vec3 world_position, in vec3 view_position, in vec3 normal, 
 
     vec3 lighting = ambient + (light * (diffuse));
 
+
+    /*
+    if (render_flags > 0u) // > 0u
+    //if (true)
+    {
+        lighting = vec3(1.0, 1.0, 1.0);
+    }
+    else
+    {
+        lighting = vec3(1.0, 0.0, 0.0);
+    }
+    */
 
     //return diffuse;
     return lighting;
@@ -539,12 +552,14 @@ uint get_render_flags(vec2 uv)
     if (render_flags_enabled)
     {
         vec2 size = textureSize(g_render_flags, 0);
-        ivec2 pixel_position = ivec2(gl_FragCoord.xy); //ivec2(int(uv.x * size.x), int(uv.y * size.y));
 
-        return texelFetch(g_render_flags, pixel_position, 0).r;
+        ivec2 pixel_position = ivec2(int(uv.x * size.x), int(uv.y * size.y));
+        //ivec2 pixel_position = ivec2(gl_FragCoord.xy);
+
+        return (texelFetch(g_render_flags, pixel_position, 0).r); // floatBitsToUint
+        //return (texture(g_render_flags, uv).r); // floatBitsToUint
 
         //return textureGather(g_render_flags, uv).r;
-        //return texture(g_render_flags, uv).r;
         //return texture2DLinear(textureSize(g_render_flags, 0), g_render_flags, uv);
         //return texelFetchOffset(g_render_flags, ivec2(int(uv.x), int(uv.y)), 0, ivec2(0, 0)).r;
     }
@@ -564,11 +579,12 @@ void main()
     uint  render_flags = get_render_flags(uv);
 
     /*
-    if (render_flags < 255u)
+    //if (render_flags < 255u)
+    if ((render_flags & FLAG_SHADOWMAP) > 0u)
     {
-        //diffuse = vec3(1.0, 1.0, 1.0);
+        diffuse = vec3(1.0, 1.0, 1.0);
         //diffuse = vec3(0.8, 0.0, 0.0);
-        diffuse = (vec3(float(render_flags)/1.0, float(render_flags)/1.0, float(render_flags)/1.0) * diffuse);
+        //diffuse = (vec3(float(render_flags)/1.0, float(render_flags)/1.0, float(render_flags)/1.0) * diffuse);
     }
     else
     {

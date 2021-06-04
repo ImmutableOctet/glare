@@ -527,7 +527,8 @@ namespace engine
 
 				if (!model_component.receives_shadow)
 				{
-					render_flags &= ~graphics::GBufferRenderFlags::ShadowMap;
+					//render_flags &= ~graphics::GBufferRenderFlags::ShadowMap;
+					render_flags = static_cast<graphics::GBufferRenderFlags>(0);
 				}
 
 				if (!model_component.receives_light)
@@ -537,7 +538,7 @@ namespace engine
 
 				auto render_flags_raw = static_cast<std::uint8_t>(render_flags); // std::uint32_t
 
-				shader["render_flags"] = render_flags_raw;
+				shader["render_flags"] = render_flags_raw; // 0; // render_flags_raw;
 
 				// TODO: Implement 'receives_shadow' flag using stencil buffer.
 				/*

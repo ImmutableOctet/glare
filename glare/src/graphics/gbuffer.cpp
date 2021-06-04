@@ -41,13 +41,15 @@ namespace graphics
 			}
 
 			if ((flags & GBufferFlags::RenderFlags))
+			//if (false)
 			{
 				render_flags = Texture
 				(
 					context, width, height,
 					TextureFormat::R, ElementType::UByte,
-					(texture_flags | graphics::TextureFlags::Clamp),
-					TextureType::Texture2D, std::nullopt, false
+					//TextureFormat::R, ElementType::Half, //ElementType::UByte,
+					graphics::TextureFlags::None, //(texture_flags), // graphics::TextureFlags::Clamp
+					TextureType::Texture2D, std::nullopt, false // true
 				);
 
 				fb.attach(*render_flags);
