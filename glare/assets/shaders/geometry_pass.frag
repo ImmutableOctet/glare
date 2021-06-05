@@ -27,8 +27,9 @@ uniform bool specular_available = false;
 
 uniform vec4 diffuse_color = vec4(1.0, 1.0, 1.0, 1.0);
 uniform float alpha = 1.0;
+//uniform float shininess = 16.0;
 
-uniform uint render_flags = 0u; // = 255u; // = 0u; // 0xFFu; // 0u;
+uniform uint render_flags = 255u; // = 0u; // 0xFFu; // 0u;
 
 void main()
 {

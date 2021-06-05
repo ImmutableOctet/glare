@@ -139,7 +139,7 @@ vec3 gridSamplingDisk[20] = vec3[]
    vec3(0, 1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0, 1, -1)
 );
 
-float point_shadow_calculation(samplerCube shadow_map, vec3 fragPos, vec3 lightPos, vec3 viewPos, float far_plane) // out vec3 dbg_color
+float point_shadow_calculation(samplerCube shadow_map, vec3 fragPos, vec3 lightPos, vec3 viewPos, float far_plane, vec3 normal) // out vec3 dbg_color
 {
     // get vector between fragment position and light position
     vec3 fragToLight = (fragPos - lightPos);
@@ -172,11 +172,16 @@ float point_shadow_calculation(samplerCube shadow_map, vec3 fragPos, vec3 lightP
     // }
     // shadow /= (samples * samples * samples);
     float shadow = 0.0;
-    float bias = 0.15; // 0.15;
 
-    //vec3 lightDir = normalize(fragToLight);
+    vec3 lightDir = normalize(fragToLight);
+    
+    ////float bias = 0.15;
+
+    float bias = max(0.01 * (0.2 - dot(normal, lightDir)), (length(fragToLight) / far_plane));
+    //float bias = (length(fragToLight) / far_plane);
+
     //float bias = max(0.15 * (1.0 - dot(normal, lightDir)), 0.01);
-    //float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);  
+    //float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
 
     int samples = 20;
     float viewDistance = length(viewPos - fragPos);
@@ -327,7 +332,7 @@ vec3 shade_pixel(in vec3 world_position, in vec3 view_position, in vec3 normal, 
 
         for (int layer = 0; layer < point_shadows_count; layer++)
         {
-            shadow += point_shadow_calculation(point_shadow_cubemap[layer], world_position, point_shadow_light_position[layer], view_position, point_shadow_far_plane[layer]);
+            shadow += point_shadow_calculation(point_shadow_cubemap[layer], world_position, point_shadow_light_position[layer], view_position, point_shadow_far_plane[layer], normal);
         }
     }
     /*
