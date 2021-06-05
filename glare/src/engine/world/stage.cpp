@@ -37,7 +37,8 @@ namespace engine
 		{ "follow_sphere", Stage::CreateFollowSphere },
 		{ "billboard",     Stage::CreateBillboard    },
 		{ "platform",      Stage::CreatePlatform     },
-		{ "light",         Stage::CreateLight        }
+		{ "light",         Stage::CreateLight        },
+		{ "scenery",       Stage::CreateScenery      }
 	};
 
     Entity Stage::Load(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const util::json& data)
@@ -401,6 +402,28 @@ namespace engine
 
 			registry.emplace<SpinBehavior>(obj, direction);
 		}
+
+		return obj;
+	}
+
+	Entity Stage::CreateScenery(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
+	{
+		auto& registry = world.get_registry();
+
+		auto model_path = util::get_value<std::string>(data, "path");
+
+		if (model_path.empty())
+		{
+			model_path = "assets/geometry/cube.b3d";
+		}
+		else
+		{
+			model_path = (root_path / model_path).string();
+		}
+
+		auto solid = util::get_value<bool>(data, "solid", false);
+
+		auto obj = load_model(world, model_path, parent, EntityType::Scenery, solid, 0.0f);
 
 		return obj;
 	}
