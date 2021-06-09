@@ -36,25 +36,39 @@ void main()
 
     texture_uv = a_uv;
     
-    mat3 normal_matrix = mat3(model);
     //mat3 normal_matrix = transpose(mat3(model));
     //mat3 normal_matrix = transpose(inverse(mat3(model)));
 
+    mat3 normal_matrix = mat3(model);
+    
+    /*
+    normal_matrix[0] /= dot(normal_matrix[0], normal_matrix[0]);
+    normal_matrix[1] /= dot(normal_matrix[1], normal_matrix[1]);
+    normal_matrix[2] /= dot(normal_matrix[2], normal_matrix[2]);
+    */
+
     if (normal_map_available || height_map_available)
     {
-        vec3 T = normalize(normal_matrix * a_tangent);
-        vec3 B = normalize(normal_matrix * a_bitangent);
-        vec3 N = normalize(normal_matrix * a_normal);
+        mat3 nm = (normal_matrix); // transpose(inverse(mat3(model)));
+
+        vec3 T = normalize(nm * a_tangent);
+        vec3 B = normalize(nm * a_bitangent);
+        vec3 N = normalize(nm * a_normal);
 
         //T = normalize(T - dot(T, N) * N);
+
         //vec3 B = cross(N, T);
         //vec3 B = cross(T, N);
     
         // Tangent-space matrix.
-        TBN = transpose(mat3(T, B, N));
+        //TBN = mat3(T, B, N);
+        ////TBN = transpose(mat3(T, B, N));
+        TBN = transpose(inverse(mat3(T, B, N)));
 
-        tangent_view_position     = (TBN * view_position);
-        tangent_fragment_position = (TBN * fragment_position);
+        mat3 tangent_matrix = transpose(mat3(T, B, N)); // TBN;
+
+        tangent_view_position     = (tangent_matrix * view_position);
+        tangent_fragment_position = (tangent_matrix * fragment_position);
 
         //normal = TBN * vec3(0.0, 1.0, 0.0);
 

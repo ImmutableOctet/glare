@@ -37,6 +37,40 @@ namespace graphics
 		return static_cast<aiTextureType>(type);
 	}
 
+	static aiMatrix4x4 get_scene_orientation(const aiScene* scene)
+	{
+		int upAxis = 1;
+		int upAxisSign = 1;
+
+		int frontAxis = 2;
+		int frontAxisSign = 1;
+
+		int coordAxis = 0;
+		int coordAxisSign = -1;
+
+		if (scene && scene->mMetaData)
+		{
+			scene->mMetaData->Get<int>("UpAxis", upAxis); // 1
+			scene->mMetaData->Get<int>("UpAxisSign", upAxisSign);
+			scene->mMetaData->Get<int>("FrontAxis", frontAxis);
+			scene->mMetaData->Get<int>("FrontAxisSign", frontAxisSign);
+			scene->mMetaData->Get<int>("CoordAxis", coordAxis);
+			scene->mMetaData->Get<int>("CoordAxisSign", coordAxisSign);
+		}
+
+		aiVector3D upVec = upAxis == 0 ? aiVector3D(upAxisSign, 0, 0) : upAxis == 1 ? aiVector3D(0, upAxisSign, 0) : aiVector3D(0, 0, upAxisSign);
+		aiVector3D forwardVec = frontAxis == 0 ? aiVector3D(frontAxisSign, 0, 0) : frontAxis == 1 ? aiVector3D(0, frontAxisSign, 0) : aiVector3D(0, 0, frontAxisSign);
+		aiVector3D rightVec = coordAxis == 0 ? aiVector3D(coordAxisSign, 0, 0) : coordAxis == 1 ? aiVector3D(0, coordAxisSign, 0) : aiVector3D(0, 0, coordAxisSign);
+		
+		return aiMatrix4x4
+		(
+			rightVec.x, rightVec.y, rightVec.z, 0.0f,
+			upVec.x, upVec.y, upVec.z, 0.0f,
+			forwardVec.x, forwardVec.y, forwardVec.z, 0.0f,
+			0.0f, 0.0f, 0.0f, 1.0f
+		);
+	}
+
 	Model::Model(Meshes&& meshes, VertexWinding vertex_winding) noexcept
 		: meshes(std::move(meshes)), vertex_winding(vertex_winding) {}
 
@@ -103,19 +137,26 @@ namespace graphics
 		Assimp::Importer importer;
 
 		// TODO: Implement 'flags' parameter.
-		unsigned int flags = ( aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_FlipUVs ); // aiProcess_PreTransformVertices  // aiProcess_JoinIdenticalVertices
+		unsigned int flags = ( aiProcess_Triangulate | aiProcess_CalcTangentSpace ); // aiProcess_PreTransformVertices  // aiProcess_JoinIdenticalVertices
 
 		VertexWinding vert_direction = VertexWinding::Clockwise;
 
-		if (path.ends_with(".obj"))
+		bool needs_reorientation = false;
+
+		if (path.ends_with(".obj") || path.ends_with(".fbx"))
 		{
 			vert_direction = VertexWinding::CounterClockwise;
 
 			// Doesn't work, for some reason.
 			//flags |= aiProcess_FlipWindingOrder | aiProcess_PreTransformVertices;
+
 			//flags |= aiProcess_MakeLeftHanded;
 			//flags |= aiProcess_JoinIdenticalVertices;
+
+			needs_reorientation = true;
 		}
+		
+		flags |= aiProcess_FlipUVs;
 
 
 		// Load a scene from the path specified.
@@ -129,6 +170,13 @@ namespace graphics
 			return {};
 		}
 
+		aiMatrix4x4 scene_orientation;
+
+		if (needs_reorientation)
+		{
+			scene_orientation = get_scene_orientation(scene);
+		}
+
 		// The root directory of the scene; used to load resources. (Textures, etc)
 		//auto directory = path.substr(0, path.find_last_of('/'));
 
@@ -137,7 +185,17 @@ namespace graphics
 
 		CollisionGeometry::Container collision_out;
 
-		model.process_node(context, importer, root_path, scene, scene->mRootNode, default_shader, vert_direction, ((load_collision) ? &collision_out : nullptr));
+		model.process_node
+		(
+			context,
+			importer, root_path,
+			scene, scene->mRootNode,
+			default_shader,
+			vert_direction,
+			((load_collision) ? &collision_out : nullptr),
+
+			(needs_reorientation) ? reinterpret_cast<_aiMatrix4x4*>(&scene_orientation) : nullptr
+		);
 
 		////model.vertex_winding = vert_direction;
 
@@ -263,7 +321,7 @@ namespace graphics
 		return material;
 	}
 
-	void Model::process_node(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, pass_ref<Shader> default_shader, VertexWinding vert_direction, CollisionGeometry::Container* opt_collision_out)
+	void Model::process_node(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, pass_ref<Shader> default_shader, VertexWinding vert_direction, CollisionGeometry::Container* opt_collision_out, const _aiMatrix4x4* _scene_orientation)
 	{
 		bool collision_enabled = (opt_collision_out != nullptr);
 
@@ -294,7 +352,7 @@ namespace graphics
 			// TODO: Review concept of 'optional materials'.
 			auto& mesh_descriptor = meshes[material_index];
 
-			auto mesh_data = process_mesh(importer, root_path, scene, node, mesh, vert_direction);
+			auto mesh_data = process_mesh(importer, root_path, scene, node, mesh, vert_direction, _scene_orientation);
 
 			if (collision_enabled)
 			{
@@ -309,7 +367,7 @@ namespace graphics
 		{
 			auto* child = node->mChildren[i];
 
-			process_node(context, importer, root_path, scene, child, default_shader, vert_direction, opt_collision_out);
+			process_node(context, importer, root_path, scene, child, default_shader, vert_direction, opt_collision_out, _scene_orientation);
 		}
 
 		// First node (root):
@@ -339,13 +397,15 @@ namespace graphics
 		}
 	}
 
-	MeshData<Model::VertexType> Model::process_mesh(Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, const aiMesh* mesh, VertexWinding vert_direction)
+	MeshData<Model::VertexType> Model::process_mesh(Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, const aiMesh* mesh, VertexWinding vert_direction, const _aiMatrix4x4* _scene_orientation)
 	{
 		const auto vertex_count = (mesh->mNumVertices);
 
 		MeshData<VertexType> data = { {}, std::make_shared<std::vector<MeshIndex>>() };
 
 		data.vertices.reserve(vertex_count);
+
+		const auto* scene_orientation = reinterpret_cast<const aiMatrix4x4*>(_scene_orientation);
 
 		// Retrieve vertex data:
 
@@ -358,36 +418,78 @@ namespace graphics
 			//aiMatrix4x4 rm = node->mTransformation;
 			//aiMatrix4x4::Rotation(1.0f, { 1.0, 1.0, 1.0 }, rm);
 
+			auto uv_channels = mesh->mTextureCoords[0];
+
 			///*
-			if (vert_direction == VertexWinding::CounterClockwise)
+			//if (vert_direction == VertexWinding::CounterClockwise)
+			if (false)
 			{
+				// Test:
 				auto p = math::to_vector(mesh->mVertices[i]); // rm * ...
 
 				vertex.position = math::vec3(-p.x, p.y, p.z);
+
+				auto t = math::to_vector(mesh->mTangents[i]);
+
+				vertex.tangent = math::vec3(t.x, t.y, -t.z);
+
+				auto b = math::to_vector(mesh->mBitangents[i]);
+
+				vertex.bitangent = math::vec3(b.x, b.y, b.z);
 			}
 			else
 			{
-				vertex.position = math::to_vector(mesh->mVertices[i]); // rm * ...
+				auto position  = mesh->mVertices[i];
+				auto normal    = mesh->mNormals[i];
+
+				auto tangent   = (mesh->mTangents) ? mesh->mTangents[i] : aiVector3D {};
+				auto bitangent = (mesh->mBitangents) ? mesh->mBitangents[i] : aiVector3D {};
+
+				if (scene_orientation)
+				{
+					const auto& m = (*scene_orientation);
+
+					vertex.position  = math::to_vector(m * position);
+					vertex.normal    = math::to_vector(m * normal);
+					vertex.tangent   = math::to_vector(m * tangent);
+					vertex.bitangent = (math::to_vector(m * bitangent) * -1.0f);
+
+					if (uv_channels)
+					{
+						//vertex.uv = glm::normalize(math::to_vector(m * uv_channels[i]));
+						vertex.uv = math::to_vector(uv_channels[i]);
+
+						//auto uv = math::to_vector(uv_channels[i]);;
+						//vertex.uv = math::vec2(uv.x, 1.0 - uv.y);
+					}
+					else
+					{
+						vertex.uv = {};
+					}
+				}
+				else
+				{
+					vertex.position  = math::to_vector(position);
+					vertex.normal    = math::to_vector(normal);
+					vertex.tangent   = math::to_vector(tangent);
+					vertex.bitangent = math::to_vector(bitangent);
+
+					if (uv_channels)
+					{
+						vertex.uv = math::to_vector(uv_channels[i]);
+
+						//auto uv = math::to_vector(uv_channels[i]);;
+						//vertex.uv = math::vec2(uv.x, 1.0 - uv.y);
+					}
+					else
+					{
+						vertex.uv = {};
+					}
+				}
 			}
 			//*/
 
 			//vertex.position = math::to_vector(mesh->mVertices[i]); // rm * ...
-
-			vertex.normal   = math::to_vector(mesh->mNormals[i]);
-
-			auto uv_channels = mesh->mTextureCoords[0];
-
-			if (uv_channels)
-			{
-				vertex.uv = math::to_vector(uv_channels[i]);
-			}
-			else
-			{
-				vertex.uv = {};
-			}
-
-			vertex.tangent = math::to_vector(mesh->mTangents[i]);
-			vertex.bitangent = math::to_vector(mesh->mBitangents[i]);
 
 			data.vertices.push_back(vertex);
 		}

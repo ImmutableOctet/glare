@@ -34,6 +34,10 @@ struct aiNode;
 struct aiMesh;
 struct aiMaterial;
 
+//class aiMatrix4x4;
+
+using _aiMatrix4x4 = void*;
+
 // Bullet:
 class btTriangleIndexVertexArray;
 
@@ -134,7 +138,7 @@ namespace graphics
 		protected:
 			ref<Texture> process_texture(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const filesystem::path& texture_path);
 			Material process_material(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiMaterial* native_material, pass_ref<Shader> default_shader, bool load_textures=true, bool load_values=true);
-			void process_node(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, pass_ref<Shader> default_shader, VertexWinding vert_direction, CollisionGeometry::Container* opt_collision_out=nullptr);
-			MeshData<VertexType> process_mesh(Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, const aiMesh* mesh, VertexWinding vert_direction);
+			void process_node(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, pass_ref<Shader> default_shader, VertexWinding vert_direction, CollisionGeometry::Container* opt_collision_out=nullptr, const _aiMatrix4x4* _scene_orientation=nullptr);
+			MeshData<VertexType> process_mesh(Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, const aiMesh* mesh, VertexWinding vert_direction, const _aiMatrix4x4* _scene_orientation=nullptr);
 	};
 }

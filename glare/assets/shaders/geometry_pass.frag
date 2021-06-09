@@ -98,6 +98,7 @@ void main()
     vec2 uv;
 
     if (height_map_available)
+    //if (false)
     {
         //vec3 tangent_view_direction = normalize(view_position - tangent_fragment_position);
         //vec3 tangent_view_direction = normalize(view_position - fragment_position);
@@ -110,7 +111,11 @@ void main()
         //if (uv.x > 1.0 || uv.y > 1.0 || uv.x < 0.0 || uv.y < 0.0)
         //    discard;
 
-        //g_albedo_specular = vec4(uv.x, uv.y, 1.0, 1.0); return;
+        //vec3 up = vec3(0.0, 1.0, 0.0);
+        //g_albedo_specular = vec4((TBN * up), 1.0); return;
+
+        //g_albedo_specular = vec4(texture_uv.x, texture_uv.y, 0.0, 1.0); return;
+        //g_albedo_specular = vec4(uv.x, uv.y/10.0, 0.0, 1.0); return;
         //g_albedo_specular = vec4(tangent_view_direction.xyz, 1.0); return;
     }
     else
@@ -136,7 +141,7 @@ void main()
     // and the diffuse per-fragment color
     if (texture_diffuse_enabled)
     {
-        albedo_specular.rgb = (texture(diffuse, uv).rgb * diffuse_color.rgb);
+        albedo_specular.rgb = (texture(diffuse, uv).rgb * diffuse_color.rgb); // texture_uv
     }
     else
     {
