@@ -42,12 +42,8 @@ uniform float alpha = 1.0;
 
 uniform uint render_flags = 255u; // = 0u; // 0xFFu; // 0u;
 
-vec2 parallax_mapping(sampler2D depthMap, vec2 texCoords, vec3 viewDir, float heightScale)
-{ 
-    // Number of depth layers:
-    const float minLayers = 8;
-    const float maxLayers = 32;
-
+vec2 parallax_mapping(sampler2D depthMap, vec2 texCoords, vec3 viewDir, float heightScale, float minLayers=8, float maxLayers=32)
+{
     float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));
 
     // calculate the size of each layer
