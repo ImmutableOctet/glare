@@ -126,33 +126,49 @@ namespace graphics
 
 			bool material_has_textures = false;
 			bool specular_available = false;
+			bool normal_map_available = false;
+			bool height_map_available = false;
 
 			bool ignore_textures = (draw_mode & DrawMode::IgnoreTextures);
 
 			if (!ignore_textures)
 			{
 				material_has_textures = mesh_descriptor.material.has_textures();
+				//normal_map_available = mesh_descriptor.material.textures.contains(Model::get_texture_class_variable(TextureClass::Normals));
+
 				bool force_clear_textures = (auto_clear_textures || (!material_has_textures));
 
 				context->clear_textures(force_clear_textures); // (!has_material)
 
-				specular_available = false;
+				//specular_available = false;
+				//normal_map_available = false;
+				//height_map_available = false;
 
 				for (auto& texture_group : material.textures)
 				{
 					const auto& texture_name = texture_group.first;
 					const auto& _data = texture_group.second;
 
-					if (texture_name == "specular") // (texture_name.find("specular") != std::string::npos)
+					if (texture_name == Model::get_texture_class_variable(TextureClass::Specular)) // (texture_name.find("specular") != std::string::npos)
 					{
 						specular_available = true;
 					}
 
+					if (texture_name == Model::get_texture_class_variable(TextureClass::Normals))
+					{
+						normal_map_available = true;
+					}
+
+					if (texture_name == Model::get_texture_class_variable(TextureClass::Height))
+					{
+						height_map_available = true;
+					}
+
 					// TODO: Implement as visit:
 					if (util::peek_value<ref<Texture>>(_data, [&](const ref<Texture>& texture)
-						{
-							bind_texture(*texture, texture_name);
-						}))
+					{
+						bind_texture(*texture, texture_name);
+					}))
 					{}
 					else if (util::peek_value<TextureArray>(_data, [&](const TextureArray& textures)
 					{
@@ -238,9 +254,20 @@ namespace graphics
 				if (!ignore_textures)
 				{
 					shader["texture_diffuse_enabled"] = material_has_textures; // has_diffuse();
-					shader["specular_available"] = specular_available;
+					shader["specular_available"]      = specular_available;
+					shader["normal_map_available"]    = normal_map_available;
+					shader["height_map_available"]    = height_map_available;
 				}
 			}
+
+			/*
+			bool is_ccw = (model.get_winding_order() == VertexWinding::CounterClockwise);
+
+			if (is_ccw)
+			{
+				context->set_winding_order(VertexWinding::CounterClockwise);
+			}
+			*/
 
 			for (auto& mesh : mesh_descriptor.meshes)
 			{
@@ -249,6 +276,13 @@ namespace graphics
 					context->draw();
 				});
 			}
+
+			/*
+			if (is_ccw)
+			{
+				context->set_winding_order(VertexWinding::Clockwise);
+			}
+			*/
 		}
 	}
 

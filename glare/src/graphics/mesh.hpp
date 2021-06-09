@@ -116,7 +116,7 @@ namespace graphics
 				);
 			}
 
-			static Mesh GenerateTexturedQuad(pass_ref<Context> ctx, VertexWinding winding=VertexWinding::Clockwise);
+			static Mesh GenerateTexturedQuad(pass_ref<Context> ctx, VertexWinding winding=VertexWinding::Clockwise); // CounterClockwise
 
 			friend void swap(Mesh& x, Mesh& y) noexcept;
 

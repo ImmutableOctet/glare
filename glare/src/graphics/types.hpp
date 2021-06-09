@@ -108,7 +108,7 @@ namespace graphics
 
 	FLAG_ENUM(std::uint32_t, GBufferFlags);
 
-	enum class ShaderType
+	enum class ShaderType : std::uint8_t
 	{
 		Vertex,
 		Fragment,
@@ -133,7 +133,7 @@ namespace graphics
 			StringType version;
 	};
 
-	enum class ElementType
+	enum class ElementType // : std::uint8_t
 	{
 		Byte,
 		UByte,
@@ -160,7 +160,7 @@ namespace graphics
 		Unknown = -1,
 	};
 
-	enum class Primitive
+	enum class Primitive : std::int8_t
 	{
 		Point,
 		Line,
@@ -176,7 +176,7 @@ namespace graphics
 		Unknown = -1,
 	};
 
-	enum class VertexWinding
+	enum class VertexWinding : std::uint8_t
 	{
 		Clockwise,
 		CounterClockwise,
@@ -203,8 +203,6 @@ namespace graphics
 
 	enum class TextureClass : std::int32_t // int
 	{
-		StartType = 1,
-
 		None = 0,
 		Diffuse,
 		Specular,
@@ -226,6 +224,9 @@ namespace graphics
 		Unknown,
 
 		MaxTypes,
+
+		//StartType = 1,
+		StartType = Diffuse,
 		EndType = MaxTypes
 	};
 

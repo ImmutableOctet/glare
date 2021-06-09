@@ -20,6 +20,8 @@ namespace graphics
 		public:
 			static constexpr std::string_view ALPHA = "alpha"; // sv
 			static constexpr std::string_view DIFFUSE_COLOR = "diffuse_color"; // sv
+			static constexpr std::string_view HEIGHT_MAP_SCALE = "height_map_scale";
+			static constexpr std::string_view SHININESS = "shininess";
 
 			static constexpr float TRANSPARENCY_THRESHOLD = 0.99f; // <=
 

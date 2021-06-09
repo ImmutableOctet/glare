@@ -25,11 +25,20 @@ namespace graphics
 	// Internal TextureClasss are currently consistent with Assimp.
 	static aiTextureType to_aiTextureType(TextureClass type)
 	{
+		// Mappings for weird texture-handling behavior from Assimp:
+		switch (type)
+		{
+			case TextureClass::Normals:
+				return aiTextureType_HEIGHT;
+			case TextureClass::Height:
+				return aiTextureType_AMBIENT;
+		}
+
 		return static_cast<aiTextureType>(type);
 	}
 
-	Model::Model(Meshes&& meshes) noexcept
-		: meshes(std::move(meshes)) {}
+	Model::Model(Meshes&& meshes, VertexWinding vertex_winding) noexcept
+		: meshes(std::move(meshes)), vertex_winding(vertex_winding) {}
 
 	Model::Model(Model&& model) noexcept
 		: Model() { swap(*this, model); }
@@ -39,9 +48,10 @@ namespace graphics
 		using std::swap;
 
 		swap(x.meshes, y.meshes);
+		swap(x.vertex_winding, y.vertex_winding);
 	}
 
-	std::string Model::get_texture_class_variable(TextureClass type)
+	const char* Model::get_texture_class_variable_raw(TextureClass type)
 	{
 		switch (type)
 		{
@@ -49,14 +59,14 @@ namespace graphics
 				return "diffuse";
 			case TextureClass::Specular:
 				return "specular";
-			case TextureClass::Ambient:
-				return "ambient";
+			//case TextureClass::Ambient:
+			//	return "ambient";
 			case TextureClass::Emissive:
 				return "emissive";
 			case TextureClass::Height:
-				return "height";
+				return "height_map";
 			case TextureClass::Normals:
-				return "normal";
+				return "normal_map";
 			case TextureClass::Shininess:
 				return "shininess";
 			case TextureClass::Opacity:
@@ -93,16 +103,20 @@ namespace graphics
 		Assimp::Importer importer;
 
 		// TODO: Implement 'flags' parameter.
-		unsigned int flags = ( aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace ); // aiProcess_PreTransformVertices  // aiProcess_JoinIdenticalVertices
+		unsigned int flags = ( aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_FlipUVs ); // aiProcess_PreTransformVertices  // aiProcess_JoinIdenticalVertices
 
 		VertexWinding vert_direction = VertexWinding::Clockwise;
 
-		if (!path.ends_with(".obj"))
+		if (path.ends_with(".obj"))
 		{
 			vert_direction = VertexWinding::CounterClockwise;
+
+			// Doesn't work, for some reason.
+			//flags |= aiProcess_FlipWindingOrder | aiProcess_PreTransformVertices;
+			//flags |= aiProcess_MakeLeftHanded;
+			//flags |= aiProcess_JoinIdenticalVertices;
 		}
 
-		//flags |= aiProcess_FlipWindingOrder;
 
 		// Load a scene from the path specified.
 		const aiScene* scene = importer.ReadFile(path, flags);
@@ -124,6 +138,8 @@ namespace graphics
 		CollisionGeometry::Container collision_out;
 
 		model.process_node(context, importer, root_path, scene, scene->mRootNode, default_shader, vert_direction, ((load_collision) ? &collision_out : nullptr));
+
+		////model.vertex_winding = vert_direction;
 
 		if (load_collision)
 		{
@@ -169,10 +185,17 @@ namespace graphics
 
 				if (texture_count == 0)
 				{
-					return;
+					return; // Continue enumeration.
 				}
 
+				std::cout << "Texture: " << native_type << " (" << texture_count << ")" << '\n';
+
 				auto texture_type_var = get_texture_class_variable(texture_type);
+
+				if (texture_type_var.empty())
+				{
+					return; // Continue enumeration.
+				}
 
 				if (texture_count > 1)
 				{
@@ -217,11 +240,23 @@ namespace graphics
 			}
 
 			// 'diffuse_color':
-			if (aiColor4D _diffuse_color; native_material->Get(AI_MATKEY_COLOR_DIFFUSE, _diffuse_color) == aiReturn_SUCCESS) // AI_MATKEY_COLOR_TRANSPARENT
+			if (aiColor4D _diffuse_color; native_material->Get(AI_MATKEY_COLOR_DIFFUSE, _diffuse_color) == aiReturn_SUCCESS)
 			{
 				auto diffuse_color = (*reinterpret_cast<ColorRGBA*>(&_diffuse_color));
 
 				material.set_var(Material::DIFFUSE_COLOR, (diffuse_color));
+			}
+
+			// 'height_map_scale':
+			if (float height_map_scale; native_material->Get(AI_MATKEY_BUMPSCALING, height_map_scale) == aiReturn_SUCCESS)
+			{
+				material.set_var(Material::HEIGHT_MAP_SCALE, height_map_scale);
+			}
+
+			// 'shininess':
+			if (float shininess; native_material->Get(AI_MATKEY_SHININESS, shininess) == aiReturn_SUCCESS)
+			{
+				material.set_var(Material::SHININESS, shininess);
 			}
 		}
 
@@ -323,7 +358,21 @@ namespace graphics
 			//aiMatrix4x4 rm = node->mTransformation;
 			//aiMatrix4x4::Rotation(1.0f, { 1.0, 1.0, 1.0 }, rm);
 
-			vertex.position = math::to_vector(mesh->mVertices[i]); // rm * ...
+			///*
+			if (vert_direction == VertexWinding::CounterClockwise)
+			{
+				auto p = math::to_vector(mesh->mVertices[i]); // rm * ...
+
+				vertex.position = math::vec3(-p.x, p.y, p.z);
+			}
+			else
+			{
+				vertex.position = math::to_vector(mesh->mVertices[i]); // rm * ...
+			}
+			//*/
+
+			//vertex.position = math::to_vector(mesh->mVertices[i]); // rm * ...
+
 			vertex.normal   = math::to_vector(mesh->mNormals[i]);
 
 			auto uv_channels = mesh->mTextureCoords[0];

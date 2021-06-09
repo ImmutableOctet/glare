@@ -476,7 +476,7 @@ namespace engine
 				}
 			}
 
-			/*
+			///*
 			if (render_state)
 			{
 				if (render_state->meta.view_position.has_value())
@@ -484,7 +484,7 @@ namespace engine
 					shader["view_position"] = *render_state->meta.view_position;
 				}
 			}
-			*/
+			//*/
 
 			bool _auto_clear_textures = false; // true;
 

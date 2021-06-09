@@ -88,11 +88,23 @@ namespace graphics
 
 			friend Canvas;
 			friend Context;
-		private:
-			// Retrieves a string containing the name of 'class' to be used to link with shaders.
-			std::string get_texture_class_variable(TextureClass type);
 
+			// Retrieves a string containing the name of 'class' to be used to link with shaders.
+			static const char* get_texture_class_variable_raw(TextureClass type);
+			inline static std::string get_texture_class_variable(TextureClass type)
+			{
+				const auto* raw = get_texture_class_variable_raw(type);
+
+				if (!raw)
+				{
+					return {};
+				}
+
+				return raw;
+			}
+		private:
 			Meshes meshes;
+			VertexWinding vertex_winding = VertexWinding::Clockwise;
 		public:
 			static std::tuple<Model, std::optional<CollisionGeometry>> Load(pass_ref<Context> context, const std::string& path, pass_ref<Shader> default_shader, bool load_collision=false);
 
@@ -103,7 +115,7 @@ namespace graphics
 			// TODO: Handle copies.
 			Model(const Model&) = delete;
 
-			Model(Meshes&& meshes) noexcept;
+			Model(Meshes&& meshes, VertexWinding vertex_winding=VertexWinding::Clockwise) noexcept;
 			Model(Model&& model) noexcept;
 
 			// TODO: Verify non-const access.
@@ -117,6 +129,8 @@ namespace graphics
 
 				return *this;
 			}
+
+			inline VertexWinding get_winding_order() const { return vertex_winding; }
 		protected:
 			ref<Texture> process_texture(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const filesystem::path& texture_path);
 			Material process_material(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiMaterial* native_material, pass_ref<Shader> default_shader, bool load_textures=true, bool load_values=true);

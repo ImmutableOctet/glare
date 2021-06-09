@@ -789,7 +789,12 @@ namespace graphics
 					//glCullFace(GL_FRONT);
 
 					// Default behavior:
-					glFrontFace(GL_CW); // VertexWinding::Clockwise
+					glFrontFace(GL_CW);
+					//glFrontFace(GL_CCW);
+
+					//set_winding_order(VertexWinding::Clockwise);
+					//set_winding_order(VertexWinding::CounterClockwise);
+
 					glCullFace(GL_BACK);
 				}
 
@@ -1572,6 +1577,21 @@ namespace graphics
 	}
 
 	// Mesh related:
+	void Context::set_winding_order(VertexWinding winding_order)
+	{
+		switch (winding_order)
+		{
+			case VertexWinding::Clockwise:
+				glFrontFace(GL_CW);
+
+				break;
+			case VertexWinding::CounterClockwise:
+				glFrontFace(GL_CCW);
+
+				break;
+		}
+	}
+
 	MeshComposition Context::generate_mesh(memory::memory_view vertices, std::size_t vertex_size, memory::array_view<VertexAttribute> attributes, memory::array_view<MeshIndex> indices) noexcept
 	{
 		ASSERT(vertices);

@@ -332,6 +332,8 @@ namespace graphics
 			bool flush_uniforms();
 		protected:
 			inline State& get_state() const { return *state; }
+
+			void set_winding_order(VertexWinding winding_order);
 			
 			// Mesh related:
 			MeshComposition generate_mesh(memory::memory_view vertices, std::size_t vertex_size, memory::array_view<VertexAttribute> attributes, memory::array_view<MeshIndex> indices=nullptr) noexcept;

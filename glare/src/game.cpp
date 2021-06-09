@@ -1074,18 +1074,18 @@ namespace glare
 			{
 				auto t = transform(target_entity);
 
-				std::cout << "\nCamera:\n";
-
 				auto position = t.get_position();
 				auto rotation = math::degrees(t.get_rotation());
 				auto scale = t.get_scale();
 
+				std::cout << "\nCamera:\n";
+
 				//std::cout << "Position: " << t.get_position() << '\n';
 				//std::cout << "Rotation: " << math::degrees(t.get_rotation()) << '\n';
 				//std::cout << "Scale: " << t.get_scale() << '\n';
-				std::cout << "Position: " << "\"x\": " << position.x << ", " << "\"y\": " << position.y << ", " << "\"z\": " << position.z << '\n';
-				std::cout << "Rotation: " << "\"x\": " << rotation.x << ", " << "\"y\": " << rotation.y << ", " << "\"z\": " << rotation.z << '\n';
-				std::cout << "Scale: " << "\"x\": " << scale.x << ", " << "\"y\": " << scale.y << ", " << "\"z\": " << scale.z << '\n';
+				std::cout << "\"position\": { " << "\"x\": " << position.x << ", " << "\"y\": " << position.y << ", " << "\"z\": " << position.z << " }," << '\n';
+				std::cout << "\"rotation\": { " << "\"x\": " << rotation.x << ", " << "\"y\": " << rotation.y << ", " << "\"z\": " << rotation.z << " }," << '\n';
+				std::cout << "\"scale\": { " << "\"x\": " << scale.x << ", " << "\"y\": " << scale.y << ", " << "\"z\": " << scale.z << " }" << '\n';
 			}
 
 			//engine::SimpleFollowComponent::update(world);
