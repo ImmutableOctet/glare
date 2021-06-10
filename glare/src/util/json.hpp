@@ -56,6 +56,15 @@ namespace util
 		return (data.contains(name) ? data[name].get<T>() : default_value);
 	}
 
+	template <typename T, typename UIDType, typename get_fn>
+	inline void retrieve_value(const json& data, const UIDType& name, T& dest, get_fn&& fn)
+	{
+		if (data.contains(name))
+		{
+			dest = fn(data, name);
+		}
+	}
+
 	template <typename UIDType>
 	inline math::Vector get_vector(const json& data, const UIDType& vector_name, math::Vector default_value={0.0f, 0.0f, 0.0f})
 	{
@@ -87,5 +96,70 @@ namespace util
 		auto scale = get_vector(data, "scale", { 1.0f, 1.0f, 1.0f });
 
 		return { position, rotation, scale };
+	}
+
+	template <typename T, typename UIDType>
+	inline void retrieve_value(const json& data, const UIDType& name, T& dest)
+	{
+		retrieve_value
+		(
+			data, name, dest,
+			[](const json& data, const UIDType& name)
+			{
+				return data[name].get<T>();
+			}
+		);
+	}
+
+	template <typename UIDType>
+	inline void retrieve_value(const json& data, const UIDType& name, math::Vector& dest)
+	{
+		retrieve_value
+		(
+			data, name, dest,
+			[](const json& data, const UIDType& name)
+			{
+				return to_vector(data[name]);
+			}
+		);
+	}
+
+	template <typename UIDType>
+	inline void retrieve_value(const json& data, const UIDType& name, math::vec2i& dest)
+	{
+		retrieve_value
+		(
+			data, name, dest,
+			[](const json& data, const UIDType& name)
+			{
+				return to_vec2i(data[name]);
+			}
+		);
+	}
+
+	template <typename UIDType>
+	inline void retrieve_value(const json& data, const UIDType& name, graphics::ColorRGBA& dest, float default_alpha=1.0f)
+	{
+		retrieve_value
+		(
+			data, name, dest,
+			[](const json& data, const UIDType& name)
+			{
+				return to_color(data[name], default_alpha);
+			}
+		);
+	}
+
+	template <typename UIDType>
+	inline void retrieve_value(const json& data, const UIDType& name, math::TransformVectors& dest)
+	{
+		retrieve_value
+		(
+			data, name, dest,
+			[](const json& data, const UIDType& name)
+			{
+				return get_transform(data[name]);
+			}
+		);
 	}
 }
