@@ -35,6 +35,8 @@ uniform bool normal_map_available = false;
 uniform bool height_map_available = false;
 
 uniform float height_map_scale = 0.1;
+uniform float height_map_min_layers = 8.0; //16.0;
+uniform float height_map_max_layers = 32.0;
 
 uniform vec4 diffuse_color = vec4(1.0, 1.0, 1.0, 1.0);
 uniform float alpha = 1.0;
@@ -42,7 +44,7 @@ uniform float alpha = 1.0;
 
 uniform uint render_flags = 255u; // = 0u; // 0xFFu; // 0u;
 
-vec2 parallax_mapping(sampler2D depthMap, vec2 texCoords, vec3 viewDir, float heightScale, float minLayers=8, float maxLayers=32)
+vec2 parallax_mapping(sampler2D depthMap, vec2 texCoords, vec3 viewDir, float heightScale, float minLayers, float maxLayers) // float minLayers=8, float maxLayers=32
 {
     float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));
 
@@ -102,15 +104,34 @@ void main()
         vec3 tangent_view_direction = normalize(tangent_view_position - tangent_fragment_position);
         //vec3 tangent_view_direction = normalize(tangent_fragment_position - tangent_view_position);
         
-        uv = parallax_mapping(height_map, texture_uv, tangent_view_direction, height_map_scale);
+        uv = parallax_mapping(height_map, texture_uv, tangent_view_direction, height_map_scale, height_map_min_layers, height_map_max_layers);
 
-        //if (uv.x > 1.0 || uv.y > 1.0 || uv.x < 0.0 || uv.y < 0.0)
+        vec2 test = uv; // vec2(1.0-uv.x, uv.y);
+
+        //if ((test.x > 1.0) || (test.x < 0.0))
         //    discard;
+
+        //if ((test.y < 1.0) || (test.y > 1.0))
+        //    discard;
+
+        /*
+        if ((test.x > 1.0 || test.y > 1.0 || test.x < 0.0 || test.y < 0.0))
+            discard;
+        */
 
         //vec3 up = vec3(0.0, 1.0, 0.0);
         //g_albedo_specular = vec4((TBN * up), 1.0); return;
 
-        //g_albedo_specular = vec4(texture_uv.x, texture_uv.y, 0.0, 1.0); return;
+        //if (texture_uv.y > 1.0)
+        //    discard;
+
+        //g_albedo_specular = vec4(texture_uv.x, 0.0, 0.0, 1.0); return;
+        //g_albedo_specular = vec4(texture_uv.y, 0.0, 0.0, 1.0); return;
+
+        //if (uv.y > 1.0)
+        //    g_albedo_specular = vec4(uv.y-1.0, 0.0, 0.0, 1.0); return;
+
+        //g_albedo_specular = vec4(0.0, uv.y, 0.0, 1.0); return;
         //g_albedo_specular = vec4(uv.x, uv.y/10.0, 0.0, 1.0); return;
         //g_albedo_specular = vec4(tangent_view_direction.xyz, 1.0); return;
     }

@@ -26,6 +26,7 @@
 #include <graphics/shader.hpp>
 #include <graphics/world_render_state.hpp>
 
+#include <engine/config.hpp>
 #include <engine/collision.hpp>
 #include <engine/resource_manager.hpp>
 #include <engine/free_look.hpp>
@@ -261,6 +262,8 @@ namespace engine
 
 		if (render_state)
 		{
+			const auto& cfg = get_config();
+
 			render_state->matrices =
 			{
 				.view       { camera_matrix },
@@ -272,6 +275,12 @@ namespace engine
 				.fov_y        = camera_params.fov,
 				.aspect_ratio = camera_params.aspect_ratio,
 				.depth_range  = { camera_params.near_plane, camera_params.far_plane }
+			};
+
+			render_state->parallax =
+			{
+				.min_layers = cfg.graphics.parallax.min_layers,
+				.max_layers = cfg.graphics.parallax.max_layers,
 			};
 		}
 
@@ -483,6 +492,9 @@ namespace engine
 				{
 					shader["view_position"] = *render_state->meta.view_position;
 				}
+
+				shader["height_map_min_layers"] = render_state->parallax.min_layers;
+				shader["height_map_max_layers"] = render_state->parallax.max_layers;
 			}
 			//*/
 

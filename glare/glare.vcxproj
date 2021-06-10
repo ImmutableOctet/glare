@@ -330,6 +330,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r</Command>
     <ClCompile Include="src\app\timer.cpp" />
     <ClCompile Include="src\app\window.cpp" />
     <ClCompile Include="src\engine\collision.cpp" />
+    <ClCompile Include="src\engine\config.cpp" />
     <ClCompile Include="src\engine\free_look.cpp" />
     <ClCompile Include="src\engine\model_component.cpp" />
     <ClCompile Include="src\engine\relationship.cpp" />

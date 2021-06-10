@@ -690,6 +690,7 @@
     <ClCompile Include="src\graphics\gbuffer.cpp">
       <Filter>graphics\graphics</Filter>
     </ClCompile>
+    <ClCompile Include="src\engine\config.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />

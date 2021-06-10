@@ -456,8 +456,14 @@ namespace graphics
 
 					if (uv_channels)
 					{
-						//vertex.uv = glm::normalize(math::to_vector(m * uv_channels[i]));
-						vertex.uv = math::to_vector(uv_channels[i]);
+						auto uv = uv_channels[i];
+
+						//auto uvt = (math::to_vector(m * aiVector3D(1.0 - uv.x, uv.y, 0.0)));
+						auto uvt = math::to_vector(uv);
+
+						vertex.uv = math::vec2f(uvt.x, uvt.y);
+
+						//vertex.uv = math::to_vector(uv_channels[i]);
 
 						//auto uv = math::to_vector(uv_channels[i]);;
 						//vertex.uv = math::vec2(uv.x, 1.0 - uv.y);
@@ -477,6 +483,8 @@ namespace graphics
 					if (uv_channels)
 					{
 						vertex.uv = math::to_vector(uv_channels[i]);
+
+						//vertex.uv.y -= 1.0;
 
 						//auto uv = math::to_vector(uv_channels[i]);;
 						//vertex.uv = math::vec2(uv.x, 1.0 - uv.y);

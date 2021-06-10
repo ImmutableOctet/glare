@@ -32,6 +32,12 @@ namespace graphics
 			//inline operator bool() const { return (light_positions.has_value() || light_matrices.has_value()); }
 		} directional_shadows;
 
+		struct
+		{
+			float min_layers = 8.0;
+			float max_layers = 32.0;
+		} parallax;
+
 		struct _matrices
 		{
 			Matrix view;

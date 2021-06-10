@@ -324,9 +324,9 @@ namespace engine
 
 				(shadow_light_type == LightType::Point)
 				?
-				cfg.get_shadow_cubemap_resolution()
+				cfg.graphics.shadow.cubemap_resolution
 				:
-				cfg.get_shadow_resolution()
+				cfg.graphics.shadow.resolution
 			);
 
 			auto shadow_range = util::get_value(data, "shadow_range", 1000.0f);
