@@ -129,18 +129,12 @@ namespace app
 		std::cout << "Done.\n";
 	}
 
-	void Application::on_keydown(const keyboard_event_t& event)
-	{
-	}
+	// Empty implementations:
+	void Application::on_keydown(const keyboard_event_t& event) {}
+	void Application::on_keyup(const keyboard_event_t& event) {}
+	void Application::on_window_resize(Window& window, int width, int height) {}
 
-	void Application::on_keyup(const keyboard_event_t& event)
-	{
-	}
-
-	void Application::on_window_resize(Window& window, int width, int height)
-	{
-	}
-
+	// Date/time related:
 	Application::time_point Application::now() const
 	{
 		return std::chrono::system_clock::now();
