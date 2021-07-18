@@ -81,8 +81,6 @@ namespace app
 			virtual void on_keydown(const keyboard_event_t& event);
 			virtual void on_keyup(const keyboard_event_t& event);
 			virtual void on_window_resize(Window& window, int width, int height);
-		public:
-			inline bool is_running() const { return running; }
 
 			// Starts all additional threads associated with the application.
 			bool start();
@@ -93,6 +91,8 @@ namespace app
 			// Stops all additional threads associated with the application.
 			// To ensure proper finalization, this should be executed after calling 'run'.
 			bool stop();
+		public:
+			inline bool is_running() const { return running; }
 
 			bool handle_events();
 
