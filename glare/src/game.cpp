@@ -228,7 +228,7 @@ namespace glare
 
 	void Glare::make_models(engine::World& world, engine::Entity player)
 	{
-		//return;
+		return;
 
 		auto& registry = world.get_registry();
 
@@ -273,8 +273,10 @@ namespace glare
 
 		//auto stage = load_model(path);
 
-		auto stage = world.load("assets/maps/test01");
+		//auto stage = world.load("assets/maps/room");
+		//auto stage = world.load("assets/maps/test01");
 		//auto stage = world.load("assets/maps/collision_test");
+		auto stage = world.load("assets/maps/story/2.ice-world/ice-connector");
 
 		auto player = world.get_player(1);
 

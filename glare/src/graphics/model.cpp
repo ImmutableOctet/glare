@@ -137,30 +137,42 @@ namespace graphics
 		Assimp::Importer importer;
 
 		// TODO: Implement 'flags' parameter.
-		unsigned int flags = ( aiProcess_Triangulate | aiProcess_CalcTangentSpace ); // aiProcess_PreTransformVertices  // aiProcess_JoinIdenticalVertices
+		unsigned int flags = ( aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_PreTransformVertices ); // aiProcess_JoinIdenticalVertices
 
 		VertexWinding vert_direction = VertexWinding::Clockwise;
 
 		bool needs_reorientation = false;
 
-		if (path.ends_with(".obj") || path.ends_with(".fbx"))
+		if (path.ends_with(".obj") || path.ends_with(".fbx") || path.ends_with(".3ds"))
 		{
 			vert_direction = VertexWinding::CounterClockwise;
 
 			// Doesn't work, for some reason.
 			//flags |= aiProcess_FlipWindingOrder | aiProcess_PreTransformVertices;
 
-			//flags |= aiProcess_MakeLeftHanded;
+			//flags |= aiProcess_PreTransformVertices;
 			//flags |= aiProcess_JoinIdenticalVertices;
 
+			//flags |= aiProcess_MakeLeftHanded;
 			needs_reorientation = true;
 		}
 		
-		flags |= aiProcess_FlipUVs;
+		//flags |= aiProcess_FlipUVs;
 
 
 		// Load a scene from the path specified.
 		const aiScene* scene = importer.ReadFile(path, flags);
+		
+		if (needs_reorientation)
+		{
+			aiMatrix4x4 m;
+			bool test = m.IsIdentity();
+
+			//aiMatrix4x4::RotationZ(90.0f, m);
+
+			scene->mRootNode->mTransformation *= m;
+			//scene->mRootNode->mTransformation *= aiMatrix4x4::RotationX(-90.0f);
+		}
 
 		// Ensure the scene was loaded:
 		if (scene == nullptr || (scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) || !scene->mRootNode)

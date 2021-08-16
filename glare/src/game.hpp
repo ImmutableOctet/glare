@@ -101,8 +101,6 @@ namespace glare
 			engine::Transform model(const std::string& path);
 			engine::Transform transform(engine::Entity entity);
 
-			engine::Entity make_camera(engine::World& world);
-
 			void make_lights(engine::World& world);
 			void make_models(engine::World& world, engine::Entity player);
 
