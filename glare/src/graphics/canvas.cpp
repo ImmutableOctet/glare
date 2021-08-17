@@ -260,14 +260,14 @@ namespace graphics
 				}
 			}
 
-			/*
+			///*
 			bool is_ccw = (model.get_winding_order() == VertexWinding::CounterClockwise);
 
 			if (is_ccw)
 			{
 				context->set_winding_order(VertexWinding::CounterClockwise);
 			}
-			*/
+			//*/
 
 			for (auto& mesh : mesh_descriptor.meshes)
 			{
@@ -277,12 +277,12 @@ namespace graphics
 				});
 			}
 
-			/*
+			///*
 			if (is_ccw)
 			{
 				context->set_winding_order(VertexWinding::Clockwise);
 			}
-			*/
+			//*/
 		}
 	}
 

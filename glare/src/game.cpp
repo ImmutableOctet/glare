@@ -262,17 +262,6 @@ namespace glare
 	{
 		std::string path;
 
-		//path = "Q:\\Projects\\BlitzSonic Projects\\Blitzsonic Related\\Genesis Redux Project 1.1\\Stages\\GreenHill\\Stage\\Stage.b3d";
-		//path = "Q:\\Projects\\BlitzSonic Projects\\Blitzsonic-backups\\BlitzSonicv02\\Stages\\GreenHill\\Stage\\Stage.b3d";
-		//path = "Q:\\Projects\\BlitzSonic Projects\\Blitzsonic Related\\HAXY EDIT OF DOOM\\Stages\\Chao World\\Stage\\Stage.b3d";
-		//path = "model_renderer/assets/tests/model_test/Bianco/Stage2.b3d";
-		//path = "assets/tests/model_test/SeasideShortcut/Stage.obj";
-		//path = "assets/tests/model_test/stage.b3d";
-		//path = "Q:\\Projects\\BlitzSonic Projects\\Blitzsonic Related\\HAXY EDIT OF DOOM\\Stages\\Emerald Coast\\1\\EC1.b3d";
-		//path = "assets/maps/test01/stage.b3d";
-
-		//auto stage = load_model(path);
-
 		//auto stage = world.load("assets/maps/room");
 		//auto stage = world.load("assets/maps/test01");
 		//auto stage = world.load("assets/maps/collision_test");

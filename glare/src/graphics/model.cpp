@@ -43,10 +43,10 @@ namespace graphics
 		int upAxisSign = 1;
 
 		int frontAxis = 2;
-		int frontAxisSign = 1;
+		int frontAxisSign = -1;
 
 		int coordAxis = 0;
-		int coordAxisSign = -1;
+		int coordAxisSign = 1;
 
 		if (scene && scene->mMetaData)
 		{
@@ -147,13 +147,15 @@ namespace graphics
 		{
 			vert_direction = VertexWinding::CounterClockwise;
 
+			//flags |= aiProcess_ConvertToLeftHanded;
+
 			// Doesn't work, for some reason.
 			//flags |= aiProcess_FlipWindingOrder | aiProcess_PreTransformVertices;
 
 			//flags |= aiProcess_PreTransformVertices;
 			//flags |= aiProcess_JoinIdenticalVertices;
 
-			//flags |= aiProcess_MakeLeftHanded;
+			flags |= aiProcess_MakeLeftHanded;
 			needs_reorientation = true;
 		}
 		
@@ -162,17 +164,18 @@ namespace graphics
 
 		// Load a scene from the path specified.
 		const aiScene* scene = importer.ReadFile(path, flags);
-		
-		if (needs_reorientation)
-		{
-			aiMatrix4x4 m;
-			bool test = m.IsIdentity();
 
-			//aiMatrix4x4::RotationZ(90.0f, m);
+		//
+		//if (needs_reorientation)
+		//{
+		//	aiMatrix4x4 m;
+		//	bool test = m.IsIdentity();
 
-			scene->mRootNode->mTransformation *= m;
-			//scene->mRootNode->mTransformation *= aiMatrix4x4::RotationX(-90.0f);
-		}
+		//	//aiMatrix4x4::RotationZ(90.0f, m);
+
+		//	scene->mRootNode->mTransformation *= m;
+		//	//scene->mRootNode->mTransformation *= aiMatrix4x4::RotationX(-90.0f);
+		//}
 
 		// Ensure the scene was loaded:
 		if (scene == nullptr || (scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) || !scene->mRootNode)
@@ -209,7 +212,7 @@ namespace graphics
 			(needs_reorientation) ? reinterpret_cast<_aiMatrix4x4*>(&scene_orientation) : nullptr
 		);
 
-		////model.vertex_winding = vert_direction;
+		model.vertex_winding = vert_direction;
 
 		if (load_collision)
 		{
