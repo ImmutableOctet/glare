@@ -14,7 +14,7 @@
 #include <types.hpp>
 #include <graphics/model.hpp>
 
-#include "collision.hpp"
+#include <engine/collision.hpp>
 
 // Forward declarations:
 

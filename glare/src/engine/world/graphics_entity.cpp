@@ -3,7 +3,7 @@
 
 #include <tuple>
 
-#include <engine/resource_manager.hpp>
+#include <engine/resource_manager/resource_manager.hpp>
 #include <engine/model_component.hpp>
 #include <graphics/model.hpp>
 #include <graphics/shader.hpp>

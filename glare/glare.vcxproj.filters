@@ -37,9 +37,6 @@
     <ClInclude Include="src\engine\relationship.hpp">
       <Filter>engine\engine</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\resource_manager.hpp">
-      <Filter>engine\engine</Filter>
-    </ClInclude>
     <ClInclude Include="src\engine\transform.hpp">
       <Filter>engine\engine</Filter>
     </ClInclude>
@@ -347,6 +344,9 @@
     <ClInclude Include="src\util\optional.hpp">
       <Filter>util\util</Filter>
     </ClInclude>
+    <ClInclude Include="src\engine\resource_manager\resource_manager.hpp">
+      <Filter>engine\resource_manager</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\tests\model_test\shaders\8.1.deferred_light_box.fs">
@@ -522,6 +522,9 @@
     <Filter Include="shaders\shadow_mapping\directional">
       <UniqueIdentifier>{799c067e-77a1-4eb7-ae2f-ffecf86d00af}</UniqueIdentifier>
     </Filter>
+    <Filter Include="engine\resource_manager">
+      <UniqueIdentifier>{9eadf317-5e21-4204-8555-36821fc7536b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="glare.cpp" />
@@ -645,9 +648,6 @@
     <ClCompile Include="src\engine\world\physics.cpp">
       <Filter>engine\world</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\resource_manager.cpp">
-      <Filter>engine\engine</Filter>
-    </ClCompile>
     <ClCompile Include="src\engine\world\player.cpp">
       <Filter>engine\world</Filter>
     </ClCompile>
@@ -691,6 +691,9 @@
       <Filter>graphics\graphics</Filter>
     </ClCompile>
     <ClCompile Include="src\engine\config.cpp" />
+    <ClCompile Include="src\engine\resource_manager\resource_manager.cpp">
+      <Filter>engine\resource_manager</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />
