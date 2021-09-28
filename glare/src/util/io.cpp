@@ -1,11 +1,40 @@
 #include "io.hpp"
+#include "log.hpp"
 
 //#include <iostream>
 #include <fstream>
 #include <sstream>
 
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+
 namespace util
 {
+	namespace log
+	{
+		// General debugging information.
+		Logger console;
+		Logger err_logger;
+
+		/*
+		Logger get_console()
+		{
+			return spdlog::get("console");
+		}
+
+		Logger get_error_logger()
+		{
+			return spdlog::get("stderr");
+		}
+		*/
+
+		void init()
+		{
+			console = spdlog::stdout_color_mt("console");
+			err_logger = spdlog::stderr_color_mt("stderr");
+		}
+	}
+
 	namespace io
 	{
 		std::string load_string(const std::string& path)

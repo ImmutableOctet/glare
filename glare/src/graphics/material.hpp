@@ -7,6 +7,11 @@
 #include "types.hpp"
 //#include "shader.hpp"
 
+namespace engine
+{
+	class ModelLoader;
+}
+
 namespace graphics
 {
 	class Context;
@@ -40,6 +45,7 @@ namespace graphics
 			friend Shader;
 			friend Mesh;
 			friend Model;
+			friend engine::ModelLoader;
 
 			TextureMap textures;
 			UniformMap uniforms;

@@ -46,6 +46,11 @@ namespace graphics
 		get_context()->resize_texture(*this, width, height); // , {}, false
 	}
 
+	Texture::operator bool() const
+	{
+		return (handle != Context::NoHandle);
+	}
+
 	void swap(Texture& x, Texture& y)
 	{
 		using std::swap;

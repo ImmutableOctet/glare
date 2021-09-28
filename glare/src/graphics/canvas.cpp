@@ -118,7 +118,7 @@ namespace graphics
 
 			if (!(draw_mode & DrawMode::IgnoreShaders))
 			{
-				if (material.get_shader() != shader)
+				if (material->get_shader() != shader)
 				{
 					continue;
 				}
@@ -133,7 +133,7 @@ namespace graphics
 
 			if (!ignore_textures)
 			{
-				material_has_textures = mesh_descriptor.material.has_textures();
+				material_has_textures = mesh_descriptor.material->has_textures();
 				//normal_map_available = mesh_descriptor.material.textures.contains(Model::get_texture_class_variable(TextureClass::Normals));
 
 				bool force_clear_textures = (auto_clear_textures || (!material_has_textures));
@@ -144,7 +144,7 @@ namespace graphics
 				//normal_map_available = false;
 				//height_map_available = false;
 
-				for (auto& texture_group : material.textures)
+				for (auto& texture_group : material->textures)
 				{
 					const auto& texture_name = texture_group.first;
 					const auto& _data = texture_group.second;
@@ -230,7 +230,7 @@ namespace graphics
 
 			if (!(draw_mode & DrawMode::IgnoreMaterials))
 			{
-				const auto& uniforms = material.get_uniforms();
+				const auto& uniforms = material->get_uniforms();
 
 				bool is_transparent = false;
 
@@ -241,7 +241,7 @@ namespace graphics
 					continue;
 				}
 
-				bind_material_values(material, [&](std::string_view name, const UniformData& value, bool& status) -> std::optional<UniformData>
+				bind_material_values(*material, [&](std::string_view name, const UniformData& value, bool& status) -> std::optional<UniformData>
 				{
 					if (name == Material::DIFFUSE_COLOR)
 					{

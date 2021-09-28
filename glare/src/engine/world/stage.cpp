@@ -41,7 +41,7 @@ namespace engine
 		{ "scenery",       Stage::CreateScenery      }
 	};
 
-    Entity Stage::Load(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const util::json& data)
+    Entity Stage::Load(World& world, Entity parent, const filesystem::path& root_path, const util::json& data)
     {
 		constexpr PlayerIndex NoPlayer = PlayerState::NoPlayer;
 
@@ -53,7 +53,7 @@ namespace engine
 		// Global settings:
 
 		// Stage pivot:
-		dbg->info("Creating pivot...");
+		print("Creating scene pivot...");
 
 		//parent = create_pivot(world, parent);
 
@@ -62,10 +62,11 @@ namespace engine
 
 		registry.emplace<NameComponent>(stage, util::get_value<std::string>(data, "title", util::get_value<std::string>(data, "name", "Unknown Stage")));
 
+		print("Initializing stage properties...");
 		world.properties = {data};
 
 		// Players:
-		dbg->info("Loading players...");
+		print("Loading players...");
 
 		PlayerIndex player_idx_counter = 1;
 
@@ -73,7 +74,7 @@ namespace engine
 		{
 			auto& registry = world.get_registry();
 
-			auto player_tform  = get_transform_data(dbg, player_cfg);
+			auto player_tform  = get_transform_data(player_cfg);
 			auto player_char   = get_character(util::get_value<std::string>(player_cfg, "character", "default"));
 			auto player_name   = util::get_value<std::string>(player_cfg, "name", DEFAULT_PLAYER_NAME);
 			auto player_idx    = util::get_value<PlayerIndex>(player_cfg, "index", player_idx_counter);
@@ -97,7 +98,7 @@ namespace engine
 		});
 
 		// Cameras:
-		dbg->info("Loading objects...");
+		print("Loading objects...");
 
 		ObjectIndex obj_idx_counter = 1; // std::uint16_t
 
@@ -109,7 +110,7 @@ namespace engine
 
 			if (obj_type.empty())
 			{
-				auto tform = get_transform_data(dbg, obj_cfg);
+				auto tform = get_transform_data(obj_cfg);
 
 				obj = create_pivot(world, tform, stage);
 			}
@@ -119,24 +120,24 @@ namespace engine
 
 				if (o == ObjectRoutines.end())
 				{
-					dbg->warn("Unkown object detected: \"{}\"", obj_type);
+					print_warn("Unkown object detected: \"{}\"", obj_type);
 				}
 				else
 				{
 					auto obj_fn = o->second;
 
-					dbg->info("Creating object of type \"{}\"...", obj_type);
+					print("Creating object of type \"{}\"...", obj_type);
 
-					obj = obj_fn(world, stage, dbg, root_path, player_objects, objects, obj_cfg);
+					obj = obj_fn(world, stage, root_path, player_objects, objects, obj_cfg);
 
 					if (obj != null)
 					{
-						apply_transform(world, dbg, obj, obj_cfg);
-						apply_color(world, dbg, obj, obj_cfg);
+						apply_transform(world, obj, obj_cfg);
+						apply_color(world, obj, obj_cfg);
 
-						resolve_parent(world, obj, stage, dbg, root_path, player_objects, objects, obj_cfg);
+						resolve_parent(world, obj, stage, root_path, player_objects, objects, obj_cfg);
 
-						dbg->info("\"{}\" object created.", obj_type);
+						print("\"{}\" object created.", obj_type);
 					}
 				}
 			}
@@ -158,7 +159,7 @@ namespace engine
 		});
 
 		// Models:
-		dbg->info("Loading models...");
+		print("Loading models...");
 
 		//auto& resource_manager = world.get_resource_manager();
 
@@ -166,13 +167,13 @@ namespace engine
 		{
 			auto model_path = (root_path / model_cfg["path"].get<std::string>()).string();
 
-			dbg->info("Loading model from \"{}\"...\n", model_path);
+			print("Loading model from \"{}\"...\n", model_path);
 
 			bool collision_enabled = util::get_value(model_cfg, "collision", true);
 
 			auto model = load_model(world, model_path, stage, EntityType::Geometry, collision_enabled);
 
-			apply_transform(world, dbg, model, model_cfg);
+			apply_transform(world, model, model_cfg);
 		});
 
 		// Apply stage transform, etc.
@@ -181,11 +182,11 @@ namespace engine
 
 			auto [position, rotation, scale] = tform;
 
-			dbg->info("Stage Transform:");
+			print("Stage Transform:");
 
-			dbg->info("Position: {}", position);
-			dbg->info("Rotation: {}", rotation);
-			dbg->info("Scale: {}\n", scale);
+			print("Position: {}", position);
+			print("Rotation: {}", rotation);
+			print("Scale: {}\n", scale);
 
 			world.apply_transform(stage, tform);
 		}
@@ -193,7 +194,7 @@ namespace engine
 		return stage;
     }
 
-	Entity Stage::CreateCamera(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& camera_cfg)
+	Entity Stage::CreateCamera(World& world, Entity parent, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& camera_cfg)
 	{
 		auto& registry = world.get_registry();
 
@@ -233,7 +234,7 @@ namespace engine
 		return camera;
 	}
 
-	Entity Stage::CreateLight(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
+	Entity Stage::CreateLight(World& world, Entity parent, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
 	{
 		auto debug_mode = util::get_value(data, "debug", false); // true
 
@@ -337,7 +338,7 @@ namespace engine
 		return light;
 	}
 
-	Entity Stage::CreateFollowSphere(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
+	Entity Stage::CreateFollowSphere(World& world, Entity parent, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
 	{
 		auto& registry = world.get_registry();
 
@@ -362,7 +363,7 @@ namespace engine
 		return obj;
 	}
 
-	Entity Stage::CreateBillboard(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
+	Entity Stage::CreateBillboard(World& world, Entity parent, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
 	{
 		auto& registry = world.get_registry();
 		auto obj = load_model(world, "assets/objects/billboard/billboard.b3d", parent, EntityType::Object);
@@ -385,7 +386,7 @@ namespace engine
 		return obj;
 	}
 
-	Entity Stage::CreatePlatform(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
+	Entity Stage::CreatePlatform(World& world, Entity parent, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
 	{
 		auto& registry = world.get_registry();
 		auto obj = load_model(world, "assets/objects/platform/platform.b3d", parent, EntityType::Object);
@@ -406,7 +407,7 @@ namespace engine
 		return obj;
 	}
 
-	Entity Stage::CreateScenery(World& world, Entity parent, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
+	Entity Stage::CreateScenery(World& world, Entity parent, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
 	{
 		auto& registry = world.get_registry();
 
@@ -428,7 +429,7 @@ namespace engine
 		return obj;
 	}
 
-	void Stage::resolve_parent(World& world, Entity entity, Entity stage, util::Logger& dbg, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
+	void Stage::resolve_parent(World& world, Entity entity, Entity stage, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
 	{
 		auto parent_query = util::get_value<std::string>(data, "parent"); // data["parent"].get<std::string>();
 
@@ -500,12 +501,12 @@ namespace engine
 		return null;
 	}
 
-	Transform Stage::apply_transform(World& world, util::Logger& dbg, Entity entity, const util::json& cfg)
+	Transform Stage::apply_transform(World& world, Entity entity, const util::json& cfg)
 	{
-		return world.apply_transform(entity, get_transform_data(dbg, cfg));
+		return world.apply_transform(entity, get_transform_data(cfg));
 	}
 
-	std::optional<graphics::ColorRGBA> Stage::apply_color(World& world, util::Logger& dbg, Entity entity, const util::json& cfg)
+	std::optional<graphics::ColorRGBA> Stage::apply_color(World& world, Entity entity, const util::json& cfg)
 	{
 		//auto color = util::get_color(cfg, "color");
 

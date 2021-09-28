@@ -86,6 +86,8 @@ namespace graphics
 			inline TextureType   get_type()         const { return type;         }
 
 			inline bool is_dynamic() const { return (flags & TextureFlags::Dynamic); }
+
+			explicit operator bool() const;
 		protected:
 			Texture(weak_ref<Context> ctx, ContextHandle&& resource_handle, int width, int height, TextureFormat format, ElementType element_type, TextureFlags flags, TextureType type);
 	};

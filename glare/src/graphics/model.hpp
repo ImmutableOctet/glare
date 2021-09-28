@@ -13,33 +13,13 @@
 #include "mesh.hpp"
 #include "material.hpp"
 
-namespace Assimp
-{
-	class Importer;
-}
-
-namespace std
-{
-	namespace filesystem
-	{
-		class path;
-	}
-}
-
-namespace filesystem = std::filesystem;
-
-// Assimp:
-struct aiScene;
-struct aiNode;
-struct aiMesh;
-struct aiMaterial;
-
-//class aiMatrix4x4;
-
-using _aiMatrix4x4 = void*;
-
 // Bullet:
 class btTriangleIndexVertexArray;
+
+namespace engine
+{
+	class ModelLoader;
+}
 
 namespace graphics
 {
@@ -56,14 +36,23 @@ namespace graphics
 
 			struct MeshDescriptor
 			{
-				Material material;
+				//Material material;
+				ref<Material> material;
 				std::vector<Mesh> meshes;
 
+				/*
 				MeshDescriptor(Material&& material, std::vector<Mesh>&& meshes) noexcept
 					: material(std::move(material)), meshes(std::move(meshes)) {}
 
 				MeshDescriptor(Material&& material) noexcept
 					: material(std::move(material)) {}
+				*/
+
+				MeshDescriptor(pass_ref<Material> material, std::vector<Mesh>&& meshes) noexcept
+					: material(material), meshes(std::move(meshes)) {}
+
+				MeshDescriptor(pass_ref<Material> material) noexcept
+					: material(material) {}
 
 				MeshDescriptor() noexcept = default;
 
@@ -93,6 +82,8 @@ namespace graphics
 			friend Canvas;
 			friend Context;
 
+			friend engine::ModelLoader;
+
 			// Retrieves a string containing the name of 'class' to be used to link with shaders.
 			static const char* get_texture_class_variable_raw(TextureClass type);
 			inline static std::string get_texture_class_variable(TextureClass type)
@@ -110,8 +101,6 @@ namespace graphics
 			Meshes meshes;
 			VertexWinding vertex_winding = VertexWinding::Clockwise;
 		public:
-			static std::tuple<Model, std::optional<CollisionGeometry>> Load(pass_ref<Context> context, const std::string& path, pass_ref<Shader> default_shader, bool load_collision=false);
-
 			friend void swap(Model& x, Model& y);
 
 			Model() = default;
@@ -135,11 +124,5 @@ namespace graphics
 			}
 
 			inline VertexWinding get_winding_order() const { return vertex_winding; }
-		protected:
-			void process_node(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, pass_ref<Shader> default_shader, VertexWinding vert_direction, CollisionGeometry::Container* opt_collision_out=nullptr, const _aiMatrix4x4* _scene_orientation=nullptr);
-
-			ref<Texture> process_texture(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const filesystem::path& texture_path);
-			Material process_material(pass_ref<Context> context, Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiMaterial* native_material, pass_ref<Shader> default_shader, bool load_textures=true, bool load_values=true);
-			MeshData<VertexType> process_mesh(Assimp::Importer& importer, const filesystem::path& root_path, const aiScene* scene, const aiNode* node, const aiMesh* mesh, VertexWinding vert_direction, const _aiMatrix4x4* _scene_orientation=nullptr);
 	};
 }

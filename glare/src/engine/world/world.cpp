@@ -28,7 +28,7 @@
 
 #include <engine/config.hpp>
 #include <engine/collision.hpp>
-#include <engine/resource_manager.hpp>
+#include <engine/resource_manager/resource_manager.hpp>
 #include <engine/free_look.hpp>
 #include <engine/relationship.hpp>
 #include <engine/transform.hpp>
@@ -83,8 +83,6 @@ namespace engine
 
 	Entity World::load(const filesystem::path& root_path, bool override_current, const std::string& json_file)
 	{
-		auto con = util::log::get_console();
-
 		bool is_child_stage = (!override_current) && (stage != null);
 		auto parent = root;
 
@@ -95,17 +93,19 @@ namespace engine
 
 		auto map_data_path = (root_path / json_file).string();
 		
-		con->info("Loading map from \"{}\"...", map_data_path);
-
-		con->info("Parsing JSON...");
+		print("Loading map from \"{}\"...", map_data_path);
 
 		std::ifstream map_data_stream(map_data_path);
 
 		try
 		{
+			print("Parsing JSON...");
+
 			util::json map_data = util::json::parse(map_data_stream);
 
-			auto map = Stage::Load(*this, parent, con, root_path, map_data);
+			print("Loading...");
+
+			auto map = Stage::Load(*this, parent, root_path, map_data);
 
 			if (!is_child_stage)
 			{
@@ -116,7 +116,7 @@ namespace engine
 		}
 		catch (std::exception& e)
 		{
-			con->error("Error parsing JSON file: {}", e.what());
+			print_warn("Error parsing JSON file: {}", e.what());
 			ASSERT(false);
 		}
 
@@ -766,7 +766,6 @@ namespace engine
 
 	void World::on_transform_change(const OnTransformChange& tform_change)
 	{
-		auto con = util::log::get_console();
 		auto entity = tform_change.entity;
 
 		// Update shadow-maps for light entities.
@@ -786,7 +785,7 @@ namespace engine
 			name_label = " \"" + name_component->name +"\"";
 		}
 
-		con->info("Entity #{}{} ({}) - Transform Changed: {}", entity, name_label, entity_type, get_transform(entity).get_vectors());
+		print("Entity #{}{} ({}) - Transform Changed: {}", entity, name_label, entity_type, get_transform(entity).get_vectors());
 		*/
 	}
 

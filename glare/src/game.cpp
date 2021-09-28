@@ -124,6 +124,9 @@ namespace glare
 		*/
 
 		default_shader = geometry_pass; // shadow_test
+
+		// TODO: Add proper construction for animated version of 'geometry_pass'.
+		default_animated_shader = geometry_pass;
 	}
 
 	Glare::Glare(bool auto_execute)
@@ -131,7 +134,7 @@ namespace glare
 		gbuffer(graphics.context, window->get_size()),
 		cfg(), // cfg(std::make_shared<engine::Config>()),
 		shaders(graphics),
-		resource_manager(graphics.context, shaders.default_shader), // shaders.forward
+		resource_manager(graphics.context, shaders.default_shader, shaders.default_animated_shader), // shaders.forward
 		world(cfg, resource_manager, TARGET_UPDATE_RATE)
 	{
 		using namespace graphics;
@@ -270,7 +273,7 @@ namespace glare
 		auto player = world.get_player(1);
 
 		//make_lights(world);
-		make_models(world, player);
+		//make_models(world, player);
 
 		world.register_event<app::input::KeyboardState, &Glare::on_user_keyboard_input>(*this);
 	}
@@ -327,7 +330,7 @@ namespace glare
 			//transform.set_position({ 10.0f, 20.01f, 30.0f });
 			transform.set_position({ 84.0751f, 69.8489f, 71.7952f });
 
-			dbg->info("New Position: {}", transform.get_position());
+			print("New Position: {}", transform.get_position());
 		}
 
 		if (keyboard.get_key(SDL_SCANCODE_R))

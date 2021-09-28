@@ -54,4 +54,21 @@ namespace util
 			return std::nullopt;
 		}
 	}
+
+	template<typename VT, typename T, std::size_t index = 0>
+	constexpr std::size_t variant_index()
+	{
+		if constexpr (index == std::variant_size_v<VT>)
+		{
+			return index;
+		}
+		else if constexpr (std::is_same_v<std::variant_alternative_t<index, VT>, T>)
+		{
+			return index;
+		}
+		else
+		{
+			return variant_index<VT, T, index + 1>();
+		}
+	}
 }

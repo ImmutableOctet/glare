@@ -1,8 +1,18 @@
 #pragma once
 
-#include <spdlog/spdlog.h>
-#include <math/math.hpp>
+#include <memory>
 #include <tuple>
+
+#include <math/math.hpp>
+
+#include <spdlog/spdlog.h>
+
+/*
+namespace spdlog
+{
+    class logger;
+}
+*/
 
 namespace util
 {
@@ -10,12 +20,34 @@ namespace util
 
 	namespace log
 	{
-		inline Logger get_console() // auto
-		{
-			return spdlog::get("console");
-		}
+        //Logger get_console();
+        //Logger get_error_logger();
+
+        extern Logger console;
+        extern Logger err_logger;
+
+        void init();
+
+        template <typename ...Args>
+        inline Logger print(Args&& ...args)
+        {
+            console->info(std::forward<Args>(args)...);
+
+            return console;
+        }
+
+        template <typename ...Args>
+        inline Logger print_warn(Args&& ...args)
+        {
+            console->warn(std::forward<Args>(args)...);
+
+            return console;
+        }
 	}
 }
+
+using util::log::print;
+using util::log::print_warn;
 
 template <>
 struct fmt::formatter<math::Vector>

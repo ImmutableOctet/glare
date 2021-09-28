@@ -39,6 +39,7 @@ namespace engine
 	(
 		World& world, const std::string& path, Entity parent, EntityType type,
 
+		bool allow_multiple,
 		bool collision_enabled, float mass,
 
 		std::optional<CollisionGroup> collision_group,
@@ -52,16 +53,35 @@ namespace engine
 
 		auto model_data = resource_manager.load_model(path, collision_enabled, shader);
 
-		auto& loaded_model = std::get<0>(model_data);
-		auto collision_data = std::get<1>(model_data); // auto*
-
-		auto entity = engine::create_model(world, loaded_model, parent, type);
-
-		if (collision_enabled && collision_data)
+		auto process_model = [&](ref<graphics::Model> model, Entity parent) -> Entity
 		{
-			attach_collision(world, entity, collision_data->collision_shape, CollisionConfig(type), mass);
-		}
+			auto entity = engine::create_model(world, model, parent, type);
 
-		return entity;
+			if (collision_enabled)
+			{
+				const auto* collision_data = resource_manager.get_collision(model); // auto*
+
+				if (collision_data)
+				{
+					attach_collision(world, entity, collision_data->collision_shape, CollisionConfig(type), mass);
+				}
+			}
+
+			return entity;
+		};
+
+		if (allow_multiple)
+		{
+			auto multi_model = engine::create_pivot(world, parent);
+
+			for (const auto& model : model_data)
+			{
+				process_model(model, multi_model);
+			}
+
+			return multi_model;
+		}
+		
+		return process_model(model_data[0], parent);
 	}
 }

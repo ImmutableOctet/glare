@@ -2,7 +2,7 @@
 
 #include <engine/world/world.hpp>
 
-#include <engine/resource_manager.hpp>
+#include <engine/resource_manager/resource_manager.hpp>
 #include <engine/world/graphics_entity.hpp>
 
 #include <engine/model_component.hpp>
@@ -44,7 +44,7 @@ namespace engine
 		{
 			//const auto& res = world.get_resource_manager();
 
-			light = load_model(world, "assets/geometry/cube.b3d", parent, EntityType::Light, false, 0.0f, std::nullopt, std::nullopt, std::nullopt, debug_shader); // {}
+			light = load_model(world, "assets/geometry/cube.b3d", parent, EntityType::Light, false, false, 0.0f, std::nullopt, std::nullopt, std::nullopt, debug_shader); // {}
 
 			auto t = world.set_position(light, position);
 			t.set_scale(4.0f);

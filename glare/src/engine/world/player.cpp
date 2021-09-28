@@ -4,7 +4,7 @@
 
 #include <util/string.hpp>
 
-#include <engine/resource_manager.hpp>
+#include <engine/resource_manager/resource_manager.hpp>
 #include <engine/name_component.hpp>
 #include <engine/collision.hpp>
 
@@ -74,7 +74,7 @@ namespace engine
 
 		auto& resource_manager = world.get_resource_manager();
 
-		auto collision_data = resource_manager.get_capsule_collision(1.0f, 2.0f); // get_collision_shape(CollisionShape::Capsule, 1.0f, 2.0f);
+		auto collision_data = resource_manager.generate_capsule_collision(1.0f, 2.0f); // get_collision_shape(CollisionShape::Capsule, 1.0f, 2.0f);
 
 		float mass = 1.0f;
 

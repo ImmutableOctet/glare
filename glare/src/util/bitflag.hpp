@@ -18,6 +18,19 @@ namespace util
           constexpr bitflag(Enum value) : bits(1 << static_cast<std::size_t>(value)) {}
           constexpr bitflag(const bitflag& other) : bits(other.bits) {}
 
+          constexpr operator Enum() const
+          {
+              /*
+              auto* value = reinterpret_cast<Enum*>(bits);
+
+              return *value;
+              */
+
+              auto value = bits.to_ulong();
+
+              return static_cast<Enum>(value);
+          }
+
           constexpr bitflag operator|(Enum value) const { bitflag result = *this; result.bits |= 1 << static_cast<std::size_t>(value); return result; }
           constexpr bitflag operator&(Enum value) const { bitflag result = *this; result.bits &= 1 << static_cast<std::size_t>(value); return result; }
           constexpr bitflag operator^(Enum value) const { bitflag result = *this; result.bits ^= 1 << static_cast<std::size_t>(value); return result; }
@@ -40,6 +53,7 @@ namespace util
           std::bitset<number_of_bits> bits;
     };
 
+    /*
     template<typename Enum>
     constexpr typename std::enable_if<std::is_enum<Enum>::value, bitflag<Enum>>::type operator|(Enum left, Enum right)
     {
@@ -55,4 +69,5 @@ namespace util
     {
       return bitflag<Enum>(left) ^ right;
     }
+    */
 }

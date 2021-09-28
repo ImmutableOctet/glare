@@ -31,15 +31,16 @@ namespace engine
 	ResourceManager::CollisionData::CollisionData(Geometry&& geometry_storage, bool optimize)
 		: collision_shape(ResourceManager::build_mesh_shape(geometry_storage, optimize)), geometry_storage(std::move(geometry_storage)) {}
 
-	ResourceManager::ResourceManager(pass_ref<graphics::Context> context, pass_ref<graphics::Shader> default_shader)
+	ResourceManager::ResourceManager(pass_ref<graphics::Context> context, pass_ref<graphics::Shader> default_shader, pass_ref<graphics::Shader> default_animated_shader)
 		: context(context) //, default_shader(default_shader)
 	{
 		set_default_shader(default_shader);
+		set_default_animated_shader(default_animated_shader);
 	}
 
 	ResourceManager::~ResourceManager() {}
 
-	ResourceManager::ModelData ResourceManager::load_model(const std::string& path, bool load_collision, pass_ref<graphics::Shader> shader, bool optimize_collision, bool force_reload, bool cache_result) const
+	const ResourceManager::ModelData& ResourceManager::load_model(const std::string& path, bool load_collision, pass_ref<graphics::Shader> shader, bool optimize_collision, bool force_reload, bool cache_result) const
 	{
 		auto path_resolved = resolve_path(path);
 
@@ -55,52 +56,51 @@ namespace engine
 
 			if (lm_it != loaded_models.end())
 			{
-				auto loaded_model = lm_it->second;
-
-				if (load_collision)
-				{
-					auto cd_it = collision_data.find(loaded_model);
-
-					if (cd_it == collision_data.end())
-					{
-						// TODO: INSERT CODE TO LOAD COLLISION SEPARATELY HERE.
-						ASSERT(false);
-					}
-					else
-					{
-						return { std::move(loaded_model), &cd_it->second };
-					}
-				}
-
-				return { std::move(loaded_model), nullptr };
+				return lm_it->second;
 			}
 		}
 
-		auto model_data = graphics::Model::Load(get_context(), path, ((shader) ? shader : get_default_shader()), load_collision);
+		auto model_loader = ModelLoader
+		(
+			get_context(),
+			((shader) ? shader : get_default_shader()),
+			((shader) ? shader : get_default_animated_shader()),
+			{
+				.maintain_storage = false,
+				.load_collision = load_collision
+			}
+		);
 
-		auto loaded_model = memory::allocate<graphics::Model>(); // ModelRef
-		*loaded_model = std::move(std::get<0>(model_data));
+		ModelData model_data_out;
 
-		ASSERT(loaded_model->has_meshes());
+		model_loader.on_model = [&](ModelLoader& loader, ModelLoader::ModelData& model_data) -> void
+		{
+			auto loaded_model = memory::allocate<graphics::Model>(); // ModelRef
+			*loaded_model = std::move(model_data.model);
+
+			ASSERT(loaded_model->has_meshes());
+
+			if (load_collision)
+			{
+				if (model_data.collision.has_value())
+				{
+					collision_data[loaded_model] = { std::move(model_data.collision.value()), optimize_collision };
+				}
+			}
+
+			model_data_out.push_back(loaded_model);
+		};
+
+		model_loader.load(path);
+
+		//auto& model_data = model_loader.get_model_storage();
 
 		if (cache_result)
 		{
-			loaded_models[path_resolved] = loaded_model;
+			(loaded_models[path_resolved] = model_data_out);
 		}
 
-		if (load_collision)
-		{
-			auto collision_opt = std::move(std::get<1>(model_data));
-
-			if (collision_opt)
-			{
-				auto& ref_out = (collision_data[loaded_model] = { std::move(collision_opt.value()), optimize_collision }); // CollisionData col_out = ... ; // [loaded_model.get()]
-
-				return { std::move(loaded_model), &ref_out };
-			}
-		}
-
-		return { std::move(loaded_model), nullptr };
+		return loaded_models[path_resolved];
 	}
 
 	ResourceManager::ShaderRef ResourceManager::get_shader(const std::string& vertex_path, const std::string& fragment_path, bool force_reload, bool cache_result) const
@@ -131,9 +131,21 @@ namespace engine
 		return shader;
 	}
 
-	ResourceManager::CollisionData ResourceManager::get_capsule_collision(float radius, float height) // ref<btCapsuleShape>
+	ResourceManager::CollisionData ResourceManager::generate_capsule_collision(float radius, float height) // ref<btCapsuleShape>
 	{
 		return { std::static_pointer_cast<CollisionRaw>(std::make_shared<btCapsuleShape>(radius, height)) };
+	}
+
+	const ResourceManager::CollisionData* ResourceManager::get_collision(const WeakModelRef model) const
+	{
+		auto it = collision_data.find(model);
+
+		if (it != collision_data.end())
+		{
+			return &it->second;
+		}
+
+		return nullptr;
 	}
 
 	std::string ResourceManager::resolve_path(const std::string& path)

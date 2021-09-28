@@ -16,6 +16,8 @@
 
 #include <engine/collision.hpp>
 
+#include "loaders.hpp"
+
 // Forward declarations:
 
 // Bullet:
@@ -76,21 +78,23 @@ namespace engine
 			// Reference to a 'Model' object; used internally for path lookups, etc.
 			using ModelRef = ref<graphics::Model>;
 			using WeakModelRef = weak_ref<graphics::Model>; // const graphics::Model*
+			using Models = std::vector<ModelRef>;
 
 			using ShaderRef = ref<graphics::Shader>;
 			using WeakShaderRef = weak_ref<graphics::Shader>;
 
 			// Output from load/creation function for models.
-			using ModelData = std::tuple<ModelRef, const CollisionData*>; // ModelRef // std::optional<...>
+			using ModelData = Models; // std::tuple<Models, const CollisionData*>; // ModelRef // std::optional<...> // ref<ModelLoader::ModelStorage>;
 
 			using TextureData = ref<graphics::Texture>;
 
-			ResourceManager(pass_ref<graphics::Context> context, pass_ref<graphics::Shader> default_shader);
+			ResourceManager(pass_ref<graphics::Context> context, pass_ref<graphics::Shader> default_shader, pass_ref<graphics::Shader> default_animated_shader={});
 			~ResourceManager();
 
 			inline pass_ref<graphics::Context> get_context() const { return context; }
 
 			inline pass_ref<graphics::Shader> get_default_shader() const { return default_shader; }
+			inline pass_ref<graphics::Shader> get_default_animated_shader() const { return default_animated_shader; }
 
 			inline void set_default_shader(pass_ref<graphics::Shader> shader)
 			{
@@ -99,7 +103,14 @@ namespace engine
 				loaded_shaders["DEFAULT"] = shader;
 			}
 
-			ModelData load_model(const std::string& path, bool load_collision=false, pass_ref<graphics::Shader> shader={}, bool optimize_collision=true, bool force_reload=false, bool cache_result=true) const;
+			inline void set_default_animated_shader(pass_ref<graphics::Shader> shader)
+			{
+				default_animated_shader = shader;
+
+				loaded_shaders["DEFAULT_ANIMATED"] = shader;
+			}
+
+			const ModelData& load_model(const std::string& path, bool load_collision=false, pass_ref<graphics::Shader> shader={}, bool optimize_collision=true, bool force_reload=false, bool cache_result=true) const;
 
 			ShaderRef get_shader(const std::string& vertex_path, const std::string& fragment_path, bool force_reload=false, bool cache_result=true) const; // const graphics::ShaderSource& shader_source
 
@@ -124,7 +135,8 @@ namespace engine
 			}
 			*/
 
-			CollisionData get_capsule_collision(float radius, float height); // ref<btCapsuleShape>
+			CollisionData generate_capsule_collision(float radius, float height); // ref<btCapsuleShape>
+			const CollisionData* get_collision(const WeakModelRef model) const;
 		protected:
 			//inline static std::string resolve_path(const std::string& path) { return path; }
 
@@ -133,11 +145,12 @@ namespace engine
 
 			mutable ref<graphics::Context> context;
 			mutable ref<graphics::Shader> default_shader;
+			mutable ref<graphics::Shader> default_animated_shader;
 
-			mutable std::unordered_map<std::string, ModelRef> loaded_models; // ModelData // std::map
+			mutable std::unordered_map<std::string, ModelData> loaded_models; // Models // std::map // ModelRef
 			mutable std::unordered_map<std::string, ShaderRef> loaded_shaders; // std::map
 
-			mutable std::map<WeakModelRef, CollisionData, std::owner_less<>> collision_data; //std::unordered_map<WeakModelRef, CollisionData, std::hash<WeakModelRef>, std::owner_less<>> collision_data;	
+			mutable std::map<const WeakModelRef, CollisionData, std::owner_less<>> collision_data; //std::unordered_map<WeakModelRef, CollisionData, std::hash<WeakModelRef>, std::owner_less<>> collision_data;	
 
 			//std::unordered_map<std::string, TextureData> texture_data;
 	};

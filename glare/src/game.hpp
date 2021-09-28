@@ -61,6 +61,7 @@ namespace glare
 				//ref<graphics::Shader> shadow_test;
 
 				ref<graphics::Shader> default_shader;
+				ref<graphics::Shader> default_animated_shader;
 			} shaders;
 
 			static constexpr auto NR_LIGHTS = 32; // 128; // 16;
@@ -88,8 +89,6 @@ namespace glare
 			engine::World world;
 
 			//engine::Entity model_entity;
-
-			util::Logger dbg = util::log::get_console();
 
 			//ref<engine::Config> cfg;
 			engine::Config cfg;

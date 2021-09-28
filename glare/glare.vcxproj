@@ -222,6 +222,8 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\model_component.hpp" />
     <ClInclude Include="src\engine\name_component.hpp" />
     <ClInclude Include="src\engine\relationship.hpp" />
+    <ClInclude Include="src\engine\resource_manager\loaders.hpp" />
+    <ClInclude Include="src\engine\resource_manager\model_loader.hpp" />
     <ClInclude Include="src\engine\resource_manager\resource_manager.hpp" />
     <ClInclude Include="src\engine\transform.hpp" />
     <ClInclude Include="src\engine\types.hpp" />
@@ -334,6 +336,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\engine\free_look.cpp" />
     <ClCompile Include="src\engine\model_component.cpp" />
     <ClCompile Include="src\engine\relationship.cpp" />
+    <ClCompile Include="src\engine\resource_manager\model_loader.cpp" />
     <ClCompile Include="src\engine\resource_manager\resource_manager.cpp" />
     <ClCompile Include="src\engine\transform.cpp" />
     <ClCompile Include="src\engine\world\billboard_behavior.cpp" />

@@ -52,6 +52,7 @@ namespace engine
 	(
 		World& world, const std::string& path, Entity parent=null, EntityType type=EntityType::Geometry, // const std::string_view& path,
 		
+		bool allow_multiple=true,
 		bool collision_enabled=false, float mass = 0.0f,
 
 		std::optional<CollisionGroup> collision_group=std::nullopt,

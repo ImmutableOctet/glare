@@ -108,7 +108,8 @@ namespace graphics
 					(
 						memory::memory_view(data.vertices.data(), data.vertices.size()),
 						sizeof(VertexType),
-						VertexType::format()
+						VertexType::format(),
+						(data.indices) ? memory::array_view<MeshIndex>(data.indices->data(), data.indices->size()) : nullptr
 					),
 					
 					primitive_type,

@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include "log.hpp"
+
 namespace util
 {
 	namespace io
