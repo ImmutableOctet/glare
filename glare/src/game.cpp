@@ -266,9 +266,10 @@ namespace glare
 		std::string path;
 
 		//auto stage = world.load("assets/maps/room");
-		//auto stage = world.load("assets/maps/test01");
+		auto stage = world.load("assets/maps/test01");
 		//auto stage = world.load("assets/maps/collision_test");
-		auto stage = world.load("assets/maps/story/2.ice-world/ice-connector");
+		
+		//auto stage = world.load("assets/maps/story/2.ice-world/ice-connector");
 
 		auto player = world.get_player(1);
 

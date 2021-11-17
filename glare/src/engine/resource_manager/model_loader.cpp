@@ -229,9 +229,11 @@ namespace engine
 			// Allocate mesh descriptors for each material:
 			model.meshes.reserve(materials.size());
 
-			for (std::size_t i = 0; i < model.meshes.size(); i++)
+			for (const auto& material : materials)
+			//for (std::size_t i = 0; i < materials.size(); i++) // model.meshes.size()
 			{
-				model.meshes[i] = Model::MeshDescriptor(materials[i]);
+				//model.meshes[i] = Model::MeshDescriptor(materials[i]);
+				model.meshes.emplace_back(material);
 			}
 
 			// TODO: Review use of unsigned integer for indexing.
@@ -507,7 +509,10 @@ namespace engine
 			}
 		}
 
-		on_material(*this, *material);
+		if (on_material)
+		{
+			on_material(*this, *material);
+		}
 
 		return material;
 	}
@@ -532,7 +537,10 @@ namespace engine
 			t = memory::allocate<Texture>(context, alternate_path.string());
 		}
 
-		on_texture(*this, *t);
+		if (on_texture)
+		{
+			on_texture(*this, *t);
+		}
 
 		return t;
 	}

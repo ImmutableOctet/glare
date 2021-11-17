@@ -65,6 +65,27 @@ namespace engine
 		print("Initializing stage properties...");
 		world.properties = {data};
 
+		//auto& resource_manager = world.get_resource_manager();
+
+		// Stage geometry:
+		print("Loading scene geometry...");
+
+		ForEach(data["models"], [&](const auto& model_cfg)
+		{
+			auto model_path = (root_path / model_cfg["path"].get<std::string>()).string();
+
+
+			bool collision_enabled = util::get_value(model_cfg, "collision", true);
+
+			print("Loading geometry from \"{}\"...\n", model_path);
+
+			auto model = load_model(world, model_path, stage, EntityType::Geometry, true, collision_enabled);
+
+			print("Applying transformation to stage geometry...");
+
+			apply_transform(world, model, model_cfg);
+		});
+
 		// Players:
 		print("Loading players...");
 
@@ -80,7 +101,14 @@ namespace engine
 			auto player_idx    = util::get_value<PlayerIndex>(player_cfg, "index", player_idx_counter);
 			auto player_parent = stage; // null;
 
+			print("Player #{}", player_idx);
+			print("Name: {}", player_name);
+			print("Character: {}", player_char);
+
 			auto player = create_player(world, player_tform, player_char, player_name, player_parent, player_idx);
+
+			print("Entity: {}", player);
+			print("Parent: {}", player_parent);
 
 			if (player_idx != NoPlayer)
 			{
@@ -97,7 +125,8 @@ namespace engine
 			player_idx_counter = std::max((player_idx_counter+1), (player_idx+1));
 		});
 
-		// Cameras:
+
+		// Objects:
 		print("Loading objects...");
 
 		ObjectIndex obj_idx_counter = 1; // std::uint16_t
@@ -147,6 +176,8 @@ namespace engine
 				auto obj_idx = util::get_value<ObjectIndex>(obj_cfg, "index", obj_idx_counter);
 				auto obj_name = util::get_value<std::string>(obj_cfg, "name", "");
 
+				print("Object name: {}", obj_name);
+
 				if (!obj_name.empty())
 				{
 					registry.emplace<NameComponent>(obj, obj_name);
@@ -156,24 +187,6 @@ namespace engine
 
 				obj_idx_counter = std::max((obj_idx_counter + 1), (obj_idx + 1));
 			}
-		});
-
-		// Models:
-		print("Loading models...");
-
-		//auto& resource_manager = world.get_resource_manager();
-
-		ForEach(data["models"], [&](const auto& model_cfg)
-		{
-			auto model_path = (root_path / model_cfg["path"].get<std::string>()).string();
-
-			print("Loading model from \"{}\"...\n", model_path);
-
-			bool collision_enabled = util::get_value(model_cfg, "collision", true);
-
-			auto model = load_model(world, model_path, stage, EntityType::Geometry, collision_enabled);
-
-			apply_transform(world, model, model_cfg);
 		});
 
 		// Apply stage transform, etc.

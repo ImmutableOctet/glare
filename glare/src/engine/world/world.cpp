@@ -97,7 +97,7 @@ namespace engine
 
 		std::ifstream map_data_stream(map_data_path);
 
-		try
+		//try
 		{
 			print("Parsing JSON...");
 
@@ -114,11 +114,13 @@ namespace engine
 
 			return map;
 		}
+		/*
 		catch (std::exception& e)
 		{
 			print_warn("Error parsing JSON file: {}", e.what());
 			ASSERT(false);
 		}
+		*/
 
 		return null;
 	}
