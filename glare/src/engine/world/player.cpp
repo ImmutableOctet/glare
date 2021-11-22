@@ -9,7 +9,7 @@
 #include <engine/collision.hpp>
 
 //#include <bullet/BulletCollision/CollisionShapes/btCapsuleShape.h>
-#include <bullet/BulletCollision/btBulletCollisionCommon.h>
+#include <bullet/btBulletCollisionCommon.h>
 
 #include <algorithm>
 #include <string>
@@ -53,7 +53,8 @@ namespace engine
 				break;
 		}
 
-		auto player = load_model(world, "assets/tests/model_test/cube.b3d", parent, EntityType::Player); //create_pivot(world, parent, EntityType::Player);
+		//auto player = load_model(world, "assets/tests/model_test/cube.b3d", parent, EntityType::Player);
+		auto player = create_pivot(world, parent, EntityType::Player);
 		auto player_model = load_model(world, model_path, player);
 
 		/*

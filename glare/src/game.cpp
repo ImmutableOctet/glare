@@ -155,9 +155,11 @@ namespace glare
 		}, this);
 		*/
 
+		/*
 		int screen_width, screen_height;
 
 		window->get_size(screen_width, screen_height);
+		*/
 
 		input.get_mouse().lock();
 
@@ -289,58 +291,15 @@ namespace glare
 
 	void Glare::on_user_keyboard_input(const app::input::KeyboardState& keyboard)
 	{
-		std::string_view target_obj = engine::DEFAULT_PLAYER_NAME;
+		//std::string_view target_obj = engine::DEFAULT_PLAYER_NAME;
 
-		auto camera_t = transform(world.get_camera());
-		auto camera_pos = camera_t.get_position();
+		//auto camera_t = transform(world.get_camera());
+		//auto camera_pos = camera_t.get_position();
 
 		//auto transform = world.get_transform(world.get_camera());
-		auto transform = get_named_transform(target_obj);
-
-		auto angle = glm::normalize(transform.get_position() - camera_pos);
-
-		float delta = world.delta();
-
-		/*
-		if (keyboard.get_key(SDL_SCANCODE_Q))
-		{
-			world.set_parent(world.get_camera(), world.get_by_name(engine::DEFAULT_PLAYER_NAME));
-		}
-		*/
-
-		if (keyboard.get_key(SDL_SCANCODE_V))
-		{
-			auto t = world.get_transform(world.get_root());
-
-			t.rotateY(0.1f);
-		}
-
-		if (keyboard.get_key(SDL_SCANCODE_2))
-		{
-			transform.move(delta * 0.5f * angle, false);
-		}
-
-		if (keyboard.get_key(SDL_SCANCODE_Z))
-		{
-			//dbg->info("Angle: {}", angle);
-
-			//transform.move(angle * delta * 0.001f * -1.0f, true);
-
-			//transform.move({0.0f, 0.01f * delta, 0.0f});
-
-			//transform.set_position({ 10.0f, 20.01f, 30.0f });
-			transform.set_position({ 84.0751f, 69.8489f, 71.7952f });
-
-			print("New Position: {}", transform.get_position());
-		}
-
-		if (keyboard.get_key(SDL_SCANCODE_R))
-		{
-			//transform.set_position({ 10.7f, 46.0f, -13.0f });
-			auto transform = get_named_transform("Player");
-
-			transform.rotateY(math::radians(10.0f * delta));
-		}
+		//auto transform = get_named_transform(target_obj);
+		//auto angle = glm::normalize(transform.get_position() - camera_pos);
+		//float delta = world.delta();
 	}
 
 	void Glare::update(app::Milliseconds time)

@@ -33,6 +33,7 @@ namespace graphics
 	{
 		public:
 			using VertexType = StandardVertex;
+			using AVertexType = StandardAnimationVertex;
 
 			struct MeshDescriptor
 			{
@@ -86,6 +87,7 @@ namespace graphics
 
 			// Retrieves a string containing the name of 'class' to be used to link with shaders.
 			static const char* get_texture_class_variable_raw(TextureClass type);
+
 			inline static std::string get_texture_class_variable(TextureClass type)
 			{
 				const auto* raw = get_texture_class_variable_raw(type);
@@ -97,9 +99,12 @@ namespace graphics
 
 				return raw;
 			}
+
 		private:
 			Meshes meshes;
 			VertexWinding vertex_winding = VertexWinding::Clockwise;
+
+			//bool animated = false;
 		public:
 			friend void swap(Model& x, Model& y);
 
@@ -114,6 +119,9 @@ namespace graphics
 			// TODO: Verify non-const access.
 			inline Meshes& get_meshes() { return meshes; };
 			inline bool has_meshes() const { return !meshes.empty(); }
+
+			inline bool is_animated() const { return false; }
+
 			inline explicit operator bool() const { return has_meshes(); }
 
 			inline Model& operator=(Model model)

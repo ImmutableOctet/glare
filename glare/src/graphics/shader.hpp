@@ -86,7 +86,7 @@ namespace graphics
 			template <typename T>
 			inline auto& operator=(const T& value) // T&&
 			{
-				shader.uniforms[name] = value; // std::string(name)
+				///shader.uniforms[name] = value; // std::string(name)
 				shader.get_context()->set_uniform(shader, name, value); // name.c_str()
 
 				return *this;

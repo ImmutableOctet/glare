@@ -90,7 +90,14 @@ namespace graphics
 			//Mesh& operator=(const Mesh&) = delete;
 
 			inline ref<Context> get_context_ref() { return context.lock(); }
-			inline Context& get_context() { return *get_context_ref(); }
+			
+			inline Context& get_context()
+			{
+				Context* ctx = get_context_ref().get();
+
+				return *ctx;
+			}
+
 			inline const MeshComposition& get_composition() const { return composition; }
 			inline Primitive get_primitive() const { return primitive_type; }
 

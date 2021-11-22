@@ -10,7 +10,7 @@
 
 //#include <bullet/btBulletDynamicsCommon.h>
 #include <bullet/btBulletCollisionCommon.h>
-#include <bullet/BulletCollision/btBulletCollisionCommon.h>
+//#include <bullet/BulletCollision/btBulletCollisionCommon.h>
 
 #include <glm/glm.hpp>
 #include <cmath>

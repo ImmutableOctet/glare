@@ -110,7 +110,17 @@ namespace engine
 				loaded_shaders["DEFAULT_ANIMATED"] = shader;
 			}
 
-			const ModelData& load_model(const std::string& path, bool load_collision=false, pass_ref<graphics::Shader> shader={}, bool optimize_collision=true, bool force_reload=false, bool cache_result=true) const;
+			const ModelData& load_model
+			(
+				const std::string& path,
+				bool load_collision=false,
+				
+				pass_ref<graphics::Shader> shader={},
+
+				bool optimize_collision=true,
+				bool force_reload=false,
+				bool cache_result=true
+			) const;
 
 			ShaderRef get_shader(const std::string& vertex_path, const std::string& fragment_path, bool force_reload=false, bool cache_result=true) const; // const graphics::ShaderSource& shader_source
 

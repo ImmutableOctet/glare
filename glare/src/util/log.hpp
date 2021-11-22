@@ -5,7 +5,10 @@
 
 #include <math/math.hpp>
 
+//#define FMT_HEADER_ONLY
+
 #include <spdlog/spdlog.h>
+#include <fmt/core.h>
 
 /*
 namespace spdlog
@@ -65,12 +68,12 @@ struct fmt::formatter<math::Vector>
     }
 
     template <typename FormatContext>
-    auto format(const math::Vector& v, FormatContext& ctx)
+    auto format(const math::Vector& v, FormatContext& ctx) -> decltype(ctx.out())
     {
         return format_to
 		(
             ctx.out(),
-            "({:.1f}, {:.1f}, {:.1f})",
+            fmt::format_string<const char*>("({:.1f}, {:.1f}, {:.1f})"), // basic_format_string
             v.x, v.y, v.z
 		);
     }

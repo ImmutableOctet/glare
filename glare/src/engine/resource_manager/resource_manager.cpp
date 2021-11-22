@@ -3,7 +3,7 @@
 #include <graphics/model.hpp>
 #include <graphics/shader.hpp>
 
-#include <bullet/BulletCollision/btBulletCollisionCommon.h>
+#include <bullet/btBulletCollisionCommon.h>
 
 #include <memory>
 #include <tuple>

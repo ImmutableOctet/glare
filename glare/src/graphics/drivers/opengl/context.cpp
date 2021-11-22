@@ -1070,7 +1070,7 @@ namespace graphics
 		glDrawArrays(primitive_type, offset, count);
 	}
 
-	bool Context::set_uniform(Shader& shader, std::string_view name, int value)
+	bool Context::set_uniform(Shader& shader, std::string_view name, std::int32_t value) // int
 	{
 		auto& driver = get_driver(*this);
 
@@ -1084,6 +1084,37 @@ namespace graphics
 		glUniform1i(uniform, value);
 
 		return true;
+	}
+
+	/*
+	bool Context::set_uniform(Shader& shader, std::string_view name, std::uint32_t value) // unsigned int
+	{
+		auto& driver = get_driver(*this);
+
+		auto uniform = driver.get_uniform(shader, name);
+
+		if (uniform == Driver::InvalidUniform)
+		{
+			return false;
+		}
+
+		glUniform1ui(uniform, value);
+
+		return true;
+	}
+	*/
+
+	bool Context::set_uniform(Shader& shader, std::string_view name, std::int64_t value)
+	{
+		// Truncate to 32-bit for now. (All that's normally supported by GLSL, from what I can tell)
+		return set_uniform(shader, name, static_cast<std::int32_t>(value));
+	}
+
+	bool Context::set_uniform(Shader& shader, std::string_view name, std::uint64_t value)
+	{
+		// Truncate to 32-bit for now.
+		return set_uniform(shader, name, static_cast<std::uint32_t>(value));
+		//return set_uniform(shader, name, static_cast<std::int32_t>(value)); // <-- May be needed if other truncation option is unstable.
 	}
 
 	/*
@@ -1136,10 +1167,13 @@ namespace graphics
 		return true;
 	}
 
+	// See overloads for `std::int32_t` & `std::uint32_t`.
+	///*
 	bool Context::set_uniform(Shader& shader, std::string_view name, ContextHandle handle)
 	{
 		return set_uniform(shader, name, static_cast<int>(handle));
 	}
+	//*/
 
 	bool Context::set_uniform(Shader& shader, std::string_view name, bool value)
 	{

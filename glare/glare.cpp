@@ -19,7 +19,7 @@ namespace glare
 	int test(int argc, char** argv)
 	{
 		auto application =
-
+			
 			//test_vertex_element_types();
 			//ShaderTest();
 			//DeferredTest();

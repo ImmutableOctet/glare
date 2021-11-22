@@ -292,8 +292,11 @@ namespace graphics
 			// Draw using the currently bound 'Mesh' object, but with a different primitive type.
 			void draw(Primitive primitive);
 
-			bool set_uniform(Shader& shader, std::string_view name, int value); // std::int32_t
-			//bool set_uniform(Shader& shader, std::string_view name, unsigned int value); // std::uint32_t
+			bool set_uniform(Shader& shader, std::string_view name, std::int32_t value); // int
+			//bool set_uniform(Shader& shader, std::string_view name, std::uint32_t value); // unsigned int
+			bool set_uniform(Shader& shader, std::string_view name, std::int64_t value);
+			bool set_uniform(Shader& shader, std::string_view name, std::uint64_t value);
+
 			bool set_uniform(Shader& shader, std::string_view name, ContextHandle handle); // std::uint32_t
 
 			bool set_uniform(Shader& shader, std::string_view name, std::uint8_t value); // std::uint32_t
