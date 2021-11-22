@@ -4,7 +4,7 @@
 #include <stdexcept>
 
 // Debugger related.
-//#include <iostream>
+#include <iostream>
 
 #include <graphics/graphics.hpp>
 
@@ -67,7 +67,7 @@ namespace app
 
 					graphics.framerate = framerate;
 
-					//std::cout << "Framerate: " << framerate << '\n';
+					std::cout << "Framerate: " << framerate << '\n';
 
 					return Timer::DURATION_SECOND;
 				});
