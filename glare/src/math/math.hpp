@@ -10,6 +10,7 @@
 #include <glm/mat3x4.hpp>
 
 #include <assimp/vector3.h>
+#include<assimp/matrix4x4.h>
 
 #include <tuple>
 
@@ -145,6 +146,7 @@ namespace math
 	Vector3D to_vector(const aiVector3D& v);
 
 	Matrix to_matrix(const btTransform& t);
+	Matrix to_matrix(const aiMatrix4x4& m);
 
 	Vector abs(Vector v);
 
