@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string>
+#include <string_view>
 #include <atomic>
 #include <chrono>
 
@@ -60,7 +60,7 @@ namespace app
 		protected:
 			Application(UpdateRate update_rate);
 
-			Window& make_window(int width, int height, const std::string& title="", WindowFlags flags=WindowFlags::Default);
+			Window& make_window(int width, int height, std::string_view title="", WindowFlags flags=WindowFlags::Default);
 
 			time_point now() const;
 			clock_duration time() const;
@@ -93,6 +93,7 @@ namespace app
 			bool stop();
 		public:
 			inline bool is_running() const { return running; }
+			inline Window* get_window() const { return window.get(); }
 
 			bool handle_events();
 

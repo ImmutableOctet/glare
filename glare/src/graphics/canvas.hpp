@@ -50,7 +50,7 @@ namespace graphics
 			void clear(float red, float green, float blue, float alpha);
 
 			void bind_texture(const Texture& texture, const std::string& name);
-			void bind_texture(const Texture& texture, const std::string_view& name);
+			void bind_texture(const Texture& texture, std::string_view name);
 
 			inline void bind_texture(std::tuple<std::string_view, const Texture*> tdata)
 			{

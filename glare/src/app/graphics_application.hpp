@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string>
+#include <string_view>
 #include <stdexcept>
 
 // Debugger related.
@@ -54,7 +54,7 @@ namespace app
 
 			Graphics graphics;
 
-			GraphicsApplication(const std::string& title, int width, int height, WindowFlags flags=app::WindowFlags::OpenGL|app::WindowFlags::Resizable, UpdateRate update_rate=DEFAULT_FRAMERATE, bool vsync=true)
+			GraphicsApplication(std::string_view title, int width, int height, WindowFlags flags=app::WindowFlags::OpenGL|app::WindowFlags::Resizable, UpdateRate update_rate=DEFAULT_FRAMERATE, bool vsync=true)
 				: Application(update_rate), graphics(make_window(width, height, title, flags), flags, vsync)
 			{
 				auto time = milliseconds();
@@ -67,7 +67,7 @@ namespace app
 
 					graphics.framerate = framerate;
 
-					std::cout << "Framerate: " << framerate << '\n';
+					//std::cout << "Framerate: " << framerate << '\n';
 
 					return Timer::DURATION_SECOND;
 				});

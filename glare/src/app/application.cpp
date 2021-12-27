@@ -43,7 +43,7 @@ namespace app
 		return !is_running();
 	}
 
-	Window& Application::make_window(int width, int height, const std::string& title, WindowFlags flags)
+	Window& Application::make_window(int width, int height, std::string_view title, WindowFlags flags)
 	{
 		if (window == nullptr)
 		{

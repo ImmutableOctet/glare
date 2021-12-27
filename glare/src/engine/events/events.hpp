@@ -1,12 +1,21 @@
 #pragma once
 
+#include <string>
+#include <optional>
+#include <filesystem>
+
 #include <engine/types.hpp>
 #include "input.hpp"
+
+namespace graphics
+{
+	struct Animation;
+}
 
 namespace engine
 {
 	class World;
-
+	struct Animator;
 	struct TransformComponent;
 
 	//template <EntityType type>
@@ -32,6 +41,11 @@ namespace engine
 		EntityType type;
 
 		bool destroy_orphans = true;
+	};
+
+	struct OnParentChanged
+	{
+		Entity entity, from_parent, to_parent;
 	};
 
 	template <typename ComponentType>
@@ -60,6 +74,43 @@ namespace engine
 		//World& world;
 		//ComponentType& component;
 		Entity entity;
+	};
+
+	// Triggered any time an animation completes.
+	// (Happens repeatedly in the case of looping animations)
+	struct OnAnimationComplete
+	{
+		Entity entity;
+
+		const Animator*  animator;
+		const Animation* animation;
+	};
+
+	struct OnAnimationChange
+	{
+		Entity entity;
+
+		const Animator*  animator;
+		const Animation* prev_animation;
+		const Animation* current_animation;
+	};
+
+	// Executed each tick/frame an entity's animation updates.
+	struct OnAnimationFrame
+	{
+		Entity entity;
+
+		float current_time;
+		float prev_time;
+
+		const Animator*  animator;
+		const Animation* current_animation;
+	};
+
+	struct OnStageLoaded
+	{
+		Entity root;
+		std::optional<std::filesystem::path> path = std::nullopt;
 	};
 
 	using OnTransformChange = OnComponentChange<TransformComponent>;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string>
+#include <string_view>
 #include <tuple>
 
 #include "types.hpp"
@@ -24,13 +24,15 @@ namespace app
 
 			static std::uint32_t to_native_window_flags(WindowFlags flags);
 
-			Window(int width, int height, const std::string& title="", WindowFlags flags=WindowFlags::Default);
+			Window(int width, int height, std::string_view title="", WindowFlags flags=WindowFlags::Default);
 			~Window();
 
 			inline SDL_Window* get_handle() const { return handle; }
 
 			std::uint32_t get_id() const;
 			WindowFlags get_flags() const;
+
+			void set_title(std::string_view title);
 
 			// Retrieve the width and height of the window.
 			void get_size(int& width, int& height) const;

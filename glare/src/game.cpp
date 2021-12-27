@@ -28,6 +28,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+//#include <fmt/format.h>
+#include <format>
+
 namespace glare
 {
 	Glare::init_shaders::init_shaders(Graphics& graphics)
@@ -72,6 +75,18 @@ namespace glare
 			std::string {},
 
 			preprocessor
+		);
+
+		animated_geometry_pass = memory::allocate<graphics::Shader>
+		(
+			graphics.context,
+
+			"assets/shaders/geometry_pass.vert",
+			"assets/shaders/geometry_pass.frag",
+
+			std::string {},
+
+			(std::string(preprocessor) + "\n#define ANIMATION_ENABLED 1\n")
 		);
 
 		framebuffer_dbg = memory::allocate<graphics::Shader>
@@ -126,7 +141,7 @@ namespace glare
 		default_shader = geometry_pass; // shadow_test
 
 		// TODO: Add proper construction for animated version of 'geometry_pass'.
-		default_animated_shader = geometry_pass;
+		default_animated_shader = animated_geometry_pass;
 	}
 
 	Glare::Glare(bool auto_execute)
@@ -247,7 +262,7 @@ namespace glare
 		registry.emplace<engine::NameComponent>(cube, "Spinning Cube");
 		registry.emplace<engine::SpinBehavior>(cube);
 
-		world.set_parent(cube, player);
+		//world.set_parent(cube, player);
 
 		transform(cube).set_position({ 25.0f, 46.0f, -20.0f });
 
@@ -267,8 +282,10 @@ namespace glare
 	{
 		std::string path;
 
-		//auto stage = world.load("assets/maps/room");
 		auto stage = world.load("assets/maps/test01");
+		//auto stage = world.load("assets/maps/test01 - old");
+
+		//auto stage = world.load("assets/maps/room");
 		//auto stage = world.load("assets/maps/collision_test");
 		
 		//auto stage = world.load("assets/maps/story/2.ice-world/ice-connector");
@@ -276,7 +293,7 @@ namespace glare
 		auto player = world.get_player(1);
 
 		//make_lights(world);
-		//make_models(world, player);
+		make_models(world, player);
 
 		world.register_event<app::input::KeyboardState, &Glare::on_user_keyboard_input>(*this);
 	}
@@ -312,6 +329,18 @@ namespace glare
 		}
 
 		world.update(time);
+
+		auto camera = world.get_camera(); // world.get_by_name("Moving Sphere"); // "Spinning Cube" // world.get_root()
+
+		if (camera != engine::null)
+		{
+			auto t = transform(camera);
+			auto position = t.get_position();
+
+			std::string window_title = std::format("Camera position: {},{},{}", position.x, position.y, position.z);
+
+			window->set_title(window_title);
+		}
 	}
 
 	void Glare::render()
@@ -397,8 +426,6 @@ namespace glare
 
 	graphics::GBuffer& Glare::render_geometry(engine::World& world, const graphics::Viewport& viewport, graphics::GBuffer& gbuffer, graphics::WorldRenderState& render_state)
 	{
-		auto& shader = *shaders.geometry_pass;
-
 		//graphics.context->clear_textures(false); // true // <-- May not be needed.
 
 		graphics.context->use(gbuffer.framebuffer, [&, this]()
@@ -406,7 +433,8 @@ namespace glare
 			graphics.context->clear(0.0f, 0.0f, 0.0f, 1.0f, (graphics::BufferType::Color | graphics::BufferType::Depth)); // gfx // 1.0f, 0.0f, 0.0f
 			//graphics.context->clear(1.0f, 1.0f, 1.0f, 1.0f, (graphics::BufferType::Color | graphics::BufferType::Depth)); // gfx // 1.0f, 0.0f, 0.0f
 
-			graphics.context->use(shader, [&, this]()
+			/*
+			graphics.context->use(*shaders.geometry_pass, [&, this]()
 			{
 				world.render
 				(
@@ -416,6 +444,26 @@ namespace glare
 					&render_state
 				);
 			});
+
+			graphics.context->use(*shaders.animated_geometry_pass, [&, this]()
+			{
+				world.render
+				(
+					*graphics.canvas, viewport,
+					false, true,
+
+					&render_state
+				);
+			});
+			*/
+
+			world.render
+			(
+				*graphics.canvas, viewport,
+				false, false,
+
+				&render_state
+			);
 		});
 
 		return gbuffer;

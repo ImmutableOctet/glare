@@ -7,10 +7,12 @@
 //#include <cmath>
 #include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
+//#include <glm/gtc/quaternion.hpp>
 #include <glm/mat3x4.hpp>
 
 #include <assimp/vector3.h>
-#include<assimp/matrix4x4.h>
+#include <assimp/matrix4x4.h>
+#include <assimp/Quaternion.h>
 
 #include <tuple>
 
@@ -111,6 +113,11 @@ namespace math
 		return matrix_type(1.0f); // glm::identity<matrix_type>();
 	}
 
+	inline constexpr Matrix identity_matrix()
+	{
+		return identity<Matrix>();
+	}
+
 	template <typename quat_type>
 	inline RotationMatrix to_rotation_matrix(const quat_type& q)
 	{
@@ -148,10 +155,12 @@ namespace math
 	Matrix to_matrix(const btTransform& t);
 	Matrix to_matrix(const aiMatrix4x4& m);
 
+	Quaternion to_quat(const aiQuaternion& q); // to_quaternion(...)
+
 	Vector abs(Vector v);
 
 	float direction_to_angle(const Vector2D& dir);
-	float direction_to_yaw(const Vector3D& dir);
+	float direction_to_yaw(const Vector& dir); // Vector3D
 
 	template <typename T>
 	inline T clamp(T value, T min_value, T max_value)

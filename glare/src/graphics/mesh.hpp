@@ -2,6 +2,8 @@
 
 #include <vector>
 #include <cstdint>
+#include <optional>
+#include <type_traits>
 
 #include "types.hpp"
 #include "context.hpp"
@@ -19,6 +21,8 @@ namespace graphics
 		using Vertex = VertexType;
 
 		//using SimpleVertex = graphics::SimpleVertex;
+
+		static constexpr bool is_animated_vertex = std::is_same_v<StandardAnimationVertex, VertexType>;
 
 		std::vector<VertexType> vertices; // std::shared_ptr<std::vector<VertexType>>
 		std::shared_ptr<std::vector<Index>> indices;
@@ -38,6 +42,8 @@ namespace graphics
 		inline bool is_usable() const { return has_vertices(); }
 
 		inline explicit operator bool() const { return is_usable(); }
+
+		inline bool is_animated() const { return is_animated_vertex; }
 
 		// Creates a copy of the 'vertices' vector, containing only simple vertex attributes. (e.g. position)
 		inline std::vector<SimpleVertex> as_simple_vertices() const
@@ -80,9 +86,12 @@ namespace graphics
 
 			std::size_t vertex_count = 0;
 			Index vertex_offset = 0;
+			std::size_t index_count = 0;
 
-			inline Mesh(weak_ref<Context> ctx, MeshComposition composition, Primitive primitive_type, std::size_t vertex_count, Index vertex_offset=0)
-				: context(ctx), composition(composition), primitive_type(primitive_type), vertex_count(vertex_count), vertex_offset(vertex_offset) {}
+			bool animated = false;
+
+			inline Mesh(weak_ref<Context> ctx, MeshComposition composition, Primitive primitive_type, std::size_t vertex_count, Index vertex_offset=0, std::size_t index_count=0, bool animated=false)
+				: context(ctx), composition(composition), primitive_type(primitive_type), vertex_count(vertex_count), vertex_offset(vertex_offset), index_count(index_count), animated(animated) {}
 
 			virtual void on_bind(Context& context);
 		public:
@@ -91,21 +100,22 @@ namespace graphics
 
 			inline ref<Context> get_context_ref() { return context.lock(); }
 			
-			inline Context& get_context()
+			inline Context* get_context()
 			{
-				Context* ctx = get_context_ref().get();
-
-				return *ctx;
+				return get_context_ref().get();
 			}
 
 			inline const MeshComposition& get_composition() const { return composition; }
 			inline Primitive get_primitive() const { return primitive_type; }
 
 			inline std::size_t size() const { return vertex_count; }
+			inline std::size_t indices() const { return index_count; }
 			inline Index offset() const { return vertex_offset; }
 
+			inline bool is_animated() const { return animated; }
+
 			template <typename VertexType>
-			inline static Mesh Generate(pass_ref<Context> ctx, const Data<VertexType>& data, Primitive primitive_type=Primitive::Triangle)
+			inline static Mesh Generate(pass_ref<Context> ctx, const Data<VertexType>& data, Primitive primitive_type=Primitive::Triangle, std::optional<bool> animated={})
 			{
 				return Mesh
 				(
@@ -116,15 +126,17 @@ namespace graphics
 						memory::memory_view(data.vertices.data(), data.vertices.size()),
 						sizeof(VertexType),
 						VertexType::format(),
-						(data.indices) ? memory::array_view<MeshIndex>(data.indices->data(), data.indices->size()) : nullptr
+						((data.indices) ? memory::array_view<MeshIndex>(data.indices->data(), data.indices->size()) : nullptr)
 					),
 					
 					primitive_type,
-					data.vertices.size(), 0
+					data.vertices.size(), 0,
+					((data.indices) ? data.indices->size() : 0),
+					animated.value_or(std::is_same_v<StandardAnimationVertex, VertexType>)
 				);
 			}
 
-			static Mesh GenerateTexturedQuad(pass_ref<Context> ctx, VertexWinding winding=VertexWinding::Clockwise); // CounterClockwise
+			static Mesh GenerateTexturedQuad(pass_ref<Context> ctx, VertexWinding winding=VertexWinding::CounterClockwise); // Clockwise
 
 			friend void swap(Mesh& x, Mesh& y) noexcept;
 

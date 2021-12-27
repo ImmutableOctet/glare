@@ -106,6 +106,11 @@ namespace math
 
 		return out;
 	}
+
+	Quaternion to_quat(const aiQuaternion& q)
+	{
+		return Quaternion(q.w, q.x, q.y, q.z);
+	}
 	
 	Vector abs(Vector v)
 	{

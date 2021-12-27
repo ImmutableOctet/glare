@@ -3,7 +3,7 @@
 namespace graphics
 {
 	GBuffer::GBuffer(pass_ref<Context> context, int width, int height, GBufferFlags flags, TextureFlags texture_flags) :
-		screen_quad(Mesh::GenerateTexturedQuad(context, graphics::VertexWinding::Clockwise)), // CounterClockwise
+		screen_quad(Mesh::GenerateTexturedQuad(context, graphics::VertexWinding::CounterClockwise)), // Clockwise
 		framebuffer(context)
 	{
 		auto& fb = framebuffer;

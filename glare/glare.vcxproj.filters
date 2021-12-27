@@ -353,6 +353,30 @@
     <ClInclude Include="src\engine\resource_manager\model_loader.hpp">
       <Filter>src\engine\resource_manager</Filter>
     </ClInclude>
+    <ClInclude Include="src\graphics\animation.hpp">
+      <Filter>src\graphics\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\skeleton.hpp">
+      <Filter>src\graphics\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\bone_component.hpp">
+      <Filter>src\engine\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\animation.hpp">
+      <Filter>src\engine\world</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\animator.hpp">
+      <Filter>src\engine\world</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\animation_system.hpp">
+      <Filter>src\engine\world</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\service.hpp">
+      <Filter>src\engine\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\action.hpp">
+      <Filter>src\engine\engine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\tests\model_test\shaders\8.1.deferred_light_box.fs">
@@ -435,6 +459,9 @@
     </None>
     <None Include="assets\shaders\shadow_mapping\directional_shadows_depth.vert">
       <Filter>shaders\shadow_mapping\directional</Filter>
+    </None>
+    <None Include="assets\maps\test01\map.json">
+      <Filter>maps</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -709,6 +736,16 @@
     <ClCompile Include="src\engine\resource_manager\model_loader.cpp">
       <Filter>src\engine\resource_manager</Filter>
     </ClCompile>
+    <ClCompile Include="src\graphics\skeleton.cpp">
+      <Filter>src\graphics\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\animation.cpp">
+      <Filter>src\graphics\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\animation_system.cpp">
+      <Filter>src\engine\world</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\animator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />

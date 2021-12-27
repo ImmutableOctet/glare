@@ -44,6 +44,14 @@ uniform float alpha = 1.0;
 
 uniform uint render_flags = 255u; // = 0u; // 0xFFu; // 0u;
 
+// Debugging related:
+///*
+#if ANIMATION_ENABLED
+    uniform bool animated = false;
+    //flat in ivec4 dbg_bone_ids;
+#endif
+//*/
+
 vec2 parallax_mapping(sampler2D depthMap, vec2 texCoords, vec3 viewDir, float heightScale, float minLayers, float maxLayers) // float minLayers=8, float maxLayers=32
 {
     float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));
@@ -178,6 +186,32 @@ void main()
     ////g_albedo_specular = (light * albedo_specular);
 
     g_albedo_specular = albedo_specular;
+
+    // Debugging related:
+    /*
+    #if ANIMATION_ENABLED
+        if (animated)
+        {
+            float r = 0.0;
+            float g = 0.0;
+            float b = 0.0;
+
+            if (dbg_bone_ids[0] != -1)
+                r = 1.0;
+
+            if (dbg_bone_ids[1] != -1)
+                //r = 0.0;
+                g = 1.0;
+
+            if (dbg_bone_ids[2] != -1)
+                //g = 0.0;
+                b = 1.0;
+
+            //g_albedo_specular = vec4(1.0, 1.0, 1.0, 1.0);
+            g_albedo_specular = vec4(r, g, b, 1.0);
+        }
+    #endif
+    */
 
     g_render_flags = render_flags;
     //g_render_flags = uintBitsToFloat(render_flags);

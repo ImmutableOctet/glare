@@ -5,6 +5,7 @@
 #include "player.hpp"
 #include "stage.hpp"
 
+#include "animator.hpp"
 #include "spin_component.hpp"
 #include "target_component.hpp"
 #include "follow_component.hpp"
@@ -33,6 +34,7 @@
 #include <engine/relationship.hpp>
 #include <engine/transform.hpp>
 #include <engine/type_component.hpp>
+#include <engine/bone_component.hpp>
 
 //#include <engine/name_component.hpp>
 #include <engine/components.hpp>
@@ -57,6 +59,10 @@ namespace engine
 		register_event<OnComponentAdd<engine::CollisionComponent>, &World::on_new_collider>();
 		register_event<OnTransformChange, &World::on_transform_change>();
 		register_event<OnEntityDestroyed, &World::on_entity_destroyed>();
+
+		resource_manager.subscribe(*this);
+		physics.subscribe(*this);
+		animation.subscribe(*this);
 
 		root = create_pivot(*this);
 	}
@@ -112,6 +118,8 @@ namespace engine
 				stage = map;
 			}
 
+			event<OnStageLoaded>(map, root_path);
+
 			return map;
 		}
 		/*
@@ -130,10 +138,11 @@ namespace engine
 		// Update the delta-timer.
 		delta_time << time;
 
-		event_handler.update();
-
 		// Update systems:
+		Service::update();
+
 		physics.update(*this, delta_time);
+		animation.update(*this, delta_time);
 
 		SpinBehavior::update(*this);
 		TargetComponent::update(*this);
@@ -527,6 +536,8 @@ namespace engine
 				}
 
 				auto model_transform = Transform(registry, entity, relationship, transform);
+
+				// TODO: Check if forcing a refresh is 100% necessary.
 				auto model_matrix = model_transform.get_matrix(true); // get_local_matrix();
 				//auto model_matrix = model_transform.get_local_matrix();
 
@@ -577,6 +588,21 @@ namespace engine
 					shader["directional_shadows_count"] = 0;
 				}
 				*/
+
+				auto* animator = registry.try_get<Animator>(entity);
+
+				if (animator)
+				{
+					bool is_animated = ((animator->animated()) && model_component.model->is_animated());
+					
+					shader["animated"] = is_animated;
+
+					shader["bone_matrices"] = animator->get_pose();
+				}
+				else
+				{
+					shader["animated"] = false;
+				}
 
 				canvas.draw(model, color, model_draw_mode, _auto_clear_textures, (((render_state) && (bind_dynamic_textures)) ? render_state->dynamic_textures : nullptr));
 			});
@@ -665,7 +691,7 @@ namespace engine
 		return relationship->get_parent();
 	}
 
-	void World::set_parent(Entity entity, Entity parent, bool _null_as_root)
+	void World::set_parent(Entity entity, Entity parent, bool defer_action, bool _null_as_root)
 	{
 		/*
 		if (_null_as_root)
@@ -677,7 +703,20 @@ namespace engine
 		}
 		*/
 
-		Relationship::set_parent(registry, entity, parent);
+		if (defer_action)
+		{
+			defer
+			(
+				[](World* world, Entity entity, Entity parent)
+				{ world->set_parent(entity, parent, false); },
+				this, entity, parent
+			);
+		}
+		else
+		{
+			auto prev_parent = Relationship::set_parent(registry, entity, parent);
+			event<OnParentChanged>(entity, prev_parent, parent);
+		}
 	}
 
 	Entity World::get_by_name(std::string_view name)
@@ -697,6 +736,49 @@ namespace engine
 		}
 
 		return null;
+	}
+
+	Entity World::get_bone_by_name(Entity entity, std::string_view name, bool recursive)
+	{
+		if (name.empty())
+			return null;
+
+		auto* relationship = registry.try_get<Relationship>(entity);
+
+		if (!relationship)
+			return null;
+
+		Entity out = null;
+
+		relationship->enumerate_children(registry, [&](Entity child, Relationship& relationship, Entity next_child)
+		{
+			auto* bone = registry.try_get<BoneComponent>(child);
+
+			if (!bone)
+				return true;
+
+			if (bone->name == name)
+			{
+				out = child;
+
+				return false;
+			}
+			else if (recursive)
+			{
+				auto r_out = get_bone_by_name(child, name, true);
+
+				if (r_out != null)
+				{
+					out = r_out;
+
+					return false;
+				}
+			}
+
+			return true;
+		});
+
+		return out;
 	}
 
 	Entity World::get_player(PlayerIndex player) const
@@ -720,7 +802,7 @@ namespace engine
 
 	void World::add_camera(Entity camera, bool make_active)
 	{
-		ASSERT(registry.has<CameraParameters>(camera));
+		ASSERT(registry.try_get<CameraParameters>(camera));
 
 		if ((this->camera == null) || make_active)
 		{
@@ -732,7 +814,7 @@ namespace engine
 
 	void World::remove_camera(Entity camera)
 	{
-		ASSERT(registry.has<CameraParameters>(camera));
+		ASSERT(registry.try_get<CameraParameters>(camera));
 
 		auto it = std::find(cameras.begin(), cameras.end(), camera);
 

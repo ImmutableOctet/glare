@@ -53,6 +53,7 @@ namespace glare
 				ref<graphics::Shader> forward;
 				ref<graphics::Shader> forward_test;
 				ref<graphics::Shader> geometry_pass;
+				ref<graphics::Shader> animated_geometry_pass;
 				ref<graphics::Shader> lighting_pass;
 				ref<graphics::Shader> framebuffer_dbg;
 				ref<graphics::Shader> light_debug;

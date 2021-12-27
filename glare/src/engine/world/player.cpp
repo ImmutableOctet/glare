@@ -35,7 +35,19 @@ namespace engine
 		switch (character)
 		{
 			case engine::Character::Glare:
-				model_path = "assets/characters/test/character.b3d";
+				//model_path = "assets/characters/test/character.b3d";
+				//model_path = "assets/geometry/sphere.b3d";
+				//model_path = "assets/geometry/torus.b3d";
+				
+				//model_path = "assets/geometry/Multi_Torus.b3d";
+				
+				model_path = "assets/geometry/boxes.b3d";
+				//model_path = "assets/geometry/anims_with_full_rotations_between_keys.dae";
+				
+				//model_path = "assets/geometry/vampire/dancing_vampire.dae";
+				//model_path = "assets/geometry/direction_boxes.b3d";
+				//model_path = "assets/objects/skeleton_test/a.b3d";
+
 				//model_path = "assets/characters/nanosuit/nanosuit.obj";
 
 				/*
@@ -55,6 +67,7 @@ namespace engine
 
 		//auto player = load_model(world, "assets/tests/model_test/cube.b3d", parent, EntityType::Player);
 		auto player = create_pivot(world, parent, EntityType::Player);
+		//auto player_model = create_pivot(world, player);
 		auto player_model = load_model(world, model_path, player);
 
 		/*

@@ -70,6 +70,8 @@ namespace engine
 			PhysicsSystem(math::Vector gravity={ 0.0f, -1.0f, 0.0f });
 			~PhysicsSystem();
 
+			void subscribe(World& world);
+
 			void update(World& world, float delta);
 
 			inline math::Vector get_gravity() const { return gravity; }

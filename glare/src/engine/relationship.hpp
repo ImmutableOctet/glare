@@ -4,8 +4,12 @@
 
 namespace engine
 {
+	class World;
+
 	struct Relationship
 	{
+		public:
+			friend World;
 		protected:
 			std::uint32_t child_count = 0;
 
@@ -14,6 +18,14 @@ namespace engine
 			Entity first = null;
 			Entity prev = null;
 			Entity next = null;
+
+			// This returns the previous parent entity, if it existed before a new assignment took place.
+			static Entity set_parent(Registry& registry, Entity self, Entity parent);
+			//Entity set_parent(Registry& registry, Entity self, Entity parent);
+
+			// If `child_relationship` is not specified, a lookup will be performed on `child`.
+			Entity add_child(Registry& registry, Entity self, Entity child, Relationship* child_relationship = nullptr);
+			Entity remove_child(Registry& registry, Entity child, Entity self = null, bool remove_in_registry = false);
 		public:
 			// Internal use only.
 			Relationship(Entity parent=null);
@@ -29,12 +41,6 @@ namespace engine
 			
 			inline Entity get_parent() const { return parent; }
 
-			static void set_parent(Registry& registry, Entity self, Entity parent);
-			//void set_parent(Registry& registry, Entity self, Entity parent);
-
-			Entity add_child(Registry& registry, Entity self, Entity child);
-			Entity remove_child(Registry& registry, Entity child, Entity self=null, bool remove_in_registry=false);
-
 			std::tuple<Entity, Relationship*> get_first_child(Registry& registry) const;
 			std::tuple<Entity, Relationship*> get_last_child(Registry& registry) const;
 
@@ -48,7 +54,7 @@ namespace engine
 				{
 					auto& relationship = registry.get<Relationship>(child); // *this;
 
-					auto next_child = relationship.next;
+					auto next_child = relationship.next; // const auto&
 
 					if (next_child == child)
 					{
@@ -95,7 +101,8 @@ namespace engine
 			static Relationship& append_child(Relationship& prev_rel, Relationship& current_rel, Entity child, Entity next_child);
 
 			// Returns 'null' if a 'Relationship' object does not already exist.
-			static Relationship* remove_previous_parent(Registry& registry, Entity entity);
+			// `entity_relationship` is optional; if not specified, a lookup will take place.
+			static Relationship* remove_previous_parent(Registry& registry, Entity entity, Relationship* entity_relationship=nullptr);
 		public:
 			template <typename enum_fn>
 			inline std::uint32_t enumerate_parents(Registry& registry, enum_fn)

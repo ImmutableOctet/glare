@@ -39,6 +39,11 @@ namespace engine
 		// Nothing so far.
 	}
 
+	void PhysicsSystem::subscribe(World& world)
+	{
+		//world.register_event<...>(*this);
+	}
+
 	void PhysicsSystem::update(World& world, float delta)
 	{
 		auto& registry = world.get_registry();

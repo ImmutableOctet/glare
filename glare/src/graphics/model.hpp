@@ -35,6 +35,15 @@ namespace graphics
 			using VertexType = StandardVertex;
 			using AVertexType = StandardAnimationVertex;
 
+			/*
+				TODO: Look into a copy-on-write interface for `Materials` tied to `MeshDescriptors`.
+				
+				e.g. You have a material (that could be shared) tied to part of your model,
+				and the material is updated by some external system for an animated texture, time-value, etc.
+
+				If you were to modify the material, it'd affect all models/meshes using it, but if you access with copy-on-write,
+				you could modify a newly generated copy that's specific to your mesh/model.
+			*/
 			struct MeshDescriptor
 			{
 				//Material material;
@@ -102,9 +111,9 @@ namespace graphics
 
 		private:
 			Meshes meshes;
-			VertexWinding vertex_winding = VertexWinding::Clockwise;
-
-			//bool animated = false;
+			VertexWinding vertex_winding = VertexWinding::CounterClockwise;
+		protected:
+			bool animated = false;
 		public:
 			friend void swap(Model& x, Model& y);
 
@@ -113,14 +122,14 @@ namespace graphics
 			// TODO: Handle copies.
 			Model(const Model&) = delete;
 
-			Model(Meshes&& meshes, VertexWinding vertex_winding=VertexWinding::Clockwise) noexcept;
+			Model(Meshes&& meshes, VertexWinding vertex_winding=VertexWinding::CounterClockwise, bool animated=false) noexcept;
 			Model(Model&& model) noexcept;
 
 			// TODO: Verify non-const access.
 			inline Meshes& get_meshes() { return meshes; };
 			inline bool has_meshes() const { return !meshes.empty(); }
 
-			inline bool is_animated() const { return false; }
+			inline bool is_animated() const { return animated; }
 
 			inline explicit operator bool() const { return has_meshes(); }
 

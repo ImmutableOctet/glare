@@ -33,7 +33,7 @@ namespace engine
 
 	std::optional<Transform> Transform::get_transform_safe(Registry& registry, Entity entity)
 	{
-		bool has_transform = (registry.has<TransformComponent>(entity));
+		bool has_transform = (registry.try_get<TransformComponent>(entity));
 
 		if (has_transform)
 		{

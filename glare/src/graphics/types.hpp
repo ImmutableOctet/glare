@@ -14,13 +14,13 @@
 #include <tuple>
 
 /*
-inline bool operator<(const std::string& a, const std::string_view& b) noexcept
+inline bool operator<(const std::string& a, std::string_view b) noexcept
 {
 	return (a < b);
 }
 */
 
-inline bool operator<(const std::string_view& a, const std::string& b) noexcept
+inline bool operator<(std::string_view a, const std::string& b) noexcept
 {
 	return (a < b);
 }
@@ -39,6 +39,8 @@ namespace graphics
 
 	using NativeContext = void*;
 	using ContextHandle = unsigned int; // GLint;
+
+	using BoneID = int;
 
 	// TODO: Implement half-size indices for smaller meshes.
 	using MeshIndex = std::uint32_t; // GLuint;

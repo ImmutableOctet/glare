@@ -63,7 +63,12 @@ namespace graphics
 
 	Mesh::~Mesh()
 	{
-		get_context().release_mesh(std::move(composition));
+		auto ctx = get_context();
+		
+		if (ctx)
+		{
+			ctx->release_mesh(std::move(composition));
+		}
 	}
 
 	void swap(Mesh& x, Mesh& y) noexcept
@@ -75,6 +80,7 @@ namespace graphics
 		swap(x.primitive_type, y.primitive_type);
 		swap(x.vertex_count, y.vertex_count);
 		swap(x.vertex_offset, y.vertex_offset);
+		swap(x.index_count, y.index_count);
 	}
 
 	void Mesh::on_bind(Context& context)

@@ -32,11 +32,11 @@ namespace app
 		return sdl_flags;
 	}
 
-	Window::Window(int width, int height, const std::string& title, WindowFlags flags)
+	Window::Window(int width, int height, std::string_view title, WindowFlags flags)
 		: creation_flags(flags)
 	{
 		// TODO: Graphics Abstraction.
-		handle = SDL_CreateWindow(title.c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, to_native_window_flags(flags));
+		handle = SDL_CreateWindow(title.data(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, to_native_window_flags(flags));
 	}
 
 	Window::~Window()
@@ -56,6 +56,11 @@ namespace app
 	WindowFlags Window::get_flags() const
 	{
 		return creation_flags; // SDL_GetWindowFlags(...);
+	}
+
+	void Window::set_title(std::string_view title)
+	{
+		SDL_SetWindowTitle(handle, title.data());
 	}
 
 	void Window::get_size(int& width, int& height) const

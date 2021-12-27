@@ -11,6 +11,8 @@
 #include <util/string.hpp>
 #include <util/algorithm.hpp>
 
+#include <engine/world/world.hpp>
+
 /*
 #define AI_CONFIG_PP_PTV_NORMALIZE   "PP_PTV_NORMALIZE"
 
@@ -67,11 +69,14 @@ namespace engine
 			((shader) ? shader : get_default_animated_shader()),
 			{
 				.maintain_storage = false,
-				.load_collision = load_collision
+				//.is_animated   = true,
+				.load_collision   = load_collision
 			}
 		);
 
 		ModelData model_data_out;
+
+		ref<AnimationData> animations;
 
 		model_loader.on_model = [&](ModelLoader& loader, ModelLoader::ModelData& model_data) -> void
 		{
@@ -88,16 +93,36 @@ namespace engine
 				}
 			}
 
-			model_data_out.push_back(loaded_model);
+			if (loader.get_config().is_animated.value_or(false) || (loader.has_skeleton()))
+			{
+				if (!animations)
+				{
+					animations = memory::allocate<AnimationData>();
+				}
+
+				animation_data[loaded_model] = animations;
+			}
+
+			model_data_out.models.push_back(loaded_model);
 		};
 
 		model_loader.load(path);
 
 		//auto& model_data = model_loader.get_model_storage();
 
+		if (model_loader.has_animations() && (animations))
+		{
+			animations->animations = std::move(model_loader.get_animations());
+		}
+
+		if (model_loader.has_skeleton() && (animations))
+		{
+			animations->skeleton = std::move(model_loader.get_skeleton());
+		}
+
 		if (cache_result)
 		{
-			(loaded_models[path_resolved] = model_data_out);
+			loaded_models[path_resolved] = std::move(model_data_out);
 		}
 
 		return loaded_models[path_resolved];
@@ -146,6 +171,23 @@ namespace engine
 		}
 
 		return nullptr;
+	}
+
+	const ref<ResourceManager::AnimationData> ResourceManager::get_animation_data(const WeakModelRef model) const
+	{
+		auto it = animation_data.find(model);
+
+		if (it != animation_data.end())
+		{
+			return it->second;
+		}
+
+		return nullptr;
+	}
+
+	void ResourceManager::subscribe(World& world)
+	{
+		//world.register_event<...>(*this);
 	}
 
 	std::string ResourceManager::resolve_path(const std::string& path)

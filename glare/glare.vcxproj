@@ -252,6 +252,8 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\app\window.hpp" />
     <ClInclude Include="src\core.hpp" />
     <ClInclude Include="src\debug.hpp" />
+    <ClInclude Include="src\engine\action.hpp" />
+    <ClInclude Include="src\engine\bone_component.hpp" />
     <ClInclude Include="src\engine\collision.hpp" />
     <ClInclude Include="src\engine\components.hpp" />
     <ClInclude Include="src\engine\config.hpp" />
@@ -265,10 +267,14 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\resource_manager\loaders.hpp" />
     <ClInclude Include="src\engine\resource_manager\model_loader.hpp" />
     <ClInclude Include="src\engine\resource_manager\resource_manager.hpp" />
+    <ClInclude Include="src\engine\service.hpp" />
     <ClInclude Include="src\engine\transform.hpp" />
     <ClInclude Include="src\engine\types.hpp" />
     <ClInclude Include="src\engine\movement_state.hpp" />
     <ClInclude Include="src\engine\type_component.hpp" />
+    <ClInclude Include="src\engine\world\animation.hpp" />
+    <ClInclude Include="src\engine\world\animation_system.hpp" />
+    <ClInclude Include="src\engine\world\animator.hpp" />
     <ClInclude Include="src\engine\world\billboard_behavior.hpp" />
     <ClInclude Include="src\engine\world\camera.hpp" />
     <ClInclude Include="src\engine\world\debug\debug.hpp" />
@@ -306,6 +312,8 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\graphics\resource.hpp" />
     <ClInclude Include="src\graphics\shader.hpp" />
     <ClInclude Include="src\graphics\shadow_map.hpp" />
+    <ClInclude Include="src\graphics\animation.hpp" />
+    <ClInclude Include="src\graphics\skeleton.hpp" />
     <ClInclude Include="src\graphics\texture.hpp" />
     <ClInclude Include="src\graphics\types.hpp" />
     <ClInclude Include="src\graphics\vertex.hpp" />
@@ -330,6 +338,9 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\util\variant.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="assets\maps\test01\map.json">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
     <None Include="assets\shaders\light_box.frag" />
     <None Include="assets\shaders\light_box.vert" />
     <None Include="assets\shaders\deferred_shading.frag" />
@@ -379,6 +390,8 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\engine\resource_manager\model_loader.cpp" />
     <ClCompile Include="src\engine\resource_manager\resource_manager.cpp" />
     <ClCompile Include="src\engine\transform.cpp" />
+    <ClCompile Include="src\engine\world\animation_system.cpp" />
+    <ClCompile Include="src\engine\world\animator.cpp" />
     <ClCompile Include="src\engine\world\billboard_behavior.cpp" />
     <ClCompile Include="src\engine\world\camera.cpp" />
     <ClCompile Include="src\engine\world\debug\debug_camera.cpp" />
@@ -395,6 +408,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\engine\world\target_component.cpp" />
     <ClCompile Include="src\engine\world\world.cpp" />
     <ClCompile Include="src\game.cpp" />
+    <ClCompile Include="src\graphics\animation.cpp" />
     <ClCompile Include="src\graphics\canvas.cpp" />
     <ClCompile Include="src\graphics\context_state.cpp" />
     <ClCompile Include="src\graphics\cubemap_transform.cpp" />
@@ -409,6 +423,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\graphics\resource.cpp" />
     <ClCompile Include="src\graphics\shader.cpp" />
     <ClCompile Include="src\graphics\shadow_map.cpp" />
+    <ClCompile Include="src\graphics\skeleton.cpp" />
     <ClCompile Include="src\graphics\texture.cpp" />
     <ClCompile Include="src\graphics\types.cpp" />
     <ClCompile Include="src\graphics\vertex.cpp" />

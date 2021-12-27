@@ -68,12 +68,12 @@ namespace engine
 		//auto& resource_manager = world.get_resource_manager();
 
 		// Stage geometry:
+		///*
 		print("Loading scene geometry...");
 
 		ForEach(data["models"], [&](const auto& model_cfg)
 		{
 			auto model_path = (root_path / model_cfg["path"].get<std::string>()).string();
-
 
 			bool collision_enabled = util::get_value(model_cfg, "collision", true);
 
@@ -85,6 +85,7 @@ namespace engine
 
 			apply_transform(world, model, model_cfg);
 		});
+		//*/
 
 		// Players:
 		print("Loading players...");
@@ -428,7 +429,7 @@ namespace engine
 
 		if (model_path.empty())
 		{
-			model_path = "assets/geometry/cube.b3d";
+			model_path = "assets/geometry/cube.b3d"; // <-- Debugging related.
 		}
 		else
 		{
@@ -437,7 +438,7 @@ namespace engine
 
 		auto solid = util::get_value<bool>(data, "solid", false);
 
-		auto obj = load_model(world, model_path, parent, EntityType::Scenery, solid, 0.0f);
+		auto obj = load_model(world, model_path, parent, EntityType::Scenery, true, solid, 0.0f);
 
 		return obj;
 	}

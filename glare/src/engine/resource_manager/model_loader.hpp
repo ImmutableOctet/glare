@@ -13,6 +13,8 @@
 #include <graphics/model.hpp>
 #include <graphics/mesh.hpp>
 #include <graphics/material.hpp>
+#include <graphics/animation.hpp>
+#include <graphics/skeleton.hpp>
 
 #define AI_CONFIG_PP_PTV_NORMALIZE   "PP_PTV_NORMALIZE"
 
@@ -53,17 +55,21 @@ namespace engine
 	class ModelLoader
 	{
 		public:
-
 			using Context     = graphics::Context;
 			using Model       = graphics::Model;
 			using Mesh        = graphics::Mesh;
 			using Texture     = graphics::Texture;
 			using Shader      = graphics::Shader;
 			using Material    = graphics::Material;
+			using Animation   = graphics::Animation;
+			using Skeleton    = graphics::Skeleton;
+			using Bone        = graphics::Bone;
 
-			using MeshIndex   = graphics::MeshIndex;
-			using VertexType  = Model::VertexType;
-			using MeshData    = graphics::MeshData<VertexType>;
+			using MeshIndex    = graphics::MeshIndex;
+			using VertexType   = Model::VertexType;
+			using AVertexType  = Model::AVertexType;
+			using MeshData     = graphics::MeshData<VertexType>;
+			using AnimMeshData = graphics::MeshData<AVertexType>;
 
 			using Materials   = std::vector<ref<Material>>;
 			
@@ -77,30 +83,37 @@ namespace engine
 
 				bool load_textures  = true;
 				bool load_bones     = true;
-				bool load_animation = true;
 				bool load_collision = true;
 
 				std::optional<bool> is_animated = std::nullopt;
 
 				struct
 				{
-					bool is_right_handed = false;
 					bool flip_normals = false;
-					bool needs_reorientation = false;
 
-					std::optional<graphics::VertexWinding> vert_direction = std::nullopt;
+					graphics::VertexWinding vert_direction = graphics::VertexWinding::CounterClockwise;
 				} orientation;
 			};
 
+			// A manifold containing objects loaded from a model resource.
 			struct ModelData
 			{
 				Model model;
+
 				std::optional<Model::CollisionGeometry> collision = std::nullopt;
+
+				const Skeleton* skeleton = nullptr;
+				const std::vector<Animation>* animations = nullptr;
 
 				inline explicit operator bool() const { return static_cast<bool>(model); }
 
-				inline ModelData(Model&& model, std::optional<Model::CollisionGeometry>&& collision)
-					: model(std::move(model)), collision(std::move(collision)) {}
+				inline ModelData
+				(
+					Model&& model,
+					std::optional<Model::CollisionGeometry>&& collision,
+					const Skeleton* skeleton=nullptr,
+					const std::vector<Animation>* animations=nullptr
+				) : model(std::move(model)), collision(std::move(collision)), skeleton(skeleton), animations(animations) {}
 
 				ModelData(ModelData&&) = default;
 				ModelData(const ModelData&) = delete;
@@ -128,9 +141,12 @@ namespace engine
 
 			ModelStorage model_storage;
 			Materials materials;
+
+			Skeleton skeleton;
+			std::vector<Animation> animations;
 		public:
-			std::function<void(ModelLoader&, Texture&)> on_texture;
-			std::function<void(ModelLoader&, Material&)> on_material;
+			std::function<void(ModelLoader&, Texture&)>   on_texture;
+			std::function<void(ModelLoader&, Material&)>  on_material;
 			std::function<void(ModelLoader&, ModelData&)> on_model;
 			//std::function<void(ModelLoader&, pass_ref<ModelData>, const Bone&)> on_bone;
 
@@ -160,19 +176,30 @@ namespace engine
 				bool update_root_path=false
 			);
 
+			inline const Config& get_config() const { return cfg; }
+			inline pass_ref<Context> get_context() const { return context; }
+
 			//inline const ModelStorage& get_model_storage() const { return model_storage; }
 			inline ModelStorage& get_model_storage() { return model_storage; }
 			bool has_model_storage() const;
 
 			inline Materials& get_materials() { return materials; }
 			inline bool has_materials() const { return !materials.empty(); }
+
+			inline Skeleton& get_skeleton() { return skeleton; }
+			inline bool has_skeleton() { return skeleton.exists(); }
+
+			inline std::vector<Animation>& get_animations() { return animations; }
+			inline bool has_animations() const { return !animations.empty(); }
 		protected:
 			void store_model_data(ModelData&& model);
 
 			ref<Material> process_material(const aiScene* scene, const aiMaterial* native_material, bool load_values=true, bool load_textures=true);
 			ref<Texture> process_texture(const filesystem::path& texture_path);
-			void process_node(const aiScene* scene, const aiNode* node, const _aiMatrix4x4* scene_orientation=nullptr);
-			MeshData process_mesh(const aiScene* scene, const aiNode* node, const aiMesh* mesh, const _aiMatrix4x4* _scene_orientation=nullptr);
+			void process_node(const aiScene* scene, const aiNode* node, const _aiMatrix4x4* orientation=nullptr);
+			//MeshData process_mesh(const aiScene* scene, const aiNode* node, const aiMesh* mesh, const Skeleton* skeleton=nullptr, const _aiMatrix4x4* orientation=nullptr);
+			unsigned int process_bones(const aiScene* scene, const aiNode* node, const aiMesh* mesh, Skeleton& skeleton);
+			const std::vector<Animation> process_animations(const aiScene* scene, Skeleton& skeleton, const _aiMatrix4x4* orientation=nullptr);
 
 			ref<Context> context;
 

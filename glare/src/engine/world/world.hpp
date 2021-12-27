@@ -1,6 +1,8 @@
 #pragma once
 
 #include <engine/types.hpp>
+#include <engine/action.hpp>
+#include <engine/service.hpp>
 #include <engine/events/events.hpp>
 
 #include <graphics/types.hpp>
@@ -24,6 +26,7 @@
 #include "light.hpp"
 #include "player.hpp"
 #include "physics.hpp"
+#include "animation.hpp"
 
 #include "graphics_entity.hpp"
 
@@ -52,7 +55,7 @@ namespace engine
 
 	using WorldRenderState = graphics::WorldRenderState;
 
-	class World
+	class World : public Service
 	{
 		public:
 			using UpdateRate = app::DeltaTime::Rate;
@@ -63,9 +66,9 @@ namespace engine
 			app::DeltaTime delta_time;
 
 			mutable Registry registry;
-			EventHandler event_handler;
 
 			PhysicsSystem physics;
+			AnimationSystem animation;
 
 			// Scene root-node; parent to all world-bound entities.
 			Entity root   = null;
@@ -95,8 +98,6 @@ namespace engine
 			// Constructs a 'World' object, then immediately loads a map from the 'path' specified.
 			World(Config& config, ResourceManager& resource_manager, UpdateRate update_rate, const filesystem::path& path);
 
-			Entity load(const filesystem::path& root_path, bool override_current=false, const std::string& json_file="map.json");
-
 			template <typename EventType, auto fn, typename obj_type>
 			inline void register_event(obj_type& obj)
 			{
@@ -109,29 +110,7 @@ namespace engine
 				register_event<EventType, fn>(*this);
 			}
 
-			template <typename EventType, typename... Args>
-			inline void queue_event(Args&&... args)
-			{
-				event_handler.enqueue<EventType>(std::forward<Args>(args)...);
-			}
-
-			template <typename EventType>
-			inline void queue_event(EventType&& event_obj)
-			{
-				event_handler.enqueue(std::forward<EventType>(event_obj));
-			}
-
-			template <typename EventType, typename... Args>
-			inline void event(Args&&... args)
-			{
-				event_handler.trigger<EventType>(std::forward<Args>(args)...);
-			}
-
-			template <typename EventType>
-			inline void event(EventType&& event_obj)
-			{
-				event_handler.trigger(std::forward<EventType>(event_obj));
-			}
+			Entity load(const filesystem::path& root_path, bool override_current=false, const std::string& json_file="map.json");
 
 			void update(app::Milliseconds time);
 
@@ -266,12 +245,12 @@ namespace engine
 			math::Vector get_up_vector(math::Vector up={ 0.0f, 1.0f, 0.0f }) const;
 
 			Entity get_parent(Entity entity) const;
-			void set_parent(Entity entity, Entity parent, bool _null_as_root=true);
+			void set_parent(Entity entity, Entity parent, bool defer_action=false, bool _null_as_root=true);
 
 			Entity get_by_name(std::string_view name); // const;
+			Entity get_bone_by_name(Entity entity, std::string_view name, bool recursive=true);
 
 			inline Registry& get_registry() { return registry; }
-			inline EventHandler& get_event_handler() { return event_handler; }
 			inline ResourceManager& get_resource_manager() { return resource_manager; }
 
 			inline PhysicsSystem& get_physics() { return physics; }

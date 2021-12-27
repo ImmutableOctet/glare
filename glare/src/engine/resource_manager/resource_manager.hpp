@@ -13,6 +13,7 @@
 
 #include <types.hpp>
 #include <graphics/model.hpp>
+#include <graphics/animation.hpp>
 
 #include <engine/collision.hpp>
 
@@ -36,6 +37,23 @@ namespace graphics
 namespace engine
 {
 	class World;
+
+	using ModelRef = ref<graphics::Model>;
+	using WeakModelRef = weak_ref<graphics::Model>; // const graphics::Model*
+	using Animations = std::vector<graphics::Animation>;
+	using Models = std::vector<ModelRef>;
+
+	struct AnimationData
+	{
+		graphics::Skeleton skeleton;
+		Animations animations;
+	};
+
+	struct ModelData
+	{
+		Models models;
+		//AnimationData animations;
+	};
 
 	class ResourceManager
 	{
@@ -75,18 +93,19 @@ namespace engine
 				inline bool operator==(const CollisionData& data) const { return (this->collision_shape == data.collision_shape); }
 			};
 
+			using AnimationData = engine::AnimationData;
+
 			// Reference to a 'Model' object; used internally for path lookups, etc.
-			using ModelRef = ref<graphics::Model>;
-			using WeakModelRef = weak_ref<graphics::Model>; // const graphics::Model*
-			using Models = std::vector<ModelRef>;
+			using Models = engine::Models;
 
 			using ShaderRef = ref<graphics::Shader>;
 			using WeakShaderRef = weak_ref<graphics::Shader>;
 
-			// Output from load/creation function for models.
-			using ModelData = Models; // std::tuple<Models, const CollisionData*>; // ModelRef // std::optional<...> // ref<ModelLoader::ModelStorage>;
-
 			using TextureData = ref<graphics::Texture>;
+
+			// Output from load/creation function for models.
+			//using ModelData = Models; // std::tuple<Models, const CollisionData*>; // ModelRef // std::optional<...> // ref<ModelLoader::ModelStorage>;
+			using ModelData = engine::ModelData;
 
 			ResourceManager(pass_ref<graphics::Context> context, pass_ref<graphics::Shader> default_shader, pass_ref<graphics::Shader> default_animated_shader={});
 			~ResourceManager();
@@ -147,6 +166,10 @@ namespace engine
 
 			CollisionData generate_capsule_collision(float radius, float height); // ref<btCapsuleShape>
 			const CollisionData* get_collision(const WeakModelRef model) const;
+			const ref<AnimationData> get_animation_data(const WeakModelRef model) const;
+
+			// Links events from `world` to this resource manager instance.
+			void subscribe(World& world);
 		protected:
 			//inline static std::string resolve_path(const std::string& path) { return path; }
 
@@ -160,7 +183,9 @@ namespace engine
 			mutable std::unordered_map<std::string, ModelData> loaded_models; // Models // std::map // ModelRef
 			mutable std::unordered_map<std::string, ShaderRef> loaded_shaders; // std::map
 
-			mutable std::map<const WeakModelRef, CollisionData, std::owner_less<>> collision_data; //std::unordered_map<WeakModelRef, CollisionData, std::hash<WeakModelRef>, std::owner_less<>> collision_data;	
+			mutable std::map<const WeakModelRef, CollisionData, std::owner_less<>> collision_data; //std::unordered_map<WeakModelRef, CollisionData, std::hash<WeakModelRef>, std::owner_less<>> collision_data;
+
+			mutable std::map<const WeakModelRef, ref<AnimationData>, std::owner_less<>> animation_data;
 
 			//std::unordered_map<std::string, TextureData> texture_data;
 	};

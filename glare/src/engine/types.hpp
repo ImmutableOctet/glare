@@ -3,16 +3,31 @@
 #include <entt/entt.hpp>
 #include <math/math.hpp>
 #include <types.hpp>
+#include <graphics/types.hpp>
 
 #include <vector>
 
+namespace graphics
+{
+	struct Animation;
+}
+
 namespace engine
 {
+	class ResourceManager;
+	struct AnimationData;
+
+	class World;
+
 	using Registry     = entt::registry;
 	using Entity       = entt::entity;
 	using EventHandler = entt::dispatcher;
 
 	using Spline = std::vector<math::Vector>;
+
+	using Animation = graphics::Animation;
+
+	using BoneID = graphics::BoneID;
 
 	/*
 	template <typename... delegate_params>
@@ -21,8 +36,6 @@ namespace engine
 	template <typename... sink_parameters>
 	using Sink = entt::sink<sink_parameters...>;
 	*/
-
-	class World;
 
 	enum class Axis : std::uint8_t
 	{

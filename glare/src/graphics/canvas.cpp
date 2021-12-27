@@ -64,7 +64,7 @@ namespace graphics
 		context->bind(texture, name);
 	}
 
-	void Canvas::bind_texture(const Texture& texture, const std::string_view& name)
+	void Canvas::bind_texture(const Texture& texture, std::string_view name)
 	{
 		// Currently constructs a 'std::string' due to 'Context' requiring it.
 		bind_texture(texture, std::string(name));
@@ -261,11 +261,11 @@ namespace graphics
 			}
 
 			///*
-			bool is_ccw = (model.get_winding_order() == VertexWinding::CounterClockwise);
+			bool is_cw = (model.get_winding_order() == VertexWinding::Clockwise);
 
-			if (is_ccw)
+			if (is_cw)
 			{
-				context->set_winding_order(VertexWinding::CounterClockwise);
+				context->set_winding_order(VertexWinding::Clockwise);
 			}
 			//*/
 
@@ -278,9 +278,9 @@ namespace graphics
 			}
 
 			///*
-			if (is_ccw)
+			if (is_cw)
 			{
-				context->set_winding_order(VertexWinding::Clockwise);
+				context->set_winding_order(VertexWinding::CounterClockwise);
 			}
 			//*/
 		}

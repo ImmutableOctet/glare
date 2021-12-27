@@ -14,8 +14,8 @@
 
 namespace graphics
 {
-	Model::Model(Meshes&& meshes, VertexWinding vertex_winding) noexcept
-		: meshes(std::move(meshes)), vertex_winding(vertex_winding) {}
+	Model::Model(Meshes&& meshes, VertexWinding vertex_winding, bool animated) noexcept
+		: meshes(std::move(meshes)), vertex_winding(vertex_winding), animated(animated) {}
 
 	Model::Model(Model&& model) noexcept
 		: Model() { swap(*this, model); }
@@ -26,6 +26,7 @@ namespace graphics
 
 		swap(x.meshes, y.meshes);
 		swap(x.vertex_winding, y.vertex_winding);
+		swap(x.animated, y.animated);
 	}
 
 	const char* Model::get_texture_class_variable_raw(TextureClass type)

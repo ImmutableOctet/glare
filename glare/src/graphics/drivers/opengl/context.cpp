@@ -789,13 +789,14 @@ namespace graphics
 					//glCullFace(GL_FRONT);
 
 					// Default behavior:
-					glFrontFace(GL_CW);
-					//glFrontFace(GL_CCW);
+					glFrontFace(GL_CCW);
+					//glFrontFace(GL_CW);
 
-					//set_winding_order(VertexWinding::Clockwise);
 					//set_winding_order(VertexWinding::CounterClockwise);
+					//set_winding_order(VertexWinding::Clockwise);
 
 					glCullFace(GL_BACK);
+					//glCullFace(GL_FRONT);
 				}
 
 				// Debugging related:
@@ -877,7 +878,7 @@ namespace graphics
 				{
 					if (texture_stack[i] == texture)
 					{
-						return i;
+						return static_cast<int>(i);
 					}
 				}
 
@@ -1065,9 +1066,19 @@ namespace graphics
 
 		const auto primitive_type = Driver::get_primitive(primitive);
 		const auto offset = static_cast<GLint>(mesh.offset());
-		const auto count = static_cast<GLsizei>(mesh.size());
 
-		glDrawArrays(primitive_type, offset, count);
+		const auto& comp = mesh.get_composition();
+
+		if (comp.gl.EBO == NoHandle)
+		{
+			const auto count = static_cast<GLsizei>(mesh.size());
+			glDrawArrays(primitive_type, offset, count);
+		}
+		else
+		{
+			const auto count = static_cast<GLsizei>(mesh.indices());
+			glDrawElements(primitive_type, count, GL_UNSIGNED_INT, 0);
+		}
 	}
 
 	bool Context::set_uniform(Shader& shader, std::string_view name, std::int32_t value) // int
@@ -1243,7 +1254,7 @@ namespace graphics
 
 		const auto* data_ptr = reinterpret_cast<const GLfloat*>(values.data());
 
-		glUniform3fv(uniform, values.size(), data_ptr);
+		glUniform3fv(uniform, static_cast<GLsizei>(values.size()), data_ptr);
 
 		return true;
 	}
@@ -1261,7 +1272,7 @@ namespace graphics
 
 		const auto* data_ptr = reinterpret_cast<const GLfloat*>(values.data());
 
-		glUniformMatrix4fv(uniform, values.size(), GL_FALSE, data_ptr);
+		glUniformMatrix4fv(uniform, static_cast<GLsizei>(values.size()), GL_FALSE, data_ptr);
 
 		return true;
 	}
@@ -1279,7 +1290,7 @@ namespace graphics
 
 		const auto* data_ptr = reinterpret_cast<const GLfloat*>(values.data());
 
-		glUniform1fv(uniform, values.size(), data_ptr);
+		glUniform1fv(uniform, static_cast<GLsizei>(values.size()), data_ptr);
 
 		return true;
 	}
@@ -1356,7 +1367,7 @@ namespace graphics
 
 		const auto& buffer = driver.get_texture_indices(textures, texture_count);
 
-		glUniform1iv(uniform, texture_count, buffer.data());
+		glUniform1iv(uniform, static_cast<GLsizei>(texture_count), buffer.data());
 
 		return true;
 	}
@@ -1657,6 +1668,15 @@ namespace graphics
 		// TODO: Handle Static vs. Dynamic mesh data.
 		glBufferData(GL_ARRAY_BUFFER, (vertices.size() * vertex_size), vertices.data(), GL_STATIC_DRAW);
 
+		// Index Data:
+		if (indices_available)
+		{
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.EBO);
+
+			// TODO: Handle Static vs. Dynamic mesh data. (Less of a problem for indices)
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, (indices.size() * sizeof(MeshIndex)), indices.data(), GL_STATIC_DRAW);
+		}
+
 		const auto* fields = attributes.data();
 
 		// TODO: Look into unsigned sizes.
@@ -1673,19 +1693,13 @@ namespace graphics
 
 			ASSERT(type != GL_NONE);
 
+			glEnableVertexAttribArray(index);
+
 			// TODO: Look into normalization flag for OpenGL driver.
 			glVertexAttribPointer(index, element_count, type, GL_FALSE, stride, offset);
-			glEnableVertexAttribArray(index);
 		}
 
-		// Index Data:
-		if (indices_available)
-		{
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.EBO);
-
-			// TODO: Handle Static vs. Dynamic mesh data. (Less of a problem for indices)
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, (indices.size() * sizeof(MeshIndex)), indices.data(), GL_STATIC_DRAW);
-		}
+		glBindVertexArray(GL_NONE);
 
 		return { mesh };
 	}
@@ -2005,7 +2019,7 @@ namespace graphics
 
 		if (framebuffer.attachment_indices.size() > 0)
 		{
-			glDrawBuffers(framebuffer.attachment_indices.size(), framebuffer.attachment_indices.data());
+			glDrawBuffers(static_cast<GLsizei>(framebuffer.attachment_indices.size()), framebuffer.attachment_indices.data());
 		}
 		else
 		{

@@ -1,9 +1,12 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <regex>
 #include <utility>
 #include <optional>
+
+struct aiString;
 
 namespace util
 {
@@ -32,4 +35,6 @@ namespace util
 
 		return str;
 	}
+
+	std::string_view to_string_view(const aiString& str);
 }

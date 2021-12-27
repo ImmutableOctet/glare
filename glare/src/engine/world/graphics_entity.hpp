@@ -19,7 +19,8 @@ namespace graphics
 namespace engine
 {
 	class World;
-	//class ResourceManager;
+	class ResourceManager;
+	struct AnimationData;
 
 	/*
 	enum class RenderFlags : std::uint32_t
@@ -50,7 +51,7 @@ namespace engine
 
 	Entity load_model
 	(
-		World& world, const std::string& path, Entity parent=null, EntityType type=EntityType::Geometry, // const std::string_view& path,
+		World& world, const std::string& path, Entity parent=null, EntityType type=EntityType::Geometry, // std::string_view path,
 		
 		bool allow_multiple=true,
 		bool collision_enabled=false, float mass = 0.0f,
@@ -61,4 +62,8 @@ namespace engine
 
 		pass_ref<graphics::Shader> shader={}
 	);
+
+	Entity attach_animator(World& world, Entity entity, const pass_ref<AnimationData> animations, float rate=1.0f);
+
+	Entity create_bone(World& world, BoneID bone_id, const math::Matrix& local_transform, const math::Matrix& offset, std::string_view bone_name={}, Entity parent=null, EntityType type=EntityType::Bone);
 }
