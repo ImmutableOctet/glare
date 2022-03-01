@@ -2,15 +2,18 @@
 #include "world.hpp"
 
 #include <tuple>
+#include <utility>
 
 #include <engine/resource_manager/resource_manager.hpp>
 #include <engine/model_component.hpp>
+#include <engine/name_component.hpp>
 #include <engine/bone_component.hpp>
 #include <engine/world/animation.hpp>
 #include <engine/relationship.hpp>
 
 #include <graphics/model.hpp>
 #include <graphics/shader.hpp>
+#include <graphics/skeleton.hpp>
 
 namespace graphics
 {
@@ -22,7 +25,16 @@ namespace engine
 {
 	Entity create_model(World& world, pass_ref<graphics::Model> model, Entity parent, EntityType type)
 	{
+		ASSERT(model);
+
+		auto& registry = world.get_registry();
+
 		auto entity = create_entity(world, parent, type);
+
+		if (model->has_name())
+		{
+			registry.emplace<NameComponent>(entity, model->get_name());
+		}
 
 		return attach_model(world, entity, model);
 	}
@@ -37,6 +49,44 @@ namespace engine
 		//registry.emplace_or_replace<RenderFlagsComponent>(entity);
 
 		return entity;
+	}
+
+	static std::tuple<bool, Entity> build_ligaments(World& world, Entity parent, const graphics::Skeleton& skeleton, const std::pair<std::string, graphics::Bone>& bone_entry, bool generate_parent=true, bool check_for_existing=true)
+	{
+		const auto& bone_name = bone_entry.first;
+		const auto& bone_data = bone_entry.second;
+
+		const auto& parent_name = bone_data.parent_name;
+
+		if (generate_parent)
+		{
+			if (!parent_name.empty())
+			{
+				auto parent_it = skeleton.bones.find(parent_name);
+
+				if (parent_it != skeleton.bones.end())
+				{
+					auto new_parent = std::get<1>(build_ligaments(world, parent, skeleton, *parent_it, true, true));
+
+					if (new_parent != null)
+					{
+						parent = new_parent;
+					}
+				}
+			}
+		}
+
+		if (check_for_existing)
+		{
+			auto existing = world.get_bone_by_name(parent, bone_name, true); // false
+
+			if (existing != null)
+			{
+				return { false, existing };
+			}
+		}
+
+		return { true, create_bone(world, bone_data, bone_name, parent) };
 	}
 
 	Entity load_model
@@ -62,57 +112,46 @@ namespace engine
 			return null;
 		}
 
-		const auto animation_data = resource_manager.get_animation_data(model_data.models[0]);
+		const auto animation_data = resource_manager.get_animation_data(model_data.models[0].model);
 
 		auto& registry = world.get_registry();
 
-		auto create_skeleton = [&](Entity skeletal_parent)
+		auto create_skeleton = [&](Entity skinned_entity)
 		{
 			if (!animation_data)
 			{
 				return;
 			}
 
-			// Create all bones in the skeleton first:
-			for (const auto& bone_entry : animation_data->skeleton.bones)
-			{
-				const auto& bone_name = bone_entry.first;
-				const auto& bone = bone_entry.second;
+			print("Generating skeleton for {}...", world.label(skinned_entity));
 
-				create_bone(world, bone.id, bone.node_transform, bone.offset, bone_name, skeletal_parent);
+			const auto& skeleton = animation_data->skeleton;
+
+			// Create all bones in the skeleton first:
+			for (const auto& bone_entry : skeleton.bones)
+			{
+				build_ligaments(world, skinned_entity, skeleton, bone_entry);
 			}
 
-			// Reassign bones to their parents, if known:
-			auto& relationship = registry.get<Relationship>(skeletal_parent);
-
-			relationship.enumerate_children(registry, [&](Entity child, Relationship& relationship, Entity next_child)
-			{
-				const auto* bone = registry.try_get<BoneComponent>(child);
-
-				if (!bone)
-					return true;
-
-				const auto& parent_name = animation_data->skeleton.bones[bone->name].parent_name;
-
-				auto new_parent = world.get_bone_by_name(skeletal_parent, parent_name, false);
-
-				if (new_parent == null)
-					return true;
-
-				world.set_parent(child, new_parent, true); // false
-
-				//auto tform = world.get_transform(child);
-
-				//tform.set_matrix(offset);
-				//tform.set_local_matrix(bone->offset);
-
-				return true;
-			});
+			print("Skeleton generated.");
 		};
 
-		auto process_model = [&](ref<graphics::Model> model, Entity parent) -> Entity
+		auto process_model = [&](ModelData::ModelEntry model_entry, Entity parent) -> Entity
 		{
+			auto& model = model_entry.model;
+
 			auto entity = create_model(world, model, parent, type);
+
+			// Debugging related:
+			registry.emplace_or_replace<NameComponent>(entity, std::format("{} - {}", path, model->get_name()));
+
+			// Update model's scene-local transform:
+			{
+				auto tform = world.get_transform(entity);
+
+				tform.set_local_matrix(model_entry.transform);
+				//tform.set_matrix(model_entry.transform);
+			}
 
 			if (collision_enabled)
 			{
@@ -129,7 +168,7 @@ namespace engine
 				if (!animation_data->animations.empty())
 				{
 					create_skeleton(entity);
-					attach_animator(world, entity, animation_data, 0.01f);
+					attach_animator(world, entity, animation_data, 0.01f); // 0.01f
 				}
 			}
 
@@ -138,18 +177,11 @@ namespace engine
 
 		Entity entity = null;
 
-		if (allow_multiple)
+		if (allow_multiple && (model_data.models.size() > 1))
 		{
 			//ASSERT(!model_data.models.empty());
 
 			entity = engine::create_pivot(world, parent);
-
-			if (model_data.models.empty())
-			{
-				ASSERT(false); // <-- Debugging related.
-
-				return entity;
-			}
 
 			for (const auto& model : model_data.models)
 			{
@@ -158,10 +190,22 @@ namespace engine
 		}
 		else
 		{
+			if (model_data.models.empty())
+			{
+				ASSERT(false); // <-- Debugging related.
+
+				return entity;
+			}
+
 			entity = process_model(model_data.models[0], parent);
 		}
 		
 		return entity;
+	}
+
+	Entity create_cube(World& world, Entity parent, EntityType type)
+	{
+		return load_model(world, "assets/geometry/cube.b3d", parent, type, false);
 	}
 
 	Entity attach_animator(World& world, Entity entity, const pass_ref<AnimationData> animations, float rate)
@@ -187,6 +231,9 @@ namespace engine
 		auto entity = engine::create_pivot(world, parent, type);
 		//auto entity = engine::load_model(world, "assets/geometry/cone.b3d", parent, type, false);
 
+		// TODO: Look into optimizing out BoneComponent's `name` field.
+		registry.emplace<NameComponent>(entity, std::string(bone_name));
+
 		registry.emplace<BoneComponent>(entity, bone_id, std::string(bone_name), offset); // offset;
 
 		{
@@ -196,9 +243,14 @@ namespace engine
 		}
 
 		// Debugging related:
-		//auto dbg = engine::load_model(world, "assets/geometry/sphere.b3d", entity, type, false);
-		//auto dbg = engine::load_model(world, "assets/geometry/cube.b3d", entity, type, false);
-		auto dbg = engine::load_model(world, "assets/geometry/cone.b3d", entity, type, false);
+		auto dbg_parent = entity; // null;
+
+		auto dbg = engine::load_model(world, "assets/geometry/directions_small.b3d", dbg_parent, type, false);
+		//auto dbg = engine::load_model(world, "assets/geometry/cube.b3d", dbg_parent, type, false);
+
+		//auto dbg = engine::load_model(world, "assets/geometry/sphere.b3d", dbg_parent, type, false);
+		//auto dbg = engine::load_model(world, "assets/geometry/cone.b3d", dbg_parent, type, false);
+
 		//auto dbg = entity;
 
 		/*
@@ -206,6 +258,7 @@ namespace engine
 			auto dbg_tform = world.get_transform(dbg);
 
 			dbg_tform.set_local_matrix(offset);
+			//dbg_tform.set_local_matrix(local_transform);
 		}
 		*/
 
@@ -233,5 +286,10 @@ namespace engine
 		}
 
 		return entity;
+	}
+
+	Entity create_bone(World& world, const graphics::Bone& bone_data, std::string_view bone_name, Entity parent, EntityType type)
+	{
+		return create_bone(world, bone_data.id, bone_data.node_transform, bone_data.offset, bone_name, parent, type);
 	}
 }

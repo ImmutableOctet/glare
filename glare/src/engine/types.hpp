@@ -21,6 +21,7 @@ namespace engine
 
 	using Registry     = entt::registry;
 	using Entity       = entt::entity;
+	using EntityIDType = entt::id_type;
 	using EventHandler = entt::dispatcher;
 
 	using Spline = std::vector<math::Vector>;

@@ -31,6 +31,15 @@ namespace engine
 	class Stage
 	{
 		public:
+			struct Config
+			{
+				bool geometry = true;
+				bool objects  = true;
+				bool players  = true;
+
+				bool apply_transform = true;
+			};
+
 			using ObjectIndex = std::uint16_t; // std::string; // PlayerIndex;
 
 			using ObjectMap       = std::unordered_map<ObjectIndex, Entity>;
@@ -41,7 +50,7 @@ namespace engine
 
 			using ObjectCreationMap = std::unordered_map<std::string, ObjectCreationFunction>;
 
-			static Entity Load(World& world, Entity parent, const filesystem::path& root_path, const util::json& data);
+			static Entity Load(World& world, Entity parent, const filesystem::path& root_path, const util::json& data, const Config& cfg={});
 
 		protected:
 			static const ObjectCreationMap ObjectRoutines;

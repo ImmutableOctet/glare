@@ -4,6 +4,7 @@
 #include "action.hpp"
 
 #include <utility>
+#include <functional>
 
 namespace engine
 {
@@ -26,10 +27,22 @@ namespace engine
 				event_handler.sink<EventType>().connect<fn>(obj);
 			}
 
+			template <typename EventType, auto fn, typename obj_type>
+			inline void unregister_event(obj_type& obj)
+			{
+				event_handler.sink<EventType>().disconnect<fn>(obj);
+			}
+
 			template <typename EventType, auto fn>
 			inline void register_event()
 			{
 				register_event<EventType, fn>(*this);
+			}
+
+			template <typename EventType, auto fn>
+			inline void unregister_event()
+			{
+				unregister_event<EventType, fn>(*this);
 			}
 
 			template <typename EventType, typename... Args>
@@ -56,6 +69,13 @@ namespace engine
 				event_handler.trigger(std::forward<EventType>(event_obj));
 			}
 
+			// Unregisters all event triggers tied to a given object.
+			template <typename obj_type>
+			inline void unregister(obj_type& obj)
+			{
+				event_handler.disconnect(obj);
+			}
+
 			// Queues `fn` to be executed with `args` on the next call to `update`.
 			// Deferred calls (`Actions`) are executed in-order for the function-type specified.
 			// This means that lambdas can be used to uniquely queue a particular action in FIFO order.
@@ -65,6 +85,9 @@ namespace engine
 			inline void defer(fn_t&& f, arguments&&... args)
 			{
 				queue_event(make_action(std::forward<fn_t>(f), std::forward<arguments>(args)...));
+
+				// Debugging related:
+				//make_action(std::forward<fn_t>(f), std::forward<arguments>(args)...);
 			}
 
 			inline void update()

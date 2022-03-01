@@ -2,6 +2,8 @@
 
 #include "types.hpp"
 
+#include <util/log.hpp>
+
 namespace engine
 {
 	class World;
@@ -46,7 +48,7 @@ namespace engine
 
 			// Enumerates children, returning the 'Entity' stopped at by 'fn'.
 			template <typename enum_fn>
-			inline Entity enumerate_children(Registry& registry, enum_fn fn) const
+			inline Entity enumerate_children(Registry& registry, enum_fn fn, bool recursive=false) const
 			{
 				auto child = first;
 
@@ -66,10 +68,48 @@ namespace engine
 						break;
 					}
 
+					if (recursive)
+					{
+						auto result = relationship.enumerate_children(registry, fn, true);
+
+						if (result != null)
+						{
+							return result;
+						}
+					}
+
+					//print("Going from {} to {}", child, next_child);
+
 					child = next_child;
 				}
 
 				return child;
+			}
+
+			template <typename Container>
+			inline std::uint32_t get_children(Registry& registry, Container& out) const
+			{
+				std::uint32_t child_count = 0;
+
+				enumerate_children(registry, [&out, &child_count](Entity child, Relationship& relationship, Entity next_child)
+				{
+					out.push_back(static_cast<typename Container::value_type>(child));
+
+					child_count++;
+
+					return true;
+				});
+
+				return child_count;
+			}
+
+			inline auto get_children(Registry& registry) const
+			{
+				std::vector<Entity> out;
+
+				get_children(registry, out);
+
+				return out;
 			}
 
 			template <typename enum_fn>
@@ -82,6 +122,11 @@ namespace engine
 					auto& relationship = registry.get<Relationship>(child); // *this;
 					auto next_child = relationship.next;
 
+					if (child == next_child)
+					{
+						break;
+					}
+
 					if (!fn(child, next_child))
 					{
 						break;
@@ -91,6 +136,23 @@ namespace engine
 				}
 
 				return child;
+			}
+
+			// Reports the total number of children, including children of children, etc.
+			inline std::uint32_t count_nodes(Registry& registry) const
+			{
+				std::uint32_t count = 0;
+
+				enumerate_children(registry, [&registry, &count](Entity child, const Relationship& relationship, Entity next_child)
+				{
+					count++;
+
+					count += relationship.count_nodes(registry);
+
+					return true;
+				});
+
+				return count;
 			}
 		protected:
 			// Returns the 'Entity' identifier representing this object.

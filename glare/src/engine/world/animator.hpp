@@ -13,7 +13,7 @@ namespace engine
 			friend AnimationSystem;
 
 			static constexpr auto MAX_CHANNELS = graphics::VERTEX_MAX_BONE_INFLUENCE;
-			static constexpr unsigned int MAX_BONES = 48;
+			static constexpr unsigned int MAX_BONES = 128; // 16; // 48;
 
 			Animator(pass_ref<AnimationData> animations, const Animation* current_animation=nullptr, float rate=1.0f, float time=0.0f);
 
@@ -49,6 +49,7 @@ namespace engine
 			{
 				return pose;
 			}
+
 			inline std::size_t pose_size() const { return pose.size(); }
 	};
 }

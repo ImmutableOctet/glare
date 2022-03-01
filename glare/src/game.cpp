@@ -12,10 +12,13 @@
 #include <engine/engine.hpp>
 
 #include <util/variant.hpp>
+#include <engine/debug.hpp>
 
 #include <graphics/native/opengl.hpp>
 #include <graphics/world_render_state.hpp>
 
+#include <engine/events/events.hpp>
+#include <engine/type_component.hpp>
 #include <engine/world/spin_component.hpp>
 #include <engine/world/follow_component.hpp>
 #include <engine/world/light.hpp>
@@ -150,11 +153,17 @@ namespace glare
 		cfg(), // cfg(std::make_shared<engine::Config>()),
 		shaders(graphics),
 		resource_manager(graphics.context, shaders.default_shader, shaders.default_animated_shader), // shaders.forward
-		world(cfg, resource_manager, TARGET_UPDATE_RATE)
+		world(cfg, resource_manager, TARGET_UPDATE_RATE),
+		dbg_listener(world)
 	{
 		using namespace graphics;
 
-		/*
+		//GLint value = 0;
+		//glGetIntegerv(GL_MAX_COMBINED_VERTEX_UNIFORM_COMPONENTS, &value); // GL_MAX_VERTEX_BINDABLE_UNIFORMS_EXT
+
+		///*
+		glEnable(GL_DEBUG_OUTPUT);
+
 		glDebugMessageCallback([]
 		(
 			GLenum source,
@@ -165,16 +174,22 @@ namespace glare
 			const GLchar* message,
 			const void* userParam)
 		{
-			std::cout << "OpenGL (" << severity << "):" << '\n';
-			std::cout << message << '\n';
+			if (type == GL_DEBUG_TYPE_ERROR)
+			{
+				std::cout << "OPENGL ERROR DETECTED" << '\n';
+				std::cout << "OpenGL (" << severity << "):" << '\n';
+				std::cout << message << '\n';
+			}
 		}, this);
-		*/
+		//*/
 
 		/*
 		int screen_width, screen_height;
 
 		window->get_size(screen_width, screen_height);
 		*/
+
+		world.register_event<app::input::KeyboardState, &Glare::on_user_keyboard_input>(*this);
 
 		input.get_mouse().lock();
 
@@ -280,8 +295,6 @@ namespace glare
 
 	void Glare::setup_world(engine::World& world)
 	{
-		std::string path;
-
 		auto stage = world.load("assets/maps/test01");
 		//auto stage = world.load("assets/maps/test01 - old");
 
@@ -294,8 +307,6 @@ namespace glare
 
 		//make_lights(world);
 		make_models(world, player);
-
-		world.register_event<app::input::KeyboardState, &Glare::on_user_keyboard_input>(*this);
 	}
 
 	engine::Transform Glare::get_named_transform(std::string_view name)
@@ -337,7 +348,7 @@ namespace glare
 			auto t = transform(camera);
 			auto position = t.get_position();
 
-			std::string window_title = std::format("Camera position: {},{},{}", position.x, position.y, position.z);
+			std::string window_title = std::format("FPS: {} | Camera position: {},{},{}", graphics.framerate, position.x, position.y, position.z);
 
 			window->set_title(window_title);
 		}
@@ -354,8 +365,8 @@ namespace glare
 
 		// Backbuffer clear; for gbuffer, see below.
 
-		//graphics.context->clear(0.1f, 0.33f, 0.25f, 1.0f, BufferType::Color|BufferType::Depth); // gfx
-		graphics.context->clear(0.0f, 0.0f, 0.0f, 1.0f, BufferType::Color | BufferType::Depth);
+		graphics.context->clear(0.1f, 0.33f, 0.25f, 1.0f, BufferType::Color|BufferType::Depth); // gfx
+		//graphics.context->clear(0.0f, 0.0f, 0.0f, 1.0f, BufferType::Color | BufferType::Depth);
 		//graphics.context->clear(1.0f, 1.0f, 1.0f, 1.0f, BufferType::Color | BufferType::Depth);
 
 		auto camera = world.get_camera();
@@ -1036,9 +1047,8 @@ namespace glare
 
 		case SDLK_q:
 		{
-			auto t = world.get_transform(world.get_root());
-
-			t.move({ 0.0f, 0.01f * world.get_delta_time(), 0.0f });
+			//print("World: {}", world);
+			print_children(world, world.get_root());
 
 			break;
 		}

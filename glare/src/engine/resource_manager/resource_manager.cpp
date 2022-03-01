@@ -103,7 +103,13 @@ namespace engine
 				animation_data[loaded_model] = animations;
 			}
 
-			model_data_out.models.push_back(loaded_model);
+			model_data_out.models.push_back
+			(
+				ModelData::ModelEntry
+				{
+					loaded_model, model_data.transform
+				}
+			);
 		};
 
 		model_loader.load(path);

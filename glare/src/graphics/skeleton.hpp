@@ -26,6 +26,7 @@ namespace graphics
 
 		// Model-space to bone-local-space offset matrix.
 		math::Matrix offset;
+
 		//std::string name;
 	};
 
@@ -35,6 +36,9 @@ namespace graphics
 	struct Skeleton
 	{
 		using index_t = BoneID;
+
+		using IndexType = index_t;
+		using Container = std::unordered_map<std::string, Bone>; // std::vector<Bone>;
 
 		const Bone* get_bone(index_t bone_index) const;
 		const Bone* get_bone(std::string_view name) const;
@@ -60,7 +64,6 @@ namespace graphics
 		//std::size_t size() const { return bones.size(); }
 		index_t size() const { return static_cast<index_t>(bones.size()); }
 
-		//std::vector<Bone> bones;
-		std::unordered_map<std::string, Bone> bones;
+		Container bones;
 	};
 }

@@ -17,6 +17,8 @@
 // Debugging related:
 #include <iostream>
 
+#include <engine/model_component.hpp>
+
 namespace engine
 {
 	const char* DEFAULT_PLAYER_NAME = "Player";
@@ -39,9 +41,25 @@ namespace engine
 				//model_path = "assets/geometry/sphere.b3d";
 				//model_path = "assets/geometry/torus.b3d";
 				
-				//model_path = "assets/geometry/Multi_Torus.b3d";
+				model_path = "assets/geometry/Multi_Torus.b3d";
+				//model_path = "assets/geometry/direction_boxes-4.b3d";
+
+				///model_path = "assets/geometry/Multi_Torus_Pose.b3d";
 				
-				model_path = "assets/geometry/boxes.b3d";
+
+				//model_path = "assets/geometry/boxes.b3d";
+				//model_path = "assets/geometry/direction_boxes.b3d";
+				//model_path = "assets/geometry/direction_boxes-2.b3d";
+				//model_path = "assets/geometry/direction_boxes-3.b3d";
+				//model_path = "assets/geometry/direction_boxes-move-up.b3d";
+				//model_path = "assets/geometry/direction_boxes-move-left.b3d";
+				//model_path = "assets/geometry/direction_boxes-move-forward.b3d";
+				//model_path = "assets/geometry/direction_boxes-scale.b3d";
+				//model_path = "assets/geometry/direction_boxes-rotate-x.b3d";
+				//model_path = "assets/geometry/direction_boxes-rotate-y.b3d";
+				
+				///model_path = "assets/geometry/direction_boxes-rotate-z.b3d";
+
 				//model_path = "assets/geometry/anims_with_full_rotations_between_keys.dae";
 				
 				//model_path = "assets/geometry/vampire/dancing_vampire.dae";
@@ -49,14 +67,6 @@ namespace engine
 				//model_path = "assets/objects/skeleton_test/a.b3d";
 
 				//model_path = "assets/characters/nanosuit/nanosuit.obj";
-
-				/*
-				model_path
-				=
-				"assets/characters/nanosuit/nanosuit.obj"
-				//"assets/tests/model_test/Sonic/Sonic.b3d"
-				;
-				*/
 
 				break;
 			default:
@@ -67,18 +77,8 @@ namespace engine
 
 		//auto player = load_model(world, "assets/tests/model_test/cube.b3d", parent, EntityType::Player);
 		auto player = create_pivot(world, parent, EntityType::Player);
-		//auto player_model = create_pivot(world, player);
+		
 		auto player_model = load_model(world, model_path, player);
-
-		/*
-		{
-			auto model_t = world.get_transform(player_model);
-			
-			std::cout << model_t.get_local_position() << std::endl;
-		}
-		*/
-
-		//auto player = player_model;
 
 		registry.emplace<NameComponent>(player, name);
 

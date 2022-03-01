@@ -111,6 +111,13 @@ namespace math
 	{
 		return Quaternion(q.w, q.x, q.y, q.z);
 	}
+
+	Quaternion to_quat_flipped(const aiQuaternion& q)
+	{
+		//return Quaternion(-q.w, q.z, q.y, q.x);
+		//return Quaternion(q.w, q.x, -q.y, q.z);
+		return Quaternion(q.w, -q.x, q.y, -q.z);
+	}
 	
 	Vector abs(Vector v)
 	{

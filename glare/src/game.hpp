@@ -88,6 +88,7 @@ namespace glare
 
 			engine::ResourceManager resource_manager;
 			engine::World world;
+			engine::DebugListener dbg_listener;
 
 			//engine::Entity model_entity;
 
@@ -108,6 +109,7 @@ namespace glare
 
 			engine::Transform get_named_transform(std::string_view name);
 
+			void on_stage_loaded(const engine::OnStageLoaded& stage_info);
 			void on_user_keyboard_input(const app::input::KeyboardState& keyboard);
 
 			void update(app::Milliseconds time) override;

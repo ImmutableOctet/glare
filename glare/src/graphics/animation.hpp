@@ -104,14 +104,14 @@ namespace graphics
 			inline auto get_scale_index(float timestamp)    const { return get_index(timestamp, scales);    }
 
 			math::Vector interpolated_position(float timestamp) const;
-			math::Quaternion interpolated_rotation(float timestamp) const;
+			math::Quaternion interpolated_rotation(float timestamp, bool flip_direction=false) const;
 			math::Vector interpolated_scale(float timestamp) const;
 
 			math::Matrix interpolated_position_matrix(float timestamp) const;
-			math::Matrix interpolated_rotation_matrix(float timestamp) const;
+			math::Matrix interpolated_rotation_matrix(float timestamp, bool flip_direction=false) const;
 			math::Matrix interpolated_scale_matrix(float timestamp) const;
 
-			math::Matrix interpolated_matrix(float timestamp) const;
+			math::Matrix interpolated_matrix(float timestamp, bool flip_rotation=false) const;
 
 			std::vector<KeyPosition> positions;
 			std::vector<KeyRotation> rotations;

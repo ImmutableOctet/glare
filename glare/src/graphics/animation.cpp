@@ -24,7 +24,7 @@ namespace graphics
 	}
 
 	template <typename Keys, typename index_t, typename MixFn>
-	static auto interpolate(float timestamp, const Keys& keys, index_t index, MixFn&& mix_fn) -> decltype(Keys::value_type::value)
+	static auto interpolate(float timestamp, const Keys& keys, index_t index, MixFn&& mix_fn, bool flip_direction=false) -> decltype(Keys::value_type::value)
 	{
 		ASSERT(!keys.empty());
 
@@ -36,7 +36,16 @@ namespace graphics
 		const auto& prev = keys[(index)];
 		const auto& next = keys[(index + 1)];
 
-		float blend = Animation::KeySequence::blend_factor(timestamp, prev.timestamp, next.timestamp);
+		float blend;
+
+		if (flip_direction)
+		{
+			blend = Animation::KeySequence::blend_factor(timestamp, next.timestamp, prev.timestamp);
+		}
+		else
+		{
+			blend = Animation::KeySequence::blend_factor(timestamp, prev.timestamp, next.timestamp);
+		}
 
 		return mix_fn(prev.value, next.value, blend);
 	}
@@ -70,7 +79,8 @@ namespace graphics
 			keys, key_count, out,
 			[&orientation](const aiQuaternion& q)
 			{
-				auto quat = math::to_quat(q);
+				auto quat = math::to_quat_flipped(q); // math::to_quat(q);
+
 				return quat; // orientation * ...;
 			}
 		);
@@ -96,14 +106,15 @@ namespace graphics
 		);
 	}
 
-	math::Quaternion Animation::KeySequence::interpolated_rotation(float timestamp) const
+	math::Quaternion Animation::KeySequence::interpolated_rotation(float timestamp, bool flip_direction) const
 	{
 		return interpolate
 		(
 			timestamp, rotations,
 			get_rotation_index(timestamp),
 			[](const math::Quaternion& prev, const math::Quaternion& next, float blend)
-			{ return glm::slerp(prev, next, blend); }
+			{ return glm::slerp(prev, next, blend); },
+			flip_direction
 		);
 	}
 
@@ -123,9 +134,9 @@ namespace graphics
 		return glm::translate(glm::mat4(1.0f), interpolated_position(timestamp));
 	}
 
-	math::Matrix Animation::KeySequence::interpolated_rotation_matrix(float timestamp) const
+	math::Matrix Animation::KeySequence::interpolated_rotation_matrix(float timestamp, bool flip_direction) const
 	{
-		return glm::toMat4(interpolated_rotation(timestamp));
+		return glm::toMat4(interpolated_rotation(timestamp, flip_direction));
 	}
 
 	math::Matrix Animation::KeySequence::interpolated_scale_matrix(float timestamp) const
@@ -133,10 +144,10 @@ namespace graphics
 		return glm::scale(glm::mat4(1.0f), interpolated_scale(timestamp));
 	}
 
-	math::Matrix Animation::KeySequence::interpolated_matrix(float timestamp) const
+	math::Matrix Animation::KeySequence::interpolated_matrix(float timestamp, bool flip_rotation) const
 	{
 		auto translation = interpolated_position_matrix(timestamp);
-		auto rotation = interpolated_rotation_matrix(timestamp);
+		auto rotation = interpolated_rotation_matrix(timestamp, flip_rotation);
 		auto scale = interpolated_scale_matrix(timestamp);
 
 		return (translation * rotation * scale);

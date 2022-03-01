@@ -156,6 +156,7 @@ namespace math
 	Matrix to_matrix(const aiMatrix4x4& m);
 
 	Quaternion to_quat(const aiQuaternion& q); // to_quaternion(...)
+	Quaternion to_quat_flipped(const aiQuaternion& q);
 
 	Vector abs(Vector v);
 

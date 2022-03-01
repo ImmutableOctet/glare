@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+//#include <string_view>
 #include <vector>
 #include <utility>
 #include <optional>
@@ -114,6 +115,8 @@ namespace graphics
 			VertexWinding vertex_winding = VertexWinding::CounterClockwise;
 		protected:
 			bool animated = false;
+
+			std::string name;
 		public:
 			friend void swap(Model& x, Model& y);
 
@@ -127,7 +130,10 @@ namespace graphics
 
 			// TODO: Verify non-const access.
 			inline Meshes& get_meshes() { return meshes; };
+			inline const std::string& get_name() const { return name; }
+
 			inline bool has_meshes() const { return !meshes.empty(); }
+			inline bool has_name() const { return !name.empty(); }
 
 			inline bool is_animated() const { return animated; }
 

@@ -15,6 +15,8 @@
 
 //#include <type_traits>
 
+#include <util/log.hpp>
+
 // Debugging related:
 #include <iostream>
 
@@ -51,25 +53,13 @@ namespace engine
 		*/
 
 		int coordAxis = 0;
-		int coordAxisSign = -1;
+		int coordAxisSign = 1;
 
 		int upAxis = 1;
 		int upAxisSign = 1;
 
 		int frontAxis = 2;
 		int frontAxisSign = -1;
-
-		if (is_right_handed)
-		{
-			upAxis = 1;
-			upAxisSign = -1;
-
-			frontAxis = 2;
-			frontAxisSign = -1;
-
-			coordAxis = 0;
-			coordAxisSign = 1;
-		}
 
 		if (scene && scene->mMetaData)
 		{
@@ -94,9 +84,9 @@ namespace engine
 		);
 
 		aiMatrix4x4 rotation;
-		aiMatrix4x4::RotationX(math::radians(180.0f), rotation);
+		aiMatrix4x4::RotationZ(math::radians(90.0f), rotation);
 
-		//out = out * rotation.Inverse();
+		out = out * rotation;
 
 		return out;
 	}
@@ -110,6 +100,8 @@ namespace engine
 	{
 		using VertexType = typename MeshData::Vertex;
 		using MeshIndex  = ModelLoader::MeshIndex;
+		
+		bool _test = (util::to_string_view(node->mName) == "Geosphere");
 
 		const auto vertex_count = (mesh->mNumVertices);
 
@@ -138,12 +130,18 @@ namespace engine
 
 			if (orientation)
 			{
-				const auto& m = (*reinterpret_cast<const aiMatrix4x4*>(orientation));
+				const auto& _m = (*reinterpret_cast<const aiMatrix4x4*>(orientation));
+				//auto m = _m; m.Inverse();
+				const auto& m = _m;
+
+				bool _is_identity = m.IsIdentity();
 
 				vertex.position  =  math::to_vector(m * position);
 				vertex.normal    =  math::to_vector(m * normal);
 				vertex.tangent   =  math::to_vector(m * tangent);
-				vertex.bitangent = (math::to_vector(m * bitangent) * -1.0f);
+
+				////vertex.bitangent = (math::to_vector(m * bitangent) * -1.0f);
+				vertex.bitangent = math::to_vector(m * bitangent);
 
 				if (uv_channels)
 				{
@@ -334,6 +332,8 @@ namespace engine
 		//flags |= aiProcess_FlipWindingOrder;
 		//flags |= aiProcess_ValidateDataStructure;
 
+		//bool _dbg = (path == "assets/geometry/boxes.b3d");
+
 		if (path.ends_with(".b3d"))
 		{
 			//flags |= aiProcess_MakeLeftHanded;
@@ -377,6 +377,8 @@ namespace engine
 		aiMatrix4x4 scene_orientation;
 
 		//scene_orientation = get_scene_orientation(scene, false);
+		scene_orientation = scene->mRootNode->mTransformation;
+		//scene_orientation.Inverse();
 
 		// Handle materials & textures:
 		materials.reserve(scene->mNumMaterials);
@@ -393,15 +395,59 @@ namespace engine
 			scene,
 			scene->mRootNode,
 
+			reinterpret_cast<_aiMatrix4x4*>(&scene_orientation),
 			reinterpret_cast<_aiMatrix4x4*>(&scene_orientation)
 		);
 
 		if (is_animated)
 		{
+			print("Generating missing bones...");
+
+			unsigned int additional_bones = 0;
+
+			for (const auto& bone_entry : skeleton.bones)
+			{
+				additional_bones += handle_missing_bone(*scene, skeleton, bone_entry.second.parent_name);
+			}
+
+			print("{} additional bone(s) generated.", additional_bones);
+
 			process_animations(scene, skeleton, nullptr); // reinterpret_cast<_aiMatrix4x4*>(&inv_root_tform) <-- Not needed; these are relative movements.
 		}
 
 		return get_model_storage();
+	}
+
+	unsigned int ModelLoader::handle_missing_bone(const aiScene& scene, Skeleton& skeleton, const std::string& bone_name, bool recursive)
+	{
+		if (bone_name.empty())
+		{
+			return 0;
+		}
+
+		unsigned int bones_generated = 0;
+
+		auto& bones = skeleton.bones;
+		auto bone_it = bones.find(bone_name);
+
+		if (bone_it == bones.end())
+		{
+			print("Generating missing bone: \"{}\"", bone_name);
+
+			auto* bone = process_bone(scene, skeleton, aiString(bone_name), {});
+
+			if (bone)
+			{
+				if (recursive)
+				{
+					bones_generated += handle_missing_bone(scene, skeleton, bone->parent_name, true);
+				}
+
+				bones_generated++;
+			}
+		}
+
+		return bones_generated;
 	}
 
 	bool ModelLoader::has_model_storage() const
@@ -423,11 +469,9 @@ namespace engine
 		return graphics::Mesh::Generate(loader.get_context(), mesh_data);
 	}
 
-	void ModelLoader::process_node(const aiScene* scene, const aiNode* node, const _aiMatrix4x4* orientation)
+	void ModelLoader::process_node(const aiScene* scene, const aiNode* node, const _aiMatrix4x4* orientation, const _aiMatrix4x4* global_orientation)
 	{
-		std::cout << "Node: " << util::to_string_view(node->mName);
-		std::cout << ", Children: " << node->mNumChildren;
-		std::cout << ", Meshes: " << node->mNumMeshes << '\n';
+		print("Node: {}, Children: {}, Meshes: {}", util::to_string_view(node->mName), node->mNumChildren, node->mNumMeshes);
 
 		aiMatrix4x4 node_matrix;
 
@@ -452,6 +496,11 @@ namespace engine
 
 			model.animated = is_animated;
 
+			if (node->mName.length > 0)
+			{
+				model.name = util::to_string_view(node->mName);
+			}
+
 			// Allocate mesh descriptors for each material:
 			model.meshes.reserve(materials.size());
 
@@ -470,11 +519,11 @@ namespace engine
 
 				ASSERT(mesh);
 
-				std::cout << "Bones: " << mesh->mNumBones << '\n';
+				print("Bones: {}", mesh->mNumBones);
 
 				if (mesh->mNumBones > 0)
 				{
-					process_bones(scene, node, mesh, skeleton);
+					process_bones(*scene, *node, *mesh, skeleton);
 				}
 
 				auto material_index = mesh->mMaterialIndex;
@@ -489,19 +538,48 @@ namespace engine
 						*this, scene, node, mesh,
 						((collision_enabled) ? &collision_geometry : nullptr),
 						((skeleton.exists()) ? &skeleton : nullptr),
-						//((cfg.orientation.needs_reorientation) ? reinterpret_cast<const _aiMatrix4x4*>(&node_matrix) : nullptr)
-						reinterpret_cast<const _aiMatrix4x4*>(&node_matrix)
+
+						//orientation
+						//reinterpret_cast<const _aiMatrix4x4*>(&node_matrix)
+						//reinterpret_cast<const _aiMatrix4x4*>(&node->mTransformation)
+						//nullptr
+						
+						global_orientation
 					);
 				}
 				else
 				{
+					//auto _global = *reinterpret_cast<const aiMatrix4x4*>(global_orientation); _global.Inverse();
+					//aiMatrix4x4 _inv_parent;
+
+					/*
+					if (node->mParent)
+					{
+						_inv_parent = node->mParent->mTransformation; _inv_parent.Inverse();
+					}
+					*/
+
+					//_inv_parent = node->mTransformation; _inv_parent.Inverse();
+
+					//auto test = _global * node_matrix;
+					//auto test = _global * node_matrix * _inv_parent;
+					//auto test = _global * node->mTransformation;
+					//test.Inverse();
+
 					mesh_out = handle_mesh<MeshData>
 					(
 						*this, scene, node, mesh,
 						((collision_enabled) ? &collision_geometry : nullptr),
 						((skeleton.exists()) ? &skeleton : nullptr),
-						//((cfg.orientation.needs_reorientation) ? reinterpret_cast<const _aiMatrix4x4*>(&node_matrix) : nullptr)
-						reinterpret_cast<const _aiMatrix4x4*>(&node_matrix)
+						
+						//reinterpret_cast<const _aiMatrix4x4*>(&test)
+
+						//orientation
+						//reinterpret_cast<const _aiMatrix4x4*>(&node_matrix)
+						//reinterpret_cast<const _aiMatrix4x4*>(&node->mTransformation)
+						//nullptr
+						
+						global_orientation
 					);
 				}
 
@@ -541,8 +619,11 @@ namespace engine
 
 			store_model_data
 			(
+				ModelData
 				{
 					std::move(model),
+
+					math::to_matrix(node_matrix),
 
 					// Construct collision geometry object from populated container.
 					(collision_enabled)
@@ -560,7 +641,7 @@ namespace engine
 		{
 			const auto* child = node->mChildren[i];
 
-			process_node(scene, child, reinterpret_cast<const _aiMatrix4x4*>(&node_matrix));
+			process_node(scene, child, reinterpret_cast<const _aiMatrix4x4*>(&node_matrix), global_orientation);
 		}
 	}
 
@@ -593,106 +674,88 @@ namespace engine
 		return get_recursive_transform(scene, *bone_node, true);
 	}
 
-	static aiMatrix4x4 get_scene_orientation2(const aiScene* scene)
+	const graphics::Bone* ModelLoader::process_bone(const aiScene& scene, Skeleton& skeleton, const aiString& bone_name, const aiMatrix4x4& offset_matrix) // std::string_view bone_name
 	{
-		//return scene->mRootNode->mTransformation;
+		std::string parent_bone_name;
+
+		const auto* bone_node = scene.mRootNode->FindNode(bone_name);
+
+		if (!bone_node)
+		{
+			print_warn("Unable to determine node for bone \"{}\"", util::to_string_view(bone_name));
+
+			return nullptr;
+		}
+
+		if (bone_node->mParent)
+		{
+			if (bone_node->mParent->mName.length > 0)
+			{
+				parent_bone_name = std::string(util::to_string_view(bone_node->mParent->mName));
+			}
+		}
 
 		/*
-		int upAxis = 1;
-		int upAxisSign = 1;
+		auto local_transform = bone_node->mTransformation;
 
-		int frontAxis = 2;
-		int frontAxisSign = 1;
+		if (parent_bone_name.empty())
+		{
+			auto inv_root_matrix = scene.mRootNode->mTransformation; inv_root_matrix.Inverse();
+			local_transform = inv_root_matrix * local_transform;
+		}
 
-		int coordAxis = 0;
-		int coordAxisSign = -1;
+		// Debugging related:
+		//auto tform = get_bone_transform(*scene, bone_data->mName);
+		//auto tform = get_recursive_transform(scene, *bone_node, true);
+
+		const auto& tform = local_transform;
 		*/
 
-		int coordAxis = 0;
-		int coordAxisSign = 1;
+		///*
+		auto bt = bone_node->mTransformation;
 
-		int upAxis = 1;
-		int upAxisSign = 1;
+		if (parent_bone_name.empty())
+		{
+			auto inv_root_matrix = scene.mRootNode->mTransformation; inv_root_matrix.Inverse();
+			bt = inv_root_matrix * bt;
+		}
 
-		int frontAxis = 2;
-		int frontAxisSign = -1;
+		const auto& tform = bt;
+		//*/
 
-		upAxis = 1;
-		upAxisSign = -1;
+		print("Creating bone: \"{}\" (parent: \"{}\")", util::to_string_view(bone_name), (parent_bone_name.empty()) ? "null" : parent_bone_name);
 
-		frontAxis = 2;
-		frontAxisSign = -1;
+		//return skeleton.add_bone(&bone_data, math::to_matrix(tform), parent_bone_name);
 
-		coordAxis = 0;
-		coordAxisSign = 1;
-
-		aiVector3D upVec = upAxis == 0 ? aiVector3D(static_cast<ai_real>(upAxisSign), 0, 0) : upAxis == 1 ? aiVector3D(0, static_cast<ai_real>(upAxisSign), 0) : aiVector3D(0, 0, static_cast<ai_real>(upAxisSign));
-		aiVector3D forwardVec = frontAxis == 0 ? aiVector3D(static_cast<ai_real>(frontAxisSign), 0, 0) : frontAxis == 1 ? aiVector3D(0, static_cast<ai_real>(frontAxisSign), 0) : aiVector3D(0, 0, static_cast<ai_real>(frontAxisSign));
-		aiVector3D rightVec = coordAxis == 0 ? aiVector3D(static_cast<ai_real>(coordAxisSign), 0, 0) : coordAxis == 1 ? aiVector3D(0, static_cast<ai_real>(coordAxisSign), 0) : aiVector3D(0, 0, static_cast<ai_real>(coordAxisSign));
-		
-		auto out = aiMatrix4x4
+		return skeleton.add_bone
 		(
-			rightVec.x, rightVec.y, rightVec.z, 0.0f,
-			upVec.x, upVec.y, upVec.z, 0.0f,
-			forwardVec.x, forwardVec.y, forwardVec.z, 0.0f,
-			0.0f, 0.0f, 0.0f, 1.0f
+			util::to_string_view(bone_name),
+			math::to_matrix(tform),
+			math::to_matrix(offset_matrix),
+			parent_bone_name
 		);
 
-		aiMatrix4x4 rotation;
-		aiMatrix4x4::RotationX(math::radians(180.0f), rotation);
-
-		//out = out * rotation.Inverse();
-
-		return out;
+		//const Bone* add_bone(std::string_view name, const math::Matrix & node_transform, const math::Matrix & offset, const std::string & parent_bone_name = {});
+		//const Bone* add_bone(std::string_view name, const std::string & parent_bone_name = {});
+		//const Bone* add_bone(const aiBone * bone_raw, const math::Matrix & node_transform, const std::string & parent_bone_name = {});
 	}
 
-	unsigned int ModelLoader::process_bones(const aiScene* scene, const aiNode* node, const aiMesh* mesh, Skeleton& skeleton)
+	unsigned int ModelLoader::process_bones(const aiScene& scene, const aiNode& node, const aiMesh& mesh, Skeleton& skeleton)
 	{
 		unsigned int bones_processed = 0;
 
-		for (unsigned int i = 0; i < mesh->mNumBones; i++)
+		for (unsigned int i = 0; i < mesh.mNumBones; i++)
 		{
-			const aiBone* bone_data = mesh->mBones[i];
+			const aiBone* bone_data = mesh.mBones[i];
 
 			auto* bone_ptr = skeleton.get_bone(bone_data);
-			
-			if (!bone_ptr)
+
+			if ((!bone_ptr) && (bone_data))
 			{
-				std::string parent_bone_name;
-
-				const auto* bone_node = scene->mRootNode->FindNode(bone_data->mName);
-
-				if (!bone_node)
+				if (process_bone(scene, skeleton, bone_data->mName, bone_data->mOffsetMatrix))
 				{
-					continue;
+					bones_processed++;
 				}
-
-				if (bone_node->mParent)
-				{
-					if (bone_node->mParent->mName.length > 0)
-					{
-						parent_bone_name = std::string(util::to_string_view(bone_node->mParent->mName));
-					}
-				}
-
-				//auto tform = get_bone_transform(*scene, bone_data->mName);
-				//auto tform = get_recursive_transform(*scene, *bone_node, true);
-
-				auto bt = bone_node->mTransformation;
-				//bt.Inverse();
-
-				auto tform = get_scene_orientation2(scene) * bt;
-
-				auto inv_root_matrix = scene->mRootNode->mTransformation; inv_root_matrix.Inverse();
-				tform = inv_root_matrix * tform;
-				//tform = get_scene_orientation(scene, true) * tform;
-
-				skeleton.add_bone
-				(
-					bone_data, math::to_matrix(tform), parent_bone_name
-				);
-
-				bones_processed++;
 			}
 		}
 
@@ -732,7 +795,14 @@ namespace engine
 				auto* bone = skeleton.get_bone(bone_name);
 				//auto* bone = skeleton.get_or_create_bone(bone_name);
 
-				ASSERT(bone);
+				//ASSERT(bone);
+
+				if (!bone)
+				{
+					print_warn("Unable to resolve bone: {}", bone_name);
+
+					continue;
+				}
 
 				auto bone_id = bone->id;
 
@@ -771,7 +841,7 @@ namespace engine
 					return; // Continue enumeration.
 				}
 
-				std::cout << "Texture: " << native_type << " (" << texture_count << ")" << '\n';
+				print("Texture: {} ({})", native_type, texture_count);
 
 				auto texture_type_var = Model::get_texture_class_variable(texture_type);
 

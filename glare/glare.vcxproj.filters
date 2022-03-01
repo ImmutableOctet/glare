@@ -377,6 +377,9 @@
     <ClInclude Include="src\engine\action.hpp">
       <Filter>src\engine\engine</Filter>
     </ClInclude>
+    <ClInclude Include="src\engine\debug.hpp">
+      <Filter>src\engine\engine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\tests\model_test\shaders\8.1.deferred_light_box.fs">
@@ -461,7 +464,7 @@
       <Filter>shaders\shadow_mapping\directional</Filter>
     </None>
     <None Include="assets\maps\test01\map.json">
-      <Filter>maps</Filter>
+      <Filter>maps\test01</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -563,6 +566,9 @@
     </Filter>
     <Filter Include="src\util\util">
       <UniqueIdentifier>{c0c7e464-e801-41cc-a18f-d232f1adc33d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="maps\test01">
+      <UniqueIdentifier>{08836fbf-d152-4517-8c76-2deb6cb696d7}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -746,6 +752,9 @@
       <Filter>src\engine\world</Filter>
     </ClCompile>
     <ClCompile Include="src\engine\world\animator.cpp" />
+    <ClCompile Include="src\engine\debug.cpp">
+      <Filter>src\engine\engine</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />

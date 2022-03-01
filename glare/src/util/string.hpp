@@ -6,6 +6,8 @@
 #include <utility>
 #include <optional>
 
+//#include <fmt/core.h>
+
 struct aiString;
 
 namespace util
@@ -13,6 +15,13 @@ namespace util
 	std::string lowercase(std::string str);
 	std::smatch get_regex_groups(const std::string& s, const std::regex& re);
 	std::smatch parse_regex(const std::string& str, const std::string& regex_str);
+
+	inline std::string quote(const std::string& str)
+	{
+		//return fmt::format("\"{}\"", str);
+
+		return "\"" + str + "\"";
+	}
 
 	template <typename First>
 	inline std::string concat(First&& f)

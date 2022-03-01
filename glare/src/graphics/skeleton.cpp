@@ -2,13 +2,10 @@
 
 #include <assimp/mesh.h>
 
+#include <util/string.hpp>
+
 namespace graphics
 {
-	static std::string_view get_bone_name(const aiBone* bone_raw)
-	{
-		return std::string_view { bone_raw->mName.C_Str(), bone_raw->mName.length };
-	}
-
 	/*
 	const Bone* Skeleton::get_bone(index_t bone_index) const
 	{
@@ -70,7 +67,7 @@ namespace graphics
 
 	const Bone* Skeleton::get_bone(const aiBone* bone_raw) const
 	{
-		return get_bone(get_bone_name(bone_raw));
+		return get_bone(util::to_string_view(bone_raw->mName));
 	}
 
 	const Bone* Skeleton::add_bone(std::string_view name, const math::Matrix& node_transform, const math::Matrix& offset, const std::string& parent_bone_name)
@@ -82,7 +79,7 @@ namespace graphics
 
 		BoneID bone_id = static_cast<BoneID>(bones.size());
 
-		return &(bones[std::string(name)] = Bone{ bone_id, parent_bone_name, node_transform, offset });
+		return &(bones[std::string(name)] = Bone{ .id=bone_id, .parent_name=parent_bone_name, .node_transform=node_transform, .offset=offset });
 	}
 
 	const Bone* Skeleton::add_bone(std::string_view name, const std::string& parent_bone_name)
@@ -94,9 +91,12 @@ namespace graphics
 	{
 		return add_bone
 		(
-			get_bone_name(bone_raw),
+			util::to_string_view(bone_raw->mName),
 			node_transform,
-			math::to_matrix(bone_raw->mOffsetMatrix),
+			//math::to_matrix(bone_raw->mOffsetMatrix),
+			{},
+			//(math::to_matrix(bone_raw->mOffsetMatrix) * glm::inverse(node_transform)),
+			//(node_transform * math::to_matrix(bone_raw->mOffsetMatrix)),
 			parent_bone_name
 		);
 	}

@@ -51,8 +51,20 @@ namespace engine
 
 	struct ModelData
 	{
+		// May change this later to be the same as the `ModelLoader` class's `ModelData` type.
+		struct ModelEntry
+		{
+			ModelRef model;
+			math::Matrix transform;
+		};
+
+		/*
 		Models models;
+		std::vector<math::Matrix> matrices;
 		//AnimationData animations;
+		*/
+
+		std::vector<ModelEntry> models;
 	};
 
 	class ResourceManager

@@ -257,6 +257,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\collision.hpp" />
     <ClInclude Include="src\engine\components.hpp" />
     <ClInclude Include="src\engine\config.hpp" />
+    <ClInclude Include="src\engine\debug.hpp" />
     <ClInclude Include="src\engine\engine.hpp" />
     <ClInclude Include="src\engine\events\events.hpp" />
     <ClInclude Include="src\engine\events\input.hpp" />
@@ -384,6 +385,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\app\window.cpp" />
     <ClCompile Include="src\engine\collision.cpp" />
     <ClCompile Include="src\engine\config.cpp" />
+    <ClCompile Include="src\engine\debug.cpp" />
     <ClCompile Include="src\engine\free_look.cpp" />
     <ClCompile Include="src\engine\model_component.cpp" />
     <ClCompile Include="src\engine\relationship.cpp" />

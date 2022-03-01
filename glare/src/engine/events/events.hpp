@@ -109,7 +109,7 @@ namespace engine
 
 	struct OnStageLoaded
 	{
-		Entity root;
+		Entity stage;
 		std::optional<std::filesystem::path> path = std::nullopt;
 	};
 

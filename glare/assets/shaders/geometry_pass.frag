@@ -114,7 +114,7 @@ void main()
         
         uv = parallax_mapping(height_map, texture_uv, tangent_view_direction, height_map_scale, height_map_min_layers, height_map_max_layers);
 
-        vec2 test = uv; // vec2(1.0-uv.x, uv.y);
+        //vec2 test = uv; // vec2(1.0-uv.x, uv.y);
 
         //if ((test.x > 1.0) || (test.x < 0.0))
         //    discard;

@@ -1,7 +1,9 @@
 #pragma once
 
 #include <types.hpp>
+
 #include <graphics/types.hpp>
+
 #include <engine/collision.hpp>
 
 #include "entity.hpp"
@@ -14,6 +16,8 @@ namespace graphics
 	class Model;
 	class Shader;
 	//class Context;
+
+	struct Bone;
 }
 
 namespace engine
@@ -63,7 +67,10 @@ namespace engine
 		pass_ref<graphics::Shader> shader={}
 	);
 
+	Entity create_cube(World& world, Entity parent=null, EntityType type=EntityType::Default);
+
 	Entity attach_animator(World& world, Entity entity, const pass_ref<AnimationData> animations, float rate=1.0f);
 
 	Entity create_bone(World& world, BoneID bone_id, const math::Matrix& local_transform, const math::Matrix& offset, std::string_view bone_name={}, Entity parent=null, EntityType type=EntityType::Bone);
+	Entity create_bone(World& world, const graphics::Bone& bone_data, std::string_view bone_name = {}, Entity parent=null, EntityType type=EntityType::Bone);
 }

@@ -15,11 +15,11 @@ namespace engine
 		//world.register_event<...>(*this);
 	}
 
-	static void animate_bones(World& world, Animator& animator, const Animation& current_animation, Relationship& relationship)
+	static void animate_bones(World& world, const math::Matrix& inv_root_matrix, Animator& animator, const Animation& current_animation, Relationship& relationship)
 	{
 		auto& registry = world.get_registry();
 
-		relationship.enumerate_children(registry, [&world, &registry, &animator, &current_animation](Entity child, Relationship& relationship, Entity next_child) -> bool
+		relationship.enumerate_children(registry, [&world, &inv_root_matrix, &registry, &animator, &current_animation](Entity child, Relationship& relationship, Entity next_child) -> bool
 		{
 			auto* bone_detail = registry.try_get<BoneComponent>(child);
 
@@ -37,15 +37,32 @@ namespace engine
 				return true;
 			}
 
-			auto bone_matrix = (sequence->interpolated_matrix(animator.time) * bone_detail->offset);
+			auto local_bone_matrix = sequence->interpolated_matrix(animator.time, false);
+
+			auto bone_matrix = (local_bone_matrix * bone_detail->offset); // true
 			//auto bone_matrix = bone_detail->offset;
 			//auto bone_matrix = sequence->interpolated_matrix(animator.time);
 
-			animator.pose[bone_id] = bone_matrix;
+			//animator.pose[bone_id] = bone_matrix;
+			//animator.pose[bone_id] = local_bone_matrix;
+			
+			{
+				auto bone_tform = world.get_transform(child);
+				bone_tform.set_local_matrix(local_bone_matrix); // sequence->interpolated_matrix(animator.time, true)
+				//bone_tform.set_local_matrix(bone_matrix);
 
-			auto bone_tform = world.get_transform(child);
+				//animator.pose[bone_id] = glm::identity<glm::mat4>();
+				//animator.pose[bone_id] = bone_matrix;
 
-			bone_tform.set_local_matrix(bone_matrix);
+				//animator.pose[bone_id] = (bone_tform.get_matrix() * bone_detail->offset);
+				//animator.pose[bone_id] = (bone_tform.get_local_matrix() * bone_detail->offset * inv_root_matrix);
+
+				//animator.pose[bone_id] = bone_tform.get_matrix();
+
+				animator.pose[bone_id] = (inv_root_matrix * bone_tform.get_matrix() * bone_detail->offset);
+				//animator.pose[bone_id] = (bone_tform.get_matrix() * bone_detail->offset);
+				//animator.pose[bone_id] = bone_detail->offset;
+			}
 
 			// Get current bone state (matrix) based on ID, time, and data found in 'current_animation'.
 			// Update bone entity's transform in-engine to correspond to new matrix.
@@ -61,11 +78,11 @@ namespace engine
 
 			if (bone_rel)
 			{
-				animate_bones(world, animator, current_animation, *bone_rel);
+				animate_bones(world, inv_root_matrix, animator, current_animation, *bone_rel);
 			}
 
 			return true;
-		});
+		}, true);
 	}
 
 	void AnimationSystem::update(World& world, float delta_time)
@@ -92,7 +109,15 @@ namespace engine
 
 			const Animation& current_animation = *animator.current_animation;
 
-			animate_bones(world, animator, current_animation, relationship);
+			math::Matrix inv_root_matrix;
+
+			{
+				auto tform = Transform(registry, entity, relationship, tform_comp);
+
+				inv_root_matrix = tform.get_inverse_matrix();
+			}
+
+			animate_bones(world, inv_root_matrix, animator, current_animation, relationship);
 
 			//if (current_animation.duration > 1.0f) ...
 			
@@ -100,12 +125,12 @@ namespace engine
 
 			auto prev_time = animator.time;
 			
-			animator.time += ((current_animation.rate * animator.rate) * delta_time);
+			animator.time += ((current_animation.rate * animator.rate) * delta_time) * 0.1;
 
 			if (animator.time >= current_animation.duration)
 			{
-				//animator.time = 0.0f;
-				animator.time = std::fmod(animator.time, current_animation.duration);
+				animator.time = 0.0f;
+				//animator.time = std::fmod(animator.time, current_animation.duration);
 				//animator.time -= current_animation.duration;
 
 				world.event(OnAnimationComplete { entity, &animator, &current_animation });

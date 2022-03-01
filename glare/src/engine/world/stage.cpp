@@ -41,7 +41,7 @@ namespace engine
 		{ "scenery",       Stage::CreateScenery      }
 	};
 
-    Entity Stage::Load(World& world, Entity parent, const filesystem::path& root_path, const util::json& data)
+    Entity Stage::Load(World& world, Entity parent, const filesystem::path& root_path, const util::json& data, const Stage::Config& cfg)
     {
 		constexpr PlayerIndex NoPlayer = PlayerState::NoPlayer;
 
@@ -68,129 +68,136 @@ namespace engine
 		//auto& resource_manager = world.get_resource_manager();
 
 		// Stage geometry:
-		///*
-		print("Loading scene geometry...");
-
-		ForEach(data["models"], [&](const auto& model_cfg)
+		if (cfg.geometry)
 		{
-			auto model_path = (root_path / model_cfg["path"].get<std::string>()).string();
+			print("Loading scene geometry...");
 
-			bool collision_enabled = util::get_value(model_cfg, "collision", true);
+			ForEach(data["models"], [&](const auto& model_cfg)
+			{
+				auto model_path = (root_path / model_cfg["path"].get<std::string>()).string();
 
-			print("Loading geometry from \"{}\"...\n", model_path);
+				bool collision_enabled = util::get_value(model_cfg, "collision", true);
 
-			auto model = load_model(world, model_path, stage, EntityType::Geometry, true, collision_enabled);
+				print("Loading geometry from \"{}\"...\n", model_path);
 
-			print("Applying transformation to stage geometry...");
+				auto model = load_model(world, model_path, stage, EntityType::Geometry, true, collision_enabled);
 
-			apply_transform(world, model, model_cfg);
-		});
-		//*/
+				print("Applying transformation to stage geometry...");
+
+				apply_transform(world, model, model_cfg);
+			});
+		}
 
 		// Players:
-		print("Loading players...");
-
-		PlayerIndex player_idx_counter = 1;
-
-		ForEach(data["players"], [&](const auto& player_cfg)
+		if (cfg.players)
 		{
-			auto& registry = world.get_registry();
+			print("Loading players...");
 
-			auto player_tform  = get_transform_data(player_cfg);
-			auto player_char   = get_character(util::get_value<std::string>(player_cfg, "character", "default"));
-			auto player_name   = util::get_value<std::string>(player_cfg, "name", DEFAULT_PLAYER_NAME);
-			auto player_idx    = util::get_value<PlayerIndex>(player_cfg, "index", player_idx_counter);
-			auto player_parent = stage; // null;
+			PlayerIndex player_idx_counter = 1;
 
-			print("Player #{}", player_idx);
-			print("Name: {}", player_name);
-			print("Character: {}", player_char);
-
-			auto player = create_player(world, player_tform, player_char, player_name, player_parent, player_idx);
-
-			print("Entity: {}", player);
-			print("Parent: {}", player_parent);
-
-			if (player_idx != NoPlayer)
+			ForEach(data["players"], [&](const auto& player_cfg)
 			{
-				player_objects[player_idx] = player;
-			}
+				auto& registry = world.get_registry();
 
-			/*
-			if (util::get_value(player_cfg, "debug", false))
-			{
-				// TODO.
-			}
-			*/
+				auto player_tform  = get_transform_data(player_cfg);
+				auto player_char   = get_character(util::get_value<std::string>(player_cfg, "character", "default"));
+				auto player_name   = util::get_value<std::string>(player_cfg, "name", DEFAULT_PLAYER_NAME);
+				auto player_idx    = util::get_value<PlayerIndex>(player_cfg, "index", player_idx_counter);
+				auto player_parent = stage; // null;
 
-			player_idx_counter = std::max((player_idx_counter+1), (player_idx+1));
-		});
+				print("Player #{}", player_idx);
+				print("Name: {}", player_name);
+				print("Character: {}", player_char);
 
+				auto player = create_player(world, player_tform, player_char, player_name, player_parent, player_idx);
+
+				print("Entity: {}", player);
+				print("Parent: {}", player_parent);
+
+				if (player_idx != NoPlayer)
+				{
+					player_objects[player_idx] = player;
+				}
+
+				/*
+				if (util::get_value(player_cfg, "debug", false))
+				{
+					// TODO.
+				}
+				*/
+
+				player_idx_counter = std::max((player_idx_counter+1), (player_idx+1));
+			});
+		}
 
 		// Objects:
-		print("Loading objects...");
-
-		ObjectIndex obj_idx_counter = 1; // std::uint16_t
-
-		ForEach(data["objects"], [&](const auto& obj_cfg)
+		if (cfg.objects)
 		{
-			auto obj_type = util::get_value<std::string>(obj_cfg, "type", "");
+			print("Loading objects...");
 
-			Entity obj = null;
+			ObjectIndex obj_idx_counter = 1; // std::uint16_t
 
-			if (obj_type.empty())
+			ForEach(data["objects"], [&](const auto& obj_cfg)
 			{
-				auto tform = get_transform_data(obj_cfg);
+				auto obj_type = util::get_value<std::string>(obj_cfg, "type", "");
 
-				obj = create_pivot(world, tform, stage);
-			}
-			else
-			{
-				auto o = ObjectRoutines.find(obj_type);
+				Entity obj = null;
 
-				if (o == ObjectRoutines.end())
+				if (obj_type.empty())
 				{
-					print_warn("Unkown object detected: \"{}\"", obj_type);
+					auto tform = get_transform_data(obj_cfg);
+
+					obj = create_pivot(world, tform, stage);
 				}
 				else
 				{
-					auto obj_fn = o->second;
+					auto o = ObjectRoutines.find(obj_type);
 
-					print("Creating object of type \"{}\"...", obj_type);
-
-					obj = obj_fn(world, stage, root_path, player_objects, objects, obj_cfg);
-
-					if (obj != null)
+					if (o == ObjectRoutines.end())
 					{
-						apply_transform(world, obj, obj_cfg);
-						apply_color(world, obj, obj_cfg);
+						print_warn("Unkown object detected: \"{}\"", obj_type);
+					}
+					else
+					{
+						auto obj_fn = o->second;
 
-						resolve_parent(world, obj, stage, root_path, player_objects, objects, obj_cfg);
+						print("Creating object of type \"{}\"...", obj_type);
 
-						print("\"{}\" object created.", obj_type);
+						obj = obj_fn(world, stage, root_path, player_objects, objects, obj_cfg);
+
+						if (obj != null)
+						{
+							apply_transform(world, obj, obj_cfg);
+							apply_color(world, obj, obj_cfg);
+
+							resolve_parent(world, obj, stage, root_path, player_objects, objects, obj_cfg);
+
+							print("\"{}\" object created.", obj_type);
+						}
 					}
 				}
-			}
 
-			if (obj != null)
-			{
-				auto obj_idx = util::get_value<ObjectIndex>(obj_cfg, "index", obj_idx_counter);
-				auto obj_name = util::get_value<std::string>(obj_cfg, "name", "");
-
-				print("Object name: {}", obj_name);
-
-				if (!obj_name.empty())
+				if (obj != null)
 				{
-					registry.emplace<NameComponent>(obj, obj_name);
+					auto obj_idx = util::get_value<ObjectIndex>(obj_cfg, "index", obj_idx_counter);
+					auto obj_name = util::get_value<std::string>(obj_cfg, "name", "");
+
+					print("Object name: {}", obj_name);
+
+					if (!obj_name.empty())
+					{
+						registry.emplace<NameComponent>(obj, obj_name);
+					}
+
+					objects[obj_idx] = obj;
+
+					obj_idx_counter = std::max((obj_idx_counter + 1), (obj_idx + 1));
 				}
-
-				objects[obj_idx] = obj;
-
-				obj_idx_counter = std::max((obj_idx_counter + 1), (obj_idx + 1));
-			}
-		});
+			});
+		}
 
 		// Apply stage transform, etc.
+		if (cfg.apply_transform)
 		{
 			auto tform = util::get_transform(data);
 

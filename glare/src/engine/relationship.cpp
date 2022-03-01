@@ -4,7 +4,7 @@
 #include <math/math.hpp>
 
 // Debugging related:
-#include <iostream>
+#include <util/log.hpp>
 
 namespace engine
 {
@@ -31,6 +31,9 @@ namespace engine
 			return null;
 		}
 
+		//auto _test_ent = static_cast<Entity>(37);
+		//auto* _test_rel = (registry.valid(_test_ent)) ? registry.try_get<Relationship>(_test_ent) : nullptr;
+
 		auto* prev_rel = registry.try_get<Relationship>(self);
 		Entity prev_parent = null;
 
@@ -38,6 +41,8 @@ namespace engine
 		{
 			prev_parent = prev_rel->parent;
 		}
+
+		//print("I am: {}, my previous parent is: {}, and my new parent is going to be: {}", self, prev_parent, parent);
 
 		auto& parent_relationship = registry.get_or_emplace<Relationship>(parent);
 
@@ -57,13 +62,13 @@ namespace engine
 			return null;
 		}
 
-		bool has_child = false;
+		bool already_has_child = false;
 
 		enumerate_children(registry, [&](auto current, auto& relation, auto next)
 		{
 			if (current == child)
 			{
-				has_child = true;
+				already_has_child = true;
 
 				return false;
 			}
@@ -71,7 +76,7 @@ namespace engine
 			return true;
 		});
 
-		if (has_child)
+		if (already_has_child)
 		{
 			return child;
 		}
@@ -111,21 +116,24 @@ namespace engine
 
 		math::Matrix current_matrix;
 
-		std::optional<Transform> self_transform = Transform::get_transform_safe(registry, self);
 		std::optional<Transform> child_transform = Transform::get_transform_safe(registry, child);
 
 		if (child_transform)
 		{
-			current_matrix = self_transform->get_inverse_matrix() * child_transform->get_local_matrix();
+			if (std::optional<Transform> self_transform = Transform::get_transform_safe(registry, self))
+			{
+				current_matrix = self_transform->get_inverse_matrix() * child_transform->get_local_matrix();
+			}
 		}
 
+		/*
 		if ((self != null) && (((int)self) != 0))
 		{
-			//auto con = util::log::get_console();
-			////std::cout << "Adding child (" << (int)child << ") to parent (" << (int)self << ")\n";
+			print("Adding child ({}) to parent ({})", (int)child, (int)self);
 
 			//_dbg_is_actual_add = true;
 		}
+		*/
 
 		registry.emplace_or_replace<Relationship>(child, std::move(relationship));
 
@@ -155,11 +163,9 @@ namespace engine
 		auto child_relationship = registry.get<Relationship>(child);
 
 		///*
-		math::Matrix current_matrix;
+		std::optional<math::Matrix> current_matrix = std::nullopt;
 
-		std::optional<Transform> child_transform = Transform::get_transform_safe(registry, child);
-
-		if (child_transform)
+		if (std::optional<Transform> child_transform = Transform::get_transform_safe(registry, child))
 		{
 			current_matrix = child_transform->get_matrix();
 		}
@@ -177,14 +183,17 @@ namespace engine
 		}
 
 		///*
-		if (child_transform)
+		if (current_matrix)
 		{
-			//if (_dbg_is_actual_removal)
-			//{
-			std::cout << "Re-applying matrix...\n";
-			//}
+			if (std::optional<Transform> child_transform = Transform::get_transform_safe(registry, child))
+			{
+				//if (_dbg_is_actual_removal)
+				//{
+				print("Re-applying matrix...");
+				//}
 
-			child_transform->set_matrix(current_matrix);
+				child_transform->set_matrix(*current_matrix);
+			}
 		}
 		//*/
 
@@ -294,11 +303,11 @@ namespace engine
 		if (!relationship)
 		{
 			relationship = registry.try_get<Relationship>(entity);
-		}
 
-		if (!relationship)
-		{
-			return nullptr;
+			if (!relationship)
+			{
+				return nullptr;
+			}
 		}
 
 		auto parent = relationship->parent;

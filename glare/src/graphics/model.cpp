@@ -27,6 +27,7 @@ namespace graphics
 		swap(x.meshes, y.meshes);
 		swap(x.vertex_winding, y.vertex_winding);
 		swap(x.animated, y.animated);
+		swap(x.name, y.name);
 	}
 
 	const char* Model::get_texture_class_variable_raw(TextureClass type)

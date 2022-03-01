@@ -20,6 +20,7 @@
 #include <utility>
 #include <variant>
 #include <optional>
+//#include <fstream>
 
 #include "entity.hpp"
 #include "camera.hpp"
@@ -98,16 +99,52 @@ namespace engine
 			// Constructs a 'World' object, then immediately loads a map from the 'path' specified.
 			World(Config& config, ResourceManager& resource_manager, UpdateRate update_rate, const filesystem::path& path);
 
+			~World();
+
 			template <typename EventType, auto fn, typename obj_type>
 			inline void register_event(obj_type& obj)
 			{
 				event_handler.sink<EventType>().connect<fn>(obj);
 			}
 
-			template <typename EventType, auto fn>
+			template <typename EventType, auto fn, typename obj_type>
+			inline void unregister_event(obj_type& obj)
+			{
+				event_handler.sink<EventType>().disconnect<fn>(obj);
+			}
+
+			template <typename EventType, auto Fn>
 			inline void register_event()
 			{
-				register_event<EventType, fn>(*this);
+				register_event<EventType, Fn>(*this);
+			}
+
+			template <typename EventType, auto Fn>
+			inline void unregister_event()
+			{
+				unregister_event<EventType, Fn>(*this);
+			}
+
+			template <typename obj_type>
+			inline void unregister(obj_type& obj)
+			{
+				event_handler.disconnect(obj);
+			}
+
+			template <typename subscriber_type>
+			inline World& subscribe(subscriber_type& sub)
+			{
+				sub.subscribe(*this);
+
+				return *this;
+			}
+
+			template <typename subscriber_type>
+			inline World& unsubscribe(subscriber_type& sub)
+			{
+				unregister(sub);
+
+				return *this;
 			}
 
 			Entity load(const filesystem::path& root_path, bool override_current=false, const std::string& json_file="map.json");
@@ -245,10 +282,32 @@ namespace engine
 			math::Vector get_up_vector(math::Vector up={ 0.0f, 1.0f, 0.0f }) const;
 
 			Entity get_parent(Entity entity) const;
-			void set_parent(Entity entity, Entity parent, bool defer_action=false, bool _null_as_root=true);
 
+			void set_parent
+			(
+				Entity entity, Entity parent,
+				bool defer_action=false,
+				
+				bool _null_as_root=true, bool _is_deferred=false
+			);
+
+			// Returns a label for the entity specified.
+			// If no `NameComponent` is associated with the entity, the entity number will be used.
+			std::string label(Entity entity);
+
+			// Returns the name associated to the `entity` specified.
+			// If no `NameComponent` is associated with the entity, an empty string will be returned.
+			std::string get_name(Entity entity);
+
+			// Retrieves the first entity found with the `name` specified.
+			// NOTE: Multiple entities can share the same name.
 			Entity get_by_name(std::string_view name); // const;
+
+			// Retrieves the first bone child-entity found with the name specified.
 			Entity get_bone_by_name(Entity entity, std::string_view name, bool recursive=true);
+
+			// Retrieves the first child-entity found with the name specified, regardless of other attributes/components. (includes both bone & non-bone children)
+			Entity get_child_by_name(Entity entity, std::string_view child_name, bool recursive=true);
 
 			inline Registry& get_registry() { return registry; }
 			inline ResourceManager& get_resource_manager() { return resource_manager; }
@@ -279,6 +338,13 @@ namespace engine
 			void on_new_collider(const OnComponentAdd<CollisionComponent>& new_col);
 			void on_transform_change(const OnTransformChange& tform_change);
 			void on_entity_destroyed(const OnEntityDestroyed& destruct);
+
+			// Same as `defer`, but implicitly forwards `this` prior to any arguments following the target function; useful for deferring member functions.
+			template <typename fn_t, typename... arguments>
+			inline void later(fn_t&& f, arguments&&... args)
+			{
+				defer(std::forward<fn_t>(f), this, std::forward<arguments>(args)...);
+			}
 		private:
 			// Renders models with the given draw-mode.
 			void draw_models

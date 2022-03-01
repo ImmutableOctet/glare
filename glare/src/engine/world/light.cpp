@@ -140,7 +140,8 @@ namespace engine
 	template <typename TFormData>
 	static TFormData get_tform_data(const math::Matrix4x4& light_projection, const math::Vector& light_position)
 	{
-		static_assert(false, "Implementation missing.");
+		//static_assert(false, "Implementation missing.");
+		ASSERT(false);
 	}
 
 	template <>
@@ -201,11 +202,13 @@ namespace engine
 					r = shadows->shadow_map.get_resolution();
 				}
 
-				auto width = r.x/12; // std::sqrtf(r.x); // 20.0f; // 200.0f;
-				auto height = r.y/12; // std::sqrtf(r.y);; // 20.0f; // 200.0f;
+				auto div = 16; // 24;
 
-				//auto width = r.x / 4;
-				//auto height = r.y / 4;
+				auto width = r.x/div; // 20.0f; // 200.0f;
+				auto height = r.y/div; // 20.0f; // 200.0f;
+
+				//auto width = std::sqrtf(r.x);
+				//auto height = std::sqrtf(r.y);
 
 				auto hw = (width / 2.0f);
 				auto hh = (height / 2.0f);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <vector>
 #include <optional>
 #include <filesystem>
@@ -100,6 +101,8 @@ namespace engine
 			{
 				Model model;
 
+				math::Matrix transform;
+
 				std::optional<Model::CollisionGeometry> collision = std::nullopt;
 
 				const Skeleton* skeleton = nullptr;
@@ -110,15 +113,16 @@ namespace engine
 				inline ModelData
 				(
 					Model&& model,
-					std::optional<Model::CollisionGeometry>&& collision,
+					const math::Matrix& transform,
+					std::optional<Model::CollisionGeometry>&& collision=std::nullopt,
 					const Skeleton* skeleton=nullptr,
 					const std::vector<Animation>* animations=nullptr
 				) : model(std::move(model)), collision(std::move(collision)), skeleton(skeleton), animations(animations) {}
 
-				ModelData(ModelData&&) = default;
+				ModelData(ModelData&&) noexcept = default;
 				ModelData(const ModelData&) = delete;
 
-				ModelData& operator=(ModelData&&) = default;
+				ModelData& operator=(ModelData&&) noexcept = default;
 			};
 			
 			using ModelVector = std::vector<ModelData>;
@@ -196,9 +200,13 @@ namespace engine
 
 			ref<Material> process_material(const aiScene* scene, const aiMaterial* native_material, bool load_values=true, bool load_textures=true);
 			ref<Texture> process_texture(const filesystem::path& texture_path);
-			void process_node(const aiScene* scene, const aiNode* node, const _aiMatrix4x4* orientation=nullptr);
+			void process_node(const aiScene* scene, const aiNode* node, const _aiMatrix4x4* orientation=nullptr, const _aiMatrix4x4* global_orientation=nullptr);
 			//MeshData process_mesh(const aiScene* scene, const aiNode* node, const aiMesh* mesh, const Skeleton* skeleton=nullptr, const _aiMatrix4x4* orientation=nullptr);
-			unsigned int process_bones(const aiScene* scene, const aiNode* node, const aiMesh* mesh, Skeleton& skeleton);
+			
+			const graphics::Bone* process_bone(const aiScene& scene, Skeleton& skeleton, const aiString& bone_name, const aiMatrix4x4& offset_matrix); // std::string_view
+			unsigned int process_bones(const aiScene& scene, const aiNode& node, const aiMesh& mesh, Skeleton& skeleton);
+			unsigned int handle_missing_bone(const aiScene& scene, Skeleton& skeleton, const std::string& bone_name, bool recursive=true);
+
 			const std::vector<Animation> process_animations(const aiScene* scene, Skeleton& skeleton, const _aiMatrix4x4* orientation=nullptr);
 
 			ref<Context> context;

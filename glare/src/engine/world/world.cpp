@@ -18,6 +18,7 @@
 #include <math/math.hpp>
 
 #include <util/json.hpp>
+#include <util/string.hpp>
 #include <util/io.hpp>
 #include <util/log.hpp>
 #include <util/variant.hpp>
@@ -42,6 +43,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <utility>
 //#include <filesystem>
 
 #include <bullet/btBulletCollisionCommon.h>
@@ -60,9 +62,9 @@ namespace engine
 		register_event<OnTransformChange, &World::on_transform_change>();
 		register_event<OnEntityDestroyed, &World::on_entity_destroyed>();
 
-		resource_manager.subscribe(*this);
-		physics.subscribe(*this);
-		animation.subscribe(*this);
+		subscribe(resource_manager);
+		subscribe(physics);
+		subscribe(animation);
 
 		root = create_pivot(*this);
 	}
@@ -85,6 +87,16 @@ namespace engine
 		: World(config, resource_manager, update_rate)
 	{
 		load(path);
+	}
+
+	World::~World()
+	{
+		// Not actually needed:
+		/*
+		unsubscribe(resource_manager);
+		unsubscribe(physics);
+		unsubscribe(animation);
+		*/
 	}
 
 	Entity World::load(const filesystem::path& root_path, bool override_current, const std::string& json_file)
@@ -111,7 +123,7 @@ namespace engine
 
 			print("Loading...");
 
-			auto map = Stage::Load(*this, parent, root_path, map_data);
+			auto map = Stage::Load(*this, parent, root_path, map_data); // { .geometry = false }
 
 			if (!is_child_stage)
 			{
@@ -596,6 +608,7 @@ namespace engine
 					bool is_animated = ((animator->animated()) && model_component.model->is_animated());
 					
 					shader["animated"] = is_animated;
+					//shader["animated"] = false;
 
 					shader["bone_matrices"] = animator->get_pose();
 				}
@@ -691,8 +704,16 @@ namespace engine
 		return relationship->get_parent();
 	}
 
-	void World::set_parent(Entity entity, Entity parent, bool defer_action, bool _null_as_root)
+	void World::set_parent
+	(
+		Entity entity, Entity parent,
+		bool defer_action,
+		
+		bool _null_as_root, bool _is_deferred
+	)
 	{
+		ASSERT(entity != parent);
+
 		/*
 		if (_null_as_root)
 		{
@@ -703,20 +724,50 @@ namespace engine
 		}
 		*/
 
-		if (defer_action)
+		if (defer_action) // && (!_is_deferred)
 		{
-			defer
-			(
-				[](World* world, Entity entity, Entity parent)
-				{ world->set_parent(entity, parent, false); },
-				this, entity, parent
-			);
+			print("Deferring parental assignment for: {} to new parent {}", label(entity), label(parent));
+
+			later(&World::set_parent, entity, parent, false, _null_as_root, true);
 		}
 		else
 		{
+			//print("Adding child: {} to {}", label(entity), label(parent));
+
 			auto prev_parent = Relationship::set_parent(registry, entity, parent);
 			event<OnParentChanged>(entity, prev_parent, parent);
 		}
+	}
+
+	std::string World::label(Entity entity)
+	{
+		if (entity == null)
+		{
+			return "null";
+		}
+
+		auto* name_comp = registry.try_get<NameComponent>(entity);
+
+		auto entity_raw = static_cast<EntityIDType>(entity);
+
+		if (name_comp)
+		{
+			return std::format("\"{}\" ({})", name_comp->name, entity_raw);
+		}
+
+		return std::to_string(entity_raw);
+	}
+
+	std::string World::get_name(Entity entity)
+	{
+		auto* name_comp = registry.try_get<NameComponent>(entity);
+
+		if (name_comp)
+		{
+			return name_comp->name;
+		}
+
+		return {};
 	}
 
 	Entity World::get_by_name(std::string_view name)
@@ -766,6 +817,52 @@ namespace engine
 			else if (recursive)
 			{
 				auto r_out = get_bone_by_name(child, name, true);
+
+				if (r_out != null)
+				{
+					out = r_out;
+
+					return false;
+				}
+			}
+
+			return true;
+		});
+
+		return out;
+	}
+
+	Entity World::get_child_by_name(Entity entity, std::string_view child_name, bool recursive)
+	{
+		if (child_name.empty())
+			return null;
+
+		auto* relationship = registry.try_get<Relationship>(entity);
+
+		if (!relationship)
+			return null;
+
+		Entity out = null;
+
+		relationship->enumerate_children(registry, [&](Entity child, Relationship& relationship, Entity next_child)
+		{
+			auto* name_comp = registry.try_get<NameComponent>(child);
+
+			if (name_comp)
+			{
+				//print("Comparing {} with {}", name_comp->name, child_name);
+
+				if (name_comp->name == child_name)
+				{
+					out = child;
+
+					return false;
+				}
+			}
+			
+			if (recursive)
+			{
+				auto r_out = get_child_by_name(child, child_name, true);
 
 				if (r_out != null)
 				{

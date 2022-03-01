@@ -125,6 +125,7 @@ namespace graphics
 			}
 
 			bool material_has_textures = false;
+			bool texture_diffuse_enabled = false; // true;
 			bool specular_available = false;
 			bool normal_map_available = false;
 			bool height_map_available = false;
@@ -149,17 +150,19 @@ namespace graphics
 					const auto& texture_name = texture_group.first;
 					const auto& _data = texture_group.second;
 
-					if (texture_name == Model::get_texture_class_variable(TextureClass::Specular)) // (texture_name.find("specular") != std::string::npos)
+					if (texture_name == Model::get_texture_class_variable(TextureClass::Diffuse))
+					{
+						texture_diffuse_enabled = true;
+					}
+					else if (texture_name == Model::get_texture_class_variable(TextureClass::Specular)) // (texture_name.find("specular") != std::string::npos)
 					{
 						specular_available = true;
 					}
-
-					if (texture_name == Model::get_texture_class_variable(TextureClass::Normals))
+					else if (texture_name == Model::get_texture_class_variable(TextureClass::Normals))
 					{
 						normal_map_available = true;
 					}
-
-					if (texture_name == Model::get_texture_class_variable(TextureClass::Height))
+					else if (texture_name == Model::get_texture_class_variable(TextureClass::Height))
 					{
 						height_map_available = true;
 					}
@@ -234,6 +237,7 @@ namespace graphics
 
 				bool is_transparent = false;
 
+				// Diffuse color.
 				bool render_mesh = handle_diffuse(uniforms, color, draw_mode, is_transparent);
 
 				if (!render_mesh)
@@ -243,6 +247,7 @@ namespace graphics
 
 				bind_material_values(*material, [&](std::string_view name, const UniformData& value, bool& status) -> std::optional<UniformData>
 				{
+					// Already handled above.
 					if (name == Material::DIFFUSE_COLOR)
 					{
 						return std::nullopt;
@@ -253,7 +258,8 @@ namespace graphics
 
 				if (!ignore_textures)
 				{
-					shader["texture_diffuse_enabled"] = material_has_textures; // has_diffuse();
+					//Model::get_texture_class_variable(TextureClass::Specular)
+					shader["texture_diffuse_enabled"] = texture_diffuse_enabled; // material_has_textures;
 					shader["specular_available"]      = specular_available;
 					shader["normal_map_available"]    = normal_map_available;
 					shader["height_map_available"]    = height_map_available;

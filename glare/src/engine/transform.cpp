@@ -5,6 +5,8 @@
 
 // Debugging related:
 #include <iostream>
+#include <vector>
+#include <util/log.hpp>
 
 using namespace math;
 
@@ -127,14 +129,25 @@ namespace engine
 
 		transform._dirty |= (Dirty::W | Dirty::IW);
 
+		///*
+		/*
+		std::vector<unsigned int> children;
+		relationship.get_children(registry, children);
+
+		print("Children: [{}]", fmt::join(children, ", "));
+		*/
+
 		relationship.enumerate_children(registry, [&](auto child, auto& child_relationship, auto next_child)
 		{
+			//print("Invalidating world matrix - I am: {}", child);
+
 			auto t = Transform(registry, child, child_relationship);
 
 			t.invalidate_world();
 
 			return true;
 		});
+		//*/
 
 		return *this;
 	}
