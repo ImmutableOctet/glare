@@ -168,7 +168,7 @@ namespace engine
 				if (!animation_data->animations.empty())
 				{
 					create_skeleton(entity);
-					attach_animator(world, entity, animation_data, 0.01f); // 0.01f
+					attach_animator(world, entity, animation_data, 0.05f); // 0.01f
 				}
 			}
 
@@ -245,7 +245,7 @@ namespace engine
 		// Debugging related:
 		auto dbg_parent = entity; // null;
 
-		auto dbg = engine::load_model(world, "assets/geometry/directions_small.b3d", dbg_parent, type, false);
+		auto dbg = engine::load_model(world, "assets/geometry/directions.b3d", dbg_parent, type, false);
 		//auto dbg = engine::load_model(world, "assets/geometry/cube.b3d", dbg_parent, type, false);
 
 		//auto dbg = engine::load_model(world, "assets/geometry/sphere.b3d", dbg_parent, type, false);

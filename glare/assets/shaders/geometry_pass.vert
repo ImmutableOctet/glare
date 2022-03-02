@@ -7,7 +7,7 @@ layout (location = 3) in vec3 a_tangent;
 layout (location = 4) in vec3 a_bitangent;
 
 #if ANIMATION_ENABLED
-    layout(location = 5) in ivec4 bone_ids;
+    layout(location = 5) in vec4 bone_ids; // ivec4
     layout(location = 6) in vec4 bone_weights;
 
     const int MAX_BONES = 128;
@@ -86,9 +86,11 @@ void main()
 
                 for (int i = 0; i < MAX_BONE_INFLUENCE; i++)
                 {
-                    int id = bone_ids[i];
+                    //int id = bone_ids[i];
+                    int id = int(bone_ids[i] + 0.5); // int(bone_ids[i]);
 
-                    if (id == -1)
+                    if (bone_ids[i] < 0)
+                    //if (id == -1)
                     {
                         continue;
                     }

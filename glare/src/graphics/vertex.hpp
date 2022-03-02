@@ -136,7 +136,9 @@ namespace graphics
 	VERTEX_ATTRIBUTE(Normal, math::vec3f, normal);
 	VERTEX_ATTRIBUTE(Tangent, math::vec3f, tangent);
 	VERTEX_ATTRIBUTE(Bitangent, math::vec3f, bitangent);
-	VERTEX_ATTRIBUTE(BoneIndices, math::vec4i, bone_indices);
+
+	VERTEX_ATTRIBUTE(BoneIndices, math::vec4f, bone_indices); //VERTEX_ATTRIBUTE(BoneIndices, math::vec4i, bone_indices);
+
 	VERTEX_ATTRIBUTE(BoneWeights, math::vec4f, bone_weights);
 
 	// Adds 4 bone indices and 4 weight channels to the 'VertexType' specified.

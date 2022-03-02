@@ -79,7 +79,8 @@ namespace graphics
 			keys, key_count, out,
 			[&orientation](const aiQuaternion& q)
 			{
-				auto quat = math::to_quat_flipped(q); // math::to_quat(q);
+				auto quat = math::to_quat_flipped(q);
+				//auto quat = math::to_quat(q);
 
 				return quat; // orientation * ...;
 			}
