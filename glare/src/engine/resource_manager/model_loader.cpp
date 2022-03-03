@@ -809,7 +809,7 @@ namespace engine
 				frame_data[bone_id] = Animation::KeySequence(*channel, tform);
 			}
 
-			animations.emplace_back(duration, rate, frame_data);
+			animations.emplace_back(static_cast<AnimationID>(a), duration, rate, frame_data);
 		}
 
 		return animations;

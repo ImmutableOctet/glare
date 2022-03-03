@@ -212,14 +212,9 @@ namespace engine
 	{
 		auto& registry = world.get_registry();
 
-		const Animation* starting_animation = nullptr;
+		ASSERT(!animations->animations.empty());
 
-		if (!animations->animations.empty())
-		{
-			starting_animation = &animations->animations[0];
-		}
-
-		registry.emplace_or_replace<Animator>(entity, animations, starting_animation, rate);
+		registry.emplace_or_replace<Animator>(entity, animations, AnimationID(0), rate);
 
 		return entity;
 	}

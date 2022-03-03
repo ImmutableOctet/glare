@@ -38,7 +38,10 @@ namespace glare
 {
 	Glare::init_shaders::init_shaders(Graphics& graphics)
 	{
-		auto preprocessor = std::string_view{ "\n#define LAYER_DEPTH_ENABLED 1\n" }; // //#define LAYER_POSITION_ENABLED 1\n
+		std::string_view preprocessor =
+			"\n#define LAYER_DEPTH_ENABLED 1\n"
+			//"\n#define LAYER_POSITION_ENABLED 1\n"
+		;
 
 		lighting_pass = memory::allocate<graphics::Shader>
 		(

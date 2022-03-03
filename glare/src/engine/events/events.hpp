@@ -93,6 +93,8 @@ namespace engine
 		const Animator*  animator;
 		const Animation* prev_animation;
 		const Animation* current_animation;
+
+		float transition_length = 0.0f;
 	};
 
 	// Executed each tick/frame an entity's animation updates.
@@ -105,6 +107,8 @@ namespace engine
 
 		const Animator*  animator;
 		const Animation* current_animation;
+
+		std::uint16_t bones_changed;
 	};
 
 	struct OnStageLoaded

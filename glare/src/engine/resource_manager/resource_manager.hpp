@@ -41,12 +41,20 @@ namespace engine
 	using ModelRef = ref<graphics::Model>;
 	using WeakModelRef = weak_ref<graphics::Model>; // const graphics::Model*
 	using Animations = std::vector<graphics::Animation>;
+	using AnimationTransitions = std::map<std::tuple<AnimationID, AnimationID>, float>;
 	using Models = std::vector<ModelRef>;
 
 	struct AnimationData
 	{
+		using ID = AnimationID;
+
 		graphics::Skeleton skeleton;
 		Animations animations;
+
+		// Mapping of to/from animations to a corresponding interpolation duration in frames.
+		AnimationTransitions transitions;
+
+		float get_transition(AnimationID src, AnimationID dest) const;
 	};
 
 	struct ModelData

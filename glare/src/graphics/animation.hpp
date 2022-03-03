@@ -60,6 +60,8 @@ namespace graphics
 			float timestamp;
 		};
 
+		using ID = AnimationID;
+
 		using KeyPosition = KeyVector;
 		using KeyScale    = KeyVector;
 
@@ -119,6 +121,8 @@ namespace graphics
 		};
 
 		using FrameData = std::unordered_map<BoneID, KeySequence>;
+
+		ID id;
 
 		float duration = 0.0f;
 		float rate = 0.0f;
