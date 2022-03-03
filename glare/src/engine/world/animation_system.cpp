@@ -125,7 +125,7 @@ namespace engine
 
 			auto prev_time = animator.time;
 			
-			animator.time += ((current_animation.rate * animator.rate) * delta_time) * 0.1;
+			animator.time += ((current_animation.rate * animator.rate) * delta_time) * 0.1f;
 
 			if (animator.time >= current_animation.duration)
 			{
