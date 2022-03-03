@@ -38,7 +38,7 @@ namespace graphics
 		return { *this, str };
 	}
 
-	ShaderSource::StringType ShaderSource::load_source_string(const std::string& path, bool check_for_version, std::string* version_out)
+	ShaderSource::StringType ShaderSource::load_source_string(const std::string& path, std::string* version_out)
 	{
 		if (path.empty())
 		{
@@ -52,7 +52,7 @@ namespace graphics
 			return {};
 		}
 
-		if (check_for_version)
+		if (version_out)
 		{
 			auto ver_regex = std::regex("(\\#version[^\n]+\n+)");
 
@@ -65,14 +65,15 @@ namespace graphics
 				//std::cout << "match: [" << match[1] << ']' << '\n';
 				//std::cout << "suffix: " << match.suffix().str() << '\n';
 
-				// Extract the version string.
-				if (version_out)
+				const auto& version_in = match[1];
+
+				// Extract the version string:
+				if (!version_out->empty())
 				{
-					if (version_out->empty())
-					{
-						*version_out = match[1];
-					}
+					ASSERT(version_in == *version_out);
 				}
+
+				*version_out = version_in;
 
 				// Retrieve the rest of the shader source.
 				//source_raw = match.suffix().str();
@@ -97,12 +98,12 @@ namespace graphics
 	// ShaderSource:
 	ShaderSource ShaderSource::Load(const std::string& vertex_path, const std::string& fragment_path, const std::string& geometry_path)
 	{
-		std::string version_str;
+		std::string version;
 
-		auto vertex_src = load_source_string(vertex_path, true, &version_str);
-		auto fragment_src = load_source_string(fragment_path, true, &version_str);
-		auto geometry_src = load_source_string(geometry_path, true, &version_str);
+		auto vertex_src   = load_source_string(vertex_path,   &version);
+		auto fragment_src = load_source_string(fragment_path, &version);
+		auto geometry_src = load_source_string(geometry_path, &version);
 
-		return { std::move(vertex_src), std::move(fragment_src), std::move(geometry_src), std::move(version_str) };
+		return { std::move(vertex_src), std::move(fragment_src), std::move(geometry_src), std::move(version) };
 	}
 }

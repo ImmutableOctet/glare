@@ -33,6 +33,7 @@
 #include <type_traits>
 #include <optional>
 #include <tuple>
+#include <format>
 
 // Debugging related:
 #include <iostream>
@@ -53,6 +54,7 @@ namespace graphics
 
 			using Handle = Context::Handle;
 			using Flags = Context::Flags;
+			using GLVersion = util::lib::OpenGLVersion;
 
 			static constexpr Handle NoHandle = Context::NoHandle;
 
@@ -72,6 +74,12 @@ namespace graphics
 			GLenum gl_texture_id = BASE_TEXTURE_INDEX; // 0;
 
 			std::vector<Handle> texture_stack;
+
+			// Internal OpenGL context version.
+			GLVersion gl_version;
+
+			// Default shader version header.
+			std::string gl_default_shader_version_header;
 
 			// TODO: Implement wrapping behavior for bound textures.
 			//bool wrap_texture_indices = true;
@@ -94,6 +102,11 @@ namespace graphics
 				return static_cast<GLenum>((texture_index + BASE_TEXTURE_INDEX));
 			}
 		public:
+			static std::string gl_get_shader_version_header(const GLVersion& version)
+			{
+				return std::format("\n#version {}{}0 core\n", version.major, version.minor);
+			}
+
 			static GLbitfield gl_get_buffer_flags(BufferType buffer_type, bool default_to_color_buffer=false, bool allow_depth=true)
 			{
 				GLbitfield buffer_flags = 0; // {};
@@ -682,7 +695,7 @@ namespace graphics
 				std::cout << debug_output << std::endl;
 			}
 
-			static Context::Handle compile_shader(std::string_view source, GLenum type, std::optional<std::string_view> preprocessor=std::nullopt, std::optional<std::string_view> version=std::nullopt) noexcept // const std::string& source
+			Context::Handle compile_shader(std::string_view source, GLenum type, std::optional<std::string_view> preprocessor=std::nullopt, std::optional<std::string_view> version=std::nullopt) noexcept // const std::string& source
 			{
 				if (source.empty())
 				{
@@ -702,7 +715,7 @@ namespace graphics
 				}
 				else
 				{
-					source_raw[n_source_strings++] = "\n#version 330 core\n";
+					source_raw[n_source_strings++] = gl_default_shader_version_header.c_str(); //  "\n#version 330 core\n";
 				}
 
 				if (preprocessor.has_value())
@@ -809,10 +822,14 @@ namespace graphics
 				return state.get_flags();
 			}
 		protected:
-			Driver(SDL_Window* window_handle)
-				: SDL(SDL_GL_CreateContext(window_handle)),
-					texture_stack(MAX_TEXTURES, NoHandle)
+			Driver(SDL_Window* window_handle, const GLVersion& gl_version):
+				SDL(SDL_GL_CreateContext(window_handle)),
+				texture_stack(MAX_TEXTURES, NoHandle),
+				gl_version(gl_version),
+				gl_default_shader_version_header(gl_get_shader_version_header(gl_version))
 			{
+				glewInit();
+
 				_texture_assignment_buffer.reserve(MAX_TEXTURES);
 			}
 
@@ -958,12 +975,20 @@ namespace graphics
 	Context::Context(app::Window& wnd, Backend gfx, Flags flags)
 		: graphics_backend(gfx), state(memory::unique<Context::State>())
 	{
-		ASSERT(get_backend() == Backend::OpenGL);
-		ASSERT(util::lib::establish_gl());
+		auto backend = get_backend();
 
-		native_context = new Driver(wnd.get_handle());
+		switch (backend)
+		{
+			case Backend::OpenGL:
+				auto gl_version = util::lib::establish_gl();
+				native_context = new Driver(wnd.get_handle(), gl_version);
 
-		glewInit();
+				break;
+			default:
+				ASSERT(false); // Unsupported graphics backend.
+
+				break;
+		}
 
 		// Initial configuration:
 		toggle(flags, true);
@@ -1923,7 +1948,9 @@ namespace graphics
 
 	Context::Handle Context::build_shader_source_obj(std::string_view source_text, ShaderType type, std::optional<std::string_view> preprocessor, std::optional<std::string_view> version) noexcept
 	{
-		return Driver::compile_shader(source_text, Driver::get_shader_type(type), preprocessor, version);
+		auto& driver = get_driver(*this);
+
+		return driver.compile_shader(source_text, Driver::get_shader_type(type), preprocessor, version);
 	}
 
 	void Context::release_shader_source_obj(Handle&& handle)
