@@ -137,7 +137,11 @@ namespace graphics
 	VERTEX_ATTRIBUTE(Tangent, math::vec3f, tangent);
 	VERTEX_ATTRIBUTE(Bitangent, math::vec3f, bitangent);
 
-	VERTEX_ATTRIBUTE(BoneIndices, math::vec4f, bone_indices); //VERTEX_ATTRIBUTE(BoneIndices, math::vec4i, bone_indices);
+	// Integers indices aren't supported in older Shader Model versions. (Requires OpenGL ~4.3)
+	using BoneIndexVector = math::vec4f; // math::vec4i;
+	using BoneIndexType   = BoneIndexVector::value_type;
+	
+	VERTEX_ATTRIBUTE(BoneIndices, BoneIndexVector, bone_indices);
 
 	VERTEX_ATTRIBUTE(BoneWeights, math::vec4f, bone_weights);
 

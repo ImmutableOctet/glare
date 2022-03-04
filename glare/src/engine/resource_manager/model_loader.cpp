@@ -226,7 +226,7 @@ namespace engine
 							continue;
 						}
 
-						vertex.bone_indices[weight_channel] = bone->id;
+						vertex.bone_indices[weight_channel] = static_cast<graphics::BoneIndexType>(bone->id);
 						vertex.bone_weights[weight_channel] = weight.mWeight;
 					}
 
