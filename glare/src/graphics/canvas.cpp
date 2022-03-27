@@ -47,6 +47,16 @@ namespace graphics
 		context = nullptr;
 	}
 
+	void Canvas::begin()
+	{
+		context->begin_frame();
+	}
+
+	void Canvas::end()
+	{
+		context->end_frame();
+	}
+
 	void Canvas::flip(app::Window& wnd)
 	{
 		context->flip(wnd);

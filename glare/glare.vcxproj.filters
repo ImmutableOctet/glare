@@ -570,6 +570,12 @@
     <Filter Include="maps\test01">
       <UniqueIdentifier>{08836fbf-d152-4517-8c76-2deb6cb696d7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="third-party">
+      <UniqueIdentifier>{a5290f25-e8a4-41f8-96a2-00a8c915cd58}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="third-party\imgui">
+      <UniqueIdentifier>{5f8c00cb-0815-4364-9d34-723ab3af2a6a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="glare.cpp" />
@@ -754,6 +760,30 @@
     <ClCompile Include="src\engine\world\animator.cpp" />
     <ClCompile Include="src\engine\debug.cpp">
       <Filter>src\engine\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="dependencies\modules\imgui\imgui.cpp">
+      <Filter>third-party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="dependencies\modules\imgui\imgui_demo.cpp">
+      <Filter>third-party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="dependencies\modules\imgui\imgui_draw.cpp">
+      <Filter>third-party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="dependencies\modules\imgui\backends\imgui_impl_opengl3.cpp">
+      <Filter>third-party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="dependencies\modules\imgui\backends\imgui_impl_sdl.cpp">
+      <Filter>third-party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="dependencies\modules\imgui\imgui_tables.cpp">
+      <Filter>third-party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="dependencies\modules\imgui\imgui_widgets.cpp">
+      <Filter>third-party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\app\graphics_application.cpp">
+      <Filter>src\app\app</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

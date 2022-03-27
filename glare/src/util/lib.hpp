@@ -5,6 +5,8 @@
 
 #include <optional>
 
+struct SDL_Window;
+
 namespace util
 {
 	namespace lib
@@ -18,6 +20,10 @@ namespace util
 		};
 
 		bool init_sdl();
+
+		bool init_imgui();
+		bool deinit_imgui();
+
 		OpenGLVersion establish_gl(std::optional<OpenGLVersion> version=std::nullopt);
 	}
 }

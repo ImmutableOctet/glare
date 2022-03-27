@@ -113,6 +113,7 @@ namespace glare
 			void on_user_keyboard_input(const app::input::KeyboardState& keyboard);
 
 			void update(app::Milliseconds time) override;
+
 			void render() override;
 
 			std::tuple<bool, bool> render_shadows(bool point_lights=true, bool directional_lights=true);

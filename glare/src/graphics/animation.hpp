@@ -99,6 +99,8 @@ namespace graphics
 
 				// Invalid timestamp specified.
 				ASSERT(false);
+
+				return 0;
 			}
 
 			inline auto get_position_index(float timestamp) const { return get_index(timestamp, positions); }

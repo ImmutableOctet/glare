@@ -70,27 +70,40 @@ namespace app
 			*this << time;
 
 			update(time); update_counter++;
+
+			begin_render();
 			render(); render_counter++;
+			end_render();
 		}
 	}
 
 	bool Application::handle_events()
 	{
-		SDL_Event event;
+		SDL_Event e;
+		
+		//int events_processed = 0;
 
-		while (SDL_PollEvent(&event)) // SDL_WaitEvent
+		while (SDL_PollEvent(&e)) // SDL_WaitEvent
 		{
-			switch (event.type)
+			if (process_event(e))
+			{
+				//events_processed++;
+
+				continue;
+			}
+
+			switch (e.type)
 			{
 				case SDL_QUIT:
 					return false;
+
 				case SDL_WINDOWEVENT:
 				{
-					const auto& window_event = event.window;
+					const auto& window_event = e.window;
 
 					if (window->get_id() == window_event.windowID)
 					{
-						if (!window->handle_event(event, window_event, *this))
+						if (!window->handle_event(e, window_event, *this))
 						{
 							return false;
 						}
@@ -98,17 +111,25 @@ namespace app
 
 					break;
 				}
+
 				case SDL_KEYDOWN:
-					on_keydown(event.key);
+					on_keydown(e.key);
 
 					break;
+
 				case SDL_KEYUP:
-					on_keyup(event.key);
+					on_keyup(e.key);
 
 					break;
+
+				default:
+					continue;
 			}
+
+			//events_processed++;
 		}
 
+		//return events_processed;
 		return true;
 	}
 
@@ -130,9 +151,14 @@ namespace app
 	}
 
 	// Empty implementations:
+	void Application::begin_render() {}
+	void Application::end_render() {}
+
 	void Application::on_keydown(const keyboard_event_t& event) {}
 	void Application::on_keyup(const keyboard_event_t& event) {}
 	void Application::on_window_resize(Window& window, int width, int height) {}
+
+	bool Application::process_event(const SDL_Event& e) { return false; }
 
 	// Date/time related:
 	Application::time_point Application::now() const

@@ -112,6 +112,8 @@ namespace graphics
 			NativeContext native_context;
 
 			memory::unique_ref<State> state;
+
+			Viewport viewport;
 		protected:
 			// Bind Operations:
 
@@ -149,7 +151,7 @@ namespace graphics
 		public:
 			static std::tuple<TextureFormat, ElementType> resolve_renderbuffer_format(RenderBufferType type);
 
-			Context(app::Window& wnd, Backend gfx, Flags flags=Flags::Default);
+			Context(app::Window& wnd, Backend gfx, Flags flags=Flags::Default, bool extensions=false);
 			~Context();
 
 			inline graphics::Backend get_backend() const { return graphics_backend; }
@@ -160,19 +162,18 @@ namespace graphics
 			// Commands:
 			void flip(app::Window& wnd);
 
+			void begin_frame();
+			void end_frame();
+
 			void clear(BufferType buffer_type=BufferType::ColorDepth);
 
 			// TODO: Add an overload for vectors.
 			void clear(float red, float green, float blue, float alpha, BufferType buffer_type=BufferType::ColorDepth);
 
 			// Assigns the current rendering viewport.
-			void set_viewport(int x, int y, int width, int height);
+			void set_viewport(const Viewport& viewport);
 
-			// Assigns the current rendering viewport.
-			inline void set_viewport(Viewport viewport)
-			{
-				set_viewport(viewport.get_x(), viewport.get_y(), viewport.get_width(), viewport.get_height());
-			}
+			inline Viewport get_viewport() const { return viewport; }
 
 			// NOTE: Unsafe; use at your own risk.
 			void clear_textures(bool force=false);

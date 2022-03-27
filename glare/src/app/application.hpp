@@ -13,6 +13,7 @@
 
 // SDL:
 struct SDL_KeyboardEvent;
+union SDL_Event;
 
 namespace app
 {
@@ -76,7 +77,10 @@ namespace app
 			virtual void fixed_update();
 
 			virtual void update(Milliseconds time) abstract; // const DeltaTime& delta_time
+
+			virtual void begin_render();
 			virtual void render() abstract;
+			virtual void end_render();
 
 			virtual void on_keydown(const keyboard_event_t& event);
 			virtual void on_keyup(const keyboard_event_t& event);
@@ -95,7 +99,11 @@ namespace app
 			inline bool is_running() const { return running; }
 			inline Window* get_window() const { return window.get(); }
 
-			bool handle_events();
+			virtual bool handle_events();
+
+			// Returning `true` indicates that the event was handled, and will therefore
+			// not need to be processed further by the default implementation of `handle_events`.
+			virtual bool process_event(const SDL_Event& e);
 
 			void execute();
 		private:

@@ -38,6 +38,7 @@ namespace engine
 		{
 			case engine::Character::Glare:
 				model_path = "assets/characters/test/character.b3d";
+
 				//model_path = "assets/geometry/sphere.b3d";
 				//model_path = "assets/geometry/torus.b3d";
 				

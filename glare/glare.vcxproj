@@ -70,25 +70,25 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>D:\Projects\glare\glare\src;D:\Projects\glare\glare\dependencies\include;D:\Projects\glare\glare\dependencies\modules\fpm\include;D:\Projects\glare\glare\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
+    <IncludePath>D:\Projects\glare\glare\src;D:\Projects\glare\glare\dependencies\include;D:\Projects\glare\glare\dependencies\modules\fpm\include;$(IncludePath)</IncludePath>
     <LibraryPath>D:\Projects\glare\glare\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>D:\Projects\glare\glare\src;D:\Projects\glare\glare\dependencies\include;D:\Projects\glare\glare\dependencies\modules\fpm\include;D:\Projects\glare\glare\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
+    <IncludePath>D:\Projects\glare\glare\src;D:\Projects\glare\glare\dependencies\include;D:\Projects\glare\glare\dependencies\modules\fpm\include;$(IncludePath)</IncludePath>
     <LibraryPath>D:\Projects\glare\glare\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>D:\Projects\glare\glare\src;D:\Projects\glare\glare\dependencies\include;D:\Projects\glare\glare\dependencies\modules\fpm\include;D:\Projects\glare\glare\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
+    <IncludePath>D:\Projects\glare\glare\src;D:\Projects\glare\glare\dependencies\include;D:\Projects\glare\glare\dependencies\modules\fpm\include;$(IncludePath)</IncludePath>
     <LibraryPath>D:\Projects\glare\glare\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>D:\Projects\glare\glare\src;D:\Projects\glare\glare\dependencies\include;D:\Projects\glare\glare\dependencies\modules\fpm\include;D:\Projects\glare\glare\dependencies\modules\entt-3.3.0\src;$(IncludePath)</IncludePath>
+    <IncludePath>D:\Projects\glare\glare\src;D:\Projects\glare\glare\dependencies\include;D:\Projects\glare\glare\dependencies\modules\fpm\include;$(IncludePath)</IncludePath>
     <LibraryPath>D:\Projects\glare\glare\dependencies\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg">
     <VcpkgEnabled>true</VcpkgEnabled>
     <VcpkgManifestInstall>true</VcpkgManifestInstall>
-    <VcpkgAutoLink>false</VcpkgAutoLink>
+    <VcpkgAutoLink>true</VcpkgAutoLink>
     <VcpkgEnableManifest>false</VcpkgEnableManifest>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -99,9 +99,12 @@
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <VcpkgConfiguration>Debug</VcpkgConfiguration>
-    <VcpkgInstalledDir>..\..\..\vcpkg\installed\x64-windows</VcpkgInstalledDir>
-    <VcpkgUseStatic>false</VcpkgUseStatic>
-    <VcpkgTriplet>x64-windows-static</VcpkgTriplet>
+    <VcpkgInstalledDir>
+    </VcpkgInstalledDir>
+    <VcpkgUseStatic>
+    </VcpkgUseStatic>
+    <VcpkgTriplet>
+    </VcpkgTriplet>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <VcpkgConfiguration>Release</VcpkgConfiguration>
@@ -111,9 +114,12 @@
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <VcpkgConfiguration>Release</VcpkgConfiguration>
-    <VcpkgInstalledDir>..\..\..\vcpkg\installed\x64-windows</VcpkgInstalledDir>
-    <VcpkgUseStatic>true</VcpkgUseStatic>
-    <VcpkgTriplet>x64-windows-static</VcpkgTriplet>
+    <VcpkgInstalledDir>
+    </VcpkgInstalledDir>
+    <VcpkgUseStatic>
+    </VcpkgUseStatic>
+    <VcpkgTriplet>
+    </VcpkgTriplet>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -129,7 +135,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;glew32.lib;opengl32.lib;SDL2.lib;fmt.lib;assimp-vc142-mt.lib;LinearMath_vs2010_$(Configuration).lib;Bullet3Common_vs2010_$(Configuration).lib;Bullet3Geometry_vs2010_$(Configuration).lib;BulletDynamics_vs2010_$(Configuration).lib;BulletInverseDynamics_vs2010_$(Configuration).lib;BulletSoftBody_vs2010_$(Configuration).lib;Bullet3Collision_vs2010_$(Configuration).lib;BulletCollision_vs2010_$(Configuration).lib</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;glew32.lib;opengl32.lib;SDL2.lib;fmt.lib;LinearMath_vs2010_$(Configuration).lib;Bullet3Common_vs2010_$(Configuration).lib;Bullet3Geometry_vs2010_$(Configuration).lib;BulletDynamics_vs2010_$(Configuration).lib;BulletInverseDynamics_vs2010_$(Configuration).lib;BulletSoftBody_vs2010_$(Configuration).lib;Bullet3Collision_vs2010_$(Configuration).lib;BulletCollision_vs2010_$(Configuration).lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>D:\Projects\glare\glare\dependencies\lib;D:\vcpkg\installed\x86-windows\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
@@ -151,7 +157,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;glew32.lib;opengl32.lib;SDL2.lib;fmt.lib;assimp-vc142-mt.lib;LinearMath_vs2010_$(PlatformTarget)_$(Configuration).lib;Bullet3Common_vs2010_$(PlatformTarget)_$(Configuration).lib;Bullet3Geometry_vs2010_$(PlatformTarget)_$(Configuration).lib;BulletDynamics_vs2010_$(PlatformTarget)_$(Configuration).lib;BulletInverseDynamics_vs2010_$(PlatformTarget)_$(Configuration).lib;BulletSoftBody_vs2010_$(PlatformTarget)_$(Configuration).lib;Bullet3Collision_vs2010_$(PlatformTarget)_$(Configuration).lib;BulletCollision_vs2010_$(PlatformTarget)_$(Configuration).lib</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;glew32.lib;opengl32.lib;SDL2.lib;fmt.lib;LinearMath_vs2010_$(PlatformTarget)_$(Configuration).lib;Bullet3Common_vs2010_$(PlatformTarget)_$(Configuration).lib;Bullet3Geometry_vs2010_$(PlatformTarget)_$(Configuration).lib;BulletDynamics_vs2010_$(PlatformTarget)_$(Configuration).lib;BulletInverseDynamics_vs2010_$(PlatformTarget)_$(Configuration).lib;BulletSoftBody_vs2010_$(PlatformTarget)_$(Configuration).lib;Bullet3Collision_vs2010_$(PlatformTarget)_$(Configuration).lib;BulletCollision_vs2010_$(PlatformTarget)_$(Configuration).lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>D:\Projects\glare\glare\dependencies\lib;D:\vcpkg\installed\x64-windows\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
@@ -176,7 +182,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;glew32.lib;opengl32.lib;SDL2.lib;fmt.lib;assimp-vc142-mt.lib;LinearMath_vs2010.lib;Bullet3Common_vs2010.lib;Bullet3Geometry_vs2010.lib;BulletDynamics_vs2010.lib;BulletInverseDynamics_vs2010.lib;BulletSoftBody_vs2010.lib;Bullet3Collision_vs2010.lib;BulletCollision_vs2010.lib</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;glew32.lib;opengl32.lib;SDL2.lib;fmt.lib;LinearMath_vs2010.lib;Bullet3Common_vs2010.lib;Bullet3Geometry_vs2010.lib;BulletDynamics_vs2010.lib;BulletInverseDynamics_vs2010.lib;BulletSoftBody_vs2010.lib;Bullet3Collision_vs2010.lib;BulletCollision_vs2010.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>D:\Projects\glare\glare\dependencies\lib;D:\vcpkg\installed\x86-windows\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
@@ -201,7 +207,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;glew32.lib;opengl32.lib;SDL2.lib;fmt.lib;assimp-vc142-mt.lib;LinearMath_vs2010_$(PlatformTarget)_$(Configuration).lib;Bullet3Common_vs2010_$(PlatformTarget)_$(Configuration).lib;Bullet3Geometry_vs2010_$(PlatformTarget)_$(Configuration).lib;BulletDynamics_vs2010_$(PlatformTarget)_$(Configuration).lib;BulletInverseDynamics_vs2010_$(PlatformTarget)_$(Configuration).lib;BulletSoftBody_vs2010_$(PlatformTarget)_$(Configuration).lib;Bullet3Collision_vs2010_$(PlatformTarget)_$(Configuration).lib;BulletCollision_vs2010_$(PlatformTarget)_$(Configuration).lib</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;glew32.lib;opengl32.lib;SDL2.lib;fmt.lib;LinearMath_vs2010_$(PlatformTarget)_$(Configuration).lib;Bullet3Common_vs2010_$(PlatformTarget)_$(Configuration).lib;Bullet3Geometry_vs2010_$(PlatformTarget)_$(Configuration).lib;BulletDynamics_vs2010_$(PlatformTarget)_$(Configuration).lib;BulletInverseDynamics_vs2010_$(PlatformTarget)_$(Configuration).lib;BulletSoftBody_vs2010_$(PlatformTarget)_$(Configuration).lib;Bullet3Collision_vs2010_$(PlatformTarget)_$(Configuration).lib;BulletCollision_vs2010_$(PlatformTarget)_$(Configuration).lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>D:\Projects\glare\glare\dependencies\lib;D:\vcpkg\installed\x64-windows\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
@@ -373,11 +379,19 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <None Include="assets\tests\model_test\shaders\forward_test.fs" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="dependencies\modules\imgui\backends\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="dependencies\modules\imgui\backends\imgui_impl_sdl.cpp" />
+    <ClCompile Include="dependencies\modules\imgui\imgui.cpp" />
+    <ClCompile Include="dependencies\modules\imgui\imgui_demo.cpp" />
+    <ClCompile Include="dependencies\modules\imgui\imgui_draw.cpp" />
+    <ClCompile Include="dependencies\modules\imgui\imgui_tables.cpp" />
+    <ClCompile Include="dependencies\modules\imgui\imgui_widgets.cpp" />
     <ClCompile Include="dependencies\modules\stb\deprecated\stb_image.c" />
     <ClCompile Include="dependencies\modules\stb\stb_vorbis.c" />
     <ClCompile Include="glare.cpp" />
     <ClCompile Include="src\app\application.cpp" />
     <ClCompile Include="src\app\event_handler.cpp" />
+    <ClCompile Include="src\app\graphics_application.cpp" />
     <ClCompile Include="src\app\input\input_handler.cpp" />
     <ClCompile Include="src\app\input\keyboard.cpp" />
     <ClCompile Include="src\app\input\mouse.cpp" />

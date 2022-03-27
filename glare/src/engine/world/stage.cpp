@@ -107,7 +107,7 @@ namespace engine
 
 				print("Player #{}", player_idx);
 				print("Name: {}", player_name);
-				print("Character: {}", player_char);
+				print("Character: {}", static_cast<std::uint8_t>(player_char));
 
 				auto player = create_player(world, player_tform, player_char, player_name, player_parent, player_idx);
 

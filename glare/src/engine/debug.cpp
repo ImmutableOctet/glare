@@ -112,6 +112,7 @@ namespace engine
 		if (stage_info.path)
 		{
 			print("Stage \"{}\" loaded successfully.", stage_info.path->string());
+			//util::log::console->info("Stage \"{}\" loaded successfully.", stage_info.path->string());
 		}
 
 		auto stage = stage_info.stage;

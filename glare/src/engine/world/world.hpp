@@ -327,6 +327,7 @@ namespace engine
 			Entity get_player(PlayerIndex player) const;
 
 			inline math::Vector gravity() const { return physics.get_gravity(); }
+			inline math::Vector down() const { return { 0.0f, -1.0f, 0.0f }; }
 			inline float delta() const { return delta_time; }
 			inline operator Entity() const { return get_root(); }
 

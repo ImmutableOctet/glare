@@ -46,6 +46,17 @@ namespace graphics
 			bool attach(memory::pass_ref<Context> ctx);
 			void detach();
 
+			void begin();
+			void end();
+
+			template <typename Callback>
+			inline void use(Callback&& fn)
+			{
+				begin();
+				fn();
+				end();
+			}
+
 			void flip(app::Window& wnd);
 			void clear(float red, float green, float blue, float alpha);
 

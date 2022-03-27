@@ -25,6 +25,10 @@
 
 #include <sdl2/SDL_video.h>
 
+// imgui:
+#include <imgui/imgui_impl_sdl.h>
+#include <imgui/imgui_impl_opengl3.h>
+
 #include <utility>
 #include <variant>
 #include <vector>
@@ -36,7 +40,8 @@
 #include <format>
 
 // Debugging related:
-#include <iostream>
+//#include <iostream>
+#include <util/log.hpp>
 
 namespace graphics
 {
@@ -70,6 +75,9 @@ namespace graphics
 			// SDL:
 			SDL_GLContext SDL = nullptr;
 
+			// imgui:
+			bool imgui_enabled = false;
+
 			// State:
 			GLenum gl_texture_id = BASE_TEXTURE_INDEX; // 0;
 
@@ -102,9 +110,15 @@ namespace graphics
 				return static_cast<GLenum>((texture_index + BASE_TEXTURE_INDEX));
 			}
 		public:
+			// Use `gl_get_shader_version_header` for general usage.
+			static std::string gl_get_shader_version_raw(const GLVersion& version)
+			{
+				return std::format("#version {}{}0 core", version.major, version.minor); // "#version {}{}0"
+			}
+
 			static std::string gl_get_shader_version_header(const GLVersion& version)
 			{
-				return std::format("\n#version {}{}0 core\n", version.major, version.minor);
+				return std::format("\n{}\n", gl_get_shader_version_raw(version)); // "\n{} core\n"
 			}
 
 			static GLbitfield gl_get_buffer_flags(BufferType buffer_type, bool default_to_color_buffer=false, bool allow_depth=true)
@@ -170,7 +184,7 @@ namespace graphics
 
 				if (uniform_location == -1)
 				{
-					std::cout << "Unable to resolve uniform for: " << '\"' << name << '\"' << '\n';
+					print("Unable to resolve uniform for: \"{}\"", name);
 					//auto e = glGetError();
 					//std::cout << e << std::endl;
 				}
@@ -675,7 +689,7 @@ namespace graphics
 				glGetShaderInfoLog(shader, reserve_size, &length, debug_output);
 				//auto e = glGetError();
 
-				std::cout << debug_output << std::endl;
+				print(debug_output);
 			}
 
 			static void output_shader_link_errors(const Context::Handle& shader)
@@ -692,7 +706,7 @@ namespace graphics
 				glGetProgramInfoLog(shader, reserve_size, &length, debug_output);
 				//auto e = glGetError();
 
-				std::cout << debug_output << std::endl;
+				print(debug_output);
 			}
 
 			Context::Handle compile_shader(std::string_view source, GLenum type, std::optional<std::string_view> preprocessor=std::nullopt, std::optional<std::string_view> version=std::nullopt) noexcept // const std::string& source
@@ -822,13 +836,39 @@ namespace graphics
 				return state.get_flags();
 			}
 		protected:
-			Driver(SDL_Window* window_handle, const GLVersion& gl_version):
+			void init_imgui(SDL_GLContext gl_context, SDL_Window* window_handle, const GLVersion& gl_version, std::string_view glsl_version)
+			{
+				ASSERT(util::lib::init_imgui());
+				//ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+				print("Calling ImGui_ImplSDL2_InitForOpenGL...");
+				ASSERT(ImGui_ImplSDL2_InitForOpenGL(window_handle, gl_context));
+
+				print("Calling ImGui_ImplOpenGL3_Init...");
+				ASSERT(ImGui_ImplOpenGL3_Init(glsl_version.data()));
+			}
+
+			void deinit_imgui()
+			{
+				ImGui_ImplOpenGL3_Shutdown();
+				ImGui_ImplSDL2_Shutdown();
+
+				util::lib::deinit_imgui();
+			}
+
+			Driver(SDL_Window* window_handle, const GLVersion& gl_version, bool extensions=false):
 				SDL(SDL_GL_CreateContext(window_handle)),
 				texture_stack(MAX_TEXTURES, NoHandle),
 				gl_version(gl_version),
-				gl_default_shader_version_header(gl_get_shader_version_header(gl_version))
+				gl_default_shader_version_header(gl_get_shader_version_header(gl_version)),
+				imgui_enabled(extensions)
 			{
 				glewInit();
+
+				if (imgui_enabled)
+				{
+					init_imgui(SDL, window_handle, gl_version, gl_get_shader_version_raw(gl_version));
+				}
 
 				_texture_assignment_buffer.reserve(MAX_TEXTURES);
 			}
@@ -836,6 +876,11 @@ namespace graphics
 			~Driver()
 			{
 				SDL_GL_DeleteContext(SDL);
+
+				if (imgui_enabled)
+				{
+					deinit_imgui();
+				}
 			}
 		public:
 			// OpenGL API:
@@ -934,6 +979,41 @@ namespace graphics
 
 				//uniform_location_map = uniform_location_cache[shader];
 			}
+
+			void begin_frame(Context& ctx)
+			{
+				if (imgui_enabled)
+				{
+					ImGui_ImplOpenGL3_NewFrame();
+					ImGui_ImplSDL2_NewFrame();
+					ImGui::NewFrame();
+				}
+			}
+
+			void end_frame(Context& ctx, bool _imgui_restore_viewport=false) // _imgui_restore_viewport=false
+			{
+				if (imgui_enabled)
+				{
+					Viewport old_viewport;
+
+					if (_imgui_restore_viewport)
+					{
+						old_viewport = ctx.get_viewport();
+					}
+
+					ImGui::Render();
+
+					ImGuiIO& io = ImGui::GetIO(); //(void)io;
+
+					ctx.set_viewport({ {0, 0}, {static_cast<int>(io.DisplaySize.x), static_cast<int>(io.DisplaySize.y)} });
+					ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+					if (_imgui_restore_viewport)
+					{
+						ctx.set_viewport(old_viewport);
+					}
+				}
+			}
 		protected:
 			// Returns a reference to an internal buffer, populated with the indices requested.
 			const std::vector<int>& get_texture_indices(const TextureArray& textures, std::size_t texture_count)
@@ -972,7 +1052,7 @@ namespace graphics
 	}
 
 	// Context API:
-	Context::Context(app::Window& wnd, Backend gfx, Flags flags)
+	Context::Context(app::Window& wnd, Backend gfx, Flags flags, bool extensions)
 		: graphics_backend(gfx), state(memory::unique<Context::State>())
 	{
 		auto backend = get_backend();
@@ -981,7 +1061,7 @@ namespace graphics
 		{
 			case Backend::OpenGL:
 				auto gl_version = util::lib::establish_gl();
-				native_context = new Driver(wnd.get_handle(), gl_version);
+				native_context = new Driver(wnd.get_handle(), gl_version, extensions);
 
 				break;
 			default:
@@ -1023,6 +1103,20 @@ namespace graphics
 		SDL_GL_SwapWindow(wnd.get_handle());
 	}
 
+	void Context::begin_frame()
+	{
+		auto& driver = get_driver(*this);
+
+		driver.begin_frame(*this);
+	}
+
+	void Context::end_frame()
+	{
+		auto& driver = get_driver(*this);
+
+		driver.end_frame(*this);
+	}
+
 	void Context::clear(BufferType buffer_type)
 	{
 		GLbitfield buffer_flags = Driver::gl_get_buffer_flags
@@ -1043,9 +1137,11 @@ namespace graphics
 		clear(buffer_type);
 	}
 
-	void Context::set_viewport(int x, int y, int width, int height)
+	void Context::set_viewport(const Viewport& viewport) // int x, int y, int width, int height
 	{
-		glViewport(x, y, width, height);
+		glViewport(viewport.get_x(), viewport.get_y(), viewport.get_width(), viewport.get_height());
+
+		this->viewport = viewport;
 	}
 
 	FrameBuffer& Context::get_default_framebuffer()
