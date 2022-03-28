@@ -166,28 +166,6 @@ namespace glare
 		//GLint value = 0;
 		//glGetIntegerv(GL_MAX_COMBINED_VERTEX_UNIFORM_COMPONENTS, &value); // GL_MAX_VERTEX_BINDABLE_UNIFORMS_EXT
 
-		///*
-		glEnable(GL_DEBUG_OUTPUT);
-
-		glDebugMessageCallback([]
-		(
-			GLenum source,
-			GLenum type,
-			GLuint id,
-			GLenum severity,
-			GLsizei length,
-			const GLchar* message,
-			const void* userParam)
-		{
-			if (type == GL_DEBUG_TYPE_ERROR)
-			{
-				std::cout << "OPENGL ERROR DETECTED" << '\n';
-				std::cout << "OpenGL (" << severity << "):" << '\n';
-				std::cout << message << '\n';
-			}
-		}, this);
-		//*/
-
 		/*
 		int screen_width, screen_height;
 

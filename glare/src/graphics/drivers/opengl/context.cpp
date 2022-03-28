@@ -50,6 +50,25 @@ namespace graphics
 	// Default framebuffer object; meant to always represent 'NoHandle'.
 	static FrameBuffer _main_framebuffer;
 
+	static void debug_message_callback
+	(
+		GLenum source,
+		GLenum type,
+		GLuint id,
+		GLenum severity,
+		
+		GLsizei length,
+		const GLchar* message,
+
+		const void* driver_instance
+	)
+	{
+		if (type == GL_DEBUG_TYPE_ERROR)
+		{
+			print_warn("OPENGL ERROR DETECTED (SEVERITY LEVEL: {}):\n{}", severity, message);
+		}
+	}
+
 	// Most details of the active state is handled by OpenGL, but for
 	// higher-level details, we keep track of state with this data-structure.
 	class Context::Driver
@@ -689,7 +708,10 @@ namespace graphics
 				glGetShaderInfoLog(shader, reserve_size, &length, debug_output);
 				//auto e = glGetError();
 
-				print(debug_output);
+				if (length > 0)
+				{
+					print(debug_output);
+				}
 			}
 
 			static void output_shader_link_errors(const Context::Handle& shader)
@@ -856,13 +878,22 @@ namespace graphics
 				util::lib::deinit_imgui();
 			}
 
-			Driver(SDL_Window* window_handle, const GLVersion& gl_version, bool extensions=false):
+			Driver
+			(
+				SDL_Window* window_handle,
+				const GLVersion& gl_version,
+				bool extensions=false,
+
+				bool _debug=true
+			):
 				SDL(SDL_GL_CreateContext(window_handle)),
 				texture_stack(MAX_TEXTURES, NoHandle),
 				gl_version(gl_version),
 				gl_default_shader_version_header(gl_get_shader_version_header(gl_version)),
 				imgui_enabled(extensions)
 			{
+				_texture_assignment_buffer.reserve(MAX_TEXTURES);
+
 				glewInit();
 
 				if (imgui_enabled)
@@ -870,7 +901,11 @@ namespace graphics
 					init_imgui(SDL, window_handle, gl_version, gl_get_shader_version_raw(gl_version));
 				}
 
-				_texture_assignment_buffer.reserve(MAX_TEXTURES);
+				if (_debug)
+				{
+					glEnable(GL_DEBUG_OUTPUT);
+					glDebugMessageCallback(&debug_message_callback, this);
+				}
 			}
 
 			~Driver()
