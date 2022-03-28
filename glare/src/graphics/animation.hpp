@@ -98,7 +98,7 @@ namespace graphics
 				}
 
 				// Invalid timestamp specified.
-				ASSERT(false);
+				////ASSERT(false);
 
 				return 0;
 			}

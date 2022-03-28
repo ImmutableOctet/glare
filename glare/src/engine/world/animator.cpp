@@ -50,4 +50,30 @@ namespace engine
 
 		pose = Matrices(number_of_bones);
 	}
+
+	void Animator::play()
+	{
+		state = State::Play;
+	}
+
+	void Animator::pause()
+	{
+		state = State::Pause;
+	}
+
+	bool Animator::toggle()
+	{
+		if (playing())
+		{
+			pause();
+
+			return true;
+		}
+		else // if (paused())
+		{
+			play();
+
+			return false;
+		}
+	}
 }

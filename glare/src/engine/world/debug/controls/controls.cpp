@@ -7,6 +7,9 @@
 #include <engine/relationship.hpp>
 #include <engine/bone_component.hpp>
 #include <engine/transform.hpp>
+#include <engine/world/animator.hpp>
+#include <engine/world/animation.hpp>
+#include <graphics/animation.hpp>
 
 #include <math/math.hpp>
 
@@ -211,11 +214,11 @@ namespace engine::debug
 
 				[&registry, &on_display](World& world, Entity child, const Relationship& relationship)
 				{
+					/*
 					auto& bone = registry.get<BoneComponent>(child);
-					
-					//ImGui::Separator();
 
 					ImGui::FormatText("Bone ID: {}", bone.ID);
+					*/
 
 					on_display(world, child, relationship);
 				},
@@ -225,6 +228,51 @@ namespace engine::debug
 					return (registry.try_get<BoneComponent>(child));
 				}
 			);
+		}
+
+		void animation(const graphics::Animation& a, std::string_view display_name="Animation")
+		{
+			if (ImGui::TreeNode(display_name.data()))
+			{
+				ImGui::FormatText("ID: #{}", a.id);
+				ImGui::FormatText("Duation: {} frames", a.duration);
+				ImGui::FormatText("Rate: {} fps", a.rate);
+
+				ImGui::TreePop();
+			}
+		}
+
+		void animator(Animator& animator)
+		{
+			if (ImGui::TreeNode("Animator"))
+			{
+				const Animation* cur_anim = animator.get_current_animation();
+
+				if (cur_anim)
+				{
+					ImGui::SliderFloat("Time", &animator.time, 0.0f, cur_anim->duration, "%.3f");
+				}
+
+				//ImGui::DragFloat("Rate", &animator.rate, 0.0001f, 0.0f, 1.0f, "%.06f");
+				ImGui::SliderFloat("Rate", &animator.rate, 0.0f, 1.0f, "%.06f");
+
+				if (animator.playing())
+				{
+					if (ImGui::Button("Pause", {54, 24}))
+						animator.pause();
+				}
+				else
+				{
+					if (ImGui::Button("Play", {54, 24}))
+						animator.play();
+				}
+
+				ImGui::SameLine();
+
+				ImGui::FormatText("State: {}", static_cast<int>(animator.get_state()));
+
+				ImGui::TreePop();
+			}
 		}
 	}
 
@@ -245,6 +293,21 @@ namespace engine::debug
 		const auto& rel = registry.get<Relationship>(entity);
 
 		ImGui::FormatText("Number of Children: {}, {} locally", rel.total_children(registry), rel.children());
+
+		ImGui::Separator();
+
+		auto& animator = registry.get<Animator>(entity);
+
+		display::animator(animator);
+
+		const Animation* cur_anim = animator.get_current_animation();
+		const Animation* prev_anim = animator.get_prev_animation();
+
+		if (cur_anim)
+			display::animation(*cur_anim, "Current Animation");
+
+		if ((prev_anim) && (cur_anim != prev_anim))
+			display::animation(*prev_anim, "Previous Animation");
 
 		skeletal_tree(world, entity, {});
 

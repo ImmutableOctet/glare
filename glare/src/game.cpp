@@ -348,11 +348,17 @@ namespace glare
 		if (!imgui_enabled())
 			return;
 
+		meta_controls();
+
 		auto player = world.get_player();
 		assert(player != engine::null);
 
-		animation_control(world, player);
-		meta_controls();
+		auto player_model = world.get_child_by_name(player, "model", false);
+		assert(player_model != engine::null);
+
+		auto target = player_model;
+
+		animation_control(world, target);
 	}
 
 	void Glare::meta_controls()

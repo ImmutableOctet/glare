@@ -94,6 +94,8 @@ namespace engine
 			inline const Animation* get_current_animation() const { return current_animation; }
 			inline const Animation* get_prev_animation() const { return prev_animation; }
 
+			inline State get_state() const { return state; }
+
 			inline bool paused() const { return (state == State::Pause); }
 			inline bool playing() const { return !paused(); }
 			inline bool transitioning() const { return transition_state.has_value(); }
@@ -107,5 +109,9 @@ namespace engine
 			}
 
 			inline std::size_t pose_size() const { return pose.size(); }
+
+			void play();
+			void pause();
+			bool toggle();
 	};
 }
