@@ -65,7 +65,7 @@ namespace graphics
 		}
 
 		// TODO: Add proper handling for invalid 'PixelMap' objects.
-		///ASSERT(data);
+		///assert(data);
 
 		return PixelMap(std::move(data), width, height, desired_channels);
 	}

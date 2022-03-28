@@ -25,7 +25,7 @@ namespace engine
 {
 	Entity create_model(World& world, pass_ref<graphics::Model> model, Entity parent, EntityType type)
 	{
-		ASSERT(model);
+		assert(model);
 
 		auto& registry = world.get_registry();
 
@@ -41,7 +41,7 @@ namespace engine
 
 	Entity attach_model(World& world, Entity entity, pass_ref<graphics::Model> model, graphics::ColorRGBA color)
 	{
-		///ASSERT(model);
+		///assert(model);
 
 		auto& registry = world.get_registry();
 
@@ -179,7 +179,7 @@ namespace engine
 
 		if (allow_multiple && (model_data.models.size() > 1))
 		{
-			//ASSERT(!model_data.models.empty());
+			//assert(!model_data.models.empty());
 
 			entity = engine::create_pivot(world, parent);
 
@@ -192,7 +192,7 @@ namespace engine
 		{
 			if (model_data.models.empty())
 			{
-				ASSERT(false); // <-- Debugging related.
+				assert(false); // <-- Debugging related.
 
 				return entity;
 			}
@@ -212,7 +212,7 @@ namespace engine
 	{
 		auto& registry = world.get_registry();
 
-		ASSERT(!animations->animations.empty());
+		assert(!animations->animations.empty());
 
 		registry.emplace_or_replace<Animator>(entity, animations, AnimationID(0), rate);
 

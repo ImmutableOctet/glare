@@ -319,7 +319,7 @@ namespace engine
 
 			//default:
 			//	// Unsupported.
-			//	ASSERT(false);
+			//	assert(false);
 
 			//	break;
 		}
@@ -369,7 +369,7 @@ namespace engine
 
 		auto target = resolve_object_reference(target_query, world, player_objects, objects);
 
-		ASSERT(target != null);
+		assert(target != null);
 
 		auto following_distance = util::get_value(data, "following_distance", SimpleFollowComponent::DEFAULT_FOLLOWING_DISTANCE);
 		auto follow_speed = util::get_value(data, "follow_speed", SimpleFollowComponent::DEFAULT_FOLLOW_SPEED);

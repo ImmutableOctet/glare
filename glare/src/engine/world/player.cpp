@@ -73,7 +73,7 @@ namespace engine
 
 				break;
 			default:
-				ASSERT("Invalid character specified.");
+				//assert(false, "Invalid character specified.");
 
 				break;
 		}

@@ -107,7 +107,7 @@ namespace engine
 
 	void DebugListener::operator()(const OnStageLoaded& stage_info)
 	{
-		ASSERT(stage_info.stage != null);
+		assert(stage_info.stage != null);
 
 		if (stage_info.path)
 		{

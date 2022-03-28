@@ -141,7 +141,7 @@ namespace engine
 	static TFormData get_tform_data(const math::Matrix4x4& light_projection, const math::Vector& light_position)
 	{
 		//static_assert(false, "Implementation missing.");
-		ASSERT(false);
+		assert(false);
 	}
 
 	template <>
@@ -170,7 +170,7 @@ namespace engine
 
 		// Either the caller must specify perspective parameters, or the
 		// light-entity must already have the 'PointLightShadows' component.
-		//ASSERT(pcfg_ptr); // <-- This should only fail if you're trying to attach shadows to a light without any parameters.
+		//assert(pcfg_ptr); // <-- This should only fail if you're trying to attach shadows to a light without any parameters.
 		if (!pcfg_ptr)
 		{
 			return false;
@@ -197,7 +197,7 @@ namespace engine
 				}
 				else
 				{
-					ASSERT(shadows);
+					assert(shadows);
 
 					r = shadows->shadow_map.get_resolution();
 				}
@@ -224,7 +224,7 @@ namespace engine
 				break;
 			/*
 			default:
-				ASSERT(false);
+				assert(false);
 
 				break;
 			*/
@@ -271,7 +271,7 @@ namespace engine
 					//break;
 				//default:
 					// Other light types are not currently supported. (Spotlights, etc.)
-					//ASSERT(false);
+					//assert(false);
 					//break;
 			}
 		}

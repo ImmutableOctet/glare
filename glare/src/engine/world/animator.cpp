@@ -22,7 +22,7 @@ namespace engine
 		last_known_animation(current_animation),
 		rate(rate), time(time)
 	{
-		ASSERT(animations);
+		assert(animations);
 
 		auto number_of_bones = animations->skeleton.size();
 

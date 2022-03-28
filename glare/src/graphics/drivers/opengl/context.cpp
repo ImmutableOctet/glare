@@ -777,7 +777,7 @@ namespace graphics
 
 				GLint success;
 
-				glGetShaderiv(obj, GL_COMPILE_STATUS, &success); //ASSERT(success);
+				glGetShaderiv(obj, GL_COMPILE_STATUS, &success); //assert(success);
 
 				if (!success)
 				{
@@ -860,14 +860,18 @@ namespace graphics
 		protected:
 			void init_imgui(SDL_GLContext gl_context, SDL_Window* window_handle, const GLVersion& gl_version, std::string_view glsl_version)
 			{
-				ASSERT(util::lib::init_imgui());
+				auto imgui = util::lib::init_imgui();
+				assert(imgui);
+				
 				//ImGuiIO& io = ImGui::GetIO(); (void)io;
 
 				print("Calling ImGui_ImplSDL2_InitForOpenGL...");
-				ASSERT(ImGui_ImplSDL2_InitForOpenGL(window_handle, gl_context));
+				auto imgui_sdl = ImGui_ImplSDL2_InitForOpenGL(window_handle, gl_context);
+				assert(imgui_sdl);
 
 				print("Calling ImGui_ImplOpenGL3_Init...");
-				ASSERT(ImGui_ImplOpenGL3_Init(glsl_version.data()));
+				auto imgui_gl = ImGui_ImplOpenGL3_Init(glsl_version.data());
+				assert(imgui_gl);
 			}
 
 			void deinit_imgui()
@@ -939,7 +943,7 @@ namespace graphics
 
 			GLenum push_texture(Handle texture, GLenum texture_type)
 			{
-				///ASSERT(gl_texture_id < MAX_TEXTURE_INDEX);
+				///assert(gl_texture_id < MAX_TEXTURE_INDEX);
 
 				if (gl_texture_id >= MAX_TEXTURE_INDEX)
 				{
@@ -1081,7 +1085,7 @@ namespace graphics
 
 	static Driver& get_driver(Context* ctx)
 	{
-		ASSERT(ctx);
+		assert(ctx);
 
 		return get_driver(*ctx);
 	}
@@ -1100,7 +1104,7 @@ namespace graphics
 
 				break;
 			default:
-				ASSERT(false); // Unsupported graphics backend.
+				assert(false); // Unsupported graphics backend.
 
 				break;
 		}
@@ -1123,7 +1127,7 @@ namespace graphics
 
 	Context::~Context()
 	{
-		//ASSERT(get_backend() == Backend::OpenGL);
+		//assert(get_backend() == Backend::OpenGL);
 
 		delete reinterpret_cast<Driver*>(native_context);
 	}
@@ -1795,9 +1799,9 @@ namespace graphics
 
 	MeshComposition Context::generate_mesh(memory::memory_view vertices, std::size_t vertex_size, memory::array_view<VertexAttribute> attributes, memory::array_view<MeshIndex> indices) noexcept
 	{
-		ASSERT(vertices);
-		ASSERT(vertex_size);
-		ASSERT(attributes);
+		assert(vertices);
+		assert(vertex_size);
+		assert(attributes);
 
 		GLComposition mesh = {};
 
@@ -1847,7 +1851,7 @@ namespace graphics
 
 			const void* offset = (reinterpret_cast<const std::int8_t*>(vertex_data_offset) + attribute.offset);
 
-			ASSERT(type != GL_NONE);
+			assert(type != GL_NONE);
 
 			glEnableVertexAttribArray(index);
 
@@ -1877,10 +1881,10 @@ namespace graphics
 	// TODO: Implement cubemaps, etc. for this overload.
 	Context::Handle Context::generate_texture(const PixelMap& texture_data, ElementType channel_type, TextureFlags flags, TextureType type, bool _keep_bound, bool _loose_internal_format)
 	{
-		///ASSERT(texture_data);
+		///assert(texture_data);
 
 		// At this time, no more than four color channels are supported.
-		///ASSERT(texture_data.channels() <= 4);
+		///assert(texture_data.channels() <= 4);
 
 		Handle texture = NoHandle;
 
@@ -1896,7 +1900,7 @@ namespace graphics
 			bool is_depth_map = ((flags & TextureFlags::DepthMap));
 
 			// For now, Depth maps are not supported.
-			ASSERT(!is_depth_map);
+			assert(!is_depth_map);
 		*/
 
 		allocate_texture_2d(texture_data.width(), texture_data.height(), texture_data.format(), channel_type, texture_data.data(), (flags & TextureFlags::Dynamic), (flags & TextureFlags::MipMap), false, _loose_internal_format); // true; // texture_type
@@ -2008,7 +2012,7 @@ namespace graphics
 
 	void Context::resize_texture(Texture& texture, int width, int height, const memory::raw_ptr raw_data, bool generate_mipmaps)
 	{
-		ASSERT(texture.is_dynamic());
+		assert(texture.is_dynamic());
 
 		use(texture, [&]()
 		{
@@ -2040,8 +2044,8 @@ namespace graphics
 	Context::Handle Context::link_shader(const Handle& vertex_obj, const Handle& fragment_obj, const Handle& geometry_obj) noexcept
 	{
 		// TODO: Look into proper error handling if possible.
-		ASSERT(vertex_obj);
-		ASSERT(fragment_obj);
+		assert(vertex_obj);
+		assert(fragment_obj);
 
 		// Allocate a shader-program object.
 		auto program = glCreateProgram();
@@ -2067,7 +2071,7 @@ namespace graphics
 		}
 
 		// TODO: Look into proper error handling for link-failure if possible.
-		ASSERT(success);
+		assert(success);
 
 		return program;
 	}

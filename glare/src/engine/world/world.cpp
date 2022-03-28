@@ -138,7 +138,7 @@ namespace engine
 		catch (std::exception& e)
 		{
 			print_warn("Error parsing JSON file: {}", e.what());
-			ASSERT(false);
+			assert(false);
 		}
 		*/
 
@@ -204,7 +204,7 @@ namespace engine
 	)
 	{
 		// Deferred referning is current unsupported.
-		//ASSERT(forward_rendering);
+		//assert(forward_rendering);
 
 		if (camera == null)
 		{
@@ -712,7 +712,7 @@ namespace engine
 		bool _null_as_root, bool _is_deferred
 	)
 	{
-		ASSERT(entity != parent);
+		assert(entity != parent);
 
 		/*
 		if (_null_as_root)
@@ -899,7 +899,7 @@ namespace engine
 
 	void World::add_camera(Entity camera, bool make_active)
 	{
-		ASSERT(registry.try_get<CameraParameters>(camera));
+		assert(registry.try_get<CameraParameters>(camera));
 
 		if ((this->camera == null) || make_active)
 		{
@@ -911,7 +911,7 @@ namespace engine
 
 	void World::remove_camera(Entity camera)
 	{
-		ASSERT(registry.try_get<CameraParameters>(camera));
+		assert(registry.try_get<CameraParameters>(camera));
 
 		auto it = std::find(cameras.begin(), cameras.end(), camera);
 

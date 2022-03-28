@@ -518,8 +518,8 @@ namespace glare
 
 			if (!gbuffer.position.has_value())
 			{
-				ASSERT(render_state.matrices.has_value());
-				ASSERT(render_state.screen.has_value());
+				assert(render_state.matrices.has_value());
+				assert(render_state.screen.has_value());
 
 				const auto& matrices = *render_state.matrices;
 				const auto& screen = *render_state.screen;
@@ -572,7 +572,7 @@ namespace glare
 					// TODO: Implement as visit:
 					if (util::peek_value<graphics::Vector*>(light_pos_v, [&](const graphics::Vector* vec)
 					{
-						ASSERT(vec);
+						assert(vec);
 					
 						shader["point_shadow_light_position"] = *vec;
 
@@ -581,7 +581,7 @@ namespace glare
 					{}
 					else if (util::peek_value<graphics::VectorArray*>(light_pos_v, [&](const graphics::VectorArray* vec)
 					{
-						ASSERT(vec);
+						assert(vec);
 
 						shader["point_shadow_light_position"] = *vec;
 
@@ -599,7 +599,7 @@ namespace glare
 					// TODO: Implement as visit:
 					if (util::peek_value<float*>(far_v, [&](const float* far_plane)
 					{
-						ASSERT(far_plane);
+						assert(far_plane);
 
 						shader["point_shadow_far_plane"] = *far_plane;
 
@@ -608,7 +608,7 @@ namespace glare
 					{}
 					else if (util::peek_value<graphics::FloatArray*>(far_v, [&](const graphics::FloatArray* far_plane)
 					{
-						ASSERT(far_plane);
+						assert(far_plane);
 
 						shader["point_shadow_far_plane"] = *far_plane;
 
@@ -627,7 +627,7 @@ namespace glare
 					// TODO: Implement as visit:
 					if (util::peek_value<graphics::Vector*>(light_pos_v, [&](const graphics::Vector* vec)
 					{
-						ASSERT(vec);
+						assert(vec);
 					
 						shader["directional_shadow_light_position"] = *vec;
 
@@ -636,7 +636,7 @@ namespace glare
 					{}
 					else if (util::peek_value<graphics::VectorArray*>(light_pos_v, [&](const graphics::VectorArray* vec)
 					{
-						ASSERT(vec);
+						assert(vec);
 
 						shader["directional_shadow_light_position"] = *vec;
 
@@ -654,7 +654,7 @@ namespace glare
 					// TODO: Implement as visit:
 					if (util::peek_value<graphics::Matrix*>(mat_v, [&](const graphics::Matrix* matrix)
 					{
-						ASSERT(matrix);
+						assert(matrix);
 
 						shader["directional_shadow_light_space_matrix"] = *matrix;
 
@@ -663,7 +663,7 @@ namespace glare
 					{}
 					else if (util::peek_value<graphics::MatrixArray*>(mat_v, [&](const graphics::MatrixArray* matrices)
 					{
-						ASSERT(matrices);
+						assert(matrices);
 
 						shader["directional_shadow_light_space_matrix"] = *matrices;
 
@@ -698,13 +698,13 @@ namespace glare
 						}
 					}
 
-					ASSERT(texture);
+					assert(texture);
 					graphics.canvas->bind_texture(*texture, texture_name); // bind_texture(tdata);
 				}))
 				{}
 				else if (util::peek_value<const graphics::NamedTextureArrayRaw*>(dynamic_textures_v, [&](const graphics::NamedTextureArrayRaw* tdata)
 				{
-					//ASSERT(tdata);
+					//assert(tdata);
 					if (tdata)
 					{
 						graphics.canvas->bind_textures(*tdata, [shadows_enabled](const std::string& texture_name, const graphics::TextureArrayRaw& textures)
@@ -836,7 +836,7 @@ namespace glare
 
 		auto* dir = registry.try_get<engine::DirectionalLightComponent>(entity);
 		
-		ASSERT(dir);
+		assert(dir);
 
 		attr("use_position", dir->use_position);
 
@@ -882,7 +882,7 @@ namespace glare
 
 		auto* spot = registry.try_get<engine::SpotLightComponent>(entity);
 		
-		ASSERT(spot);
+		assert(spot);
 
 		attr("cutoff", spot->cutoff);
 		attr("outer_cutoff", spot->outer_cutoff);
@@ -931,7 +931,7 @@ namespace glare
 
 		auto* point_light = registry.try_get<engine::PointLightComponent>(entity);
 
-		ASSERT(point_light);
+		assert(point_light);
 
 		// update attenuation parameters and calculate radius
 		//const float constant = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)

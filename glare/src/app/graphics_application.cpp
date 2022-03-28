@@ -6,20 +6,14 @@ namespace app
 {
 	void GraphicsApplication::begin_render()
 	{
-		auto& gfx = *graphics.canvas;
-		//auto& wnd = *window;
-
-		gfx.begin();
+		graphics.canvas->begin();
 	}
 
 	void GraphicsApplication::end_render()
 	{
-		auto& gfx = *graphics.canvas;
-		auto& wnd = *window;
+		graphics.canvas->end();
 
-		gfx.end();
-
-		gfx.flip(wnd);
+		graphics.canvas->flip(*window);
 	}
 
 	bool GraphicsApplication::process_event(const SDL_Event& e)
