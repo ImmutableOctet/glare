@@ -108,7 +108,7 @@ namespace engine
 
 	void AnimationSystem::update(World& world, float delta_time)
 	{
-		return;
+		//return;
 
 		auto& registry = world.get_registry();
 
