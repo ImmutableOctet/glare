@@ -114,6 +114,8 @@ namespace glare
 
 			void update(app::Milliseconds time) override;
 
+			void render_debug_controls();
+			void meta_controls();
 			void render() override;
 
 			std::tuple<bool, bool> render_shadows(bool point_lights=true, bool directional_lights=true);

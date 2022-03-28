@@ -324,7 +324,7 @@ namespace engine
 
 			inline const app::DeltaTime& get_delta_time() const { return delta_time; }
 
-			Entity get_player(PlayerIndex player) const;
+			Entity get_player(PlayerIndex player=engine::PRIMARY_LOCAL_PLAYER) const;
 
 			inline math::Vector gravity() const { return physics.get_gravity(); }
 			inline math::Vector down() const { return { 0.0f, -1.0f, 0.0f }; }

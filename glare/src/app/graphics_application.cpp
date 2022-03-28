@@ -28,7 +28,9 @@ namespace app
 			}
 
 			if (ImGui_ImplSDL2_ProcessEvent(&e))
+			{
 				return true;
+			}
 		}
 
 		return false;

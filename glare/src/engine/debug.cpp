@@ -40,9 +40,9 @@ namespace engine
 
 		if (summary_info)
 		{
-			auto total_nodes = rel->count_nodes(registry);
+			auto total_children = rel->total_children(registry);
 
-			print("Number of children listed: {} ({} recursively)", child_count, total_nodes);
+			print("Number of children listed: {} ({} recursively)", child_count, total_children);
 			//print("{} List of children:", prefix);
 			print("List:");
 		}

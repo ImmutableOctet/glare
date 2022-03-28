@@ -6,13 +6,16 @@
 #include <cmath>
 #include <cstdlib>
 #include <optional>
+#include <cassert>
 
 #include <app/events.hpp>
 #include <app/input/keycodes.hpp>
 #include <engine/engine.hpp>
 
 #include <util/variant.hpp>
+
 #include <engine/debug.hpp>
+#include <engine/world/debug/debug.hpp>
 
 #include <graphics/native/opengl.hpp>
 #include <graphics/world_render_state.hpp>
@@ -174,7 +177,8 @@ namespace glare
 
 		world.register_event<app::input::KeyboardState, &Glare::on_user_keyboard_input>(*this);
 
-		input.get_mouse().lock();
+		// Normally, we lock when starting.
+		//input.get_mouse().lock();
 
 		setup_world(world);
 
@@ -337,6 +341,37 @@ namespace glare
 		}
 	}
 
+	void Glare::render_debug_controls()
+	{
+		using namespace engine::debug;
+
+		if (!imgui_enabled())
+			return;
+
+		auto player = world.get_player();
+		assert(player != engine::null);
+
+		animation_control(world, player);
+		meta_controls();
+	}
+
+	void Glare::meta_controls()
+	{
+		ImGui::Begin("Meta", nullptr, ImGuiWindowFlags_NoBackground|ImGuiWindowFlags_NoTitleBar);
+
+		if (ImGui::Button("Switch to Game"))
+		{
+			auto& mouse = input.get_mouse();
+			mouse.toggle_lock();
+		}
+
+		auto& io = ImGui::GetIO();
+
+		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+
+		ImGui::End();
+	}
+
 	void Glare::render()
 	{
 		using namespace graphics;
@@ -344,34 +379,7 @@ namespace glare
 		//auto& gfx = *graphics.canvas;
 		//auto& wnd = *window;
 
-		// imgui test:
-		if (imgui_enabled())
-		{
-			static bool show_demo_window = true;
-			static float f = 0.0f;
-			static int counter = 0;
-			static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-
-			ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-			ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-			ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-
-			ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-			ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-			if (ImGui::Button("Switch to Game"))
-			{
-				auto& mouse = input.get_mouse();
-				mouse.toggle_lock();
-			}
-
-			ImGui::SameLine();
-			ImGui::Text("counter = %d", counter);
-
-			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-			ImGui::End();
-		}
+		render_debug_controls();
 
 		//std::sinf(milliseconds())
 

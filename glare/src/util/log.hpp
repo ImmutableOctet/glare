@@ -1,5 +1,7 @@
 #pragma once
 
+#include "format.hpp"
+
 #include <memory>
 #include <tuple>
 //#include <vector>
@@ -7,10 +9,6 @@
 #include <math/math.hpp>
 #include <engine/types.hpp>
 
-#define FMT_HEADER_ONLY
-
-#include <fmt/core.h>
-#include <fmt/format.h>
 #include <spdlog/spdlog.h>
 
 /*
