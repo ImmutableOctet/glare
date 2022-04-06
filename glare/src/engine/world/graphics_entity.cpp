@@ -142,8 +142,8 @@ namespace engine
 
 			auto entity = create_model(world, model, parent, type);
 
-			// Debugging related:
-			registry.emplace_or_replace<NameComponent>(entity, std::format("{} - {}", path, model->get_name()));
+			//world.set_name(entity, std::format("{} - {}", path, model->get_name()));
+			world.set_name(entity, model->get_name());
 
 			// Update model's scene-local transform:
 			{
@@ -182,6 +182,7 @@ namespace engine
 			//assert(!model_data.models.empty());
 
 			entity = engine::create_pivot(world, parent);
+			world.set_name(entity, path);
 
 			for (const auto& model : model_data.models)
 			{
