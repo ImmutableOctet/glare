@@ -773,7 +773,10 @@ namespace engine
 
 	void World::set_name(Entity entity, const std::string& name)
 	{
-		registry.emplace_or_replace<NameComponent>(entity, name);
+		if (!name.empty())
+		{
+			registry.emplace_or_replace<NameComponent>(entity, name);
+		}
 	}
 
 	Entity World::get_by_name(std::string_view name)
