@@ -67,6 +67,7 @@ namespace engine
 		subscribe(animation);
 
 		root = create_pivot(*this);
+		set_name(root, "Root");
 	}
 	
 	/*
@@ -768,6 +769,11 @@ namespace engine
 		}
 
 		return {};
+	}
+
+	void World::set_name(Entity entity, const std::string& name)
+	{
+		registry.emplace_or_replace<NameComponent>(entity, name);
 	}
 
 	Entity World::get_by_name(std::string_view name)
