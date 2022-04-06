@@ -296,9 +296,6 @@
     <ClInclude Include="src\engine\world\animation_system.hpp">
       <Filter>src\engine\world</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\world\debug\controls\controls.hpp">
-      <Filter>src\engine\world\debug\controls</Filter>
-    </ClInclude>
     <ClInclude Include="src\engine\action.hpp">
       <Filter>src\engine</Filter>
     </ClInclude>
@@ -385,6 +382,12 @@
     </ClInclude>
     <ClInclude Include="src\util\format.hpp">
       <Filter>src\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\meta\controls.hpp">
+      <Filter>src\engine\world\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\meta\meta.hpp">
+      <Filter>src\engine\world\meta</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -578,6 +581,9 @@
     </Filter>
     <Filter Include="src\engine\world\debug\controls">
       <UniqueIdentifier>{e81df559-5224-4a8e-a8ca-05050f11ee13}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\engine\world\meta">
+      <UniqueIdentifier>{1a0a946e-c79f-47cf-ad51-aafdfff566eb}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -779,9 +785,6 @@
     <ClCompile Include="src\engine\transform.cpp">
       <Filter>src\engine</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\world\debug\controls\controls.cpp">
-      <Filter>src\engine\world\debug\controls</Filter>
-    </ClCompile>
     <ClCompile Include="src\util\io.cpp">
       <Filter>src\util</Filter>
     </ClCompile>
@@ -790,6 +793,9 @@
     </ClCompile>
     <ClCompile Include="src\util\string.cpp">
       <Filter>src\util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\meta\controls.cpp">
+      <Filter>src\engine\world\meta</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

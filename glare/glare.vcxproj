@@ -284,7 +284,6 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\world\animator.hpp" />
     <ClInclude Include="src\engine\world\billboard_behavior.hpp" />
     <ClInclude Include="src\engine\world\camera.hpp" />
-    <ClInclude Include="src\engine\world\debug\controls\controls.hpp" />
     <ClInclude Include="src\engine\world\debug\debug.hpp" />
     <ClInclude Include="src\engine\world\debug\debug_camera.hpp" />
     <ClInclude Include="src\engine\world\debug\debug_move.hpp" />
@@ -292,6 +291,8 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\world\follow_component.hpp" />
     <ClInclude Include="src\engine\world\graphics_entity.hpp" />
     <ClInclude Include="src\engine\world\light.hpp" />
+    <ClInclude Include="src\engine\world\meta\controls.hpp" />
+    <ClInclude Include="src\engine\world\meta\meta.hpp" />
     <ClInclude Include="src\engine\world\physics.hpp" />
     <ClInclude Include="src\engine\world\player.hpp" />
     <ClInclude Include="src\engine\world\rave_component.hpp" />
@@ -412,13 +413,13 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\engine\world\animator.cpp" />
     <ClCompile Include="src\engine\world\billboard_behavior.cpp" />
     <ClCompile Include="src\engine\world\camera.cpp" />
-    <ClCompile Include="src\engine\world\debug\controls\controls.cpp" />
     <ClCompile Include="src\engine\world\debug\debug_camera.cpp" />
     <ClCompile Include="src\engine\world\debug\debug_move.cpp" />
     <ClCompile Include="src\engine\world\entity.cpp" />
     <ClCompile Include="src\engine\world\follow_component.cpp" />
     <ClCompile Include="src\engine\world\graphics_entity.cpp" />
     <ClCompile Include="src\engine\world\light.cpp" />
+    <ClCompile Include="src\engine\world\meta\controls.cpp" />
     <ClCompile Include="src\engine\world\physics.cpp" />
     <ClCompile Include="src\engine\world\player.cpp" />
     <ClCompile Include="src\engine\world\rave_component.cpp" />

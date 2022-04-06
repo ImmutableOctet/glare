@@ -182,10 +182,10 @@ namespace engine
 					auto obj_idx = util::get_value<ObjectIndex>(obj_cfg, "index", obj_idx_counter);
 					auto obj_name = util::get_value<std::string>(obj_cfg, "name", "");
 
-					print("Object name: {}", obj_name);
-
 					if (!obj_name.empty())
 					{
+						print("Object name: {}", obj_name);
+
 						registry.emplace<NameComponent>(obj, obj_name);
 					}
 
