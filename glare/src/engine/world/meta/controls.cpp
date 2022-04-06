@@ -29,7 +29,7 @@ namespace ImGui
 	}
 }
 
-namespace engine::debug
+namespace engine::meta
 {
 	namespace display
 	{
@@ -40,8 +40,91 @@ namespace engine::debug
 			return format("{} ({})", entity_name, entity);
 		}
 
-		struct empty_child_display { void operator()(World& world, Entity child, const Relationship& relationship) {} };
-		struct on_child_show_all   { auto operator()(Entity child) { return true; } };
+		void vectors(const math::Vector& pos, const math::Vector& rot, const math::Vector& scale)
+		{
+			ImGui::FormatText("x: {}, y: {}, z: {}", pos.x, pos.y, pos.z);
+			ImGui::FormatText("pitch: {}, yaw: {}, roll: {}", rot.x, rot.y, rot.z);
+			ImGui::FormatText("sx: {}, sy: {}, sz: {}", scale.x, scale.y, scale.z);
+		}
+
+		void transform(World& world, Transform& t)
+		{
+			if (ImGui::TreeNode("Local"))
+			{
+				vectors
+				(
+					t.get_local_position(),
+					math::degrees(t.get_local_rotation()),
+					t.get_local_scale()
+				);
+
+				ImGui::TreePop();
+			}
+
+			if (ImGui::TreeNode("Global"))
+			{
+				vectors
+				(
+					t.get_position(),
+					math::degrees(t.get_rotation()),
+					t.get_scale()
+				);
+
+				ImGui::TreePop();
+			}
+		}
+
+		void transform(World& world, Entity entity)
+		{
+			auto t = world.get_transform(entity);
+
+			transform(world, t);
+		}
+
+		void animation(const graphics::Animation& a, std::string_view display_name)
+		{
+			if (ImGui::TreeNode(display_name.data()))
+			{
+				ImGui::FormatText("ID: #{}", a.id);
+				ImGui::FormatText("Duation: {} frames", a.duration);
+				ImGui::FormatText("Rate: {} fps", a.rate);
+
+				ImGui::TreePop();
+			}
+		}
+
+		void animator(Animator& animator)
+		{
+			if (ImGui::TreeNode("Animator"))
+			{
+				const Animation* cur_anim = animator.get_current_animation();
+
+				if (cur_anim)
+				{
+					ImGui::SliderFloat("Time", &animator.time, 0.0f, cur_anim->duration, "%.3f");
+				}
+
+				//ImGui::DragFloat("Rate", &animator.rate, 0.0001f, 0.0f, 1.0f, "%.06f");
+				ImGui::SliderFloat("Rate", &animator.rate, 0.0f, 1.0f, "%.06f");
+
+				if (animator.playing())
+				{
+					if (ImGui::Button("Pause", {54, 24}))
+						animator.pause();
+				}
+				else
+				{
+					if (ImGui::Button("Play", {54, 24}))
+						animator.play();
+				}
+
+				ImGui::SameLine();
+
+				ImGui::FormatText("State: {}", static_cast<int>(animator.get_state()));
+
+				ImGui::TreePop();
+			}
+		}
 
 		template <typename on_display_fn=empty_child_display, typename on_child_fn=on_child_show_all>
 		void child_tree_ex(World& world, Entity entity, on_display_fn on_display, on_child_fn on_child, std::optional<std::string_view> node_name=std::nullopt)
@@ -129,51 +212,15 @@ namespace engine::debug
 			}
 		}
 
-		template <typename on_display_fn>
+		template <typename on_display_fn=empty_child_display>
 		void child_tree(World& world, Entity entity, on_display_fn on_display, std::optional<std::string_view> node_name=std::nullopt)
 		{
 			child_tree_ex(world, entity, on_display, [](Entity child) { return true; }, node_name);
 		}
 
-		void vectors(const math::Vector& pos, const math::Vector& rot, const math::Vector& scale)
+		void child_tree(World& world, Entity entity)
 		{
-			ImGui::FormatText("x: {}, y: {}, z: {}", pos.x, pos.y, pos.z);
-			ImGui::FormatText("pitch: {}, yaw: {}, roll: {}", rot.x, rot.y, rot.z);
-			ImGui::FormatText("sx: {}, sy: {}, sz: {}", scale.x, scale.y, scale.z);
-		}
-
-		void transform(World& world, Entity entity, Transform& t)
-		{
-			if (ImGui::TreeNode("Local"))
-			{
-				vectors
-				(
-					t.get_local_position(),
-					math::degrees(t.get_local_rotation()),
-					t.get_local_scale()
-				);
-
-				ImGui::TreePop();
-			}
-
-			if (ImGui::TreeNode("Global"))
-			{
-				vectors
-				(
-					t.get_position(),
-					math::degrees(t.get_rotation()),
-					t.get_scale()
-				);
-
-				ImGui::TreePop();
-			}
-		}
-
-		void transform(World& world, Entity entity)
-		{
-			auto t = world.get_transform(entity);
-
-			transform(world, entity, t);
+			child_tree<>(world, entity, {});
 		}
 
 		template <typename on_display_fn=empty_child_display, typename on_child_fn=on_child_show_all>
@@ -203,6 +250,11 @@ namespace engine::debug
 			);
 		}
 
+		void transform_tree(World& world, Entity entity)
+		{
+			transform_tree<>(world, entity, {}, {});
+		}
+
 		template <typename on_display_fn=empty_child_display>
 		void skeletal_tree(World& world, Entity entity, on_display_fn on_display)
 		{
@@ -230,100 +282,86 @@ namespace engine::debug
 			);
 		}
 
-		void animation(const graphics::Animation& a, std::string_view display_name="Animation")
+		void skeletal_tree(World& world, Entity entity)
 		{
-			if (ImGui::TreeNode(display_name.data()))
-			{
-				ImGui::FormatText("ID: #{}", a.id);
-				ImGui::FormatText("Duation: {} frames", a.duration);
-				ImGui::FormatText("Rate: {} fps", a.rate);
-
-				ImGui::TreePop();
-			}
+			skeletal_tree<>(world, entity, {});
 		}
 
-		void animator(Animator& animator)
+		template <typename window_fn>
+		void named_window(World& world, Entity entity, window_fn wnd, std::string_view subtitle={}, bool display_entity_name = true)
 		{
-			if (ImGui::TreeNode("Animator"))
+			auto name = name_and_id(world, entity);
+
+			std::string wnd_name;
+
+			if (!subtitle.empty())
 			{
-				const Animation* cur_anim = animator.get_current_animation();
-
-				if (cur_anim)
-				{
-					ImGui::SliderFloat("Time", &animator.time, 0.0f, cur_anim->duration, "%.3f");
-				}
-
-				//ImGui::DragFloat("Rate", &animator.rate, 0.0001f, 0.0f, 1.0f, "%.06f");
-				ImGui::SliderFloat("Rate", &animator.rate, 0.0f, 1.0f, "%.06f");
-
-				if (animator.playing())
-				{
-					if (ImGui::Button("Pause", {54, 24}))
-						animator.pause();
-				}
-				else
-				{
-					if (ImGui::Button("Play", {54, 24}))
-						animator.play();
-				}
-
-				ImGui::SameLine();
-
-				ImGui::FormatText("State: {}", static_cast<int>(animator.get_state()));
-
-				ImGui::TreePop();
+				wnd_name = format("{} - {}", name, subtitle);
 			}
+			else
+			{
+				wnd_name = name;
+			}
+
+			ImGui::Begin(wnd_name.c_str());
+
+			if (display_entity_name)
+			{
+				ImGui::FormatText("Name: {}", name);
+			}
+
+			wnd(entity);
+
+			ImGui::End();
 		}
 	}
 
 	void animation_control(World& world, Entity entity)
 	{
-		using namespace display;
+		display::named_window(world, entity, [&world](Entity entity)
+		{
+			auto& registry = world.get_registry();
+			const auto& rel = registry.get<Relationship>(entity);
 
-		auto& registry = world.get_registry();
+			ImGui::FormatText("Number of Children: {}, {} locally", rel.total_children(registry), rel.children());
 
-		auto name = name_and_id(world, entity);
+			ImGui::Separator();
 
-		auto wnd_name = format("{} - Animation Controls", name, entity);
+			auto& animator = registry.get<Animator>(entity);
 
-		ImGui::Begin(wnd_name.c_str());
+			display::animator(animator);
 
-		ImGui::FormatText("Name: {}", name);
+			const Animation* cur_anim = animator.get_current_animation();
+			const Animation* prev_anim = animator.get_prev_animation();
 
-		const auto& rel = registry.get<Relationship>(entity);
+			if (cur_anim)
+				display::animation(*cur_anim, "Current Animation");
 
-		ImGui::FormatText("Number of Children: {}, {} locally", rel.total_children(registry), rel.children());
+			if ((prev_anim) && (cur_anim != prev_anim))
+				display::animation(*prev_anim, "Previous Animation");
 
-		ImGui::Separator();
+			display::skeletal_tree(world, entity, {});
 
-		auto& animator = registry.get<Animator>(entity);
+			//ImGui::ShowDemoWindow();
+			//ImGui::TreeNode
 
-		display::animator(animator);
+			/*
+			ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
 
-		const Animation* cur_anim = animator.get_current_animation();
-		const Animation* prev_anim = animator.get_prev_animation();
+			ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+			ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
 
-		if (cur_anim)
-			display::animation(*cur_anim, "Current Animation");
+			ImGui::SameLine();
+			ImGui::Text("counter = %d", counter);
+			*/
+		}, "Animation Controls");
+	}
 
-		if ((prev_anim) && (cur_anim != prev_anim))
-			display::animation(*prev_anim, "Previous Animation");
-
-		skeletal_tree(world, entity, {});
-
-		//ImGui::ShowDemoWindow();
-		//ImGui::TreeNode
-
-		/*
-		ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-
-		ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-		ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-		ImGui::SameLine();
-		ImGui::Text("counter = %d", counter);
-		*/
-
-		ImGui::End();
+	void hierarchy_control(World& world, Entity entity)
+	{
+		display::named_window(world, entity, [&world](Entity entity)
+		{
+			display::transform_tree(world, entity);
+		});
 	}
 }

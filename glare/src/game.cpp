@@ -15,6 +15,7 @@
 #include <util/variant.hpp>
 
 #include <engine/debug.hpp>
+#include <engine/world/meta/meta.hpp>
 #include <engine/world/debug/debug.hpp>
 
 #include <graphics/native/opengl.hpp>
@@ -343,7 +344,7 @@ namespace glare
 
 	void Glare::render_debug_controls()
 	{
-		using namespace engine::debug;
+		using namespace engine::meta;
 
 		if (!imgui_enabled())
 			return;
@@ -359,6 +360,8 @@ namespace glare
 		auto target = player_model;
 
 		animation_control(world, target);
+
+		hierarchy_control(world, world.get_root());
 	}
 
 	void Glare::meta_controls()
