@@ -25,6 +25,10 @@
 
 #include <sdl2/SDL_video.h>
 
+// imgui:
+#include <imgui/imgui_impl_sdl.h>
+#include <imgui/imgui_impl_opengl3.h>
+
 #include <utility>
 #include <variant>
 #include <vector>
@@ -36,7 +40,8 @@
 #include <format>
 
 // Debugging related:
-#include <iostream>
+//#include <iostream>
+#include <util/log.hpp>
 
 namespace graphics
 {
@@ -44,6 +49,25 @@ namespace graphics
 
 	// Default framebuffer object; meant to always represent 'NoHandle'.
 	static FrameBuffer _main_framebuffer;
+
+	static void debug_message_callback
+	(
+		GLenum source,
+		GLenum type,
+		GLuint id,
+		GLenum severity,
+		
+		GLsizei length,
+		const GLchar* message,
+
+		const void* driver_instance
+	)
+	{
+		if (type == GL_DEBUG_TYPE_ERROR)
+		{
+			print_warn("OPENGL ERROR DETECTED (SEVERITY LEVEL: {}):\n{}", severity, message);
+		}
+	}
 
 	// Most details of the active state is handled by OpenGL, but for
 	// higher-level details, we keep track of state with this data-structure.
@@ -69,6 +93,9 @@ namespace graphics
 		protected:
 			// SDL:
 			SDL_GLContext SDL = nullptr;
+
+			// imgui:
+			bool imgui_enabled = false;
 
 			// State:
 			GLenum gl_texture_id = BASE_TEXTURE_INDEX; // 0;
@@ -102,9 +129,15 @@ namespace graphics
 				return static_cast<GLenum>((texture_index + BASE_TEXTURE_INDEX));
 			}
 		public:
+			// Use `gl_get_shader_version_header` for general usage.
+			static std::string gl_get_shader_version_raw(const GLVersion& version)
+			{
+				return std::format("#version {}{}0 core", version.major, version.minor); // "#version {}{}0"
+			}
+
 			static std::string gl_get_shader_version_header(const GLVersion& version)
 			{
-				return std::format("\n#version {}{}0 core\n", version.major, version.minor);
+				return std::format("\n{}\n", gl_get_shader_version_raw(version)); // "\n{} core\n"
 			}
 
 			static GLbitfield gl_get_buffer_flags(BufferType buffer_type, bool default_to_color_buffer=false, bool allow_depth=true)
@@ -170,7 +203,7 @@ namespace graphics
 
 				if (uniform_location == -1)
 				{
-					std::cout << "Unable to resolve uniform for: " << '\"' << name << '\"' << '\n';
+					print("Unable to resolve uniform for: \"{}\"", name);
 					//auto e = glGetError();
 					//std::cout << e << std::endl;
 				}
@@ -675,7 +708,10 @@ namespace graphics
 				glGetShaderInfoLog(shader, reserve_size, &length, debug_output);
 				//auto e = glGetError();
 
-				std::cout << debug_output << std::endl;
+				if (length > 0)
+				{
+					print(debug_output);
+				}
 			}
 
 			static void output_shader_link_errors(const Context::Handle& shader)
@@ -692,7 +728,7 @@ namespace graphics
 				glGetProgramInfoLog(shader, reserve_size, &length, debug_output);
 				//auto e = glGetError();
 
-				std::cout << debug_output << std::endl;
+				print(debug_output);
 			}
 
 			Context::Handle compile_shader(std::string_view source, GLenum type, std::optional<std::string_view> preprocessor=std::nullopt, std::optional<std::string_view> version=std::nullopt) noexcept // const std::string& source
@@ -741,7 +777,7 @@ namespace graphics
 
 				GLint success;
 
-				glGetShaderiv(obj, GL_COMPILE_STATUS, &success); //ASSERT(success);
+				glGetShaderiv(obj, GL_COMPILE_STATUS, &success); //assert(success);
 
 				if (!success)
 				{
@@ -822,20 +858,68 @@ namespace graphics
 				return state.get_flags();
 			}
 		protected:
-			Driver(SDL_Window* window_handle, const GLVersion& gl_version):
+			void init_imgui(SDL_GLContext gl_context, SDL_Window* window_handle, const GLVersion& gl_version, std::string_view glsl_version)
+			{
+				auto imgui = util::lib::init_imgui();
+				assert(imgui);
+				
+				//ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+				print("Calling ImGui_ImplSDL2_InitForOpenGL...");
+				auto imgui_sdl = ImGui_ImplSDL2_InitForOpenGL(window_handle, gl_context);
+				assert(imgui_sdl);
+
+				print("Calling ImGui_ImplOpenGL3_Init...");
+				auto imgui_gl = ImGui_ImplOpenGL3_Init(glsl_version.data());
+				assert(imgui_gl);
+			}
+
+			void deinit_imgui()
+			{
+				ImGui_ImplOpenGL3_Shutdown();
+				ImGui_ImplSDL2_Shutdown();
+
+				util::lib::deinit_imgui();
+			}
+
+			Driver
+			(
+				SDL_Window* window_handle,
+				const GLVersion& gl_version,
+				bool extensions=false,
+
+				bool _debug=true
+			):
 				SDL(SDL_GL_CreateContext(window_handle)),
 				texture_stack(MAX_TEXTURES, NoHandle),
 				gl_version(gl_version),
-				gl_default_shader_version_header(gl_get_shader_version_header(gl_version))
+				gl_default_shader_version_header(gl_get_shader_version_header(gl_version)),
+				imgui_enabled(extensions)
 			{
+				_texture_assignment_buffer.reserve(MAX_TEXTURES);
+
 				glewInit();
 
-				_texture_assignment_buffer.reserve(MAX_TEXTURES);
+				if (imgui_enabled)
+				{
+					init_imgui(SDL, window_handle, gl_version, gl_get_shader_version_raw(gl_version));
+				}
+
+				if (_debug)
+				{
+					glEnable(GL_DEBUG_OUTPUT);
+					glDebugMessageCallback(&debug_message_callback, this);
+				}
 			}
 
 			~Driver()
 			{
 				SDL_GL_DeleteContext(SDL);
+
+				if (imgui_enabled)
+				{
+					deinit_imgui();
+				}
 			}
 		public:
 			// OpenGL API:
@@ -859,7 +943,7 @@ namespace graphics
 
 			GLenum push_texture(Handle texture, GLenum texture_type)
 			{
-				///ASSERT(gl_texture_id < MAX_TEXTURE_INDEX);
+				///assert(gl_texture_id < MAX_TEXTURE_INDEX);
 
 				if (gl_texture_id >= MAX_TEXTURE_INDEX)
 				{
@@ -934,6 +1018,41 @@ namespace graphics
 
 				//uniform_location_map = uniform_location_cache[shader];
 			}
+
+			void begin_frame(Context& ctx)
+			{
+				if (imgui_enabled)
+				{
+					ImGui_ImplOpenGL3_NewFrame();
+					ImGui_ImplSDL2_NewFrame();
+					ImGui::NewFrame();
+				}
+			}
+
+			void end_frame(Context& ctx, bool _imgui_restore_viewport=false) // _imgui_restore_viewport=false
+			{
+				if (imgui_enabled)
+				{
+					Viewport old_viewport;
+
+					if (_imgui_restore_viewport)
+					{
+						old_viewport = ctx.get_viewport();
+					}
+
+					ImGui::Render();
+
+					ImGuiIO& io = ImGui::GetIO(); //(void)io;
+
+					ctx.set_viewport({ {0, 0}, {static_cast<int>(io.DisplaySize.x), static_cast<int>(io.DisplaySize.y)} });
+					ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+					if (_imgui_restore_viewport)
+					{
+						ctx.set_viewport(old_viewport);
+					}
+				}
+			}
 		protected:
 			// Returns a reference to an internal buffer, populated with the indices requested.
 			const std::vector<int>& get_texture_indices(const TextureArray& textures, std::size_t texture_count)
@@ -966,13 +1085,13 @@ namespace graphics
 
 	static Driver& get_driver(Context* ctx)
 	{
-		ASSERT(ctx);
+		assert(ctx);
 
 		return get_driver(*ctx);
 	}
 
 	// Context API:
-	Context::Context(app::Window& wnd, Backend gfx, Flags flags)
+	Context::Context(app::Window& wnd, Backend gfx, Flags flags, bool extensions)
 		: graphics_backend(gfx), state(memory::unique<Context::State>())
 	{
 		auto backend = get_backend();
@@ -981,11 +1100,11 @@ namespace graphics
 		{
 			case Backend::OpenGL:
 				auto gl_version = util::lib::establish_gl();
-				native_context = new Driver(wnd.get_handle(), gl_version);
+				native_context = new Driver(wnd.get_handle(), gl_version, extensions);
 
 				break;
 			default:
-				ASSERT(false); // Unsupported graphics backend.
+				assert(false); // Unsupported graphics backend.
 
 				break;
 		}
@@ -1008,7 +1127,7 @@ namespace graphics
 
 	Context::~Context()
 	{
-		//ASSERT(get_backend() == Backend::OpenGL);
+		//assert(get_backend() == Backend::OpenGL);
 
 		delete reinterpret_cast<Driver*>(native_context);
 	}
@@ -1021,6 +1140,20 @@ namespace graphics
 	void Context::flip(app::Window& wnd)
 	{
 		SDL_GL_SwapWindow(wnd.get_handle());
+	}
+
+	void Context::begin_frame()
+	{
+		auto& driver = get_driver(*this);
+
+		driver.begin_frame(*this);
+	}
+
+	void Context::end_frame()
+	{
+		auto& driver = get_driver(*this);
+
+		driver.end_frame(*this);
 	}
 
 	void Context::clear(BufferType buffer_type)
@@ -1043,9 +1176,11 @@ namespace graphics
 		clear(buffer_type);
 	}
 
-	void Context::set_viewport(int x, int y, int width, int height)
+	void Context::set_viewport(const Viewport& viewport) // int x, int y, int width, int height
 	{
-		glViewport(x, y, width, height);
+		glViewport(viewport.get_x(), viewport.get_y(), viewport.get_width(), viewport.get_height());
+
+		this->viewport = viewport;
 	}
 
 	FrameBuffer& Context::get_default_framebuffer()
@@ -1664,9 +1799,9 @@ namespace graphics
 
 	MeshComposition Context::generate_mesh(memory::memory_view vertices, std::size_t vertex_size, memory::array_view<VertexAttribute> attributes, memory::array_view<MeshIndex> indices) noexcept
 	{
-		ASSERT(vertices);
-		ASSERT(vertex_size);
-		ASSERT(attributes);
+		assert(vertices);
+		assert(vertex_size);
+		assert(attributes);
 
 		GLComposition mesh = {};
 
@@ -1716,7 +1851,7 @@ namespace graphics
 
 			const void* offset = (reinterpret_cast<const std::int8_t*>(vertex_data_offset) + attribute.offset);
 
-			ASSERT(type != GL_NONE);
+			assert(type != GL_NONE);
 
 			glEnableVertexAttribArray(index);
 
@@ -1746,10 +1881,10 @@ namespace graphics
 	// TODO: Implement cubemaps, etc. for this overload.
 	Context::Handle Context::generate_texture(const PixelMap& texture_data, ElementType channel_type, TextureFlags flags, TextureType type, bool _keep_bound, bool _loose_internal_format)
 	{
-		///ASSERT(texture_data);
+		///assert(texture_data);
 
 		// At this time, no more than four color channels are supported.
-		///ASSERT(texture_data.channels() <= 4);
+		///assert(texture_data.channels() <= 4);
 
 		Handle texture = NoHandle;
 
@@ -1765,7 +1900,7 @@ namespace graphics
 			bool is_depth_map = ((flags & TextureFlags::DepthMap));
 
 			// For now, Depth maps are not supported.
-			ASSERT(!is_depth_map);
+			assert(!is_depth_map);
 		*/
 
 		allocate_texture_2d(texture_data.width(), texture_data.height(), texture_data.format(), channel_type, texture_data.data(), (flags & TextureFlags::Dynamic), (flags & TextureFlags::MipMap), false, _loose_internal_format); // true; // texture_type
@@ -1877,7 +2012,7 @@ namespace graphics
 
 	void Context::resize_texture(Texture& texture, int width, int height, const memory::raw_ptr raw_data, bool generate_mipmaps)
 	{
-		ASSERT(texture.is_dynamic());
+		assert(texture.is_dynamic());
 
 		use(texture, [&]()
 		{
@@ -1909,8 +2044,8 @@ namespace graphics
 	Context::Handle Context::link_shader(const Handle& vertex_obj, const Handle& fragment_obj, const Handle& geometry_obj) noexcept
 	{
 		// TODO: Look into proper error handling if possible.
-		ASSERT(vertex_obj);
-		ASSERT(fragment_obj);
+		assert(vertex_obj);
+		assert(fragment_obj);
 
 		// Allocate a shader-program object.
 		auto program = glCreateProgram();
@@ -1936,7 +2071,7 @@ namespace graphics
 		}
 
 		// TODO: Look into proper error handling for link-failure if possible.
-		ASSERT(success);
+		assert(success);
 
 		return program;
 	}

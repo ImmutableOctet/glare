@@ -27,6 +27,7 @@ namespace engine
 	using Spline = std::vector<math::Vector>;
 
 	using Animation = graphics::Animation;
+	using AnimationID = graphics::AnimationID;
 
 	using BoneID = graphics::BoneID;
 

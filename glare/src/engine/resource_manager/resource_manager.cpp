@@ -83,7 +83,7 @@ namespace engine
 			auto loaded_model = memory::allocate<graphics::Model>(); // ModelRef
 			*loaded_model = std::move(model_data.model);
 
-			ASSERT(loaded_model->has_meshes());
+			assert(loaded_model->has_meshes());
 
 			if (load_collision)
 			{
@@ -206,10 +206,22 @@ namespace engine
 	{
 		auto desc = geometry_storage.mesh_interface.get(); // auto*
 
-		ASSERT(desc);
+		assert(desc);
 
 		auto shape = std::make_shared<btBvhTriangleMeshShape>(desc, optimize); // std::shared_ptr<btTriangleMeshShape>
 
 		return std::static_pointer_cast<CollisionRaw>(shape);
+	}
+	
+	float AnimationData::get_transition(AnimationID src, AnimationID dest) const
+	{
+		auto it = transitions.find({src, dest});
+
+		if (it != transitions.end())
+		{
+			return it->second;
+		}
+
+		return 0.0f;
 	}
 }

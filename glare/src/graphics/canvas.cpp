@@ -47,6 +47,16 @@ namespace graphics
 		context = nullptr;
 	}
 
+	void Canvas::begin()
+	{
+		context->begin_frame();
+	}
+
+	void Canvas::end()
+	{
+		context->end_frame();
+	}
+
 	void Canvas::flip(app::Window& wnd)
 	{
 		context->flip(wnd);
@@ -202,13 +212,13 @@ namespace graphics
 							}
 						}
 
-						ASSERT(texture);
+						assert(texture);
 						bind_texture(*texture, texture_name); // bind_texture(tdata);
 					}))
 					{}
 					else if (util::peek_value<const NamedTextureArrayRaw*>(dynamic_textures_v, [&](const NamedTextureArrayRaw* tdata)
 					{
-						//ASSERT(tdata);
+						//assert(tdata);
 						if (tdata)
 						{
 							bind_textures(*tdata, [shadows_enabled](const std::string& texture_name, const graphics::TextureArrayRaw& textures)

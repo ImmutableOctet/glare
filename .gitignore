@@ -11,7 +11,6 @@
 *.userprefs
 
 # Build results
-[Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
@@ -279,3 +278,6 @@ __pycache__/
 /glare/Notes and Resources/*
 /glare/notes
 /glare/test_assets
+/glare/imgui.ini
+/glare/Debug
+/Debug

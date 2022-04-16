@@ -107,7 +107,7 @@ namespace engine
 
 				print("Player #{}", player_idx);
 				print("Name: {}", player_name);
-				print("Character: {}", player_char);
+				print("Character: {}", static_cast<std::uint8_t>(player_char));
 
 				auto player = create_player(world, player_tform, player_char, player_name, player_parent, player_idx);
 
@@ -182,10 +182,10 @@ namespace engine
 					auto obj_idx = util::get_value<ObjectIndex>(obj_cfg, "index", obj_idx_counter);
 					auto obj_name = util::get_value<std::string>(obj_cfg, "name", "");
 
-					print("Object name: {}", obj_name);
-
 					if (!obj_name.empty())
 					{
+						print("Object name: {}", obj_name);
+
 						registry.emplace<NameComponent>(obj, obj_name);
 					}
 
@@ -319,7 +319,7 @@ namespace engine
 
 			//default:
 			//	// Unsupported.
-			//	ASSERT(false);
+			//	assert(false);
 
 			//	break;
 		}
@@ -369,7 +369,7 @@ namespace engine
 
 		auto target = resolve_object_reference(target_query, world, player_objects, objects);
 
-		ASSERT(target != null);
+		assert(target != null);
 
 		auto following_distance = util::get_value(data, "following_distance", SimpleFollowComponent::DEFAULT_FOLLOWING_DISTANCE);
 		auto follow_speed = util::get_value(data, "follow_speed", SimpleFollowComponent::DEFAULT_FOLLOW_SPEED);

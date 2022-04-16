@@ -9,8 +9,8 @@ namespace glare::tests
 	{
 		using namespace graphics;
 
-		ASSERT(Vertex::GetElementType<int>() == ElementType::Int);
-		ASSERT(Vertex::GetElementType<float>() == ElementType::Float);
-		ASSERT(Vertex::GetElementType<double>() == ElementType::Double);
+		assert(Vertex::GetElementType<int>() == ElementType::Int);
+		assert(Vertex::GetElementType<float>() == ElementType::Float);
+		assert(Vertex::GetElementType<double>() == ElementType::Double);
 	}
 }

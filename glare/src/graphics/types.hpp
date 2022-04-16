@@ -40,7 +40,8 @@ namespace graphics
 	using NativeContext = void*;
 	using ContextHandle = unsigned int; // GLint;
 
-	using BoneID = int;
+	using AnimationID = std::uint16_t;
+	using BoneID = int; // std::uint16_t;
 
 	// TODO: Implement half-size indices for smaller meshes.
 	using MeshIndex = std::uint32_t; // GLuint;

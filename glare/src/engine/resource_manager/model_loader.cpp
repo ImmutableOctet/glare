@@ -212,7 +212,7 @@ namespace engine
 					auto* bone_raw = mesh->mBones[i];
 					auto* bone = skeleton->get_bone(bone_raw);
 
-					ASSERT(bone);
+					assert(bone);
 
 					for (unsigned int w = 0; w < bone_raw->mNumWeights; w++)
 					{
@@ -226,7 +226,7 @@ namespace engine
 							continue;
 						}
 
-						vertex.bone_indices[weight_channel] = bone->id;
+						vertex.bone_indices[weight_channel] = static_cast<graphics::BoneIndexType>(bone->id);
 						vertex.bone_weights[weight_channel] = weight.mWeight;
 					}
 
@@ -253,7 +253,7 @@ namespace engine
 			*/
 
 			///*
-			ASSERT(face.mNumIndices == 3);
+			assert(face.mNumIndices == 3);
 
 			const auto& a = face.mIndices[0];
 			const auto& b = face.mIndices[1];
@@ -517,7 +517,7 @@ namespace engine
 				auto mesh_index = node->mMeshes[i];
 				aiMesh* mesh = scene->mMeshes[mesh_index];
 
-				ASSERT(mesh);
+				assert(mesh);
 
 				print("Bones: {}", mesh->mNumBones);
 
@@ -764,8 +764,8 @@ namespace engine
 
 	const std::vector<ModelLoader::Animation> ModelLoader::process_animations(const aiScene* scene, Skeleton& skeleton, const _aiMatrix4x4* orientation)
 	{
-		ASSERT(scene);
-		ASSERT(scene->mRootNode);
+		assert(scene);
+		assert(scene->mRootNode);
 
 		math::Matrix tform;
 
@@ -795,7 +795,7 @@ namespace engine
 				auto* bone = skeleton.get_bone(bone_name);
 				//auto* bone = skeleton.get_or_create_bone(bone_name);
 
-				//ASSERT(bone);
+				//assert(bone);
 
 				if (!bone)
 				{
@@ -809,7 +809,7 @@ namespace engine
 				frame_data[bone_id] = Animation::KeySequence(*channel, tform);
 			}
 
-			animations.emplace_back(duration, rate, frame_data);
+			animations.emplace_back(static_cast<AnimationID>(a), duration, rate, frame_data);
 		}
 
 		return animations;

@@ -3,6 +3,8 @@
 #include "types.hpp"
 
 #include <util/log.hpp>
+#include <utility>
+//#include <optional>
 
 namespace engine
 {
@@ -46,9 +48,18 @@ namespace engine
 			std::tuple<Entity, Relationship*> get_first_child(Registry& registry) const;
 			std::tuple<Entity, Relationship*> get_last_child(Registry& registry) const;
 
-			// Enumerates children, returning the 'Entity' stopped at by 'fn'.
-			template <typename enum_fn>
-			inline Entity enumerate_children(Registry& registry, enum_fn fn, bool recursive=false) const
+			// Enumerates children, calling `fn` on each child.
+			// `recursive` allows for traversal of the entire relationship tree.
+			// `on_exit` is called once recursion has completed, or immediately after `fn` if recursion is disabled.
+			// ``
+			template
+			<
+				typename response_type, // = decltype(enum_fn(std::declval<Entity>(), std::declval<Relationship&>(), std::declval<Entity>()))
+				typename enum_fn,
+				typename exit_fn,
+				typename get_continuation_fn
+			>
+			inline Entity enumerate_children(Registry& registry, enum_fn fn, bool recursive, exit_fn on_exit, get_continuation_fn get_continuation, const response_type* parent_response=nullptr) const // enter_fn on_enter
 			{
 				auto child = first;
 
@@ -63,19 +74,30 @@ namespace engine
 						break;
 					}
 
-					if (!fn(child, relationship, next_child))
+					//on_enter();
+
+					response_type response = fn(child, relationship, next_child, parent_response);
+
+					auto continue_recurse = get_continuation(response);
+
+					if (continue_recurse)
 					{
-						break;
+						if (recursive)
+						{
+							auto result = relationship.enumerate_children(registry, fn, true, on_exit, get_continuation, &response);
+
+							if (result != null)
+							{
+								return result;
+							}
+						}
 					}
 
-					if (recursive)
-					{
-						auto result = relationship.enumerate_children(registry, fn, true);
+					on_exit(child, relationship, next_child, response);
 
-						if (result != null)
-						{
-							return result;
-						}
+					if (!continue_recurse)
+					{
+						break;
 					}
 
 					//print("Going from {} to {}", child, next_child);
@@ -84,6 +106,36 @@ namespace engine
 				}
 
 				return child;
+			}
+
+			// `fn` must return a boolean value, or a value convertible to one.
+			template <typename enum_fn, typename exit_fn, typename response_type=bool> // typename enter_fn
+			inline Entity enumerate_children(Registry& registry, enum_fn fn, bool recursive, exit_fn on_exit) const
+			{
+				return enumerate_children<response_type>
+				(
+					registry,
+					[&fn](auto child, auto& relationship, auto next_child, auto* parent_response)
+					{
+						return fn(child, relationship, next_child);
+					},
+					recursive,
+					on_exit,
+					[](auto continue_recurse) { return static_cast<bool>(continue_recurse); }
+				);
+			}
+
+			// `fn` must return a boolean value, or a value convertible to one.
+			template <typename enum_fn, typename response_type=bool>
+			inline Entity enumerate_children(Registry& registry, enum_fn fn, bool recursive=false) const
+			{
+				return enumerate_children
+				(
+					registry,
+					fn,
+					recursive,
+					[](auto child, auto& relationship, auto next_child, auto response){}
+				); // []{}
 			}
 
 			template <typename Container>
@@ -139,7 +191,7 @@ namespace engine
 			}
 
 			// Reports the total number of children, including children of children, etc.
-			inline std::uint32_t count_nodes(Registry& registry) const
+			inline std::uint32_t total_children(Registry& registry) const
 			{
 				std::uint32_t count = 0;
 
@@ -147,7 +199,7 @@ namespace engine
 				{
 					count++;
 
-					count += relationship.count_nodes(registry);
+					count += relationship.total_children(registry);
 
 					return true;
 				});

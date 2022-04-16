@@ -24,7 +24,7 @@ namespace engine
 
 	Entity Relationship::set_parent(Registry& registry, Entity self, Entity parent)
 	{
-		ASSERT(self != null);
+		assert(self != null);
 
 		if ((self == parent) || (parent == null))
 		{
@@ -55,7 +55,7 @@ namespace engine
 
 	Entity Relationship::add_child(Registry& registry, Entity self, Entity child, Relationship* child_relationship)
 	{
-		ASSERT(self != null);
+		assert(self != null);
 
 		if ((self == child) || (child == null))
 		{
@@ -107,7 +107,7 @@ namespace engine
 			auto last = get_last_child(registry);
 			auto last_child = std::get<0>(last);
 
-			ASSERT(last_child != null);
+			assert(last_child != null);
 
 			auto& last_child_rel = *std::get<1>(last);
 
@@ -263,11 +263,11 @@ namespace engine
 
 	Relationship& Relationship::collapse_child(Registry& registry, Relationship& child_relationship, Entity self, Entity child)
 	{
-		//ASSERT(registry.try_get<Relationship>(child));
+		//assert(registry.try_get<Relationship>(child));
 
 		//auto& child_relationship = registry.get<Relationship>(child);
 
-		//ASSERT((self == null) || (child_relationship.parent == self));
+		//assert((self == null) || (child_relationship.parent == self));
 
 		auto next_child = child_relationship.next;
 
