@@ -1,5 +1,7 @@
 #pragma once
 
+#include "format.hpp"
+
 #include <memory>
 #include <tuple>
 //#include <vector>
@@ -7,11 +9,7 @@
 #include <math/math.hpp>
 #include <engine/types.hpp>
 
-//#define FMT_HEADER_ONLY
-
 #include <spdlog/spdlog.h>
-#include <fmt/core.h>
-#include <fmt/format.h>
 
 /*
 namespace spdlog
@@ -35,17 +33,33 @@ namespace util
         void init();
 
         template <typename ...Args>
-        inline Logger print(Args&& ...args)
+        inline Logger print(fmt::format_string<Args...> fmt, Args &&...args)
         {
-            console->info(std::forward<Args>(args)...);
+            console->info(fmt, std::forward<Args>(args)...);
+
+            return console;
+        }
+
+        template <typename T>
+        inline Logger print(const T& msg)
+        {
+            console->info(msg);
 
             return console;
         }
 
         template <typename ...Args>
-        inline Logger print_warn(Args&& ...args)
+        inline Logger print_warn(fmt::format_string<Args...> fmt, Args &&...args)
         {
-            console->warn(std::forward<Args>(args)...);
+            console->warn(fmt, std::forward<Args>(args)...);
+
+            return console;
+        }
+
+        template <typename T>
+        inline Logger print_warn(const T& msg)
+        {
+            console->warn(msg);
 
             return console;
         }
@@ -58,27 +72,31 @@ using util::log::print_warn;
 template <>
 struct fmt::formatter<math::Vector>
 {
-    constexpr auto parse(format_parse_context& ctx)
-    {
-        auto it = ctx.begin(), end = ctx.end();
+    // Presentation format: 'f' - fixed, 'e' - exponential.
+    char presentation = 'f';
 
-        // Check if reached the end of the range:
+    // Parses format specifications of the form ['f' | 'e'].
+    constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
+        // Parse the presentation format and store it in the formatter:
+        auto it = ctx.begin(), end = ctx.end();
+        
+        if (it != end && (*it == 'f' || *it == 'e'))
+            presentation = *it++;
+
+        // Check if reached the end of the range.
         if (it != end && *it != '}')
             throw format_error("invalid format");
 
-        // Return an iterator past the end of the parsed range:
+        // Return an iterator past the end of the parsed range.
         return it;
     }
 
     template <typename FormatContext>
     auto format(const math::Vector& v, FormatContext& ctx) -> decltype(ctx.out())
     {
-        return format_to
-		(
-            ctx.out(),
-            fmt::format_string<const char*>("({:.1f}, {:.1f}, {:.1f})"), // basic_format_string
-            v.x, v.y, v.z
-		);
+        return (presentation == 'f')
+              ? fmt::format_to(ctx.out(), "({:.1f}, {:.1f}, {:.1f})", v.x, v.y, v.z)
+              : fmt::format_to(ctx.out(), "({:.1e}, {:.1e}, {:.1e})", v.x, v.y, v.z);
     }
 };
 

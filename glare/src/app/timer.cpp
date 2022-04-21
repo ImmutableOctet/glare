@@ -34,7 +34,7 @@ namespace app
 
 	Timer Timer::make_continuous(Duration wait_duration, Time now, ContinuousTimerFunction event_fn, bool trigger_on_destruct)
 	{
-		///ASSERT(event_fn);
+		///assert(event_fn);
 
 		return Timer(wait_duration, now, [event_fn](Timer& timer, Duration time_elapsed)
 		{

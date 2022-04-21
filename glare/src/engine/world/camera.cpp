@@ -44,6 +44,9 @@ namespace engine
 
 		registry.emplace<CameraParameters>(entity, params);
 
+		// Assign a default name for this camera.
+		world.set_name(entity, "Camera");
+
 		world.add_camera(entity, make_active);
 
 		return entity;

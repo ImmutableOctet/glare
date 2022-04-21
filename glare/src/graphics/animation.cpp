@@ -26,7 +26,7 @@ namespace graphics
 	template <typename Keys, typename index_t, typename MixFn>
 	static auto interpolate(float timestamp, const Keys& keys, index_t index, MixFn&& mix_fn, bool flip_direction=false) -> decltype(Keys::value_type::value)
 	{
-		ASSERT(!keys.empty());
+		assert(!keys.empty());
 
 		if (keys.size() == 1)
 		{

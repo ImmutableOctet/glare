@@ -6,13 +6,17 @@
 #include <cmath>
 #include <cstdlib>
 #include <optional>
+#include <cassert>
 
 #include <app/events.hpp>
 #include <app/input/keycodes.hpp>
 #include <engine/engine.hpp>
 
 #include <util/variant.hpp>
+
 #include <engine/debug.hpp>
+#include <engine/world/meta/meta.hpp>
+#include <engine/world/debug/debug.hpp>
 
 #include <graphics/native/opengl.hpp>
 #include <graphics/world_render_state.hpp>
@@ -26,19 +30,24 @@
 #include <engine/free_look.hpp>
 
 #include <sdl2/SDL_video.h>
+#include <sdl2/SDL_events.h>
+
+#include <imgui/imgui.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-//#include <fmt/format.h>
 #include <format>
 
 namespace glare
 {
 	Glare::init_shaders::init_shaders(Graphics& graphics)
 	{
-		auto preprocessor = std::string_view{ "\n#define LAYER_DEPTH_ENABLED 1\n" }; // //#define LAYER_POSITION_ENABLED 1\n
+		std::string_view preprocessor =
+			"\n#define LAYER_DEPTH_ENABLED 1\n"
+			//"\n#define LAYER_POSITION_ENABLED 1\n"
+		;
 
 		lighting_pass = memory::allocate<graphics::Shader>
 		(
@@ -148,7 +157,7 @@ namespace glare
 	}
 
 	Glare::Glare(bool auto_execute)
-		: GraphicsApplication("Project Glare", 1600, 900, (app::WindowFlags::OpenGL | app::WindowFlags::Resizable), TARGET_UPDATE_RATE, false), // true
+		: GraphicsApplication("Project Glare", 1600, 900, (app::WindowFlags::OpenGL | app::WindowFlags::Resizable), TARGET_UPDATE_RATE, false, true), // true
 		gbuffer(graphics.context, window->get_size()),
 		cfg(), // cfg(std::make_shared<engine::Config>()),
 		shaders(graphics),
@@ -161,28 +170,6 @@ namespace glare
 		//GLint value = 0;
 		//glGetIntegerv(GL_MAX_COMBINED_VERTEX_UNIFORM_COMPONENTS, &value); // GL_MAX_VERTEX_BINDABLE_UNIFORMS_EXT
 
-		///*
-		glEnable(GL_DEBUG_OUTPUT);
-
-		glDebugMessageCallback([]
-		(
-			GLenum source,
-			GLenum type,
-			GLuint id,
-			GLenum severity,
-			GLsizei length,
-			const GLchar* message,
-			const void* userParam)
-		{
-			if (type == GL_DEBUG_TYPE_ERROR)
-			{
-				std::cout << "OPENGL ERROR DETECTED" << '\n';
-				std::cout << "OpenGL (" << severity << "):" << '\n';
-				std::cout << message << '\n';
-			}
-		}, this);
-		//*/
-
 		/*
 		int screen_width, screen_height;
 
@@ -191,7 +178,8 @@ namespace glare
 
 		world.register_event<app::input::KeyboardState, &Glare::on_user_keyboard_input>(*this);
 
-		input.get_mouse().lock();
+		// Normally, we lock when starting.
+		//input.get_mouse().lock();
 
 		setup_world(world);
 
@@ -354,12 +342,53 @@ namespace glare
 		}
 	}
 
+	void Glare::render_debug_controls()
+	{
+		using namespace engine::meta;
+
+		if (!imgui_enabled())
+			return;
+
+		meta_controls();
+
+		auto player = world.get_player();
+		assert(player != engine::null);
+
+		auto player_model = world.get_child_by_name(player, "model", false);
+		assert(player_model != engine::null);
+
+		auto target = player_model;
+
+		animation_control(world, target);
+
+		hierarchy_control(world, world.get_root());
+	}
+
+	void Glare::meta_controls()
+	{
+		ImGui::Begin("Meta", nullptr, ImGuiWindowFlags_NoBackground|ImGuiWindowFlags_NoTitleBar);
+
+		if (ImGui::Button("Switch to Game"))
+		{
+			auto& mouse = input.get_mouse();
+			mouse.toggle_lock();
+		}
+
+		auto& io = ImGui::GetIO();
+
+		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+
+		ImGui::End();
+	}
+
 	void Glare::render()
 	{
 		using namespace graphics;
 
-		auto& gfx = *graphics.canvas;
-		auto& wnd = *window;
+		//auto& gfx = *graphics.canvas;
+		//auto& wnd = *window;
+
+		render_debug_controls();
 
 		//std::sinf(milliseconds())
 
@@ -431,8 +460,6 @@ namespace glare
 			render_debug(viewport, gbuffer);
 		}
 		//*/
-
-		gfx.flip(wnd);
 	}
 
 	graphics::GBuffer& Glare::render_geometry(engine::World& world, const graphics::Viewport& viewport, graphics::GBuffer& gbuffer, graphics::WorldRenderState& render_state)
@@ -508,8 +535,8 @@ namespace glare
 
 			if (!gbuffer.position.has_value())
 			{
-				ASSERT(render_state.matrices.has_value());
-				ASSERT(render_state.screen.has_value());
+				assert(render_state.matrices.has_value());
+				assert(render_state.screen.has_value());
 
 				const auto& matrices = *render_state.matrices;
 				const auto& screen = *render_state.screen;
@@ -562,7 +589,7 @@ namespace glare
 					// TODO: Implement as visit:
 					if (util::peek_value<graphics::Vector*>(light_pos_v, [&](const graphics::Vector* vec)
 					{
-						ASSERT(vec);
+						assert(vec);
 					
 						shader["point_shadow_light_position"] = *vec;
 
@@ -571,7 +598,7 @@ namespace glare
 					{}
 					else if (util::peek_value<graphics::VectorArray*>(light_pos_v, [&](const graphics::VectorArray* vec)
 					{
-						ASSERT(vec);
+						assert(vec);
 
 						shader["point_shadow_light_position"] = *vec;
 
@@ -589,7 +616,7 @@ namespace glare
 					// TODO: Implement as visit:
 					if (util::peek_value<float*>(far_v, [&](const float* far_plane)
 					{
-						ASSERT(far_plane);
+						assert(far_plane);
 
 						shader["point_shadow_far_plane"] = *far_plane;
 
@@ -598,7 +625,7 @@ namespace glare
 					{}
 					else if (util::peek_value<graphics::FloatArray*>(far_v, [&](const graphics::FloatArray* far_plane)
 					{
-						ASSERT(far_plane);
+						assert(far_plane);
 
 						shader["point_shadow_far_plane"] = *far_plane;
 
@@ -617,7 +644,7 @@ namespace glare
 					// TODO: Implement as visit:
 					if (util::peek_value<graphics::Vector*>(light_pos_v, [&](const graphics::Vector* vec)
 					{
-						ASSERT(vec);
+						assert(vec);
 					
 						shader["directional_shadow_light_position"] = *vec;
 
@@ -626,7 +653,7 @@ namespace glare
 					{}
 					else if (util::peek_value<graphics::VectorArray*>(light_pos_v, [&](const graphics::VectorArray* vec)
 					{
-						ASSERT(vec);
+						assert(vec);
 
 						shader["directional_shadow_light_position"] = *vec;
 
@@ -644,7 +671,7 @@ namespace glare
 					// TODO: Implement as visit:
 					if (util::peek_value<graphics::Matrix*>(mat_v, [&](const graphics::Matrix* matrix)
 					{
-						ASSERT(matrix);
+						assert(matrix);
 
 						shader["directional_shadow_light_space_matrix"] = *matrix;
 
@@ -653,7 +680,7 @@ namespace glare
 					{}
 					else if (util::peek_value<graphics::MatrixArray*>(mat_v, [&](const graphics::MatrixArray* matrices)
 					{
-						ASSERT(matrices);
+						assert(matrices);
 
 						shader["directional_shadow_light_space_matrix"] = *matrices;
 
@@ -688,13 +715,13 @@ namespace glare
 						}
 					}
 
-					ASSERT(texture);
+					assert(texture);
 					graphics.canvas->bind_texture(*texture, texture_name); // bind_texture(tdata);
 				}))
 				{}
 				else if (util::peek_value<const graphics::NamedTextureArrayRaw*>(dynamic_textures_v, [&](const graphics::NamedTextureArrayRaw* tdata)
 				{
-					//ASSERT(tdata);
+					//assert(tdata);
 					if (tdata)
 					{
 						graphics.canvas->bind_textures(*tdata, [shadows_enabled](const std::string& texture_name, const graphics::TextureArrayRaw& textures)
@@ -826,7 +853,7 @@ namespace glare
 
 		auto* dir = registry.try_get<engine::DirectionalLightComponent>(entity);
 		
-		ASSERT(dir);
+		assert(dir);
 
 		attr("use_position", dir->use_position);
 
@@ -872,7 +899,7 @@ namespace glare
 
 		auto* spot = registry.try_get<engine::SpotLightComponent>(entity);
 		
-		ASSERT(spot);
+		assert(spot);
 
 		attr("cutoff", spot->cutoff);
 		attr("outer_cutoff", spot->outer_cutoff);
@@ -921,7 +948,7 @@ namespace glare
 
 		auto* point_light = registry.try_get<engine::PointLightComponent>(entity);
 
-		ASSERT(point_light);
+		assert(point_light);
 
 		// update attenuation parameters and calculate radius
 		//const float constant = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)

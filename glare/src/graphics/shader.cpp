@@ -70,7 +70,7 @@ namespace graphics
 				// Extract the version string:
 				if (!version_out->empty())
 				{
-					ASSERT(version_in == *version_out);
+					assert(version_in == *version_out);
 				}
 
 				*version_out = version_in;

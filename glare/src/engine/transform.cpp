@@ -129,7 +129,6 @@ namespace engine
 
 		transform._dirty |= (Dirty::W | Dirty::IW);
 
-		///*
 		/*
 		std::vector<unsigned int> children;
 		relationship.get_children(registry, children);
@@ -147,7 +146,6 @@ namespace engine
 
 			return true;
 		});
-		//*/
 
 		return *this;
 	}

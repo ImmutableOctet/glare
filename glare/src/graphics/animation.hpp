@@ -60,6 +60,8 @@ namespace graphics
 			float timestamp;
 		};
 
+		using ID = AnimationID;
+
 		using KeyPosition = KeyVector;
 		using KeyScale    = KeyVector;
 
@@ -96,7 +98,9 @@ namespace graphics
 				}
 
 				// Invalid timestamp specified.
-				ASSERT(false);
+				////ASSERT(false);
+
+				return 0;
 			}
 
 			inline auto get_position_index(float timestamp) const { return get_index(timestamp, positions); }
@@ -119,6 +123,8 @@ namespace graphics
 		};
 
 		using FrameData = std::unordered_map<BoneID, KeySequence>;
+
+		ID id;
 
 		float duration = 0.0f;
 		float rate = 0.0f;

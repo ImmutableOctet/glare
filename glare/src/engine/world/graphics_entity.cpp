@@ -25,7 +25,7 @@ namespace engine
 {
 	Entity create_model(World& world, pass_ref<graphics::Model> model, Entity parent, EntityType type)
 	{
-		ASSERT(model);
+		assert(model);
 
 		auto& registry = world.get_registry();
 
@@ -41,7 +41,7 @@ namespace engine
 
 	Entity attach_model(World& world, Entity entity, pass_ref<graphics::Model> model, graphics::ColorRGBA color)
 	{
-		///ASSERT(model);
+		///assert(model);
 
 		auto& registry = world.get_registry();
 
@@ -142,8 +142,8 @@ namespace engine
 
 			auto entity = create_model(world, model, parent, type);
 
-			// Debugging related:
-			registry.emplace_or_replace<NameComponent>(entity, std::format("{} - {}", path, model->get_name()));
+			//world.set_name(entity, std::format("{} - {}", path, model->get_name()));
+			world.set_name(entity, model->get_name());
 
 			// Update model's scene-local transform:
 			{
@@ -179,9 +179,10 @@ namespace engine
 
 		if (allow_multiple && (model_data.models.size() > 1))
 		{
-			//ASSERT(!model_data.models.empty());
+			//assert(!model_data.models.empty());
 
 			entity = engine::create_pivot(world, parent);
+			world.set_name(entity, path);
 
 			for (const auto& model : model_data.models)
 			{
@@ -192,7 +193,7 @@ namespace engine
 		{
 			if (model_data.models.empty())
 			{
-				ASSERT(false); // <-- Debugging related.
+				assert(false); // <-- Debugging related.
 
 				return entity;
 			}
@@ -212,14 +213,9 @@ namespace engine
 	{
 		auto& registry = world.get_registry();
 
-		const Animation* starting_animation = nullptr;
+		assert(!animations->animations.empty());
 
-		if (!animations->animations.empty())
-		{
-			starting_animation = &animations->animations[0];
-		}
-
-		registry.emplace_or_replace<Animator>(entity, animations, starting_animation, rate);
+		registry.emplace_or_replace<Animator>(entity, animations, AnimationID(0), rate);
 
 		return entity;
 	}
@@ -247,6 +243,13 @@ namespace engine
 
 		auto dbg = engine::load_model(world, "assets/geometry/directions.b3d", dbg_parent, type, false);
 		//auto dbg = engine::load_model(world, "assets/geometry/cube.b3d", dbg_parent, type, false);
+
+		auto* dbg_name = registry.try_get<NameComponent>(dbg);
+
+		if (dbg_name)
+		{
+			dbg_name->name = "Debug"; // "Debug Orientation";
+		}
 
 		//auto dbg = engine::load_model(world, "assets/geometry/sphere.b3d", dbg_parent, type, false);
 		//auto dbg = engine::load_model(world, "assets/geometry/cone.b3d", dbg_parent, type, false);

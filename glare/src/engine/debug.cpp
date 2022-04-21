@@ -40,9 +40,9 @@ namespace engine
 
 		if (summary_info)
 		{
-			auto total_nodes = rel->count_nodes(registry);
+			auto total_children = rel->total_children(registry);
 
-			print("Number of children listed: {} ({} recursively)", child_count, total_nodes);
+			print("Number of children listed: {} ({} recursively)", child_count, total_children);
 			//print("{} List of children:", prefix);
 			print("List:");
 		}
@@ -107,11 +107,12 @@ namespace engine
 
 	void DebugListener::operator()(const OnStageLoaded& stage_info)
 	{
-		ASSERT(stage_info.stage != null);
+		assert(stage_info.stage != null);
 
 		if (stage_info.path)
 		{
 			print("Stage \"{}\" loaded successfully.", stage_info.path->string());
+			//util::log::console->info("Stage \"{}\" loaded successfully.", stage_info.path->string());
 		}
 
 		auto stage = stage_info.stage;

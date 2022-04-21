@@ -5,6 +5,11 @@
 
 namespace engine
 {
+	const Animation& Animator::get_animation(pass_ref<AnimationData> animations, AnimationID id)
+	{
+		return animations->animations.at(id); //animations->animations[id];
+	}
+
 	Animator::Animator
 	(
 		pass_ref<AnimationData> animations,
@@ -17,10 +22,11 @@ namespace engine
 		last_known_animation(current_animation),
 		rate(rate), time(time)
 	{
-		ASSERT(animations);
+		assert(animations);
 
 		auto number_of_bones = animations->skeleton.size();
 
+		/*
 		pose.reserve(number_of_bones); // MAX_BONES
 
 		for (decltype(number_of_bones) i = 0; i < number_of_bones; i++)
@@ -39,6 +45,35 @@ namespace engine
 			}
 
 			pose.push_back(bone_matrix);
+		}
+		*/
+
+		pose = Matrices(number_of_bones);
+	}
+
+	void Animator::play()
+	{
+		state = State::Play;
+	}
+
+	void Animator::pause()
+	{
+		state = State::Pause;
+	}
+
+	bool Animator::toggle()
+	{
+		if (playing())
+		{
+			pause();
+
+			return true;
+		}
+		else // if (paused())
+		{
+			play();
+
+			return false;
 		}
 	}
 }

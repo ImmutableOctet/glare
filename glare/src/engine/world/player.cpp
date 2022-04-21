@@ -37,13 +37,14 @@ namespace engine
 		switch (character)
 		{
 			case engine::Character::Glare:
-				model_path = "assets/characters/test/character.b3d";
+				////model_path = "assets/characters/test/character.b3d";
+
 				//model_path = "assets/geometry/sphere.b3d";
 				//model_path = "assets/geometry/torus.b3d";
 				
 				//model_path = "assets/characters/sonic/sonic.b3d";
 				//model_path = "assets/objects/turret/turret.b3d";
-				//model_path = "assets/geometry/Multi_Torus.b3d";
+				model_path = "assets/geometry/Multi_Torus.b3d";
 				//model_path = "assets/geometry/direction_boxes-4.b3d";
 
 				///model_path = "assets/geometry/Multi_Torus_Pose.b3d";
@@ -72,7 +73,7 @@ namespace engine
 
 				break;
 			default:
-				ASSERT("Invalid character specified.");
+				//assert(false, "Invalid character specified.");
 
 				break;
 		}
@@ -81,6 +82,8 @@ namespace engine
 		auto player = create_pivot(world, parent, EntityType::Player);
 		
 		auto player_model = load_model(world, model_path, player);
+
+		registry.emplace_or_replace<NameComponent>(player_model, "model");
 
 		registry.emplace<NameComponent>(player, name);
 

@@ -3,6 +3,7 @@
 #include "lib.hpp"
 
 #include <sdl2/SDL.h>
+#include <imgui/imgui.h>
 
 namespace util
 {
@@ -10,12 +11,31 @@ namespace util
 	{
 		bool init_sdl()
 		{
-			if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0)
+			if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_GAMECONTROLLER) != 0)
 			{
 				SDL_Log("Failed to initialize SDL: %s", SDL_GetError());
 
 				return false;
 			}
+
+			return true;
+		}
+
+		bool init_imgui()
+		{
+			IMGUI_CHECKVERSION();
+			ImGui::CreateContext();
+			//ImGuiIO& io = ImGui::GetIO(); // (void)io;
+
+			ImGui::StyleColorsDark();
+			//ImGui::StyleColorsClassic();
+
+			return true;
+		}
+
+		bool deinit_imgui()
+		{
+			ImGui::DestroyContext();
 
 			return true;
 		}
