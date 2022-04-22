@@ -27,12 +27,6 @@
 
 namespace engine
 {
-	ResourceManager::CollisionData::CollisionData(const Shape& collision_shape)
-		: collision_shape(collision_shape) {}
-
-	ResourceManager::CollisionData::CollisionData(Geometry&& geometry_storage, bool optimize)
-		: collision_shape(ResourceManager::build_mesh_shape(geometry_storage, optimize)), geometry_storage(std::move(geometry_storage)) {}
-
 	ResourceManager::ResourceManager(pass_ref<graphics::Context> context, pass_ref<graphics::Shader> default_shader, pass_ref<graphics::Shader> default_animated_shader)
 		: context(context) //, default_shader(default_shader)
 	{
@@ -162,12 +156,12 @@ namespace engine
 		return shader;
 	}
 
-	ResourceManager::CollisionData ResourceManager::generate_capsule_collision(float radius, float height) // ref<btCapsuleShape>
+	CollisionData ResourceManager::generate_capsule_collision(float radius, float height) // ref<btCapsuleShape>
 	{
 		return { std::static_pointer_cast<CollisionRaw>(std::make_shared<btCapsuleShape>(radius, height)) };
 	}
 
-	const ResourceManager::CollisionData* ResourceManager::get_collision(const WeakModelRef model) const
+	const CollisionData* ResourceManager::get_collision(const WeakModelRef model) const
 	{
 		auto it = collision_data.find(model);
 
@@ -200,28 +194,5 @@ namespace engine
 	{
 		// TODO: Implement logic to handle different paths to the same resource.
 		return path;
-	}
-
-	ResourceManager::CollisionShape ResourceManager::build_mesh_shape(const ResourceManager::CollisionGeometry& geometry_storage, bool optimize)
-	{
-		auto desc = geometry_storage.mesh_interface.get(); // auto*
-
-		assert(desc);
-
-		auto shape = std::make_shared<btBvhTriangleMeshShape>(desc, optimize); // std::shared_ptr<btTriangleMeshShape>
-
-		return std::static_pointer_cast<CollisionRaw>(shape);
-	}
-	
-	float AnimationData::get_transition(AnimationID src, AnimationID dest) const
-	{
-		auto it = transitions.find({src, dest});
-
-		if (it != transitions.end())
-		{
-			return it->second;
-		}
-
-		return 0.0f;
 	}
 }

@@ -275,10 +275,10 @@
     <ClInclude Include="src\engine\resource_manager\resource_manager.hpp">
       <Filter>src\engine\resource_manager</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\resource_manager\loaders.hpp">
+    <ClInclude Include="src\engine\resource_manager\loaders\loaders.hpp">
       <Filter>src\engine\resource_manager</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\resource_manager\model_loader.hpp">
+    <ClInclude Include="src\engine\resource_manager\loaders\model_loader.hpp">
       <Filter>src\engine\resource_manager</Filter>
     </ClInclude>
     <ClInclude Include="src\graphics\animation.hpp">
@@ -389,6 +389,9 @@
     <ClInclude Include="src\engine\world\meta\meta.hpp">
       <Filter>src\engine\world\meta</Filter>
     </ClInclude>
+    <ClInclude Include="src\engine\resource_manager\animation_data.hpp" />
+    <ClInclude Include="src\engine\resource_manager\collision_data.hpp" />
+    <ClInclude Include="src\engine\resource_manager\model_data.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\tests\model_test\shaders\8.1.deferred_light_box.fs">
@@ -730,7 +733,7 @@
     <ClCompile Include="src\engine\resource_manager\resource_manager.cpp">
       <Filter>src\engine\resource_manager</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\resource_manager\model_loader.cpp">
+    <ClCompile Include="src\engine\resource_manager\loaders\model_loader.cpp">
       <Filter>src\engine\resource_manager</Filter>
     </ClCompile>
     <ClCompile Include="src\graphics\skeleton.cpp">
@@ -797,6 +800,8 @@
     <ClCompile Include="src\engine\world\meta\controls.cpp">
       <Filter>src\engine\world\meta</Filter>
     </ClCompile>
+    <ClCompile Include="src\engine\resource_manager\animation_data.cpp" />
+    <ClCompile Include="src\engine\resource_manager\collision_data.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />
