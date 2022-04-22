@@ -82,7 +82,7 @@ namespace engine
 		auto player = create_pivot(world, parent, EntityType::Player);
 		
 		auto player_model = load_model(world, model_path, player);
-
+		
 		registry.emplace_or_replace<NameComponent>(player_model, "model");
 
 		registry.emplace<NameComponent>(player, name);
