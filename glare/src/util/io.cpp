@@ -30,8 +30,15 @@ namespace util
 
 		void init()
 		{
-			console = spdlog::stdout_color_mt("console");
-			err_logger = spdlog::stderr_color_mt("stderr");
+			if (!console)
+			{
+				console = spdlog::stdout_color_mt("console");
+			}
+
+			if (!err_logger)
+			{
+				err_logger = spdlog::stderr_color_mt("stderr");
+			}
 		}
 	}
 
