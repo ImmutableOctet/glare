@@ -104,9 +104,12 @@ namespace app
 
 	void TimedEventManager::flush_timers()
 	{
-		std::remove_if(timers.begin(), timers.end(), [](const Timer& timer)
-		{
-			return (!timer.valid());
-		});
+		timers.erase
+		(
+			std::remove_if(timers.begin(), timers.end(), [](const Timer& timer)
+			{
+				return (!timer.valid());
+			})
+		);
 	}
 }
