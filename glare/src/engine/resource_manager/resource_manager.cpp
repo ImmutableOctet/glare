@@ -62,9 +62,10 @@ namespace engine
 			((shader) ? shader : get_default_shader()),
 			((shader) ? shader : get_default_animated_shader()),
 			{
-				.maintain_storage = false,
-				//.is_animated   = true,
-				.load_collision   = load_collision
+				.maintain_storage  = false,
+				//.is_animated     = true,
+				.load_collision    = load_collision,
+				.load_mesh_content = true
 			}
 		);
 
