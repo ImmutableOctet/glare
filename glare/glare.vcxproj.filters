@@ -130,9 +130,6 @@
     <ClInclude Include="src\graphics\graphics.hpp">
       <Filter>src\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="src\util\util.hpp">
-      <Filter>src\util</Filter>
-    </ClInclude>
     <ClInclude Include="src\graphics\drivers\drivers.hpp">
       <Filter>src\graphics</Filter>
     </ClInclude>
@@ -344,6 +341,19 @@
     <ClInclude Include="src\engine\world\debug\debug.hpp">
       <Filter>src\engine\world\debug</Filter>
     </ClInclude>
+    <ClInclude Include="src\engine\world\meta\controls.hpp">
+      <Filter>src\engine\world\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\meta\meta.hpp">
+      <Filter>src\engine\world\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\resource_manager\model_data.hpp" />
+    <ClInclude Include="src\engine\resource_manager\animation_data.hpp">
+      <Filter>src\engine\resource_manager</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\resource_manager\collision_data.hpp">
+      <Filter>src\engine\resource_manager</Filter>
+    </ClInclude>
     <ClInclude Include="src\util\algorithm.hpp">
       <Filter>src\util</Filter>
     </ClInclude>
@@ -351,6 +361,9 @@
       <Filter>src\util</Filter>
     </ClInclude>
     <ClInclude Include="src\util\bitflag.hpp">
+      <Filter>src\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\format.hpp">
       <Filter>src\util</Filter>
     </ClInclude>
     <ClInclude Include="src\util\io.hpp">
@@ -377,56 +390,14 @@
     <ClInclude Include="src\util\string.hpp">
       <Filter>src\util</Filter>
     </ClInclude>
+    <ClInclude Include="src\util\util.hpp">
+      <Filter>src\util</Filter>
+    </ClInclude>
     <ClInclude Include="src\util\variant.hpp">
       <Filter>src\util</Filter>
     </ClInclude>
-    <ClInclude Include="src\util\format.hpp">
-      <Filter>src\util</Filter>
-    </ClInclude>
-    <ClInclude Include="src\engine\world\meta\controls.hpp">
-      <Filter>src\engine\world\meta</Filter>
-    </ClInclude>
-    <ClInclude Include="src\engine\world\meta\meta.hpp">
-      <Filter>src\engine\world\meta</Filter>
-    </ClInclude>
-    <ClInclude Include="src\engine\resource_manager\animation_data.hpp" />
-    <ClInclude Include="src\engine\resource_manager\collision_data.hpp" />
-    <ClInclude Include="src\engine\resource_manager\model_data.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="assets\tests\model_test\shaders\8.1.deferred_light_box.fs">
-      <Filter>src\tests\model_test\shaders</Filter>
-    </None>
-    <None Include="assets\tests\model_test\shaders\8.1.deferred_light_box.vs">
-      <Filter>src\tests\model_test\shaders</Filter>
-    </None>
-    <None Include="assets\tests\model_test\shaders\8.1.deferred_shading.fs">
-      <Filter>src\tests\model_test\shaders</Filter>
-    </None>
-    <None Include="assets\tests\model_test\shaders\8.1.deferred_shading.vs">
-      <Filter>src\tests\model_test\shaders</Filter>
-    </None>
-    <None Include="assets\tests\model_test\shaders\8.1.fbo_debug.fs">
-      <Filter>src\tests\model_test\shaders</Filter>
-    </None>
-    <None Include="assets\tests\model_test\shaders\8.1.fbo_debug.vs">
-      <Filter>src\tests\model_test\shaders</Filter>
-    </None>
-    <None Include="assets\tests\model_test\shaders\8.1.g_buffer.fs">
-      <Filter>src\tests\model_test\shaders</Filter>
-    </None>
-    <None Include="assets\tests\model_test\shaders\8.1.g_buffer.vs">
-      <Filter>src\tests\model_test\shaders</Filter>
-    </None>
-    <None Include="assets\tests\model_test\shaders\forward.fs">
-      <Filter>src\tests\model_test\shaders</Filter>
-    </None>
-    <None Include="assets\tests\model_test\shaders\forward.vs">
-      <Filter>src\tests\model_test\shaders</Filter>
-    </None>
-    <None Include="assets\tests\model_test\shaders\forward_test.fs">
-      <Filter>src\tests\model_test\shaders</Filter>
-    </None>
     <None Include="assets\shaders\light_box.frag">
       <Filter>shaders</Filter>
     </None>
@@ -555,12 +526,6 @@
     <Filter Include="src\tests">
       <UniqueIdentifier>{4c2fa98e-dec2-424b-866b-0d8e4c3655b1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\tests\model_test">
-      <UniqueIdentifier>{5c554b87-2e5d-472c-a86c-b970460e48eb}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\tests\model_test\shaders">
-      <UniqueIdentifier>{cef71ef4-9ba5-40b9-af78-c64ab9e65119}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\tests\signal_test">
       <UniqueIdentifier>{e2aab549-55cd-4750-989d-d0dd76e0d6eb}</UniqueIdentifier>
     </Filter>
@@ -569,9 +534,6 @@
     </Filter>
     <Filter Include="src\tests\vertex_element_types">
       <UniqueIdentifier>{7ce784d9-e672-4ffd-a3ec-ce2deec692b8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\util">
-      <UniqueIdentifier>{2bdd65ae-be35-4849-97c4-f2c9e98ed892}</UniqueIdentifier>
     </Filter>
     <Filter Include="maps\test01">
       <UniqueIdentifier>{08836fbf-d152-4517-8c76-2deb6cb696d7}</UniqueIdentifier>
@@ -587,6 +549,9 @@
     </Filter>
     <Filter Include="src\engine\world\meta">
       <UniqueIdentifier>{1a0a946e-c79f-47cf-ad51-aafdfff566eb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\util">
+      <UniqueIdentifier>{43958b03-a7fc-4031-984c-44fcf0f3514d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -729,7 +694,6 @@
     <ClCompile Include="src\graphics\gbuffer.cpp">
       <Filter>src\graphics\graphics</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\config.cpp" />
     <ClCompile Include="src\engine\resource_manager\resource_manager.cpp">
       <Filter>src\engine\resource_manager</Filter>
     </ClCompile>
@@ -745,7 +709,6 @@
     <ClCompile Include="src\engine\world\animation_system.cpp">
       <Filter>src\engine\world</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\world\animator.cpp" />
     <ClCompile Include="dependencies\modules\imgui\imgui.cpp">
       <Filter>third-party\imgui</Filter>
     </ClCompile>
@@ -788,6 +751,21 @@
     <ClCompile Include="src\engine\transform.cpp">
       <Filter>src\engine</Filter>
     </ClCompile>
+    <ClCompile Include="src\engine\world\meta\controls.cpp">
+      <Filter>src\engine\world\meta</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\resource_manager\animation_data.cpp">
+      <Filter>src\engine\resource_manager</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\resource_manager\collision_data.cpp">
+      <Filter>src\engine\resource_manager</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\config.cpp">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\animator.cpp">
+      <Filter>src\engine\world</Filter>
+    </ClCompile>
     <ClCompile Include="src\util\io.cpp">
       <Filter>src\util</Filter>
     </ClCompile>
@@ -797,11 +775,6 @@
     <ClCompile Include="src\util\string.cpp">
       <Filter>src\util</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\world\meta\controls.cpp">
-      <Filter>src\engine\world\meta</Filter>
-    </ClCompile>
-    <ClCompile Include="src\engine\resource_manager\animation_data.cpp" />
-    <ClCompile Include="src\engine\resource_manager\collision_data.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />
