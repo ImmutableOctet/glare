@@ -109,7 +109,9 @@ namespace app
 			std::remove_if(timers.begin(), timers.end(), [](const Timer& timer)
 			{
 				return (!timer.valid());
-			})
+			}),
+
+			timers.end()
 		);
 	}
 }
