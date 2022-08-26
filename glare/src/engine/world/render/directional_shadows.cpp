@@ -31,7 +31,6 @@ namespace engine
 
 	void DirectionalShadowPhase::clear()
 	{
-		shadow_maps.clear();
 		positions.clear();
 		matrices.clear();
 	}
@@ -46,9 +45,13 @@ namespace engine
 			return parameters;
 		}
 
-		//auto& directional_shadows = this->shadow_maps;
-		//auto& directional_shadows = dynamic_texture_maps["directional_shadow_map"];
-		//render_state.dynamic_textures["directional_shadow_map"];
+		if (!render_state.dynamic_textures)
+		{
+			return parameters;
+		}
+
+		auto& dynamic_textures = *render_state.dynamic_textures;
+		auto& shadow_maps = dynamic_textures["directional_shadow_map"];
 
 		auto& world = parameters.scene.world;
 		auto& registry = world.get_registry();
@@ -56,20 +59,8 @@ namespace engine
 		auto& ctx = parameters.scene.canvas.get_context();
 		auto& shader = *this->depth_shader;
 
-		clear();
-
-		/*
-		directional_lights = world.render_directional_shadows
-		(
-			*graphics.canvas,
-			*shaders.directional_shadow_depth,
-					
-			&directional_shadows,
-
-			&directional_light_shadows.positions,
-			&directional_light_shadows.matrices
-		);
-		*/
+		// Clear internal state and registered shadow-maps.
+		clear(); shadow_maps.clear();
 
 		bool light_found = false;
 
@@ -132,7 +123,8 @@ namespace engine
 				light_found = true;
 
 				// Store data about the directional-shadow-enabled light:
-				this->shadow_maps.push_back(&depth_texture);
+				shadow_maps.push_back(&depth_texture);
+
 				this->positions.push_back(light_position);
 				this->matrices.push_back(light_space_matrix);
 			});

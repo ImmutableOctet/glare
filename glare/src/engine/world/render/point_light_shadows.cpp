@@ -33,8 +33,6 @@ namespace engine
 
 	void PointLightShadowPhase::clear()
 	{
-		shadow_maps.clear();
-
 		light_positions.clear();
 		far_planes.clear();
 	}
@@ -49,15 +47,14 @@ namespace engine
 			return parameters;
 		}
 
-		/*
-		if (!render_state.dynamic_textures.has_value())
+		if (!render_state.dynamic_textures)
 		{
 			return parameters;
 		}
 
 		auto& dynamic_textures = *render_state.dynamic_textures;
-		auto& point_shadows = dynamic_textures["point_shadow_cubemap"];
-		*/
+
+		auto& shadow_maps = dynamic_textures["point_shadow_cubemap"];
 
 		auto& world = parameters.scene.world;
 		auto& registry = world.get_registry();
@@ -65,8 +62,8 @@ namespace engine
 		auto& ctx = parameters.scene.canvas.get_context();
 		auto& shader = *this->point_shadow_depth;
 
-		// Clear previously captured values. (if any)
-		clear();
+		// Clear internal state and registered shadow-maps.
+		clear(); shadow_maps.clear();
 
 		bool light_found = false;
 
@@ -112,7 +109,8 @@ namespace engine
 					light_found = true;
 
 					// Store data about the point-shadow-enabled light:
-					this->shadow_maps.push_back(shadows.shadow_map.get_depth_map().get());
+					shadow_maps.push_back(shadows.shadow_map.get_depth_map().get());
+
 					this->light_positions.push_back(light_position);
 					this->far_planes.push_back(far_plane);
 				});

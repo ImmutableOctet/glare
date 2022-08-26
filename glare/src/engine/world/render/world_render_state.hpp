@@ -9,7 +9,8 @@ namespace engine
 	struct WorldRenderState
 	{
 		// Temporary reference to a dictionary of dynamically updated texture maps. (e.g. shadow maps)
-		std::optional<graphics::NamedTextureGroupRaw> dynamic_textures = std::nullopt;
+		//std::optional<graphics::NamedTextureGroupRaw> dynamic_textures = std::nullopt;
+		graphics::NamedTextureArrayRaw* dynamic_textures = nullptr;
 
 		struct
 		{

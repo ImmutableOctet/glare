@@ -13,8 +13,6 @@ namespace engine
 		protected:
 			ref<graphics::Shader> depth_shader;
 
-			graphics::TextureArrayRaw shadow_maps;
-
 			graphics::VectorArray positions; // std::vector<math::Vector>
 			graphics::MatrixArray matrices;
 

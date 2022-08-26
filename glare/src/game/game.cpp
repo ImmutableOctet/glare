@@ -13,7 +13,9 @@ namespace game
 		std::string_view title, int width, int height,
 		UpdateRate update_rate, bool vsync, bool lock_mouse,
 		app::WindowFlags window_flags,
-		bool imgui_enabled
+		bool imgui_enabled,
+
+		unique_ref<engine::RenderPipeline>&& rendering_pipeline
 	) :
 		GraphicsApplication(title, width, height, window_flags, update_rate, vsync, imgui_enabled),
 		
@@ -29,30 +31,37 @@ namespace game
 		renderer
 		(
 			engine::RenderScene { *graphics.canvas, world, resource_manager },
-
-			engine::make_render_pipeline
-			(
-				engine::PointLightShadowPhase  { graphics.context, effects.get_preprocessor() },
-				engine::DirectionalShadowPhase { graphics.context, effects.get_preprocessor() },
-				
-				util::inspect_and_store
-				(
-					engine::GeometryRenderPhase { graphics.context, effects.get_preprocessor() },
-
-					[this](auto&& geometry_phase)
-					{
-						this->resource_manager.set_default_shader(geometry_phase.get_shader());
-						this->resource_manager.set_default_animated_shader(geometry_phase.get_animated_shader());
-					}
-				),
-
-				engine::DeferredShadingPhase{ graphics.context, effects.get_preprocessor() }
-			)
+			std::move(rendering_pipeline)
 		)
 	{
 		if (lock_mouse)
 		{
 			input.get_mouse().lock();
+		}
+
+		if (!renderer)
+		{
+			renderer.set_pipeline
+			(
+				engine::make_render_pipeline
+				(
+					engine::PointLightShadowPhase  { graphics.context, effects.get_preprocessor() },
+					engine::DirectionalShadowPhase { graphics.context, effects.get_preprocessor() },
+				
+					util::inspect_and_store
+					(
+						engine::GeometryRenderPhase { graphics.context, effects.get_preprocessor() },
+
+						[this](auto&& geometry_phase)
+						{
+							this->resource_manager.set_default_shader(geometry_phase.get_shader());
+							this->resource_manager.set_default_animated_shader(geometry_phase.get_animated_shader());
+						}
+					),
+
+					engine::DeferredShadingPhase { graphics.context, effects.get_preprocessor() }
+				)
+			);
 		}
 	}
 
@@ -105,6 +114,7 @@ namespace game
 		}
 
 		world.update_camera_parameters(width, height);
+
 		screen.resize(width, height);
 		on_resize(width, height);
 	}

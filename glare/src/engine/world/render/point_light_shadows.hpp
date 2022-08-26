@@ -18,8 +18,6 @@ namespace engine
 		protected:
 			ref<graphics::Shader> point_shadow_depth;
 
-			graphics::TextureArrayRaw shadow_maps; // std::vector<const Texture*>
-
 			graphics::VectorArray light_positions; // std::vector<math::Vector>
 			graphics::FloatArray  far_planes; // std::vector<float>
 

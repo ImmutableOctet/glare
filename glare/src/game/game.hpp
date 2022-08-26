@@ -43,7 +43,20 @@ namespace game
 
 			engine::WorldRenderer renderer;
 		public:
-			Game(std::string_view title, int width=1600, int height=900, UpdateRate update_rate=DEFAULT_FRAMERATE, bool vsync=true, bool lock_mouse=true, app::WindowFlags window_flags=(app::WindowFlags::OpenGL|app::WindowFlags::Resizable), bool imgui_enabled=true);
+			Game
+			(
+				std::string_view title,
+				
+				int width=1600, int height=900,
+				UpdateRate update_rate=DEFAULT_FRAMERATE,
+
+				bool vsync=true, bool lock_mouse=true,
+
+				app::WindowFlags window_flags=(app::WindowFlags::OpenGL|app::WindowFlags::Resizable),
+				bool imgui_enabled=true,
+
+				unique_ref<engine::RenderPipeline>&& rendering_pipeline=nullptr
+			);
 
 			inline engine::World& get_world() { return world; }
 

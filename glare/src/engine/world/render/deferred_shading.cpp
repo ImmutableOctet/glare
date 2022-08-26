@@ -226,54 +226,25 @@ namespace engine
 			shader["directional_shadows_count"] = directional_shadow_n_layers;
 			shader["point_shadows_count"] = point_shadow_n_layers;
 
-			if (render_state.dynamic_textures.has_value())
+			if (render_state.dynamic_textures)
 			{
-				//static const std::string texture_name = "depth_map"; // constexpr
-				const auto& dynamic_textures_v = *render_state.dynamic_textures;
-
+				// TODO: Look into this more.
 				bool shadows_enabled = true; //!(draw_mode & DrawMode::IgnoreShadows);
 
-				// TODO: Implement as visit:
-				if (util::peek_value<std::tuple<std::string_view, const graphics::Texture*>>(dynamic_textures_v, [&](const std::tuple<std::string_view, const graphics::Texture*>& tdata)
+				canvas.bind_textures(*render_state.dynamic_textures, [shadows_enabled](const std::string& texture_name, const graphics::TextureArrayRaw& textures)
 				{
-					const auto& texture_name = std::get<0>(tdata);
-					const auto* texture = std::get<1>(tdata);
-
-					if (!shadows_enabled)
+					if (!shadows_enabled) // tolower(...)
 					{
 						if ((texture_name.find("shadow") != std::string::npos))
 						{
 							// Don't bind this texture.
-							return; // From lambda.
+							return false;
 						}
 					}
 
-					assert(texture);
-					canvas.bind_texture(*texture, texture_name); // bind_texture(tdata);
-				}))
-				{}
-				else if (util::peek_value<const graphics::NamedTextureArrayRaw*>(dynamic_textures_v, [&](const graphics::NamedTextureArrayRaw* tdata)
-				{
-					//assert(tdata);
-					if (tdata)
-					{
-						canvas.bind_textures(*tdata, [shadows_enabled](const std::string& texture_name, const graphics::TextureArrayRaw& textures)
-						{
-							if (!shadows_enabled) // tolower(...)
-							{
-								if ((texture_name.find("shadow") != std::string::npos))
-								{
-									// Don't bind this texture.
-									return false;
-								}
-							}
-
-							// Bind this texture.
-							return true;
-						}); // false
-					}
-				}))
-				{}
+					// Bind this texture.
+					return true;
+				}); // false
 			}
 
 			render_lights(world, render_state, shader);
