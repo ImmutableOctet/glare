@@ -1,8 +1,4 @@
-#include <core.hpp>
 #include <util/log.hpp>
-
-#include <iostream>
-//#include <regex>
 
 //#include "src/graphics/graphics.hpp"
 
@@ -10,11 +6,12 @@
 //#include "src/tests/shader_test/shader_test.hpp"
 //#include "src/tests/deferred_test/deferred_test.hpp"
 
-#include "src/game.hpp"
 //#include "src/tests/signal_test/signal_test.hpp"
 //#include "src/tests/timer_test/timer_test.hpp"
 
-namespace glare
+#include "src/glare.hpp"
+
+namespace game
 {
 	int test(int argc, char** argv)
 	{
@@ -24,12 +21,14 @@ namespace glare
 			//ShaderTest();
 			//DeferredTest();
 
-			Glare();
+			glare::Glare();
 
 		//TimerTest();
 
 		//SignalTest();
 		//DispatcherTest();
+
+		application.execute();
 
 		return 0;
 	}
@@ -44,5 +43,5 @@ namespace glare
 
 int main(int argc, char** argv)
 {
-	return glare::exec(argc, argv);
+	return game::exec(argc, argv);
 }

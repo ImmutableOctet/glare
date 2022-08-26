@@ -12,6 +12,19 @@
 
 namespace app
 {
+	struct Graphics
+	{
+		public:
+			Graphics(app::Window& window, WindowFlags flags, bool vsync=true, bool extensions=true);
+
+			ref<graphics::Context> context;
+			ref<graphics::Canvas> canvas;
+
+			FrameCounter framerate = 0;
+
+			bool extensions = false;
+	};
+
 	class GraphicsApplication : public Application
 	{
 		protected:
@@ -26,43 +39,9 @@ namespace app
 			bool _imgui_enabled = true;
 
 		public:
+			using Graphics = app::Graphics;
+
 			static constexpr UpdateRate DEFAULT_FRAMERATE = 60;
-
-			struct Graphics
-			{
-				public:
-					Graphics(app::Window& window, WindowFlags flags, bool vsync=true, bool extensions=true)
-						: extensions(extensions)
-					{
-						if (!(flags & WindowFlags::OpenGL))
-						{
-							throw std::runtime_error("OpenGL is currently the only supported graphics-backend.");
-						}
-
-						auto graphics_flags = graphics::ContextFlags::Default;
-
-						if (vsync)
-						{
-							graphics_flags |= graphics::ContextFlags::VSync;
-						}
-						else
-						{
-							graphics_flags &= ~graphics::ContextFlags::VSync;
-						}
-
-						context = memory::allocate<graphics::Context>(window, graphics::Backend::OpenGL, graphics_flags, extensions);
-
-						// Create the default canvas.
-						canvas = memory::allocate<graphics::Canvas>(context);
-					}
-
-					ref<graphics::Context> context;
-					ref<graphics::Canvas> canvas;
-
-					FrameCounter framerate = 0;
-
-					bool extensions = false;
-			};
 
 			Graphics graphics;
 

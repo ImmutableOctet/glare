@@ -14,5 +14,3 @@
 #include "framebuffer.hpp"
 #include "renderbuffer.hpp"
 #include "model.hpp"
-
-#include "world_render_state.hpp"

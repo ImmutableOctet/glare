@@ -13,18 +13,19 @@
 
 #include <types.hpp>
 #include <graphics/model.hpp>
-#include <graphics/animation.hpp>
 
 #include <engine/collision.hpp>
 
-#include "loaders.hpp"
+#include "animation_data.hpp"
+#include "collision_data.hpp"
+#include "model_data.hpp"
 
-// Forward declarations:
+#include "loaders/loaders.hpp"
 
-// Bullet:
-//class btCollisionShape;
-class btCapsuleShape;
-class btBoxShape;
+namespace game
+{
+	class Game;
+}
 
 namespace graphics
 {
@@ -37,97 +38,49 @@ namespace graphics
 namespace engine
 {
 	class World;
+	class WorldRenderer;
 
-	using ModelRef = ref<graphics::Model>;
-	using WeakModelRef = weak_ref<graphics::Model>; // const graphics::Model*
-	using Animations = std::vector<graphics::Animation>;
-	using AnimationTransitions = std::map<std::tuple<AnimationID, AnimationID>, float>;
-	using Models = std::vector<ModelRef>;
+	struct RenderScene;
 
-	struct AnimationData
+	struct Resources
 	{
-		using ID = AnimationID;
+		// Aliases:
+		using AnimationData = engine::AnimationData;
 
-		graphics::Skeleton skeleton;
-		Animations animations;
+		// Reference to a 'Model' object; used internally for path lookups, etc.
+		using Models = engine::Models;
 
-		// Mapping of to/from animations to a corresponding interpolation duration in frames.
-		AnimationTransitions transitions;
+		using ShaderRef = ref<graphics::Shader>;
+		using WeakShaderRef = weak_ref<graphics::Shader>;
 
-		float get_transition(AnimationID src, AnimationID dest) const;
+		using TextureData = ref<graphics::Texture>;
+
+		// Output from load/creation function for models.
+		//using ModelData = Models; // std::tuple<Models, const CollisionData*>; // ModelRef // std::optional<...> // ref<ModelLoader::ModelStorage>;
+		using ModelData = engine::ModelData;
+
+		// Resource collections:
+		mutable std::unordered_map<std::string, ModelData> loaded_models; // Models // std::map // ModelRef
+		mutable std::unordered_map<std::string, ShaderRef> loaded_shaders; // std::map
+
+		mutable std::map<const WeakModelRef, CollisionData, std::owner_less<>> collision_data; //std::unordered_map<WeakModelRef, CollisionData, std::hash<WeakModelRef>, std::owner_less<>> collision_data;
+
+		mutable std::map<const WeakModelRef, ref<AnimationData>, std::owner_less<>> animation_data;
+
+		//std::unordered_map<std::string, TextureData> texture_data;
 	};
 
-	struct ModelData
-	{
-		// May change this later to be the same as the `ModelLoader` class's `ModelData` type.
-		struct ModelEntry
-		{
-			ModelRef model;
-			math::Matrix transform;
-		};
-
-		/*
-		Models models;
-		std::vector<math::Matrix> matrices;
-		//AnimationData animations;
-		*/
-
-		std::vector<ModelEntry> models;
-	};
-
-	class ResourceManager
+	class ResourceManager : protected Resources
 	{
 		public:
 			friend class World;
+			friend class WorldRenderer;
+			friend struct RenderScene;
 
-			using CollisionRaw = CollisionComponent::RawShape; // btCollisionShape;
-			using CollisionShape = CollisionComponent::Shape; // ref<CollisionRaw>;
-			using CollisionGeometry = graphics::Model::CollisionGeometry;
+			// TODO: Look into removing this. (Needed for construction of `RenderScene` object in `Game`)
+			friend class game::Game;
 
-			//using CollisionData = CollisionShape;
-
-			struct CollisionData
-			{
-				using Shape = CollisionShape;
-				using Raw = CollisionRaw;
-
-				using Geometry = CollisionGeometry;
-
-				CollisionData() = default;
-
-				CollisionData(CollisionData&&) = default;
-				CollisionData(const CollisionData&) = default;
-
-				CollisionData(const Shape& collision_shape);
-				CollisionData(Geometry&& geometry_storage, bool optimize=true);
-
-				CollisionData& operator=(CollisionData&&) = default;
-
-				Shape collision_shape;
-				std::optional<Geometry> geometry_storage = std::nullopt;
-
-				inline bool has_shape() const { return collision_shape.operator bool(); }
-				inline bool has_geometry() const { return geometry_storage.has_value(); }
-
-				inline explicit operator bool() const { return has_shape(); }
-				inline bool operator==(const CollisionData& data) const { return (this->collision_shape == data.collision_shape); }
-			};
-
-			using AnimationData = engine::AnimationData;
-
-			// Reference to a 'Model' object; used internally for path lookups, etc.
-			using Models = engine::Models;
-
-			using ShaderRef = ref<graphics::Shader>;
-			using WeakShaderRef = weak_ref<graphics::Shader>;
-
-			using TextureData = ref<graphics::Texture>;
-
-			// Output from load/creation function for models.
-			//using ModelData = Models; // std::tuple<Models, const CollisionData*>; // ModelRef // std::optional<...> // ref<ModelLoader::ModelStorage>;
-			using ModelData = engine::ModelData;
-
-			ResourceManager(pass_ref<graphics::Context> context, pass_ref<graphics::Shader> default_shader, pass_ref<graphics::Shader> default_animated_shader={});
+			ResourceManager(pass_ref<graphics::Context> context, pass_ref<graphics::Shader> default_shader={}, pass_ref<graphics::Shader> default_animated_shader={});
 			~ResourceManager();
 
 			inline pass_ref<graphics::Context> get_context() const { return context; }
@@ -194,19 +147,10 @@ namespace engine
 			//inline static std::string resolve_path(const std::string& path) { return path; }
 
 			static std::string resolve_path(const std::string& path);
-			static CollisionShape build_mesh_shape(const CollisionGeometry& geometry_storage, bool optimize=true);
 
 			mutable ref<graphics::Context> context;
+
 			mutable ref<graphics::Shader> default_shader;
 			mutable ref<graphics::Shader> default_animated_shader;
-
-			mutable std::unordered_map<std::string, ModelData> loaded_models; // Models // std::map // ModelRef
-			mutable std::unordered_map<std::string, ShaderRef> loaded_shaders; // std::map
-
-			mutable std::map<const WeakModelRef, CollisionData, std::owner_less<>> collision_data; //std::unordered_map<WeakModelRef, CollisionData, std::hash<WeakModelRef>, std::owner_less<>> collision_data;
-
-			mutable std::map<const WeakModelRef, ref<AnimationData>, std::owner_less<>> animation_data;
-
-			//std::unordered_map<std::string, TextureData> texture_data;
 	};
 }

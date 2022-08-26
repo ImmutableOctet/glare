@@ -130,9 +130,6 @@
     <ClInclude Include="src\graphics\graphics.hpp">
       <Filter>src\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="src\util\util.hpp">
-      <Filter>src\util</Filter>
-    </ClInclude>
     <ClInclude Include="src\graphics\drivers\drivers.hpp">
       <Filter>src\graphics</Filter>
     </ClInclude>
@@ -256,7 +253,7 @@
     <ClInclude Include="src\engine\world\rave_component.hpp">
       <Filter>src\engine\world</Filter>
     </ClInclude>
-    <ClInclude Include="src\game.hpp">
+    <ClInclude Include="src\glare.hpp">
       <Filter>src\glare</Filter>
     </ClInclude>
     <ClInclude Include="resource.h" />
@@ -266,7 +263,7 @@
     <ClInclude Include="src\graphics\shadow_map.hpp">
       <Filter>src\graphics\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="src\graphics\world_render_state.hpp">
+    <ClInclude Include="src\engine\world\render\world_render_state.hpp">
       <Filter>src\graphics\graphics</Filter>
     </ClInclude>
     <ClInclude Include="src\graphics\gbuffer.hpp">
@@ -275,10 +272,10 @@
     <ClInclude Include="src\engine\resource_manager\resource_manager.hpp">
       <Filter>src\engine\resource_manager</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\resource_manager\loaders.hpp">
+    <ClInclude Include="src\engine\resource_manager\loaders\loaders.hpp">
       <Filter>src\engine\resource_manager</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\resource_manager\model_loader.hpp">
+    <ClInclude Include="src\engine\resource_manager\loaders\model_loader.hpp">
       <Filter>src\engine\resource_manager</Filter>
     </ClInclude>
     <ClInclude Include="src\graphics\animation.hpp">
@@ -344,6 +341,18 @@
     <ClInclude Include="src\engine\world\debug\debug.hpp">
       <Filter>src\engine\world\debug</Filter>
     </ClInclude>
+    <ClInclude Include="src\engine\world\meta\controls.hpp">
+      <Filter>src\engine\world\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\meta\meta.hpp">
+      <Filter>src\engine\world\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\resource_manager\animation_data.hpp">
+      <Filter>src\engine\resource_manager</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\resource_manager\collision_data.hpp">
+      <Filter>src\engine\resource_manager</Filter>
+    </ClInclude>
     <ClInclude Include="src\util\algorithm.hpp">
       <Filter>src\util</Filter>
     </ClInclude>
@@ -351,6 +360,9 @@
       <Filter>src\util</Filter>
     </ClInclude>
     <ClInclude Include="src\util\bitflag.hpp">
+      <Filter>src\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\format.hpp">
       <Filter>src\util</Filter>
     </ClInclude>
     <ClInclude Include="src\util\io.hpp">
@@ -377,53 +389,50 @@
     <ClInclude Include="src\util\string.hpp">
       <Filter>src\util</Filter>
     </ClInclude>
+    <ClInclude Include="src\util\util.hpp">
+      <Filter>src\util</Filter>
+    </ClInclude>
     <ClInclude Include="src\util\variant.hpp">
       <Filter>src\util</Filter>
     </ClInclude>
-    <ClInclude Include="src\util\format.hpp">
+    <ClInclude Include="src\game\effects.hpp">
+      <Filter>src\game</Filter>
+    </ClInclude>
+    <ClInclude Include="src\game\game.hpp">
+      <Filter>src\game</Filter>
+    </ClInclude>
+    <ClInclude Include="src\game\graphics.hpp">
+      <Filter>src\game</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\resource_manager\model_data.hpp">
+      <Filter>src\engine\resource_manager</Filter>
+    </ClInclude>
+    <ClInclude Include="src\game\screen.hpp">
+      <Filter>src\game</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\render\render.hpp" />
+    <ClInclude Include="src\engine\world\render\render_phase.hpp">
+      <Filter>src\engine\world\render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\render\world_renderer.hpp" />
+    <ClInclude Include="src\engine\world\render\render_scene.hpp" />
+    <ClInclude Include="src\engine\world\render\render_pipeline.hpp" />
+    <ClInclude Include="src\engine\world\render\deferred_render_pipeline.hpp" />
+    <ClInclude Include="src\engine\world\render\render_pipeline_impl.hpp" />
+    <ClInclude Include="src\engine\world\render\point_light_shadows.hpp" />
+    <ClInclude Include="src\engine\world\render\render_parameters.hpp" />
+    <ClInclude Include="src\engine\world\render\types.hpp" />
+    <ClInclude Include="src\engine\world\render\geometry_render_phase.hpp" />
+    <ClInclude Include="src\util\function_traits.hpp">
       <Filter>src\util</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\world\meta\controls.hpp">
-      <Filter>src\engine\world\meta</Filter>
+    <ClInclude Include="src\util\pipeline.hpp">
+      <Filter>src\util</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\world\meta\meta.hpp">
-      <Filter>src\engine\world\meta</Filter>
-    </ClInclude>
+    <ClInclude Include="src\engine\world\render\directional_shadows.hpp" />
+    <ClInclude Include="src\engine\world\render\deferred_shading.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="assets\tests\model_test\shaders\8.1.deferred_light_box.fs">
-      <Filter>src\tests\model_test\shaders</Filter>
-    </None>
-    <None Include="assets\tests\model_test\shaders\8.1.deferred_light_box.vs">
-      <Filter>src\tests\model_test\shaders</Filter>
-    </None>
-    <None Include="assets\tests\model_test\shaders\8.1.deferred_shading.fs">
-      <Filter>src\tests\model_test\shaders</Filter>
-    </None>
-    <None Include="assets\tests\model_test\shaders\8.1.deferred_shading.vs">
-      <Filter>src\tests\model_test\shaders</Filter>
-    </None>
-    <None Include="assets\tests\model_test\shaders\8.1.fbo_debug.fs">
-      <Filter>src\tests\model_test\shaders</Filter>
-    </None>
-    <None Include="assets\tests\model_test\shaders\8.1.fbo_debug.vs">
-      <Filter>src\tests\model_test\shaders</Filter>
-    </None>
-    <None Include="assets\tests\model_test\shaders\8.1.g_buffer.fs">
-      <Filter>src\tests\model_test\shaders</Filter>
-    </None>
-    <None Include="assets\tests\model_test\shaders\8.1.g_buffer.vs">
-      <Filter>src\tests\model_test\shaders</Filter>
-    </None>
-    <None Include="assets\tests\model_test\shaders\forward.fs">
-      <Filter>src\tests\model_test\shaders</Filter>
-    </None>
-    <None Include="assets\tests\model_test\shaders\forward.vs">
-      <Filter>src\tests\model_test\shaders</Filter>
-    </None>
-    <None Include="assets\tests\model_test\shaders\forward_test.fs">
-      <Filter>src\tests\model_test\shaders</Filter>
-    </None>
     <None Include="assets\shaders\light_box.frag">
       <Filter>shaders</Filter>
     </None>
@@ -436,10 +445,10 @@
     <None Include="assets\shaders\deferred_shading.vert">
       <Filter>shaders</Filter>
     </None>
-    <None Include="assets\shaders\8.1.fbo_debug.frag">
+    <None Include="assets\shaders\display_texture.frag">
       <Filter>shaders</Filter>
     </None>
-    <None Include="assets\shaders\8.1.fbo_debug.vert">
+    <None Include="assets\shaders\display_texture.vert">
       <Filter>shaders</Filter>
     </None>
     <None Include="assets\shaders\geometry_pass.frag">
@@ -552,12 +561,6 @@
     <Filter Include="src\tests">
       <UniqueIdentifier>{4c2fa98e-dec2-424b-866b-0d8e4c3655b1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\tests\model_test">
-      <UniqueIdentifier>{5c554b87-2e5d-472c-a86c-b970460e48eb}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\tests\model_test\shaders">
-      <UniqueIdentifier>{cef71ef4-9ba5-40b9-af78-c64ab9e65119}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\tests\signal_test">
       <UniqueIdentifier>{e2aab549-55cd-4750-989d-d0dd76e0d6eb}</UniqueIdentifier>
     </Filter>
@@ -566,9 +569,6 @@
     </Filter>
     <Filter Include="src\tests\vertex_element_types">
       <UniqueIdentifier>{7ce784d9-e672-4ffd-a3ec-ce2deec692b8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\util">
-      <UniqueIdentifier>{2bdd65ae-be35-4849-97c4-f2c9e98ed892}</UniqueIdentifier>
     </Filter>
     <Filter Include="maps\test01">
       <UniqueIdentifier>{08836fbf-d152-4517-8c76-2deb6cb696d7}</UniqueIdentifier>
@@ -585,9 +585,18 @@
     <Filter Include="src\engine\world\meta">
       <UniqueIdentifier>{1a0a946e-c79f-47cf-ad51-aafdfff566eb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\util">
+      <UniqueIdentifier>{43958b03-a7fc-4031-984c-44fcf0f3514d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\game">
+      <UniqueIdentifier>{db378c18-35df-4631-a2ab-f57fa37db3eb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\engine\world\render">
+      <UniqueIdentifier>{acb353cc-f94a-4f54-b71b-d55e40590cd0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="glare.cpp" />
+    <ClCompile Include="main.cpp" />
     <ClCompile Include="src\app\input\input_handler.cpp">
       <Filter>src\app\input</Filter>
     </ClCompile>
@@ -714,7 +723,7 @@
     <ClCompile Include="src\graphics\types.cpp">
       <Filter>src\graphics\graphics</Filter>
     </ClCompile>
-    <ClCompile Include="src\game.cpp">
+    <ClCompile Include="src\glare.cpp">
       <Filter>src\glare</Filter>
     </ClCompile>
     <ClCompile Include="src\graphics\cubemap_transform.cpp">
@@ -726,11 +735,10 @@
     <ClCompile Include="src\graphics\gbuffer.cpp">
       <Filter>src\graphics\graphics</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\config.cpp" />
     <ClCompile Include="src\engine\resource_manager\resource_manager.cpp">
       <Filter>src\engine\resource_manager</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\resource_manager\model_loader.cpp">
+    <ClCompile Include="src\engine\resource_manager\loaders\model_loader.cpp">
       <Filter>src\engine\resource_manager</Filter>
     </ClCompile>
     <ClCompile Include="src\graphics\skeleton.cpp">
@@ -742,7 +750,6 @@
     <ClCompile Include="src\engine\world\animation_system.cpp">
       <Filter>src\engine\world</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\world\animator.cpp" />
     <ClCompile Include="dependencies\modules\imgui\imgui.cpp">
       <Filter>third-party\imgui</Filter>
     </ClCompile>
@@ -785,6 +792,21 @@
     <ClCompile Include="src\engine\transform.cpp">
       <Filter>src\engine</Filter>
     </ClCompile>
+    <ClCompile Include="src\engine\world\meta\controls.cpp">
+      <Filter>src\engine\world\meta</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\resource_manager\animation_data.cpp">
+      <Filter>src\engine\resource_manager</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\resource_manager\collision_data.cpp">
+      <Filter>src\engine\resource_manager</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\config.cpp">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\animator.cpp">
+      <Filter>src\engine\world</Filter>
+    </ClCompile>
     <ClCompile Include="src\util\io.cpp">
       <Filter>src\util</Filter>
     </ClCompile>
@@ -794,9 +816,23 @@
     <ClCompile Include="src\util\string.cpp">
       <Filter>src\util</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\world\meta\controls.cpp">
-      <Filter>src\engine\world\meta</Filter>
+    <ClCompile Include="src\game\effects.cpp">
+      <Filter>src\game</Filter>
     </ClCompile>
+    <ClCompile Include="src\game\game.cpp">
+      <Filter>src\game</Filter>
+    </ClCompile>
+    <ClCompile Include="src\game\screen.cpp">
+      <Filter>src\game</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\render\render_phase.cpp">
+      <Filter>src\engine\world\render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\world\render\world_renderer.cpp" />
+    <ClCompile Include="src\engine\world\render\geometry_render_phase.cpp" />
+    <ClCompile Include="src\engine\world\render\point_light_shadows.cpp" />
+    <ClCompile Include="src\engine\world\render\directional_shadows.cpp" />
+    <ClCompile Include="src\engine\world\render\deferred_shading.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />

@@ -13,6 +13,7 @@
 
 #include <bullet/btBulletCollisionCommon.h>
 
+#include <optional>
 //#include <type_traits>
 
 #include <util/log.hpp>
@@ -285,6 +286,7 @@ namespace engine
 		pass_ref<graphics::Context> context,
 		pass_ref<graphics::Shader> default_shader,
 		pass_ref<graphics::Shader> default_animated_shader,
+
 		const Config& cfg
 	) :
 		context(context),
@@ -299,8 +301,10 @@ namespace engine
 		pass_ref<graphics::Context> context,
 		pass_ref<graphics::Shader> default_shader,
 		pass_ref<graphics::Shader> default_animated_shader,
+		
 		const filesystem::path& filepath,
 		std::optional<NativeFlags> native_flags,
+
 		const Config& cfg
 	)
 		: ModelLoader(context, default_shader, default_animated_shader, cfg)
@@ -456,7 +460,7 @@ namespace engine
 	}
 
 	template <typename MeshData>
-	static graphics::Mesh handle_mesh(ModelLoader& loader, const aiScene* scene, const aiNode* node, aiMesh* mesh, ModelLoader::Model::CollisionGeometry::Container* collision_geometry=nullptr, const ModelLoader::Skeleton* skeleton=nullptr, const _aiMatrix4x4* scene_orientation=nullptr)
+	static std::optional<graphics::Mesh> handle_mesh(ModelLoader& loader, const aiScene* scene, const aiNode* node, aiMesh* mesh, bool generate_graphical_mesh=true, ModelLoader::Model::CollisionGeometry::Container* collision_geometry=nullptr, const ModelLoader::Skeleton* skeleton=nullptr, const _aiMatrix4x4* scene_orientation=nullptr)
 	{
 		auto mesh_data = process_mesh<MeshData>(loader.get_config(), scene, node, mesh, skeleton, scene_orientation);
 
@@ -466,7 +470,12 @@ namespace engine
 			collision_geometry->emplace_back(graphics::copy_simple_vertices(*mesh), mesh_data.indices); // TODO: Look into reducing unneeded copies.
 		}
 
-		return graphics::Mesh::Generate(loader.get_context(), mesh_data);
+		if (generate_graphical_mesh)
+		{
+			return graphics::Mesh::Generate(loader.get_context(), mesh_data);
+		}
+
+		return std::nullopt;
 	}
 
 	void ModelLoader::process_node(const aiScene* scene, const aiNode* node, const _aiMatrix4x4* orientation, const _aiMatrix4x4* global_orientation)
@@ -501,14 +510,17 @@ namespace engine
 				model.name = util::to_string_view(node->mName);
 			}
 
-			// Allocate mesh descriptors for each material:
-			model.meshes.reserve(materials.size());
-
-			for (const auto& material : materials)
-			//for (std::size_t i = 0; i < materials.size(); i++) // model.meshes.size()
+			if (cfg.load_mesh_content)
 			{
-				//model.meshes[i] = Model::MeshDescriptor(materials[i]);
-				model.meshes.emplace_back(material);
+				// Allocate mesh descriptors for each material:
+				model.meshes.reserve(materials.size());
+
+				for (const auto& material : materials)
+					//for (std::size_t i = 0; i < materials.size(); i++) // model.meshes.size()
+				{
+					//model.meshes[i] = Model::MeshDescriptor(materials[i]);
+					model.meshes.emplace_back(material);
+				}
 			}
 
 			// TODO: Review use of unsigned integer for indexing.
@@ -526,16 +538,14 @@ namespace engine
 					process_bones(*scene, *node, *mesh, skeleton);
 				}
 
-				auto material_index = mesh->mMaterialIndex;
-				auto& mesh_descriptor = model.meshes[material_index];
-
-				Mesh mesh_out;
+				std::optional<Mesh> mesh_out;
 
 				if (is_animated)
 				{
 					mesh_out = handle_mesh<AnimMeshData>
 					(
 						*this, scene, node, mesh,
+						cfg.load_mesh_content,
 						((collision_enabled) ? &collision_geometry : nullptr),
 						((skeleton.exists()) ? &skeleton : nullptr),
 
@@ -569,6 +579,7 @@ namespace engine
 					mesh_out = handle_mesh<MeshData>
 					(
 						*this, scene, node, mesh,
+						cfg.load_mesh_content,
 						((collision_enabled) ? &collision_geometry : nullptr),
 						((skeleton.exists()) ? &skeleton : nullptr),
 						
@@ -583,36 +594,45 @@ namespace engine
 					);
 				}
 
-				mesh_descriptor.meshes.push_back(std::move(mesh_out));
+				if ((cfg.load_mesh_content) && (mesh_out))
+				{
+					auto material_index = mesh->mMaterialIndex;
+					auto& mesh_descriptor = model.meshes[material_index];
+
+					mesh_descriptor.meshes.push_back(std::move(*mesh_out));
+				}
 			}
 
-			// First node (root):
-			//if (node == scene->mRootNode)
+			if (cfg.load_mesh_content)
 			{
-				// Remove empty mesh descriptors:
-				model.meshes.erase
-				(
-					std::remove_if
-					(
-						model.meshes.begin(), model.meshes.end(),
-						[](const auto& descriptor) -> bool
-						{
-							bool res = (!descriptor);
-
-							return res;
-						}
-					),
-
-					model.meshes.end()
-				);
-
-				// TODO: Review why this was added.
-				// Sort mesh descriptors based on numebr of textures.
-				std::sort(model.meshes.begin(), model.meshes.end(),
-				[](const auto& a, const auto& b)
+				// First node (root):
+				//if (node == scene->mRootNode)
 				{
-					return (a.material->textures.size() > b.material->textures.size());
-				});
+					// Remove empty mesh descriptors:
+					model.meshes.erase
+					(
+						std::remove_if
+						(
+							model.meshes.begin(), model.meshes.end(),
+							[](const auto& descriptor) -> bool
+							{
+								bool res = (!descriptor);
+
+								return res;
+							}
+						),
+
+						model.meshes.end()
+					);
+
+					// TODO: Review why this was added. (probably an optimization for overlapping texture binds)
+					// Sort mesh descriptors based on number of textures.
+					std::sort(model.meshes.begin(), model.meshes.end(),
+					[](const auto& a, const auto& b)
+					{
+						return (a.material->textures.size() > b.material->textures.size());
+					});
+				}
 			}
 
 			//model.vertex_winding = cfg.orientation.vert_direction;

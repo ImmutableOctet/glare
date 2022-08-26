@@ -32,6 +32,7 @@ namespace app
 			std::uint32_t get_id() const;
 			WindowFlags get_flags() const;
 
+			// `title` must be zero-terminated.
 			void set_title(std::string_view title);
 
 			// Retrieve the width and height of the window.

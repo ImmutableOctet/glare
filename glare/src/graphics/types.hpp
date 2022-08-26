@@ -34,8 +34,11 @@ namespace graphics
 {
 	using ResourceManager = engine::ResourceManager;
 
+	class Context;
+	class Shader;
 	class Texture;
 	class Material;
+	class Canvas;
 
 	using NativeContext = void*;
 	using ContextHandle = unsigned int; // GLint;
@@ -374,7 +377,7 @@ namespace graphics
 
 	// Names are non-owning views.
 	//using NamedTextureArrayRaw = std::vector<std::tuple<std::string_view, const Texture*>>;
-	using NamedTextureArrayRaw = std::unordered_map<std::string, std::vector<const Texture*>>;
+	using NamedTextureArrayRaw = std::unordered_map<std::string, TextureArrayRaw>; // std::vector<const Texture*>
 
 	using TextureGroup    = std::variant<ref<Texture>, TextureArray>; // Used to represent a single texture object or vector of textures objects. (Represents a 'TextureClass')
 	//using NamedTextureGroup = std::tuple<std::string, TextureGroup>;

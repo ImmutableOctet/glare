@@ -4,6 +4,31 @@
 
 namespace app
 {
+	Graphics::Graphics(app::Window& window, WindowFlags flags, bool vsync, bool extensions)
+		: extensions(extensions)
+	{
+		if (!(flags & WindowFlags::OpenGL))
+		{
+			throw std::runtime_error("OpenGL is currently the only supported graphics-backend.");
+		}
+
+		auto graphics_flags = graphics::ContextFlags::Default;
+
+		if (vsync)
+		{
+			graphics_flags |= graphics::ContextFlags::VSync;
+		}
+		else
+		{
+			graphics_flags &= ~graphics::ContextFlags::VSync;
+		}
+
+		context = memory::allocate<graphics::Context>(window, graphics::Backend::OpenGL, graphics_flags, extensions);
+
+		// Create the default canvas.
+		canvas = memory::allocate<graphics::Canvas>(context);
+	}
+
 	void GraphicsApplication::begin_render()
 	{
 		graphics.canvas->begin();

@@ -1,5 +1,9 @@
 #include "debug.hpp"
 
+#include <format>
+
+#include <game/game.hpp>
+
 #include "relationship.hpp"
 #include "world/world.hpp"
 
@@ -67,6 +71,19 @@ namespace engine
 
 			return true;
 		});
+	}
+
+	void position_in_titlebar(game::Game& game, Entity entity, std::optional<std::string_view> prefix)
+	{
+		auto& world = game.get_world();
+
+		if (entity != engine::null)
+		{
+			auto t = world.get_transform(entity);
+			auto position = t.get_position();
+
+			game.set_title(std::format("{}{}: {},{},{}", prefix.value_or(""), world.get_name(entity), position.x, position.y, position.z));
+		}
 	}
 
 	template <typename EventType>

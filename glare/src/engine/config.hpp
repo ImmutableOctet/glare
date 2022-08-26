@@ -17,6 +17,8 @@ namespace engine
 				{
 					Resolution resolution = { 8192, 8192 };
 					Resolution cubemap_resolution = { 2048, 2048 };
+
+					bool enabled = true;
 				} shadow;
 
 				struct

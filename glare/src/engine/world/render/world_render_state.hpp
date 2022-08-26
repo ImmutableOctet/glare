@@ -1,19 +1,21 @@
 #pragma once
 
 #include <optional>
+#include <graphics/types.hpp>
 
-#include "types.hpp"
-
-namespace graphics
+namespace engine
 {
+	// View of state from previous rendering pipeline stages.
 	struct WorldRenderState
 	{
-		std::optional<NamedTextureGroupRaw> dynamic_textures = std::nullopt;
+		// Temporary reference to a dictionary of dynamically updated texture maps. (e.g. shadow maps)
+		//std::optional<graphics::NamedTextureGroupRaw> dynamic_textures = std::nullopt;
+		graphics::NamedTextureArrayRaw* dynamic_textures = nullptr;
 
 		struct
 		{
-			std::optional<LightPositions> light_positions;
-			std::optional<FloatValues>    far_planes;
+			std::optional<graphics::LightPositions> light_positions;
+			std::optional<graphics::FloatValues>    far_planes;
 
 			bool enabled = false;
 
@@ -23,8 +25,8 @@ namespace graphics
 
 		struct
 		{
-			std::optional<LightPositions> light_positions;
-			std::optional<LightMatrices>  light_matrices;
+			std::optional<graphics::LightPositions> light_positions;
+			std::optional<graphics::LightMatrices>  light_matrices;
 
 			bool enabled = false;
 
@@ -40,8 +42,8 @@ namespace graphics
 
 		struct _matrices
 		{
-			Matrix view;
-			Matrix projection;
+			graphics::Matrix view;
+			graphics::Matrix projection;
 		};
 
 		std::optional<_matrices> matrices;
@@ -49,7 +51,7 @@ namespace graphics
 		struct
 		{
 			// Position of camera/view being rendered.
-			std::optional<Vector> view_position;
+			std::optional<math::Vector> view_position;
 			std::optional<graphics::ColorRGB> ambient_light;
 		} meta;
 
@@ -58,7 +60,7 @@ namespace graphics
 			float fov_y;
 			float aspect_ratio;
 
-			Vector2D depth_range;
+			math::Vector2D depth_range;
 		};
 
 		std::optional<_screen> screen;

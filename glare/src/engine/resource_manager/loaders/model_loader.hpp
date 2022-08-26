@@ -82,9 +82,10 @@ namespace engine
 
 				bool maintain_storage = true;
 
-				bool load_textures  = true;
-				bool load_bones     = true;
-				bool load_collision = true;
+				bool load_textures     = true;
+				bool load_bones        = true;
+				bool load_collision    = true;
+				bool load_mesh_content = true;
 
 				std::optional<bool> is_animated = std::nullopt;
 
