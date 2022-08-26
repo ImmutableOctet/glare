@@ -42,6 +42,9 @@ namespace engine
 
 	struct RenderScene;
 
+	// TODO: Revisit weak vs. strong references for caching.
+	// Theoretically we could use weak references but return strong references upon initial request.
+
 	struct Resources
 	{
 		// Aliases:

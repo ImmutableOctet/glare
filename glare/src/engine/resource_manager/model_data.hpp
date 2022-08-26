@@ -15,12 +15,14 @@ namespace engine
 
 	using Models = std::vector<ModelRef>;
 
-	struct ModelData
+	// TODO: Revisit weak vs. strong model references for caching purposes. (Resource manager)
+	template <typename RefType=ModelRef>
+	struct ModelData_Raw
 	{
 		// May change this later to be the same as the `ModelLoader` class's `ModelData` type.
 		struct ModelEntry
 		{
-			ModelRef model;
+			RefType model;
 			math::Matrix transform;
 		};
 
@@ -32,4 +34,8 @@ namespace engine
 
 		std::vector<ModelEntry> models;
 	};
+
+	using ModelData = ModelData_Raw<>;
+	using StrongModelData = ModelData;
+	using WeakModelData = ModelData_Raw<WeakModelRef>;
 }
