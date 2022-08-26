@@ -4,7 +4,19 @@
 //#include "world/world.hpp"
 
 #include <string>
+#include <string_view>
+#include <optional>
 #include <functional>
+
+namespace app
+{
+	class Window;
+}
+
+namespace game
+{
+	class Game;
+}
 
 namespace engine
 {
@@ -13,17 +25,20 @@ namespace engine
 	struct OnParentChanged;
 
 	void print_children(World& registry, Entity entity, bool recursive=true, bool summary_info=true, bool recursive_labels=false, const std::string& prefix="->");
+	void position_in_titlebar(game::Game& game, Entity entity, std::optional<std::string_view> prefix=std::nullopt);
 	
 	class DebugListener
 	{
 		protected:
 			World& world;
+
+		private:
+			template <typename EventType>
+			void enable();
+
 		public:
 			DebugListener(World& world);
 			~DebugListener();
-
-			template <typename EventType>
-			void enable();
 
 			void operator()(const OnStageLoaded& data);
 			void operator()(const OnEntityCreated& data);

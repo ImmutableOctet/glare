@@ -17,5 +17,6 @@ namespace engine
 
 		util::retrieve_value(shadow, "resolution", g.shadow.resolution);
 		util::retrieve_value(shadow, "cubemap_resolution", g.shadow.cubemap_resolution);
+		util::retrieve_value(shadow, "enabled", g.shadow.enabled);
 	}
 }

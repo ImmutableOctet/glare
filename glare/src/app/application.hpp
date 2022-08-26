@@ -60,6 +60,7 @@ namespace app
 			UpdateRate fixed_update_rate;
 		protected:
 			Application(UpdateRate update_rate);
+			virtual ~Application() = default;
 
 			Window& make_window(int width, int height, std::string_view title="", WindowFlags flags=WindowFlags::Default);
 

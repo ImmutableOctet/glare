@@ -22,6 +22,11 @@
 
 #include "loaders/loaders.hpp"
 
+namespace game
+{
+	class Game;
+}
+
 namespace graphics
 {
 	class Context;
@@ -33,27 +38,49 @@ namespace graphics
 namespace engine
 {
 	class World;
+	class WorldRenderer;
 
-	class ResourceManager
+	struct RenderScene;
+
+	struct Resources
+	{
+		// Aliases:
+		using AnimationData = engine::AnimationData;
+
+		// Reference to a 'Model' object; used internally for path lookups, etc.
+		using Models = engine::Models;
+
+		using ShaderRef = ref<graphics::Shader>;
+		using WeakShaderRef = weak_ref<graphics::Shader>;
+
+		using TextureData = ref<graphics::Texture>;
+
+		// Output from load/creation function for models.
+		//using ModelData = Models; // std::tuple<Models, const CollisionData*>; // ModelRef // std::optional<...> // ref<ModelLoader::ModelStorage>;
+		using ModelData = engine::ModelData;
+
+		// Resource collections:
+		mutable std::unordered_map<std::string, ModelData> loaded_models; // Models // std::map // ModelRef
+		mutable std::unordered_map<std::string, ShaderRef> loaded_shaders; // std::map
+
+		mutable std::map<const WeakModelRef, CollisionData, std::owner_less<>> collision_data; //std::unordered_map<WeakModelRef, CollisionData, std::hash<WeakModelRef>, std::owner_less<>> collision_data;
+
+		mutable std::map<const WeakModelRef, ref<AnimationData>, std::owner_less<>> animation_data;
+
+		//std::unordered_map<std::string, TextureData> texture_data;
+	};
+
+	class ResourceManager : protected Resources
 	{
 		public:
 			friend class World;
+			friend class WorldRenderer;
+			friend struct RenderScene;
 
-			using AnimationData = engine::AnimationData;
+			// TODO: Look into removing this. (Needed for construction of `RenderScene` object in `Game`)
+			friend class game::Game;
 
-			// Reference to a 'Model' object; used internally for path lookups, etc.
-			using Models = engine::Models;
-
-			using ShaderRef = ref<graphics::Shader>;
-			using WeakShaderRef = weak_ref<graphics::Shader>;
-
-			using TextureData = ref<graphics::Texture>;
-
-			// Output from load/creation function for models.
-			//using ModelData = Models; // std::tuple<Models, const CollisionData*>; // ModelRef // std::optional<...> // ref<ModelLoader::ModelStorage>;
-			using ModelData = engine::ModelData;
-
-			ResourceManager(pass_ref<graphics::Context> context, pass_ref<graphics::Shader> default_shader, pass_ref<graphics::Shader> default_animated_shader={});
+			ResourceManager(pass_ref<graphics::Context> context, pass_ref<graphics::Shader> default_shader={}, pass_ref<graphics::Shader> default_animated_shader={});
 			~ResourceManager();
 
 			inline pass_ref<graphics::Context> get_context() const { return context; }
@@ -122,16 +149,8 @@ namespace engine
 			static std::string resolve_path(const std::string& path);
 
 			mutable ref<graphics::Context> context;
+
 			mutable ref<graphics::Shader> default_shader;
 			mutable ref<graphics::Shader> default_animated_shader;
-
-			mutable std::unordered_map<std::string, ModelData> loaded_models; // Models // std::map // ModelRef
-			mutable std::unordered_map<std::string, ShaderRef> loaded_shaders; // std::map
-
-			mutable std::map<const WeakModelRef, CollisionData, std::owner_less<>> collision_data; //std::unordered_map<WeakModelRef, CollisionData, std::hash<WeakModelRef>, std::owner_less<>> collision_data;
-
-			mutable std::map<const WeakModelRef, ref<AnimationData>, std::owner_less<>> animation_data;
-
-			//std::unordered_map<std::string, TextureData> texture_data;
 	};
 }

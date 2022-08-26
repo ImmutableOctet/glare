@@ -6,12 +6,8 @@
 #include <engine/events/events.hpp>
 
 #include <graphics/types.hpp>
-#include <graphics/world_render_state.hpp>
-
 #include <app/delta_time.hpp>
-
 #include <math/math.hpp>
-
 #include <util/json.hpp>
 
 #include <vector>
@@ -22,6 +18,7 @@
 #include <optional>
 //#include <fstream>
 
+// TODO: Move most of these includes to `world.cpp`:
 #include "entity.hpp"
 #include "camera.hpp"
 #include "light.hpp"
@@ -45,16 +42,12 @@ namespace graphics
 {
 	class Canvas;
 	class Shader;
-
-	//struct WorldRenderState;
 }
 
 namespace engine
 {
 	class ResourceManager;
 	class Config;
-
-	using WorldRenderState = graphics::WorldRenderState;
 
 	class World : public Service
 	{
@@ -153,123 +146,6 @@ namespace engine
 
 			void handle_transform_events(float delta);
 
-			// Renders the scene using the last bound camera. If no camera has been bound/assinged, then this routine will return 'false'.
-			// Returns 'false' if an essential rendering component is missing.
-			inline bool render
-			(
-				graphics::Canvas& canvas,
-				const graphics::Viewport& viewport,
-				bool multi_pass=false,
-				bool use_active_shader=false,
-				WorldRenderState* render_state=nullptr,
-				graphics::CanvasDrawMode additional_draw_modes=graphics::CanvasDrawMode::None, // (graphics::CanvasDrawMode::IgnoreShaders)
-				bool _combine_view_proj_matrices=false,
-				bool _bind_dynamic_textures=false
-			)
-			{
-				return render
-				(
-					canvas,
-					viewport,
-					this->camera,
-					multi_pass,
-					use_active_shader,
-					render_state,
-					additional_draw_modes,
-					_combine_view_proj_matrices,
-					_bind_dynamic_textures
-				);
-			}
-
-			// Renders the scene using the camera specified.
-			// Returns 'false' if an essential rendering component is missing. (e.g. 'camera')
-			bool render
-			(
-				graphics::Canvas& canvas,
-				const graphics::Viewport& viewport,
-				Entity camera,
-				bool multi_pass=false,
-				bool use_active_shader=false,
-				WorldRenderState* render_state=nullptr,
-				graphics::CanvasDrawMode additional_draw_modes=graphics::CanvasDrawMode::None,
-				bool _combine_view_proj_matrices=false,
-				bool _bind_dynamic_textures=false
-			);
-
-			inline bool render_point_shadows
-			(
-				graphics::Canvas& canvas,
-				graphics::Shader& shader,
-
-				graphics::TextureArrayRaw* shadow_maps_out=nullptr,
-				graphics::VectorArray* light_positions_out=nullptr,
-				graphics::FloatArray* shadow_far_planes_out=nullptr
-			)
-			{
-				return render_point_shadows
-				(
-					canvas,
-					shader,
-					
-					this->camera,
-
-					shadow_maps_out,
-					light_positions_out,
-					shadow_far_planes_out
-				);
-			}
-
-			// Renders the scene multiple times for each shadow-enabled point-light.
-			bool render_point_shadows
-			(
-				graphics::Canvas& canvas,
-				graphics::Shader& shader,
-				
-				Entity camera,
-
-				graphics::TextureArrayRaw* shadow_maps_out=nullptr,
-				graphics::VectorArray* light_positions_out=nullptr,
-				graphics::FloatArray* shadow_far_planes_out=nullptr
-			);
-
-			inline bool render_directional_shadows
-			(
-				graphics::Canvas& canvas,
-				graphics::Shader& shader,
-
-				graphics::TextureArrayRaw* shadow_maps_out=nullptr,
-				graphics::VectorArray* light_positions_out=nullptr,
-				graphics::MatrixArray* light_matrices_out=nullptr
-			)
-			{
-				return render_directional_shadows
-				(
-					canvas,
-					shader,
-					
-					this->camera,
-
-					shadow_maps_out,
-
-					light_positions_out,
-					light_matrices_out
-				);
-			}
-
-			// Renders the scene once for each shadow-enabled directional-light.
-			bool render_directional_shadows
-			(
-				graphics::Canvas& canvas,
-				graphics::Shader& shader,
-
-				Entity camera,
-
-				graphics::TextureArrayRaw* shadow_maps_out=nullptr,
-
-				graphics::VectorArray* light_positions_out=nullptr,
-				graphics::MatrixArray* light_matrices_out=nullptr
-			);
-
 			//void on_child_removed(const Event_ChildRemoved& e);
 
 			void update_camera_parameters(int width, int height);
@@ -348,24 +224,6 @@ namespace engine
 			{
 				defer(std::forward<fn_t>(f), this, std::forward<arguments>(args)...);
 			}
-		private:
-			// Renders models with the given draw-mode.
-			void draw_models
-			(
-				graphics::CanvasDrawMode draw_mode,
-				graphics::Canvas& canvas,
-				// graphics::Shader& shader,
-				
-				const math::Matrix* projection_matrix=nullptr,
-				const math::Matrix* view_matrix=nullptr,
-				
-				bool use_active_shader=false,
-				
-				WorldRenderState* render_state=nullptr,
-
-				bool combine_matrices=false,
-				bool bind_dynamic_textures=false
-			);
 	};
 
 	using Scene = World;

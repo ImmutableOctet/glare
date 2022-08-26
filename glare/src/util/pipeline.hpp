@@ -1,5 +1,8 @@
 #pragma once
 
+#include <utility>
+#include <type_traits>
+
 #include "function_traits.hpp"
 
 namespace util
@@ -60,16 +63,16 @@ namespace util
     template<typename... Phases>
     struct pipeline
     {
-        // Tin/Tout types
+        // T-in/T-out types:
         using in_type = typename pipeline_input<Phases...>::type;
         using out_type = typename pipeline_output<Phases...>::type;
 
         // Tuple holding the current state of each phase.
         std::tuple<Phases...> phases;
         
-        pipeline(std::tuple<Phases...>&& phases) : phases(std::move(phases)) {};
-        pipeline(Phases... phases) : phases(std::tuple<Phases...>(std::forward<Phases>(phases)...)) {};
-    
+        pipeline(std::tuple<Phases...>&& phases) : phases(std::forward<std::tuple<Phases...>>(phases)) {};
+        pipeline(Phases&&... phases) : phases(std::tuple<Phases...>(std::forward<Phases>(phases)...)) {};
+        
         // Call operator; `pipeline` objects are lazy and will not execute until this is invoked.
         out_type operator()(in_type input_value)
         {
@@ -80,4 +83,72 @@ namespace util
     // Utility function that generates a pipeline object.
     template<typename... Phases>
     auto make_pipeline(Phases... phases) { return pipeline<Phases...>(std::forward<Phases>(phases)...); };
+
+    /*
+        Simple type used to store a reference to a `phase` object in a pipeline as well as its produced value.
+
+        This is useful when you want to reference the object being called within a constructed pipeline,
+        but have no way of obtaining a reference to it, outside of the pipeline itself.
+
+        e.g. You want to access members from a `GeometryRenderPhase` object before forwarding its `operator()` result to `DeferredShadingPhase`.
+    */
+    template <typename phase_type, typename input_type>
+    struct inject_self
+    {
+        using PhaseType = phase_type;
+        using InputType = input_type;
+
+        // Result of calling `operator()` on `phase`.
+        using OutputType = std::invoke_result<PhaseType, InputType>::type; // std::decay<InputType>::type
+        //using OutputType = decltype(phase(std::decay<InputType>::type()));
+        //using OutputType = std::result_of<PhaseType(InputType)>::type;
+
+        PhaseType phase;
+
+        struct Manifold
+        {
+            PhaseType& phase;
+            OutputType output;
+        };
+
+        inline Manifold operator()(InputType&& input)
+        {
+            return { phase, phase(std::forward<InputType>(input)) };
+        }
+    };
+
+    /*
+    template <typename phase_type, typename input_type>
+    struct store_and_inspect
+    {
+        using PhaseType = phase_type;
+        using InputType = input_type;
+
+        // Result of calling `operator()` on `phase`.
+        using OutputType = std::invoke_result<PhaseType, InputType>::type; // std::decay<InputType>::type
+
+        template <typename Callback>
+        store_and_inspect(PhaseType&& phase, Callback&& callback)
+            phase(std::move(phase))
+        {
+            callback(phase);
+        }
+
+        PhaseType phase;
+
+        inline OutputType operator()(InputType&& input)
+        {
+            return phase(input);
+        }
+    };
+    */
+
+    // Calls `callback_fn` with `phase` (as an lvalue reference), then returns `phase` back to the caller.
+    template <typename PhaseType, typename Callback>
+    PhaseType inspect_and_store(PhaseType&& phase, Callback&& callback_fn)
+    {
+        callback_fn(phase);
+
+        return phase;
+    }
 }
