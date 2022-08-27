@@ -95,6 +95,14 @@ namespace engine
 		CollisionConfig(EntityType type);
 	};
 
+	/*
+		Represents a 'collider' object attached to an entity.
+		This can be thought of as an in-world instance of collision shape (see 'Shape' types below),
+		tied directly to an Entity's world-space transform.
+
+		***To attach `CollisionComponent` objects to an entity, please use the `attach_collision` command to
+		ensure registration with the `World` object's physics-system occurs properly.***
+	*/
 	struct CollisionComponent : protected CollisionConfig
 	{
 		public:
@@ -220,9 +228,6 @@ namespace engine
 	template <typename ShapeType>
 	inline Entity attach_collision(World& world, Entity entity, const ShapeType& collision_data, const CollisionConfig& config, float mass=0.0f) // CollisionComponent::Shape
 	{
-		// TODO: Remove temporary.
-		auto col = CollisionComponent(collision_data, config, mass);
-
-		return attach_collision_impl(world, entity, std::move(col));
+		return attach_collision_impl(world, entity, CollisionComponent(collision_data, config, mass));
 	}
 }
