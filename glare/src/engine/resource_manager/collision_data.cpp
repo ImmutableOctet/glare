@@ -12,6 +12,7 @@ namespace engine
 
 		auto shape = std::make_shared<btBvhTriangleMeshShape>(desc, optimize); // std::shared_ptr<btTriangleMeshShape>
 
+		// Return the generated `shape` object as a pointer to a generic shape, rather than as a triangle-mesh shape. (Internally a `btCollisionShape` type)
 		return std::static_pointer_cast<CollisionRaw>(shape);
 	}
 

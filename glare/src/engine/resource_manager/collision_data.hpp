@@ -13,10 +13,14 @@ class btBoxShape;
 
 namespace engine
 {
+	// TODO: Simplify some of these typedefs.
 	using CollisionRaw = CollisionComponent::RawShape; // btCollisionShape;
 	using CollisionShape = CollisionComponent::Shape; // ref<CollisionRaw>;
 	using CollisionGeometry = graphics::Model::CollisionGeometry;
 
+	// Internal storage mechanism for 'collision shapes' and associated mesh-data (if any).
+	// This is different from a 'collision object' instance (sometimes referred to as a 'collider'), which can be attached to an `Entity` in a Game World.
+	// Such 'colliders' are created by attaching a `CollisionComponent` object to an `Entity`, using these `CollisionData` objects as their underlying storage. (see constructors for `CollisionComponent`)
 	struct CollisionData
 	{
 		using Shape = CollisionShape;
