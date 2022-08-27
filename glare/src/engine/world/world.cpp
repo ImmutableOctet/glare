@@ -123,7 +123,7 @@ namespace engine
 
 			print("Loading...");
 
-			auto map = Stage::Load(*this, parent, root_path, map_data); // { .geometry = false }
+			auto map = Stage::Load(*this, root_path, map_data, parent); // { .geometry = false }
 
 			if (!is_child_stage)
 			{

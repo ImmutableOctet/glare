@@ -30,6 +30,7 @@
 
 namespace engine
 {
+	// Stage:
 	const Stage::ObjectCreationMap Stage::ObjectRoutines
 	=
 	{
@@ -41,178 +42,11 @@ namespace engine
 		{ "scenery",       Stage::CreateScenery      }
 	};
 
-    Entity Stage::Load(World& world, Entity parent, const filesystem::path& root_path, const util::json& data, const Stage::Config& cfg)
+    Entity Stage::Load(World& world, const filesystem::path& root_path, const util::json& data, Entity parent, const Stage::Loader::Config& cfg)
     {
-		constexpr PlayerIndex NoPlayer = PlayerState::NoPlayer;
+		auto state = Stage::Loader(world, root_path, data);
 
-		PlayerObjectMap player_objects;
-		ObjectMap       objects;
-
-		auto& registry = world.get_registry();
-
-		// Global settings:
-
-		// Stage pivot:
-		print("Creating scene pivot...");
-
-		//parent = create_pivot(world, parent);
-
-		//Entity stage = null;
-		auto stage = create_pivot(world, parent);
-
-		registry.emplace<NameComponent>(stage, util::get_value<std::string>(data, "title", util::get_value<std::string>(data, "name", "Unknown Stage")));
-
-		print("Initializing stage properties...");
-		world.properties = {data};
-
-		//auto& resource_manager = world.get_resource_manager();
-
-		// Stage geometry:
-		if (cfg.geometry)
-		{
-			print("Loading scene geometry...");
-
-			ForEach(data["models"], [&](const auto& model_cfg)
-			{
-				auto model_path = (root_path / model_cfg["path"].get<std::string>()).string();
-
-				bool collision_enabled = util::get_value(model_cfg, "collision", true);
-
-				print("Loading geometry from \"{}\"...\n", model_path);
-
-				auto model = load_model(world, model_path, stage, EntityType::Geometry, true, collision_enabled);
-
-				print("Applying transformation to stage geometry...");
-
-				apply_transform(world, model, model_cfg);
-			});
-		}
-
-		// Players:
-		if (cfg.players)
-		{
-			print("Loading players...");
-
-			PlayerIndex player_idx_counter = 1;
-
-			ForEach(data["players"], [&](const auto& player_cfg)
-			{
-				auto& registry = world.get_registry();
-
-				auto player_tform  = get_transform_data(player_cfg);
-				auto player_char   = get_character(util::get_value<std::string>(player_cfg, "character", "default"));
-				auto player_name   = util::get_value<std::string>(player_cfg, "name", DEFAULT_PLAYER_NAME);
-				auto player_idx    = util::get_value<PlayerIndex>(player_cfg, "index", player_idx_counter);
-				auto player_parent = stage; // null;
-
-				print("Player #{}", player_idx);
-				print("Name: {}", player_name);
-				print("Character: {}", static_cast<std::uint8_t>(player_char));
-
-				auto player = create_player(world, player_tform, player_char, player_name, player_parent, player_idx);
-
-				print("Entity: {}", player);
-				print("Parent: {}", player_parent);
-
-				if (player_idx != NoPlayer)
-				{
-					player_objects[player_idx] = player;
-				}
-
-				/*
-				if (util::get_value(player_cfg, "debug", false))
-				{
-					// TODO.
-				}
-				*/
-
-				player_idx_counter = std::max((player_idx_counter+1), (player_idx+1));
-			});
-		}
-
-		// Objects:
-		if (cfg.objects)
-		{
-			print("Loading objects...");
-
-			ObjectIndex obj_idx_counter = 1; // std::uint16_t
-
-			ForEach(data["objects"], [&](const auto& obj_cfg)
-			{
-				auto obj_type = util::get_value<std::string>(obj_cfg, "type", "");
-
-				Entity obj = null;
-
-				if (obj_type.empty())
-				{
-					auto tform = get_transform_data(obj_cfg);
-
-					obj = create_pivot(world, tform, stage);
-				}
-				else
-				{
-					auto o = ObjectRoutines.find(obj_type);
-
-					if (o == ObjectRoutines.end())
-					{
-						print_warn("Unkown object detected: \"{}\"", obj_type);
-					}
-					else
-					{
-						auto obj_fn = o->second;
-
-						print("Creating object of type \"{}\"...", obj_type);
-
-						obj = obj_fn(world, stage, root_path, player_objects, objects, obj_cfg);
-
-						if (obj != null)
-						{
-							apply_transform(world, obj, obj_cfg);
-							apply_color(world, obj, obj_cfg);
-
-							resolve_parent(world, obj, stage, root_path, player_objects, objects, obj_cfg);
-
-							print("\"{}\" object created.", obj_type);
-						}
-					}
-				}
-
-				if (obj != null)
-				{
-					auto obj_idx = util::get_value<ObjectIndex>(obj_cfg, "index", obj_idx_counter);
-					auto obj_name = util::get_value<std::string>(obj_cfg, "name", "");
-
-					if (!obj_name.empty())
-					{
-						print("Object name: {}", obj_name);
-
-						registry.emplace<NameComponent>(obj, obj_name);
-					}
-
-					objects[obj_idx] = obj;
-
-					obj_idx_counter = std::max((obj_idx_counter + 1), (obj_idx + 1));
-				}
-			});
-		}
-
-		// Apply stage transform, etc.
-		if (cfg.apply_transform)
-		{
-			auto tform = util::get_transform(data);
-
-			auto [position, rotation, scale] = tform;
-
-			print("Stage Transform:");
-
-			print("Position: {}", position);
-			print("Rotation: {}", rotation);
-			print("Scale: {}\n", scale);
-
-			world.apply_transform(stage, tform);
-		}
-
-		return stage;
+		return state.load(cfg, parent);
     }
 
 	Entity Stage::CreateCamera(World& world, Entity parent, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& camera_cfg)
@@ -550,5 +384,231 @@ namespace engine
 		}
 
 		return std::nullopt;
+	}
+
+	// Stage::Loader:
+	Entity Stage::Loader::make_stage_pivot(World& world, Entity parent)
+	{
+		//parent = create_pivot(world, parent);
+		auto stage = create_pivot(world, parent);
+
+		return stage;
+	}
+
+	Stage::Loader::Loader(World& world, const filesystem::path& root_path, const util::json& data, Entity stage):
+		world(world),
+		root_path(root_path),
+		data(data),
+		stage(stage)
+	{}
+
+	bool Stage::Loader::ensure_stage(Entity parent)
+	{
+		if (stage != null)
+		{
+			return false;
+		}
+
+		// Automatically generated scene/stage pivot:
+		print("Creating scene pivot...");
+
+		stage = make_stage_pivot(world, parent);
+
+		return true;
+	}
+
+	Entity Stage::Loader::load(const Stage::Loader::Config& cfg, Entity parent)
+	{
+		auto stage = this->stage;
+
+		if (stage == null)
+		{
+			stage = make_stage_pivot(world, parent);
+		}
+
+		return load(stage, cfg, parent);
+	}
+
+	Entity Stage::Loader::load(Entity stage, const Stage::Loader::Config& cfg, Entity parent, bool load_title)
+	{
+		assert(stage != null);
+
+		this->stage = stage;
+
+		load_properties((stage == this->stage));
+
+		// Stage geometry:
+		if (cfg.geometry)
+		{
+			load_geometry();
+		}
+
+		// Players:
+		if (cfg.players)
+		{
+			load_players();
+		}
+
+		// Objects:
+		if (cfg.objects)
+		{
+			load_objects();
+		}
+
+		// Apply stage transform, etc.
+		if (cfg.apply_transform)
+		{
+			print("Applying stage transform...");
+			apply_transform(world, stage, data);
+		}
+
+		return stage;
+	}
+
+	void Stage::Loader::load_properties(bool load_title, const std::string& default_title)
+	{
+		if ((load_title) && (stage != null))
+		{
+			world.set_name(stage, util::get_value<std::string>(data, "title", util::get_value<std::string>(data, "name", default_title)));
+		}
+
+		print("Initializing stage properties...");
+
+		world.properties = { data };
+	}
+
+	void Stage::Loader::load_geometry()
+	{
+		ensure_stage();
+
+		print("Loading scene geometry...");
+
+		ForEach(data["models"], [&](const auto& model_cfg)
+		{
+			auto model_path = (root_path / model_cfg["path"].get<std::string>()).string();
+
+			bool collision_enabled = util::get_value(model_cfg, "collision", true);
+
+			print("Loading geometry from \"{}\"...\n", model_path);
+
+			auto model = load_model(world, model_path, stage, EntityType::Geometry, true, collision_enabled);
+
+			print("Applying transformation to stage geometry...");
+
+			apply_transform(world, model, model_cfg);
+		});
+	}
+
+	void Stage::Loader::load_players()
+	{
+		ensure_stage();
+
+		print("Loading players...");
+
+		ForEach(data["players"], [&](const auto& player_cfg)
+		{
+			auto& registry = world.get_registry();
+			auto& player_idx_counter = indices.players.player_idx_counter;
+			auto& player_objects = indices.players.player_objects;
+
+			auto player_tform  = get_transform_data(player_cfg);
+			auto player_char   = get_character(util::get_value<std::string>(player_cfg, "character", "default"));
+			auto player_name   = util::get_value<std::string>(player_cfg, "name", DEFAULT_PLAYER_NAME);
+			auto player_idx    = util::get_value<PlayerIndex>(player_cfg, "index", player_idx_counter);
+			auto player_parent = stage; // null;
+
+			print("Player #{}", player_idx);
+			print("Name: {}", player_name);
+			print("Character: {}", static_cast<std::uint8_t>(player_char));
+
+			auto player = create_player(world, player_tform, player_char, player_name, player_parent, player_idx);
+
+			print("Entity: {}", player);
+			print("Parent: {}", player_parent);
+
+			if (player_idx != NoPlayer)
+			{
+				player_objects[player_idx] = player;
+			}
+
+			/*
+			if (util::get_value(player_cfg, "debug", false))
+			{
+				// TODO.
+			}
+			*/
+
+			player_idx_counter = std::max((player_idx_counter+1), (player_idx+1));
+		});
+	}
+
+	void Stage::Loader::load_objects()
+	{
+		auto& registry = world.get_registry();
+		auto& obj_idx_counter = indices.objects.obj_idx_counter;
+		auto& objects = indices.objects.objects;
+		auto& player_objects = indices.players.player_objects;
+
+		ensure_stage();
+
+		print("Loading objects...");
+
+		ForEach(data["objects"], [&](const auto& obj_cfg)
+		{
+			auto obj_type = util::get_value<std::string>(obj_cfg, "type", "");
+
+			Entity obj = null;
+
+			if (obj_type.empty())
+			{
+				auto tform = get_transform_data(obj_cfg);
+
+				obj = create_pivot(world, tform, stage);
+			}
+			else
+			{
+				auto o = ObjectRoutines.find(obj_type);
+
+				if (o == ObjectRoutines.end())
+				{
+					print_warn("Unkown object detected: \"{}\"", obj_type);
+				}
+				else
+				{
+					auto obj_fn = o->second;
+
+					print("Creating object of type \"{}\"...", obj_type);
+
+					obj = obj_fn(world, stage, root_path, player_objects, objects, obj_cfg);
+
+					if (obj != null)
+					{
+						apply_transform(world, obj, obj_cfg);
+						apply_color(world, obj, obj_cfg);
+
+						resolve_parent(world, obj, stage, root_path, player_objects, objects, obj_cfg);
+
+						print("\"{}\" object created.", obj_type);
+					}
+				}
+			}
+
+			if (obj != null)
+			{
+				auto obj_idx = util::get_value<ObjectIndex>(obj_cfg, "index", obj_idx_counter);
+				auto obj_name = util::get_value<std::string>(obj_cfg, "name", "");
+
+				if (!obj_name.empty())
+				{
+					print("Object name: {}", obj_name);
+
+					registry.emplace<NameComponent>(obj, obj_name);
+				}
+
+				objects[obj_idx] = obj;
+
+				obj_idx_counter = std::max((obj_idx_counter + 1), (obj_idx + 1));
+			}
+		});
 	}
 }
