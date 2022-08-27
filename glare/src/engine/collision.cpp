@@ -192,7 +192,9 @@ namespace engine
 
 		auto& component = registry.emplace<CollisionComponent>(entity, std::move(col));
 
-		world.on_new_collider({ entity });
+		// TODO: Hook into entt's Entity creation, destruction and component-assignment events to better handle this.
+		// At the moment, we just trigger the event immediately:
+		world.on_new_collider({ entity }); // Entity destruction currently handles this event manually as well. (needs to be changed)
 
 		return entity;
 	}
