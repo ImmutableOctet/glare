@@ -2,6 +2,7 @@
 #include "context.hpp"
 
 #include <math/math.hpp>
+#include <math/assimp.hpp>
 
 #include <algorithm>
 

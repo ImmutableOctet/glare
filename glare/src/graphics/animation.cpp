@@ -1,8 +1,10 @@
 #include "animation.hpp"
 
 #include <math/math.hpp>
+#include <math/assimp.hpp>
 #include <assimp/anim.h>
-#include "..\engine\world\animation.hpp"
+
+//#include <engine\world\animation.hpp>
 
 //struct aiVector3D;
 //struct aiQuaternion;

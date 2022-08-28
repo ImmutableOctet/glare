@@ -1,7 +1,10 @@
 #include "model_loader.hpp"
 
+#include <math/assimp.hpp>
+
 #include <graphics/texture.hpp>
 #include <graphics/vertex.hpp>
+
 #include <util/memory.hpp>
 #include <util/string.hpp>
 

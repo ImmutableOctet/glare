@@ -2,7 +2,7 @@
 
 #define GLM_FORCE_CTOR_INIT
 
-#include <types.hpp>
+//#include <types.hpp>
 
 //#include <cmath>
 #include <glm/glm.hpp>
@@ -10,18 +10,7 @@
 //#include <glm/gtc/quaternion.hpp>
 #include <glm/mat3x4.hpp>
 
-#include <assimp/vector3.h>
-#include <assimp/matrix4x4.h>
-#include <assimp/Quaternion.h>
-
 #include <tuple>
-
-// Bullet types:
-class btVector3;
-class btTransform;
-
-// Assimp types:
-//class aiVector3D;
 
 namespace math
 {
@@ -148,15 +137,6 @@ namespace math
 	RotationMatrix rotation_from_vector(const Vector& rv);
 
 	inline Vector3D to_vector(const Vector3D& v) { return v; }
-
-	Vector3D to_vector(const btVector3& v);
-	Vector3D to_vector(const aiVector3D& v);
-
-	Matrix to_matrix(const btTransform& t);
-	Matrix to_matrix(const aiMatrix4x4& m);
-
-	Quaternion to_quat(const aiQuaternion& q); // to_quaternion(...)
-	Quaternion to_quat_flipped(const aiQuaternion& q);
 
 	Vector abs(Vector v);
 

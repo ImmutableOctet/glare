@@ -35,6 +35,7 @@ namespace graphics
 			*/
 
 			math::Vector value;
+
 			float timestamp;
 		};
 
