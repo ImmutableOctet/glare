@@ -298,7 +298,9 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\world\light.hpp" />
     <ClInclude Include="src\engine\world\meta\controls.hpp" />
     <ClInclude Include="src\engine\world\meta\meta.hpp" />
-    <ClInclude Include="src\engine\world\physics.hpp" />
+    <ClInclude Include="src\engine\world\physics\physics.hpp" />
+    <ClInclude Include="src\engine\world\physics\physics_component.hpp" />
+    <ClInclude Include="src\engine\world\physics\types.hpp" />
     <ClInclude Include="src\engine\world\player.hpp" />
     <ClInclude Include="src\engine\world\rave_component.hpp" />
     <ClInclude Include="src\engine\world\render\deferred_render_pipeline.hpp" />
@@ -435,7 +437,8 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\engine\world\graphics_entity.cpp" />
     <ClCompile Include="src\engine\world\light.cpp" />
     <ClCompile Include="src\engine\world\meta\controls.cpp" />
-    <ClCompile Include="src\engine\world\physics.cpp" />
+    <ClCompile Include="src\engine\world\physics\physics.cpp" />
+    <ClCompile Include="src\engine\world\physics\physics_component.cpp" />
     <ClCompile Include="src\engine\world\player.cpp" />
     <ClCompile Include="src\engine\world\rave_component.cpp" />
     <ClCompile Include="src\engine\world\render\deferred_shading.cpp" />

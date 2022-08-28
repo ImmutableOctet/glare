@@ -226,7 +226,7 @@
     <ClInclude Include="src\engine\world\light.hpp">
       <Filter>src\engine\world</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\world\physics.hpp">
+    <ClInclude Include="src\engine\world\physics\physics.hpp">
       <Filter>src\engine\world</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\world\player.hpp">
@@ -435,6 +435,8 @@
     <ClInclude Include="src\engine\events\service_events.hpp" />
     <ClInclude Include="src\engine\world\world_system.hpp" />
     <ClInclude Include="src\math\assimp.hpp" />
+    <ClInclude Include="src\engine\world\physics\physics_component.hpp" />
+    <ClInclude Include="src\engine\world\physics\types.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\shaders\light_box.frag">
@@ -700,7 +702,7 @@
     <ClCompile Include="src\engine\world\light.cpp">
       <Filter>src\engine\world</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\world\physics.cpp">
+    <ClCompile Include="src\engine\world\physics\physics.cpp">
       <Filter>src\engine\world</Filter>
     </ClCompile>
     <ClCompile Include="src\engine\world\player.cpp">
@@ -838,6 +840,7 @@
     <ClCompile Include="src\engine\world\render\directional_shadows.cpp" />
     <ClCompile Include="src\engine\world\render\deferred_shading.cpp" />
     <ClCompile Include="src\engine\world\world_system.cpp" />
+    <ClCompile Include="src\engine\world\physics\physics_component.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />

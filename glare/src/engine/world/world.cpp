@@ -167,7 +167,8 @@ namespace engine
 		{
 			tf.on_flag(TransformComponent::Flag::EventFlag, [this, entity]()
 			{
-				this->queue_event<OnTransformChange>(entity);
+				//this->queue_event<OnTransformChange>(entity);
+				this->event<OnTransformChange>(entity);
 			});
 
 			//tf.validate(TransformComponent::Dirty::EventFlag);

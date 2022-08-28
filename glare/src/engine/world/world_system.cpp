@@ -32,6 +32,8 @@ namespace engine
 	void WorldSystem::subscribe(World& world)
 	{
 		world.register_event<OnServiceUpdate, &WorldSystem::update>(*this);
+
+		on_subscribe(world);
 	}
 
 	void WorldSystem::unsubscribe(World& world)

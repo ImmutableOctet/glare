@@ -78,6 +78,7 @@ namespace engine
 				if (invalid(flag))
 				{
 					validate(flag);
+
 					event_fn();
 
 					return true;

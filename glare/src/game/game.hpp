@@ -12,7 +12,7 @@
 #include <engine/resource_manager/resource_manager.hpp>
 
 #include <engine/world/world.hpp>
-#include <engine/world/physics.hpp>
+#include <engine/world/physics/physics.hpp>
 
 #include <engine/world/render/world_renderer.hpp>
 

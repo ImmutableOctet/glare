@@ -1,7 +1,7 @@
 #include "follow_component.hpp"
 
 #include "world.hpp"
-#include "physics.hpp"
+#include "physics/physics_component.hpp"
 
 #include <math/math.hpp>
 #include <cmath>

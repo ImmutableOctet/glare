@@ -1,9 +1,10 @@
 #include "physics.hpp"
-#include "world.hpp"
+#include "physics_component.hpp"
 
-#include <engine/types.hpp>
-#include <engine/transform.hpp>
+#include <engine/world/world.hpp>
+
 #include <engine/collision.hpp>
+#include <engine/transform.hpp>
 //#include <engine/relationship.hpp>
 
 #include <math/bullet.hpp>
@@ -13,6 +14,7 @@
 //#include <bullet/BulletCollision/btBulletCollisionCommon.h>
 
 #include <glm/glm.hpp>
+
 #include <cmath>
 
 namespace engine
@@ -51,7 +53,38 @@ namespace engine
 
 	void PhysicsSystem::on_transform_change(const OnTransformChange& tform_change)
 	{
-		print("Entity changed: {}", tform_change.entity);
+		if ((int)tform_change.entity == 34)
+		{
+			print("Entity changed: {}", tform_change.entity);
+		}
+
+		auto entity = tform_change.entity;
+
+		auto& registry = world.get_registry();
+
+		auto* col = registry.try_get<CollisionComponent>(entity);
+
+		if (!col)
+		{
+			return;
+		}
+
+		if (!col->collision)
+		{
+			return;
+		}
+
+		auto transform = world.get_transform(entity);
+		
+		//auto* collision_obj = col->collision.get();
+
+		//auto from = collision_obj->getWorldTransform();
+		//auto to = math::to_bullet_matrix(transform.get_matrix());
+
+		//collision_world->convexSweepTest();
+		//collision_world->contactTest();
+
+		update_collision_object(transform, *col);
 	}
 
 	void PhysicsSystem::on_entity_destroyed(const OnEntityDestroyed& destruct)
@@ -74,8 +107,7 @@ namespace engine
 	{
 		auto& registry = world.get_registry();
 
-		collision_world->updateAabbs();
-		collision_world->computeOverlappingPairs();
+		update_collision_world(delta);
 
 		auto view = registry.view<PhysicsComponent>(); // <TransformComponent, ...> (auto& tf_comp)
 		
@@ -86,31 +118,14 @@ namespace engine
 		{
 			auto transform = world.get_transform(entity);
 
-			auto* col = registry.try_get<CollisionComponent>(entity);
-
-			// TODO: See notes below about using bullet's matrices to handle position deltas between physics steps.
-			auto from_matrix = transform.get_matrix();
-
-			update_motion(world, entity, transform, ph, delta);
-
-			if (transform.collision_invalid())
-			{
-				if (col)
-				{
-					// TODO: We could probably use the bullet side's matrix for `CollisionComponent` here, rather than forcing all movement to be performed by `update_motion`.
-					auto from = math::to_bullet_matrix(from_matrix);
-
-					auto to   = math::to_bullet_matrix(transform.get_matrix());
-
-					// Check-for/resolve collisions during movement.
-					//collision_world->convexSweepTest(col->);
-
-					//col->collision;
-
-					update_collision_object(transform, *col);
-				}
-			}
+			update_motion(entity, transform, ph, delta);
 		});
+	}
+
+	void PhysicsSystem::update_collision_world(float delta)
+	{
+		collision_world->updateAabbs();
+		collision_world->computeOverlappingPairs();
 	}
 
 	void PhysicsSystem::set_gravity(const math::Vector& g)
@@ -172,7 +187,7 @@ namespace engine
 		obj.setWorldTransform(math::to_bullet_matrix(m));
 	}
 
-	void PhysicsSystem::update_motion(World& world, Entity entity, Transform& transform, PhysicsComponent& ph, float delta)
+	void PhysicsSystem::update_motion(Entity entity, Transform& transform, PhysicsComponent& ph, float delta)
 	{
 		math::Vector movement = {};
 
@@ -203,19 +218,5 @@ namespace engine
 		ph.motion.prev_position = transform.get_position();
 
 		transform.move(movement);
-	}
-
-	// PhysicsComponent:
-	PhysicsComponent::PhysicsComponent(PhysicsComponent::Flags motion_flags, MotionState motion_state)
-		: flags(motion_flags), motion(motion_state)
-	{}
-
-	Entity attach_physics(World& world, Entity entity, PhysicsComponent::Flags flags, PhysicsComponent::MotionState motion_state)
-	{
-		auto& registry = world.get_registry();
-
-		registry.emplace_or_replace<PhysicsComponent>(entity, flags, motion_state);
-
-		return entity;
 	}
 }
