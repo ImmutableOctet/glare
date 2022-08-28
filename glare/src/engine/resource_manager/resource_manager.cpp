@@ -1,4 +1,5 @@
 #include "resource_manager.hpp"
+#include "collision_data.hpp"
 
 #include <graphics/model.hpp>
 #include <graphics/shader.hpp>
@@ -157,9 +158,16 @@ namespace engine
 		return shader;
 	}
 
+	// TODO: Implement some form of caching/optimization for basic shapes.
 	CollisionData ResourceManager::generate_capsule_collision(float radius, float height) // ref<btCapsuleShape>
 	{
 		return { std::static_pointer_cast<CollisionRaw>(std::make_shared<btCapsuleShape>(radius, height)) };
+	}
+
+	// TODO: Implement some form of caching/optimization for basic shapes.
+	CollisionData ResourceManager::generate_sphere_collision(float radius) // ref<btCapsuleShape>
+	{
+		return { std::static_pointer_cast<CollisionRaw>(std::make_shared<btSphereShape>(radius)) };
 	}
 
 	const CollisionData* ResourceManager::get_collision(const WeakModelRef model) const
