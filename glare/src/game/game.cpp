@@ -26,6 +26,8 @@ namespace game
 		resource_manager(graphics.context),
 		world(cfg, resource_manager, update_rate),
 
+		physics(world),
+
 		// May split this out in body of constructor. -- This would
 		// allow for a different renderer (forward, etc.)
 		renderer

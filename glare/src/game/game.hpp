@@ -10,7 +10,10 @@
 
 #include <engine/config.hpp>
 #include <engine/resource_manager/resource_manager.hpp>
+
 #include <engine/world/world.hpp>
+#include <engine/world/physics.hpp>
+
 #include <engine/world/render/world_renderer.hpp>
 
 #include <util/shorthand.hpp>
@@ -40,6 +43,7 @@ namespace game
 
 			engine::ResourceManager resource_manager;
 			engine::World world;
+			engine::PhysicsSystem physics;
 
 			engine::WorldRenderer renderer;
 		public:

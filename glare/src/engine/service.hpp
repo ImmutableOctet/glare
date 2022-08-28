@@ -21,7 +21,7 @@ namespace engine
 			inline Service(EventHandler&& event_handler)
 				: event_handler(std::move(event_handler)) {}
 
-			virtual ~Service() = default;
+			virtual ~Service() {};
 
 			inline EventHandler& get_event_handler() { return event_handler; }
 
@@ -96,7 +96,7 @@ namespace engine
 
 			inline void update(float delta=1.0f)
 			{
-				this->event<OnServiceUpdate>(*this, delta);
+				this->event<OnServiceUpdate>(this, delta);
 
 				event_handler.update();
 			}

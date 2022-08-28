@@ -1,7 +1,6 @@
 #include "world.hpp"
 #include "entity.hpp"
 #include "camera.hpp"
-#include "physics.hpp"
 #include "player.hpp"
 #include "stage.hpp"
 
@@ -57,12 +56,10 @@ namespace engine
 	{
 		register_event<app::input::MouseState,    &World::on_mouse_input>();
 		register_event<app::input::KeyboardState, &World::on_keyboard_input>();
-		register_event<OnComponentAdd<engine::CollisionComponent>, &World::on_new_collider>();
 		register_event<OnTransformChange, &World::on_transform_change>();
 		register_event<OnEntityDestroyed, &World::on_entity_destroyed>();
 
 		subscribe(resource_manager);
-		subscribe(physics);
 		subscribe(animation);
 
 		root = create_pivot(*this);
@@ -94,7 +91,6 @@ namespace engine
 		// Not actually needed:
 		/*
 		unsubscribe(resource_manager);
-		unsubscribe(physics);
 		unsubscribe(animation);
 		*/
 	}
@@ -151,9 +147,8 @@ namespace engine
 		delta_time << time;
 
 		// Update systems:
-		Service::update();
+		Service::update(delta_time);
 
-		physics.update(*this, delta_time);
 		animation.update(*this, delta_time);
 
 		SpinBehavior::update(*this);
@@ -489,11 +484,6 @@ namespace engine
 		engine::debug::DebugMove::update(*this, keyboard);
 	}
 
-	void World::on_new_collider(const OnComponentAdd<CollisionComponent>& new_col)
-	{
-		physics.on_new_collider(*this, new_col);
-	}
-
 	void World::on_transform_change(const OnTransformChange& tform_change)
 	{
 		auto entity = tform_change.entity;
@@ -525,14 +515,6 @@ namespace engine
 		auto parent          = destruct.parent;
 		auto type            = destruct.type;
 		auto destroy_orphans = destruct.destroy_orphans;
-
-		// Handle collision:
-		auto* col = registry.try_get<CollisionComponent>(entity);
-
-		if (col)
-		{
-			physics.on_destroy_collider(*this, entity, *col);
-		}
 
 		// Handle entity relationships:
 		auto* relationship = registry.try_get<Relationship>(entity);

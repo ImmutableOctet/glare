@@ -23,7 +23,6 @@
 #include "camera.hpp"
 #include "light.hpp"
 #include "player.hpp"
-#include "physics.hpp"
 #include "animation.hpp"
 
 #include "graphics_entity.hpp"
@@ -59,9 +58,9 @@ namespace engine
 			
 			app::DeltaTime delta_time;
 
+			// TODO: Allow the user to specify a registry, rather than owning it outright.
 			mutable Registry registry;
 
-			PhysicsSystem physics;
 			AnimationSystem animation;
 
 			// Scene root-node; parent to all world-bound entities.
@@ -92,7 +91,7 @@ namespace engine
 			// Constructs a 'World' object, then immediately loads a map from the 'path' specified.
 			World(Config& config, ResourceManager& resource_manager, UpdateRate update_rate, const filesystem::path& path);
 
-			~World();
+			virtual ~World();
 
 			template <typename EventType, auto fn, typename obj_type>
 			inline void register_event(obj_type& obj)
@@ -190,8 +189,6 @@ namespace engine
 			inline Registry& get_registry() { return registry; }
 			inline ResourceManager& get_resource_manager() { return resource_manager; }
 
-			inline PhysicsSystem& get_physics() { return physics; }
-
 			inline const Config& get_config() const { return config; }
 			
 			// Retrieves the root scene-node; parent to all world-scoped entities.
@@ -204,8 +201,11 @@ namespace engine
 
 			Entity get_player(PlayerIndex player=engine::PRIMARY_LOCAL_PLAYER) const;
 
-			inline math::Vector gravity() const { return physics.get_gravity(); }
 			inline math::Vector down() const { return { 0.0f, -1.0f, 0.0f }; }
+
+			// TODO: Determine how to sync gravity with physics system appropriately.
+			inline math::Vector gravity() const { return down(); }
+
 			inline float delta() const { return delta_time; }
 			inline operator Entity() const { return get_root(); }
 
@@ -214,7 +214,6 @@ namespace engine
 
 			void on_mouse_input(const app::input::MouseState& mouse);
 			void on_keyboard_input(const app::input::KeyboardState& keyboard);
-			void on_new_collider(const OnComponentAdd<CollisionComponent>& new_col);
 			void on_transform_change(const OnTransformChange& tform_change);
 			void on_entity_destroyed(const OnEntityDestroyed& destruct);
 

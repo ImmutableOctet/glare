@@ -18,8 +18,9 @@
 namespace engine
 {
 	// PhysicsSystem:
-	PhysicsSystem::PhysicsSystem(math::Vector gravity)
+	PhysicsSystem::PhysicsSystem(World& world, math::Vector gravity)
 	:
+		world(world),
 		gravity(gravity), // <-- This is set later anyway, but just in case something depends on the raw value during construction, we set it here as well.
 
 		collision_configuration(std::make_unique<btDefaultCollisionConfiguration>()),
@@ -32,33 +33,62 @@ namespace engine
 		collision_world(std::make_unique<btCollisionWorld>(collision_dispatcher.get(), broadphase.get(), collision_configuration.get()))
 	{
 		set_gravity(gravity);
+
+		world.subscribe(*this);
 	}
 
 	PhysicsSystem::~PhysicsSystem()
 	{
-		// Nothing so far.
+		unsubscribe(world);
 	}
 
-	void PhysicsSystem::subscribe(World& world)
+	void PhysicsSystem::on_subscribe(World& world)
 	{
-		//world.register_event<...>(*this);
+		world.register_event<OnTransformChange, &PhysicsSystem::on_transform_change>(*this);
+		world.register_event<OnEntityDestroyed, &PhysicsSystem::on_entity_destroyed>(*this);
+		world.register_event<OnComponentAdd<engine::CollisionComponent>, &PhysicsSystem::on_new_collider>(*this);
 	}
 
-	void PhysicsSystem::update(World& world, float delta)
+	void PhysicsSystem::on_transform_change(const OnTransformChange& tform_change)
+	{
+		print("Entity changed: {}", tform_change.entity);
+	}
+
+	void PhysicsSystem::on_entity_destroyed(const OnEntityDestroyed& destruct)
 	{
 		auto& registry = world.get_registry();
+
+		auto entity = destruct.entity;
+
+		// Handle collision:
+		auto* col = registry.try_get<CollisionComponent>(entity);
+
+		if (col)
+		{
+			on_destroy_collider(entity, *col);
+		}
+	}
+
+	// TODO: We need to look at `OnTransformChange`/`on_transform_change` and how it relates to the collision side of this routine.
+	void PhysicsSystem::on_update(World& world, float delta)
+	{
+		auto& registry = world.get_registry();
+
+		collision_world->updateAabbs();
+		collision_world->computeOverlappingPairs();
 
 		auto view = registry.view<PhysicsComponent>(); // <TransformComponent, ...> (auto& tf_comp)
 		
 		auto& gravity = this->gravity;
 
-		// Apply motion (gravity, velocity, deceleration, etc.):
+		// Apply motion (gravity, velocity, deceleration, etc.) and resolve collisions between old and new positions:
 		view.each([&](auto entity, auto& ph)
 		{
 			auto transform = world.get_transform(entity);
 
 			auto* col = registry.try_get<CollisionComponent>(entity);
 
+			// TODO: See notes below about using bullet's matrices to handle position deltas between physics steps.
 			auto from_matrix = transform.get_matrix();
 
 			update_motion(world, entity, transform, ph, delta);
@@ -67,9 +97,12 @@ namespace engine
 			{
 				if (col)
 				{
+					// TODO: We could probably use the bullet side's matrix for `CollisionComponent` here, rather than forcing all movement to be performed by `update_motion`.
 					auto from = math::to_bullet_matrix(from_matrix);
+
 					auto to   = math::to_bullet_matrix(transform.get_matrix());
 
+					// Check-for/resolve collisions during movement.
 					//collision_world->convexSweepTest(col->);
 
 					//col->collision;
@@ -84,10 +117,11 @@ namespace engine
 	{
 		gravity = g;
 
+		// TODO: Determine if we need/want to use Bullet's built-in gravity functionality.
 		//collision_world->setGravity(math::to_bullet_vector(g));
 	}
 
-	void PhysicsSystem::on_new_collider(World& world, const OnComponentAdd<CollisionComponent>& new_col)
+	void PhysicsSystem::on_new_collider(const OnComponentAdd<CollisionComponent>& new_col)
 	{
 		//auto& world = new_col.world;
 		auto entity = new_col.entity;
@@ -113,7 +147,7 @@ namespace engine
 		update_collision_object(transform, component);
 	}
 
-	void PhysicsSystem::on_destroy_collider(World& world, Entity entity, CollisionComponent& col)
+	void PhysicsSystem::on_destroy_collider(Entity entity, CollisionComponent& col)
 	{
 		if (col.collision)
 		{

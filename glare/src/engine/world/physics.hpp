@@ -8,6 +8,8 @@
 #include <engine/collision.hpp>
 //#include <engine/transform.hpp>
 
+#include "world_system.hpp"
+
 // Forward declarations:
 
 // Bullet:
@@ -22,8 +24,6 @@ class btCollisionShape;
 
 namespace engine
 {
-	class World;
-
 	struct Transform;
 
 	enum class MotionFlags : std::uint8_t
@@ -62,29 +62,36 @@ namespace engine
 		inline bool apply_velocity() const { return (flags & Flags::ApplyVelocity); }
 	};
 
-	class PhysicsSystem
+	class PhysicsSystem : public WorldSystem
 	{
 		public:
 			static constexpr float MIN_SPEED = 0.0025f;
 
-			PhysicsSystem(math::Vector gravity={ 0.0f, -1.0f, 0.0f });
+			PhysicsSystem(World& world, math::Vector gravity={ 0.0f, -1.0f, 0.0f });
 			~PhysicsSystem();
 
-			void subscribe(World& world);
+			void on_subscribe(World& world) override;
 
-			void update(World& world, float delta);
+			void on_transform_change(const OnTransformChange& tform_change);
+			void on_entity_destroyed(const OnEntityDestroyed& destruct);
+
+			void on_update(World& world, float delta) override;
 
 			inline math::Vector get_gravity() const { return gravity; }
 
 			void set_gravity(const math::Vector& g);
 
-			void on_new_collider(World& world, const OnComponentAdd<CollisionComponent>& new_col);
-			void on_destroy_collider(World& world, Entity entity, CollisionComponent& col); // const CollisionComponent&
+			void on_new_collider(const OnComponentAdd<CollisionComponent>& new_col);
+			void on_destroy_collider(Entity entity, CollisionComponent& col); // const CollisionComponent&
 			void update_collision_object(Transform& transform, CollisionComponent& col);
 		protected:
 			void update_collision_object(btCollisionObject& obj, const math::Matrix& m);
 			void update_motion(World& world, Entity entity, Transform& transform, PhysicsComponent& ph, float delta);
 		private:
+			World& world;
+
+			math::Vector gravity;
+
 			std::unique_ptr<btDefaultCollisionConfiguration> collision_configuration;
 			std::unique_ptr<btCollisionDispatcher> collision_dispatcher;
 			std::unique_ptr<btDbvtBroadphase> broadphase;
@@ -93,8 +100,6 @@ namespace engine
 
 			//std::unique_ptr<btDiscreteDynamicsWorld> collision_world;
 			std::unique_ptr<btCollisionWorld> collision_world;
-
-			math::Vector gravity;
 	};
 
 	Entity attach_physics(World& world, Entity entity, PhysicsComponent::Flags flags, PhysicsComponent::MotionState motion_state = PhysicsComponent::MotionState());

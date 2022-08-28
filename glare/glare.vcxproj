@@ -266,6 +266,8 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\debug.hpp" />
     <ClInclude Include="src\engine\engine.hpp" />
     <ClInclude Include="src\engine\events\events.hpp" />
+    <ClInclude Include="src\engine\events\service_events.hpp" />
+    <ClInclude Include="src\engine\events\standard_events.hpp" />
     <ClInclude Include="src\engine\events\input.hpp" />
     <ClInclude Include="src\engine\free_look.hpp" />
     <ClInclude Include="src\engine\model_component.hpp" />
@@ -316,6 +318,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\world\stage.hpp" />
     <ClInclude Include="src\engine\world\target_component.hpp" />
     <ClInclude Include="src\engine\world\world.hpp" />
+    <ClInclude Include="src\engine\world\world_system.hpp" />
     <ClInclude Include="src\game\effects.hpp" />
     <ClInclude Include="src\game\game.hpp" />
     <ClInclude Include="src\game\graphics.hpp" />
@@ -347,6 +350,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\graphics\types.hpp" />
     <ClInclude Include="src\graphics\vertex.hpp" />
     <ClInclude Include="src\engine\world\render\world_render_state.hpp" />
+    <ClInclude Include="src\math\assimp.hpp" />
     <ClInclude Include="src\math\bullet.hpp" />
     <ClInclude Include="src\math\math.hpp" />
     <ClInclude Include="src\tests\signal_test\signal_test.hpp" />
@@ -444,6 +448,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\engine\world\stage.cpp" />
     <ClCompile Include="src\engine\world\target_component.cpp" />
     <ClCompile Include="src\engine\world\world.cpp" />
+    <ClCompile Include="src\engine\world\world_system.cpp" />
     <ClCompile Include="src\game\effects.cpp" />
     <ClCompile Include="src\game\game.cpp" />
     <ClCompile Include="src\game\screen.cpp" />
