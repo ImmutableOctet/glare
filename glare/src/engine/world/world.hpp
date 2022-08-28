@@ -72,8 +72,6 @@ namespace engine
 			// Currently-active/last-bound camera.
 			Entity camera = null;
 		public:
-			std::vector<Entity> cameras;
-
 			struct _properties
 			{
 				graphics::ColorRGB ambient_light = { 0.8f, 0.8f, 0.8f };
@@ -196,6 +194,7 @@ namespace engine
 
 			// The actively bound camera. (Does not always represent the rendering camera)
 			inline Entity get_camera() const { return camera; }
+			void set_camera(Entity camera);
 
 			inline const app::DeltaTime& get_delta_time() const { return delta_time; }
 

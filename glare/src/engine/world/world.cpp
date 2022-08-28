@@ -442,37 +442,11 @@ namespace engine
 		return null;
 	}
 
-	void World::add_camera(Entity camera, bool make_active)
+	void World::set_camera(Entity camera)
 	{
 		assert(registry.try_get<CameraParameters>(camera));
 
-		if ((this->camera == null) || make_active)
-		{
-			this->camera = camera;
-		}
-
-		cameras.push_back(camera);
-	}
-
-	void World::remove_camera(Entity camera)
-	{
-		assert(registry.try_get<CameraParameters>(camera));
-
-		auto it = std::find(cameras.begin(), cameras.end(), camera);
-
-		if (it != cameras.end())
-		{
-			cameras.erase(it);
-		}
-
-		if (cameras.empty())
-		{
-			this->camera = null;
-		}
-		else
-		{
-			this->camera = cameras[0];
-		}
+		this->camera = camera;
 	}
 
 	void World::on_mouse_input(const app::input::MouseState& mouse)
