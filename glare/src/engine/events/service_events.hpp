@@ -2,7 +2,7 @@
 
 namespace engine
 {
-	class System;
+	class Service;
 
 	struct OnServiceUpdate
 	{
