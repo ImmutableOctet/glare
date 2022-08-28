@@ -5,6 +5,7 @@
 #include "camera.hpp"
 #include "light.hpp"
 #include "player.hpp"
+#include "graphics_entity.hpp"
 
 #include "target_component.hpp"
 #include "follow_component.hpp"
@@ -17,6 +18,7 @@
 #include <engine/config.hpp>
 #include <engine/name_component.hpp>
 #include <engine/model_component.hpp>
+#include <engine/collision.hpp>
 
 #include <util/json.hpp>
 #include <util/log.hpp>
@@ -56,10 +58,11 @@ namespace engine
 		auto params = CameraParameters(camera_cfg);
 
 		bool make_active = util::get_value(camera_cfg, "make_active", false);
+		bool collision_enabled = util::get_value(camera_cfg, "collision", false);
 
 		auto camera_parent = parent; // < --TODO: look into weird bug where camera goes flying when a parent is assigned.
 
-		auto camera = create_camera(world, params, camera_parent, make_active);
+		auto camera = create_camera(world, params, camera_parent, make_active, collision_enabled);
 
 		bool is_debug_camera = util::get_value(camera_cfg, "debug", false);
 

@@ -5,7 +5,9 @@
 
 #include <graphics/canvas.hpp>
 #include <graphics/context.hpp>
+
 #include <engine/world/world.hpp>
+#include <engine/world/light.hpp>
 
 #include <string>
 

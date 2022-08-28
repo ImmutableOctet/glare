@@ -6,6 +6,7 @@
 #include <graphics/canvas.hpp>
 
 #include <engine/world/world.hpp>
+#include <engine/world/camera.hpp>
 
 #include <engine/config.hpp>
 #include <engine/transform.hpp>

@@ -1,6 +1,8 @@
 #include "player.hpp"
 #include "world.hpp"
-#include "physics.hpp"
+#include "entity.hpp"
+#include "graphics_entity.hpp"
+#include "physics/physics_component.hpp"
 
 #include <util/string.hpp>
 

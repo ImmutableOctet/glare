@@ -1,10 +1,14 @@
 #include "world.hpp"
+
 #include "entity.hpp"
 #include "camera.hpp"
 #include "player.hpp"
 #include "stage.hpp"
+#include "light.hpp"
 
-#include "animator.hpp"
+//#include "animator.hpp"
+#include "graphics_entity.hpp"
+
 #include "spin_component.hpp"
 #include "target_component.hpp"
 #include "follow_component.hpp"
@@ -31,7 +35,6 @@
 #include <engine/resource_manager/resource_manager.hpp>
 #include <engine/free_look.hpp>
 #include <engine/relationship.hpp>
-#include <engine/transform.hpp>
 #include <engine/type_component.hpp>
 #include <engine/bone_component.hpp>
 
@@ -463,6 +466,7 @@ namespace engine
 	{
 		auto entity = tform_change.entity;
 
+		// TODO: Move this into a separate lighting system/event-handler...?
 		// Update shadow-maps for light entities.
 		update_shadows(*this, entity); // *point_shadows
 

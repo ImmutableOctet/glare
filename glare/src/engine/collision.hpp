@@ -1,5 +1,9 @@
 #pragma once
 
+/*
+* TODO: Finish merging the `collision` module with the `world:physics` module.
+*/
+
 #include "types.hpp"
 
 #include <utility>
@@ -95,6 +99,10 @@ namespace engine
 		CollisionConfig(EntityType type);
 	};
 
+	// Returns the `Entity` instance associated with the specified Bullet collision-object.
+	// It is only legal to call this function on collision-objects managed by a `CollisionComponent`.
+	Entity get_entity_from_collision_object(const btCollisionObject& c_obj);
+
 	/*
 		Represents a 'collider' object attached to an entity.
 		This can be thought of as an in-world instance of collision shape (see 'Shape' types below),
@@ -112,6 +120,8 @@ namespace engine
 			using ConcaveShapeRaw = btConcaveShape;
 			using ConvexShapeRaw = btConvexShape;
 
+			using NativeCollisionObject = btCollisionObject;
+
 			using Shape        = std::shared_ptr<RawShape>;
 			using ConcaveShape = std::shared_ptr<ConcaveShapeRaw>;
 			using ConvexShape  = std::shared_ptr<ConvexShapeRaw>;
@@ -121,7 +131,7 @@ namespace engine
 			inline CollisionComponent(const CollisionConfig& config, float mass) :
 				CollisionConfig(config),
 				mass(mass),
-				collision(make_collision_object())
+				collision(make_collision_object(config))
 			{}
 		public:
 			
@@ -209,8 +219,11 @@ namespace engine
 			void set_shape(const Shape& shape);
 			void set_shape(const ConcaveShape& shape);
 			void set_shape(const ConvexShape& shape);
+
+			inline btCollisionObject* get_collision_object();
+			inline const btCollisionObject* get_collision_object() const;
 		protected:
-			static std::unique_ptr<btCollisionObject> make_collision_object();
+			static std::unique_ptr<btCollisionObject> make_collision_object(const CollisionConfig& config);
 			
 			float mass = 0.0f;
 

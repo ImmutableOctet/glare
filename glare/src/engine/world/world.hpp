@@ -1,31 +1,27 @@
 #pragma once
 
-#include <engine/types.hpp>
+#include "types.hpp"
+
 #include <engine/action.hpp>
 #include <engine/service.hpp>
+#include <engine/transform.hpp>
+
 #include <engine/events/events.hpp>
 
-#include <graphics/types.hpp>
+//#include <graphics/types.hpp> // Not actually needed. (`ColorRGB` is actually located in math)
 #include <app/delta_time.hpp>
+
 #include <math/math.hpp>
 #include <util/json.hpp>
 
-#include <vector>
 #include <string_view>
 #include <filesystem>
 #include <utility>
 #include <variant>
 #include <optional>
-//#include <fstream>
 
-// TODO: Move most of these includes to `world.cpp`:
-#include "entity.hpp"
-#include "camera.hpp"
-#include "light.hpp"
-#include "player.hpp"
+// TODO: Remove.
 #include "animation.hpp"
-
-#include "graphics_entity.hpp"
 
 namespace filesystem = std::filesystem;
 
@@ -61,6 +57,7 @@ namespace engine
 			// TODO: Allow the user to specify a registry, rather than owning it outright.
 			mutable Registry registry;
 
+			// TODO: Move this out of the `World` type.
 			AnimationSystem animation;
 
 			// Scene root-node; parent to all world-bound entities.
@@ -207,9 +204,6 @@ namespace engine
 
 			inline float delta() const { return delta_time; }
 			inline operator Entity() const { return get_root(); }
-
-			void add_camera(Entity camera, bool make_active=false);
-			void remove_camera(Entity camera);
 
 			void on_mouse_input(const app::input::MouseState& mouse);
 			void on_keyboard_input(const app::input::KeyboardState& keyboard);

@@ -5,6 +5,8 @@
 
 #include <util/string.hpp>
 
+#include <engine/resource_manager/resource_manager.hpp>
+
 namespace engine
 {
 	CameraParameters::Projection CameraParameters::resolve_projection_mode(const std::string& mode)
@@ -36,18 +38,30 @@ namespace engine
 	CameraParameters::CameraParameters(float v_fov_deg, float near_plane, float far_plane, float aspect_ratio, CameraParameters::Projection projection_mode, bool free_rotation, bool dynamic_aspect_ratio)
 		: fov(glm::radians(v_fov_deg)), near_plane(near_plane), far_plane(far_plane), aspect_ratio(aspect_ratio), projection_mode(projection_mode), free_rotation(free_rotation), dynamic_aspect_ratio(dynamic_aspect_ratio){}
 
-	Entity create_camera(World& world, CameraParameters params, Entity parent, bool make_active)
+	Entity create_camera(World& world, CameraParameters params, Entity parent, bool make_active, bool collision_enabled)
 	{
 		auto& registry = world.get_registry();
 		
-		auto entity = create_entity(world, parent, EntityType::Camera);
+		constexpr auto entity_type = EntityType::Camera;
+		auto entity = create_entity(world, parent, entity_type);
 
 		registry.emplace<CameraParameters>(entity, params);
 
 		// Assign a default name for this camera.
 		world.set_name(entity, "Camera");
 
-		world.add_camera(entity, make_active);
+		if (collision_enabled)
+		{
+			auto& resource_manager = world.get_resource_manager();
+			auto collision_data = resource_manager.generate_sphere_collision(0.1f);
+
+			attach_collision(world, entity, collision_data.collision_shape, {entity_type});
+		}
+
+		if ((world.get_camera() == null) || make_active)
+		{
+			world.set_camera(entity);
+		}
 
 		return entity;
 	}

@@ -53,9 +53,10 @@ namespace engine
 
 	void PhysicsSystem::on_transform_change(const OnTransformChange& tform_change)
 	{
+		// Debugging related (camera):
 		if ((int)tform_change.entity == 34)
 		{
-			print("Entity changed: {}", tform_change.entity);
+			//print("Entity changed: {}", tform_change.entity);
 		}
 
 		auto entity = tform_change.entity;
@@ -126,6 +127,34 @@ namespace engine
 	{
 		collision_world->updateAabbs();
 		collision_world->computeOverlappingPairs();
+
+		collision_world->performDiscreteCollisionDetection();
+		//collision_world->stepSimulation(...);
+
+		auto& dispatcher = *collision_dispatcher;
+
+		auto manifold_count = dispatcher.getNumManifolds();
+
+		if (manifold_count == 0)
+		{
+			return;
+		}
+
+		for (auto i = 0; i < manifold_count; i++)
+		{
+			auto* contact = dispatcher.getManifoldByIndexInternal(i);
+
+			auto* a = contact->getBody0();
+			auto* b = contact->getBody1();
+
+			auto a_ent = get_entity_from_collision_object(*a);
+			auto b_ent = get_entity_from_collision_object(*b);
+
+			if ((int)a_ent == 34 || (int)b_ent == 34)
+			{
+				print("{} ({}) collision with {} ({})", static_cast<entt::id_type>(a_ent), world.get_name(a_ent), static_cast<entt::id_type>(b_ent), world.get_name(b_ent));
+			}
+		}
 	}
 
 	void PhysicsSystem::set_gravity(const math::Vector& g)

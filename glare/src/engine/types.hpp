@@ -1,9 +1,10 @@
 #pragma once
 
-#include <entt/entt.hpp>
-#include <math/math.hpp>
 #include <types.hpp>
 #include <graphics/types.hpp>
+#include <math/math.hpp>
+
+#include <entt/entt.hpp>
 
 #include <vector>
 

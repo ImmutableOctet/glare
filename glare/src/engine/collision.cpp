@@ -6,12 +6,36 @@
 
 //#include <bullet/btBulletDynamicsCommon.h>
 #include <bullet/btBulletCollisionCommon.h>
+//#include <bullet/btCollisionObject.h>
 //#include <bullet/BulletCollision/btBulletCollisionCommon.h>
 
 #include <utility>
+#include <type_traits>
 
 namespace engine
 {
+	// Only accessible in this file.
+	static void set_entity_for_collision_object(btCollisionObject& c_obj, Entity entity)
+	{
+		static_assert(sizeof(int) >= sizeof(entt::id_type));
+		c_obj.setUserIndex(static_cast<int>(entity));
+	}
+
+	// Unlike `set_entity_for_collision_object`, this function is part of the public API.
+	Entity get_entity_from_collision_object(const btCollisionObject& c_obj)
+	{
+		auto index_raw = c_obj.getUserIndex();
+
+		/*
+		if (index_raw == 0)
+		{
+			return null;
+		}
+		*/
+
+		return static_cast<Entity>(index_raw);
+	}
+
 	CollisionGroup CollisionConfig::resolve_collision_group(EntityType type)
 	{
 		switch (type)
@@ -139,6 +163,16 @@ namespace engine
 		this->shape = shape;
 	}
 
+	btCollisionObject* CollisionComponent::get_collision_object()
+	{
+		return collision.get();
+	}
+
+	const btCollisionObject* CollisionComponent::get_collision_object() const
+	{
+		return collision.get();
+	}
+
 	void CollisionComponent::activate(bool force)
 	{
 		collision->activate(force);
@@ -181,9 +215,31 @@ namespace engine
 		return {};
 	}
 
-	std::unique_ptr<btCollisionObject> CollisionComponent::make_collision_object()
+	std::unique_ptr<btCollisionObject> CollisionComponent::make_collision_object(const CollisionConfig& config)
 	{
-		return std::make_unique<btCollisionObject>();
+		auto obj = std::make_unique<btCollisionObject>();
+
+		using native_flags = btCollisionObject::CollisionFlags;
+		using enum native_flags;
+
+		std::underlying_type_t<native_flags> flags = 0;
+
+		if ((config.group & CollisionGroup::StaticGeometry))
+		{
+			// Bullet does not allow a collision object to be both static and dynamic.
+			assert(!(config.group & CollisionGroup::DynamicGeometry));
+
+			flags |= CF_STATIC_OBJECT;
+		}
+
+		// No other flags are used at the moment.
+
+		obj->setCollisionFlags(static_cast<native_flags>(flags));
+
+		// For safety, we always set the associated `Entity` to `null` by default.
+		set_entity_for_collision_object(*obj, null);
+
+		return obj;
 	}
 	
 	Entity attach_collision_impl(World& world, Entity entity, CollisionComponent&& col)
@@ -191,6 +247,17 @@ namespace engine
 		auto& registry = world.get_registry();
 
 		auto& component = registry.emplace<CollisionComponent>(entity, std::move(col));
+
+		auto* c_obj = component.get_collision_object();
+
+		assert(c_obj);
+
+		set_entity_for_collision_object(*c_obj, entity);
+
+		// Note: Unsafe due to entt's ability to move/reallocate this component. (Used for debugging purposes only)
+		#ifndef NDEBUG
+			c_obj->setUserPointer(&component);
+		#endif
 
 		// TODO: Hook into entt's Entity creation, destruction and component-assignment events to better handle this.
 		// At the moment, we just trigger the event immediately:

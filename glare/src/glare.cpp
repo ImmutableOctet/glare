@@ -25,6 +25,8 @@
 
 #include <engine/events/events.hpp>
 #include <engine/type_component.hpp>
+
+#include <engine/world/graphics_entity.hpp>
 #include <engine/world/spin_component.hpp>
 #include <engine/world/follow_component.hpp>
 #include <engine/world/light.hpp>
@@ -71,6 +73,20 @@ namespace glare
 		//world.load("assets/maps/collision_test");
 
 		//world.load("assets/maps/story/2.ice-world/ice-connector");
+
+		auto cube = engine::load_model
+		(
+			world, "assets/objects/cube/cube.b3d", engine::null,
+			engine::EntityType::Object,
+			true, true, 0.0f,
+			engine::CollisionGroup::DynamicGeometry,
+			engine::CollisionGroup::All,
+			engine::CollisionGroup::All
+		);
+
+		auto cube_t = world.get_transform(cube);
+
+		cube_t.set_position({ -6.20467f, 66.5406f, 39.1254f });
 	}
 
 	engine::Transform Glare::get_named_transform(std::string_view name)
@@ -97,6 +113,14 @@ namespace glare
 	void Glare::on_update(float delta)
 	{
 		engine::position_in_titlebar(*this, world.get_camera(), std::format("FPS: {} | ", graphics.framerate));
+
+		auto mouse = input.get_mouse();
+		auto mouse_state = mouse.peek();
+
+		if (mouse_state.left)
+		{
+			std::cout << "Hello world\n";
+		}
 	}
 
 	void Glare::on_render(RenderState& render_state)
