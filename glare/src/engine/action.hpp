@@ -39,7 +39,7 @@ namespace engine
 				typename fwd_fn, typename... fwd_types,
 				typename = std::enable_if_t<(std::is_convertible_v<fwd_types&&, argument_types> && ...)>
 			>
-			Action(fwd_fn&& func, fwd_types&&... args):
+			Action(fwd_fn&& func, fwd_types&&... args) noexcept:
 				f(std::forward<fwd_fn>(func)),
 				args({ std::forward<fwd_types>(args)... })
 			{}
@@ -54,7 +54,7 @@ namespace engine
 				return *this;
 			}
 
-			Action(Action&& a) : Action() { *this = std::move(a); }
+			Action(Action&& a) noexcept : Action() { *this = std::move(a); }
 
 			void operator()()
 			{
