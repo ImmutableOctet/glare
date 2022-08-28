@@ -3,6 +3,8 @@
 #include "types.hpp"
 #include "action.hpp"
 
+#include "events/service_events.hpp"
+
 #include <utility>
 #include <functional>
 
@@ -18,6 +20,8 @@ namespace engine
 
 			inline Service(EventHandler&& event_handler)
 				: event_handler(std::move(event_handler)) {}
+
+			virtual ~Service() = default;
 
 			inline EventHandler& get_event_handler() { return event_handler; }
 
@@ -90,8 +94,10 @@ namespace engine
 				//make_action(std::forward<fn_t>(f), std::forward<arguments>(args)...);
 			}
 
-			inline void update()
+			inline void update(float delta=1.0f)
 			{
+				this->event<OnServiceUpdate>(*this, delta);
+
 				event_handler.update();
 			}
 	};
