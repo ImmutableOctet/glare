@@ -31,7 +31,6 @@
 #include <graphics/shader.hpp>
 
 #include <engine/config.hpp>
-#include <engine/collision.hpp>
 #include <engine/resource_manager/resource_manager.hpp>
 #include <engine/free_look.hpp>
 #include <engine/relationship.hpp>

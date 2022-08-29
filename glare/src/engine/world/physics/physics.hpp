@@ -5,8 +5,6 @@
 #include <util/memory.hpp>
 
 #include <engine/events/events.hpp>
-//#include <engine/collision.hpp>
-//#include <engine/transform.hpp>
 
 #include <engine/world/world_system.hpp>
 
@@ -63,9 +61,9 @@ namespace engine
 			std::unique_ptr<btCollisionDispatcher> collision_dispatcher;
 			std::unique_ptr<btDbvtBroadphase> broadphase;
 			
-			//std::unique_ptr<btSequentialImpulseConstraintSolver> solver;
+			std::unique_ptr<btSequentialImpulseConstraintSolver> solver;
+			std::unique_ptr<btDiscreteDynamicsWorld> collision_world;
 
-			//std::unique_ptr<btDiscreteDynamicsWorld> collision_world;
-			std::unique_ptr<btCollisionWorld> collision_world;
+			//std::unique_ptr<btCollisionWorld> collision_world;
 	};
 }

@@ -299,7 +299,7 @@
     <ClInclude Include="src\engine\bone_component.hpp">
       <Filter>src\engine</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\collision.hpp">
+    <ClInclude Include="src\engine\world\physics\collision_component.hpp">
       <Filter>src\engine</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\components.hpp">
@@ -438,6 +438,10 @@
     <ClInclude Include="src\engine\world\physics\physics_component.hpp" />
     <ClInclude Include="src\engine\world\physics\types.hpp" />
     <ClInclude Include="src\engine\world\types.hpp" />
+    <ClInclude Include="src\engine\world\physics\collision.hpp" />
+    <ClInclude Include="src\engine\world\physics\motion_flags.hpp" />
+    <ClInclude Include="src\engine\world\physics\collision_group.hpp" />
+    <ClInclude Include="src\engine\world\physics\collision_config.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\shaders\light_box.frag">
@@ -781,7 +785,7 @@
     <ClCompile Include="src\app\graphics_application.cpp">
       <Filter>src\app\app</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\collision.cpp">
+    <ClCompile Include="src\engine\world\physics\collision_component.cpp">
       <Filter>src\engine</Filter>
     </ClCompile>
     <ClCompile Include="src\engine\debug.cpp">
@@ -842,6 +846,7 @@
     <ClCompile Include="src\engine\world\render\deferred_shading.cpp" />
     <ClCompile Include="src\engine\world\world_system.cpp" />
     <ClCompile Include="src\engine\world\physics\physics_component.cpp" />
+    <ClCompile Include="src\engine\world\physics\collision_config.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />

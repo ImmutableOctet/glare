@@ -1,6 +1,8 @@
 #pragma once
 
-#include <engine/collision.hpp>
+#include <engine/world/physics/collision.hpp>
+//#include <engine/world/physics/collision_component.hpp>
+
 #include <graphics/model.hpp>
 #include <optional>
 
@@ -14,8 +16,8 @@ class btBoxShape;
 namespace engine
 {
 	// TODO: Simplify some of these typedefs.
-	using CollisionRaw = CollisionComponent::RawShape; // btCollisionShape;
-	using CollisionShape = CollisionComponent::Shape; // ref<CollisionRaw>;
+	using CollisionRaw      = CollisionComponent::RawShape; // btCollisionShape;
+	using CollisionShape    = CollisionComponent::Shape; // ref<CollisionRaw>;
 	using CollisionGeometry = graphics::Model::CollisionGeometry;
 
 	// Internal storage mechanism for 'collision shapes' and associated mesh-data (if any).
@@ -23,9 +25,8 @@ namespace engine
 	// Such 'colliders' are created by attaching a `CollisionComponent` object to an `Entity`, using these `CollisionData` objects as their underlying storage. (see constructors for `CollisionComponent`)
 	struct CollisionData
 	{
-		using Shape = CollisionShape;
-		using Raw = CollisionRaw;
-
+		using Shape    = CollisionShape;
+		using Raw      = CollisionRaw;
 		using Geometry = CollisionGeometry;
 
 		static CollisionShape build_mesh_shape(const CollisionGeometry& geometry_storage, bool optimize=true);

@@ -14,7 +14,7 @@
 #include <types.hpp>
 #include <graphics/model.hpp>
 
-#include <engine/collision.hpp>
+//#include <engine/world/physics/collision.hpp>
 
 #include "animation_data.hpp"
 #include "collision_data.hpp"

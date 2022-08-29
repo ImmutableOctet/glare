@@ -4,7 +4,7 @@
 
 #include <graphics/types.hpp>
 
-#include <engine/collision.hpp>
+#include "physics/collision_group.hpp"
 
 #include "entity.hpp"
 

@@ -1,8 +1,7 @@
 #pragma once
 
-/*
-* TODO: Finish merging the `collision` module with the `world:physics` module.
-*/
+#include "collision_group.hpp"
+#include "collision_config.hpp"
 
 #include "types.hpp"
 
@@ -10,11 +9,11 @@
 #include <variant>
 #include <type_traits>
 //#include <optional>
-
 //#include <tuple>
-
 //#include <climits>
 
+// Bullet's included in the header for now. This is due to some issues
+// with missing destructors for the `unique_ptr` instances.
 #include <bullet/btBulletCollisionCommon.h>
 //#include <bullet/BulletCollision/CollisionDispatch/btCollisionObject.h>
 
@@ -27,77 +26,6 @@ namespace engine
 {
 	class World;
 	class PhysicsSystem;
-
-	/*
-	enum class CollisionShape
-	{
-		Box = 1,
-		Capsule = 2,
-		//Sphere = 3,
-	};
-	*/
-
-	enum class CollisionGroup : std::uint32_t
-	{
-		All = (UINT32_MAX),
-
-		None = 0,
-
-		// Bit 1 is reserved.
-
-		StaticGeometry   = (1 << 1),
-		DynamicGeometry  = (1 << 2),
-		Actor            = (1 << 3),
-		Object           = (1 << 4),
-		Bone             = (1 << 5),
-		Zone             = (1 << 6),
-		Particle         = (1 << 7),
-		Projectile       = (1 << 8),
-
-		Meta = (Zone), // | Bone
-		AllGeometry = (StaticGeometry | DynamicGeometry),
-		
-		GeometrySolids = (All & ~(Meta)),
-		ObjectSolids = (AllGeometry | Actor | Object),
-		BoneSolids = ObjectSolids,
-		ActorSolids = ObjectSolids,
-		ProjectileSolids = (ObjectSolids | Projectile | Bone),
-
-
-		PlayerInteractions      = All, // (All & ~(StaticGeometry)),
-
-		ObjectInteractions      = (Actor | Object | Zone | AllGeometry),
-		CollectableInteractions = (Actor | Zone),
-		EnemyInteractions       = ObjectInteractions, // (Actor | Object | Zone),
-
-		// Used for hitscan bullets, projectiles, etc.
-		HitDetectionInteractions = (ObjectSolids | Zone | Bone),
-	};
-
-	FLAG_ENUM(std::uint32_t, CollisionGroup);
-
-	//using CollisionMask = CollisionGroup;
-
-	struct CollisionConfig
-	{
-		CollisionGroup group = CollisionGroup::None;
-		CollisionGroup solid_mask = CollisionGroup::None;
-		CollisionGroup interaction_mask = CollisionGroup::None;
-
-		static CollisionGroup resolve_collision_group(EntityType type);
-		static CollisionGroup resolve_solid_mask(EntityType type);
-		static CollisionGroup resolve_interaction_mask(EntityType type);
-
-		//using CollisionLookupResult = std::tuple<CollisionGroup, CollisionGroup, CollisionGroup>;
-
-		CollisionConfig() = default;
-		CollisionConfig(const CollisionConfig&) = default;
-		CollisionConfig(CollisionConfig&&) = default;
-
-		CollisionConfig& operator=(CollisionConfig&&) = default;
-
-		CollisionConfig(EntityType type);
-	};
 
 	// Returns the `Entity` instance associated with the specified Bullet collision-object.
 	// It is only legal to call this function on collision-objects managed by a `CollisionComponent`.
@@ -120,7 +48,7 @@ namespace engine
 			using ConcaveShapeRaw = btConcaveShape;
 			using ConvexShapeRaw = btConvexShape;
 
-			using NativeCollisionObject = btCollisionObject;
+			//using NativeCollisionObject = btCollisionObject;
 
 			using Shape        = std::shared_ptr<RawShape>;
 			using ConcaveShape = std::shared_ptr<ConcaveShapeRaw>;
@@ -131,7 +59,7 @@ namespace engine
 			inline CollisionComponent(const CollisionConfig& config, float mass) :
 				CollisionConfig(config),
 				mass(mass),
-				collision(make_collision_object(config))
+				collision(make_collision_object(config, mass))
 			{}
 		public:
 			
@@ -223,7 +151,7 @@ namespace engine
 			inline btCollisionObject* get_collision_object();
 			inline const btCollisionObject* get_collision_object() const;
 		protected:
-			static std::unique_ptr<btCollisionObject> make_collision_object(const CollisionConfig& config);
+			static std::unique_ptr<btCollisionObject> make_collision_object(const CollisionConfig& config, float mass);
 			
 			float mass = 0.0f;
 

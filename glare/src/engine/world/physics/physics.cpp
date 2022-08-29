@@ -1,17 +1,17 @@
 #include "physics.hpp"
 #include "physics_component.hpp"
+#include "collision.hpp"
 
 #include <engine/world/world.hpp>
 
-#include <engine/collision.hpp>
 #include <engine/transform.hpp>
 //#include <engine/relationship.hpp>
 
 #include <math/bullet.hpp>
 
-//#include <bullet/btBulletDynamicsCommon.h>
 #include <bullet/btBulletCollisionCommon.h>
-//#include <bullet/BulletCollision/btBulletCollisionCommon.h>
+
+#include <bullet/btBulletDynamicsCommon.h>
 
 #include <glm/glm.hpp>
 
@@ -29,10 +29,11 @@ namespace engine
 		collision_dispatcher(std::make_unique<btCollisionDispatcher>(collision_configuration.get())),
 		broadphase(std::make_unique<btDbvtBroadphase>()),
 
-		//solver(std::make_unique<btSequentialImpulseConstraintSolver>()),
+		//solver(std::make_unique<>()),
+		solver(std::make_unique<btSequentialImpulseConstraintSolver>()),
 
-		//collision_world(std::make_unique<btDiscreteDynamicsWorld>(collision_dispatcher.get(), broadphase.get(), solver.get(), collision_configuration.get()))
-		collision_world(std::make_unique<btCollisionWorld>(collision_dispatcher.get(), broadphase.get(), collision_configuration.get()))
+		collision_world(std::make_unique<btDiscreteDynamicsWorld>(collision_dispatcher.get(), broadphase.get(), solver.get(), collision_configuration.get()))
+		//collision_world(std::make_unique<btCollisionWorld>(collision_dispatcher.get(), broadphase.get(), collision_configuration.get()))
 	{
 		set_gravity(gravity);
 
@@ -125,11 +126,13 @@ namespace engine
 
 	void PhysicsSystem::update_collision_world(float delta)
 	{
+		/*
 		collision_world->updateAabbs();
 		collision_world->computeOverlappingPairs();
-
 		collision_world->performDiscreteCollisionDetection();
-		//collision_world->stepSimulation(...);
+		*/
+
+		collision_world->stepSimulation(delta);
 
 		auto& dispatcher = *collision_dispatcher;
 
@@ -153,6 +156,39 @@ namespace engine
 			if ((int)a_ent == 34 || (int)b_ent == 34)
 			{
 				print("{} ({}) collision with {} ({})", static_cast<entt::id_type>(a_ent), world.get_name(a_ent), static_cast<entt::id_type>(b_ent), world.get_name(b_ent));
+
+				auto a_tform = a->getWorldTransform();
+				auto t = world.get_transform(a_ent);
+
+				t.set_matrix(math::to_matrix(a_tform));
+
+				/*
+				auto a_wrapper = btCollisionObjectWrapper(nullptr, a->getCollisionShape(), a, a->getWorldTransform(), 0, 0);
+				auto b_wrapper = btCollisionObjectWrapper(nullptr, b->getCollisionShape(), b, b->getWorldTransform(), 0, 0);
+
+				btCollisionAlgorithm* algorithm = collision_world->getDispatcher()->findAlgorithm(&a_wrapper, &b_wrapper, contact, ebtDispatcherQueryType::BT_CLOSEST_POINT_ALGORITHMS);
+
+				if (algorithm)
+				{
+					auto result = btManifoldResult(&a_wrapper, &b_wrapper);
+					algorithm->processCollision(&a_wrapper, &b_wrapper, collision_world->getDispatchInfo(), &result);
+				}
+				*/
+
+				/*
+				int numContacts = contact->getNumContacts();
+				for (int j = 0; j < numContacts; j++)
+				{
+					btManifoldPoint& pt = contact->getContactPoint(j);
+
+					if (pt.getDistance() < 0.f)
+					{
+						const btVector3& ptA = pt.getPositionWorldOnA();
+						const btVector3& ptB = pt.getPositionWorldOnB();
+						const btVector3& normalOnB = pt.m_normalWorldOnB;
+					}
+				}
+				*/
 			}
 		}
 	}

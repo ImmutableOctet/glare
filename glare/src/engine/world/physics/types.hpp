@@ -1,19 +1,20 @@
 #pragma once
 
 #include <engine/types.hpp>
+//#include <engine/world/types.hpp>
 #include <math/math.hpp>
+
+#include "collision_group.hpp"
+#include "motion_flags.hpp"
 
 namespace engine
 {
-	enum class MotionFlags : std::uint8_t
+	/*
+	enum class CollisionShape
 	{
-		None = 0,
-
-		ApplyGravity = (1 << 0),
-		ApplyVelocity = (1 << 2),
-
-		StandardMovement = (ApplyGravity|ApplyVelocity),
+		Box = 1,
+		Capsule = 2,
+		//Sphere = 3,
 	};
-
-	FLAG_ENUM(std::uint8_t, MotionFlags);
+	*/
 }

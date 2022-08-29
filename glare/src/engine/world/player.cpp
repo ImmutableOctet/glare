@@ -1,14 +1,16 @@
 #include "player.hpp"
 #include "world.hpp"
 #include "entity.hpp"
+
 #include "graphics_entity.hpp"
+
 #include "physics/physics_component.hpp"
+#include "physics/collision.hpp"
 
 #include <util/string.hpp>
 
 #include <engine/resource_manager/resource_manager.hpp>
 #include <engine/name_component.hpp>
-#include <engine/collision.hpp>
 
 //#include <bullet/BulletCollision/CollisionShapes/btCapsuleShape.h>
 #include <bullet/btBulletCollisionCommon.h>

@@ -81,7 +81,7 @@ namespace graphics
 
 			struct CollisionGeometry // CollisionData
 			{
-				using Descriptor = btTriangleIndexVertexArray;
+				using Descriptor = btTriangleIndexVertexArray; // btTriangleMesh;
 				using Container = std::vector<SimpleMeshData>;
 
 				CollisionGeometry(Container&& mesh_data);

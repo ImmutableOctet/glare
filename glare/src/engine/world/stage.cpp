@@ -13,12 +13,13 @@
 #include "rave_component.hpp"
 #include "spin_component.hpp"
 
+//#include "physics/collision_component.hpp"
+
 #include "debug/debug.hpp"
 
 #include <engine/config.hpp>
 #include <engine/name_component.hpp>
 #include <engine/model_component.hpp>
-#include <engine/collision.hpp>
 
 #include <util/json.hpp>
 #include <util/log.hpp>
