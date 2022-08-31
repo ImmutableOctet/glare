@@ -8,13 +8,9 @@
 
 #include <bullet/btBulletCollisionCommon.h>
 #include <bullet/btBulletDynamicsCommon.h>
-//#include <bullet/BulletCollision/CollisionDispatch/btCollisionObject.h>
-
-#include <utility>
 
 namespace engine
 {
-	// Only accessible in this file.
 	static void set_entity_for_collision_object(btCollisionObject& c_obj, Entity entity)
 	{
 		static_assert(sizeof(int) >= sizeof(entt::id_type));
@@ -36,10 +32,22 @@ namespace engine
 		return static_cast<Entity>(index_raw);
 	}
 
+	void CollisionComponent::set_entity_for_collision_object(btCollisionObject& c_obj, Entity entity)
+	{
+		engine::set_entity_for_collision_object(c_obj, entity);
+	}
+
+	// Unlike `set_entity_for_collision_object`, this function is part of the public API.
+	Entity CollisionComponent::get_entity_from_collision_object(const btCollisionObject& c_obj)
+	{
+		return engine::get_entity_from_collision_object(c_obj);
+	}
+
 	CollisionComponent::CollisionComponent(const CollisionConfig& config, float mass, std::unique_ptr<CollisionMotionState>&& motion_state) :
 		CollisionConfig(config),
 		mass(mass),
-		motion_state(std::move(motion_state))
+		motion_state(std::move(motion_state)),
+		collision_object(std::monostate())
 	{}
 
 	template <typename ShapeRefType>
@@ -49,6 +57,8 @@ namespace engine
 		{
 			return;
 		}
+
+		auto* collision = get_collision_object();
 
 		if (collision)
 		{
@@ -130,15 +140,14 @@ namespace engine
 	void CollisionComponent::set_shape(const ConcaveShape& shape) { set_shape_impl(std::forward<decltype(shape)>(shape)); }
 	void CollisionComponent::set_shape(const ConvexShape& shape)  { set_shape_impl(std::forward<decltype(shape)>(shape)); }
 
-	void CollisionComponent::set_collision_object(std::unique_ptr<btCollisionObject>&& collision)
+	bool CollisionComponent::collision_object_in_monostate() const
 	{
-		if (collision)
-		{
-			// For safety, we always set the associated `Entity` to `null` by default.
-			set_entity_for_collision_object(*collision, null);
+		return (collision_object.index() == null_collision_object_index);
+	}
 
-			this->collision = std::move(collision);
-		}
+	const CollisionComponent::collision_object_variant_t& CollisionComponent::get_collision_object_variant() const
+	{
+		return collision_object;
 	}
 
 	void CollisionComponent::build_basic_collision_object(const CollisionConfig& config) // , float mass
@@ -165,21 +174,46 @@ namespace engine
 
 		auto obj_info = apply_collision_flags(*rigid_body, config, true, allow_kinematics);
 
-		// Re-encapsulate our handle to `rigid_body` as its parent type,
-		// `btCollisionObject`, then assign the collision-object instance accordingly.
-		set_collision_object(std::unique_ptr<btCollisionObject>(rigid_body.release()));
+		set_collision_object(rigid_body);
 
 		return obj_info;
 	}
 
 	btCollisionObject* CollisionComponent::get_collision_object()
 	{
-		return collision.get();
+		return const_cast<btCollisionObject*>(reinterpret_cast<const CollisionComponent*>(this)->get_collision_object());
 	}
 
 	const btCollisionObject* CollisionComponent::get_collision_object() const
 	{
-		return collision.get();
+		btCollisionObject* result = nullptr;
+
+		on_collision_object
+		(
+			[&result](const auto& obj)
+			{
+				result = obj.get();
+			}
+		);
+
+		return result;
+	}
+
+	btRigidBody* CollisionComponent::get_rigid_body()
+	{
+		return const_cast<btRigidBody*>(reinterpret_cast<const CollisionComponent*>(this)->get_rigid_body());
+	}
+
+	const btRigidBody* CollisionComponent::get_rigid_body() const
+	{
+		const auto* rigid_body = std::get_if<RigidBody>(&collision_object);
+
+		if (rigid_body)
+		{
+			return rigid_body->get();
+		}
+
+		return nullptr;
 	}
 
 	CollisionMotionState* CollisionComponent::get_motion_state()
@@ -194,6 +228,8 @@ namespace engine
 
 	bool CollisionComponent::activate(bool force)
 	{
+		auto* collision = get_collision_object();
+
 		if (collision)
 		{
 			collision->activate(force);
@@ -206,6 +242,8 @@ namespace engine
 
 	bool CollisionComponent::deactivate(bool force)
 	{
+		auto* collision = get_collision_object();
+
 		if (collision)
 		{
 			if (force)
@@ -225,6 +263,8 @@ namespace engine
 
 	bool CollisionComponent::is_active() const
 	{
+		auto* collision = get_collision_object();
+
 		if (collision)
 		{
 			return collision->isActive();
@@ -237,12 +277,24 @@ namespace engine
 	{
 		using enum btCollisionObject::CollisionFlags;
 
+		auto* collision = get_collision_object();
+
 		if (collision)
 		{
 			return (collision->getCollisionFlags() & CF_KINEMATIC_OBJECT);
 		}
 
 		return false;
+	}
+
+	bool CollisionComponent::has_collision_object() const
+	{
+		if (collision_object_in_monostate())
+		{
+			return false;
+		}
+
+		return (get_collision_object());
 	}
 
 	CollisionComponent::Shape CollisionComponent::get_shape() const
@@ -298,7 +350,7 @@ namespace engine
 		#ifndef NDEBUG
 			c_obj->setUserPointer(&component);
 		#endif
-
+		
 		// TODO: Hook into entt's Entity creation, destruction and component-assignment events to better handle this.
 		// At the moment, we just trigger the event immediately:
 		world.event<OnComponentAdd<CollisionComponent>>(entity); // Entity destruction currently handles this event manually as well. (needs to be changed)

@@ -1,6 +1,7 @@
 #include "physics.hpp"
 #include "physics_component.hpp"
 #include "collision.hpp"
+#include "collision_motion_state.hpp"
 
 #include <engine/world/world.hpp>
 
@@ -10,12 +11,13 @@
 #include <math/bullet.hpp>
 
 #include <bullet/btBulletCollisionCommon.h>
-
 #include <bullet/btBulletDynamicsCommon.h>
 
 #include <glm/glm.hpp>
 
+#include <variant>
 #include <cmath>
+#include <type_traits>
 
 namespace engine
 {
@@ -72,11 +74,6 @@ namespace engine
 			return;
 		}
 
-		if (!col->collision)
-		{
-			return;
-		}
-
 		auto transform = world.get_transform(entity);
 		
 		//auto* collision_obj = col->collision.get();
@@ -87,14 +84,25 @@ namespace engine
 		//collision_world->convexSweepTest();
 		//collision_world->contactTest();
 		
-		// Only update the collision object if it isn't already
-		// linked to Bullet via a `CollisionMotionState` object.
-		//if (!col->has_motion_state())
+		auto* motion_state = col->get_motion_state();
+
+		if (motion_state)
 		{
-			// This should only really apply to things like event/interaction triggers, etc.
+			// Handle motion-state submission/update to Bullet:
+			#if defined(ENGINE_COLLISION_MOTION_STATE_ALTERNATIVE_IMPL) && (ENGINE_COLLISION_MOTION_STATE_ALTERNATIVE_IMPL == 1)
+				// We perform this check before submission in order to reduce the overhead of calling `get_matrix`.
+				if (motion_state->can_submit_to_bullet())
+				{
+					motion_state->submit_to_bullet(transform.get_matrix());
+				}
+			#endif
+		}
+		else
+		{
+			// This should only really apply to things like event/interaction triggers, non-kinematic geometry, etc.
 			// i.e. entities utilizing collision-detection without the need for a solver.
 			// For more details, see the conditions outlined in `make_collision_motion_state`.
-			update_collision_object(transform, *col);
+			update_collision_object(*col, transform);
 		}
 	}
 
@@ -135,6 +143,8 @@ namespace engine
 
 	void PhysicsSystem::update_collision_world(float delta)
 	{
+		auto& registry = world.get_registry();
+
 		/*
 		collision_world->updateAabbs();
 		collision_world->computeOverlappingPairs();
@@ -142,6 +152,10 @@ namespace engine
 		*/
 
 		collision_world->stepSimulation(delta);
+
+		#if defined(ENGINE_COLLISION_MOTION_STATE_ALTERNATIVE_IMPL) && (ENGINE_COLLISION_MOTION_STATE_ALTERNATIVE_IMPL == 1)
+			retrieve_bullet_transforms();
+		#endif
 
 		auto& dispatcher = *collision_dispatcher;
 
@@ -254,43 +268,95 @@ namespace engine
 		auto& registry = world.get_registry();
 
 		auto& component = registry.get<CollisionComponent>(entity);
-		auto* collision_obj = component.collision.get(); // new_col.component
 
-		if (!collision_obj) // component.collision
-		{
-			return;
-		}
+		bool object_found = component.on_collision_object
+		(
+			[this, &component, &transform](const auto& collision_obj)
+			{
+				auto c_group = static_cast<int>(component.get_group());
+				auto c_mask = static_cast<int>(component.get_full_mask());
 
-		auto c_group = static_cast<int>(component.get_group());
-		auto c_mask = static_cast<int>(component.get_full_mask());
+				using obj_type = std::decay_t<decltype(collision_obj)>;
 
-		collision_world->addCollisionObject(collision_obj, c_group, c_mask);
+				if constexpr (std::is_same_v<obj_type, CollisionComponent::RigidBody>)
+				{
+					this->collision_world->addRigidBody(collision_obj.get(), c_group, c_mask);
+				}
+				else
+				{
+					this->collision_world->addCollisionObject(collision_obj.get(), c_group, c_mask);
+				}
 
-		update_collision_object(transform, component);
+				update_collision_object(*collision_obj, transform);
+			}
+		);
 	}
 
 	void PhysicsSystem::on_destroy_collider(Entity entity, CollisionComponent& col)
 	{
-		if (col.collision)
-		{
-			auto* collision_obj = col.collision.get();
+		auto* collision_obj = col.get_collision_object();
 
+		if (collision_obj)
+		{
+			/*
+				Bullet handles checks for derived collision-object types and handles them
+				appropriately, so we only need to call `removeCollisionObject` here.
+			
+				e.g. if the object is actually of type `btRigidBody`, Bullet
+				will call `removeRigidBody` automatically.
+			*/
 			collision_world->removeCollisionObject(collision_obj);
 		}
 	}
 
-	void PhysicsSystem::update_collision_object(Transform& transform, CollisionComponent& col) // World& world, Entity entity
+	void PhysicsSystem::update_collision_object(CollisionComponent& col, Transform& transform) // World& world, Entity entity
 	{
-		if (col.collision)
-		{
-			auto* collision_obj = col.collision.get();
+		// TODO: Determine if any addition work needs to be done in this step for other collision-object types. (e.g. `btRigidBody`)
 
-			update_collision_object(*collision_obj, transform.get_matrix());
+		auto* collision_obj = col.get_collision_object();
+
+		if (collision_obj)
+		{
+			update_collision_object(*collision_obj, transform);
 		}
+	}
+
+	void PhysicsSystem::update_collision_object(btCollisionObject& obj, Transform& transform)
+	{
+		update_collision_object(obj, transform.get_matrix());
 	}
 
 	void PhysicsSystem::update_collision_object(btCollisionObject& obj, const math::Matrix& m)
 	{
 		obj.setWorldTransform(math::to_bullet_matrix(m));
+	}
+
+	void PhysicsSystem::retrieve_bullet_transforms()
+	{
+		#if defined(ENGINE_COLLISION_MOTION_STATE_ALTERNATIVE_IMPL) && (ENGINE_COLLISION_MOTION_STATE_ALTERNATIVE_IMPL == 1)
+			auto& registry = world.get_registry();
+
+			// Retrieve newly reported transform states from Bullet:
+			auto view = registry.view<CollisionComponent>();
+
+			view.each([this](auto entity, CollisionComponent& collision)
+			{
+				auto* motion_state = collision.get_motion_state();
+
+				if (!motion_state)
+				{
+					return;
+				}
+
+				auto new_matrix = motion_state->retrieve_from_bullet();
+
+				if (new_matrix.has_value())
+				{
+					auto transform = world.get_transform(entity);
+
+					transform.set_matrix(*new_matrix);
+				}
+			});
+		#endif
 	}
 }

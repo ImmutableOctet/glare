@@ -53,7 +53,7 @@ namespace engine
 		if (collision_enabled)
 		{
 			auto& resource_manager = world.get_resource_manager();
-			auto collision_data = resource_manager.generate_sphere_collision(0.01f);
+			auto collision_data = resource_manager.generate_sphere_collision(0.1f); // 0.01f
 
 			attach_collision(world, entity, collision_data.collision_shape, {entity_type}); // , 0.1f
 		}

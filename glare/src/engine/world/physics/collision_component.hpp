@@ -19,12 +19,13 @@
 // Bullet's included in the header for now. This is due to some issues
 // with missing destructors for the `unique_ptr` instances.
 #include <bullet/btBulletCollisionCommon.h>
-//#include <bullet/BulletCollision/CollisionDispatch/btCollisionObject.h>
+#include <bullet/btBulletDynamicsCommon.h>
 
 class btCollisionShape;
 class btConcaveShape;
 class btConvexShape;
 class btCollisionObject;
+class btRigidBody;
 
 namespace engine
 {
@@ -32,6 +33,9 @@ namespace engine
 	class PhysicsSystem;
 
 	//class CollisionMotionState;
+
+	// `set_entity_for_collision_object` is considered an internal implementation detail and is therefore inaccessible.
+	//void set_entity_for_collision_object(btCollisionObject& c_obj, Entity entity);
 
 	// Returns the `Entity` instance associated with the specified Bullet collision-object.
 	// It is only legal to call this function on collision-objects managed by a `CollisionComponent`.
@@ -54,14 +58,20 @@ namespace engine
 			using ConcaveShapeRaw = btConcaveShape;
 			using ConvexShapeRaw  = btConvexShape;
 
-			//using NativeCollisionObject = btCollisionObject;
-
 			using Shape        = std::shared_ptr<RawShape>;
 			using ConcaveShape = std::shared_ptr<ConcaveShapeRaw>;
 			using ConvexShape  = std::shared_ptr<ConvexShapeRaw>;
 
+			using CollisionObject = std::unique_ptr<btCollisionObject>;
+			using RigidBody       = std::unique_ptr<btRigidBody>;
+
 			//CollisionComponent(const Shape& shape, const CollisionConfig& config, float mass = 0.0f, bool auto_activate=true);
+
+			using collision_object_variant_t = std::variant<std::monostate, CollisionObject, RigidBody>;
+			using shape_variant_t = std::variant<Shape, ConcaveShape, ConvexShape>;
 		protected:
+			static constexpr std::size_t null_collision_object_index = 0; // AKA, what index has `std::monostate`.
+
 			// The return-value of this function states whether the object in question has been flagged as kinematic.
 			// TODO: Look into making the return-value of this function a struct outlining several properties of the collision-object.
 			static bool apply_collision_flags(btCollisionObject& c_obj, const CollisionConfig& config, bool keep_existing_flags=true, bool allow_kinematic=true);
@@ -80,12 +90,30 @@ namespace engine
 
 			// Sets the internal collision-shape instance to a convex shape.
 			void set_shape(const ConvexShape& shape);
+
+			bool collision_object_in_monostate() const;
+			const collision_object_variant_t& get_collision_object_variant() const;
 		private:
-			// Implementation for `set_shape`.
+			// Declared for internal use only. (Forwards to static free-function implementation)
+			static void set_entity_for_collision_object(btCollisionObject& c_obj, Entity entity);
+
+			// Implementation for `set_shape`. -- Declared here in order to work as a member function,
+			// but only the template itself is only usable where it's fully defined.
+			// (In `collision_component` implementation file)
 			template <typename ShapeRefType>
 			void set_shape_impl(ShapeRefType&& shape);
 
-			void set_collision_object(std::unique_ptr<btCollisionObject>&& collision);
+			template <typename CollisionObjectType>
+			inline void set_collision_object(CollisionObjectType&& collision)
+			{
+				if (collision)
+				{
+					// For safety, we always set the associated `Entity` to `null` by default.
+					set_entity_for_collision_object(*collision, null);
+
+					this->collision_object = std::move(collision);
+				}
+			}
 
 			void build_basic_collision_object(const CollisionConfig& config); // , float mass
 
@@ -94,6 +122,9 @@ namespace engine
 			// TODO: Look into making the return-value of this function a struct outlining several properties of the collision-object. (see `apply_collision_flags`)
 			bool build_rigid_body(const CollisionConfig& config, btCollisionShape* collision_shape, float mass, bool allow_kinematics=true);
 		public:
+			// This calls the free-function of the same name.
+			static Entity get_entity_from_collision_object(const btCollisionObject& c_obj);
+
 			template <typename ShapeRefType> // Shape, ConvexShape, ConcaveShape
 			inline CollisionComponent(const ShapeRefType& shape, const CollisionConfig& config, float mass, std::optional<CollisionBodyType> body_type_in=std::nullopt, std::unique_ptr<CollisionMotionState>&& motion_state_in={}, bool auto_activate=true) :
 				CollisionComponent(config, mass, std::move(motion_state_in))
@@ -168,12 +199,39 @@ namespace engine
 			btCollisionObject* get_collision_object();
 			const btCollisionObject* get_collision_object() const;
 			
-			// TODO: May implement this later. (would require `std::variant` usage like `shape`)
-			//btRigidBody* get_rigid_body();
-			//const btRigidBody* get_rigid_body() const;
+			btRigidBody* get_rigid_body();
+			const btRigidBody* get_rigid_body() const;
 
 			CollisionMotionState* get_motion_state();
 			const CollisionMotionState* get_motion_state() const;
+
+			template <typename callback_fn>
+			inline bool on_collision_object(callback_fn&& callback) const
+			{
+				bool executed = false;
+
+				std::visit
+				(
+					[&callback, &executed](const auto& obj)
+					{
+						using obj_t = std::decay_t<decltype(obj)>;
+
+						if constexpr (!std::is_same_v<obj_t, std::monostate>)
+						{
+							if (static_cast<bool>(obj))
+							{
+								callback(std::forward<decltype(obj)>(obj)); // obj_t
+
+								executed = true;
+							}
+						}
+					},
+
+					this->collision_object
+				);
+
+				return executed;
+			}
 
 			inline bool has_motion_state() const { return get_motion_state(); }
 
@@ -185,13 +243,13 @@ namespace engine
 
 			bool is_active() const;
 			bool is_kinematic() const;
+			bool has_collision_object() const;
 		protected:
 			float mass = 0.0f;
 
 			std::unique_ptr<CollisionMotionState> motion_state;
-			std::unique_ptr<btCollisionObject> collision;
-
-			std::variant<Shape, ConcaveShape, ConvexShape> shape;
+			collision_object_variant_t collision_object;
+			shape_variant_t shape;
 	};
 
 	Entity attach_collision_impl(World& world, Entity entity, CollisionComponent&& col);

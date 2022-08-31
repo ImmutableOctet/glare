@@ -512,6 +512,7 @@ namespace engine
 		ForEach(data["players"], [&](const auto& player_cfg)
 		{
 			auto& registry = world.get_registry();
+
 			auto& player_idx_counter = indices.players.player_idx_counter;
 			auto& player_objects = indices.players.player_objects;
 
