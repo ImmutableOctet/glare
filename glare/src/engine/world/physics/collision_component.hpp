@@ -123,7 +123,7 @@ namespace engine
 							set_shape(shape);
 
 							// Note: `this->shape` needs to be defined before this is called.
-							bool is_kinematic = build_rigid_body(config, shape.get(), mass, !(body_type & CollisionBodyType::Static));
+							bool is_kinematic = build_rigid_body(config, shape.get(), mass, (body_type != CollisionBodyType::Static));
 
 							// Assert that we're either not kinematic, or if we are, that `motion_state` exists.
 							assert((!(is_kinematic) || (motion_state != nullptr)));
@@ -202,7 +202,18 @@ namespace engine
 		// TODO: Refactor into something more explicit from the user. (or something better for automatically determining body type)
 		// We currently assume kinematic rigid bodies if a motion-state is generated:
 		auto motion_state = make_collision_motion_state(world, entity, config);
-		auto body_type = util::optional_if(static_cast<bool>(motion_state), CollisionBodyType::Kinematic);
+		auto body_type = util::optional_if
+		(
+			static_cast<bool>(motion_state),
+			CollisionBodyType::Kinematic,
+
+			util::optional_if<CollisionBodyType>
+			(
+				// Exact value check.
+				(config.group == CollisionGroup::StaticGeometry),
+				CollisionBodyType::Static
+			)
+		);
 
 		return attach_collision_impl(world, entity, CollisionComponent(collision_shape_data, config, mass, body_type, std::move(motion_state)));
 	}
