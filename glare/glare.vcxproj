@@ -261,6 +261,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\action.hpp" />
     <ClInclude Include="src\engine\bone_component.hpp" />
     <ClInclude Include="src\engine\world\physics\collision.hpp" />
+    <ClInclude Include="src\engine\world\physics\collision_body_type.hpp" />
     <ClInclude Include="src\engine\world\physics\collision_component.hpp" />
     <ClInclude Include="src\engine\components.hpp" />
     <ClInclude Include="src\engine\config.hpp" />
@@ -301,6 +302,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\world\meta\meta.hpp" />
     <ClInclude Include="src\engine\world\physics\collision_config.hpp" />
     <ClInclude Include="src\engine\world\physics\collision_group.hpp" />
+    <ClInclude Include="src\engine\world\physics\collision_motion_state.hpp" />
     <ClInclude Include="src\engine\world\physics\motion_flags.hpp" />
     <ClInclude Include="src\engine\world\physics\physics.hpp" />
     <ClInclude Include="src\engine\world\physics\physics_component.hpp" />
@@ -443,6 +445,8 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\engine\world\light.cpp" />
     <ClCompile Include="src\engine\world\meta\controls.cpp" />
     <ClCompile Include="src\engine\world\physics\collision_config.cpp" />
+    <ClCompile Include="src\engine\world\physics\collision_group.cpp" />
+    <ClCompile Include="src\engine\world\physics\collision_motion_state.cpp" />
     <ClCompile Include="src\engine\world\physics\physics.cpp" />
     <ClCompile Include="src\engine\world\physics\physics_component.cpp" />
     <ClCompile Include="src\engine\world\player.cpp" />

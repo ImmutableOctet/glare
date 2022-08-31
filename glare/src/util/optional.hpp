@@ -14,4 +14,30 @@ namespace util
 
 		return fallback();
 	}
+
+	// Workaround for `std::nullopt` not working in unary-if statements.
+	template <typename T>
+	constexpr std::optional<T> optional_if(bool condition, const T&& true_value)
+	{
+		if (condition)
+		{
+			return true_value;
+		}
+
+		return std::nullopt;
+	}
+
+	// Similar to other overload of `optional_if`, but allows the user to specify the `false_value`.
+	template <typename T> // template <typename true_t, typename false_t>
+	constexpr std::optional<T> optional_if(bool condition, const T&& true_value, const T&& false_value)
+	{
+		//return ((condition) ? true_value : false_value);
+
+		if (condition)
+		{
+			return true_value;
+		}
+
+		return false_value;
+	}
 }

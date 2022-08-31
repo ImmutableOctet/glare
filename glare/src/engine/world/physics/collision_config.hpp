@@ -8,8 +8,13 @@ namespace engine
 {
 	struct CollisionConfig
 	{
+		// What group this object belongs to.
 		CollisionGroup group = CollisionGroup::None;
+
+		// What groups are solid to this object.
 		CollisionGroup solid_mask = CollisionGroup::None;
+
+		// What groups produce an interaction event.
 		CollisionGroup interaction_mask = CollisionGroup::None;
 
 		static CollisionGroup resolve_collision_group(EntityType type);
@@ -25,5 +30,9 @@ namespace engine
 		CollisionConfig& operator=(CollisionConfig&&) = default;
 
 		CollisionConfig(EntityType type);
+
+		// The full mask represents the final bitmask that should be used for filtering at the outermost level.
+		// (i.e. what we can engage with in some form)
+		inline CollisionGroup get_full_mask() const { return (interaction_mask | solid_mask); }
 	};
 }

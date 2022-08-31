@@ -29,6 +29,10 @@ namespace engine
 	class PhysicsSystem : public WorldSystem
 	{
 		public:
+			//using CollisionWorldRaw = btSimpleDynamicsWorld;
+			using CollisionWorldRaw = btDiscreteDynamicsWorld;
+			//using CollisionWorldRaw = btCollisionWorld;
+
 			static constexpr float MIN_SPEED = 0.0025f;
 
 			PhysicsSystem(World& world, math::Vector gravity={ 0.0f, -1.0f, 0.0f });
@@ -62,8 +66,7 @@ namespace engine
 			std::unique_ptr<btDbvtBroadphase> broadphase;
 			
 			std::unique_ptr<btSequentialImpulseConstraintSolver> solver;
-			std::unique_ptr<btDiscreteDynamicsWorld> collision_world;
 
-			//std::unique_ptr<btCollisionWorld> collision_world;
+			std::unique_ptr<CollisionWorldRaw> collision_world;
 	};
 }

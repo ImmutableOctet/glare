@@ -5,6 +5,7 @@
 #include <math/math.hpp>
 
 #include "collision_group.hpp"
+#include "collision_body_type.hpp"
 #include "motion_flags.hpp"
 
 namespace engine

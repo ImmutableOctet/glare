@@ -55,7 +55,7 @@ namespace engine
 			auto& resource_manager = world.get_resource_manager();
 			auto collision_data = resource_manager.generate_sphere_collision(0.01f);
 
-			attach_collision(world, entity, collision_data.collision_shape, {entity_type});
+			attach_collision(world, entity, collision_data.collision_shape, {entity_type}); // , 0.1f
 		}
 
 		if ((world.get_camera() == null) || make_active)
