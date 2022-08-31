@@ -1,20 +1,14 @@
 #pragma once
 
-#include <types.hpp> // Global header.
-
 namespace engine
 {
-	// TODO: Determine if this needs to be handled as a bitfield.
-	enum class CollisionBodyType : std::uint8_t // unsigned char
+	enum class CollisionBodyType
 	{
-		Static    = (0),
-		
-		Basic     = (1),
-		Kinematic = (1 << 1),
-		Ghost     = (1 << 2),
+		Basic,     // Standard Bullet collision object.
+		Static,    // Rigid body type without kinematics/motion-state.
+		Kinematic, // Rigid body type with kinematics/motion-state.
+		Ghost,     // Bullet ghost object.
 
 		Dynamic = Kinematic,
 	};
-
-	FLAG_ENUM(std::uint8_t, CollisionBodyType); // unsigned char
 }
