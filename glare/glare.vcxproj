@@ -268,7 +268,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\debug.hpp" />
     <ClInclude Include="src\engine\engine.hpp" />
     <ClInclude Include="src\engine\events\events.hpp" />
-    <ClInclude Include="src\engine\events\service_events.hpp" />
+    <ClInclude Include="src\engine\service_events.hpp" />
     <ClInclude Include="src\engine\events\standard_events.hpp" />
     <ClInclude Include="src\engine\events\input.hpp" />
     <ClInclude Include="src\engine\free_look.hpp" />

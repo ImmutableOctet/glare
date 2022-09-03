@@ -1,7 +1,7 @@
 #include "world_system.hpp"
 #include "world.hpp"
 
-#include <engine/events/service_events.hpp>
+#include <engine/service_events.hpp>
 
 #include <cassert>
 

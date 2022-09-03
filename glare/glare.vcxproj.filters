@@ -432,7 +432,7 @@
     <ClInclude Include="src\engine\world\render\directional_shadows.hpp" />
     <ClInclude Include="src\engine\world\render\deferred_shading.hpp" />
     <ClInclude Include="src\engine\events\events.hpp" />
-    <ClInclude Include="src\engine\events\service_events.hpp" />
+    <ClInclude Include="src\engine\service_events.hpp" />
     <ClInclude Include="src\engine\world\world_system.hpp" />
     <ClInclude Include="src\math\assimp.hpp" />
     <ClInclude Include="src\engine\world\physics\physics_component.hpp" />

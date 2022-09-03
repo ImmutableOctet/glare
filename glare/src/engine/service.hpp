@@ -3,7 +3,7 @@
 #include "types.hpp"
 #include "action.hpp"
 
-#include "events/service_events.hpp"
+#include "service_events.hpp"
 
 #include <utility>
 #include <functional>
