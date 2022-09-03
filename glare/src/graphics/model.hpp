@@ -16,6 +16,7 @@
 
 // Bullet:
 class btTriangleIndexVertexArray;
+class btTriangleMesh;
 
 namespace engine
 {
@@ -81,13 +82,18 @@ namespace graphics
 
 			struct CollisionGeometry // CollisionData
 			{
-				using Descriptor = btTriangleIndexVertexArray; // btTriangleMesh;
-				using Container = std::vector<SimpleMeshData>;
+				public:
+					using Descriptor = btTriangleMesh; // btTriangleIndexVertexArray;
+					using Container = std::vector<SimpleMeshData>;
 
-				CollisionGeometry(Container&& mesh_data);
+					CollisionGeometry(Container&& mesh_data);
 
-				std::unique_ptr<Descriptor> mesh_interface;
-				Container mesh_data;
+					std::unique_ptr<Descriptor> mesh_interface;
+					Container mesh_data;
+
+					bool has_32bit_indices() const;
+				protected:
+					std::unique_ptr<Descriptor> generate_mesh_interface();
 			};
 
 			friend Canvas;

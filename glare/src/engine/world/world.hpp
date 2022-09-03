@@ -43,6 +43,7 @@ namespace engine
 {
 	class ResourceManager;
 	class Config;
+	struct CollisionComponent;
 
 	class World : public Service
 	{
@@ -145,9 +146,52 @@ namespace engine
 			void update_camera_parameters(int width, int height);
 
 			Transform apply_transform(Entity entity, const math::TransformVectors& tform);
+
+			// See `transform_and_reset_collision` for details.
+			void apply_transform_and_reset_collision(Entity entity, const math::TransformVectors& tform_data);
+
 			Transform set_position(Entity entity, const math::Vector& position);
 
 			Transform get_transform(Entity entity);
+
+			// Calls `callback` with the `Transform` of `entity` while handling updates
+			// to the collision-component's activation-status and world-transform.
+			// For most purposes, it's recommended to use `get_transform` normally.
+			// This works as a utility function for object creation and reset routines.
+			template <typename callback_fn>
+			inline void transform_and_reset_collision(Entity entity, callback_fn&& callback)
+			{
+				auto* collision = get_collision_component(entity);
+
+				math::Matrix tform_matrix;
+
+				bool collision_active;
+
+				// Store activity status and deactivate.
+				if (collision)
+				{
+					collision_active = _transform_and_reset_collision_store_active_state(collision);
+				}
+
+				// Execute `callback` and store the resulting matrix if needed:
+				{
+					auto tform = get_transform(entity);
+
+					callback(tform);
+
+					// Only store the transformation matrix if a collision component exists:
+					if (collision)
+					{
+						tform_matrix = tform.get_matrix();
+					}
+				}
+
+				// Revert the collision component's activity state and update its world-transform.
+				if (collision)
+				{
+					_transform_and_reset_collision_revert_active_state(collision, tform_matrix, collision_active);
+				}
+			}
 
 			math::Vector get_up_vector(math::Vector up={ 0.0f, 1.0f, 0.0f }) const;
 
@@ -216,6 +260,11 @@ namespace engine
 			{
 				defer(std::forward<fn_t>(f), this, std::forward<arguments>(args)...);
 			}
+		private:
+			CollisionComponent* get_collision_component(Entity entity);
+
+			bool _transform_and_reset_collision_store_active_state(CollisionComponent* collision);
+			void _transform_and_reset_collision_revert_active_state(CollisionComponent* collision, const math::Matrix& tform_matrix, bool collision_active);
 	};
 
 	using Scene = World;

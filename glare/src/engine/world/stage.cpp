@@ -13,7 +13,7 @@
 #include "rave_component.hpp"
 #include "spin_component.hpp"
 
-//#include "physics/collision_component.hpp"
+#include "physics/collision_component.hpp"
 
 #include "debug/debug.hpp"
 
@@ -360,9 +360,12 @@ namespace engine
 		return null;
 	}
 
-	Transform Stage::apply_transform(World& world, Entity entity, const util::json& cfg)
+	void Stage::apply_transform(World& world, Entity entity, const util::json& cfg)
 	{
-		return world.apply_transform(entity, get_transform_data(cfg));
+		auto tform_data = get_transform_data(cfg);
+
+		//world.apply_transform(entity, tform_data);
+		world.apply_transform_and_reset_collision(entity, tform_data);
 	}
 
 	std::optional<graphics::ColorRGBA> Stage::apply_color(World& world, Entity entity, const util::json& cfg)
@@ -588,9 +591,11 @@ namespace engine
 
 					if (obj != null)
 					{
-						apply_transform(world, obj, obj_cfg);
 						apply_color(world, obj, obj_cfg);
+						apply_transform(world, obj, obj_cfg);
 
+						// TODO: Ensure `tform` doesn't get invalidated by call to `resolve_parent`.
+						// (May actually make sense to call `get_matrix` before `resolve_parent` anyway)
 						resolve_parent(world, obj, stage, root_path, player_objects, objects, obj_cfg);
 
 						print("\"{}\" object created.", obj_type);

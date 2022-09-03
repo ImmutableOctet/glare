@@ -76,14 +76,15 @@ namespace graphics
 	}
 	
 	Model::CollisionGeometry::CollisionGeometry(Container&& mesh_data)
-		: mesh_interface(std::make_unique<Descriptor>()), mesh_data(std::move(mesh_data))
+		: mesh_interface(generate_mesh_interface()), mesh_data(std::move(mesh_data))
 	{
-		constexpr auto ph_index_type = ((sizeof(SimpleMeshData::Index) == 4) ? PHY_INTEGER : PHY_SHORT);
+		auto ph_index_type = (has_32bit_indices() ? PHY_INTEGER : PHY_SHORT);
 
 		for (const auto& m : this->mesh_data)
 		{
 			btIndexedMesh part = {};
 
+			part.m_vertexType = PHY_FLOAT;
 			part.m_vertexBase = reinterpret_cast<const unsigned char*>(m.vertices.data());
 			part.m_vertexStride = sizeof(SimpleMeshData::Vertex); // SimpleVertex
 			part.m_numVertices = static_cast<int>(m.vertices.size());
@@ -98,5 +99,16 @@ namespace graphics
 
 			mesh_interface->addIndexedMesh(part, ph_index_type);
 		}
+	}
+
+	bool Model::CollisionGeometry::has_32bit_indices() const
+	{
+		return (sizeof(SimpleMeshData::Index) == 4);
+	}
+
+	std::unique_ptr<Model::CollisionGeometry::Descriptor> Model::CollisionGeometry::generate_mesh_interface()
+	{
+		//return std::make_unique<Descriptor>();
+		return std::make_unique<Descriptor>(has_32bit_indices(), false);
 	}
 }

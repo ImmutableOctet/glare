@@ -29,7 +29,6 @@ namespace engine
 	class PhysicsSystem : public WorldSystem
 	{
 		public:
-			//using CollisionWorldRaw = btSimpleDynamicsWorld;
 			using CollisionWorldRaw = btDiscreteDynamicsWorld;
 			//using CollisionWorldRaw = btCollisionWorld;
 
@@ -39,20 +38,20 @@ namespace engine
 			~PhysicsSystem();
 
 			void on_subscribe(World& world) override;
-
-			void on_transform_change(const OnTransformChange& tform_change);
-			void on_entity_destroyed(const OnEntityDestroyed& destruct);
-
 			void on_update(World& world, float delta) override;
 
-			inline math::Vector get_gravity() const { return gravity; }
-
-			void set_gravity(const math::Vector& g);
-
+			void on_transform_change(const OnTransformChange& tform_change);
+			
 			void on_new_collider(const OnComponentAdd<CollisionComponent>& new_col);
 			void on_destroy_collider(Entity entity, CollisionComponent& col); // const CollisionComponent&
+
 			void update_collision_object(CollisionComponent& col, Transform& transform);
 			void update_collision_object(btCollisionObject& obj, Transform& transform);
+
+			void on_entity_destroyed(const OnEntityDestroyed& destruct);
+
+			math::Vector get_gravity() const;
+			void set_gravity(const math::Vector& g);
 		protected:
 			void update_collision_world(float delta);
 			void update_motion(Entity entity, Transform& transform, PhysicsComponent& ph, float delta);

@@ -67,26 +67,27 @@ namespace glare
 		//input.get_mouse().lock();
 
 		world.load("assets/maps/test01");
+		//world.load("assets/maps/story/2.ice-world/ice-connector");
+		
 		//world.load("assets/maps/test01 - old");
 
 		//world.load("assets/maps/room");
 		//world.load("assets/maps/collision_test");
 
-		//world.load("assets/maps/story/2.ice-world/ice-connector");
 
 		auto cube = engine::load_model
 		(
 			world, "assets/objects/cube/cube.b3d", engine::null,
 			engine::EntityType::Object,
 			true, true, 0.0f,
-			engine::CollisionGroup::DynamicGeometry,
+			engine::CollisionGroup::Object,
 			engine::CollisionGroup::All,
 			engine::CollisionGroup::All
 		);
 
 		auto cube_t = world.get_transform(cube);
 
-		cube_t.set_position({ -6.20467f, 66.5406f, 39.1254f });
+		cube_t.set_position({ -6.20467f, 166.5406f, 39.1254f });
 	}
 
 	engine::Transform Glare::get_named_transform(std::string_view name)

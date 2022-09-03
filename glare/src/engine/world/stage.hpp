@@ -74,7 +74,7 @@ namespace engine
 				return tform;
 			};
 
-			static Transform apply_transform(World& world, Entity entity, const util::json& cfg);
+			static void apply_transform(World& world, Entity entity, const util::json& cfg);
 			static std::optional<graphics::ColorRGBA> apply_color(World& world, Entity entity, const util::json& cfg);
 
 			template <typename JsonArray, typename Pred>

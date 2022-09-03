@@ -53,9 +53,17 @@ namespace engine
 		if (collision_enabled)
 		{
 			auto& resource_manager = world.get_resource_manager();
-			auto collision_data = resource_manager.generate_sphere_collision(0.1f); // 0.01f
+			//auto collision_data = resource_manager.generate_sphere_collision(0.1f); // 0.01f
+			auto collision_data = resource_manager.generate_capsule_collision(1.0f, 2.0f);
 
-			attach_collision(world, entity, collision_data.collision_shape, {entity_type}); // , 0.1f
+			auto collision_config = CollisionConfig { entity_type };
+			//auto collision_config = CollisionConfig{ EntityType::Platform };
+
+			//collision_config.group = CollisionGroup::DynamicGeometry;
+			
+			float mass = 0.0f;
+
+			attach_collision(world, entity, collision_data.collision_shape, collision_config, mass);
 		}
 
 		if ((world.get_camera() == null) || make_active)

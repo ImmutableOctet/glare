@@ -41,6 +41,8 @@ namespace engine
 	// It is only legal to call this function on collision-objects managed by a `CollisionComponent`.
 	Entity get_entity_from_collision_object(const btCollisionObject& c_obj);
 
+	void update_collision_object_transform(btCollisionObject& obj, const math::Matrix& m);
+
 	/*
 		Represents a 'collider' object attached to an entity.
 		This can be thought of as an in-world instance of collision shape (see 'Shape' types below),
@@ -64,8 +66,6 @@ namespace engine
 
 			using CollisionObject = std::unique_ptr<btCollisionObject>;
 			using RigidBody       = std::unique_ptr<btRigidBody>;
-
-			//CollisionComponent(const Shape& shape, const CollisionConfig& config, float mass = 0.0f, bool auto_activate=true);
 
 			using collision_object_variant_t = std::variant<std::monostate, CollisionObject, RigidBody>;
 			using shape_variant_t = std::variant<Shape, ConcaveShape, ConvexShape>;
@@ -126,53 +126,48 @@ namespace engine
 			static Entity get_entity_from_collision_object(const btCollisionObject& c_obj);
 
 			template <typename ShapeRefType> // Shape, ConvexShape, ConcaveShape
-			inline CollisionComponent(const ShapeRefType& shape, const CollisionConfig& config, float mass, std::optional<CollisionBodyType> body_type_in=std::nullopt, std::unique_ptr<CollisionMotionState>&& motion_state_in={}, bool auto_activate=true) :
+			inline CollisionComponent(const ShapeRefType& shape, const CollisionConfig& config, float mass, std::optional<CollisionBodyType> body_type_in=std::nullopt, std::unique_ptr<CollisionMotionState>&& motion_state_in={}, bool activate_immediately=true) :
 				CollisionComponent(config, mass, std::move(motion_state_in))
 			{
 				auto body_type = body_type_in.value_or(CollisionBodyType::Basic);
 
-				// Check for the basic collision-object case:
-				if (body_type == CollisionBodyType::Basic)
+				// Check for all other body types:
+				switch (body_type)
 				{
-					build_basic_collision_object(config);
+					case CollisionBodyType::Basic:
+						build_basic_collision_object(config);
 
-					// `shape` needs to be specified after construction for basic collision-objects.
-					set_shape(shape);
+						// `shape` needs to be specified after construction for basic collision-objects.
+						set_shape(shape);
+
+						break;
+					case CollisionBodyType::Ghost:
+						// TODO: Implement ghost-objects.
+						assert(false);
+
+						break;
+					default:
+						// TODO: Determine if `shape` setup code is shared between cases:
+						assert(shape);
+
+						// `shape` must be specified during/before construction for rigid bodies.
+						set_shape(shape);
+
+						// Note: `this->shape` needs to be defined before this is called.
+						build_rigid_body(config, shape.get(), mass, (body_type != CollisionBodyType::Static));
+
+						break;
+				}
+
+				if (activate_immediately)
+				{
+					activate();
 				}
 				else
 				{
-					// Check for all other body types:
-					switch (body_type)
-					{
-						case CollisionBodyType::Static:
-						case CollisionBodyType::Kinematic:
-						{
-							// TODO: Determine if `shape` setup code is shared between cases:
-							assert(shape);
-
-							// `shape` must be specified during/before construction for rigid bodies.
-							set_shape(shape);
-
-							// Note: `this->shape` needs to be defined before this is called.
-							bool is_kinematic = build_rigid_body(config, shape.get(), mass, (body_type != CollisionBodyType::Static));
-
-							// Assert that we're either not kinematic, or if we are, that `motion_state` exists.
-							assert((!(is_kinematic) || (motion_state != nullptr)));
-
-							break;
-						}
-
-						case CollisionBodyType::Ghost:
-							// TODO: Implement ghost-objects.
-							assert(false);
-
-							break;
-					}
-				}
-
-				if (auto_activate)
-				{
-					activate();
+					// Bullet has a built-in auto-activate setting,
+					// so we ensure deactivation here.
+					deactivate();
 				}
 			}
 
@@ -182,10 +177,13 @@ namespace engine
 			CollisionComponent(const CollisionComponent&) = delete;
 			CollisionComponent& operator=(const CollisionComponent&) = delete;
 
-			inline CollisionGroup get_group() const { return group; }
+			// Manually updates the transformation matrix of the internal held collision-object.
+			// This does not directly affect the Entity's `TransformComponent`.
+			void update_transform(const math::Matrix& tform);
 
+			inline CollisionGroup get_group() const        { return group; }
 			inline CollisionGroup get_interactions() const { return interaction_mask; }
-			inline CollisionGroup get_solids() const { return solid_mask; }
+			inline CollisionGroup get_solids() const       { return solid_mask; }
 
 			// Returns the internally bound collision-shape object, regardless of concave/convex qualification.
 			Shape get_shape() const;
@@ -233,8 +231,6 @@ namespace engine
 				return executed;
 			}
 
-			inline bool has_motion_state() const { return get_motion_state(); }
-
 			// Returns `true` if activation was successful.
 			bool activate(bool force=false);
 
@@ -243,7 +239,11 @@ namespace engine
 
 			bool is_active() const;
 			bool is_kinematic() const;
+			bool is_dynamic() const;
+			bool is_static() const;
+
 			bool has_collision_object() const;
+			bool has_motion_state() const;
 		protected:
 			float mass = 0.0f;
 
@@ -259,19 +259,18 @@ namespace engine
 	{
 		// TODO: Refactor into something more explicit from the user. (or something better for automatically determining body type)
 		// We currently assume kinematic rigid bodies if a motion-state is generated:
-		auto motion_state = make_collision_motion_state(world, entity, config);
-		auto body_type = util::optional_if
-		(
-			static_cast<bool>(motion_state),
-			CollisionBodyType::Kinematic,
+		std::unique_ptr<CollisionMotionState> motion_state;
 
-			util::optional_if<CollisionBodyType>
-			(
-				// Exact value check.
-				(config.group == CollisionGroup::StaticGeometry),
-				CollisionBodyType::Static
-			)
-		);
+		CollisionBodyType body_type = get_collision_body_type(config.group);
+
+		switch (body_type)
+		{
+			//case CollisionBodyType::Kinematic:
+			case CollisionBodyType::Dynamic:
+				motion_state = make_collision_motion_state(world, entity, config);
+
+				break;
+		}
 
 		return attach_collision_impl(world, entity, CollisionComponent(collision_shape_data, config, mass, body_type, std::move(motion_state)));
 	}

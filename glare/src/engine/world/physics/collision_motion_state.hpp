@@ -17,6 +17,12 @@
 
 class btTransform;
 
+#include <bullet/btBulletDynamicsCommon.h>
+#include <bullet/LinearMath/btDefaultMotionState.h>
+
+//namespace engine { using CollisionMotionState = btDefaultMotionState; }
+namespace engine { class _CollisionMotionState; using CollisionMotionState = _CollisionMotionState; }
+
 namespace engine
 {
 	class World;
@@ -33,11 +39,11 @@ namespace engine
 
 		TODO: Determine if there's any way to optimize this via existing transform change-detection mechanisms.
 	*/
-	class CollisionMotionState : public btMotionState
+	class _CollisionMotionState : public btMotionState
 	{
 		protected:
 			#if defined(ENGINE_COLLISION_MOTION_STATE_ALTERNATIVE_IMPL) && (ENGINE_COLLISION_MOTION_STATE_ALTERNATIVE_IMPL == 1)
-				// We have no need to reference a `World` or `Entity` explicitly, as `CollisionMotionState` objects
+				// We have no need to reference a `World` or `Entity` explicitly, as `_CollisionMotionState` objects
 				// are normally held by `CollisionComponent` instances, making them already associated.
 				
 				// The last known internal matrix state of the represented entity.
@@ -53,7 +59,7 @@ namespace engine
 				Entity entity;
 			#endif
 		public:
-			CollisionMotionState(World& world, Entity entity);
+			_CollisionMotionState(World& world, Entity entity);
 
 			// Bullet interface methods:
 

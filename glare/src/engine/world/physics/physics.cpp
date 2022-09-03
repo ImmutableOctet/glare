@@ -40,6 +40,8 @@ namespace engine
 	{
 		set_gravity(gravity);
 
+		//collision_world->setSynchronizeAllMotionStates(true);
+
 		world.subscribe(*this);
 	}
 
@@ -52,73 +54,7 @@ namespace engine
 	{
 		world.register_event<OnTransformChange, &PhysicsSystem::on_transform_change>(*this);
 		world.register_event<OnEntityDestroyed, &PhysicsSystem::on_entity_destroyed>(*this);
-		world.register_event<OnComponentAdd<engine::CollisionComponent>, &PhysicsSystem::on_new_collider>(*this);
-	}
-
-	void PhysicsSystem::on_transform_change(const OnTransformChange& tform_change)
-	{
-		// Debugging related (camera):
-		if ((int)tform_change.entity == 34)
-		{
-			//print("Entity changed: {}", tform_change.entity);
-		}
-
-		auto entity = tform_change.entity;
-
-		auto& registry = world.get_registry();
-
-		auto* col = registry.try_get<CollisionComponent>(entity);
-
-		if (!col)
-		{
-			return;
-		}
-
-		auto transform = world.get_transform(entity);
-		
-		//auto* collision_obj = col->collision.get();
-
-		//auto from = collision_obj->getWorldTransform();
-		//auto to = math::to_bullet_matrix(transform.get_matrix());
-
-		//collision_world->convexSweepTest();
-		//collision_world->contactTest();
-		
-		auto* motion_state = col->get_motion_state();
-
-		if (motion_state)
-		{
-			// Handle motion-state submission/update to Bullet:
-			#if defined(ENGINE_COLLISION_MOTION_STATE_ALTERNATIVE_IMPL) && (ENGINE_COLLISION_MOTION_STATE_ALTERNATIVE_IMPL == 1)
-				// We perform this check before submission in order to reduce the overhead of calling `get_matrix`.
-				if (motion_state->can_submit_to_bullet())
-				{
-					motion_state->submit_to_bullet(transform.get_matrix());
-				}
-			#endif
-		}
-		else
-		{
-			// This should only really apply to things like event/interaction triggers, non-kinematic geometry, etc.
-			// i.e. entities utilizing collision-detection without the need for a solver.
-			// For more details, see the conditions outlined in `make_collision_motion_state`.
-			update_collision_object(*col, transform);
-		}
-	}
-
-	void PhysicsSystem::on_entity_destroyed(const OnEntityDestroyed& destruct)
-	{
-		auto& registry = world.get_registry();
-
-		auto entity = destruct.entity;
-
-		// Handle collision:
-		auto* col = registry.try_get<CollisionComponent>(entity);
-
-		if (col)
-		{
-			on_destroy_collider(entity, *col);
-		}
+		world.register_event<OnComponentAdd<CollisionComponent>, &PhysicsSystem::on_new_collider>(*this);
 	}
 
 	// TODO: We need to look at `OnTransformChange`/`on_transform_change` and how it relates to the collision side of this routine.
@@ -166,9 +102,13 @@ namespace engine
 			return;
 		}
 
+		print("manifold_count: {}", manifold_count);
+
 		for (auto i = 0; i < manifold_count; i++)
 		{
 			auto* contact = dispatcher.getManifoldByIndexInternal(i);
+
+			int numContacts = contact->getNumContacts();
 
 			auto* a = contact->getBody0();
 			auto* b = contact->getBody1();
@@ -176,11 +116,17 @@ namespace engine
 			auto a_ent = get_entity_from_collision_object(*a);
 			auto b_ent = get_entity_from_collision_object(*b);
 
+			print("{} ({}) within bounds of {} ({})", static_cast<entt::id_type>(a_ent), world.get_name(a_ent), static_cast<entt::id_type>(b_ent), world.get_name(b_ent));
+
+			if (numContacts == 0)
+			{
+				continue;
+			}
+
 			if ((int)a_ent == 34 || (int)b_ent == 34)
 			{
-				print("Camera is at: {}", math::to_vector(a->getWorldTransform().getOrigin()));
-
-				print("{} ({}) collision with {} ({})", static_cast<entt::id_type>(a_ent), world.get_name(a_ent), static_cast<entt::id_type>(b_ent), world.get_name(b_ent));
+				//auto t = world.get_transform(a_ent);
+				//update_collision_object(const_cast<btCollisionObject&>(*a), t);
 
 				//auto a_tform = a->getWorldTransform();
 				//auto t = world.get_transform(a_ent);
@@ -199,21 +145,119 @@ namespace engine
 				}
 				*/
 
-				/*
-				int numContacts = contact->getNumContacts();
+				///*
+
+				print("Camera is at: {}", math::to_vector(a->getWorldTransform().getOrigin()));
+
+				print("{} ({}) collision with {} ({})", static_cast<entt::id_type>(a_ent), world.get_name(a_ent), static_cast<entt::id_type>(b_ent), world.get_name(b_ent));
+
+				math::Vector v = {};
+
+				auto a_tranform = world.get_transform(a_ent);
+				auto a_position = a_tranform.get_position();
+
 				for (int j = 0; j < numContacts; j++)
 				{
 					btManifoldPoint& pt = contact->getContactPoint(j);
 
-					if (pt.getDistance() < 0.f)
+					//if (pt.getDistance() < 0.f)
 					{
-						const btVector3& ptA = pt.getPositionWorldOnA();
-						const btVector3& ptB = pt.getPositionWorldOnB();
-						const btVector3& normalOnB = pt.m_normalWorldOnB;
+						auto ptA = math::to_vector(pt.getPositionWorldOnA());
+						auto ptB = math::to_vector(pt.getPositionWorldOnB());
+
+						//auto contact_dist = -glm::normalize(ptA - ptB) * 1.005f * math::to_vector(pt.m_normalWorldOnB); // glm::normalize(math::to_vector(pt.m_normalWorldOnB));
+
+
+						//const btVector3& normalOnB = pt.m_normalWorldOnB;
+
+						auto contact_dist = (a_position - math::to_vector(ptA));
+
+						v += contact_dist;
+					}
+				}
+
+				v /= numContacts;
+
+				a_tranform.move(v);
+
+				//*/
+			}
+		}
+	}
+
+	void PhysicsSystem::on_transform_change(const OnTransformChange& tform_change)
+	{
+		auto entity = tform_change.entity;
+
+		auto& registry = world.get_registry();
+
+		auto* col = registry.try_get<CollisionComponent>(entity);
+
+		if (!col)
+		{
+			return;
+		}
+
+		auto transform = world.get_transform(entity);
+
+		// Debugging related (camera):
+		if ((int)tform_change.entity == 34)
+		{
+			//print("Entity changed: {} @ {}", tform_change.entity, transform.get_position());
+			
+			/*
+			bool is_kinematic = col->get_rigid_body()->isKinematicObject();
+			bool is_static = col->get_rigid_body()->isStaticObject();
+			bool is_static_or_kinematic = col->get_rigid_body()->isStaticOrKinematicObject();
+			*/
+
+			//auto t = col->get_collision_object()->getWorldTransform();
+			//print("Collision object position: {}", math::to_vector(t.getOrigin()));
+		}
+		
+		//auto* collision_obj = col->collision.get();
+
+		//auto from = collision_obj->getWorldTransform();
+		//auto to = math::to_bullet_matrix(transform.get_matrix());
+
+		//collision_world->convexSweepTest();
+		//collision_world->contactTest();
+
+		auto* motion_state = col->get_motion_state();
+
+		if (motion_state)
+		{
+			#if defined(ENGINE_COLLISION_MOTION_STATE_ALTERNATIVE_IMPL) && (ENGINE_COLLISION_MOTION_STATE_ALTERNATIVE_IMPL == 1)
+				// Handle motion-state submission/update to Bullet:
+				// We perform this check before submission in order to reduce the overhead of calling `get_matrix`.
+				if (motion_state->can_submit_to_bullet())
+				{
+					motion_state->submit_to_bullet(transform.get_matrix());
+				}
+			#else
+				/*
+				// Disabled for now; Bullet will call into `motion_state`'s
+				// set `setWorldTransform` method every time, causing another
+				// `OnTransformChange` event-trigger continuously.
+				if (motion_state)
+				{
+					auto* rigid_body = col->get_rigid_body();
+
+					if (rigid_body)
+					{
+						collision_world->synchronizeSingleMotionState(rigid_body);
 					}
 				}
 				*/
-			}
+			#endif
+		}
+		else
+		{
+			update_collision_object(*col, transform);
+
+			// Debugging related:
+			//auto t = col->get_collision_object()->getWorldTransform();
+			//print("Position is now: {}", math::to_vector(t.getOrigin()));
 		}
 	}
 
@@ -248,14 +292,6 @@ namespace engine
 		ph.motion.prev_position = transform.get_position();
 
 		transform.move(movement);
-	}
-
-	void PhysicsSystem::set_gravity(const math::Vector& g)
-	{
-		gravity = g;
-
-		// TODO: Determine if we need/want to use Bullet's built-in gravity functionality.
-		//collision_world->setGravity(math::to_bullet_vector(g));
 	}
 
 	void PhysicsSystem::on_new_collider(const OnComponentAdd<CollisionComponent>& new_col)
@@ -328,7 +364,37 @@ namespace engine
 
 	void PhysicsSystem::update_collision_object(btCollisionObject& obj, const math::Matrix& m)
 	{
-		obj.setWorldTransform(math::to_bullet_matrix(m));
+		update_collision_object_transform(obj, m);
+	}
+
+	void PhysicsSystem::on_entity_destroyed(const OnEntityDestroyed& destruct)
+	{
+		auto& registry = world.get_registry();
+
+		auto entity = destruct.entity;
+
+		// Handle collision:
+		auto* col = registry.try_get<CollisionComponent>(entity);
+
+		if (col)
+		{
+			on_destroy_collider(entity, *col);
+		}
+	}
+
+	math::Vector PhysicsSystem::get_gravity() const
+	{
+		//return math::to_vector(collision_world->getGravity());
+
+		return gravity;
+	}
+
+	void PhysicsSystem::set_gravity(const math::Vector& g)
+	{
+		gravity = g;
+
+		// TODO: Determine if we need/want to use Bullet's built-in gravity functionality.
+		//collision_world->setGravity(math::to_bullet_vector(g));
 	}
 
 	void PhysicsSystem::retrieve_bullet_transforms()

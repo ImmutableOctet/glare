@@ -9,6 +9,8 @@
 #include <bullet/btBulletCollisionCommon.h>
 #include <bullet/btBulletDynamicsCommon.h>
 
+//#include <bullet/BulletDynamics/Dynamics/btRigidBody.h>
+
 namespace engine
 {
 	static void set_entity_for_collision_object(btCollisionObject& c_obj, Entity entity)
@@ -30,6 +32,11 @@ namespace engine
 		*/
 
 		return static_cast<Entity>(index_raw);
+	}
+
+	void update_collision_object_transform(btCollisionObject& obj, const math::Matrix& m)
+	{
+		obj.setWorldTransform(math::to_bullet_matrix(m));
 	}
 
 	void CollisionComponent::set_entity_for_collision_object(btCollisionObject& c_obj, Entity entity)
@@ -84,6 +91,9 @@ namespace engine
 			assert(!(group & CollisionGroup::DynamicGeometry));
 
 			flags |= CF_STATIC_OBJECT;
+
+			// Debugging related:
+			//flags |= CF_KINEMATIC_OBJECT;
 		}
 		else
 		{
@@ -92,7 +102,11 @@ namespace engine
 				// Note: `CF_DYNAMIC_OBJECT` is typically `0`, so this is effectively a no-op.
 				// (Added here for consistency; Bullet could change its bitfields, etc.)
 				flags |= CF_DYNAMIC_OBJECT;
+
+				// Ensure the static object flag isn't set.
+				flags &= ~CF_STATIC_OBJECT;
 			}
+
 
 			// TODO:
 			// This may be something we revisit at a later date.
@@ -132,6 +146,13 @@ namespace engine
 
 		c_obj.setCollisionFlags(static_cast<native_flags>(flags));
 
+		// Debugging related:
+		if (flags & CF_KINEMATIC_OBJECT)
+		{
+			// Disable deactivation of kinematic objects.
+			c_obj.setActivationState(DISABLE_DEACTIVATION);
+		}
+
 		return (flags & CF_KINEMATIC_OBJECT);
 	}
 
@@ -170,7 +191,12 @@ namespace engine
 		// `collision_shape` cannot be nullptr. (we take a pointer to indicate address permanency; see declaration)
 		assert(collision_shape);
 
-		auto rigid_body = std::make_unique<btRigidBody>(mass, this->motion_state.get(), collision_shape); // , localInertia=btVector3(0, 0, 0)
+		auto details = btRigidBody::btRigidBodyConstructionInfo(mass, this->motion_state.get(), collision_shape); // , localInertia=btVector3(0, 0, 0)
+
+		details.m_restitution = 0.8f;
+		details.m_friction = 0.5f;
+
+		auto rigid_body = std::make_unique<btRigidBody>(details);
 
 		auto obj_info = apply_collision_flags(*rigid_body, config, true, allow_kinematics);
 
@@ -287,6 +313,36 @@ namespace engine
 		return false;
 	}
 
+	bool CollisionComponent::is_dynamic() const
+	{
+		using enum btCollisionObject::CollisionFlags;
+
+		auto* collision = get_collision_object();
+
+		if (collision)
+		{
+			return (collision->getCollisionFlags() & CF_DYNAMIC_OBJECT); // && !is_static()
+		}
+
+		return false;
+	}
+
+	bool CollisionComponent::is_static() const
+	{
+		//return !is_dynamic();
+
+		using enum btCollisionObject::CollisionFlags;
+
+		auto* collision = get_collision_object();
+
+		if (collision)
+		{
+			return (collision->getCollisionFlags() & CF_STATIC_OBJECT); // && !is_dynamic();
+		}
+
+		return false;
+	}
+
 	bool CollisionComponent::has_collision_object() const
 	{
 		if (collision_object_in_monostate())
@@ -295,6 +351,23 @@ namespace engine
 		}
 
 		return (get_collision_object());
+	}
+
+	bool CollisionComponent::has_motion_state() const
+	{
+		return (get_motion_state());
+	}
+
+	void CollisionComponent::update_transform(const math::Matrix& tform)
+	{
+		auto* collision = get_collision_object();
+
+		if (!collision)
+		{
+			return;
+		}
+
+		update_collision_object_transform(*collision, tform);
 	}
 
 	CollisionComponent::Shape CollisionComponent::get_shape() const

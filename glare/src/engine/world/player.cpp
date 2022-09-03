@@ -35,9 +35,6 @@ namespace engine
 
 		std::string model_path;
 
-		float c_mass = 1.0f;
-		float c_gravity = 1.0f;
-
 		switch (character)
 		{
 			case engine::Character::Glare:
@@ -99,12 +96,7 @@ namespace engine
 
 		auto collision_data = resource_manager.generate_capsule_collision(1.0f, 2.0f); // get_collision_shape(CollisionShape::Capsule, 1.0f, 2.0f);
 
-		float mass = 1.0f;
-
-		//auto interaction_mask = CollisionGroup::All;
-		auto solid_mask = CollisionGroup::Actor;
-
-		attach_collision(world, player, collision_data.collision_shape, EntityType::Player, mass);
+		attach_collision(world, player, collision_data.collision_shape, EntityType::Player);
 
 		registry.emplace<PlayerState>(player, PlayerState::Action::Default, index);
 

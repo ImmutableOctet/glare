@@ -18,6 +18,8 @@
 #include "debug/debug_camera.hpp"
 #include "debug/debug_move.hpp"
 
+#include "physics/collision_component.hpp"
+
 #include <math/math.hpp>
 
 #include <util/json.hpp>
@@ -208,6 +210,14 @@ namespace engine
 		transform.apply(tform);
 
 		return transform;
+	}
+
+	void World::apply_transform_and_reset_collision(Entity entity, const math::TransformVectors& tform_data)
+	{
+		transform_and_reset_collision(entity, [&tform_data](Transform& tform)
+		{
+			tform.apply(tform_data);
+		});
 	}
 
 	Transform World::set_position(Entity entity, const math::Vector& position)
@@ -526,5 +536,47 @@ namespace engine
 		}
 
 		registry.destroy(entity);
+	}
+
+	// This exists purely to circumvent having a complete type definition for `CollisionComponent` in the header.
+	CollisionComponent* World::get_collision_component(Entity entity)
+	{
+		return registry.try_get<CollisionComponent>(entity);
+	}
+
+	bool World::_transform_and_reset_collision_store_active_state(CollisionComponent* collision)
+	{
+		bool collision_active = false;
+
+		// Null-check added for safety.
+		if (collision)
+		{
+			collision_active = collision->is_active();
+
+			collision->deactivate();
+		}
+
+		return collision_active;
+	}
+
+	void World::_transform_and_reset_collision_revert_active_state(CollisionComponent* collision, const math::Matrix& tform_matrix, bool collision_active)
+	{
+		// Null-check added for safety.
+		if (collision)
+		{
+			/*
+				This will trigger a `OnTransformChange` event, which
+				in turn *may* update the collision-object again.
+
+				Regardless, we still perform a transform update/assignment to
+				ensure that nothing is out-of-sync with the physics engine.
+			*/
+			collision->update_transform(tform_matrix);
+
+			if (collision_active)
+			{
+				collision->activate();
+			}
+		}
 	}
 }

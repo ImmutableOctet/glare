@@ -3,6 +3,8 @@
 //#include <cstdint>
 #include <types.hpp> // Global header.
 
+#include "collision_body_type.hpp"
+
 namespace engine
 {
 	enum class CollisionGroup : std::uint32_t // unsigned int
@@ -51,7 +53,12 @@ namespace engine
 
 	using CollisionMask = CollisionGroup;
 
+	// Retrieves the default collision-body-type associated with a specific `CollisionGroup`.
+	// (`group` must be an exact value; bitmasks are currently unsupported)
+	CollisionBodyType get_collision_body_type(CollisionGroup group);
+
 	// Determines whether a `CollisionGroup` should be kinematic by default.
 	// NOTE: As a rule of thumb, not all entities within these groups will have the same kinematic status.
+	// (`group` must be an exact value; bitmasks are currently unsupported)
 	bool collision_group_is_kinematic(CollisionGroup group);
 }
