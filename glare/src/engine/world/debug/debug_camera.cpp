@@ -1,7 +1,7 @@
 #include "debug_camera.hpp"
-#include "debug.hpp"
+#include "debug_move.hpp"
 
-#include <engine/free_look.hpp>
+#include <engine/world/behaviors/free_look.hpp>
 #include <engine/world/world.hpp>
 #include <engine/world/camera.hpp>
 
