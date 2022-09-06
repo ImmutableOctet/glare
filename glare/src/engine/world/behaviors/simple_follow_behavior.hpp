@@ -1,12 +1,17 @@
 #pragma once
 
-#include "entity.hpp"
+#include <engine/types.hpp>
 
 namespace engine
 {
-	struct SimpleFollowComponent
+	class World;
+	struct Transform;
+
+	// Applies a simple following behavior, moving an
+	// entity towards a targeted `leader` entity.
+	struct SimpleFollowBehavior
 	{
-		static void update(World& world);
+		static void on_update(World& world, float delta);
 
 		static constexpr float DEFAULT_FOLLOWING_DISTANCE = 5.0f;
 		static constexpr float DEFAULT_FOLLOW_SPEED = 0.1f;
@@ -18,8 +23,8 @@ namespace engine
 
 		// The ideal distance between this Entity and the leader.
 		float following_distance = DEFAULT_FOLLOWING_DISTANCE;
-		float follow_speed = DEFAULT_FOLLOW_SPEED;
-		float max_distance = DEFAULT_MAX_DISTANCE;
+		float follow_speed       = DEFAULT_FOLLOW_SPEED;
+		float max_distance       = DEFAULT_MAX_DISTANCE;
 
 		/*
 			When enabled, if the distance between this entity and the leader is > 'max_distance',
@@ -32,7 +37,7 @@ namespace engine
 
 		// If enabled, this entity will follow the leader.
 		bool following = true;
-
-		void apply(World& world, Entity entity, Transform& transform);
+		
+		void apply(World& world, Entity entity, Transform& transform, float delta);
 	};
 }

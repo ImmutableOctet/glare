@@ -3,17 +3,9 @@
 #include <engine/world/world.hpp>
 #include <engine/transform.hpp>
 
-#include <app/input/types.hpp>
-//#include <math/math.hpp>
-
-#include <app/input/keycodes.hpp>
-
-// Debugging related:
-#include <iostream>
-
 namespace engine
 {
-	void SpinBehavior::update(World& world)
+	void SpinBehavior::on_update(World& world, float delta)
 	{
 		auto& registry = world.get_registry();
 
@@ -25,10 +17,8 @@ namespace engine
 		});
 	}
 
-	void SpinBehavior::apply(World& world, Entity entity, Transform& transform)
+	void SpinBehavior::apply(World& world, Entity entity, Transform& transform, float delta)
 	{
-		auto delta = world.delta();
-
 		transform.rotate((spin_vector * delta), true);
 	}
 }

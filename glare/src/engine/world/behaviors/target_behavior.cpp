@@ -1,11 +1,12 @@
-#include "target_component.hpp"
-#include "world.hpp"
+#include "target_behavior.hpp"
 
+#include <engine/world/world.hpp>
+#include <engine/transform.hpp>
 #include <util/string.hpp>
 
 namespace engine
 {
-	TargetComponent::Mode TargetComponent::resolve_mode(const std::string& mode_name)
+	TargetBehavior::Mode TargetBehavior::resolve_mode(const std::string& mode_name)
 	{
 		const auto m = util::lowercase(mode_name);
 		
@@ -32,19 +33,19 @@ namespace engine
 		return Mode::Default;
 	}
 
-	void TargetComponent::update(World& world)
+	void TargetBehavior::on_update(World& world, float delta)
 	{
 		auto& registry = world.get_registry();
 
-		registry.view<TargetComponent>().each([&](auto entity, auto& target_comp) // TransformComponent, ...
+		registry.view<TargetBehavior>().each([&](auto entity, auto& target_comp) // TransformComponent, ...
 		{
 			auto transform = world.get_transform(entity);
 
-			target_comp.apply(world, entity, transform);
+			target_comp.apply(world, entity, transform, delta);
 		});
 	}
 
-	math::Quaternion TargetComponent::look_at(Transform& transform, Transform& target_transform, float delta)
+	math::Quaternion TargetBehavior::look_at(Transform& transform, Transform& target_transform, float delta)
 	{
 		//auto dest_m = Transform::orientation(transform.get_position(), target_transform.get_position());
 		//auto dest_q = glm::quat_cast(dest_m);
@@ -61,12 +62,12 @@ namespace engine
 		return q;
 	}
 
-	math::RotationMatrix TargetComponent::look_at_immediate(Transform& transform, Transform& target_transform)
+	math::RotationMatrix TargetBehavior::look_at_immediate(Transform& transform, Transform& target_transform)
 	{
 		return transform.look_at(target_transform);
 	}
 
-	float TargetComponent::look_at_yaw(Transform& transform, Transform& target_transform, float delta)
+	float TargetBehavior::look_at_yaw(Transform& transform, Transform& target_transform, float delta)
 	{
 		auto src_dir = transform.get_direction_vector();
 		auto dest_dir = (target_transform.get_position() - transform.get_position());
@@ -79,7 +80,7 @@ namespace engine
 		return yaw;
 	}
 
-	float TargetComponent::look_at_yaw_immediate(Transform& transform, Transform& target_transform)
+	float TargetBehavior::look_at_yaw_immediate(Transform& transform, Transform& target_transform)
 	{
 		auto dir = (target_transform.get_position() - transform.get_position());
 		auto yaw = math::direction_to_yaw(dir);
@@ -89,7 +90,7 @@ namespace engine
 		return yaw;
 	}
 
-	void TargetComponent::apply(World& world, Entity entity, Transform& transform)
+	void TargetBehavior::apply(World& world, Entity entity, Transform& transform, float delta)
 	{
 		if ((!enabled) || (target == null))
 		{
@@ -98,7 +99,6 @@ namespace engine
 
 		//auto up = world.get_up_vector();
 
-		auto delta = world.delta();
 		auto& registry = world.get_registry();
 
 		auto target_transform = world.get_transform(target);

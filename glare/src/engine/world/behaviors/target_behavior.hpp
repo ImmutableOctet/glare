@@ -1,12 +1,13 @@
 #pragma once
 
-#include "entity.hpp"
+#include <engine/types.hpp>
 
 namespace engine
 {
 	class World;
+	struct Transform;
 
-	struct TargetComponent
+	struct TargetBehavior
 	{
 		enum class Mode : std::uint8_t
 		{
@@ -21,7 +22,7 @@ namespace engine
 		
 		static Mode resolve_mode(const std::string& mode_name);
 
-		static void update(World& world);
+		static void on_update(World& world, float delta);
 
 		math::Quaternion look_at(Transform& transform, Transform& target_transform, float delta);
 		math::RotationMatrix look_at_immediate(Transform& transform, Transform& target_transform);
@@ -29,7 +30,7 @@ namespace engine
 		float look_at_yaw(Transform& transform, Transform& target_transform, float delta);
 		float look_at_yaw_immediate(Transform& transform, Transform& target_transform);
 
-		void apply(World& world, Entity entity, Transform& transform);
+		void apply(World& world, Entity entity, Transform& transform, float delta);
 
 		Entity target;
 		
@@ -38,6 +39,6 @@ namespace engine
 		Mode mode = Mode::Default;
 
 		bool allow_roll = true;
-		bool enabled = true;
+		bool enabled    = true;
 	};
 }

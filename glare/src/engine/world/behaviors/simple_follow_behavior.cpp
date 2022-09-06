@@ -1,33 +1,33 @@
-#include "follow_component.hpp"
+#include "simple_follow_behavior.hpp"
 
-#include "world.hpp"
-#include "physics/physics_component.hpp"
+#include <engine/transform.hpp>
+#include <engine/world/world.hpp>
+#include <engine/world/physics/physics_component.hpp>
 
 #include <math/math.hpp>
 #include <cmath>
 
 namespace engine
 {
-	void SimpleFollowComponent::update(World& world)
+	void SimpleFollowBehavior::on_update(World& world, float delta)
 	{
 		auto& registry = world.get_registry();
 
-		registry.view<SimpleFollowComponent>().each([&](auto entity, auto& follow_comp) // TransformComponent, ...
+		registry.view<SimpleFollowBehavior>().each([&](auto entity, auto& follow_comp) // TransformComponent, ...
 		{
 			auto transform = world.get_transform(entity);
 
-			follow_comp.apply(world, entity, transform);
+			follow_comp.apply(world, entity, transform, delta);
 		});
 	}
 
-	void SimpleFollowComponent::apply(World& world, Entity entity, Transform& transform)
+	void SimpleFollowBehavior::apply(World& world, Entity entity, Transform& transform, float delta)
 	{
 		if (leader == null)
 		{
 			return;
 		}
 
-		auto delta = world.delta();
 		auto& registry = world.get_registry();
 
 		auto leader_transform = world.get_transform(leader);

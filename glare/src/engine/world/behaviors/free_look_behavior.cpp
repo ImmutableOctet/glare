@@ -1,7 +1,7 @@
-#include "free_look.hpp"
+#include "free_look_behavior.hpp"
 
-#include "world/world.hpp"
-#include "transform.hpp"
+#include <engine/world/world.hpp>
+#include <engine/transform.hpp>
 
 #include <app/input/types.hpp>
 //#include <math/math.hpp>
@@ -9,11 +9,11 @@
 
 namespace engine
 {
-	void FreeLook::update(World& world, const MouseState& mouse_state)
+	void FreeLookBehavior::on_mouse(World& world, const MouseState& mouse_state)
 	{
 		auto& registry = world.get_registry();
 
-		registry.view<FreeLook>().each([&](auto entity, auto& free_look)
+		registry.view<FreeLookBehavior>().each([&](auto entity, auto& free_look)
 		{
 			auto transform = world.get_transform(entity);
 
@@ -21,7 +21,7 @@ namespace engine
 		});
 	}
 
-	void FreeLook::apply(World& world, Entity entity, Transform& transform, const FreeLook::MouseState& input)
+	void FreeLookBehavior::apply(World& world, Entity entity, Transform& transform, const FreeLookBehavior::MouseState& input)
 	{
 		auto sens = this->sensitivity;
 

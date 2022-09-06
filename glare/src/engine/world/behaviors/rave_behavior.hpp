@@ -1,15 +1,16 @@
 #pragma once
 
-#include "entity.hpp"
+#include <engine/types.hpp>
 
 namespace engine
 {
 	class World;
 	struct ModelComponent;
 
-	struct RaveComponent
+	// Cyclically changes the color of an entity's attached model.
+	struct RaveBehavior
 	{
-		static void update(World& world);
+		static void on_update(World& world, float delta);
 
 		bool enabled = true;
 
