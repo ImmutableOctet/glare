@@ -1,4 +1,4 @@
-#include "spin_component.hpp"
+#include "spin_behavior.hpp"
 
 #include <engine/world/world.hpp>
 #include <engine/transform.hpp>
@@ -13,7 +13,7 @@ namespace engine
 		{
 			auto transform = world.get_transform(entity);
 
-			spin.apply(world, entity, transform);
+			spin.apply(world, entity, transform, delta);
 		});
 	}
 
