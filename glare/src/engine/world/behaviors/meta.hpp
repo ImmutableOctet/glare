@@ -64,7 +64,7 @@ namespace engine
                 return;
             }
 
-            BehaviorType::on_mouse(*world, world->delta(), mouse_event.mouse_state);
+            BehaviorType::on_mouse(*world, world->delta(), *mouse_event.mouse_state);
         }
 
         template <typename BehaviorType>
@@ -77,7 +77,7 @@ namespace engine
                 return;
             }
 
-            BehaviorType::on_keyboard(*world, world->delta(), keyboard_event.keyboard_state);
+            BehaviorType::on_keyboard(*world, world->delta(), *keyboard_event.keyboard_state);
         }
     }
 }

@@ -7,6 +7,12 @@
 #include <engine/world/render/deferred_render_pipeline.hpp>
 #include <engine/world/render/render_scene.hpp>
 
+// TODO: Automate behavior registration in some way.
+// (May also be applicable to systems)
+// Behaviors:
+#include <engine/world/behaviors/free_look_behavior.hpp>
+#include <engine/world/behaviors/debug_move_behavior.hpp>
+
 #include <utility>
 
 namespace game
@@ -70,6 +76,9 @@ namespace game
 		// Default systems:
 		system<engine::PhysicsSystem>(world);
 		system<engine::AnimationSystem>(world);
+
+		behavior<engine::FreeLookBehavior>();
+		behavior<engine::DebugMoveBehavior>();
 
 		//behavior<engine::TargetBehavior>();
 		//behavior<engine::BillboardBehavior>();
