@@ -437,6 +437,7 @@
     <ClInclude Include="src\engine\world\behaviors\meta.hpp" />
     <ClInclude Include="src\util\static_member_function.hpp" />
     <ClInclude Include="src\engine\input_events.hpp" />
+    <ClInclude Include="src\engine\system_manager.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\shaders\light_box.frag">
@@ -843,6 +844,7 @@
     <ClCompile Include="src\engine\world\physics\collision_group.cpp" />
     <ClCompile Include="src\engine\world\behaviors\meta.cpp" />
     <ClCompile Include="src\engine\service.cpp" />
+    <ClCompile Include="src\engine\system_manager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />

@@ -83,6 +83,8 @@ namespace engine
 
 			virtual ~World();
 
+			// TODO: Re-route most of these template functions to their `Service` equivalents.
+
 			template <typename EventType, auto fn, typename obj_type>
 			inline void register_event(obj_type& obj)
 			{

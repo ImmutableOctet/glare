@@ -260,6 +260,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\action.hpp" />
     <ClInclude Include="src\engine\bone_component.hpp" />
     <ClInclude Include="src\engine\input_events.hpp" />
+    <ClInclude Include="src\engine\system_manager.hpp" />
     <ClInclude Include="src\engine\world\animation\animation_events.hpp" />
     <ClInclude Include="src\engine\world\behaviors\behaviors.hpp" />
     <ClInclude Include="src\engine\world\behaviors\meta.hpp" />
@@ -423,6 +424,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\app\timer.cpp" />
     <ClCompile Include="src\app\window.cpp" />
     <ClCompile Include="src\engine\service.cpp" />
+    <ClCompile Include="src\engine\system_manager.cpp" />
     <ClCompile Include="src\engine\world\behaviors\meta.cpp" />
     <ClCompile Include="src\engine\world\physics\collision_component.cpp" />
     <ClCompile Include="src\engine\config.cpp" />

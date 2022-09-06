@@ -52,9 +52,12 @@ namespace engine
 
 	void PhysicsSystem::on_subscribe(World& world)
 	{
+		auto& registry = world.get_registry();
+
 		world.register_event<OnTransformChange, &PhysicsSystem::on_transform_change>(*this);
-		world.register_event<OnEntityDestroyed, &PhysicsSystem::on_entity_destroyed>(*this);
-		world.register_event<OnComponentAdd<CollisionComponent>, &PhysicsSystem::on_new_collider>(*this);
+
+		registry.on_construct<CollisionComponent>().connect<&PhysicsSystem::on_create_collider>(*this);
+		registry.on_destroy<CollisionComponent>().connect<&PhysicsSystem::on_destroy_collider>(*this);
 	}
 
 	// TODO: We need to look at `OnTransformChange`/`on_transform_change` and how it relates to the collision side of this routine.
@@ -306,15 +309,11 @@ namespace engine
 		transform.move(movement);
 	}
 
-	void PhysicsSystem::on_new_collider(const OnComponentAdd<CollisionComponent>& new_col)
+	void PhysicsSystem::on_create_collider(Registry& registry, Entity entity)
 	{
 		//auto& world = new_col.world;
-		auto entity = new_col.entity;
 
 		auto transform = world.get_transform(entity);
-
-		auto& registry = world.get_registry();
-
 		auto& component = registry.get<CollisionComponent>(entity);
 
 		bool object_found = component.on_collision_object
@@ -340,21 +339,30 @@ namespace engine
 		);
 	}
 
-	void PhysicsSystem::on_destroy_collider(Entity entity, CollisionComponent& col)
+	void PhysicsSystem::on_destroy_collider(Registry& registry, Entity entity)
 	{
-		auto* collision_obj = col.get_collision_object();
+		auto* component = registry.try_get<CollisionComponent>(entity);
 
-		if (collision_obj)
+		if (!component)
 		{
-			/*
-				Bullet handles checks for derived collision-object types and handles them
-				appropriately, so we only need to call `removeCollisionObject` here.
-			
-				e.g. if the object is actually of type `btRigidBody`, Bullet
-				will call `removeRigidBody` automatically.
-			*/
-			collision_world->removeCollisionObject(collision_obj);
+			return;
 		}
+
+		auto* collision_obj = component->get_collision_object();
+
+		if (!collision_obj)
+		{
+			return;
+		}
+
+		/*
+			Bullet handles checks for derived collision-object types and handles them
+			appropriately, so we only need to call `removeCollisionObject` here.
+			
+			e.g. if the object is actually of type `btRigidBody`, Bullet
+			will call `removeRigidBody` automatically.
+		*/
+		collision_world->removeCollisionObject(collision_obj);
 	}
 
 	void PhysicsSystem::update_collision_object(CollisionComponent& col, Transform& transform) // World& world, Entity entity
@@ -377,21 +385,6 @@ namespace engine
 	void PhysicsSystem::update_collision_object(btCollisionObject& obj, const math::Matrix& m)
 	{
 		update_collision_object_transform(obj, m);
-	}
-
-	void PhysicsSystem::on_entity_destroyed(const OnEntityDestroyed& destruct)
-	{
-		auto& registry = world.get_registry();
-
-		auto entity = destruct.entity;
-
-		// Handle collision:
-		auto* col = registry.try_get<CollisionComponent>(entity);
-
-		if (col)
-		{
-			on_destroy_collider(entity, *col);
-		}
 	}
 
 	math::Vector PhysicsSystem::get_gravity() const

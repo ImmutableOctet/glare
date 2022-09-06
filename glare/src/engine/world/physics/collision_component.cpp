@@ -423,10 +423,6 @@ namespace engine
 		#ifndef NDEBUG
 			c_obj->setUserPointer(&component);
 		#endif
-		
-		// TODO: Hook into entt's Entity creation, destruction and component-assignment events to better handle this.
-		// At the moment, we just trigger the event immediately:
-		world.event<OnComponentAdd<CollisionComponent>>(entity); // Entity destruction currently handles this event manually as well. (needs to be changed)
 
 		return entity;
 	}

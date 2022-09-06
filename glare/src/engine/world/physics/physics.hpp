@@ -43,13 +43,11 @@ namespace engine
 
 			void on_transform_change(const OnTransformChange& tform_change);
 			
-			void on_new_collider(const OnComponentAdd<CollisionComponent>& new_col);
-			void on_destroy_collider(Entity entity, CollisionComponent& col); // const CollisionComponent&
+			void on_create_collider(Registry& registry, Entity entity);
+			void on_destroy_collider(Registry& registry, Entity entity); // const CollisionComponent&
 
 			void update_collision_object(CollisionComponent& col, Transform& transform);
 			void update_collision_object(btCollisionObject& obj, Transform& transform);
-
-			void on_entity_destroyed(const OnEntityDestroyed& destruct);
 
 			math::Vector get_gravity() const;
 			void set_gravity(const math::Vector& g);
