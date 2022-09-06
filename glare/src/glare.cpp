@@ -55,6 +55,7 @@ namespace glare
 
 		// TODO: Look into this again.
 		world.register_event<app::input::KeyboardState, &Glare::on_user_keyboard_input>(*this);
+		world.register_event<app::input::MouseState, &Glare::on_user_mouse_input>(*this);
 
 		// Normally, we lock when starting the game, but don't here for testing purposes.
 		//input.get_mouse().lock();
@@ -93,6 +94,8 @@ namespace glare
 
 	void Glare::on_user_keyboard_input(const app::input::KeyboardState& keyboard)
 	{
+		//print("Keyboard input detected.");
+
 		//std::string_view target_obj = engine::DEFAULT_PLAYER_NAME;
 
 		//auto camera_t = world.get_transform(world.get_camera());
@@ -104,17 +107,17 @@ namespace glare
 		//float delta = world.delta();
 	}
 
+	void Glare::on_user_mouse_input(const app::input::MouseState& mouse)
+	{
+		if (mouse.left)
+		{
+			print("Hello world");
+		}
+	}
+
 	void Glare::on_update(float delta)
 	{
 		engine::position_in_titlebar(*this, world.get_camera(), std::format("FPS: {} | ", graphics.framerate));
-
-		auto mouse = input.get_mouse();
-		auto mouse_state = mouse.peek();
-
-		if (mouse_state.left)
-		{
-			std::cout << "Hello world\n";
-		}
 	}
 
 	void Glare::on_render(RenderState& render_state)

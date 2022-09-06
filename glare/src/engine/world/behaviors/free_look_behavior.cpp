@@ -9,7 +9,7 @@
 
 namespace engine
 {
-	void FreeLookBehavior::on_mouse(World& world, const MouseState& mouse_state)
+	void FreeLookBehavior::on_mouse(World& world, float delta, const MouseState& mouse_state)
 	{
 		auto& registry = world.get_registry();
 

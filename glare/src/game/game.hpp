@@ -11,6 +11,7 @@
 #include <graphics/types.hpp>
 
 #include <engine/config.hpp>
+#include <engine/input_events.hpp>
 #include <engine/resource_manager/resource_manager.hpp>
 
 #include <engine/world/world.hpp>
@@ -28,6 +29,9 @@ namespace graphics
 namespace engine
 {
 	struct WorldRenderState;
+
+	//struct OnMouseState;
+	//struct OnKeyboardState;
 }
 
 namespace game
@@ -102,6 +106,16 @@ namespace game
 				if constexpr (engine::HAS_STATIC_MEMBER_FUNCTION(BehaviorType, on_update))
 				{
 					world.register_free_function<engine::OnServiceUpdate, engine::behavior_impl::bridge_on_update<BehaviorType>>();
+				}
+
+				if constexpr (engine::HAS_STATIC_MEMBER_FUNCTION(BehaviorType, on_mouse))
+				{
+					world.register_free_function<engine::OnMouseState, engine::behavior_impl::bridge_on_mouse<BehaviorType>>();
+				}
+
+				if constexpr (engine::HAS_STATIC_MEMBER_FUNCTION(BehaviorType, on_keyboard))
+				{
+					world.register_free_function<engine::OnKeyboardState, engine::behavior_impl::bridge_on_keyboard<BehaviorType>>();
 				}
 			}
 

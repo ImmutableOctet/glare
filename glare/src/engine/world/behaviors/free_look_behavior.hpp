@@ -20,7 +20,7 @@ namespace engine
 	{
 		using MouseState = app::input::MouseState;
 
-		static void on_mouse(World& world, const MouseState& mouse_state);
+		static void on_mouse(World& world, float delta, const MouseState& mouse_state);
 
 		//int x = 0;
 		//int y = 0;

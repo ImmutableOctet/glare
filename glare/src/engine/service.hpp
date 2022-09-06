@@ -8,6 +8,12 @@
 #include <utility>
 #include <functional>
 
+namespace app::input
+{
+	struct MouseState;
+	struct KeyboardState;
+}
+
 namespace engine
 {
 	class Service
@@ -15,11 +21,8 @@ namespace engine
 		protected:
 			EventHandler event_handler;
 		public:
-			Service() = default;
+			Service(bool register_input_events=true);
 			Service(Service&&) = default;
-
-			inline Service(EventHandler&& event_handler)
-				: event_handler(std::move(event_handler)) {}
 
 			virtual ~Service() {};
 
@@ -115,5 +118,11 @@ namespace engine
 
 				event_handler.update();
 			}
+		protected:
+			// Input re-submission callbacks. -- These routines produce additional
+			// events indicating that this service accepted an input.
+			// For more details, see `input_events`.
+			void on_mouse_input(const app::input::MouseState& mouse);
+			void on_keyboard_input(const app::input::KeyboardState& keyboard);
 	};
 }
