@@ -17,6 +17,8 @@ namespace engine
 		#endif
 	}
 
+	WorldSystem::~WorldSystem() {}
+
 	void WorldSystem::update(const OnServiceUpdate& update_event)
 	{
 		auto* world = resolve_world(update_event);

@@ -1,5 +1,8 @@
 #include "game.hpp"
 
+#include <engine/world/physics/physics.hpp>
+#include <engine/world/animation/animation.hpp>
+
 #include <engine/world/render/world_render_state.hpp>
 #include <engine/world/render/deferred_render_pipeline.hpp>
 #include <engine/world/render/render_scene.hpp>
@@ -25,8 +28,6 @@ namespace game
 		
 		resource_manager(graphics.context),
 		world(cfg, resource_manager, update_rate),
-
-		physics(world),
 
 		// May split this out in body of constructor. -- This would
 		// allow for a different renderer (forward, etc.)
@@ -65,6 +66,22 @@ namespace game
 				)
 			);
 		}
+
+		// Default systems:
+		system<engine::PhysicsSystem>(world);
+		system<engine::AnimationSystem>(world);
+
+		//behavior<engine::TargetBehavior>();
+		//behavior<engine::BillboardBehavior>();
+		/*
+		// TODO: Look into which behaviors we want to enable by default.
+		// TODO: Look into auto-detecting construction of certain component types and initializing behaviors/systems automatically.
+		system<engine::SpinBehavior>(world);
+		system<engine::TargetComponent>(world);
+		system<engine::SimpleFollowComponent>(world);
+		system<engine::BillboardBehavior>(world);
+		system<engine::RaveComponent>(world);
+		*/
 	}
 
 	void Game::set_title(std::string_view title)

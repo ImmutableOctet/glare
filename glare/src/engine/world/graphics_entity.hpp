@@ -1,12 +1,11 @@
 #pragma once
 
+//#include "types.hpp"
 #include <types.hpp>
-
 #include <graphics/types.hpp>
 
-#include "physics/collision_group.hpp"
-
 #include "entity.hpp"
+#include "physics/collision_group.hpp"
 
 #include <optional>
 #include <string>

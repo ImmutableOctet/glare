@@ -1,19 +1,26 @@
 #include "animation_system.hpp"
-#include "animation.hpp"
-#include "world.hpp"
+#include "animation_events.hpp"
+#include "animator.hpp"
 
-#include <engine/events/events.hpp>
+#include <engine/bone_component.hpp>
+
 #include <engine/relationship.hpp>
+#include <engine/world/world.hpp>
 #include <engine/resource_manager/resource_manager.hpp>
 
 #include <graphics/animation.hpp>
-
 
 #include <cmath>
 
 namespace engine
 {
-	void AnimationSystem::subscribe(Service& svc)
+	AnimationSystem::AnimationSystem(World& world)
+		//: world(world)
+	{
+		world.subscribe(*this);
+	}
+
+	void AnimationSystem::on_subscribe(World& world)
 	{
 		//world.register_event<...>(*this);
 	}
@@ -106,7 +113,7 @@ namespace engine
 		return animate_bones(world, inv_root_matrix, animator, current_animation, relationship);
 	}
 
-	void AnimationSystem::update(World& world, float delta_time)
+	void AnimationSystem::on_update(World& world, float delta_time)
 	{
 		//return;
 

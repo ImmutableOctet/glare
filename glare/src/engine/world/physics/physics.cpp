@@ -93,6 +93,11 @@ namespace engine
 			retrieve_bullet_transforms();
 		#endif
 
+		resolve_intersections();
+	}
+
+	void PhysicsSystem::resolve_intersections()
+	{
 		auto& dispatcher = *collision_dispatcher;
 
 		auto manifold_count = dispatcher.getNumManifolds();
@@ -102,7 +107,7 @@ namespace engine
 			return;
 		}
 
-		print("manifold_count: {}", manifold_count);
+		//print("manifold_count: {}", manifold_count);
 
 		for (auto i = 0; i < manifold_count; i++)
 		{
@@ -116,7 +121,9 @@ namespace engine
 			auto a_ent = get_entity_from_collision_object(*a);
 			auto b_ent = get_entity_from_collision_object(*b);
 
-			print("{} ({}) within bounds of {} ({})", static_cast<entt::id_type>(a_ent), world.get_name(a_ent), static_cast<entt::id_type>(b_ent), world.get_name(b_ent));
+			//print("{} ({}) within bounds of {} ({})", static_cast<entt::id_type>(a_ent), world.get_name(a_ent), static_cast<entt::id_type>(b_ent), world.get_name(b_ent));
+
+			//world.event<OnAABBOverlap>();
 
 			if (numContacts == 0)
 			{
@@ -147,38 +154,43 @@ namespace engine
 
 				///*
 
-				print("Camera is at: {}", math::to_vector(a->getWorldTransform().getOrigin()));
+				//print("Camera is at: {}", math::to_vector(a->getWorldTransform().getOrigin()));
+				//print("{} ({}) collision with {} ({})", static_cast<entt::id_type>(a_ent), world.get_name(a_ent), static_cast<entt::id_type>(b_ent), world.get_name(b_ent));
 
-				print("{} ({}) collision with {} ({})", static_cast<entt::id_type>(a_ent), world.get_name(a_ent), static_cast<entt::id_type>(b_ent), world.get_name(b_ent));
-
-				math::Vector v = {};
+				math::Vector correction = {};
 
 				auto a_tranform = world.get_transform(a_ent);
-				auto a_position = a_tranform.get_position();
+				//auto a_position = a_tranform.get_position();
 
 				for (int j = 0; j < numContacts; j++)
 				{
 					btManifoldPoint& pt = contact->getContactPoint(j);
 
-					//if (pt.getDistance() < 0.f)
+					//auto a_point = math::to_vector(pt.getPositionWorldOnA());
+					//auto b_point = math::to_vector(pt.getPositionWorldOnB());
+					auto distance = pt.getDistance(); // Equivalent to: glm::length((b_point - a_point));
+
+					if (distance < 0.0f)
 					{
-						auto ptA = math::to_vector(pt.getPositionWorldOnA());
-						auto ptB = math::to_vector(pt.getPositionWorldOnB());
+						//auto a_point_from_center = (a_point - a_position);
+						//auto b_point_from_a_center = (b_point - a_position);
+						//auto b_point_from_a_point = (b_point - a_point);
 
-						//auto contact_dist = -glm::normalize(ptA - ptB) * 1.005f * math::to_vector(pt.m_normalWorldOnB); // glm::normalize(math::to_vector(pt.m_normalWorldOnB));
+						auto normal = math::to_vector(pt.m_normalWorldOnB); // glm::normalize(...);
 
+						//auto push_back_len = glm::length(b_point_from_a_center);
+						//auto push_back_len = glm::length(b_point_from_a_point);
+						auto length = -distance; // * 1.5f;
+						//length = std::max(length, 0.5f);
 
-						//const btVector3& normalOnB = pt.m_normalWorldOnB;
-
-						auto contact_dist = (a_position - math::to_vector(ptA));
-
-						v += contact_dist;
+						correction += (normal * length);
 					}
 				}
 
-				v /= numContacts;
+				// Average the correction-amount by the number of contacts.
+				correction /= numContacts;
 
-				a_tranform.move(v);
+				a_tranform.move(correction);
 
 				//*/
 			}

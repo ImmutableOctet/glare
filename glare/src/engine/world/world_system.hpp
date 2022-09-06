@@ -16,6 +16,8 @@ namespace engine
 	class WorldSystem
 	{
 		public:
+			virtual ~WorldSystem();
+
 			void subscribe(World& world);
 			void unsubscribe(World& world);
 		private:
@@ -23,7 +25,9 @@ namespace engine
 		protected:
 			// Called by `subscribe` after default subscription actions are performed.
 			virtual void on_subscribe(World& world) = 0;
-			virtual void on_unsubscribe(World& world);
 			virtual void on_update(World& world, float delta) = 0;
+
+			// Empty implementation provided by default.
+			virtual void on_unsubscribe(World& world);
 	};
 }

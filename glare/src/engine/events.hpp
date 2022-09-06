@@ -1,23 +1,16 @@
 #pragma once
 
-#include <string>
-#include <optional>
-#include <filesystem>
+/*
+	Standard game engine event types.
 
-#include <engine/types.hpp>
-#include "input.hpp"
+	System-specific event types can usually be found
+	in `events` submodules for each system.
+*/
 
-namespace graphics
-{
-	struct Animation;
-}
+#include "types.hpp"
 
 namespace engine
 {
-	class World;
-	struct Animator;
-	struct TransformComponent;
-
 	//template <EntityType type>
 	struct OnEntityCreated
 	{
@@ -61,61 +54,28 @@ namespace engine
 		OnComponentAdd& operator=(OnComponentAdd&&) = default;
 		*/
 
-		//World& world;
+		//Service& service;
 		//ComponentType& component;
 		Entity entity;
 	};
 
+	/*
+		Helper template for simple "this entity changed" events, where the
+		relevant data is essentially the statically associated type.
+
+		e.g. `OnTransformChange` is just `OnComponentChange<TransformComponent>`,
+		since all of the needed data can be found in the component itself.
+	*/
+	/*
+	// TODO: Revisit this concept.
 	template <typename ComponentType>
 	struct OnComponentChange
 	{
 		using Type = ComponentType;
 
-		//World& world;
+		//Service& service;
 		//ComponentType& component;
 		Entity entity;
 	};
-
-	// Triggered any time an animation completes.
-	// (Happens repeatedly in the case of looping animations)
-	struct OnAnimationComplete
-	{
-		Entity entity;
-
-		const Animator*  animator;
-		const Animation* animation;
-	};
-
-	struct OnAnimationChange
-	{
-		Entity entity;
-
-		const Animator*  animator;
-		const Animation* prev_animation;
-		const Animation* current_animation;
-
-		float transition_length = 0.0f;
-	};
-
-	// Executed each tick/frame an entity's animation updates.
-	struct OnAnimationFrame
-	{
-		Entity entity;
-
-		float current_time;
-		float prev_time;
-
-		const Animator*  animator;
-		const Animation* current_animation;
-
-		std::uint16_t bones_changed;
-	};
-
-	struct OnStageLoaded
-	{
-		Entity stage;
-		std::optional<std::filesystem::path> path = std::nullopt;
-	};
-
-	using OnTransformChange = OnComponentChange<TransformComponent>;
+	*/
 }

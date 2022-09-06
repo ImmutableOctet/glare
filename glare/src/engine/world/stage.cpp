@@ -7,15 +7,16 @@
 #include "player.hpp"
 #include "graphics_entity.hpp"
 
-#include "target_component.hpp"
-#include "follow_component.hpp"
-#include "billboard_behavior.hpp"
-#include "rave_component.hpp"
-#include "spin_component.hpp"
-
 #include "physics/collision_component.hpp"
 
+// Behaviors supported in stage format:
+#include "behaviors/spin_behavior.hpp"
+#include "behaviors/billboard_behavior.hpp"
+#include "behaviors/simple_follow_behavior.hpp"
+
+// TODO: Revisit whether debug functionality should be included here.
 #include "debug/debug.hpp"
+#include "behaviors/debug_move_behavior.hpp"
 
 #include <engine/config.hpp>
 #include <engine/name_component.hpp>
@@ -29,7 +30,10 @@
 #include <regex>
 
 // Debugging related:
-#include <iostream>
+#include "behaviors/rave_behavior.hpp"
+
+// Not sure if this is actually going to be a standard include or not.
+#include "behaviors/target_behavior.hpp"
 
 namespace engine
 {
@@ -69,7 +73,7 @@ namespace engine
 
 		if (is_debug_camera)
 		{
-			debug::attach_debug_camera_features(world, camera);
+			attach_debug_camera_features(world, camera);
 		}
 
 		auto target_player = util::get_value<PlayerIndex>(camera_cfg, "player", PlayerState::NoPlayer);
@@ -84,8 +88,8 @@ namespace engine
 
 				if ((!is_debug_camera))
 				{
-					registry.emplace<TargetComponent>(camera, player, 0.5f); // ((is_debug_camera) ? 0.0f : 0.5f)
-					registry.emplace<SimpleFollowComponent>(camera, player, 25.0f, 0.7f, 100.0f, true);
+					registry.emplace<TargetBehavior>(camera, player, 0.5f); // ((is_debug_camera) ? 0.0f : 0.5f)
+					registry.emplace<SimpleFollowBehavior>(camera, player, 25.0f, 0.7f, 100.0f, true);
 				}
 			}
 		}
@@ -209,15 +213,17 @@ namespace engine
 
 		assert(target != null);
 
-		auto following_distance = util::get_value(data, "following_distance", SimpleFollowComponent::DEFAULT_FOLLOWING_DISTANCE);
-		auto follow_speed = util::get_value(data, "follow_speed", SimpleFollowComponent::DEFAULT_FOLLOW_SPEED);
-		auto max_distance = util::get_value(data, "max_distance", SimpleFollowComponent::DEFAULT_MAX_DISTANCE);
-		auto force_catch_up = util::get_value(data, "force_catch_up", SimpleFollowComponent::DEFAULT_FORCE_CATCH_UP);
+		auto following_distance = util::get_value(data, "following_distance", SimpleFollowBehavior::DEFAULT_FOLLOWING_DISTANCE);
+		auto follow_speed = util::get_value(data, "follow_speed", SimpleFollowBehavior::DEFAULT_FOLLOW_SPEED);
+		auto max_distance = util::get_value(data, "max_distance", SimpleFollowBehavior::DEFAULT_MAX_DISTANCE);
+		auto force_catch_up = util::get_value(data, "force_catch_up", SimpleFollowBehavior::DEFAULT_FORCE_CATCH_UP);
 
-		registry.emplace<SimpleFollowComponent>(obj, target, following_distance, follow_speed, max_distance, force_catch_up);
+		registry.emplace<SimpleFollowBehavior>(obj, target, following_distance, follow_speed, max_distance, force_catch_up);
 
 		registry.emplace<BillboardBehavior>(obj);
-		registry.emplace<RaveComponent>(obj);
+
+		// Debugging related:
+		registry.emplace<RaveBehavior>(obj);
 
 		return obj;
 	}

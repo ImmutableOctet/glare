@@ -8,8 +8,9 @@
 #include <engine/model_component.hpp>
 #include <engine/name_component.hpp>
 #include <engine/bone_component.hpp>
-#include <engine/world/animation.hpp>
 #include <engine/relationship.hpp>
+
+#include <engine/world/animation/animation.hpp>
 
 #include <graphics/model.hpp>
 #include <graphics/shader.hpp>

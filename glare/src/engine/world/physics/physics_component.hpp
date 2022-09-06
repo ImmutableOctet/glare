@@ -6,6 +6,7 @@ namespace engine
 {
 	class World;
 
+	// TODO: Rename this component to something more fitting.
 	struct PhysicsComponent
 	{
 		using Flags = MotionFlags;

@@ -9,15 +9,6 @@
 //#include "animator.hpp"
 #include "graphics_entity.hpp"
 
-#include "spin_component.hpp"
-#include "target_component.hpp"
-#include "follow_component.hpp"
-#include "billboard_behavior.hpp"
-#include "rave_component.hpp"
-
-#include "debug/debug_camera.hpp"
-#include "debug/debug_move.hpp"
-
 #include "physics/collision_component.hpp"
 
 #include <math/math.hpp>
@@ -34,13 +25,12 @@
 
 #include <engine/config.hpp>
 #include <engine/resource_manager/resource_manager.hpp>
-#include <engine/free_look.hpp>
 #include <engine/relationship.hpp>
+
 #include <engine/type_component.hpp>
 #include <engine/bone_component.hpp>
+#include <engine/name_component.hpp>
 
-//#include <engine/name_component.hpp>
-#include <engine/components.hpp>
 #include <app/input/input.hpp>
 
 #include <algorithm>
@@ -48,23 +38,17 @@
 #include <utility>
 //#include <filesystem>
 
-#include <bullet/btBulletCollisionCommon.h>
-
-// Debugging related:
-#include <iostream>
+//#include <bullet/btBulletCollisionCommon.h>
 
 namespace engine
 {
 	World::World(Config& config, ResourceManager& resource_manager, UpdateRate update_rate)
 		: config(config), resource_manager(resource_manager), delta_time(update_rate)
 	{
-		register_event<app::input::MouseState,    &World::on_mouse_input>();
-		register_event<app::input::KeyboardState, &World::on_keyboard_input>();
 		register_event<OnTransformChange, &World::on_transform_change>();
 		register_event<OnEntityDestroyed, &World::on_entity_destroyed>();
 
 		subscribe(resource_manager);
-		subscribe(animation);
 
 		root = create_pivot(*this);
 		set_name(root, "Root");
@@ -92,11 +76,17 @@ namespace engine
 
 	World::~World()
 	{
-		// Not actually needed:
-		/*
-		unsubscribe(resource_manager);
-		unsubscribe(animation);
-		*/
+		// unsubscribe(...);
+	}
+
+	Registry& World::get_registry()
+	{
+		return registry;
+	}
+
+	const Registry& World::get_registry() const
+	{
+		return registry;
 	}
 
 	Entity World::load(const filesystem::path& root_path, bool override_current, const std::string& json_file)
@@ -150,18 +140,11 @@ namespace engine
 		// Update the delta-timer.
 		delta_time << time;
 
+		// Handle changes in entity transforms.
+		handle_transform_events(delta_time);
+
 		// Update systems:
 		Service::update(delta_time);
-
-		animation.update(*this, delta_time);
-
-		SpinBehavior::update(*this);
-		TargetComponent::update(*this);
-		SimpleFollowComponent::update(*this);
-		BillboardBehavior::update(*this);
-		RaveComponent::update(*this);
-
-		handle_transform_events(delta_time);
 	}
 
 	void World::handle_transform_events(float delta)
@@ -459,16 +442,6 @@ namespace engine
 		assert(registry.try_get<CameraParameters>(camera));
 
 		this->camera = camera;
-	}
-
-	void World::on_mouse_input(const app::input::MouseState& mouse)
-	{
-		FreeLook::update(*this, mouse);
-	}
-
-	void World::on_keyboard_input(const app::input::KeyboardState& keyboard)
-	{
-		engine::debug::DebugMove::update(*this, keyboard);
 	}
 
 	void World::on_transform_change(const OnTransformChange& tform_change)

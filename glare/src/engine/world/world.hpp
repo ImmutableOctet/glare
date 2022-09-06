@@ -6,7 +6,7 @@
 #include <engine/service.hpp>
 #include <engine/transform.hpp>
 
-#include <engine/events/events.hpp>
+#include "world_events.hpp"
 
 //#include <graphics/types.hpp> // Not actually needed. (`ColorRGB` is actually located in math)
 #include <app/delta_time.hpp>
@@ -19,9 +19,6 @@
 #include <utility>
 #include <variant>
 #include <optional>
-
-// TODO: Remove.
-#include "animation.hpp"
 
 namespace filesystem = std::filesystem;
 
@@ -57,9 +54,6 @@ namespace engine
 
 			// TODO: Allow the user to specify a registry, rather than owning it outright.
 			mutable Registry registry;
-
-			// TODO: Move this out of the `World` type.
-			AnimationSystem animation;
 
 			// Scene root-node; parent to all world-bound entities.
 			Entity root   = null;
@@ -134,6 +128,21 @@ namespace engine
 
 				return *this;
 			}
+
+			template <typename EventType, auto fn>
+			inline void register_free_function()
+			{
+				event_handler.sink<EventType>().connect<fn>();
+			}
+
+			template <typename EventType, auto fn>
+			inline void unregister_free_function()
+			{
+				event_handler.sink<EventType>().disconnect<fn>();
+			}
+
+			Registry& get_registry() override;
+			const Registry& get_registry() const override;
 
 			Entity load(const filesystem::path& root_path, bool override_current=false, const std::string& json_file="map.json");
 
@@ -225,7 +234,6 @@ namespace engine
 			// Retrieves the first child-entity found with the name specified, regardless of other attributes/components. (includes both bone & non-bone children)
 			Entity get_child_by_name(Entity entity, std::string_view child_name, bool recursive=true);
 
-			inline Registry& get_registry() { return registry; }
 			inline ResourceManager& get_resource_manager() { return resource_manager; }
 
 			inline const Config& get_config() const { return config; }
@@ -249,8 +257,6 @@ namespace engine
 			inline float delta() const { return delta_time; }
 			inline operator Entity() const { return get_root(); }
 
-			void on_mouse_input(const app::input::MouseState& mouse);
-			void on_keyboard_input(const app::input::KeyboardState& keyboard);
 			void on_transform_change(const OnTransformChange& tform_change);
 			void on_entity_destroyed(const OnEntityDestroyed& destruct);
 

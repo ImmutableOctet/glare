@@ -9,6 +9,7 @@ namespace engine
 {
 	class AnimationSystem;
 
+	// Main animation component type.
 	struct Animator
 	{
 		public:
@@ -114,4 +115,6 @@ namespace engine
 			void pause();
 			bool toggle();
 	};
+
+	using AnimationComponent = Animator;
 }

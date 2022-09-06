@@ -4,13 +4,11 @@
 
 #include <game/game.hpp>
 
+#include "events.hpp"
 #include "relationship.hpp"
+
 #include "world/world.hpp"
-
-#include "events/events.hpp"
-
-// Testing related:
-#include "world/spin_component.hpp"
+#include "world/world_events.hpp"
 
 namespace engine
 {
@@ -135,22 +133,6 @@ namespace engine
 		auto stage = stage_info.stage;
 
 		print_children(world, stage);
-
-		auto model_group = world.get_child_by_name
-		(
-			stage,
-			//"Torus"
-			"Geosphere"
-		);
-
-		if (model_group != null)
-		{
-			auto& registry = get_registry();
-
-			//registry.emplace<SpinBehavior>(model_group);
-		}
-
-		//world. SpinBehavior
 	}
 
 	void DebugListener::operator()(const OnEntityCreated& entity_info)

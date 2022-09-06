@@ -7,6 +7,7 @@
 
 #include <engine/world/world.hpp>
 #include <engine/world/camera.hpp>
+#include <engine/world/animation/animation.hpp>
 
 #include <engine/config.hpp>
 #include <engine/transform.hpp>

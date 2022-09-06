@@ -25,11 +25,8 @@
     <ClInclude Include="src\engine\world\debug\debug_camera.hpp">
       <Filter>src\engine\world\debug</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\world\debug\debug_move.hpp">
+    <ClInclude Include="src\engine\world\behaviors\debug_move_behavior.hpp">
       <Filter>src\engine\world\debug</Filter>
-    </ClInclude>
-    <ClInclude Include="src\engine\events\input.hpp">
-      <Filter>src\engine\events</Filter>
     </ClInclude>
     <ClInclude Include="src\graphics\bind.hpp">
       <Filter>src\graphics\graphics</Filter>
@@ -94,9 +91,6 @@
     <ClInclude Include="src\app\delta_time.hpp">
       <Filter>src\app\app</Filter>
     </ClInclude>
-    <ClInclude Include="src\app\event_handler.hpp">
-      <Filter>src\app\app</Filter>
-    </ClInclude>
     <ClInclude Include="src\app\events.hpp">
       <Filter>src\app\app</Filter>
     </ClInclude>
@@ -121,7 +115,7 @@
     <ClInclude Include="src\engine\world\world.hpp">
       <Filter>src\engine</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\events\standard_events.hpp">
+    <ClInclude Include="src\engine\events.hpp">
       <Filter>src\engine</Filter>
     </ClInclude>
     <ClInclude Include="src\app\input\input.hpp">
@@ -238,19 +232,19 @@
     <ClInclude Include="src\engine\world\stage.hpp">
       <Filter>src\engine\world</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\world\spin_component.hpp">
+    <ClInclude Include="src\engine\world\behaviors\spin_behavior.hpp">
       <Filter>src\engine\world</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\world\target_component.hpp">
+    <ClInclude Include="src\engine\world\behaviors\target_behavior.hpp">
       <Filter>src\engine\world</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\world\follow_component.hpp">
+    <ClInclude Include="src\engine\world\behaviors\simple_follow_behavior.hpp">
       <Filter>src\engine\world</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\world\billboard_behavior.hpp">
+    <ClInclude Include="src\engine\world\behaviors\billboard_behavior.hpp">
       <Filter>src\engine\world</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\world\rave_component.hpp">
+    <ClInclude Include="src\engine\world\behaviors\rave_behavior.hpp">
       <Filter>src\engine\world</Filter>
     </ClInclude>
     <ClInclude Include="src\glare.hpp">
@@ -284,13 +278,13 @@
     <ClInclude Include="src\graphics\skeleton.hpp">
       <Filter>src\graphics\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\world\animation.hpp">
+    <ClInclude Include="src\engine\world\animation\animation.hpp">
       <Filter>src\engine\world</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\world\animator.hpp">
+    <ClInclude Include="src\engine\world\animation\animator.hpp">
       <Filter>src\engine\world</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\world\animation_system.hpp">
+    <ClInclude Include="src\engine\world\animation\animation_system.hpp">
       <Filter>src\engine\world</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\action.hpp">
@@ -302,22 +296,16 @@
     <ClInclude Include="src\engine\world\physics\collision_component.hpp">
       <Filter>src\engine</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\components.hpp">
-      <Filter>src\engine</Filter>
-    </ClInclude>
     <ClInclude Include="src\engine\config.hpp">
       <Filter>src\engine</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\debug.hpp">
       <Filter>src\engine</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\free_look.hpp">
+    <ClInclude Include="src\engine\world\behaviors\free_look_behavior.hpp">
       <Filter>src\engine</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\model_component.hpp">
-      <Filter>src\engine</Filter>
-    </ClInclude>
-    <ClInclude Include="src\engine\movement_state.hpp">
       <Filter>src\engine</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\name_component.hpp">
@@ -431,7 +419,6 @@
     </ClInclude>
     <ClInclude Include="src\engine\world\render\directional_shadows.hpp" />
     <ClInclude Include="src\engine\world\render\deferred_shading.hpp" />
-    <ClInclude Include="src\engine\events\events.hpp" />
     <ClInclude Include="src\engine\service_events.hpp" />
     <ClInclude Include="src\engine\world\world_system.hpp" />
     <ClInclude Include="src\math\assimp.hpp" />
@@ -444,6 +431,11 @@
     <ClInclude Include="src\engine\world\physics\collision_config.hpp" />
     <ClInclude Include="src\engine\world\physics\collision_motion_state.hpp" />
     <ClInclude Include="src\engine\world\physics\collision_body_type.hpp" />
+    <ClInclude Include="src\engine\world\world_events.hpp" />
+    <ClInclude Include="src\engine\world\animation\animation_events.hpp" />
+    <ClInclude Include="src\engine\world\behaviors\behaviors.hpp" />
+    <ClInclude Include="src\engine\world\behaviors\meta.hpp" />
+    <ClInclude Include="src\util\static_member_function.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\shaders\light_box.frag">
@@ -622,7 +614,7 @@
     <ClCompile Include="src\engine\world\debug\debug_camera.cpp">
       <Filter>src\engine\world\debug</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\world\debug\debug_move.cpp">
+    <ClCompile Include="src\engine\world\behaviors\debug_move_behavior.cpp">
       <Filter>src\engine\world\debug</Filter>
     </ClCompile>
     <ClCompile Include="src\graphics\canvas.cpp">
@@ -679,9 +671,6 @@
     <ClCompile Include="src\app\application.cpp">
       <Filter>src\app\app</Filter>
     </ClCompile>
-    <ClCompile Include="src\app\event_handler.cpp">
-      <Filter>src\app\app</Filter>
-    </ClCompile>
     <ClCompile Include="src\app\timer.cpp">
       <Filter>src\app\app</Filter>
     </ClCompile>
@@ -715,22 +704,22 @@
     <ClCompile Include="src\engine\world\player.cpp">
       <Filter>src\engine\world</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\world\spin_component.cpp">
+    <ClCompile Include="src\engine\world\behaviors\spin_behavior.cpp">
       <Filter>src\engine\world</Filter>
     </ClCompile>
     <ClCompile Include="src\engine\world\stage.cpp">
       <Filter>src\engine\world</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\world\target_component.cpp">
+    <ClCompile Include="src\engine\world\behaviors\target_behavior.cpp">
       <Filter>src\engine\world</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\world\follow_component.cpp">
+    <ClCompile Include="src\engine\world\behaviors\simple_follow_behavior.cpp">
       <Filter>src\engine\world</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\world\billboard_behavior.cpp">
+    <ClCompile Include="src\engine\world\behaviors\billboard_behavior.cpp">
       <Filter>src\engine\world</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\world\rave_component.cpp">
+    <ClCompile Include="src\engine\world\behaviors\rave_behavior.cpp">
       <Filter>src\engine\world</Filter>
     </ClCompile>
     <ClCompile Include="src\graphics\types.cpp">
@@ -760,7 +749,7 @@
     <ClCompile Include="src\graphics\animation.cpp">
       <Filter>src\graphics\graphics</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\world\animation_system.cpp">
+    <ClCompile Include="src\engine\world\animation\animation_system.cpp">
       <Filter>src\engine\world</Filter>
     </ClCompile>
     <ClCompile Include="dependencies\modules\imgui\imgui.cpp">
@@ -793,7 +782,7 @@
     <ClCompile Include="src\engine\debug.cpp">
       <Filter>src\engine</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\free_look.cpp">
+    <ClCompile Include="src\engine\world\behaviors\free_look_behavior.cpp">
       <Filter>src\engine</Filter>
     </ClCompile>
     <ClCompile Include="src\engine\model_component.cpp">
@@ -817,7 +806,7 @@
     <ClCompile Include="src\engine\config.cpp">
       <Filter>src\engine</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\world\animator.cpp">
+    <ClCompile Include="src\engine\world\animation\animator.cpp">
       <Filter>src\engine\world</Filter>
     </ClCompile>
     <ClCompile Include="src\util\io.cpp">
@@ -851,6 +840,7 @@
     <ClCompile Include="src\engine\world\physics\collision_config.cpp" />
     <ClCompile Include="src\engine\world\physics\collision_motion_state.cpp" />
     <ClCompile Include="src\engine\world\physics\collision_group.cpp" />
+    <ClCompile Include="src\engine\world\behaviors\meta.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />

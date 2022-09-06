@@ -1,5 +1,6 @@
 #include "glare.hpp"
 
+// TODO: Reduce unnecessary includes.
 #include <iostream>
 #include <string>
 #include <string_view>
@@ -23,15 +24,15 @@
 #include <graphics/native/opengl.hpp>
 #include <engine/world/render/world_render_state.hpp>
 
-#include <engine/events/events.hpp>
+#include <engine/events.hpp>
+#include <engine/world/world_events.hpp>
 #include <engine/type_component.hpp>
+#include <engine/model_component.hpp>
 
 #include <engine/world/graphics_entity.hpp>
-#include <engine/world/spin_component.hpp>
-#include <engine/world/follow_component.hpp>
 #include <engine/world/light.hpp>
 
-#include <engine/free_look.hpp>
+#include <engine/world/behaviors/behaviors.hpp>
 
 #include <sdl2/SDL_video.h>
 #include <sdl2/SDL_events.h>
@@ -52,28 +53,20 @@ namespace glare
 	{
 		using namespace graphics;
 
-		//GLint value = 0;
-		//glGetIntegerv(GL_MAX_COMBINED_VERTEX_UNIFORM_COMPONENTS, &value); // GL_MAX_VERTEX_BINDABLE_UNIFORMS_EXT
-
-		/*
-		int screen_width, screen_height;
-
-		window->get_size(screen_width, screen_height);
-		*/
-
+		// TODO: Look into this again.
 		world.register_event<app::input::KeyboardState, &Glare::on_user_keyboard_input>(*this);
 
-		// Normally, we lock when starting.
+		// Normally, we lock when starting the game, but don't here for testing purposes.
 		//input.get_mouse().lock();
 
 		world.load("assets/maps/test01");
 		//world.load("assets/maps/story/2.ice-world/ice-connector");
-		
 		//world.load("assets/maps/test01 - old");
-
 		//world.load("assets/maps/room");
 		//world.load("assets/maps/collision_test");
 
+		// Debugging related:
+		//GLint value = 0; glGetIntegerv(GL_MAX_COMBINED_VERTEX_UNIFORM_COMPONENTS, &value); // GL_MAX_VERTEX_BINDABLE_UNIFORMS_EXT
 
 		auto cube = engine::load_model
 		(

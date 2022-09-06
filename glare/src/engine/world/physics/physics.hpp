@@ -4,8 +4,8 @@
 
 #include <util/memory.hpp>
 
-#include <engine/events/events.hpp>
-
+#include <engine/events.hpp>
+//#include <engine/world/world_events.hpp>
 #include <engine/world/world_system.hpp>
 
 // Forward declarations:
@@ -25,6 +25,7 @@ namespace engine
 	struct Transform;
 	struct PhysicsComponent;
 	struct CollisionComponent;
+	struct OnTransformChange;
 
 	class PhysicsSystem : public WorldSystem
 	{
@@ -54,6 +55,7 @@ namespace engine
 			void set_gravity(const math::Vector& g);
 		protected:
 			void update_collision_world(float delta);
+			void resolve_intersections();
 			void update_motion(Entity entity, Transform& transform, PhysicsComponent& ph, float delta);
 			void update_collision_object(btCollisionObject& obj, const math::Matrix& m);
 		private:

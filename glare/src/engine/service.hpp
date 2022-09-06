@@ -25,6 +25,9 @@ namespace engine
 
 			inline EventHandler& get_event_handler() { return event_handler; }
 
+			virtual Registry& get_registry() = 0;
+			virtual const Registry& get_registry() const = 0;
+
 			template <typename EventType, auto fn, typename obj_type>
 			inline void register_event(obj_type& obj)
 			{
@@ -78,6 +81,18 @@ namespace engine
 			inline void unregister(obj_type& obj)
 			{
 				event_handler.disconnect(obj);
+			}
+
+			template <typename EventType, auto fn>
+			inline void register_free_function()
+			{
+				event_handler.sink<EventType>().connect<fn>();
+			}
+
+			template <typename EventType, auto fn>
+			inline void unregister_free_function()
+			{
+				event_handler.sink<EventType>().disconnect<fn>();
 			}
 
 			// Queues `fn` to be executed with `args` on the next call to `update`.
