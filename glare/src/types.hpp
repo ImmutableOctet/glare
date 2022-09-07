@@ -79,11 +79,11 @@ class defaultable_ref
 		}
 };
 
-#define FLAG_ENUM(BaseType, EnumType) \
-inline constexpr BaseType operator& (EnumType a, EnumType b) { return (BaseType)((BaseType)a & (BaseType)b); }       \
-inline constexpr EnumType operator~ (EnumType a) { return (EnumType)~(BaseType)a; }                                  \
-inline constexpr EnumType operator| (EnumType a, EnumType b) { return (EnumType)((BaseType)a | (BaseType)b); }       \
-inline constexpr EnumType operator^ (EnumType a, EnumType b) { return (EnumType)((BaseType)a ^ (BaseType)b); }       \
-inline constexpr EnumType& operator|= (EnumType& a, EnumType b) { return (EnumType&)((BaseType&)a |= (BaseType)b); } \
-inline constexpr EnumType& operator&= (EnumType& a, EnumType b) { return (EnumType&)((BaseType&)a &= (BaseType)b); } \
-inline constexpr EnumType& operator^= (EnumType& a, EnumType b) { return (EnumType&)((BaseType&)a ^= (BaseType)b); } \
+#define FLAG_ENUM(BaseType, EnumType)                                                                                    \
+	inline constexpr BaseType operator& (EnumType a, EnumType b) { return (BaseType)((BaseType)a & (BaseType)b); }       \
+	inline constexpr EnumType operator~ (EnumType a) { return (EnumType)~(BaseType)a; }                                  \
+	inline constexpr EnumType operator| (EnumType a, EnumType b) { return (EnumType)((BaseType)a | (BaseType)b); }       \
+	inline constexpr EnumType operator^ (EnumType a, EnumType b) { return (EnumType)((BaseType)a ^ (BaseType)b); }       \
+	inline constexpr EnumType& operator|= (EnumType& a, EnumType b) { return (EnumType&)((BaseType&)a |= (BaseType)b); } \
+	inline constexpr EnumType& operator&= (EnumType& a, EnumType b) { return (EnumType&)((BaseType&)a &= (BaseType)b); } \
+	inline constexpr EnumType& operator^= (EnumType& a, EnumType b) { return (EnumType&)((BaseType&)a ^= (BaseType)b); }
