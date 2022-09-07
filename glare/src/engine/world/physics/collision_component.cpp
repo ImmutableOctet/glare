@@ -387,6 +387,23 @@ namespace engine
 		return out;
 	}
 
+	CollisionComponent::RawShape* CollisionComponent::peek_shape() const
+	{
+		RawShape* out = nullptr;
+
+		std::visit
+		(
+			[&](auto&& value)
+			{
+				out = std::static_pointer_cast<RawShape>(value).get();
+			},
+
+			this->shape
+		);
+
+		return out;
+	}
+
 	CollisionComponent::ConvexShape CollisionComponent::get_convex_shape() const
 	{
 		if (auto out = std::get_if<ConvexShape>(&shape))
@@ -397,11 +414,35 @@ namespace engine
 		return {};
 	}
 
+	CollisionComponent::ConvexShapeRaw* CollisionComponent::peek_convex_shape() const
+	{
+		auto out = std::get_if<ConvexShape>(&shape);
+
+		if (out)
+		{
+			return (*out).get();
+		}
+
+		return {};
+	}
+
 	CollisionComponent::ConcaveShape CollisionComponent::get_concave_shape() const
 	{
 		if (auto out = std::get_if<ConcaveShape>(&shape))
 		{
 			return *out;
+		}
+
+		return {};
+	}
+
+	CollisionComponent::ConcaveShapeRaw* CollisionComponent::peek_concave_shape() const
+	{
+		auto out = std::get_if<ConcaveShape>(&shape);
+
+		if (out)
+		{
+			return (*out).get();
 		}
 
 		return {};

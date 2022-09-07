@@ -4,6 +4,7 @@
 #include "collision_config.hpp"
 #include "collision_motion_state.hpp"
 #include "collision_body_type.hpp"
+#include "collision_cast_method.hpp"
 
 #include "types.hpp"
 
@@ -187,12 +188,15 @@ namespace engine
 
 			// Returns the internally bound collision-shape object, regardless of concave/convex qualification.
 			Shape get_shape() const;
+			RawShape* peek_shape() const;
 
 			// Retrieves the internally bound convex collision-shape object (if available).
 			ConvexShape get_convex_shape() const;
+			ConvexShapeRaw* peek_convex_shape() const;
 
 			// Retrieves the internally bound concave collision-shape object (if available).
 			ConcaveShape get_concave_shape() const;
+			ConcaveShapeRaw* peek_concave_shape() const;
 
 			btCollisionObject* get_collision_object();
 			const btCollisionObject* get_collision_object() const;
