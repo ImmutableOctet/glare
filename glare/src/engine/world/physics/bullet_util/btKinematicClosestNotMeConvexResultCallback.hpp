@@ -26,6 +26,7 @@ namespace engine
 	class btKinematicClosestNotMeConvexResultCallback : public btCollisionWorld::ClosestConvexResultCallback
 	{
 		public:
+			// TODO: Look into this one more. -- Why don't we set `from` and `to` vectors...?
 			btKinematicClosestNotMeConvexResultCallback(btCollisionObject* me, const btVector3& up, btScalar minSlopeDot)
 				: btCollisionWorld::ClosestConvexResultCallback(btVector3(0.0, 0.0, 0.0), btVector3(0.0, 0.0, 0.0))
 				, m_me(me)

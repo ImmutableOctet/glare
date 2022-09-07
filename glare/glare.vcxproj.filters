@@ -438,6 +438,11 @@
     <ClInclude Include="src\util\static_member_function.hpp" />
     <ClInclude Include="src\engine\input_events.hpp" />
     <ClInclude Include="src\engine\system_manager.hpp" />
+    <ClInclude Include="src\engine\world\physics\collision_cast_method.hpp" />
+    <ClInclude Include="src\engine\world\physics\bullet_util\bullet_util.hpp" />
+    <ClInclude Include="src\engine\world\physics\bullet_util\btClosestNotMeConvexResultCallback.hpp" />
+    <ClInclude Include="src\engine\world\physics\bullet_util\btKinematicClosestNotMeRayResultCallback.hpp" />
+    <ClInclude Include="src\engine\world\physics\bullet_util\btKinematicClosestNotMeConvexResultCallback.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\shaders\light_box.frag">

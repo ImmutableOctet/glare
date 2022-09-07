@@ -79,7 +79,7 @@ namespace engine
 
 			// This constructor overload does not generate an internal collision object. (To do so requires a collision-shape; see other overloads)
 			// This exists purely to simplify constructor delegation.
-			CollisionComponent(const CollisionConfig& config, float mass, std::unique_ptr<CollisionMotionState>&& motion_state={});
+			CollisionComponent(const CollisionConfig& config, std::unique_ptr<CollisionMotionState>&& motion_state={});
 
 			// Acceptable inputs for `set_shape`/`set_shape_impl`:
 
@@ -122,13 +122,25 @@ namespace engine
 			// This function returns `true` if the internally generated rigid-body is kinematic.
 			// TODO: Look into making the return-value of this function a struct outlining several properties of the collision-object. (see `apply_collision_flags`)
 			bool build_rigid_body(const CollisionConfig& config, btCollisionShape* collision_shape, float mass, bool allow_kinematics=true);
+
+			// Generates a default collision-cast method, given the configuration of the component.
+			CollisionCastMethod default_collision_cast_method() const;
 		public:
 			// This calls the free-function of the same name.
 			static Entity get_entity_from_collision_object(const btCollisionObject& c_obj);
 
 			template <typename ShapeRefType> // Shape, ConvexShape, ConcaveShape
-			inline CollisionComponent(const ShapeRefType& shape, const CollisionConfig& config, float mass, std::optional<CollisionBodyType> body_type_in=std::nullopt, std::unique_ptr<CollisionMotionState>&& motion_state_in={}, bool activate_immediately=true) :
-				CollisionComponent(config, mass, std::move(motion_state_in))
+			inline CollisionComponent
+			(
+				const ShapeRefType& shape,
+				const CollisionConfig& config,
+				float mass,
+				std::optional<CollisionBodyType> body_type_in=std::nullopt,
+				std::unique_ptr<CollisionMotionState>&& motion_state_in={},
+				std::optional<CollisionCastMethod> cast_method_in=std::nullopt,
+				bool activate_immediately=true
+			):
+				CollisionComponent(config, std::move(motion_state_in))
 			{
 				auto body_type = body_type_in.value_or(CollisionBodyType::Basic);
 
@@ -158,6 +170,17 @@ namespace engine
 						build_rigid_body(config, shape.get(), mass, (body_type != CollisionBodyType::Static));
 
 						break;
+				}
+
+				// If-statement used in place of `value_or` due to possible overhead
+				// incurred from calling `default_collision_cast_method`.
+				if (cast_method_in.has_value())
+				{
+					cast_method = *cast_method_in;
+				}
+				else
+				{
+					cast_method = default_collision_cast_method();
 				}
 
 				if (activate_immediately)
@@ -248,8 +271,11 @@ namespace engine
 
 			bool has_collision_object() const;
 			bool has_motion_state() const;
+
+			float get_mass() const;
+			void set_mass(float mass);
 		protected:
-			float mass = 0.0f;
+			CollisionCastMethod cast_method = CollisionCastMethod::None;
 
 			std::unique_ptr<CollisionMotionState> motion_state;
 			collision_object_variant_t collision_object;
@@ -259,7 +285,14 @@ namespace engine
 	Entity attach_collision_impl(World& world, Entity entity, CollisionComponent&& col);
 
 	template <typename ShapeType>
-	inline Entity attach_collision(World& world, Entity entity, const ShapeType& collision_shape_data, const CollisionConfig& config, float mass=0.0f) // CollisionComponent::Shape
+	inline Entity attach_collision
+	(
+		World& world, Entity entity,
+		const ShapeType& collision_shape_data,
+		const CollisionConfig& config,
+		float mass=0.0f,
+		std::optional<CollisionCastMethod> cast_method=std::nullopt
+	) // CollisionComponent::Shape
 	{
 		// TODO: Refactor into something more explicit from the user. (or something better for automatically determining body type)
 		// We currently assume kinematic rigid bodies if a motion-state is generated:
@@ -276,6 +309,6 @@ namespace engine
 				break;
 		}
 
-		return attach_collision_impl(world, entity, CollisionComponent(collision_shape_data, config, mass, body_type, std::move(motion_state)));
+		return attach_collision_impl(world, entity, CollisionComponent(collision_shape_data, config, mass, body_type, std::move(motion_state), cast_method));
 	}
 }

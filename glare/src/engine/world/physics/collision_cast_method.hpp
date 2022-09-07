@@ -5,13 +5,17 @@
 
 namespace engine
 {
+	struct CollisionComponent;
+
 	enum class CollisionCastMethod : std::uint8_t
 	{
 		None,
+
 		RayCast,
 		ConvexCast,
-		ConvexKinematicCast,
 
-		Default=ConvexCast
+		// TODO: Look into this option and how it differs from `ConvexCast`.
+		// (see: `btKinematicClosestNotMeConvexResultCallback`)
+		//ConvexKinematicCast
 	};
 }

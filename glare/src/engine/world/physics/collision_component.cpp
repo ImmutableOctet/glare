@@ -50,9 +50,8 @@ namespace engine
 		return engine::get_entity_from_collision_object(c_obj);
 	}
 
-	CollisionComponent::CollisionComponent(const CollisionConfig& config, float mass, std::unique_ptr<CollisionMotionState>&& motion_state) :
+	CollisionComponent::CollisionComponent(const CollisionConfig& config, std::unique_ptr<CollisionMotionState>&& motion_state) :
 		CollisionConfig(config),
-		mass(mass),
 		motion_state(std::move(motion_state)),
 		collision_object(std::monostate())
 	{}
@@ -203,6 +202,26 @@ namespace engine
 		set_collision_object(rigid_body);
 
 		return obj_info;
+	}
+
+	CollisionCastMethod CollisionComponent::default_collision_cast_method() const
+	{
+		// Collision-casting on transformation-change is only
+		// possible with kinematic objects currently.
+		if (!is_kinematic())
+		{
+			return CollisionCastMethod::None;
+		}
+
+		// Convex shapes get to utilize Bullet's convex-sweep functionality.
+		if (peek_convex_shape())
+		{
+			return CollisionCastMethod::ConvexCast;
+			//return CollisionCastMethod::ConvexKinematicCast;
+		}
+
+		// Everything else gets a simple ray-cast approach.
+		return CollisionCastMethod::RayCast;
 	}
 
 	btCollisionObject* CollisionComponent::get_collision_object()
@@ -356,6 +375,28 @@ namespace engine
 	bool CollisionComponent::has_motion_state() const
 	{
 		return (get_motion_state());
+	}
+
+	float CollisionComponent::get_mass() const
+	{
+		auto* rigid_body = get_rigid_body();
+
+		if (rigid_body)
+		{
+			return rigid_body->getMass();
+		}
+
+		return 0.0f;
+	}
+
+	void CollisionComponent::set_mass(float mass)
+	{
+		auto* rigid_body = get_rigid_body();
+
+		if (rigid_body)
+		{
+			rigid_body->setMassProps(mass, rigid_body->getLocalInertia());
+		}
 	}
 
 	void CollisionComponent::update_transform(const math::Matrix& tform)

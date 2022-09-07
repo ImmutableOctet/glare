@@ -264,6 +264,11 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\world\animation\animation_events.hpp" />
     <ClInclude Include="src\engine\world\behaviors\behaviors.hpp" />
     <ClInclude Include="src\engine\world\behaviors\meta.hpp" />
+    <ClInclude Include="src\engine\world\physics\bullet_util\btClosestNotMeConvexResultCallback.hpp" />
+    <ClInclude Include="src\engine\world\physics\bullet_util\btKinematicClosestNotMeConvexResultCallback.hpp" />
+    <ClInclude Include="src\engine\world\physics\bullet_util\btKinematicClosestNotMeRayResultCallback.hpp" />
+    <ClInclude Include="src\engine\world\physics\bullet_util\bullet_util.hpp" />
+    <ClInclude Include="src\engine\world\physics\collision_cast_method.hpp" />
     <ClInclude Include="src\engine\world\world_events.hpp" />
     <ClInclude Include="src\engine\world\physics\collision.hpp" />
     <ClInclude Include="src\engine\world\physics\collision_body_type.hpp" />
