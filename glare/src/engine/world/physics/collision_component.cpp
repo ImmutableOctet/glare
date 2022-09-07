@@ -506,6 +506,8 @@ namespace engine
 			c_obj->setUserPointer(&component);
 		#endif
 
+		// NOTE: `PhysicsSystem` hooks into entt's component events in order to add/remove `c_obj` from the collision world.
+
 		return entity;
 	}
 }
