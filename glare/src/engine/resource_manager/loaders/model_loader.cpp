@@ -5,6 +5,10 @@
 #include <graphics/texture.hpp>
 #include <graphics/vertex.hpp>
 
+// Already included via header:
+//#include <graphics/collision_geometry.hpp>
+//#include <engine/world/physics/types.hpp>
+
 #include <util/memory.hpp>
 #include <util/string.hpp>
 
@@ -463,7 +467,7 @@ namespace engine
 	}
 
 	template <typename MeshData>
-	static std::optional<graphics::Mesh> handle_mesh(ModelLoader& loader, const aiScene* scene, const aiNode* node, aiMesh* mesh, bool generate_graphical_mesh=true, ModelLoader::Model::CollisionGeometry::Container* collision_geometry=nullptr, const ModelLoader::Skeleton* skeleton=nullptr, const _aiMatrix4x4* scene_orientation=nullptr)
+	static std::optional<graphics::Mesh> handle_mesh(ModelLoader& loader, const aiScene* scene, const aiNode* node, aiMesh* mesh, bool generate_graphical_mesh=true, CollisionGeometry::Container* collision_geometry=nullptr, const ModelLoader::Skeleton* skeleton=nullptr, const _aiMatrix4x4* scene_orientation=nullptr)
 	{
 		auto mesh_data = process_mesh<MeshData>(loader.get_config(), scene, node, mesh, skeleton, scene_orientation);
 
@@ -501,7 +505,7 @@ namespace engine
 		if (is_model_node)
 		{
 			Model model;
-			Model::CollisionGeometry::Container collision_geometry;
+			CollisionGeometry::Container collision_geometry;
 
 			bool collision_enabled = cfg.load_collision;
 			bool is_animated = cfg.is_animated.value_or(false);
@@ -650,7 +654,7 @@ namespace engine
 
 					// Construct collision geometry object from populated container.
 					(collision_enabled)
-					? std::optional<Model::CollisionGeometry>{std::move(collision_geometry)}
+					? std::optional<CollisionGeometry>{std::move(collision_geometry)}
 					: std::nullopt,
 
 					((skeleton.exists()) ? (&skeleton) : nullptr),

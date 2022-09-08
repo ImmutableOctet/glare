@@ -341,6 +341,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\glare.hpp" />
     <ClInclude Include="src\graphics\bind.hpp" />
     <ClInclude Include="src\graphics\canvas.hpp" />
+    <ClInclude Include="src\graphics\collision_geometry.hpp" />
     <ClInclude Include="src\graphics\context.hpp" />
     <ClInclude Include="src\graphics\context_state.hpp" />
     <ClInclude Include="src\graphics\cubemap_transform.hpp" />
@@ -477,6 +478,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\glare.cpp" />
     <ClCompile Include="src\graphics\animation.cpp" />
     <ClCompile Include="src\graphics\canvas.cpp" />
+    <ClCompile Include="src\graphics\collision_geometry.cpp" />
     <ClCompile Include="src\graphics\context_state.cpp" />
     <ClCompile Include="src\graphics\cubemap_transform.cpp" />
     <ClCompile Include="src\graphics\drivers\opengl\context.cpp" />

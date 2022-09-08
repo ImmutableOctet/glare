@@ -31,6 +31,8 @@ namespace graphics
 	//class Material;
 	//class Mesh;
 
+	struct CollisionGeometry;
+
 	class Model
 	{
 		public:
@@ -79,22 +81,6 @@ namespace graphics
 			};
 
 			using Meshes = std::vector<MeshDescriptor>;
-
-			struct CollisionGeometry // CollisionData
-			{
-				public:
-					using Descriptor = btTriangleMesh; // btTriangleIndexVertexArray;
-					using Container = std::vector<SimpleMeshData>;
-
-					CollisionGeometry(Container&& mesh_data);
-
-					std::unique_ptr<Descriptor> mesh_interface;
-					Container mesh_data;
-
-					bool has_32bit_indices() const;
-				protected:
-					std::unique_ptr<Descriptor> generate_mesh_interface();
-			};
 
 			friend Canvas;
 			friend Context;

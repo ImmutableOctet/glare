@@ -14,6 +14,7 @@
 #include <variant>
 #include <type_traits>
 #include <optional>
+#include <memory>
 //#include <tuple>
 //#include <climits>
 
@@ -21,12 +22,6 @@
 // with missing destructors for the `unique_ptr` instances.
 #include <bullet/btBulletCollisionCommon.h>
 #include <bullet/btBulletDynamicsCommon.h>
-
-class btCollisionShape;
-class btConcaveShape;
-class btConvexShape;
-class btCollisionObject;
-class btRigidBody;
 
 namespace engine
 {
@@ -57,14 +52,16 @@ namespace engine
 		public:
 			friend class PhysicsSystem;
 
-			using RawShape        = btCollisionShape;
-			using ConcaveShapeRaw = btConcaveShape;
-			using ConvexShapeRaw  = btConvexShape;
+			// Shorthand type aliases:
+			using RawShape        = CollisionRaw;             // btCollisionShape;
+			using ConvexShapeRaw  = ConvexCollisionShapeRaw;  // btConvexShape;
+			using ConcaveShapeRaw = ConcaveCollisionShapeRaw; // btConcaveShape;
 
-			using Shape        = std::shared_ptr<RawShape>;
-			using ConcaveShape = std::shared_ptr<ConcaveShapeRaw>;
-			using ConvexShape  = std::shared_ptr<ConvexShapeRaw>;
+			using Shape           = CollisionShape;        // std::shared_ptr<RawShape>;
+			using ConvexShape     = ConvexCollisionShape;  // std::shared_ptr<ConvexShapeRaw>;
+			using ConcaveShape    = ConcaveCollisionShape; // std::shared_ptr<ConcaveShapeRaw>;
 
+			// Specific to this component type:
 			using CollisionObject = std::unique_ptr<btCollisionObject>;
 			using RigidBody       = std::unique_ptr<btRigidBody>;
 
@@ -81,28 +78,55 @@ namespace engine
 			// This exists purely to simplify constructor delegation.
 			CollisionComponent(const CollisionConfig& config, std::unique_ptr<CollisionMotionState>&& motion_state={});
 
-			// Acceptable inputs for `set_shape`/`set_shape_impl`:
-
-			// Sets the internal collision-shape instance to a non-specific `Shape` type.
-			void set_shape(const Shape& shape);
-
-			// Sets the internal collision-shape instance to a concave shape.
-			void set_shape(const ConcaveShape& shape);
-
-			// Sets the internal collision-shape instance to a convex shape.
-			void set_shape(const ConvexShape& shape);
-
 			bool collision_object_in_monostate() const;
 			const collision_object_variant_t& get_collision_object_variant() const;
 		private:
 			// Declared for internal use only. (Forwards to static free-function implementation)
 			static void set_entity_for_collision_object(btCollisionObject& c_obj, Entity entity);
 
-			// Implementation for `set_shape`. -- Declared here in order to work as a member function,
-			// but only the template itself is only usable where it's fully defined.
-			// (In `collision_component` implementation file)
-			template <typename ShapeRefType>
-			void set_shape_impl(ShapeRefType&& shape);
+			template <typename RawShapeType>
+			inline void set_shape(const std::shared_ptr<RawShapeType>& shape)
+			{
+				if (!shape)
+				{
+					return;
+				}
+
+				auto* collision = get_collision_object();
+
+				if (collision)
+				{
+					collision->setCollisionShape(shape.get());
+				}
+
+				// Enforce correct template usage and variant assignment:
+
+				// Static scenarios (Convex and concave):
+				if constexpr (std::is_base_of_v<ConcaveShapeRaw, RawShapeType>)
+				{
+					this->shape = std::static_pointer_cast<ConcaveShape>(shape);
+				}
+				else if constexpr (std::is_base_of_v<ConvexShapeRaw, RawShapeType>)
+				{
+					this->shape = std::static_pointer_cast<ConvexShape>(shape);
+				}
+				// Dynamic scenario (any input shape):
+				else
+				{
+					if (auto convex_ptr = std::dynamic_pointer_cast<ConvexShapeRaw>(shape); convex_ptr)
+					{
+						this->shape = std::move(convex_ptr);
+					}
+					else if (auto concave_ptr = std::dynamic_pointer_cast<ConcaveShapeRaw>(shape); concave_ptr)
+					{
+						this->shape = std::move(concave_ptr);
+					}
+					else
+					{
+						this->shape = std::static_pointer_cast<RawShape>(shape);
+					}
+				}
+			}
 
 			template <typename CollisionObjectType>
 			inline void set_collision_object(CollisionObjectType&& collision)
@@ -163,11 +187,13 @@ namespace engine
 						// TODO: Determine if `shape` setup code is shared between cases:
 						assert(shape);
 
+						auto* shape_ptr = shape.get();
+
 						// `shape` must be specified during/before construction for rigid bodies.
 						set_shape(shape);
 
 						// Note: `this->shape` needs to be defined before this is called.
-						build_rigid_body(config, shape.get(), mass, (body_type != CollisionBodyType::Static));
+						build_rigid_body(config, shape_ptr, mass, (body_type != CollisionBodyType::Static));
 
 						break;
 				}
@@ -274,6 +300,8 @@ namespace engine
 
 			float get_mass() const;
 			void set_mass(float mass);
+
+			inline CollisionCastMethod get_cast_method() const { return cast_method; }
 		protected:
 			CollisionCastMethod cast_method = CollisionCastMethod::None;
 

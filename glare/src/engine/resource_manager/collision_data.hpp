@@ -1,35 +1,24 @@
 #pragma once
 
-#include <engine/world/physics/collision.hpp>
-//#include <engine/world/physics/collision_component.hpp>
+#include <engine/world/physics/types.hpp>
 
 #include <graphics/model.hpp>
+#include <graphics/collision_geometry.hpp>
+
 #include <optional>
-
-// Forward declarations:
-
-// Bullet:
-//class btCollisionShape;
-class btCapsuleShape;
-class btBoxShape;
 
 namespace engine
 {
-	// TODO: Simplify some of these typedefs.
-	using CollisionRaw      = CollisionComponent::RawShape; // btCollisionShape;
-	using CollisionShape    = CollisionComponent::Shape; // ref<CollisionRaw>;
-	using CollisionGeometry = graphics::Model::CollisionGeometry;
-
 	// Internal storage mechanism for 'collision shapes' and associated mesh-data (if any).
 	// This is different from a 'collision object' instance (sometimes referred to as a 'collider'), which can be attached to an `Entity` in a Game World.
 	// Such 'colliders' are created by attaching a `CollisionComponent` object to an `Entity`, using these `CollisionData` objects as their underlying storage. (see constructors for `CollisionComponent`)
 	struct CollisionData
 	{
-		using Shape    = CollisionShape;
-		using Raw      = CollisionRaw;
-		using Geometry = CollisionGeometry;
+		using Shape    = CollisionShape;    // std::shared_ptr<btCollisionShape>;
+		using Raw      = CollisionRaw;      // btCollisionShape;
+		using Geometry = CollisionGeometry; // graphics::Model::CollisionGeometry;
 
-		static CollisionShape build_mesh_shape(const CollisionGeometry& geometry_storage, bool optimize=true);
+		static CollisionShape build_mesh_shape(const Geometry& geometry_storage, bool optimize=true);
 
 		CollisionData() = default;
 

@@ -1,9 +1,11 @@
 #include "camera.hpp"
 
 #include <math/math.hpp>
-#include <engine/world/world.hpp>
 
 #include <util/string.hpp>
+
+#include "world.hpp"
+#include "physics/collision_component.hpp"
 
 #include <engine/resource_manager/resource_manager.hpp>
 

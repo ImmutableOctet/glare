@@ -1,7 +1,11 @@
 #include "physics.hpp"
 #include "physics_component.hpp"
+
 #include "collision.hpp"
+#include "collision_component.hpp"
 #include "collision_motion_state.hpp"
+
+#include "bullet_util/bullet_util.hpp"
 
 #include <engine/world/world.hpp>
 
@@ -12,6 +16,7 @@
 
 #include <bullet/btBulletCollisionCommon.h>
 #include <bullet/btBulletDynamicsCommon.h>
+#include <bullet/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 
 #include <glm/glm.hpp>
 
@@ -215,29 +220,6 @@ namespace engine
 
 		auto transform = world.get_transform(entity);
 
-		// Debugging related (camera):
-		if ((int)tform_change.entity == 34)
-		{
-			//print("Entity changed: {} @ {}", tform_change.entity, transform.get_position());
-			
-			/*
-			bool is_kinematic = col->get_rigid_body()->isKinematicObject();
-			bool is_static = col->get_rigid_body()->isStaticObject();
-			bool is_static_or_kinematic = col->get_rigid_body()->isStaticOrKinematicObject();
-			*/
-
-			//auto t = col->get_collision_object()->getWorldTransform();
-			//print("Collision object position: {}", math::to_vector(t.getOrigin()));
-		}
-		
-		//auto* collision_obj = col->collision.get();
-
-		//auto from = collision_obj->getWorldTransform();
-		//auto to = math::to_bullet_matrix(transform.get_matrix());
-
-		//collision_world->convexSweepTest();
-		//collision_world->contactTest();
-
 		auto* motion_state = col->get_motion_state();
 
 		if (motion_state)
@@ -268,7 +250,85 @@ namespace engine
 		}
 		else
 		{
-			update_collision_object(*col, transform);
+			auto* collision_obj = col->get_collision_object();
+
+			if (!collision_obj)
+			{
+				return;
+			}
+
+			auto tform_matrix = transform.get_matrix();
+
+			if (col->is_active() && col->is_kinematic())
+			{
+				// TODO: Add to collision component.
+				auto method = col->get_cast_method(); // CollisionCastMethod::ConvexCast;
+				auto allowed_penetration = collision_world->getDispatchInfo().m_allowedCcdPenetration;
+
+				const auto& from = collision_obj->getWorldTransform();
+				auto to   = math::to_bullet_matrix(tform_matrix);
+
+				const auto& local_origin  = collision_obj->getWorldTransform().getOrigin();
+				auto from_position = (from * local_origin);
+				auto to_position   = (to   * local_origin); // transform.get_position();
+
+				switch (method)
+				{
+					case CollisionCastMethod::ConvexCast:
+					{
+						auto* shape = col->peek_convex_shape();
+
+						if (!shape)
+						{
+							break; // return;
+						}
+
+						using callback_t = btClosestNotMeConvexResultCallback; // btCollisionWorld::ClosestConvexResultCallback;
+
+						auto callback = callback_t(collision_obj, from_position, to_position, broadphase->getOverlappingPairCache(), collision_dispatcher.get());
+
+						callback.m_collisionFilterGroup = collision_obj->getBroadphaseHandle()->m_collisionFilterGroup;
+						callback.m_collisionFilterMask  = collision_obj->getBroadphaseHandle()->m_collisionFilterMask;
+
+						collision_world->convexSweepTest(shape, from, to, callback, allowed_penetration);
+
+						if (callback.hasHit())
+						{
+							const auto* hit_object = callback.m_hitCollisionObject;
+
+							// Const-cast required here due to fault in `needsCollision` interface from Bullet.
+							//auto* broadphase_proxy = const_cast<btBroadphaseProxy*>(hit_object->getBroadphaseHandle());
+
+							// Check if collision-resolution is warranted.
+							//if (callback.needsCollision(broadphase_proxy)) // <-- TODO: Determine if this check is actually necessary (shouldn't be)
+							{
+								print("HIT DETECTED");
+
+								//callback.m_hitPointWorld;
+								//callback.m_hitCollisionObject
+							}
+						}
+
+						break;
+					}
+					//case CollisionCastMethod::ConvexKinematicCast:
+						// INSERT USE OF `btKinematicClosestNotMeConvexResultCallback` here.
+						//break;
+
+					case CollisionCastMethod::RayCast:
+						// TODO: Implement ray cast approach. (offset by half of AABB/shape width from contact point)
+						//assert(false);
+						break;
+					//case CollisionCastMethod::None:
+					default:
+						break;
+				}
+			}
+
+			//collision_world->convexSweepTest();
+			//collision_world->contactTest();
+
+			update_collision_object_transform(*collision_obj, tform_matrix);
 
 			// Debugging related:
 			//auto t = col->get_collision_object()->getWorldTransform();

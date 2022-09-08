@@ -55,24 +55,6 @@ namespace engine
 		motion_state(std::move(motion_state)),
 		collision_object(std::monostate())
 	{}
-
-	template <typename ShapeRefType>
-	void CollisionComponent::set_shape_impl(ShapeRefType&& shape)
-	{
-		if (!shape)
-		{
-			return;
-		}
-
-		auto* collision = get_collision_object();
-
-		if (collision)
-		{
-			collision->setCollisionShape(shape.get());
-		}
-
-		this->shape = shape;
-	}
 	
 	bool CollisionComponent::apply_collision_flags(btCollisionObject& c_obj, const CollisionConfig& config, bool keep_existing_flags, bool allow_kinematic)
 	{
@@ -154,11 +136,6 @@ namespace engine
 
 		return (flags & CF_KINEMATIC_OBJECT);
 	}
-
-	// Acceptable inputs to give to `set_shape_impl`:
-	void CollisionComponent::set_shape(const Shape& shape)        { set_shape_impl(std::forward<decltype(shape)>(shape)); }
-	void CollisionComponent::set_shape(const ConcaveShape& shape) { set_shape_impl(std::forward<decltype(shape)>(shape)); }
-	void CollisionComponent::set_shape(const ConvexShape& shape)  { set_shape_impl(std::forward<decltype(shape)>(shape)); }
 
 	bool CollisionComponent::collision_object_in_monostate() const
 	{

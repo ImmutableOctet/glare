@@ -443,6 +443,7 @@
     <ClInclude Include="src\engine\world\physics\bullet_util\btClosestNotMeConvexResultCallback.hpp" />
     <ClInclude Include="src\engine\world\physics\bullet_util\btKinematicClosestNotMeRayResultCallback.hpp" />
     <ClInclude Include="src\engine\world\physics\bullet_util\btKinematicClosestNotMeConvexResultCallback.hpp" />
+    <ClInclude Include="src\graphics\collision_geometry.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\shaders\light_box.frag">
@@ -850,6 +851,7 @@
     <ClCompile Include="src\engine\world\behaviors\meta.cpp" />
     <ClCompile Include="src\engine\service.cpp" />
     <ClCompile Include="src\engine\system_manager.cpp" />
+    <ClCompile Include="src\graphics\collision_geometry.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />

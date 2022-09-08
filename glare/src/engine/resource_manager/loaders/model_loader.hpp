@@ -8,14 +8,19 @@
 #include <variant>
 #include <functional>
 
-#include <util/variant.hpp>
 #include <types.hpp>
+
+#include <util/variant.hpp>
+
 #include <graphics/types.hpp>
 #include <graphics/model.hpp>
 #include <graphics/mesh.hpp>
 #include <graphics/material.hpp>
 #include <graphics/animation.hpp>
 #include <graphics/skeleton.hpp>
+#include <graphics/collision_geometry.hpp>
+
+#include <engine/world/physics/types.hpp>
 
 #define AI_CONFIG_PP_PTV_NORMALIZE   "PP_PTV_NORMALIZE"
 
@@ -104,7 +109,7 @@ namespace engine
 
 				math::Matrix transform;
 
-				std::optional<Model::CollisionGeometry> collision = std::nullopt;
+				std::optional<CollisionGeometry> collision = std::nullopt;
 
 				const Skeleton* skeleton = nullptr;
 				const std::vector<Animation>* animations = nullptr;
@@ -115,7 +120,7 @@ namespace engine
 				(
 					Model&& model,
 					const math::Matrix& transform,
-					std::optional<Model::CollisionGeometry>&& collision=std::nullopt,
+					std::optional<CollisionGeometry>&& collision=std::nullopt,
 					const Skeleton* skeleton=nullptr,
 					const std::vector<Animation>* animations=nullptr
 				) : model(std::move(model)), collision(std::move(collision)), skeleton(skeleton), animations(animations) {}
