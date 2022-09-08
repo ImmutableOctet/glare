@@ -70,9 +70,12 @@ namespace engine
 				///don't do CCD when the collision filters are not matching
 				if (!ClosestConvexResultCallback::needsCollision(proxy0))
 					return false;
-				if (m_pairCache->getOverlapFilterCallback()) {
+
+				if (m_pairCache->getOverlapFilterCallback())
+				{
 					btBroadphaseProxy* proxy1 = m_me->getBroadphaseHandle();
 					bool collides = m_pairCache->needsBroadphaseCollision(proxy0, proxy1);
+					
 					if (!collides)
 					{
 						return false;
@@ -83,6 +86,19 @@ namespace engine
 
 				if (!m_dispatcher->needsCollision(m_me, otherObj))
 					return false;
+
+
+				// Custom logic to allow for static and kinematic objects for ray and convex casting:
+				if (m_me->isStaticOrKinematicObject() || otherObj->isStaticOrKinematicObject())
+				{
+					return true;
+				}
+				
+				// NOTE:
+				// The `needsResponse` logic here will trigger two `isStaticOrKinematicObject`
+				// checks that will disallow casting for non-dynamic objects. This is not intended behavior for
+				// this project's version of `btClosestNotMeConvexResultCallback`, but is intended for Bullet's implementation.
+
 
 				//call needsResponse, see http://code.google.com/p/bullet/issues/detail?id=179
 				if (m_dispatcher->needsResponse(m_me, otherObj))
