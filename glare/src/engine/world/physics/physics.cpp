@@ -106,6 +106,8 @@ namespace engine
 
 	void PhysicsSystem::resolve_intersections()
 	{
+		return;
+
 		auto& dispatcher = *collision_dispatcher;
 
 		auto manifold_count = dispatcher.getNumManifolds();
@@ -138,7 +140,7 @@ namespace engine
 				continue;
 			}
 
-			if ((int)a_ent == 34 || (int)b_ent == 34)
+			//if ((int)a_ent == 34 || (int)b_ent == 34)
 			{
 				//auto t = world.get_transform(a_ent);
 				//update_collision_object(const_cast<btCollisionObject&>(*a), t);
@@ -188,7 +190,10 @@ namespace engine
 
 						//auto push_back_len = glm::length(b_point_from_a_center);
 						//auto push_back_len = glm::length(b_point_from_a_point);
+						
 						auto length = -distance; // * 1.5f;
+						//auto length = (-distance) + collision_world->getDispatchInfo().m_allowedCcdPenetration;
+
 						//length = std::max(length, 0.5f);
 
 						correction += (normal * length);
@@ -268,9 +273,17 @@ namespace engine
 				const auto& from = collision_obj->getWorldTransform();
 				auto to   = math::to_bullet_matrix(tform_matrix);
 
-				const auto& local_origin  = collision_obj->getWorldTransform().getOrigin();
+				//const auto& local_origin  = collision_obj->getWorldTransform().getOrigin();
+				auto local_origin = btVector3(0.0f, 0.0f, 0.0f);
 				auto from_position = (from * local_origin);
 				auto to_position   = (to   * local_origin); // transform.get_position();
+
+				auto position_delta = glm::length(math::to_vector(to_position) - math::to_vector(from_position));
+
+				if (((int)entity == 34) && (position_delta > 10.0f))
+				{
+					print("Camera [{}] from: {}, to: {}", position_delta, math::to_vector(from_position), math::to_vector(to_position));
+				}
 
 				switch (method)
 				{
@@ -287,8 +300,10 @@ namespace engine
 
 						auto callback = callback_t(collision_obj, from_position, to_position, broadphase->getOverlappingPairCache(), collision_dispatcher.get());
 
-						callback.m_collisionFilterGroup = collision_obj->getBroadphaseHandle()->m_collisionFilterGroup;
-						callback.m_collisionFilterMask  = collision_obj->getBroadphaseHandle()->m_collisionFilterMask;
+						callback.m_collisionFilterGroup = collision_obj->getBroadphaseHandle()->m_collisionFilterGroup; // -1;
+						callback.m_collisionFilterMask = collision_obj->getBroadphaseHandle()->m_collisionFilterMask; // -1;
+
+						callback.m_allowedPenetration = allowed_penetration;
 
 						collision_world->convexSweepTest(shape, from, to, callback, allowed_penetration);
 
@@ -296,17 +311,52 @@ namespace engine
 						{
 							const auto* hit_object = callback.m_hitCollisionObject;
 
-							// Const-cast required here due to fault in `needsCollision` interface from Bullet.
-							//auto* broadphase_proxy = const_cast<btBroadphaseProxy*>(hit_object->getBroadphaseHandle());
-
-							// Check if collision-resolution is warranted.
-							//if (callback.needsCollision(broadphase_proxy)) // <-- TODO: Determine if this check is actually necessary (shouldn't be)
+							if ((int)entity == 34)
 							{
-								print("HIT DETECTED");
-
-								//callback.m_hitPointWorld;
-								//callback.m_hitCollisionObject
+								print("HIT DETECTED (camera)");
 							}
+							else
+							{
+								print("HIT DETECTED (not camera)");
+							}
+
+							auto normal = math::to_vector(callback.m_hitNormalWorld);
+							auto fraction = callback.m_closestHitFraction;
+							auto hit_point_in_world = math::to_vector(callback.m_hitPointWorld);
+
+
+							// This needs to be its own routine:
+							btVector3 aabb_min, aabb_max;
+							const auto* rigid_body = col->get_rigid_body();
+
+							rigid_body->getAabb(aabb_min, aabb_max);
+
+							const auto* convex_shape = col->peek_convex_shape();
+
+							//convex_shape->getAabb();
+
+							btVector3 sphere_center;
+							float sphere_radius = 0.0f;
+
+							convex_shape->getBoundingSphere(sphere_center, sphere_radius);
+
+							auto obj_size = glm::length(math::to_vector(aabb_min - aabb_max));
+							auto half_obj_size = (obj_size / 2.0f);
+
+							print("Size: {}, Radius: {}", obj_size, sphere_radius);
+
+							auto corrected_dest_position = (hit_point_in_world + (normal * half_obj_size));
+
+							auto attempted_move_length = glm::length(math::to_vector(to_position) - math::to_vector(from_position));
+							auto actual_move_length = glm::length(corrected_dest_position - math::to_vector(from_position));
+
+							transform.set_position(corrected_dest_position);
+							tform_matrix = transform.get_matrix();
+
+							print("DEBUG");
+
+							//callback.m_hitPointWorld;
+							//callback.m_hitCollisionObject
 						}
 
 						break;

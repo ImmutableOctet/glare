@@ -79,6 +79,8 @@ namespace glare
 			engine::CollisionGroup::All
 		);
 
+		world.set_name(cube, "TestBox");
+
 		auto cube_t = world.get_transform(cube);
 
 		cube_t.set_position({ -6.20467f, 166.5406f, 39.1254f });
@@ -105,6 +107,19 @@ namespace glare
 		//auto transform = get_named_transform(target_obj);
 		//auto angle = glm::normalize(transform.get_position() - camera_pos);
 		//float delta = world.delta();
+
+		if (keyboard.get_key(SDL_SCANCODE_R))
+		{
+			auto box = world.get_by_name("TestBox");
+
+			auto t = world.get_transform(box);
+
+			const auto& dt = world.get_delta_time();
+
+			auto m = math::Vector { 0.0f, std::sinf((dt.current_frame_time() / 1000.0f)) * 1.0f * dt, 0.0f };
+
+			t.move(m);
+		}
 	}
 
 	void Glare::on_user_mouse_input(const app::input::MouseState& mouse)
@@ -190,27 +205,34 @@ namespace glare
 			break;
 		}
 
-		case SDLK_e:
+		case SDLK_k:
 		{
-			auto child_obj = world.get_player(1); // world.get_camera();
+			print("Moving camera down.");
 
-			const auto& rel = world.get_registry().get<engine::Relationship>(child_obj);
+			auto camera = world.get_camera();
 
-			auto rel_parent = rel.get_parent();
-			auto root = world.get_root();
+			if (camera == engine::null)
+				break;
 
-			if ((rel_parent == engine::null) || (rel_parent == root))
-			{
-				//auto parent_obj = world.get_by_name(engine::DEFAULT_PLAYER_NAME);
+			auto t = world.get_transform(camera);
 
-				auto parent_obj = world.get_by_name("Rotating Platform"); // "Spinning Cube"
+			t.move({0.0f, -40.0f, 0.0f});
 
-				world.set_parent(child_obj, parent_obj);
-			}
-			else
-			{
-				world.set_parent(child_obj, engine::null); // root
-			}
+			break;
+		}
+
+		case SDLK_l:
+		{
+			print("Moving camera up.");
+
+			auto camera = world.get_camera();
+
+			if (camera == engine::null)
+				break;
+
+			auto t = world.get_transform(camera);
+
+			t.move({ 0.0f, 40.0f, 0.0f });
 
 			break;
 		}
@@ -235,33 +257,6 @@ namespace glare
 				std::cout << "\"position\": { " << "\"x\": " << position.x << ", " << "\"y\": " << position.y << ", " << "\"z\": " << position.z << " }," << '\n';
 				std::cout << "\"rotation\": { " << "\"x\": " << rotation.x << ", " << "\"y\": " << rotation.y << ", " << "\"z\": " << rotation.z << " }," << '\n';
 				std::cout << "\"scale\": { " << "\"x\": " << scale.x << ", " << "\"y\": " << scale.y << ", " << "\"z\": " << scale.z << " }" << '\n';
-			}
-
-			//engine::SimpleFollowComponent::update(world);
-
-			break;
-		}
-
-		case SDLK_g:
-		{
-			auto target_entity = world.get_by_name("Rotating Platform"); //world.get_player(1);
-
-			if (target_entity != engine::null)
-			{
-				auto t = world.get_transform(target_entity);
-
-				/*
-				std::cout << "\nPlayer:\n";
-				std::cout << "Position: " << t.get_position() << '\n';
-				std::cout << "Rotation: " << math::degrees(t.get_rotation()) << '\n';
-				std::cout << "Scale: " << t.get_scale() << '\n';
-				*/
-
-				auto& registry = world.get_registry();
-				auto& m = registry.get<engine::ModelComponent>(target_entity);
-
-				m.receives_shadow = !m.receives_shadow;
-				//m.receives_light = !m.receives_light;
 			}
 
 			//engine::SimpleFollowComponent::update(world);
