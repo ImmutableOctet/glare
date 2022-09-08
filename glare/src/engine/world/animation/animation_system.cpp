@@ -2,11 +2,13 @@
 #include "animation_events.hpp"
 #include "animator.hpp"
 
-#include <engine/bone_component.hpp>
+#include "bone_component.hpp"
+#include "skeletal_component.hpp"
 
 #include <engine/relationship.hpp>
 #include <engine/world/world.hpp>
 #include <engine/resource_manager/resource_manager.hpp>
+#include <engine/events.hpp>
 
 #include <graphics/animation.hpp>
 
@@ -15,14 +17,14 @@
 namespace engine
 {
 	AnimationSystem::AnimationSystem(World& world)
-		//: world(world)
+		: world(world)
 	{
 		world.subscribe(*this);
 	}
 
 	void AnimationSystem::on_subscribe(World& world)
 	{
-		//world.register_event<...>(*this);
+		world.register_event<OnParentChanged, &AnimationSystem::on_parent_changed>(*this);
 	}
 
 	static std::uint16_t animate_bones(World& world, const math::Matrix& inv_root_matrix, Animator& animator, const Animation& current_animation, Relationship& relationship)
@@ -188,5 +190,77 @@ namespace engine
 				}
 			}
 		});
+	}
+
+	void AnimationSystem::on_parent_changed(const OnParentChanged& parent_changed)
+	{
+		auto& registry = world.get_registry();
+
+		auto* bone_component = registry.try_get<BoneComponent>(parent_changed.entity);
+
+		if (!bone_component)
+		{
+			return;
+		}
+		
+		// Check if the previous parent had a skeleton:
+		if (parent_changed.from_parent != null)
+		{
+			if (auto* prev_parent_skeleton = registry.try_get<SkeletalComponent>(parent_changed.from_parent); prev_parent_skeleton)
+			{
+				// Check if we're the root bone:
+				if (prev_parent_skeleton->root_bone == parent_changed.entity)
+				{
+					// Set the previous parent's root bone to `null`.
+					prev_parent_skeleton->root_bone = null;
+				}
+			}
+		}
+		
+		// If the newly assigned parent entity is a bone, forward its skeleton field:
+		if (auto* new_parent_bone_component = registry.try_get<BoneComponent>(parent_changed.to_parent); new_parent_bone_component)
+		{
+			bone_component->skeleton = new_parent_bone_component->skeleton;
+		}
+		else // Parent is not a bone:
+		{
+			// Point our own skeleton field to the new parent/skeleton entity.
+			bone_component->skeleton = parent_changed.to_parent;
+
+			// Attach a skeleton to the new parent.
+			if (!attach_skeleton(world, parent_changed.to_parent, parent_changed.entity)) // In the event of failure:
+			{
+				// A skeleton already exists, assign our parent to that skeleton's `root_bone` instead:
+				if (auto* skeleton = registry.try_get<SkeletalComponent>(parent_changed.to_parent); skeleton)
+				{
+					assert(skeleton->root_bone != null);
+
+					world.set_parent(parent_changed.entity, skeleton->root_bone);
+
+					// Don't bother continuing, since we'll have to handle a new `OnParentChanged` event shortly.
+					return;
+				}
+			}
+		}
+
+		auto* relationship = registry.try_get<Relationship>(parent_changed.entity);
+
+		if (!relationship)
+		{
+			return;
+		}
+		
+		// Update children recursively with our newly established skeleton entity:
+		relationship->enumerate_children(registry, [&](Entity child, Relationship& relationship, Entity next_child)
+		{
+			auto* bone = registry.try_get<BoneComponent>(child);
+
+			if (!bone)
+				return true;
+
+			bone->skeleton = parent_changed.to_parent;
+
+			return true;
+		}, true);
 	}
 }

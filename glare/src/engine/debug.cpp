@@ -10,8 +10,13 @@
 #include "world/world.hpp"
 #include "world/world_events.hpp"
 
+// Components:
+#include <engine/world/animation/skeletal_component.hpp>
+
 namespace engine
 {
+	//struct SkeletalComponent;
+
 	void print_children(World& world, Entity entity, bool recursive, bool summary_info, bool recursive_labels, const std::string& prefix)
 	{
 		auto& registry = world.get_registry();
@@ -100,9 +105,15 @@ namespace engine
 	DebugListener::DebugListener(World& world)
 		: world(world)
 	{
+		auto& registry = world.get_registry();
+
+		// Standard event types:
 		enable<OnStageLoaded>();
 		enable<OnEntityCreated>();
 		enable<OnParentChanged>();
+
+		// Component construction events:
+		registry.on_construct<SkeletalComponent>().connect<&DebugListener::on_skeleton>(*this);
 	}
 
 	DebugListener::~DebugListener()
@@ -157,5 +168,10 @@ namespace engine
 			label(data.from_parent),
 			label(data.to_parent)
 		);
+	}
+
+	void DebugListener::on_skeleton(Registry& registry, Entity entity)
+	{
+		print("Skeleton attached to: {}", entity);
 	}
 }

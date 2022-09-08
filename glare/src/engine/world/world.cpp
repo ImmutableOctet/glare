@@ -9,6 +9,7 @@
 //#include "animator.hpp"
 #include "graphics_entity.hpp"
 
+#include "animation/bone_component.hpp"
 #include "physics/collision_component.hpp"
 
 #include <math/math.hpp>
@@ -28,7 +29,6 @@
 #include <engine/relationship.hpp>
 
 #include <engine/type_component.hpp>
-#include <engine/bone_component.hpp>
 #include <engine/name_component.hpp>
 
 #include <app/input/input.hpp>

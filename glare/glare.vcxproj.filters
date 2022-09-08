@@ -290,7 +290,7 @@
     <ClInclude Include="src\engine\action.hpp">
       <Filter>src\engine</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\bone_component.hpp">
+    <ClInclude Include="src\engine\world\animation\bone_component.hpp">
       <Filter>src\engine</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\world\physics\collision_component.hpp">
@@ -444,6 +444,7 @@
     <ClInclude Include="src\engine\world\physics\bullet_util\btKinematicClosestNotMeRayResultCallback.hpp" />
     <ClInclude Include="src\engine\world\physics\bullet_util\btKinematicClosestNotMeConvexResultCallback.hpp" />
     <ClInclude Include="src\graphics\collision_geometry.hpp" />
+    <ClInclude Include="src\engine\world\animation\skeletal_component.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\shaders\light_box.frag">
@@ -852,6 +853,8 @@
     <ClCompile Include="src\engine\service.cpp" />
     <ClCompile Include="src\engine\system_manager.cpp" />
     <ClCompile Include="src\graphics\collision_geometry.cpp" />
+    <ClCompile Include="src\engine\world\animation\skeletal_component.cpp" />
+    <ClCompile Include="src\engine\world\animation\bone_component.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />

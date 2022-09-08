@@ -44,6 +44,8 @@ namespace engine
 			void operator()(const OnEntityCreated& data);
 			void operator()(const OnParentChanged& data);
 
+			void on_skeleton(Registry& registry, Entity entity);
+
 			std::string label(Entity entity);
 
 			inline World& get_world() const

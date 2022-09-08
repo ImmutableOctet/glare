@@ -11,6 +11,8 @@ namespace engine
 	struct Animator;
 	struct AnimationTransition;
 
+	struct OnParentChanged;
+
 	class AnimationSystem : public WorldSystem
 	{
 		public:
@@ -21,7 +23,8 @@ namespace engine
 			void on_subscribe(World& world) override;
 			void on_update(World& world, float delta_time) override;
 		protected:
-			// May need this in the future.
-			//World& world;
+			void on_parent_changed(const OnParentChanged& parent_changed);
+
+			World& world;
 	};
 }

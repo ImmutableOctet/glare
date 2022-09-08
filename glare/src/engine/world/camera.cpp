@@ -55,8 +55,9 @@ namespace engine
 		if (collision_enabled)
 		{
 			auto& resource_manager = world.get_resource_manager();
-			//auto collision_data = resource_manager.generate_sphere_collision(0.1f); // 0.01f
-			auto collision_data = resource_manager.generate_capsule_collision(1.0f, 2.0f);
+			
+			auto collision_data = resource_manager.generate_sphere_collision(2.0f); // 0.1f
+			//auto collision_data = resource_manager.generate_capsule_collision(1.0f, 2.0f);
 
 			auto collision_config = CollisionConfig { entity_type };
 			//auto collision_config = CollisionConfig{ EntityType::Platform };
