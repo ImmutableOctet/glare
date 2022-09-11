@@ -8,6 +8,7 @@
 #include "bullet_util/bullet_util.hpp"
 
 #include <engine/world/world.hpp>
+#include <engine/world/world_events.hpp>
 
 #include <engine/transform.hpp>
 //#include <engine/relationship.hpp>
@@ -27,10 +28,9 @@
 namespace engine
 {
 	// PhysicsSystem:
-	PhysicsSystem::PhysicsSystem(World& world, math::Vector gravity)
+	PhysicsSystem::PhysicsSystem(World& world)
 	:
 		world(world),
-		gravity(gravity), // <-- This is set later anyway, but just in case something depends on the raw value during construction, we set it here as well.
 
 		collision_configuration(std::make_unique<btDefaultCollisionConfiguration>()),
 		collision_dispatcher(std::make_unique<btCollisionDispatcher>(collision_configuration.get())),
@@ -43,7 +43,7 @@ namespace engine
 		collision_world(std::make_unique<btDiscreteDynamicsWorld>(collision_dispatcher.get(), broadphase.get(), solver.get(), collision_configuration.get()))
 		//collision_world(std::make_unique<btCollisionWorld>(collision_dispatcher.get(), broadphase.get(), collision_configuration.get()))
 	{
-		set_gravity(gravity);
+		set_physics_gravity(world.get_gravity());
 
 		//collision_world->setSynchronizeAllMotionStates(true);
 
@@ -59,13 +59,14 @@ namespace engine
 	{
 		auto& registry = world.get_registry();
 
-		world.register_event<OnTransformChange, &PhysicsSystem::on_transform_change>(*this);
+		world.register_event<OnTransformChanged, &PhysicsSystem::on_transform_change>(*this);
+		world.register_event<OnGravityChanged, &PhysicsSystem::on_gravity_change>(*this);
 
 		registry.on_construct<CollisionComponent>().connect<&PhysicsSystem::on_create_collider>(*this);
 		registry.on_destroy<CollisionComponent>().connect<&PhysicsSystem::on_destroy_collider>(*this);
 	}
 
-	// TODO: We need to look at `OnTransformChange`/`on_transform_change` and how it relates to the collision side of this routine.
+	// TODO: We need to look at `OnTransformChanged`/`on_transform_change` and how it relates to the collision side of this routine.
 	void PhysicsSystem::on_update(World& world, float delta)
 	{
 		auto& registry = world.get_registry();
@@ -74,7 +75,7 @@ namespace engine
 
 		auto view = registry.view<PhysicsComponent>(); // <TransformComponent, ...> (auto& tf_comp)
 		
-		auto& gravity = this->gravity;
+		const auto gravity = get_gravity();
 
 		// Apply motion (gravity, velocity, deceleration, etc.) and resolve collisions between old and new positions:
 		view.each([&](auto entity, auto& ph)
@@ -210,7 +211,13 @@ namespace engine
 		}
 	}
 
-	void PhysicsSystem::on_transform_change(const OnTransformChange& tform_change)
+	void PhysicsSystem::on_gravity_change(const OnGravityChanged& gravity)
+	{
+		// Forward the world's new gravity to Bullet.
+		set_physics_gravity(gravity.new_gravity);
+	}
+
+	void PhysicsSystem::on_transform_change(const OnTransformChanged& tform_change)
 	{
 		auto entity = tform_change.entity;
 
@@ -240,7 +247,7 @@ namespace engine
 				/*
 				// Disabled for now; Bullet will call into `motion_state`'s
 				// set `setWorldTransform` method every time, causing another
-				// `OnTransformChange` event-trigger continuously.
+				// `OnTransformChanged` event-trigger continuously.
 				if (motion_state)
 				{
 					auto* rigid_body = col->get_rigid_body();
@@ -331,17 +338,25 @@ namespace engine
 
 							rigid_body->getAabb(aabb_min, aabb_max);
 
-							const auto* convex_shape = col->peek_convex_shape();
+							const auto* shape = col->peek_shape(); // col->peek_convex_shape();
 
 							//convex_shape->getAabb();
 
 							btVector3 sphere_center;
 							float sphere_radius = 0.0f;
 
-							convex_shape->getBoundingSphere(sphere_center, sphere_radius);
+							shape->getBoundingSphere(sphere_center, sphere_radius);
 
 							auto obj_size = glm::length(math::to_vector(aabb_min - aabb_max));
 							auto half_obj_size = (obj_size / 2.0f);
+
+							btTransform alt_aabb_transform;
+							alt_aabb_transform.setIdentity();
+
+							btVector3 alt_aabb_min, alt_aabb_max;
+							shape->getAabb(alt_aabb_transform, alt_aabb_min, alt_aabb_max);
+
+							auto obj_size2 = glm::length(math::to_vector(alt_aabb_min - alt_aabb_max));
 
 							print("Size: {}, Radius: {}", obj_size, sphere_radius);
 
@@ -392,7 +407,7 @@ namespace engine
 
 		if (ph.apply_gravity())
 		{
-			movement += (gravity * ph.gravity() * delta);
+			movement += (get_gravity() * ph.gravity() * delta);
 		}
 
 		if (ph.apply_velocity())
@@ -497,21 +512,29 @@ namespace engine
 		update_collision_object_transform(obj, m);
 	}
 
+	// Internal shorthand for `world.get_gravity()`.
 	math::Vector PhysicsSystem::get_gravity() const
 	{
-		//return math::to_vector(collision_world->getGravity());
-
-		return gravity;
+		return world.get_gravity();
 	}
 
-	void PhysicsSystem::set_gravity(const math::Vector& g)
+	// Internal shorthand for `world.down()`.
+	math::Vector PhysicsSystem::down() const
 	{
-		gravity = g;
-
-		// TODO: Determine if we need/want to use Bullet's built-in gravity functionality.
-		//collision_world->setGravity(math::to_bullet_vector(g));
+		return world.down();
 	}
 
+	void PhysicsSystem::set_physics_gravity(const math::Vector& gravity)
+	{
+		collision_world->setGravity(math::to_bullet_vector(gravity));
+	}
+
+	math::Vector PhysicsSystem::get_physics_gravity() const
+	{
+		return math::to_vector(collision_world->getGravity());
+	}
+
+	// Internal routine, used for `ENGINE_COLLISION_MOTION_STATE_ALTERNATIVE_IMPL`.
 	void PhysicsSystem::retrieve_bullet_transforms()
 	{
 		#if defined(ENGINE_COLLISION_MOTION_STATE_ALTERNATIVE_IMPL) && (ENGINE_COLLISION_MOTION_STATE_ALTERNATIVE_IMPL == 1)

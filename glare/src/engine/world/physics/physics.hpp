@@ -25,7 +25,8 @@ namespace engine
 	struct Transform;
 	struct PhysicsComponent;
 	struct CollisionComponent;
-	struct OnTransformChange;
+	struct OnTransformChanged;
+	struct OnGravityChanged;
 
 	class PhysicsSystem : public WorldSystem
 	{
@@ -35,13 +36,15 @@ namespace engine
 
 			static constexpr float MIN_SPEED = 0.0025f;
 
-			PhysicsSystem(World& world, math::Vector gravity={ 0.0f, -1.0f, 0.0f });
+			PhysicsSystem(World& world);
 			~PhysicsSystem();
 
 			void on_subscribe(World& world) override;
 			void on_update(World& world, float delta) override;
 
-			void on_transform_change(const OnTransformChange& tform_change);
+			void on_gravity_change(const OnGravityChanged& gravity);
+
+			void on_transform_change(const OnTransformChanged& tform_change);
 			
 			void on_create_collider(Registry& registry, Entity entity);
 			void on_destroy_collider(Registry& registry, Entity entity); // const CollisionComponent&
@@ -49,20 +52,30 @@ namespace engine
 			void update_collision_object(CollisionComponent& col, Transform& transform);
 			void update_collision_object(btCollisionObject& obj, Transform& transform);
 
-			math::Vector get_gravity() const;
-			void set_gravity(const math::Vector& g);
 		protected:
 			void update_collision_world(float delta);
+
 			void resolve_intersections();
+			
 			void update_motion(Entity entity, Transform& transform, PhysicsComponent& ph, float delta);
 			void update_collision_object(btCollisionObject& obj, const math::Matrix& m);
+
+			// Internal shorthand for `world.get_gravity()`.
+			math::Vector get_gravity() const;
+
+			// Internal shorthand for `world.down()`.
+			math::Vector down() const;
 		private:
+			// Manually sets the physics system's gravity. (this does not impact `world`)
+			void set_physics_gravity(const math::Vector& gravity);
+
+			// Retrieves the gravity value managed by the internally held `collision_world`.
+			math::Vector get_physics_gravity() const;
+
 			// Internal routine that handles 'Bullet-to-Engine' synchronization for `ENGINE_COLLISION_MOTION_STATE_ALTERNATIVE_IMPL`.
 			void retrieve_bullet_transforms();
 
 			World& world;
-
-			math::Vector gravity;
 
 			std::unique_ptr<btDefaultCollisionConfiguration> collision_configuration;
 			std::unique_ptr<btCollisionDispatcher> collision_dispatcher;

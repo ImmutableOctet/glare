@@ -312,6 +312,8 @@ namespace engine
 
 		if (render_state)
 		{
+			const auto& properties = world.get_properties();
+
 			if (!render_state->meta.view_position.has_value())
 			{
 				auto camera_position = camera_transform.get_position();
@@ -321,7 +323,7 @@ namespace engine
 
 			if (!render_state->meta.ambient_light.has_value())
 			{
-				render_state->meta.ambient_light = world.properties.ambient_light;
+				render_state->meta.ambient_light = properties.ambient_light;
 			}
 		}
 

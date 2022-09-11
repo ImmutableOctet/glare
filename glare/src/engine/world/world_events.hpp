@@ -28,8 +28,15 @@ namespace engine
 		Likewise, small modifications to the entity's transform will also trigger this event.
 		e.g. minor differences in rotation caused by billboard behaviors, mouse input, etc.
 	*/
-	struct OnTransformChange
+	struct OnTransformChanged
 	{
 		Entity entity;
+	};
+
+	// This event is triggered any time a `World` object's `set_gravity` command is called.
+	struct OnGravityChanged
+	{
+		math::Vector old_gravity;
+		math::Vector new_gravity;
 	};
 }

@@ -45,7 +45,7 @@ namespace engine
 	World::World(Config& config, ResourceManager& resource_manager, UpdateRate update_rate)
 		: config(config), resource_manager(resource_manager), delta_time(update_rate)
 	{
-		register_event<OnTransformChange, &World::on_transform_change>();
+		register_event<OnTransformChanged, &World::on_transform_change>();
 		register_event<OnEntityDestroyed, &World::on_entity_destroyed>();
 
 		subscribe(resource_manager);
@@ -154,8 +154,8 @@ namespace engine
 		{
 			tf.on_flag(TransformComponent::Flag::EventFlag, [this, entity]()
 			{
-				//this->queue_event<OnTransformChange>(entity);
-				this->event<OnTransformChange>(entity);
+				//this->queue_event<OnTransformChanged>(entity);
+				this->event<OnTransformChanged>(entity);
 			});
 
 			//tf.validate(TransformComponent::Dirty::EventFlag);
@@ -437,6 +437,27 @@ namespace engine
 		return null;
 	}
 
+	math::Vector World::get_gravity() const
+	{
+		return properties.gravity;
+	}
+
+	void World::set_gravity(const math::Vector& gravity)
+	{
+		auto old_gravity = properties.gravity;
+		
+		properties.gravity = gravity;
+
+		// Notify listeners that the world's gravity has changed.
+		event<OnGravityChanged>(old_gravity, gravity);
+	}
+
+	math::Vector World::down() const
+	{
+		//return { 0.0f, -1.0f, 0.0f };
+		return glm::normalize(get_gravity());
+	}
+
 	void World::set_camera(Entity camera)
 	{
 		assert(registry.try_get<CameraParameters>(camera));
@@ -444,7 +465,7 @@ namespace engine
 		this->camera = camera;
 	}
 
-	void World::on_transform_change(const OnTransformChange& tform_change)
+	void World::on_transform_change(const OnTransformChanged& tform_change)
 	{
 		auto entity = tform_change.entity;
 
@@ -538,7 +559,7 @@ namespace engine
 		if (collision)
 		{
 			/*
-				This will trigger a `OnTransformChange` event, which
+				This will trigger a `OnTransformChanged` event, which
 				in turn *may* update the collision-object again.
 
 				Regardless, we still perform a transform update/assignment to

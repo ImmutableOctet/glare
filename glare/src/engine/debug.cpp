@@ -170,6 +170,11 @@ namespace engine
 		);
 	}
 
+	void DebugListener::operator()(const OnGravityChanged& data)
+	{
+		print("Gravity changed from: {}, to: {}", data.old_gravity, data.new_gravity);
+	}
+
 	void DebugListener::on_skeleton(Registry& registry, Entity entity)
 	{
 		print("Skeleton attached to: {}", entity);

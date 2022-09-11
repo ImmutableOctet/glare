@@ -334,6 +334,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\world\behaviors\target_behavior.hpp" />
     <ClInclude Include="src\engine\world\types.hpp" />
     <ClInclude Include="src\engine\world\world.hpp" />
+    <ClInclude Include="src\engine\world\world_properties.hpp" />
     <ClInclude Include="src\engine\world\world_system.hpp" />
     <ClInclude Include="src\game\effects.hpp" />
     <ClInclude Include="src\game\game.hpp" />

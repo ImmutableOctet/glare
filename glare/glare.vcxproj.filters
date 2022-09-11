@@ -445,6 +445,7 @@
     <ClInclude Include="src\engine\world\physics\bullet_util\btKinematicClosestNotMeConvexResultCallback.hpp" />
     <ClInclude Include="src\graphics\collision_geometry.hpp" />
     <ClInclude Include="src\engine\world\animation\skeletal_component.hpp" />
+    <ClInclude Include="src\engine\world\world_properties.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\shaders\light_box.frag">

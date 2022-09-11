@@ -7,6 +7,7 @@
 #include <engine/transform.hpp>
 
 #include "world_events.hpp"
+#include "world_properties.hpp"
 
 //#include <graphics/types.hpp> // Not actually needed. (`ColorRGB` is actually located in math)
 #include <app/delta_time.hpp>
@@ -63,19 +64,9 @@ namespace engine
 
 			// Currently-active/last-bound camera.
 			Entity camera = null;
+
+			WorldProperties properties;
 		public:
-			struct _properties
-			{
-				graphics::ColorRGB ambient_light = { 0.8f, 0.8f, 0.8f };
-
-				_properties() = default;
-
-				inline _properties(const util::json& data) : _properties()
-				{
-					ambient_light = util::get_color_rgb(data, "ambient_light", ambient_light);
-				}
-			} properties;
-
 			World(Config& config, ResourceManager& resource_manager, UpdateRate update_rate);
 
 			// Constructs a 'World' object, then immediately loads a map from the 'path' specified.
@@ -251,15 +242,19 @@ namespace engine
 
 			Entity get_player(PlayerIndex player=engine::PRIMARY_LOCAL_PLAYER) const;
 
-			inline math::Vector down() const { return { 0.0f, -1.0f, 0.0f }; }
+			math::Vector get_gravity() const;
+			void set_gravity(const math::Vector& gravity);
 
-			// TODO: Determine how to sync gravity with physics system appropriately.
-			inline math::Vector gravity() const { return down(); }
+			// Returns a normalized down vector.
+			// (Direction vector of 'gravity')
+			math::Vector down() const;
+
+			const WorldProperties& get_properties() const { return properties; }
 
 			inline float delta() const { return delta_time; }
 			inline operator Entity() const { return get_root(); }
 
-			void on_transform_change(const OnTransformChange& tform_change);
+			void on_transform_change(const OnTransformChanged& tform_change);
 			void on_entity_destroyed(const OnEntityDestroyed& destruct);
 
 			// Same as `defer`, but implicitly forwards `this` prior to any arguments following the target function; useful for deferring member functions.
