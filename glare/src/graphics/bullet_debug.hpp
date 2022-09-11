@@ -55,5 +55,8 @@ namespace graphics
 
 			Vertices point_data;
 			std::shared_ptr<Context> ctx;
+
+			std::size_t max_buffer_size  = 0;
+			std::size_t prev_buffer_size = 0;
 	};
 }

@@ -304,6 +304,33 @@ namespace graphics
 				return GL_NONE;
 			}
 
+			static GLenum get_access_mode(BufferAccessMode access_mode)
+			{
+				switch (access_mode)
+				{
+					case BufferAccessMode::StaticCopy:
+						return GL_STATIC_COPY;
+					case BufferAccessMode::StaticDraw:
+						return GL_STATIC_DRAW;
+					case BufferAccessMode::StaticRead:
+						return GL_STATIC_READ;
+
+					case BufferAccessMode::DynamicCopy:
+						return GL_DYNAMIC_COPY;
+					case BufferAccessMode::DynamicDraw:
+						return GL_DYNAMIC_DRAW;
+					case BufferAccessMode::DynamicRead:
+						return GL_DYNAMIC_READ;
+
+					case BufferAccessMode::StreamCopy:
+						return GL_STREAM_COPY;
+					case BufferAccessMode::StreamDraw:
+						return GL_STREAM_DRAW;
+					case BufferAccessMode::StreamRead:
+						return GL_STREAM_READ;
+				}
+			}
+
 			static GLenum get_format_from_channels(int channels, bool integer_format=false)
 			{
 				if (integer_format)
@@ -1824,7 +1851,7 @@ namespace graphics
 		}
 	}
 
-	MeshComposition Context::generate_mesh(memory::memory_view vertices, std::size_t vertex_size, memory::array_view<VertexAttribute> attributes, memory::array_view<MeshIndex> indices) noexcept
+	MeshComposition Context::generate_mesh(memory::memory_view vertices, std::size_t vertex_size, memory::array_view<VertexAttribute> attributes, memory::array_view<MeshIndex> indices, BufferAccessMode access_mode) noexcept
 	{
 		assert(vertices);
 		assert(vertex_size);
@@ -1832,65 +1859,88 @@ namespace graphics
 
 		GLComposition mesh = {};
 
-		const void* vertex_data_offset = 0;
-		const bool indices_available = (indices.has_data());
-
 		glGenVertexArrays(1, &mesh.VAO);
 
 		// TODO: Handle shared VBOs for memory optimization:
 		glGenBuffers(1, &mesh.VBO);
 
-		if (indices_available)
+		if (indices.has_data())
 		{
 			glGenBuffers(1, &mesh.EBO);
 		}
 
-		// TODO: Potentially unify this implementation with standard bind operations.
-		glBindVertexArray(mesh.VAO);
+		// TODO: Look into unifying this implementation with standard bind operations.
+		auto mesh_comp = MeshComposition { mesh };
+
+		update_mesh(mesh_comp, vertices, vertex_size, attributes, indices, access_mode);
+
+		return mesh_comp;
+	}
+
+	void Context::update_mesh(MeshComposition& mesh, memory::memory_view vertices, std::size_t vertex_size, memory::array_view<VertexAttribute> attributes, memory::array_view<MeshIndex> indices, BufferAccessMode access_mode, bool reuse_buffer_allocation, bool update_attributes) noexcept
+	{
+		const GLintptr gpu_vertex_data_offset = 0;
+
+		glBindVertexArray(mesh.gl.VAO);
 
 		// Vertex Data:
-		glBindBuffer(GL_ARRAY_BUFFER, mesh.VBO);
+		glBindBuffer(GL_ARRAY_BUFFER, mesh.gl.VBO);
 
-		// TODO: Handle Static vs. Dynamic mesh data.
-		glBufferData(GL_ARRAY_BUFFER, (vertices.size() * vertex_size), vertices.data(), GL_STATIC_DRAW);
-
-		// Index Data:
-		if (indices_available)
+		if (reuse_buffer_allocation)
 		{
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.EBO);
-
-			// TODO: Handle Static vs. Dynamic mesh data. (Less of a problem for indices)
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, (indices.size() * sizeof(MeshIndex)), indices.data(), GL_STATIC_DRAW);
+			glBufferSubData(GL_ARRAY_BUFFER, gpu_vertex_data_offset, (vertices.size() * vertex_size), vertices.data());
+		}
+		else
+		{
+			glBufferData(GL_ARRAY_BUFFER, (vertices.size() * vertex_size), vertices.data(), Driver::get_access_mode(access_mode)); // GL_STATIC_DRAW
 		}
 
+		// Index Data:
+		if (indices.has_data())
+		{
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.gl.EBO);
+
+			if (reuse_buffer_allocation)
+			{
+				glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, gpu_vertex_data_offset, (indices.size() * sizeof(MeshIndex)), indices.data());
+			}
+			else
+			{
+				// TODO: Handle Static vs. Dynamic mesh data. (Less of a problem for indices)
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER, (indices.size() * sizeof(MeshIndex)), indices.data(), Driver::get_access_mode(access_mode)); // GL_STATIC_DRAW
+			}
+		}
+
+		// Attributes:
 		const auto* fields = attributes.data();
 
 		// TODO: Look into unsigned sizes.
-		for (std::size_t i = 0; i < (attributes.size()); i++) // static_cast<int>(...)
+		if ((update_attributes) || (!reuse_buffer_allocation))
 		{
-			const auto& attribute = fields[i];
+			for (std::size_t i = 0; i < (attributes.size()); i++) // static_cast<int>(...)
+			{
+				const auto& attribute = fields[i];
 
-			const auto index = static_cast<GLuint>(i);
-			const auto type = Driver::get_element_type(attribute.type);
-			const auto element_count = static_cast<GLint>(attribute.num_elements);
-			const auto stride = static_cast<GLsizei>(vertex_size);
+				const auto index = static_cast<GLuint>(i);
+				const auto type = Driver::get_element_type(attribute.type);
+				const auto element_count = static_cast<GLint>(attribute.num_elements);
+				const auto stride = static_cast<GLsizei>(vertex_size);
 
-			const void* offset = (reinterpret_cast<const std::int8_t*>(vertex_data_offset) + attribute.offset);
+				const void* offset = (reinterpret_cast<const std::int8_t*>(gpu_vertex_data_offset) + attribute.offset);
 
-			assert(type != GL_NONE);
+				assert(type != GL_NONE);
 
-			glEnableVertexAttribArray(index);
+				glEnableVertexAttribArray(index);
 
-			// TODO: Look into normalization flag for OpenGL driver.
-			glVertexAttribPointer(index, element_count, type, GL_FALSE, stride, offset);
+				// TODO: Look into normalization flag for OpenGL driver.
+				glVertexAttribPointer(index, element_count, type, GL_FALSE, stride, offset);
+			}
 		}
 
 		glBindVertexArray(GL_NONE);
-
-		return { mesh };
 	}
 
-	void Context::release_mesh(MeshComposition&& mesh)
+	void Context::release_mesh(MeshComposition&& mesh) noexcept
 	{
 		const auto& native_rep = mesh.gl;
 

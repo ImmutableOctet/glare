@@ -5,6 +5,8 @@
 #include <bullet/btBulletCollisionCommon.h>
 #include <math/bullet.hpp>
 
+#include <cmath>
+
 namespace graphics
 {
 	BulletDebugDrawer::~BulletDebugDrawer()
@@ -33,12 +35,36 @@ namespace graphics
 
 	void BulletDebugDrawer::clearLines()
 	{
+		prev_buffer_size = point_data.vertices.size();
 		point_data.vertices.clear();
 	}
 
 	void BulletDebugDrawer::flushLines()
 	{
 		// TODO: Optimize.
-		gpu_state = Mesh::Generate<VertexType>(ctx, point_data, Primitive::Line, false);
+		if (gpu_state)
+		{
+			//update_mesh
+			gpu_state.update_contents<VertexType>
+			(
+				ctx, point_data,
+				(point_data.vertices.size() < max_buffer_size),
+				(point_data.vertices.size() != prev_buffer_size),
+				std::nullopt, std::nullopt,
+				false
+			);
+		}
+		else
+		{
+			gpu_state = Mesh::Generate<VertexType>
+			(
+				ctx, point_data,
+				Primitive::Line,
+				false,
+				BufferAccessMode::DynamicDraw
+			);
+		}
+
+		max_buffer_size = std::max(point_data.vertices.size(), max_buffer_size);
 	}
 }

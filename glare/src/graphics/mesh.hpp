@@ -78,20 +78,24 @@ namespace graphics
 			template <typename VertexType>
 			using Data = MeshData<VertexType>;
 		protected:
+			using VertexSize = std::uint16_t;
+
 			// Fields:
 			weak_ref<Context> context;
 
 			MeshComposition composition = {};
 			Primitive primitive_type = Primitive::Unknown;
 
-			std::size_t vertex_count = 0;
-			Index vertex_offset = 0;
-			std::size_t index_count = 0;
+			std::size_t vertex_count     = 0;
+			Index vertex_offset          = 0;
+			std::size_t index_count      = 0;
+			VertexSize vertex_size       = 0;
+			BufferAccessMode access_mode = BufferAccessMode::StaticDraw;
 
 			bool animated = false;
 
-			inline Mesh(weak_ref<Context> ctx, MeshComposition composition, Primitive primitive_type, std::size_t vertex_count, Index vertex_offset=0, std::size_t index_count=0, bool animated=false)
-				: context(ctx), composition(composition), primitive_type(primitive_type), vertex_count(vertex_count), vertex_offset(vertex_offset), index_count(index_count), animated(animated) {}
+			inline Mesh(weak_ref<Context> ctx, MeshComposition composition, Primitive primitive_type, std::size_t vertex_count, Index vertex_offset=0, std::size_t index_count=0, VertexSize vertex_size=0, BufferAccessMode access_mode=BufferAccessMode::StaticDraw, bool animated=false)
+				: context(ctx), composition(composition), primitive_type(primitive_type), vertex_count(vertex_count), vertex_offset(vertex_offset), index_count(index_count), vertex_size(vertex_size), access_mode(access_mode), animated(animated) {}
 
 			virtual void on_bind(Context& context);
 		public:
@@ -113,9 +117,15 @@ namespace graphics
 			inline Index offset() const { return vertex_offset; }
 
 			inline bool is_animated() const { return animated; }
+			inline explicit operator bool() const { return (size() > 0); }
 
 			template <typename VertexType>
-			inline static Mesh Generate(pass_ref<Context> ctx, const Data<VertexType>& data, Primitive primitive_type=Primitive::Triangle, std::optional<bool> animated={})
+			inline static Mesh Generate
+			(
+				pass_ref<Context> ctx, const Data<VertexType>& data,
+				Primitive primitive_type=Primitive::Triangle, std::optional<bool> animated=std::nullopt,
+				BufferAccessMode access_mode=BufferAccessMode::StaticDraw
+			)
 			{
 				return Mesh
 				(
@@ -126,12 +136,15 @@ namespace graphics
 						memory::memory_view(data.vertices.data(), data.vertices.size()),
 						sizeof(VertexType),
 						VertexType::format(),
-						((data.indices) ? memory::array_view<MeshIndex>(data.indices->data(), data.indices->size()) : nullptr)
+						((data.indices) ? memory::array_view<MeshIndex>(data.indices->data(), data.indices->size()) : nullptr),
+						access_mode
 					),
 					
 					primitive_type,
 					data.vertices.size(), 0,
 					((data.indices) ? data.indices->size() : 0),
+					static_cast<VertexSize>(sizeof(VertexType)),
+					access_mode,
 					animated.value_or(std::is_same_v<StandardAnimationVertex, VertexType>)
 				);
 			}
@@ -152,6 +165,60 @@ namespace graphics
 			inline Mesh(Mesh&& mesh) noexcept : Mesh() { swap(*this, mesh); }
 			
 			~Mesh();
+
+			// Updates the contents of this mesh, reusing allocated storage if possible.
+			template <typename VertexType>
+			inline void update_contents
+			(
+				pass_ref<Context> ctx, const Data<VertexType>& data,
+				bool attempt_buffer_reuse=true, bool update_attributes=true,
+				std::optional<Primitive> primitive_type=std::nullopt, std::optional<bool> animated=std::nullopt, bool safeguard_buffer_size=true)
+			{
+				this->primitive_type = primitive_type.value_or(this->primitive_type);
+				this->animated = animated.value_or(this->animated);
+
+				if (attempt_buffer_reuse)
+				{
+					if ((safeguard_buffer_size) && (data.vertices.size() > this->vertex_count))
+					{
+						// We can't reuse a buffer if it's too small.
+						// NOTE: `Context` will automatically force-establish
+						// attributes if we're not reusing a buffer allocation.
+						attempt_buffer_reuse = false;
+					}
+					else if ((data.vertices.size() < this->vertex_count)) // Specifically less-than. (Equal sizes wouldn't need this):
+					{
+						// Force-update attributes.
+						update_attributes = true;
+					}
+
+					if (sizeof(VertexType) != this->vertex_size)
+					{
+						update_attributes = true;
+					}
+				}
+				else
+				{
+					update_attributes = true;
+				}
+
+				ctx->update_mesh
+				(
+					composition,
+
+					memory::memory_view(data.vertices.data(), data.vertices.size()),
+
+					sizeof(VertexType),
+					VertexType::format(),
+
+					((data.indices) ? memory::array_view<MeshIndex>(data.indices->data(), data.indices->size()) : nullptr),
+
+					access_mode,
+
+					attempt_buffer_reuse,
+					update_attributes
+				);
+			}
 	};
 
 	std::vector<SimpleVertex> copy_simple_vertices(const aiMesh& mesh);

@@ -357,6 +357,25 @@ namespace graphics
 		Unknown,
 	};
 
+	// Used to describe how vertex data will be accessed.
+	enum class BufferAccessMode : std::uint8_t
+	{
+		// Static:
+		StaticCopy,
+		StaticDraw,
+		StaticRead,
+		
+		// Dynamic:
+		DynamicCopy,
+		DynamicDraw,
+		DynamicRead,
+
+		// Stream:
+		StreamCopy,
+		StreamDraw,
+		StreamRead,
+	};
+
 	using Vector = math::Vector;
 	using Vector2D = math::Vector2D;
 	using Matrix = math::Matrix; // 4x4
