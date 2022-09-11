@@ -59,9 +59,6 @@ namespace engine
 			// Scene root-node; parent to all world-bound entities.
 			Entity root   = null;
 
-			// First entity of stage mesh. (Child of 'root')
-			Entity stage  = null;
-
 			// Currently-active/last-bound camera.
 			Entity camera = null;
 
@@ -137,7 +134,7 @@ namespace engine
 			Registry& get_registry() override;
 			const Registry& get_registry() const override;
 
-			Entity load(const filesystem::path& root_path, bool override_current=false, const std::string& json_file="map.json");
+			Entity load(const filesystem::path& root_path, const std::string& json_file="map.json", Entity parent=null);
 
 			void update(app::Milliseconds time);
 
@@ -249,6 +246,7 @@ namespace engine
 			// (Direction vector of 'gravity')
 			math::Vector down() const;
 
+			void set_properties(const WorldProperties& properties);
 			const WorldProperties& get_properties() const { return properties; }
 
 			inline float delta() const { return delta_time; }

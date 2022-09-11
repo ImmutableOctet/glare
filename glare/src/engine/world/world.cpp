@@ -89,16 +89,8 @@ namespace engine
 		return registry;
 	}
 
-	Entity World::load(const filesystem::path& root_path, bool override_current, const std::string& json_file)
+	Entity World::load(const filesystem::path& root_path, const std::string& json_file, Entity parent)
 	{
-		bool is_child_stage = (!override_current) && (stage != null);
-		auto parent = root;
-
-		if (is_child_stage)
-		{
-			parent = stage;
-		}
-
 		auto map_data_path = (root_path / json_file).string();
 		
 		print("Loading map from \"{}\"...", map_data_path);
@@ -114,11 +106,6 @@ namespace engine
 			print("Loading...");
 
 			auto map = Stage::Load(*this, root_path, map_data, parent); // { .geometry = false }
-
-			if (!is_child_stage)
-			{
-				stage = map;
-			}
 
 			event<OnStageLoaded>(map, root_path);
 
@@ -444,12 +431,27 @@ namespace engine
 
 	void World::set_gravity(const math::Vector& gravity)
 	{
+		// Temporarily store the old gravity vector.
 		auto old_gravity = properties.gravity;
 		
+		// Assign the newly provided gravity vector.
 		properties.gravity = gravity;
 
 		// Notify listeners that the world's gravity has changed.
 		event<OnGravityChanged>(old_gravity, gravity);
+	}
+
+	void World::set_properties(const WorldProperties& properties)
+	{
+		constexpr bool trigger_events = true;
+
+		// Event-enabled properties:
+		if constexpr (trigger_events)
+		{
+			set_gravity(properties.gravity);
+		}
+
+		this->properties = properties;
 	}
 
 	math::Vector World::down() const

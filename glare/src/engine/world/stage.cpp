@@ -487,7 +487,7 @@ namespace engine
 
 		print("Initializing stage properties...");
 
-		world.properties = { data };
+		world.set_properties(data);
 	}
 
 	void Stage::Loader::load_geometry()
