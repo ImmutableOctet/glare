@@ -270,6 +270,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\world\physics\bullet_util\btKinematicClosestNotMeRayResultCallback.hpp" />
     <ClInclude Include="src\engine\world\physics\bullet_util\bullet_util.hpp" />
     <ClInclude Include="src\engine\world\physics\collision_cast_method.hpp" />
+    <ClInclude Include="src\engine\world\render\bullet_debug_render_phase.hpp" />
     <ClInclude Include="src\engine\world\world_events.hpp" />
     <ClInclude Include="src\engine\world\physics\collision.hpp" />
     <ClInclude Include="src\engine\world\physics\collision_body_type.hpp" />
@@ -342,6 +343,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\game\screen.hpp" />
     <ClInclude Include="src\glare.hpp" />
     <ClInclude Include="src\graphics\bind.hpp" />
+    <ClInclude Include="src\graphics\bullet_debug.hpp" />
     <ClInclude Include="src\graphics\canvas.hpp" />
     <ClInclude Include="src\graphics\collision_geometry.hpp" />
     <ClInclude Include="src\graphics\context.hpp" />
@@ -465,6 +467,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\engine\world\physics\physics_component.cpp" />
     <ClCompile Include="src\engine\world\player.cpp" />
     <ClCompile Include="src\engine\world\behaviors\rave_behavior.cpp" />
+    <ClCompile Include="src\engine\world\render\bullet_debug_render_phase.cpp" />
     <ClCompile Include="src\engine\world\render\deferred_shading.cpp" />
     <ClCompile Include="src\engine\world\render\directional_shadows.cpp" />
     <ClCompile Include="src\engine\world\render\geometry_render_phase.cpp" />
@@ -481,6 +484,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\game\screen.cpp" />
     <ClCompile Include="src\glare.cpp" />
     <ClCompile Include="src\graphics\animation.cpp" />
+    <ClCompile Include="src\graphics\bullet_debug.cpp" />
     <ClCompile Include="src\graphics\canvas.cpp" />
     <ClCompile Include="src\graphics\collision_geometry.cpp" />
     <ClCompile Include="src\graphics\context_state.cpp" />

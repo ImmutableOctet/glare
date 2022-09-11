@@ -7,6 +7,9 @@
 #include <engine/world/render/deferred_render_pipeline.hpp>
 #include <engine/world/render/render_scene.hpp>
 
+// Debugging related:
+#include <engine/world/render/bullet_debug_render_phase.hpp>
+
 // TODO: Automate behavior registration in some way.
 // (May also be applicable to systems)
 // Behaviors:
@@ -49,6 +52,25 @@ namespace game
 			input.get_mouse().lock();
 		}
 
+		// Default systems:
+		auto& physics = system<engine::PhysicsSystem>(world);
+		system<engine::AnimationSystem>(world);
+
+		behavior<engine::FreeLookBehavior>();
+		behavior<engine::DebugMoveBehavior>();
+
+		//behavior<engine::TargetBehavior>();
+		//behavior<engine::BillboardBehavior>();
+		/*
+		// TODO: Look into which behaviors we want to enable by default.
+		// TODO: Look into auto-detecting construction of certain component types and initializing behaviors/systems automatically.
+		system<engine::SpinBehavior>(world);
+		system<engine::TargetComponent>(world);
+		system<engine::SimpleFollowComponent>(world);
+		system<engine::BillboardBehavior>(world);
+		system<engine::RaveComponent>(world);
+		*/
+
 		if (!renderer)
 		{
 			renderer.set_pipeline
@@ -69,29 +91,19 @@ namespace game
 						}
 					),
 
-					engine::DeferredShadingPhase { graphics.context, effects.get_preprocessor() }
+					engine::DeferredShadingPhase { graphics.context, effects.get_preprocessor() },
+
+					util::inspect_and_store
+					(
+						engine::BulletDebugRenderPhase { graphics.context, effects.get_preprocessor() },
+						[this, &physics](auto&& bullet_dbg)
+						{
+							physics.register_debug_drawer(bullet_dbg.get_debug_drawer());
+						}
+					)
 				)
 			);
 		}
-
-		// Default systems:
-		system<engine::PhysicsSystem>(world);
-		system<engine::AnimationSystem>(world);
-
-		behavior<engine::FreeLookBehavior>();
-		behavior<engine::DebugMoveBehavior>();
-
-		//behavior<engine::TargetBehavior>();
-		//behavior<engine::BillboardBehavior>();
-		/*
-		// TODO: Look into which behaviors we want to enable by default.
-		// TODO: Look into auto-detecting construction of certain component types and initializing behaviors/systems automatically.
-		system<engine::SpinBehavior>(world);
-		system<engine::TargetComponent>(world);
-		system<engine::SimpleFollowComponent>(world);
-		system<engine::BillboardBehavior>(world);
-		system<engine::RaveComponent>(world);
-		*/
 	}
 
 	void Game::set_title(std::string_view title)
@@ -129,6 +141,9 @@ namespace game
 		initialize_render_state(render_state);
 
 		renderer.render(camera, screen, viewport, render_state);
+
+		// Execute rendering events.
+		world.render(graphics);
 
 		auto& gbuffer = screen.render();
 

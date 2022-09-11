@@ -21,6 +21,7 @@
 #include <engine/world/meta/meta.hpp>
 #include <engine/world/debug/debug.hpp>
 
+#include <graphics/context.hpp>
 #include <graphics/native/opengl.hpp>
 #include <engine/world/render/world_render_state.hpp>
 
@@ -196,6 +197,10 @@ namespace glare
 
 			break;
 		}
+		case SDLK_SEMICOLON:
+			graphics.context->set_flags(graphics::ContextFlags::Wireframe, !graphics.context->get_flag(graphics::ContextFlags::Wireframe));
+
+			break;
 
 		case SDLK_q:
 		{

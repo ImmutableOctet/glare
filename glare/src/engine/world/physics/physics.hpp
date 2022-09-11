@@ -20,6 +20,13 @@ class btCollisionWorld;
 class btCollisionObject;
 class btCollisionShape;
 
+class btIDebugDraw;
+
+namespace graphics
+{
+	class BulletDebugDrawer;
+}
+
 namespace engine
 {
 	struct Transform;
@@ -41,6 +48,7 @@ namespace engine
 
 			void on_subscribe(World& world) override;
 			void on_update(World& world, float delta) override;
+			void on_render(World& world, app::Graphics& graphics) override;
 
 			void on_gravity_change(const OnGravityChanged& gravity);
 
@@ -52,6 +60,7 @@ namespace engine
 			void update_collision_object(CollisionComponent& col, Transform& transform);
 			void update_collision_object(btCollisionObject& obj, Transform& transform);
 
+			void register_debug_drawer(btIDebugDraw& dbg_draw); // BulletDebugDrawer&
 		protected:
 			void update_collision_world(float delta);
 

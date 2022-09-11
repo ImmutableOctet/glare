@@ -157,7 +157,9 @@ namespace graphics
 			inline graphics::Backend get_backend() const { return graphics_backend; }
 			inline NativeContext get_native() { return native_context; }
 
-			Flags toggle(Flags flag, bool value);
+			Flags set_flags(Flags flag, bool value);
+			Flags get_flags() const;
+			bool get_flag(Flags flag) const;
 
 			// Commands:
 			void flip(app::Window& wnd);

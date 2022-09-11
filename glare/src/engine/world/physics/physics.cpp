@@ -25,6 +25,11 @@
 #include <cmath>
 #include <type_traits>
 
+namespace app
+{
+	struct Graphics;
+}
+
 namespace engine
 {
 	// PhysicsSystem:
@@ -82,6 +87,11 @@ namespace engine
 
 			update_motion(entity, transform, ph, delta);
 		});
+	}
+
+	void PhysicsSystem::on_render(World& world, app::Graphics& graphics)
+	{
+		collision_world->debugDrawWorld();
 	}
 
 	void PhysicsSystem::update_collision_world(float delta)
@@ -506,6 +516,11 @@ namespace engine
 	void PhysicsSystem::update_collision_object(btCollisionObject& obj, const math::Matrix& m)
 	{
 		update_collision_object_transform(obj, m);
+	}
+
+	void PhysicsSystem::register_debug_drawer(btIDebugDraw& dbg_draw) // BulletDebugDrawer&
+	{
+		collision_world->setDebugDrawer(&dbg_draw);
 	}
 
 	// Internal shorthand for `world.get_gravity()`.

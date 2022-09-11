@@ -304,6 +304,7 @@ namespace graphics
 		DepthTest        = (1 << 1),
 		FaceCulling      = (1 << 2),
 		VSync            = (1 << 3),
+		Wireframe        = (1 << 4),
 
 		Default          = (DepthTest|FaceCulling|VSync),
 	};

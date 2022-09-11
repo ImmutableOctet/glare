@@ -790,71 +790,88 @@ namespace graphics
 				return obj;
 			}
 			
-			static Flags handle_flag(ContextState& state, Flags flags, Flags target_flag, GLenum gl_target, bool value)
+			static bool handle_gl_flag(ContextState& state, Flags flags, Flags target_flag, GLenum gl_target, bool value)
 			{
 				if ((flags & target_flag))
 				{
 					if (value)
 					{
 						glEnable(gl_target);
-
-						state.flags |= target_flag;
 					}
 					else
 					{
-						state.flags &= target_flag;
-
 						glDisable(gl_target);
 					}
 				}
 
-				return state.flags;
+				return value;
 			}
 
 			static Flags set_flags(ContextState& state, Flags flags, bool value)
 			{
-				// TODO: Look into compile-time maps.
-				// (Data driven solution vs. code driven solution)
-				handle_flag(state, flags, Flags::DepthTest, GL_DEPTH_TEST, value);
-
-				bool swap_interval = (static_cast<int>(flags & Flags::VSync) > 0);
-
-				SDL_GL_SetSwapInterval(swap_interval);
-
-				// Depth-testing:
-				if ((flags & Flags::DepthTest))
+				// Depth testing:
+				if (handle_gl_flag(state, flags, Flags::DepthTest, GL_DEPTH_TEST, value))
 				{
 					glDepthFunc(GL_LESS);
 					//glDepthRange(0.0, 1.0);
 				}
 
-				// Face culling:
-				handle_flag(state, flags, Flags::FaceCulling, GL_CULL_FACE, value);
-
-				if ((flags & Flags::FaceCulling))
+				// Vertical sync:
+				if ((flags & Flags::VSync))
 				{
+					SDL_GL_SetSwapInterval(value);
+				}
+
+				// Face culling:
+				if (handle_gl_flag(state, flags, Flags::FaceCulling, GL_CULL_FACE, value))
+				{
+					// Default behavior:
+					glFrontFace(GL_CCW);
+					glCullFace(GL_BACK);
+
+					// Debugging related:
+
 					// Discard back-faces, keep front-faces.
 					//glCullFace(GL_FRONT_AND_BACK); // GL_FRONT // GL_BACK
 					//glCullFace(GL_FRONT);
 
-					// Default behavior:
-					glFrontFace(GL_CCW);
-					//glFrontFace(GL_CW);
-
 					//set_winding_order(VertexWinding::CounterClockwise);
 					//set_winding_order(VertexWinding::Clockwise);
-
-					glCullFace(GL_BACK);
+					
+					//glFrontFace(GL_CW);
 					//glCullFace(GL_FRONT);
+					
+					//glDisable(GL_CULL_FACE);
+					//glDisable(GL_DEPTH_TEST);
 				}
 
-				// Debugging related:
-				/*
-				//glFrontFace(GL_CCW);
-				glDisable(GL_CULL_FACE);
-				glDisable(GL_DEPTH_TEST);
-				*/
+				// Wireframe:
+				if ((flags & Flags::Wireframe))
+				{
+					if (value)
+					{
+						glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+					}
+					else
+					{
+						glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+					}
+				}
 
+				// Update the context-state to reflect the new flag values.
+				state.set_flag_value(flags, value);
+
+				// Return the updated flags.
+				return state.get_flags();
+			}
+
+			static bool get_flag(ContextState& state, Flags flags)
+			{
+				return state.enabled(flags);
+			}
+
+			static Flags get_flags(ContextState& state)
+			{
 				return state.get_flags();
 			}
 		protected:
@@ -1110,7 +1127,7 @@ namespace graphics
 		}
 
 		// Initial configuration:
-		toggle(flags, true);
+		set_flags(flags, true);
 
 		//glEnable(GL_DEPTH_TEST);
 
@@ -1132,9 +1149,19 @@ namespace graphics
 		delete reinterpret_cast<Driver*>(native_context);
 	}
 
-	Context::Flags Context::toggle(Flags flags, bool value)
+	Context::Flags Context::set_flags(Flags flags, bool value)
 	{
 		return Driver::set_flags(*state, flags, value);
+	}
+
+	Context::Flags Context::get_flags() const
+	{
+		return Driver::get_flags(*state);
+	}
+
+	bool Context::get_flag(Flags flag) const
+	{
+		return Driver::get_flag(*state, flag);
 	}
 
 	void Context::flip(app::Window& wnd)

@@ -33,7 +33,7 @@ namespace game
 			return gbuffer;
 		}
 
-		context->toggle(graphics::ContextFlags::DepthTest, false);
+		context->set_flags(graphics::ContextFlags::DepthTest, false);
 
 		auto& shader = display_shader;
 
@@ -107,7 +107,7 @@ namespace game
 			});
 		});
 
-		context->toggle(graphics::ContextFlags::DepthTest, true);
+		context->set_flags(graphics::ContextFlags::DepthTest, true);
 
 		return gbuffer;
 	}

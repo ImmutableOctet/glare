@@ -63,6 +63,7 @@ namespace graphics
 			//bool has_renderbuffer() const;
 
 			bool enabled(Flags check) const;
+			bool disabled(Flags check) const { return !enabled(check); }
 
 			// Returns 'true' if the resource specified is currently bound.
 			bool bound(const Shader& shader) const;
@@ -79,6 +80,8 @@ namespace graphics
 			// Returns 'true' if the resource specified is currently bound.
 			bool bound(const Texture& texture) const;
 		protected:
+			void set_flag_value(Flags flag, bool value);
+
 			void default_all();
 	};
 }

@@ -293,22 +293,14 @@ namespace engine
 		auto& world = scene.world;
 		auto& registry = world.get_registry();
 
-		//auto& camera_transform = registry.get<engine::TransformComponent>(camera);
-		//auto inverse_world = camera_transform.inverse_world;
-
-		auto camera_transform = world.get_transform(camera);
 		auto& camera_params = registry.get<engine::CameraParameters>(camera);
 
-		math::Matrix camera_matrix;
+		// TODO: Move this aspect-ratio update to an event triggered on window-resize.
+		///camera_params.aspect_ratio = window->horizontal_aspect_ratio();
 
-		if (camera_params.free_rotation)
-		{
-			camera_matrix = camera_transform.get_inverse_matrix();
-		}
-		else
-		{
-			camera_matrix = camera_transform.get_camera_matrix();
-		}
+		math::Matrix projection, camera_matrix;
+
+		auto camera_transform = get_camera_matrices(world, viewport, camera, camera_params, projection, camera_matrix);
 
 		if (render_state)
 		{
@@ -325,34 +317,6 @@ namespace engine
 			{
 				render_state->meta.ambient_light = properties.ambient_light;
 			}
-		}
-
-		// TODO: Move this aspect-ratio update to an event triggered on window-resize.
-		///camera_params.aspect_ratio = window->horizontal_aspect_ratio();
-
-		math::Matrix projection;
-
-		switch (camera_params.projection_mode)
-		{
-			case CameraProjection::Orthographic:
-			{
-				float width = static_cast<float>(viewport.get_width());
-				float height = static_cast<float>(viewport.get_height());
-
-				float hw = (width / 2.0f);
-				float hh = (height / 2.0f);
-
-				//projection = glm::ortho(-hw, hw, hh, -hh, camera_params.near_plane, camera_params.far_plane);
-				projection = glm::ortho(-hw, hw, -hh, hh, camera_params.near_plane, camera_params.far_plane);
-				//camera_matrix = glm::inverse(camera_transform.get_matrix());
-				//camera_matrix = glm::inverse(camera_matrix);
-
-				break;
-			}
-			default: // case CameraProjection::Perspective:
-				projection = glm::perspective(camera_params.fov, camera_params.aspect_ratio, camera_params.near_plane, camera_params.far_plane);
-
-				break;
 		}
 
 		if (multi_pass)
@@ -393,5 +357,58 @@ namespace engine
 		}
 
 		return true;
+	}
+
+	Transform RenderPhase::get_camera_matrices(World& world, const graphics::Viewport& viewport, Entity camera, const engine::CameraParameters& camera_params, math::Matrix& projection, math::Matrix& view)
+	{
+		//auto& camera_transform = registry.get<engine::TransformComponent>(camera);
+		//auto inverse_world = camera_transform.inverse_world;
+
+		auto camera_transform = world.get_transform(camera);
+
+		if (camera_params.free_rotation)
+		{
+			view = camera_transform.get_inverse_matrix();
+		}
+		else
+		{
+			view = camera_transform.get_camera_matrix();
+		}
+
+		switch (camera_params.projection_mode)
+		{
+			case CameraProjection::Orthographic:
+			{
+				float width = static_cast<float>(viewport.get_width());
+				float height = static_cast<float>(viewport.get_height());
+
+				float hw = (width / 2.0f);
+				float hh = (height / 2.0f);
+
+				//projection = glm::ortho(-hw, hw, hh, -hh, camera_params.near_plane, camera_params.far_plane);
+				projection = glm::ortho(-hw, hw, -hh, hh, camera_params.near_plane, camera_params.far_plane);
+				//camera_matrix = glm::inverse(camera_transform.get_matrix());
+				//camera_matrix = glm::inverse(camera_matrix);
+
+				break;
+			}
+			default: // case CameraProjection::Perspective:
+			{
+				projection = glm::perspective(camera_params.fov, camera_params.aspect_ratio, camera_params.near_plane, camera_params.far_plane);
+
+				break;
+			}
+		}
+
+		return camera_transform;
+	}
+
+	Transform RenderPhase::get_camera_matrices(World& world, const graphics::Viewport& viewport, Entity camera, math::Matrix& projection, math::Matrix& view)
+	{
+		auto& registry = world.get_registry();
+
+		auto& camera_params = registry.get<engine::CameraParameters>(camera);
+
+		return get_camera_matrices(world, viewport, camera, camera_params, projection, view);
 	}
 }
