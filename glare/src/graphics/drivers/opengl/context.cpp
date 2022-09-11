@@ -662,7 +662,7 @@ namespace graphics
 				switch (primitive)
 				{
 					case Primitive::Point:           return GL_POINTS;
-					case Primitive::Line:            return GL_LINE;
+					case Primitive::Line:            return GL_LINES;
 					case Primitive::LineLoop:        return GL_LINE_LOOP;
 					case Primitive::LineStrip:       return GL_LINE_STRIP;
 					case Primitive::Triangle:        return GL_TRIANGLES;
@@ -1820,7 +1820,6 @@ namespace graphics
 
 		// TODO: Potentially unify this implementation with standard bind operations.
 		glBindVertexArray(mesh.VAO);
-
 
 		// Vertex Data:
 		glBindBuffer(GL_ARRAY_BUFFER, mesh.VBO);
