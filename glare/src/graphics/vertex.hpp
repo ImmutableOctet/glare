@@ -155,6 +155,8 @@ namespace graphics
 	using StandardVertex = A_Bitangent<A_Tangent<A_TexCoords<A_Normal<Vertex>>>>;
 	using StandardAnimationVertex = AnimatedVertex<StandardVertex>;
 
+	using SimpleColoredVertex = A_RGB<Vertex>;
+
 	static constexpr unsigned int VERTEX_MAX_BONE_INFLUENCE = 4;
 
 	int get_next_weight_channel(const StandardAnimationVertex& vertex);
