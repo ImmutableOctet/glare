@@ -181,7 +181,7 @@ namespace engine
 		return obj_info;
 	}
 
-	CollisionCastMethod CollisionComponent::default_collision_cast_method() const
+	CollisionCastMethod CollisionComponent::default_kinematic_cast_method() const
 	{
 		// Collision-casting on transformation-change is only
 		// possible with kinematic objects currently.

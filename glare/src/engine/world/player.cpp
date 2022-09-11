@@ -38,14 +38,14 @@ namespace engine
 		switch (character)
 		{
 			case engine::Character::Glare:
-				////model_path = "assets/characters/test/character.b3d";
+				model_path = "assets/characters/test/character.b3d";
 
 				//model_path = "assets/geometry/sphere.b3d";
 				//model_path = "assets/geometry/torus.b3d";
 				
 				//model_path = "assets/characters/sonic/sonic.b3d";
 				//model_path = "assets/objects/turret/turret.b3d";
-				model_path = "assets/geometry/Multi_Torus.b3d";
+				//model_path = "assets/geometry/Multi_Torus.b3d";
 				//model_path = "assets/geometry/direction_boxes-4.b3d";
 
 				///model_path = "assets/geometry/Multi_Torus_Pose.b3d";
@@ -94,7 +94,7 @@ namespace engine
 
 		auto& resource_manager = world.get_resource_manager();
 
-		auto collision_data = resource_manager.generate_capsule_collision(1.0f, 2.0f); // get_collision_shape(CollisionShape::Capsule, 1.0f, 2.0f);
+		auto collision_data = resource_manager.generate_capsule_collision(2.0f, 10.0f); // get_collision_shape(CollisionShape::Capsule, 1.0f, 2.0f);
 
 		attach_collision(world, player, collision_data.collision_shape, EntityType::Player);
 

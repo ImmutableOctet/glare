@@ -10,7 +10,7 @@ namespace engine
 	struct WorldProperties
 	{
 		graphics::ColorRGB ambient_light = { 0.8f, 0.8f, 0.8f };
-		math::Vector gravity = { 0.0f, -3.0f, 0.0f };
+		math::Vector gravity = { 0.0f, -1.0f, 0.0f };
 
 		WorldProperties() = default;
 		WorldProperties(const WorldProperties&) = default;

@@ -74,8 +74,6 @@ namespace engine
 		update_collision_world(delta);
 
 		auto view = registry.view<PhysicsComponent>(); // <TransformComponent, ...> (auto& tf_comp)
-		
-		const auto gravity = get_gravity();
 
 		// Apply motion (gravity, velocity, deceleration, etc.) and resolve collisions between old and new positions:
 		view.each([&](auto entity, auto& ph)
@@ -274,7 +272,7 @@ namespace engine
 			if (col->is_active() && col->is_kinematic())
 			{
 				// TODO: Add to collision component.
-				auto method = col->get_cast_method(); // CollisionCastMethod::ConvexCast;
+				auto method = col->get_kinematic_cast_method(); // CollisionCastMethod::ConvexCast;
 				auto allowed_penetration = collision_world->getDispatchInfo().m_allowedCcdPenetration;
 
 				const auto& from = collision_obj->getWorldTransform();
@@ -287,9 +285,9 @@ namespace engine
 
 				auto position_delta = glm::length(math::to_vector(to_position) - math::to_vector(from_position));
 
-				if (((int)entity == 34) && (position_delta > 10.0f))
+				//if (((int)entity == 34) && (position_delta > 10.0f))
 				{
-					print("Camera [{}] from: {}, to: {}", position_delta, math::to_vector(from_position), math::to_vector(to_position));
+					print("[{}] from: {}, to: {}", position_delta, math::to_vector(from_position), math::to_vector(to_position));
 				}
 
 				switch (method)
@@ -324,7 +322,7 @@ namespace engine
 							}
 							else
 							{
-								print("HIT DETECTED (not camera)");
+								print("HIT DETECTED (not camera): {}", world.label(entity));
 							}
 
 							auto normal = math::to_vector(callback.m_hitNormalWorld);
@@ -407,7 +405,7 @@ namespace engine
 
 		if (ph.apply_gravity())
 		{
-			movement += (get_gravity() * ph.gravity() * delta);
+			movement += (get_gravity() * delta);
 		}
 
 		if (ph.apply_velocity())
@@ -428,8 +426,6 @@ namespace engine
 				ph.motion.velocity = {};
 			}
 		}
-
-		ph.motion.prev_position = transform.get_position();
 
 		transform.move(movement);
 	}

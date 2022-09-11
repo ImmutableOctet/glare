@@ -148,7 +148,7 @@ namespace engine
 			bool build_rigid_body(const CollisionConfig& config, btCollisionShape* collision_shape, float mass, bool allow_kinematics=true);
 
 			// Generates a default collision-cast method, given the configuration of the component.
-			CollisionCastMethod default_collision_cast_method() const;
+			CollisionCastMethod default_kinematic_cast_method() const;
 		public:
 			// This calls the free-function of the same name.
 			static Entity get_entity_from_collision_object(const btCollisionObject& c_obj);
@@ -161,7 +161,7 @@ namespace engine
 				float mass,
 				std::optional<CollisionBodyType> body_type_in=std::nullopt,
 				std::unique_ptr<CollisionMotionState>&& motion_state_in={},
-				std::optional<CollisionCastMethod> cast_method_in=std::nullopt,
+				std::optional<CollisionCastMethod> kinematic_cast_method_in=std::nullopt,
 				bool activate_immediately=true
 			):
 				CollisionComponent(config, std::move(motion_state_in))
@@ -199,14 +199,14 @@ namespace engine
 				}
 
 				// If-statement used in place of `value_or` due to possible overhead
-				// incurred from calling `default_collision_cast_method`.
-				if (cast_method_in.has_value())
+				// incurred from calling `default_kinematic_cast_method`.
+				if (kinematic_cast_method_in.has_value())
 				{
-					cast_method = *cast_method_in;
+					kinematic_cast_method = *kinematic_cast_method_in;
 				}
 				else
 				{
-					cast_method = default_collision_cast_method();
+					kinematic_cast_method = default_kinematic_cast_method();
 				}
 
 				if (activate_immediately)
@@ -301,9 +301,9 @@ namespace engine
 			float get_mass() const;
 			void set_mass(float mass);
 
-			inline CollisionCastMethod get_cast_method() const { return cast_method; }
+			inline CollisionCastMethod get_kinematic_cast_method() const { return kinematic_cast_method; }
 		protected:
-			CollisionCastMethod cast_method = CollisionCastMethod::None;
+			CollisionCastMethod kinematic_cast_method = CollisionCastMethod::None;
 
 			std::unique_ptr<CollisionMotionState> motion_state;
 			collision_object_variant_t collision_object;
