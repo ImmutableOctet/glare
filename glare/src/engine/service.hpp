@@ -8,10 +8,18 @@
 #include <utility>
 #include <functional>
 
-namespace app::input
+namespace app
 {
-	struct MouseState;
-	struct KeyboardState;
+	namespace input
+	{
+		struct MouseState;
+		struct KeyboardState;
+	}
+
+	namespace graphics
+	{
+		struct Graphics;
+	}
 }
 
 namespace engine
@@ -117,6 +125,11 @@ namespace engine
 				this->event<OnServiceUpdate>(this, delta);
 
 				event_handler.update();
+			}
+
+			inline void render(app::Graphics& gfx)
+			{
+				this->event<OnServiceRender>(this, &gfx);
 			}
 		protected:
 			// Input re-submission callbacks. -- These routines produce additional

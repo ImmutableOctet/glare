@@ -1,5 +1,10 @@
 #pragma once
 
+namespace app
+{
+	struct Graphics;
+}
+
 namespace engine
 {
 	class Service;
@@ -12,6 +17,13 @@ namespace engine
 		// A normalized rate of execution. This represents the amount
 		// of time that has passed since the last `OnServiceUpdate` trigger.
 		float delta;
+	};
+
+	// This event is triggered immediately by a `Service`, once per frame/render, if applicable.
+	struct OnServiceRender
+	{
+		Service* service;
+		app::Graphics* graphics;
 	};
 
 	// TODO: Implement pause events.

@@ -31,9 +31,27 @@ namespace engine
 		on_update(*world, update_event.delta);
 	}
 
+	void WorldSystem::render(const OnServiceRender& render_event)
+	{
+		auto* world = resolve_world(render_event);
+
+		if (!world)
+		{
+			return;
+		}
+
+		on_render(*world, *render_event.graphics);
+	}
+
+	void WorldSystem::on_render(World& world, app::Graphics& graphics)
+	{
+		// Empty implementation.
+	}
+
 	void WorldSystem::subscribe(World& world)
 	{
 		world.register_event<OnServiceUpdate, &WorldSystem::update>(*this);
+		world.register_event<OnServiceRender, &WorldSystem::render>(*this);
 
 		on_subscribe(world);
 	}
