@@ -27,7 +27,7 @@ namespace graphics
 		std::vector<VertexType> vertices; // std::shared_ptr<std::vector<VertexType>>
 		std::shared_ptr<std::vector<Index>> indices;
 
-		inline bool has_vertices() const { return (vertices.count() > 0); }
+		inline bool has_vertices() const { return (vertices.size() > 0); }
 		inline bool has_indices() const
 		{
 			if (!indices)
@@ -35,7 +35,7 @@ namespace graphics
 				return false;
 			}
 
-			return (indices->count() > 0);
+			return (indices->size() > 0);
 		}
 
 		inline bool is_complete() const { return (has_vertices() && has_indices()); }
