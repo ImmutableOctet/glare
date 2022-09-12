@@ -35,6 +35,11 @@ namespace engine
 
 	const RenderParameters& BulletDebugRenderPhase::operator()(const RenderParameters& parameters)
 	{
+		if (!enabled)
+		{
+			return parameters;
+		}
+
 		if (!debug_drawer->has_points())
 		{
 			return parameters;
