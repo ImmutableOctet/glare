@@ -94,8 +94,25 @@ namespace graphics
 
 			bool animated = false;
 
-			inline Mesh(weak_ref<Context> ctx, MeshComposition composition, Primitive primitive_type, std::size_t vertex_count, Index vertex_offset=0, std::size_t index_count=0, VertexSize vertex_size=0, BufferAccessMode access_mode=BufferAccessMode::StaticDraw, bool animated=false)
-				: context(ctx), composition(composition), primitive_type(primitive_type), vertex_count(vertex_count), vertex_offset(vertex_offset), index_count(index_count), vertex_size(vertex_size), access_mode(access_mode), animated(animated) {}
+			inline Mesh
+			(
+				weak_ref<Context> ctx,
+				MeshComposition composition,
+				Primitive primitive_type,
+				std::size_t vertex_count, Index vertex_offset=0,
+				std::size_t index_count=0,
+				VertexSize vertex_size=0,
+				BufferAccessMode access_mode=BufferAccessMode::StaticDraw,
+				bool animated=false
+			):
+				context(ctx),
+				composition(composition),
+				primitive_type(primitive_type),
+				vertex_count(vertex_count), vertex_offset(vertex_offset),
+				index_count(index_count),
+				vertex_size(vertex_size),
+				access_mode(access_mode), animated(animated)
+			{}
 
 			virtual void on_bind(Context& context);
 		public:
@@ -172,7 +189,11 @@ namespace graphics
 			(
 				pass_ref<Context> ctx, const Data<VertexType>& data,
 				bool attempt_buffer_reuse=true, bool update_attributes=true,
-				std::optional<Primitive> primitive_type=std::nullopt, std::optional<bool> animated=std::nullopt, bool safeguard_buffer_size=true)
+				std::optional<Primitive> primitive_type=std::nullopt,
+				std::optional<bool> animated=std::nullopt,
+				std::optional<BufferAccessMode> access_mode=std::nullopt,
+				bool safeguard_buffer_size=true
+			)
 			{
 				this->primitive_type = primitive_type.value_or(this->primitive_type);
 				this->animated = animated.value_or(this->animated);
@@ -213,7 +234,7 @@ namespace graphics
 
 					((data.indices) ? memory::array_view<MeshIndex>(data.indices->data(), data.indices->size()) : nullptr),
 
-					access_mode,
+					access_mode.value_or(this->access_mode),
 
 					attempt_buffer_reuse,
 					update_attributes

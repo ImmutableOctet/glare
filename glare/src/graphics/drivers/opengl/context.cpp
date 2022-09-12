@@ -329,6 +329,8 @@ namespace graphics
 					case BufferAccessMode::StreamRead:
 						return GL_STREAM_READ;
 				}
+
+				return GL_STATIC_DRAW;
 			}
 
 			static GLenum get_format_from_channels(int channels, bool integer_format=false)
@@ -1877,7 +1879,13 @@ namespace graphics
 		return mesh_comp;
 	}
 
-	void Context::update_mesh(MeshComposition& mesh, memory::memory_view vertices, std::size_t vertex_size, memory::array_view<VertexAttribute> attributes, memory::array_view<MeshIndex> indices, BufferAccessMode access_mode, bool reuse_buffer_allocation, bool update_attributes) noexcept
+	void Context::update_mesh
+	(
+		MeshComposition& mesh, memory::memory_view vertices, std::size_t vertex_size,
+		memory::array_view<VertexAttribute> attributes, memory::array_view<MeshIndex> indices,
+		BufferAccessMode access_mode,
+		bool reuse_buffer_allocation, bool update_attributes
+	) noexcept
 	{
 		const GLintptr gpu_vertex_data_offset = 0;
 

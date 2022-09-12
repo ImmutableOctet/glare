@@ -41,16 +41,14 @@ namespace graphics
 
 	void BulletDebugDrawer::flushLines()
 	{
-		// TODO: Optimize.
 		if (gpu_state)
 		{
-			//update_mesh
 			gpu_state.update_contents<VertexType>
 			(
 				ctx, point_data,
-				(point_data.vertices.size() < max_buffer_size),
+				(point_data.vertices.size() <= max_buffer_size),
 				(point_data.vertices.size() != prev_buffer_size),
-				std::nullopt, std::nullopt,
+				std::nullopt, std::nullopt, std::nullopt,
 				false
 			);
 		}

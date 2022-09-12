@@ -76,12 +76,16 @@ namespace graphics
 	{
 		using std::swap;
 
-		swap(x.context, y.context);
-		swap(x.composition, y.composition);
+		// Swap all members:
+		swap(x.context,        y.context);
+		swap(x.composition,    y.composition);
 		swap(x.primitive_type, y.primitive_type);
-		swap(x.vertex_count, y.vertex_count);
-		swap(x.vertex_offset, y.vertex_offset);
-		swap(x.index_count, y.index_count);
+		swap(x.vertex_count,   y.vertex_count);
+		swap(x.vertex_offset,  y.vertex_offset);
+		swap(x.index_count,    y.index_count);
+		swap(x.vertex_size,    y.vertex_size);
+		swap(x.access_mode,    y.access_mode);
+		swap(x.animated,       y.animated);
 	}
 
 	void Mesh::on_bind(Context& context)
