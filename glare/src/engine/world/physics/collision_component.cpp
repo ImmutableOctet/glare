@@ -181,24 +181,23 @@ namespace engine
 		return obj_info;
 	}
 
-	CollisionCastMethod CollisionComponent::default_kinematic_cast_method() const
+	KinematicResolutionConfig CollisionComponent::default_kinematic_resolution_method() const
 	{
 		// Collision-casting on transformation-change is only
 		// possible with kinematic objects currently.
 		if (!is_kinematic())
 		{
-			return CollisionCastMethod::None;
+			return {};
 		}
 
 		// Convex shapes get to utilize Bullet's convex-sweep functionality.
 		if (peek_convex_shape())
 		{
-			return CollisionCastMethod::ConvexCast;
-			//return CollisionCastMethod::ConvexKinematicCast;
+			return { CollisionCastMethod::ConvexCast, KinematicResolutionConfig::AABBType {} }; // CollisionCastMethod::ConvexKinematicCast
 		}
 
 		// Everything else gets a simple ray-cast approach.
-		return CollisionCastMethod::RayCast;
+		return { CollisionCastMethod::RayCast, KinematicResolutionConfig::AABBType {} };
 	}
 
 	btCollisionObject* CollisionComponent::get_collision_object()
@@ -374,6 +373,104 @@ namespace engine
 		{
 			rigid_body->setMassProps(mass, rigid_body->getLocalInertia());
 		}
+	}
+
+	bool CollisionComponent::has_kinematic_cast_method() const
+	{
+		if (kinematic_resolution.has_value())
+		{
+			return (kinematic_resolution->cast_method != CollisionCastMethod::None);
+		}
+
+		return false;
+	}
+
+	std::tuple<math::Vector, math::Vector> CollisionComponent::get_world_aabb() const
+	{
+		btVector3 aabb_min, aabb_max;
+		const auto* rigid_body = get_rigid_body();
+
+		if (rigid_body)
+		{
+			rigid_body->getAabb(aabb_min, aabb_max);
+		}
+		else
+		{
+			const auto* c_obj = get_collision_object();
+
+			if (!c_obj)
+			{
+				return {};
+			}
+
+			c_obj->getCollisionShape()->getAabb(c_obj->getWorldTransform(), aabb_min, aabb_max);
+		}
+
+		return { math::to_vector(aabb_min), math::to_vector(aabb_max) };
+	}
+
+	std::tuple<math::Vector, float> CollisionComponent::get_world_bounding_sphere() const
+	{
+		// Values assigned for safety:
+		btVector3 sphere_center = {};
+		float sphere_radius = 0.0f;
+
+		auto* shape = peek_shape();
+		const auto* c_obj = get_collision_object();
+
+		if (!shape)
+		{
+			return {};
+		}
+
+		if (!c_obj)
+		{
+			return {};
+		}
+
+		shape->getBoundingSphere(sphere_center, sphere_radius);
+
+		return { math::to_vector((c_obj->getWorldTransform() * sphere_center)), sphere_radius };
+	}
+
+	float CollisionComponent::get_aabb_size() const
+	{
+		auto [aabb_min, aabb_max] = get_world_aabb();
+
+		// Compute the length of the delta from the 'min' and 'max' vectors. (Pythagorean theorem)
+		return glm::length(math::to_vector(aabb_max - aabb_min));
+	}
+
+	float CollisionComponent::get_bounding_radius() const
+	{
+		// Unified implementation (slower):
+		//auto [sphere_center, sphere_radius] = get_world_bounding_sphere();
+		//return sphere_radius;
+
+		// Optimized implementation:
+		auto* shape = peek_shape();
+
+		if (!shape)
+		{
+			return 0.0f;
+		}
+
+		btVector3 _sphere_center;
+		float sphere_radius = 0.0f; // <-- Value assigned for safety.
+
+		shape->getBoundingSphere(_sphere_center, sphere_radius);
+
+		return sphere_radius;
+	}
+
+	CollisionCastMethod CollisionComponent::get_kinematic_cast_method() const
+	{
+		if (kinematic_resolution.has_value())
+		{
+			return kinematic_resolution->cast_method;
+		}
+
+		return CollisionCastMethod::None;
 	}
 
 	void CollisionComponent::update_transform(const math::Matrix& tform)

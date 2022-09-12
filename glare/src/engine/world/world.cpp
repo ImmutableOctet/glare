@@ -127,11 +127,12 @@ namespace engine
 		// Update the delta-timer.
 		delta_time << time;
 
-		// Handle changes in entity transforms.
-		handle_transform_events(delta_time);
-
 		// Update systems:
 		Service::update(delta_time);
+
+		// TODO: Look into workarounds for collision objects updating a frame behind.
+		// Handle changes in entity transforms.
+		handle_transform_events(delta_time);
 	}
 
 	void World::handle_transform_events(float delta)
@@ -145,6 +146,7 @@ namespace engine
 				this->event<OnTransformChanged>(entity);
 			});
 
+			// Already handled by `on_flag`.
 			//tf.validate(TransformComponent::Dirty::EventFlag);
 		});
 

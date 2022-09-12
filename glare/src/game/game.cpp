@@ -96,7 +96,7 @@ namespace game
 					util::inspect_and_store
 					(
 						engine::BulletDebugRenderPhase { graphics.context, effects.get_preprocessor() },
-						[this, &physics](auto&& bullet_dbg)
+						[this, &physics](auto& bullet_dbg)
 						{
 							physics.register_debug_drawer(bullet_dbg.get_debug_drawer());
 						}

@@ -122,9 +122,9 @@ namespace engine
 
 			inline void update(float delta=1.0f)
 			{
-				this->event<OnServiceUpdate>(this, delta);
-
 				event_handler.update();
+
+				this->event<OnServiceUpdate>(this, delta);
 			}
 
 			inline void render(app::Graphics& gfx)

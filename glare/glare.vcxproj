@@ -270,6 +270,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\world\physics\bullet_util\btKinematicClosestNotMeRayResultCallback.hpp" />
     <ClInclude Include="src\engine\world\physics\bullet_util\bullet_util.hpp" />
     <ClInclude Include="src\engine\world\physics\collision_cast_method.hpp" />
+    <ClInclude Include="src\engine\world\physics\kinematic_resolution_config.hpp" />
     <ClInclude Include="src\engine\world\render\bullet_debug_render_phase.hpp" />
     <ClInclude Include="src\engine\world\world_events.hpp" />
     <ClInclude Include="src\engine\world\physics\collision.hpp" />

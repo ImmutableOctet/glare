@@ -5,6 +5,7 @@
 #include "collision_motion_state.hpp"
 #include "collision_body_type.hpp"
 #include "collision_cast_method.hpp"
+#include "kinematic_resolution_config.hpp"
 
 #include "types.hpp"
 
@@ -15,7 +16,7 @@
 #include <type_traits>
 #include <optional>
 #include <memory>
-//#include <tuple>
+#include <tuple>
 //#include <climits>
 
 // Bullet's included in the header for now. This is due to some issues
@@ -148,7 +149,7 @@ namespace engine
 			bool build_rigid_body(const CollisionConfig& config, btCollisionShape* collision_shape, float mass, bool allow_kinematics=true);
 
 			// Generates a default collision-cast method, given the configuration of the component.
-			CollisionCastMethod default_kinematic_cast_method() const;
+			KinematicResolutionConfig default_kinematic_resolution_method() const;
 		public:
 			// This calls the free-function of the same name.
 			static Entity get_entity_from_collision_object(const btCollisionObject& c_obj);
@@ -161,7 +162,7 @@ namespace engine
 				float mass,
 				std::optional<CollisionBodyType> body_type_in=std::nullopt,
 				std::unique_ptr<CollisionMotionState>&& motion_state_in={},
-				std::optional<CollisionCastMethod> kinematic_cast_method_in=std::nullopt,
+				std::optional<KinematicResolutionConfig> kinematic_resolution=std::nullopt,
 				bool activate_immediately=true
 			):
 				CollisionComponent(config, std::move(motion_state_in))
@@ -199,14 +200,14 @@ namespace engine
 				}
 
 				// If-statement used in place of `value_or` due to possible overhead
-				// incurred from calling `default_kinematic_cast_method`.
-				if (kinematic_cast_method_in.has_value())
+				// incurred from calling `default_kinematic_resolution_method`.
+				if (kinematic_resolution.has_value())
 				{
-					kinematic_cast_method = *kinematic_cast_method_in;
+					this->kinematic_resolution = kinematic_resolution;
 				}
 				else
 				{
-					kinematic_cast_method = default_kinematic_cast_method();
+					this->kinematic_resolution = default_kinematic_resolution_method();
 				}
 
 				if (activate_immediately)
@@ -301,9 +302,27 @@ namespace engine
 			float get_mass() const;
 			void set_mass(float mass);
 
-			inline CollisionCastMethod get_kinematic_cast_method() const { return kinematic_cast_method; }
+			bool has_kinematic_cast_method() const;
+
+			// Returns the 'min' and 'max' points for the axis-aligned bounding-box
+			// (AABB) of the internal collision-object in world-space.
+			std::tuple<math::Vector, math::Vector> get_world_aabb() const;
+
+			// Returns the center-point of the internal collision-object in world-space
+			// as well as a radius representing the object's spherical bounds.
+			std::tuple<math::Vector, float> get_world_bounding_sphere() const;
+
+			// Retrieves the size of the internal collision-object as an AABB.
+			// NOTE: The value returned is subject to padding from Bullet.
+			float get_aabb_size() const;
+
+			// Retrieves the bounding-sphere radius of the internal collision-object.
+			// NOTE: The value returned is subject to padding from Bullet.
+			float get_bounding_radius() const;
+
+			CollisionCastMethod get_kinematic_cast_method() const;
 		protected:
-			CollisionCastMethod kinematic_cast_method = CollisionCastMethod::None;
+			std::optional<KinematicResolutionConfig> kinematic_resolution;
 
 			std::unique_ptr<CollisionMotionState> motion_state;
 			collision_object_variant_t collision_object;
@@ -319,7 +338,7 @@ namespace engine
 		const ShapeType& collision_shape_data,
 		const CollisionConfig& config,
 		float mass=0.0f,
-		std::optional<CollisionCastMethod> cast_method=std::nullopt
+		std::optional<KinematicResolutionConfig> resolution_method=std::nullopt
 	) // CollisionComponent::Shape
 	{
 		// TODO: Refactor into something more explicit from the user. (or something better for automatically determining body type)
@@ -337,6 +356,6 @@ namespace engine
 				break;
 		}
 
-		return attach_collision_impl(world, entity, CollisionComponent(collision_shape_data, config, mass, body_type, std::move(motion_state), cast_method));
+		return attach_collision_impl(world, entity, CollisionComponent(collision_shape_data, config, mass, body_type, std::move(motion_state), resolution_method));
 	}
 }

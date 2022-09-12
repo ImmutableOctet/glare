@@ -270,6 +270,7 @@ namespace engine
 		}
 		else
 		{
+			// Kinematic logic:
 			auto* collision_obj = col->get_collision_object();
 
 			if (!collision_obj)
@@ -297,7 +298,7 @@ namespace engine
 
 				//if (((int)entity == 34) && (position_delta > 10.0f))
 				{
-					print("[{}] from: {}, to: {}", position_delta, math::to_vector(from_position), math::to_vector(to_position));
+					print("{} moving | [{}] from: {}, to: {}", entity, position_delta, math::to_vector(from_position), math::to_vector(to_position));
 				}
 
 				switch (method)
@@ -345,6 +346,8 @@ namespace engine
 							const auto* rigid_body = col->get_rigid_body();
 
 							rigid_body->getAabb(aabb_min, aabb_max);
+
+							auto [test_min, test_max] = col->get_world_aabb();
 
 							const auto* shape = col->peek_shape(); // col->peek_convex_shape();
 
