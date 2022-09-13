@@ -1,11 +1,27 @@
 #pragma once
 
 #include <variant>
+#include <utility>
 #include <optional>
 
 namespace util
 {
-	// TODO: Implement variadic template to wrap 'std::visit'.
+	// Helper templates (from cppreference):
+
+	// Utility for the series of visitor functions passed into `std::visit`.
+	template<class... Ts> struct visit_overloaded_t : Ts... { using Ts::operator()...; };
+
+	// Explicit deduction guide. (Not needed from C++20 onward)
+	template<class... Ts> visit_overloaded_t(Ts...)->visit_overloaded_t<Ts...>;
+
+	// Similar to `std::visit`, but allows for a series of callbacks, rather than using `if constexpr` chains.
+	// NOTE: You'll have to cover all possible variant types when declaring overloads.
+	// NOTE: This version of `visit` takes `variant_obj` as the first argument, rather than as a trailing argument.
+	template<typename variant_t, class... Callbacks>
+	constexpr auto visit(variant_t&& variant_obj, Callbacks&&... overloads)
+	{
+		return std::visit(visit_overloaded_t<Callbacks...>(std::forward<Callbacks>(overloads)...), std::forward<variant_t>(variant_obj));
+	}
 
 	// Calls 'fn' with a value of type 'T' if 'v' contains said value.
 	template <typename T, typename VariantType, typename FunctionType>
