@@ -449,6 +449,10 @@
     <ClInclude Include="src\graphics\bullet_debug.hpp" />
     <ClInclude Include="src\engine\world\render\bullet_debug_render_phase.hpp" />
     <ClInclude Include="src\engine\world\physics\kinematic_resolution_config.hpp" />
+    <ClInclude Include="src\engine\world\physics\collision_events.hpp" />
+    <ClInclude Include="src\engine\world\physics\contact_type.hpp" />
+    <ClInclude Include="src\engine\world\physics\collision_cast_result.hpp" />
+    <ClInclude Include="src\engine\world\physics\collision_cast.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\shaders\light_box.frag">
@@ -861,6 +865,7 @@
     <ClCompile Include="src\engine\world\animation\bone_component.cpp" />
     <ClCompile Include="src\graphics\bullet_debug.cpp" />
     <ClCompile Include="src\engine\world\render\bullet_debug_render_phase.cpp" />
+    <ClCompile Include="src\engine\world\physics\collision_cast.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />

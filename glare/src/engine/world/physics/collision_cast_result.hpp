@@ -1,0 +1,35 @@
+#pragma once
+
+#include <engine/types.hpp>
+#include <math/math.hpp>
+
+class btCollisionObject;
+
+namespace engine
+{
+	struct CollisionCastResult
+	{
+		Entity cast_entity;
+		Entity hit_entity;
+
+		math::Vector hit_position;
+		math::Vector hit_normal;
+
+		struct
+		{
+			// Bullet native:
+			const btCollisionObject* cast_object;
+			const btCollisionObject* hit_object;
+		} native;
+	};
+
+	struct ConvexCastResult : public CollisionCastResult
+	{
+		float closest_hit_fraction;
+	};
+
+	struct RayCastResult : public CollisionCastResult
+	{
+
+	};
+}

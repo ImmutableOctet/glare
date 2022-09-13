@@ -30,7 +30,7 @@ namespace engine
 			public:
 				inline SizeType(float size):
 					//size(size),
-					half_size(size/2.0f)
+					half_size(size * 0.5f)
 				{}
 
 				//SizeType(const SizeType&) = default;

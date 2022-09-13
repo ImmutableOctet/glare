@@ -26,6 +26,9 @@ class btConvexShape;
 class btCollisionObject;
 class btRigidBody;
 
+class btVector3;
+class btTransform;
+
 namespace graphics
 {
 	struct CollisionGeometry;

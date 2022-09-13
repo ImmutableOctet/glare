@@ -1,12 +1,15 @@
 #pragma once
 
 #include "types.hpp"
+#include "collision_cast_result.hpp"
 
 #include <util/memory.hpp>
 
 #include <engine/events.hpp>
 //#include <engine/world/world_events.hpp>
 #include <engine/world/world_system.hpp>
+
+#include <optional>
 
 // Forward declarations:
 
@@ -38,9 +41,6 @@ namespace engine
 	class PhysicsSystem : public WorldSystem
 	{
 		public:
-			using CollisionWorldRaw = btDiscreteDynamicsWorld;
-			//using CollisionWorldRaw = btCollisionWorld;
-
 			static constexpr float MIN_SPEED = 0.0025f;
 
 			PhysicsSystem(World& world);
@@ -49,6 +49,9 @@ namespace engine
 			void on_subscribe(World& world) override;
 			void on_update(World& world, float delta) override;
 			void on_render(World& world, app::Graphics& graphics) override;
+
+			void register_debug_drawer(btIDebugDraw& dbg_draw); // BulletDebugDrawer&
+			void unregister_debug_drawer();
 
 			void on_gravity_change(const OnGravityChanged& gravity);
 
@@ -60,9 +63,20 @@ namespace engine
 			void update_collision_object(CollisionComponent& col, Transform& transform);
 			void update_collision_object(btCollisionObject& obj, Transform& transform);
 
-			void register_debug_drawer(btIDebugDraw& dbg_draw); // BulletDebugDrawer&
+			inline World& get_world() const { return world; }
+
+			inline auto* get_collision_world() { return collision_world.get(); }
+			inline auto* get_broadphase() { return broadphase.get(); }
+			inline auto* get_collision_dispatcher() { return collision_dispatcher.get(); }
 		protected:
 			void update_collision_world(float delta);
+
+			void handle_transform_resolution
+			(
+				Entity entity, CollisionComponent& collision,
+				btCollisionObject& collision_obj,
+				Transform& transform
+			);
 
 			void resolve_intersections();
 			
@@ -92,6 +106,6 @@ namespace engine
 			
 			std::unique_ptr<btSequentialImpulseConstraintSolver> solver;
 
-			std::unique_ptr<CollisionWorldRaw> collision_world;
+			std::unique_ptr<btDiscreteDynamicsWorld> collision_world; // btCollisionWorld
 	};
 }

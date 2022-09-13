@@ -3,7 +3,12 @@
 
 #include "collision.hpp"
 #include "collision_component.hpp"
+#include "collision_events.hpp"
 #include "collision_motion_state.hpp"
+
+#include "collision_cast.hpp"
+
+#include "kinematic_resolution_config.hpp"
 
 #include "bullet_util/bullet_util.hpp"
 
@@ -14,6 +19,7 @@
 //#include <engine/relationship.hpp>
 
 #include <math/bullet.hpp>
+#include <util/variant.hpp>
 
 #include <bullet/btBulletCollisionCommon.h>
 #include <bullet/btBulletDynamicsCommon.h>
@@ -92,6 +98,16 @@ namespace engine
 	void PhysicsSystem::on_render(World& world, app::Graphics& graphics)
 	{
 		collision_world->debugDrawWorld();
+	}
+
+	void PhysicsSystem::register_debug_drawer(btIDebugDraw& dbg_draw) // BulletDebugDrawer&
+	{
+		collision_world->setDebugDrawer(&dbg_draw);
+	}
+
+	void PhysicsSystem::unregister_debug_drawer()
+	{
+		collision_world->setDebugDrawer(nullptr);
 	}
 
 	void PhysicsSystem::update_collision_world(float delta)
@@ -238,8 +254,6 @@ namespace engine
 			return;
 		}
 
-		auto transform = world.get_transform(entity);
-
 		auto* motion_state = col->get_motion_state();
 
 		if (motion_state)
@@ -249,6 +263,8 @@ namespace engine
 				// We perform this check before submission in order to reduce the overhead of calling `get_matrix`.
 				if (motion_state->can_submit_to_bullet())
 				{
+					auto transform = world.get_transform(entity);
+
 					motion_state->submit_to_bullet(transform.get_matrix());
 				}
 			#else
@@ -278,139 +294,115 @@ namespace engine
 				return;
 			}
 
-			auto tform_matrix = transform.get_matrix();
+			auto transform = world.get_transform(entity);
 
 			if (col->is_active() && col->is_kinematic())
 			{
-				// TODO: Add to collision component.
-				auto method = col->get_kinematic_cast_method(); // CollisionCastMethod::ConvexCast;
-				auto allowed_penetration = collision_world->getDispatchInfo().m_allowedCcdPenetration;
-
-				const auto& from = collision_obj->getWorldTransform();
-				auto to   = math::to_bullet_matrix(tform_matrix);
-
-				//const auto& local_origin  = collision_obj->getWorldTransform().getOrigin();
-				auto local_origin = btVector3(0.0f, 0.0f, 0.0f);
-				auto from_position = (from * local_origin);
-				auto to_position   = (to   * local_origin); // transform.get_position();
-
-				auto position_delta = glm::length(math::to_vector(to_position) - math::to_vector(from_position));
-
-				//if (((int)entity == 34) && (position_delta > 10.0f))
-				{
-					print("{} moving | [{}] from: {}, to: {}", entity, position_delta, math::to_vector(from_position), math::to_vector(to_position));
-				}
-
-				switch (method)
-				{
-					case CollisionCastMethod::ConvexCast:
-					{
-						auto* shape = col->peek_convex_shape();
-
-						if (!shape)
-						{
-							break; // return;
-						}
-
-						using callback_t = btClosestNotMeConvexResultCallback; // btCollisionWorld::ClosestConvexResultCallback;
-
-						auto callback = callback_t(collision_obj, from_position, to_position, broadphase->getOverlappingPairCache(), collision_dispatcher.get());
-
-						callback.m_collisionFilterGroup = collision_obj->getBroadphaseHandle()->m_collisionFilterGroup; // -1;
-						callback.m_collisionFilterMask = collision_obj->getBroadphaseHandle()->m_collisionFilterMask; // -1;
-
-						callback.m_allowedPenetration = allowed_penetration;
-
-						collision_world->convexSweepTest(shape, from, to, callback, allowed_penetration);
-
-						if (callback.hasHit())
-						{
-							const auto* hit_object = callback.m_hitCollisionObject;
-
-							if ((int)entity == 34)
-							{
-								print("HIT DETECTED (camera)");
-							}
-							else
-							{
-								print("HIT DETECTED (not camera): {}", world.label(entity));
-							}
-
-							auto normal = math::to_vector(callback.m_hitNormalWorld);
-							auto fraction = callback.m_closestHitFraction;
-							auto hit_point_in_world = math::to_vector(callback.m_hitPointWorld);
-
-
-							// This needs to be its own routine:
-							btVector3 aabb_min, aabb_max;
-							const auto* rigid_body = col->get_rigid_body();
-
-							rigid_body->getAabb(aabb_min, aabb_max);
-
-							auto [test_min, test_max] = col->get_world_aabb();
-
-							const auto* shape = col->peek_shape(); // col->peek_convex_shape();
-
-							//convex_shape->getAabb();
-
-							btVector3 sphere_center;
-							float sphere_radius = 0.0f;
-
-							shape->getBoundingSphere(sphere_center, sphere_radius);
-
-							auto obj_size = glm::length(math::to_vector(aabb_min - aabb_max));
-							auto half_obj_size = (obj_size / 2.0f);
-
-							btTransform alt_aabb_transform;
-							alt_aabb_transform.setIdentity();
-
-							btVector3 alt_aabb_min, alt_aabb_max;
-							shape->getAabb(alt_aabb_transform, alt_aabb_min, alt_aabb_max);
-
-							auto obj_size2 = glm::length(math::to_vector(alt_aabb_min - alt_aabb_max));
-
-							print("Size: {}, Radius: {}", obj_size, sphere_radius);
-
-							auto corrected_dest_position = (hit_point_in_world + (normal * half_obj_size));
-
-							auto attempted_move_length = glm::length(math::to_vector(to_position) - math::to_vector(from_position));
-							auto actual_move_length = glm::length(corrected_dest_position - math::to_vector(from_position));
-
-							transform.set_position(corrected_dest_position);
-							tform_matrix = transform.get_matrix();
-
-							print("DEBUG");
-
-							//callback.m_hitPointWorld;
-							//callback.m_hitCollisionObject
-						}
-
-						break;
-					}
-					//case CollisionCastMethod::ConvexKinematicCast:
-						// INSERT USE OF `btKinematicClosestNotMeConvexResultCallback` here.
-						//break;
-
-					case CollisionCastMethod::RayCast:
-						// TODO: Implement ray cast approach. (offset by half of AABB/shape width from contact point)
-						//assert(false);
-						break;
-					//case CollisionCastMethod::None:
-					default:
-						break;
-				}
+				handle_transform_resolution(entity, *col, *collision_obj, transform);
 			}
 
 			//collision_world->convexSweepTest();
 			//collision_world->contactTest();
 
-			update_collision_object_transform(*collision_obj, tform_matrix);
+			update_collision_object_transform(*collision_obj, transform.get_matrix());
 
 			// Debugging related:
 			//auto t = col->get_collision_object()->getWorldTransform();
 			//print("Position is now: {}", math::to_vector(t.getOrigin()));
 		}
 	}
+
+	void PhysicsSystem::handle_transform_resolution
+	(
+		Entity entity, CollisionComponent& collision,
+		btCollisionObject& collision_obj,
+		Transform& transform
+	)
+	{
+		const auto kinematic_resolution_opt = collision.get_kinematic_resolution();
+
+		if (!kinematic_resolution_opt.has_value())
+		{
+			return;
+		}
+
+		const auto& kinematic_resolution = *kinematic_resolution_opt;
+
+		// TODO: Look into reducing number of casts performed via delta length-check.
+		//auto position_delta = glm::length(math::to_vector(to_position) - math::to_vector(from_position));
+
+		switch (kinematic_resolution.cast_method)
+		{
+			case CollisionCastMethod::ConvexCast:
+			{
+				auto result = convex_cast_to(*this, entity, transform.get_matrix());
+
+				if (result)
+				{
+					const auto* hit_object = result->native.hit_object;
+					const auto  hit_entity = result->hit_entity;
+
+					//auto fraction = callback.m_closestHitFraction;
+
+					auto hit_normal = result->hit_normal;
+					auto hit_point_in_world = result->hit_position;
+
+
+					//float obj_size = 0.0f;
+					float half_obj_size = 0.0f;
+					
+					util::visit
+					(
+						kinematic_resolution.size,
+
+						[&](const KinematicResolutionConfig::AABBType& aabb)
+						{
+							half_obj_size = (collision.get_aabb_size() * 0.5f);
+						},
+
+						[&](const KinematicResolutionConfig::SphereType& sphere)
+						{
+							half_obj_size = collision.get_bounding_radius();
+						},
+
+						[&](const KinematicResolutionConfig::SizeType& manual_size)
+						{
+							//obj_size = manual_size.get_size();
+							half_obj_size = manual_size.get_half_size();
+						},
+
+						[](const std::monostate&) {}
+					);
+
+					auto corrected_dest_position = (hit_point_in_world + (hit_normal * half_obj_size));
+
+					//auto attempted_move_length = glm::length(math::to_vector(to_position) - math::to_vector(from_position));
+					//auto actual_move_length = glm::length(corrected_dest_position - math::to_vector(from_position));
+
+					transform.set_position(corrected_dest_position);
+
+					// Notify listeners that this `entity` contacted `hit_entity`'s surface.
+					world.event<OnCollision>(entity, hit_entity, hit_point_in_world, hit_normal, 0.0f, ContactType::Surface);
+				}
+
+				break;
+			}
+			//case CollisionCastMethod::ConvexKinematicCast:
+				// INSERT USE OF `btKinematicClosestNotMeConvexResultCallback` here.
+				//break;
+
+			case CollisionCastMethod::RayCast:
+				// TODO: Implement ray cast approach. (offset by half of AABB/shape width from contact point)
+				//assert(false);
+				break;
+			
+			//case CollisionCastMethod::None:
+			default:
+				break;
+		}
+	}
+
+	
 
 	void PhysicsSystem::update_motion(Entity entity, Transform& transform, PhysicsComponent& ph, float delta)
 	{
@@ -519,11 +511,6 @@ namespace engine
 	void PhysicsSystem::update_collision_object(btCollisionObject& obj, const math::Matrix& m)
 	{
 		update_collision_object_transform(obj, m);
-	}
-
-	void PhysicsSystem::register_debug_drawer(btIDebugDraw& dbg_draw) // BulletDebugDrawer&
-	{
-		collision_world->setDebugDrawer(&dbg_draw);
 	}
 
 	// Internal shorthand for `world.get_gravity()`.

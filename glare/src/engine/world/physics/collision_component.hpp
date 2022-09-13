@@ -321,6 +321,9 @@ namespace engine
 			float get_bounding_radius() const;
 
 			CollisionCastMethod get_kinematic_cast_method() const;
+
+			void set_kinematic_resolution(const KinematicResolutionConfig& resolution);
+			std::optional<KinematicResolutionConfig> get_kinematic_resolution() const;
 		protected:
 			std::optional<KinematicResolutionConfig> kinematic_resolution;
 

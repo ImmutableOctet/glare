@@ -473,6 +473,16 @@ namespace engine
 		return CollisionCastMethod::None;
 	}
 
+	void CollisionComponent::set_kinematic_resolution(const KinematicResolutionConfig& resolution)
+	{
+		kinematic_resolution = resolution;
+	}
+
+	std::optional<KinematicResolutionConfig> CollisionComponent::get_kinematic_resolution() const
+	{
+		return kinematic_resolution;
+	}
+
 	void CollisionComponent::update_transform(const math::Matrix& tform)
 	{
 		auto* collision = get_collision_object();

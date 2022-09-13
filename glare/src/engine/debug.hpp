@@ -24,6 +24,8 @@ namespace engine
 	struct OnEntityCreated;
 	struct OnParentChanged;
 	struct OnGravityChanged;
+	struct OnTransformChanged;
+	struct OnCollision;
 
 	void print_children(World& registry, Entity entity, bool recursive=true, bool summary_info=true, bool recursive_labels=false, const std::string& prefix="->");
 	void position_in_titlebar(game::Game& game, Entity entity, std::optional<std::string_view> prefix=std::nullopt);
@@ -45,6 +47,8 @@ namespace engine
 			void operator()(const OnEntityCreated& data);
 			void operator()(const OnParentChanged& data);
 			void operator()(const OnGravityChanged& data);
+			void operator()(const OnTransformChanged& data);
+			void operator()(const OnCollision& data);
 
 			void on_skeleton(Registry& registry, Entity entity);
 

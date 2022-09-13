@@ -5,13 +5,15 @@
 #include <game/game.hpp>
 
 #include "events.hpp"
-#include "relationship.hpp"
 
 #include "world/world.hpp"
 #include "world/world_events.hpp"
+#include "world/physics/collision_events.hpp"
 
 // Components:
-#include <engine/world/animation/skeletal_component.hpp>
+#include "relationship.hpp"
+
+#include "world/animation/skeletal_component.hpp"
 
 namespace engine
 {
@@ -111,6 +113,10 @@ namespace engine
 		enable<OnStageLoaded>();
 		enable<OnEntityCreated>();
 		enable<OnParentChanged>();
+		enable<OnCollision>();
+
+		// Disabled for now.
+		//enable<OnTransformChanged>();
 
 		// Component construction events:
 		registry.on_construct<SkeletalComponent>().connect<&DebugListener::on_skeleton>(*this);
@@ -173,6 +179,20 @@ namespace engine
 	void DebugListener::operator()(const OnGravityChanged& data)
 	{
 		print("Gravity changed from: {}, to: {}", data.old_gravity, data.new_gravity);
+	}
+
+	void DebugListener::operator()(const OnTransformChanged& data)
+	{
+		auto tform = world.get_transform(data.entity);
+
+		auto [position, rotation, scale] = tform.get_vectors();
+
+		print("Transform of {} changed. (Position: [{}], Rotation: [{}], Scale: [{}])", data.entity, position, rotation, scale);
+	}
+
+	void DebugListener::operator()(const OnCollision& data)
+	{
+		print("Collision detected between entities {} and {} at {}. (Contact type: {})", data.a, data.b, data.position, static_cast<int>(data.contact_type));
 	}
 
 	void DebugListener::on_skeleton(Registry& registry, Entity entity)
