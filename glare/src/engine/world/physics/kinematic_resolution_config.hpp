@@ -6,6 +6,8 @@
 
 namespace engine
 {
+	struct CollisionComponent;
+
 	// Collision resolution information for kinematic objects.
 	// This is used to supply data to 
 	struct KinematicResolutionConfig
@@ -48,5 +50,8 @@ namespace engine
 
 		CollisionCastMethod cast_method = CollisionCastMethod::None;
 		SizeConfig size = std::monostate{};
+
+		float get_size(const CollisionComponent& collision) const;
+		float get_half_size(const CollisionComponent& collision) const;
 	};
 }
