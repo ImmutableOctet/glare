@@ -110,7 +110,7 @@ namespace engine
 		Entity entity,
 		const CollisionComponent& collision,
 
-		const CastDestination& destination,
+		const CollisionCastPoint& destination,
 
 		std::optional<CollisionGroup> filter_group,
 		std::optional<CollisionGroup> filter_mask,
@@ -183,7 +183,7 @@ namespace engine
 
 		Entity entity,
 
-		const CastDestination& destination,
+		const CollisionCastPoint& destination,
 
 		std::optional<CollisionGroup> filter_group,
 		std::optional<CollisionGroup> filter_mask,

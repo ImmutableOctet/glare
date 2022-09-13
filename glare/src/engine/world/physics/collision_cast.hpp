@@ -22,7 +22,7 @@ namespace engine
 	struct CollisionComponent;
 
 	// Destination for a cast operation; can either be a world-space position or a matrix.
-	using CastDestination = std::variant<math::Matrix, math::Vector>;
+	using CollisionCastPoint = std::variant<math::Matrix, math::Vector>;
 
 	std::optional<ConvexCastResult> convex_cast_impl
 	(
@@ -55,7 +55,7 @@ namespace engine
 		Entity entity,
 		const CollisionComponent& collision,
 
-		const CastDestination& destination,
+		const CollisionCastPoint& destination,
 
 		std::optional<CollisionGroup> filter_group=std::nullopt, // Defaults to `collision` object's filter.
 		std::optional<CollisionGroup> filter_mask=std::nullopt,  // Defaults to `collision` object's mask.
@@ -69,7 +69,7 @@ namespace engine
 
 		Entity entity,
 
-		const CastDestination& destination,
+		const CollisionCastPoint& destination,
 
 		std::optional<CollisionGroup> filter_group=std::nullopt, // Defaults to `collision` object's filter.
 		std::optional<CollisionGroup> filter_mask=std::nullopt,  // Defaults to `collision` object's mask.
