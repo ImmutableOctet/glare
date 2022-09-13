@@ -469,6 +469,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\engine\world\physics\collision_group.cpp" />
     <ClCompile Include="src\engine\world\physics\collision_motion_state.cpp" />
     <ClCompile Include="src\engine\world\physics\collision_cast.cpp" />
+    <ClCompile Include="src\engine\world\physics\kinematic_resolution_config.cpp" />
     <ClCompile Include="src\engine\world\physics\physics.cpp" />
     <ClCompile Include="src\engine\world\physics\physics_component.cpp" />
     <ClCompile Include="src\engine\world\player.cpp" />

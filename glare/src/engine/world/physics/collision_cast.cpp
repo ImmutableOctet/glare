@@ -14,17 +14,20 @@
 
 #include <util/variant.hpp>
 
+#include <type_traits>
+
 namespace engine
 {
 	std::optional<ConvexCastResult> convex_cast_impl
 	(
 		PhysicsSystem& physics,
 
-		const btCollisionObject& collision_obj_ref,
 		const btConvexShape& shape,
 
 		const btTransform& from_matrix_bt,
 		const btTransform& to_matrix_bt,
+
+		const btCollisionObject* collision_obj_ptr,
 
 		std::optional<btVector3> from_position_bt,
 		std::optional<btVector3> to_position_bt,
@@ -37,17 +40,13 @@ namespace engine
 	{
 		// Const-cast needed due to non-const pointer used by Bullet,
 		// despite no direct modification occurring.
-		auto& collision_obj = const_cast<btCollisionObject&>(collision_obj_ref);
+		auto* collision_obj = const_cast<btCollisionObject*>(collision_obj_ptr);
 
 		auto* collision_world = physics.get_collision_world();
 
 		assert(collision_world);
 
-		if (!allowed_penetration.has_value())
-		{
-			allowed_penetration = collision_world->getDispatchInfo().m_allowedCcdPenetration;
-		}
-
+		// TODO: Fix this. (should allow for non-centered convex objects; origin to be pulled from `collision_obj`)
 		// Currently hard-coded to 'center' origin.
 		const auto local_origin = btVector3(0.0f, 0.0f, 0.0f); // collision_obj->getWorldTransform().getOrigin();
 
@@ -61,43 +60,98 @@ namespace engine
 			to_position_bt = (to_matrix_bt * local_origin);
 		}
 
-		auto callback = btClosestNotMeConvexResultCallback // btCollisionWorld::ClosestConvexResultCallback
-		(
-			&collision_obj,
-
-			*from_position_bt, *to_position_bt,
-
-			physics.get_broadphase()->getOverlappingPairCache(),
-			physics.get_collision_dispatcher()
-		);
-
-		callback.m_collisionFilterGroup = filter_group.value_or(collision_obj.getBroadphaseHandle()->m_collisionFilterGroup); // -1;
-		callback.m_collisionFilterMask  = filter_mask.value_or(collision_obj.getBroadphaseHandle()->m_collisionFilterMask); // -1;
-
-		callback.m_allowedPenetration = *allowed_penetration;
-
-		collision_world->convexSweepTest(&shape, from_matrix_bt, to_matrix_bt, callback, *allowed_penetration);
-
-		if (callback.hasHit())
+		auto use_callback = [&]<typename Callback>(Callback&& callback) -> std::optional<ConvexCastResult>
 		{
-			return ConvexCastResult
+			if (filter_group.has_value())
 			{
-				// General cast result data:
-				get_entity_from_collision_object(*callback.m_me), // get_entity_from_collision_object(collision_obj), // entity,
-				get_entity_from_collision_object(*callback.m_hitCollisionObject),
+				callback.m_collisionFilterGroup = *filter_group;
+			}
+			else
+			{
+				int filter_group_fallback = -1;
 
-				math::to_vector(callback.m_hitPointWorld),
-				math::to_vector(callback.m_hitNormalWorld),
-
-				// Bullet/native data:
+				if (collision_obj)
 				{
-					&collision_obj,
-					callback.m_hitCollisionObject
-				},
+					filter_group_fallback = collision_obj->getBroadphaseHandle()->m_collisionFilterGroup;
+				}
 
-				// Convex-cast specific:
-				callback.m_closestHitFraction
-			};
+				callback.m_collisionFilterGroup = filter_group_fallback;
+			}
+
+			if (filter_mask.has_value())
+			{
+				callback.m_collisionFilterMask = *filter_mask;
+			}
+			else
+			{
+				int filter_mask_fallback = -1;
+
+				if (collision_obj)
+				{
+					filter_mask_fallback = collision_obj->getBroadphaseHandle()->m_collisionFilterMask;
+				}
+
+				callback.m_collisionFilterMask = filter_mask_fallback;
+			}
+
+			auto penetration = allowed_penetration.value_or(collision_world->getDispatchInfo().m_allowedCcdPenetration);
+
+			if constexpr (std::is_same_v<Callback, btClosestNotMeConvexResultCallback>)
+			{
+				callback.m_allowedPenetration = penetration;
+			}
+
+			collision_world->convexSweepTest(&shape, from_matrix_bt, to_matrix_bt, callback, penetration);
+
+			if (callback.hasHit())
+			{
+				return ConvexCastResult
+				{
+					// General cast result data:
+					((collision_obj) ? get_entity_from_collision_object(*collision_obj) : null), //get_entity_from_collision_object(*callback.m_me), // entity,
+					((callback.m_hitCollisionObject) ? get_entity_from_collision_object(*callback.m_hitCollisionObject) : null),
+
+					math::to_vector(callback.m_hitPointWorld),
+					math::to_vector(callback.m_hitNormalWorld),
+
+					// Bullet/native data:
+					{
+						collision_obj,
+						callback.m_hitCollisionObject
+					},
+
+					// Convex-cast specific:
+					callback.m_closestHitFraction
+				};
+			}
+
+			return std::nullopt;
+		};
+
+		if (collision_obj)
+		{
+			return use_callback
+			(
+				btClosestNotMeConvexResultCallback
+				(
+					collision_obj,
+
+					*from_position_bt, *to_position_bt,
+
+					physics.get_broadphase()->getOverlappingPairCache(),
+					physics.get_collision_dispatcher()
+				)
+			);
+		}
+		else
+		{
+			return use_callback
+			(
+				btCollisionWorld::ClosestConvexResultCallback
+				(
+					*from_position_bt, *to_position_bt
+				)
+			);
 		}
 
 		return std::nullopt;
@@ -114,6 +168,7 @@ namespace engine
 
 		std::optional<CollisionGroup> filter_group,
 		std::optional<CollisionGroup> filter_mask,
+
 		std::optional<float> allowed_penetration
 	)
 	{
@@ -161,11 +216,12 @@ namespace engine
 		(
 			physics,
 			
-			*collision_obj,
 			*shape,
 			
 			from_matrix_bt,
 			to_matrix_bt,
+
+			collision_obj,
 			
 			from_position_bt,
 			to_position_bt,
@@ -177,6 +233,7 @@ namespace engine
 		);
 	}
 
+	// Shorthand overload.
 	std::optional<ConvexCastResult> convex_cast_to
 	(
 		PhysicsSystem& physics,
@@ -214,6 +271,88 @@ namespace engine
 			filter_group,
 			filter_mask,
 			
+			allowed_penetration
+		);
+	}
+
+	std::optional<ConvexCastResult> convex_cast
+	(
+		PhysicsSystem& physics,
+
+		const btConvexShape& shape,
+
+		const CollisionCastPoint& from,
+		const CollisionCastPoint& to,
+
+		CollisionGroup filter_group,
+		CollisionGroup filter_mask,
+
+		std::optional<float> allowed_penetration
+	)
+	{
+		// Resolve cast-source:
+		btVector3 from_position_bt;
+		btTransform from_matrix_bt;
+
+		util::visit
+		(
+			from,
+
+			[&from_position_bt, &from_matrix_bt](const math::Matrix& from)
+			{
+				from_matrix_bt = math::to_bullet_matrix(from);
+				from_position_bt = math::to_bullet_vector(math::get_translation(from));
+			},
+
+			[&from_position_bt, &from_matrix_bt](const math::Vector& from)
+			{
+				from_position_bt = math::to_bullet_vector(from);
+				from_matrix_bt = btTransform(btMatrix3x3::getIdentity(), from_position_bt);
+			}
+		);
+
+		// Resolve cast-destination:
+		btVector3 to_position_bt;
+		btTransform to_matrix_bt;
+
+		util::visit
+		(
+			to,
+
+			[&to_position_bt, &to_matrix_bt](const math::Matrix& to)
+			{
+				to_matrix_bt = math::to_bullet_matrix(to);
+				to_position_bt = math::to_bullet_vector(math::get_translation(to));
+			},
+
+			[&to_position_bt, &to_matrix_bt, &from_matrix_bt](const math::Vector& to)
+			{
+				to_position_bt = math::to_bullet_vector(to);
+
+				to_matrix_bt = btTransform(from_matrix_bt.getBasis(), to_position_bt);
+
+				// Alternative: no orientation at destination.
+				//to_matrix_bt = btTransform(btMatrix3x3::getIdentity(), to_position_bt);
+			}
+		);
+
+		return convex_cast_impl
+		(
+			physics,
+			
+			shape,
+			
+			from_matrix_bt,
+			to_matrix_bt,
+
+			nullptr,
+			
+			from_position_bt,
+			to_position_bt,
+			
+			static_cast<int>(filter_group),
+			static_cast<int>(filter_mask),
+
 			allowed_penetration
 		);
 	}

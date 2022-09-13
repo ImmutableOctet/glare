@@ -24,15 +24,17 @@ namespace engine
 	// Destination for a cast operation; can either be a world-space position or a matrix.
 	using CollisionCastPoint = std::variant<math::Matrix, math::Vector>;
 
+	// Convex cast implementation; this inteface is non-stable.
 	std::optional<ConvexCastResult> convex_cast_impl
 	(
 		PhysicsSystem& physics,
 		
-		const btCollisionObject& collision_obj_ref,
 		const btConvexShape& shape,
 
 		const btTransform& from_matrix_bt,
 		const btTransform& to_matrix_bt,
+
+		const btCollisionObject* collision_obj_ptr=nullptr,
 
 		std::optional<btVector3> from_position_bt=std::nullopt,
 		std::optional<btVector3> to_position_bt=std::nullopt,
@@ -42,11 +44,8 @@ namespace engine
 
 		std::optional<float> allowed_penetration=std::nullopt // Defaults to the collision-world's allowable penetration.
 	);
-
-	// TODO: Add version of `convex_cast` that allows the use of shapes directly.
-	// (Would need to either require CollisionGroups outright, or have them defaulted to `CollisionGroup::All`)
-	// 
-	// Performs a cast using a convex object (`entity`) between two points in world-space.
+	
+	// Performs a cast using a convex object (`entity`) from its current position to the specified position in world-space.
 	// If a hit is detected, this function will return a `ConvexCastResult` object, otherwise, the return value will be `std::nullopt`.
 	std::optional<ConvexCastResult> convex_cast_to
 	(
@@ -59,10 +58,11 @@ namespace engine
 
 		std::optional<CollisionGroup> filter_group=std::nullopt, // Defaults to `collision` object's filter.
 		std::optional<CollisionGroup> filter_mask=std::nullopt,  // Defaults to `collision` object's mask.
+
 		std::optional<float> allowed_penetration=std::nullopt    // Defaults to internal collision-world's allowable penetration.
 	);
 
-	// See main overload for details. (Shorthand overload)
+	// Shorthand overload: See main overload for details.
 	std::optional<ConvexCastResult> convex_cast_to
 	(
 		PhysicsSystem& physics,
@@ -74,6 +74,23 @@ namespace engine
 		std::optional<CollisionGroup> filter_group=std::nullopt, // Defaults to `collision` object's filter.
 		std::optional<CollisionGroup> filter_mask=std::nullopt,  // Defaults to `collision` object's mask.
 		std::optional<float> allowed_penetration=std::nullopt    // Defaults to internal collision-world's allowable penetration.
+	);
+
+	// Performs a convex-cast using `shape` from the location
+	// specified (`from`) to the destination specified (`to`).
+	std::optional<ConvexCastResult> convex_cast
+	(
+		PhysicsSystem& physics,
+
+		const btConvexShape& shape,
+
+		const CollisionCastPoint& from,
+		const CollisionCastPoint& to,
+
+		CollisionGroup filter_group=CollisionGroup::All,
+		CollisionGroup filter_mask=CollisionGroup::All,
+
+		std::optional<float> allowed_penetration=std::nullopt
 	);
 
 	/*

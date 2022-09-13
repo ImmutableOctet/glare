@@ -347,32 +347,8 @@ namespace engine
 					auto hit_normal = result->hit_normal;
 					auto hit_point_in_world = result->hit_position;
 
-
 					//float obj_size = 0.0f;
-					float half_obj_size = 0.0f;
-					
-					util::visit
-					(
-						kinematic_resolution.size,
-
-						[&](const KinematicResolutionConfig::AABBType& aabb)
-						{
-							half_obj_size = (collision.get_aabb_size() * 0.5f);
-						},
-
-						[&](const KinematicResolutionConfig::SphereType& sphere)
-						{
-							half_obj_size = collision.get_bounding_radius();
-						},
-
-						[&](const KinematicResolutionConfig::SizeType& manual_size)
-						{
-							//obj_size = manual_size.get_size();
-							half_obj_size = manual_size.get_half_size();
-						},
-
-						[](const std::monostate&) {}
-					);
+					auto half_obj_size = kinematic_resolution.get_half_size(collision);
 
 					auto corrected_dest_position = (hit_point_in_world + (hit_normal * half_obj_size));
 
