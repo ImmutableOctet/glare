@@ -20,29 +20,34 @@
 #include <bullet/btBulletCollisionCommon.h>
 //#include <bullet/BulletCollision/CollisionDispatch/btCollisionWorld.h>
 
-// Based code found in `btKinematicCharacterController.cpp` from Bullet's source code:
+// Based code found in `btKinematicCharacterController.cpp` from Bullet's source code (modified slightly):
 namespace engine
 {
+	// See also: `btClosestNotMeConvexResultCallback`
 	class btKinematicClosestNotMeRayResultCallback : public btCollisionWorld::ClosestRayResultCallback
 	{
 		public:
-			btKinematicClosestNotMeRayResultCallback(btCollisionObject* me)
-				: btCollisionWorld::ClosestRayResultCallback(btVector3(0.0, 0.0, 0.0), btVector3(0.0, 0.0, 0.0))
-			{
-				m_me = me;
-			}
+			btKinematicClosestNotMeRayResultCallback(const btCollisionObject* me):
+				btCollisionWorld::ClosestRayResultCallback(btVector3(0.0, 0.0, 0.0), btVector3(0.0, 0.0, 0.0)),
+				m_me(me)
+			{}
 
 			virtual btScalar addSingleResult(btCollisionWorld::LocalRayResult& rayResult, bool normalInWorldSpace)
 			{
-				if (rayResult.m_collisionObject == m_me)
+				// Additional check for `nullptr`; not sure if this would be
+				// called with null collision-object in `rayResult`. (Probably not necessary)
+				if (m_me != nullptr)
 				{
-					return 1.0;
+					if (rayResult.m_collisionObject == m_me)
+					{
+						return 1.0;
+					}
 				}
 
 				return ClosestRayResultCallback::addSingleResult(rayResult, normalInWorldSpace);
 			}
 
 		protected:
-			btCollisionObject* m_me;
+			const btCollisionObject* m_me;
 	};
 }
