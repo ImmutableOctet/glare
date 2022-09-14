@@ -49,8 +49,25 @@ namespace graphics
 			inline Mesh& get_gpu_state() { return gpu_state; }
 
 			inline bool has_points() const { return static_cast<bool>(point_data); }
+
+			inline void enable()
+			{
+				enabled = true;
+			}
+
+			inline void disable()
+			{
+				enabled = false;
+			}
+
+			inline bool is_enabled() const
+			{
+				return enabled;
+			}
 		protected:
 			//MeshComposition gpu_state;
+
+			// TODO: Look into optimiziation via two or more gpu states. ('double buffering')
 			Mesh gpu_state;
 
 			Vertices point_data;
@@ -58,5 +75,7 @@ namespace graphics
 
 			std::size_t max_buffer_size  = 0;
 			std::size_t prev_buffer_size = 0;
+
+			bool enabled = true;
 	};
 }

@@ -16,6 +16,11 @@ namespace graphics
 
 	void BulletDebugDrawer::drawLine(const btVector3& from, const btVector3& to, const btVector3& color)
 	{
+		if (!enabled)
+		{
+			return;
+		}
+
 		SimpleColoredVertex from_v;
 		SimpleColoredVertex to_v;
 
@@ -35,12 +40,22 @@ namespace graphics
 
 	void BulletDebugDrawer::clearLines()
 	{
+		if (!enabled)
+		{
+			return;
+		}
+
 		prev_buffer_size = point_data.vertices.size();
 		point_data.vertices.clear();
 	}
 
 	void BulletDebugDrawer::flushLines()
 	{
+		if (!enabled)
+		{
+			return;
+		}
+
 		if (gpu_state)
 		{
 			gpu_state.update_contents<VertexType>

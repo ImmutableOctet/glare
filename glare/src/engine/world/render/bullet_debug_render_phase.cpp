@@ -35,7 +35,7 @@ namespace engine
 
 	const RenderParameters& BulletDebugRenderPhase::operator()(const RenderParameters& parameters)
 	{
-		if (!enabled)
+		if (!is_enabled())
 		{
 			return parameters;
 		}
@@ -84,5 +84,20 @@ namespace engine
 		});
 
 		return parameters;
+	}
+
+	void BulletDebugRenderPhase::enable()
+	{
+		debug_drawer->enable();
+	}
+
+	void BulletDebugRenderPhase::disable()
+	{
+		debug_drawer->disable();
+	}
+
+	bool BulletDebugRenderPhase::is_enabled() const
+	{
+		return debug_drawer->is_enabled();
 	}
 }
