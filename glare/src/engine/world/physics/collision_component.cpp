@@ -388,6 +388,10 @@ namespace engine
 	std::tuple<math::Vector, math::Vector> CollisionComponent::get_world_aabb() const
 	{
 		btVector3 aabb_min, aabb_max;
+
+		//btVector3 aabb_min = btVector3(0.0f, 0.0f, 0.0f);
+		//btVector3 aabb_max = btVector3(0.0f, 0.0f, 0.0f);
+
 		const auto* rigid_body = get_rigid_body();
 
 		if (rigid_body)

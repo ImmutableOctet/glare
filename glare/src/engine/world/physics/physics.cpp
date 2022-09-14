@@ -331,6 +331,33 @@ namespace engine
 		// TODO: Look into reducing number of casts performed via delta length-check.
 		//auto position_delta = glm::length(math::to_vector(to_position) - math::to_vector(from_position));
 
+		auto kinematic_resolve = [&](const auto& result, ContactType contact_type)
+		{
+			const auto* hit_object = result->native.hit_object;
+			const auto  hit_entity = result->hit_entity;
+
+			//auto fraction = callback.m_closestHitFraction;
+
+			const auto& hit_normal = result->hit_normal;
+			const auto& hit_point_in_world = result->hit_position;
+
+			//float obj_size = 0.0f;
+			auto half_obj_size = kinematic_resolution.get_half_size(collision);
+
+			auto corrected_dest_position = (hit_point_in_world + (hit_normal * half_obj_size));
+
+			//auto attempted_move_length = glm::length(math::to_vector(to_position) - math::to_vector(from_position));
+			//auto actual_move_length = glm::length(corrected_dest_position - math::to_vector(from_position));
+
+			transform.set_position(corrected_dest_position);
+
+			// TODO: Look into speculatively representing penetration depth.
+			auto penetration_depth = 0.0f;
+
+			// Notify listeners that this `entity` contacted `hit_entity`'s surface.
+			world.event<OnCollision>(entity, hit_entity, hit_point_in_world, hit_normal, penetration_depth, contact_type);
+		};
+
 		switch (kinematic_resolution.cast_method)
 		{
 			case CollisionCastMethod::ConvexCast:
@@ -339,26 +366,7 @@ namespace engine
 
 				if (result)
 				{
-					const auto* hit_object = result->native.hit_object;
-					const auto  hit_entity = result->hit_entity;
-
-					//auto fraction = callback.m_closestHitFraction;
-
-					auto hit_normal = result->hit_normal;
-					auto hit_point_in_world = result->hit_position;
-
-					//float obj_size = 0.0f;
-					auto half_obj_size = kinematic_resolution.get_half_size(collision);
-
-					auto corrected_dest_position = (hit_point_in_world + (hit_normal * half_obj_size));
-
-					//auto attempted_move_length = glm::length(math::to_vector(to_position) - math::to_vector(from_position));
-					//auto actual_move_length = glm::length(corrected_dest_position - math::to_vector(from_position));
-
-					transform.set_position(corrected_dest_position);
-
-					// Notify listeners that this `entity` contacted `hit_entity`'s surface.
-					world.event<OnCollision>(entity, hit_entity, hit_point_in_world, hit_normal, 0.0f, ContactType::Surface);
+					kinematic_resolve(result, ContactType::Surface);
 				}
 
 				break;
@@ -373,6 +381,11 @@ namespace engine
 			{
 				auto result = ray_cast_to(*this, collision, transform.get_position());
 
+				if (result)
+				{
+					kinematic_resolve(result, ContactType::Surface);
+				}
+
 				break;
 			}
 			
@@ -381,8 +394,6 @@ namespace engine
 				break;
 		}
 	}
-
-	
 
 	void PhysicsSystem::update_motion(Entity entity, Transform& transform, PhysicsComponent& ph, float delta)
 	{

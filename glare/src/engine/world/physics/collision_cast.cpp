@@ -18,6 +18,26 @@
 
 namespace engine
 {
+	/*
+		This routine performs a safety check for a zero-distance ray-cast.
+		(Returns `false` on 'abort' scenario)
+		
+		Bullet triggers an assert on vector normalization when attempting this,
+		so we check this ahead of bullet and abort the cast operation entirely.
+		
+		Bullet presumably has this assert to circumvent a divide-by-zero error.
+	*/
+	static bool _ray_cast_impl_abort_check(const btVector3& from_bt, const btVector3& to_bt)
+	{
+		// TODO: Determine if this is needed in Release builds.
+		// (Probably not, since it's circumventing a `btAssert`)
+
+		auto diff = (to_bt - from_bt); diff.normalize();
+
+		//return (glm::length(from - to) == 0.0f); // <-- Non-Bullet version.
+		return (diff.fuzzyZero()); // (diff.length2() < SIMD_EPSILON* SIMD_EPSILON);
+	}
+
 	static const btCollisionObject* resolve_self(PhysicsSystem& physics, const RayCastSelf& self)
 	{
 		const btCollisionObject* self_collision_obj = nullptr;
@@ -425,11 +445,16 @@ namespace engine
 		const RayCastSelf& self
 	)
 	{
-		const auto* collision_world = physics.get_collision_world();
-
 		const auto from_bt = math::to_bullet_vector(from);
 		const auto to_bt   = math::to_bullet_vector(to);
+		
+		// Safety check for Bullet:
+		if (!_ray_cast_impl_abort_check(from_bt, to_bt))
+		{
+			return std::nullopt;
+		}
 
+		const auto* collision_world = physics.get_collision_world();
 		const auto* self_collision_obj = resolve_self(physics, self);
 
 		// btCollisionWorld::RayResultCallback
