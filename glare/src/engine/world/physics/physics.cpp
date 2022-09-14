@@ -335,7 +335,7 @@ namespace engine
 		{
 			case CollisionCastMethod::ConvexCast:
 			{
-				auto result = convex_cast_to(*this, entity, transform.get_matrix());
+				auto result = convex_cast_to(*this, collision, transform.get_matrix());
 
 				if (result)
 				{
@@ -371,7 +371,7 @@ namespace engine
 
 			case CollisionCastMethod::RayCast:
 			{
-
+				auto result = ray_cast_to(*this, collision, transform.get_position());
 
 				break;
 			}

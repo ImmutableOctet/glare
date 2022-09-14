@@ -56,6 +56,23 @@ namespace engine
 		return self_collision_obj;
 	}
 
+	static math::Vector resolve_from_vector(PhysicsSystem& physics, const RayCastSelf& self)
+	{
+		const auto* collision_obj = resolve_self(physics, self);
+
+		assert(collision_obj);
+
+		if (!collision_obj)
+		{
+			return {};
+		}
+
+		const auto& tform = collision_obj->getWorldTransform();
+		auto from = math::to_vector(tform.getOrigin());
+
+		return from;
+	}
+
 	template <typename CallbackType, typename GroupOptionalType, typename CollisionObjectType>
 	static CallbackType& register_collision_filters(CallbackType& callback, GroupOptionalType&& filter_group, GroupOptionalType&& filter_mask, CollisionObjectType* collision_obj=nullptr)
 	{
@@ -452,7 +469,7 @@ namespace engine
 		return std::nullopt;
 	}
 
-	std::optional<RayCastResult> ray_cast_directional
+	std::optional<RayCastResult> directional_ray_cast
 	(
 		PhysicsSystem& physics,
 
@@ -481,6 +498,52 @@ namespace engine
 			filter_group,
 			filter_mask,
 
+			self
+		);
+	}
+
+	std::optional<RayCastResult> ray_cast_to
+	(
+		PhysicsSystem& physics,
+
+		const RayCastSelf& self,
+
+		const math::Vector& destination,
+
+		std::optional<CollisionGroup> filter_group,
+		std::optional<CollisionGroup> filter_mask
+	)
+	{
+		return ray_cast
+		(
+			physics,
+			resolve_from_vector(physics, self),
+			destination,
+			filter_group, filter_mask,
+			self
+		);
+	}
+
+	std::optional<RayCastResult> directional_ray_cast_to
+	(
+		PhysicsSystem& physics,
+
+		const RayCastSelf& self,
+
+		const math::Vector& direction,
+		std::optional<float> max_distance,
+
+		std::optional<CollisionGroup> filter_group,
+		std::optional<CollisionGroup> filter_mask
+	)
+	{
+		return directional_ray_cast
+		(
+			physics,
+			resolve_from_vector(physics, self),
+			direction,
+			max_distance,
+			filter_group, filter_mask,
 			self
 		);
 	}

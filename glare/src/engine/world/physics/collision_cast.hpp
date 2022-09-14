@@ -141,7 +141,7 @@ namespace engine
 	// Similar to `ray_cast`, but allows for a normalized `to_direction` vector, instead of an exact end-position.
 	// This can be useful for things like hitscan weapons, speculative floor-detection, etc.
 	// Like `ray_cast`, `self` can be specified to ignore a specific entity/collision-object.
-	std::optional<RayCastResult> ray_cast_directional
+	std::optional<RayCastResult> directional_ray_cast
 	(
 		PhysicsSystem& physics,
 
@@ -158,7 +158,7 @@ namespace engine
 
 
 	// Performs a ray-cast for `self` from its current position to `destination`.
-	// See also: `ray_cast`
+	// See also: `ray_cast` for general-purpose ray-casting.
 	std::optional<RayCastResult> ray_cast_to
 	(
 		PhysicsSystem& physics,
@@ -166,6 +166,21 @@ namespace engine
 		const RayCastSelf& self,
 
 		const math::Vector& destination,
+
+		std::optional<CollisionGroup> filter_group=std::nullopt, // Defaults to filter resolved from `self`.
+		std::optional<CollisionGroup> filter_mask=std::nullopt  // Defaults to mask resolved from `self`.
+	);
+
+	// Performs a ray-cast for `self` from its current position to the `direction` specified.
+	// See also: `directional_ray_cast` for general-purpose ray-casting.
+	std::optional<RayCastResult> directional_ray_cast_to
+	(
+		PhysicsSystem& physics,
+
+		const RayCastSelf& self,
+
+		const math::Vector& direction,
+		std::optional<float> max_distance=std::nullopt,          // If no maximum distance is supplied, then the `physics` object's configured max-distance is used.
 
 		std::optional<CollisionGroup> filter_group=std::nullopt, // Defaults to filter resolved from `self`.
 		std::optional<CollisionGroup> filter_mask=std::nullopt  // Defaults to mask resolved from `self`.
