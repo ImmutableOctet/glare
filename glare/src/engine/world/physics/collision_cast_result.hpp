@@ -15,6 +15,8 @@ namespace engine
 		math::Vector hit_position;
 		math::Vector hit_normal;
 
+		float closest_hit_fraction;
+
 		struct
 		{
 			// Bullet native:
@@ -25,7 +27,7 @@ namespace engine
 
 	struct ConvexCastResult : public CollisionCastResult
 	{
-		float closest_hit_fraction;
+		
 	};
 
 	struct RayCastResult : public CollisionCastResult
