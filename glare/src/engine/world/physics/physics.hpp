@@ -68,6 +68,9 @@ namespace engine
 			inline auto* get_collision_world() { return collision_world.get(); }
 			inline auto* get_broadphase() { return broadphase.get(); }
 			inline auto* get_collision_dispatcher() { return collision_dispatcher.get(); }
+
+			// TODO: Change this to a dedicated field.
+			inline constexpr auto get_max_ray_distance() const { return 2000.0f; }
 		protected:
 			void update_collision_world(float delta);
 

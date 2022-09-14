@@ -363,14 +363,18 @@ namespace engine
 
 				break;
 			}
+
+			// TODO: Look into whether we want to implement this.
 			//case CollisionCastMethod::ConvexKinematicCast:
 				// INSERT USE OF `btKinematicClosestNotMeConvexResultCallback` here.
 				//break;
 
 			case CollisionCastMethod::RayCast:
-				// TODO: Implement ray cast approach. (offset by half of AABB/shape width from contact point)
-				//assert(false);
+			{
+
+
 				break;
+			}
 			
 			//case CollisionCastMethod::None:
 			default:
