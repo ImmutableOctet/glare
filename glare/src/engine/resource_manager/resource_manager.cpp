@@ -9,6 +9,8 @@
 #include <memory>
 #include <tuple>
 
+#include <math/bullet.hpp>
+
 #include <util/string.hpp>
 #include <util/algorithm.hpp>
 
@@ -159,15 +161,27 @@ namespace engine
 	}
 
 	// TODO: Implement some form of caching/optimization for basic shapes.
-	CollisionData ResourceManager::generate_capsule_collision(float radius, float height) // ref<btCapsuleShape>
+	CollisionData ResourceManager::generate_capsule_collision(float radius, float height)
 	{
 		return { std::static_pointer_cast<CollisionRaw>(std::make_shared<btCapsuleShape>(radius, height)) };
 	}
 
 	// TODO: Implement some form of caching/optimization for basic shapes.
-	CollisionData ResourceManager::generate_sphere_collision(float radius) // ref<btCapsuleShape>
+	CollisionData ResourceManager::generate_sphere_collision(float radius)
 	{
 		return { std::static_pointer_cast<CollisionRaw>(std::make_shared<btSphereShape>(radius)) };
+	}
+
+	// TODO: Implement some form of caching/optimization for basic shapes.
+	CollisionData ResourceManager::generate_cube_collision(float radius)
+	{
+		return generate_cube_collision({radius, radius, radius});
+	}
+
+	// TODO: Implement some form of caching/optimization for basic shapes.
+	CollisionData ResourceManager::generate_cube_collision(const math::Vector& size)
+	{
+		return { std::static_pointer_cast<CollisionRaw>(std::make_shared<btBoxShape>(math::to_bullet_vector(size))) };
 	}
 
 	const CollisionData* ResourceManager::get_collision(const WeakModelRef model) const

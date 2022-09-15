@@ -140,8 +140,11 @@ namespace engine
 			}
 			*/
 
-			CollisionData generate_capsule_collision(float radius, float height); // ref<btCapsuleShape>
-			CollisionData generate_sphere_collision(float radius); // ref<btCapsuleShape>
+			CollisionData generate_capsule_collision(float radius, float height);
+			CollisionData generate_sphere_collision(float radius);
+			CollisionData generate_cube_collision(float radius);
+			CollisionData generate_cube_collision(const math::Vector& size);
+
 			const CollisionData* get_collision(const WeakModelRef model) const;
 			const ref<AnimationData> get_animation_data(const WeakModelRef model) const;
 
