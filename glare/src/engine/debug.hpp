@@ -25,6 +25,7 @@ namespace engine
 	struct OnParentChanged;
 	struct OnGravityChanged;
 	struct OnTransformChanged;
+	struct OnAABBOverlap;
 	struct OnCollision;
 
 	void print_children(World& registry, Entity entity, bool recursive=true, bool summary_info=true, bool recursive_labels=false, const std::string& prefix="->");
@@ -48,6 +49,7 @@ namespace engine
 			void operator()(const OnParentChanged& data);
 			void operator()(const OnGravityChanged& data);
 			void operator()(const OnTransformChanged& data);
+			void operator()(const OnAABBOverlap& data);
 			void operator()(const OnCollision& data);
 
 			void on_skeleton(Registry& registry, Entity entity);

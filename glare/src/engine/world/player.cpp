@@ -90,7 +90,7 @@ namespace engine
 
 		world.apply_transform(player, tform);
 
-		attach_physics(world, player, MotionFlags::StandardMovement);
+		////attach_physics(world, player, MotionFlags::StandardMovement);
 
 		auto& resource_manager = world.get_resource_manager();
 

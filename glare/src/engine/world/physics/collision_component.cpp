@@ -181,10 +181,10 @@ namespace engine
 		return obj_info;
 	}
 
-	KinematicResolutionConfig CollisionComponent::default_kinematic_resolution_method() const
+	KinematicResolutionConfig CollisionComponent::default_kinematic_resolution_method() const // std::optional<KinematicResolutionConfig>
 	{
 		// Collision-casting on transformation-change is only
-		// possible with kinematic objects currently.
+		// possible with kinematic objects, currently.
 		if (!is_kinematic())
 		{
 			return {};
@@ -193,11 +193,13 @@ namespace engine
 		// Convex shapes get to utilize Bullet's convex-sweep functionality.
 		if (peek_convex_shape())
 		{
-			return { CollisionCastMethod::ConvexCast, KinematicResolutionConfig::AABBType {} }; // CollisionCastMethod::ConvexKinematicCast
+			////return { CollisionCastMethod::ConvexCast, KinematicResolutionConfig::AABBType {}, true, true }; // CollisionCastMethod::ConvexKinematicCast
+			return { CollisionCastMethod::ConvexCast, KinematicResolutionConfig::InnerSphereType {}, true, true, true };
 		}
 
 		// Everything else gets a simple ray-cast approach.
-		return { CollisionCastMethod::RayCast, KinematicResolutionConfig::AABBType {} };
+		////return { CollisionCastMethod::RayCast, KinematicResolutionConfig::AABBType {}, true, true };
+		return { CollisionCastMethod::RayCast, KinematicResolutionConfig::InnerSphereType {}, true, true, true };
 	}
 
 	btCollisionObject* CollisionComponent::get_collision_object()
@@ -442,7 +444,14 @@ namespace engine
 		auto [aabb_min, aabb_max] = get_world_aabb();
 
 		// Compute the length of the delta from the 'min' and 'max' vectors. (Pythagorean theorem)
+		//return glm::length(math::to_vector(aabb_max - aabb_min));
 		return glm::length(math::to_vector(aabb_max - aabb_min));
+	}
+
+	math::Vector CollisionComponent::get_aabb_lengths() const
+	{
+		auto [aabb_min, aabb_max] = get_world_aabb();
+		return (aabb_max - aabb_min);
 	}
 
 	float CollisionComponent::get_bounding_radius() const
@@ -467,6 +476,22 @@ namespace engine
 		return sphere_radius;
 	}
 
+	float CollisionComponent::get_inner_radius() const
+	{
+		//return (get_inner_diameter() * 0.5f);
+
+		auto delta = (get_aabb_lengths() * 0.5f);
+
+		return ((delta.x + delta.y + delta.z) / 3.0f);
+	}
+
+	float CollisionComponent::get_inner_diameter() const
+	{
+		auto delta = get_aabb_lengths();
+
+		return ((delta.x + delta.y + delta.z) / 3.0f);
+	}
+
 	CollisionCastMethod CollisionComponent::get_kinematic_cast_method() const
 	{
 		if (kinematic_resolution.has_value())
@@ -482,7 +507,7 @@ namespace engine
 		kinematic_resolution = resolution;
 	}
 
-	std::optional<KinematicResolutionConfig> CollisionComponent::get_kinematic_resolution() const
+	const std::optional<KinematicResolutionConfig>& CollisionComponent::get_kinematic_resolution() const
 	{
 		return kinematic_resolution;
 	}

@@ -23,6 +23,11 @@ namespace engine
 				obj_size = (2.0f * collision.get_bounding_radius()); // Diameter.
 			},
 
+			[&](const KinematicResolutionConfig::InnerSphereType& inner_sphere)
+			{
+				obj_size = collision.get_inner_diameter();
+			},
+
 			[&](const KinematicResolutionConfig::SizeType& manual_size)
 			{
 				//obj_size = manual_size.get_size();
@@ -51,6 +56,11 @@ namespace engine
 			[&](const KinematicResolutionConfig::SphereType& sphere)
 			{
 				half_obj_size = collision.get_bounding_radius();
+			},
+
+			[&](const KinematicResolutionConfig::InnerSphereType& inner_sphere)
+			{
+				half_obj_size = collision.get_inner_radius();
 			},
 
 			[&](const KinematicResolutionConfig::SizeType& manual_size)

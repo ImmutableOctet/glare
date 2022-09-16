@@ -312,6 +312,10 @@ namespace engine
 			// as well as a radius representing the object's spherical bounds.
 			std::tuple<math::Vector, float> get_world_bounding_sphere() const;
 
+			// Retrieves lengths for each of the AABB axes.
+			// (max_aabb - min_aabb)
+			math::Vector get_aabb_lengths() const;
+
 			// Retrieves the size of the internal collision-object as an AABB.
 			// NOTE: The value returned is subject to padding from Bullet.
 			float get_aabb_size() const;
@@ -320,10 +324,26 @@ namespace engine
 			// NOTE: The value returned is subject to padding from Bullet.
 			float get_bounding_radius() const;
 
+			/*
+				Retrieves the average length of all three AABB axes, divided by two.
+				(((length_x+length_y+length_z)/2)/3), where lengths are: (max_aabb-min_aabb)
+				
+				This effectively returns the largest spherical radius that could exist within the AABB,
+				as opposed to `get_bounding_radius`, which returns the smallest radius that could encapsulate the AABB.
+				
+				NOTE: The value returned is subject to padding from Bullet.
+
+				See also: `get_aabb_lengths`
+			*/
+			float get_inner_radius() const;
+
+			// See notes for `get_inner_radius`. (2x)
+			float get_inner_diameter() const;
+
 			CollisionCastMethod get_kinematic_cast_method() const;
 
 			void set_kinematic_resolution(const KinematicResolutionConfig& resolution);
-			std::optional<KinematicResolutionConfig> get_kinematic_resolution() const;
+			const std::optional<KinematicResolutionConfig>& get_kinematic_resolution() const;
 		protected:
 			std::optional<KinematicResolutionConfig> kinematic_resolution;
 

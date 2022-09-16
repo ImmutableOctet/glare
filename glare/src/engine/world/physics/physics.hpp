@@ -32,11 +32,16 @@ namespace graphics
 
 namespace engine
 {
+	// Components:
 	struct Transform;
 	struct PhysicsComponent;
 	struct CollisionComponent;
+
+	// Events:
 	struct OnTransformChanged;
 	struct OnGravityChanged;
+	struct OnIntersection;
+	struct OnSurfaceContact;
 
 	class PhysicsSystem : public WorldSystem
 	{
@@ -82,7 +87,7 @@ namespace engine
 				Transform& transform
 			);
 
-			void resolve_intersections();
+			void resolve_intersections(bool check_resolution_flags=true);
 			
 			void update_motion(Entity entity, Transform& transform, PhysicsComponent& ph, float delta);
 			void update_collision_object(btCollisionObject& obj, const math::Matrix& m);
@@ -98,6 +103,18 @@ namespace engine
 
 			// Retrieves the gravity value managed by the internally held `collision_world`.
 			math::Vector get_physics_gravity() const;
+
+			// Event aliasing:
+
+			// Forward declared here, defined in main source file. (Internal)
+			template <typename CollisionEventType>
+			void forward_collision_event(const CollisionEventType& event_obj);
+			
+			// Produces an equivalent `OnCollision` event for this `OnSurfaceContact` event.
+			void on_surface_contact(const OnSurfaceContact& surface);
+
+			// Produces an equivalent `OnCollision` event for this `OnIntersection` event.
+			void on_intersection(const OnIntersection& intersection);
 
 			// Internal routine that handles 'Bullet-to-Engine' synchronization for `ENGINE_COLLISION_MOTION_STATE_ALTERNATIVE_IMPL`.
 			void retrieve_bullet_transforms();

@@ -31,6 +31,10 @@
 #include <cmath>
 #include <type_traits>
 
+// Debugging related:
+#include <engine/world/entity.hpp>
+#include <engine/world/graphics_entity.hpp>
+
 namespace app
 {
 	struct Graphics;
@@ -70,9 +74,16 @@ namespace engine
 	{
 		auto& registry = world.get_registry();
 
+		// Standard engine events:
 		world.register_event<OnTransformChanged, &PhysicsSystem::on_transform_change>(*this);
 		world.register_event<OnGravityChanged, &PhysicsSystem::on_gravity_change>(*this);
 
+		// TODO: Look into circumventing named functions for event aliasing.
+		// (Cast + template instantiation of `forward_collision_event`)
+		world.register_event<OnSurfaceContact, &PhysicsSystem::on_surface_contact>(*this);
+		world.register_event<OnIntersection, &PhysicsSystem::on_intersection>(*this);
+
+		// Core registry events:
 		registry.on_construct<CollisionComponent>().connect<&PhysicsSystem::on_create_collider>(*this);
 		registry.on_destroy<CollisionComponent>().connect<&PhysicsSystem::on_destroy_collider>(*this);
 	}
@@ -129,10 +140,8 @@ namespace engine
 		resolve_intersections();
 	}
 
-	void PhysicsSystem::resolve_intersections()
+	void PhysicsSystem::resolve_intersections(bool check_resolution_flags)
 	{
-		return;
-
 		auto& dispatcher = *collision_dispatcher;
 
 		auto manifold_count = dispatcher.getNumManifolds();
@@ -142,13 +151,11 @@ namespace engine
 			return;
 		}
 
-		//print("manifold_count: {}", manifold_count);
-
 		for (auto i = 0; i < manifold_count; i++)
 		{
-			auto* contact = dispatcher.getManifoldByIndexInternal(i);
+			const auto* contact = dispatcher.getManifoldByIndexInternal(i);
 
-			int numContacts = contact->getNumContacts();
+			const auto contact_count = contact->getNumContacts();
 
 			auto* a = contact->getBody0();
 			auto* b = contact->getBody1();
@@ -156,82 +163,134 @@ namespace engine
 			auto a_ent = get_entity_from_collision_object(*a);
 			auto b_ent = get_entity_from_collision_object(*b);
 
-			//print("{} ({}) within bounds of {} ({})", static_cast<entt::id_type>(a_ent), world.get_name(a_ent), static_cast<entt::id_type>(b_ent), world.get_name(b_ent));
+			// NOTE: Need to validate that this behavior is intended/consistent from Bullet.
+			// Notify listeners that `a` has entered `b`'s axis-aligned bounding box.
+			world.queue_event
+			(
+				OnAABBOverlap
+				{
+					.entity = a_ent,
+					.bounding = b_ent,
+					
+					.number_of_contacts = contact_count,
 
-			//world.event<OnAABBOverlap>();
+					.native =
+					{
+						.entity_collision_obj   = a,
+						.bounding_collision_obj = b
+					}
+				}
+			);
 
-			if (numContacts == 0)
+			// If there are no contacts between the two objects,
+			// don't bother checking for intersections.
+			if (contact_count == 0)
 			{
 				continue;
 			}
 
-			//if ((int)a_ent == 34 || (int)b_ent == 34)
+			// An object must be flagged as kinematic in order to resolve its intersections here:
+			bool is_kinematic = (a->getCollisionFlags() & btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT);
+
+			if (!is_kinematic)
 			{
-				//auto t = world.get_transform(a_ent);
-				//update_collision_object(const_cast<btCollisionObject&>(*a), t);
+				continue;
+			}
 
-				//auto a_tform = a->getWorldTransform();
-				//auto t = world.get_transform(a_ent);
-				//t.set_matrix(math::to_matrix(a_tform));
+			if (check_resolution_flags)
+			{
+				auto& registry = world.get_registry();
 
-				/*
-				auto a_wrapper = btCollisionObjectWrapper(nullptr, a->getCollisionShape(), a, a->getWorldTransform(), 0, 0);
-				auto b_wrapper = btCollisionObjectWrapper(nullptr, b->getCollisionShape(), b, b->getWorldTransform(), 0, 0);
+				const auto* a_collision = registry.try_get<CollisionComponent>(a_ent);
 
-				btCollisionAlgorithm* algorithm = collision_world->getDispatcher()->findAlgorithm(&a_wrapper, &b_wrapper, contact, ebtDispatcherQueryType::BT_CLOSEST_POINT_ALGORITHMS);
-
-				if (algorithm)
+				if (!a_collision)
 				{
-					auto result = btManifoldResult(&a_wrapper, &b_wrapper);
-					algorithm->processCollision(&a_wrapper, &b_wrapper, collision_world->getDispatchInfo(), &result);
+					continue;
 				}
-				*/
 
-				///*
+				auto kinematic_resolution = a_collision->get_kinematic_resolution();
 
-				//print("Camera is at: {}", math::to_vector(a->getWorldTransform().getOrigin()));
-				//print("{} ({}) collision with {} ({})", static_cast<entt::id_type>(a_ent), world.get_name(a_ent), static_cast<entt::id_type>(b_ent), world.get_name(b_ent));
-
-				math::Vector correction = {};
-
-				auto a_tranform = world.get_transform(a_ent);
-				//auto a_position = a_tranform.get_position();
-
-				for (int j = 0; j < numContacts; j++)
+				if (kinematic_resolution.has_value())
 				{
-					btManifoldPoint& pt = contact->getContactPoint(j);
-
-					//auto a_point = math::to_vector(pt.getPositionWorldOnA());
-					//auto b_point = math::to_vector(pt.getPositionWorldOnB());
-					auto distance = pt.getDistance(); // Equivalent to: glm::length((b_point - a_point));
-
-					if (distance < 0.0f)
+					if (!kinematic_resolution->accepts_influence)
 					{
-						//auto a_point_from_center = (a_point - a_position);
-						//auto b_point_from_a_center = (b_point - a_position);
-						//auto b_point_from_a_point = (b_point - a_point);
+						continue;
+					}
 
-						auto normal = math::to_vector(pt.m_normalWorldOnB); // glm::normalize(...);
-
-						//auto push_back_len = glm::length(b_point_from_a_center);
-						//auto push_back_len = glm::length(b_point_from_a_point);
-						
-						auto length = -distance; // * 1.5f;
-						//auto length = (-distance) + collision_world->getDispatchInfo().m_allowedCcdPenetration;
-
-						//length = std::max(length, 0.5f);
-
-						correction += (normal * length);
+					if (!kinematic_resolution->resolve_intersections) // (kinematic_resolution->cast_method != CollisionCastMethod::None)
+					{
+						continue;
 					}
 				}
-
-				// Average the correction-amount by the number of contacts.
-				correction /= numContacts;
-
-				a_tranform.move(correction);
-
-				//*/
 			}
+
+			auto a_tranform = world.get_transform(a_ent);
+			//auto a_position = a_tranform.get_position();
+
+			// Average accumulators:
+
+			// NOTE: We're using Bullet's vector types for efficiency purposes here.
+			btVector3 avg_world_hit_position = { 0.0f, 0.0f, 0.0f };
+			btVector3 avg_hit_normal         = { 0.0f, 0.0f, 0.0f };
+			float     avg_penetration_depth  = 0.0f;
+
+			// The positional-correction to be applied to `a`.
+			math::Vector correction = {};
+
+			for (int j = 0; j < contact_count; j++)
+			{
+				const auto& contact_point = contact->getContactPoint(j);
+
+				const auto distance = contact_point.getDistance(); // Equivalent to: glm::length((b_point - a_point));
+
+				// Accumulate sum of values for average calculation:
+				avg_world_hit_position += contact_point.getPositionWorldOnA(); // contact_point.getPositionWorldOnB();
+				avg_hit_normal         += contact_point.m_normalWorldOnB;
+				avg_penetration_depth  += distance;
+
+				// NOTE:
+				// A negative distance indicates moving towards the object, whereas a positive
+				// penetration distance indicates moving away-from/out-of the object.
+				if (distance < 0.0f)
+				{
+					const auto normal = math::to_vector(contact_point.m_normalWorldOnB); // glm::normalize(...);
+					const auto length = -distance;
+
+					correction += (normal * length);
+				}
+			}
+
+			// Average the correction-amount by the number of contacts:
+			const auto contact_count_f = static_cast<float>(contact_count);
+
+			avg_world_hit_position /= contact_count_f;
+			avg_hit_normal         /= contact_count_f;
+			avg_penetration_depth  /= contact_count_f;
+
+			correction             /= contact_count_f;
+
+			a_tranform.move(correction);
+
+			// Notify listeners that this `entity` contacted `hit_entity`'s surface.
+ 			world.queue_event
+			(
+				OnIntersection
+				{
+					.collision =
+					{
+						.a = a_ent,
+						.b = b_ent,
+
+						.position    = math::to_vector(avg_world_hit_position),
+						.normal      = math::to_vector(avg_hit_normal),
+						.penetration = avg_penetration_depth,
+
+						.contact_type = ContactType::Intersection
+					},
+					
+					.correction = correction
+				}
+			);
 		}
 	}
 
@@ -328,10 +387,10 @@ namespace engine
 
 		const auto& kinematic_resolution = *kinematic_resolution_opt;
 
-		// TODO: Look into reducing number of casts performed via delta length-check.
+		// TODO: Look into reducing number of casts performed via delta length-check. (Optimization opportunity)
 		//auto position_delta = glm::length(math::to_vector(to_position) - math::to_vector(from_position));
 
-		auto kinematic_resolve = [&](const auto& result, ContactType contact_type)
+		auto kinematic_resolve = [&](const auto& result)
 		{
 			const auto* hit_object = result->native.hit_object;
 			const auto  hit_entity = result->hit_entity;
@@ -341,21 +400,181 @@ namespace engine
 			const auto& hit_normal = result->hit_normal;
 			const auto& hit_point_in_world = result->hit_position;
 
-			//float obj_size = 0.0f;
+			auto old_position = math::to_vector(collision.get_collision_object()->getWorldTransform().getOrigin());
+			auto new_position = transform.get_position();
+
+			const auto impact_velocity = (new_position - old_position);
+			const auto penetration = (new_position - hit_point_in_world);
+
 			auto half_obj_size = kinematic_resolution.get_half_size(collision);
 
-			auto corrected_dest_position = (hit_point_in_world + (hit_normal * half_obj_size));
+			// The influence applied to the `hit_entity`, if any.
+			// This variable is modified in `handle_influence_on_hit_entity`
+			// and optionally read in `adjust_entity_position`.
+			math::Vector influence = {};
 
-			//auto attempted_move_length = glm::length(math::to_vector(to_position) - math::to_vector(from_position));
-			//auto actual_move_length = glm::length(corrected_dest_position - math::to_vector(from_position));
+			bool apply_correction = true;
+			//world.set_position(create_cube(world), hit_point_in_world);
 
-			transform.set_position(corrected_dest_position);
+			auto handle_influence_on_hit_entity = [&]()
+			{
+				if (!kinematic_resolution.is_influencer)
+				{
+					return;
+				}
 
-			// TODO: Look into speculatively representing penetration depth.
-			auto penetration_depth = 0.0f;
+				auto& registry = world.get_registry();
 
-			// Notify listeners that this `entity` contacted `hit_entity`'s surface.
-			world.event<OnCollision>(entity, hit_entity, hit_point_in_world, hit_normal, penetration_depth, contact_type);
+				const auto* hit_collision = registry.try_get<CollisionComponent>(hit_entity);
+
+				if (!hit_collision)
+				{
+					return;
+				}
+
+				const auto& hit_resolution = hit_collision->get_kinematic_resolution();
+
+				// Check if we're supposed to resolve this hit/influence:
+				if (!hit_resolution.has_value())
+				{
+					return;
+				}
+
+				// Ensure the object we're influencing allows it.
+				if (!hit_resolution->accepts_influence)
+				{
+					return;
+				}
+
+				// The strength (%) of movement translated from `entity` to `hit_entity`.
+				float influence_strength = 1.0f;
+
+				const auto hit_mass = hit_collision->get_mass();
+
+				// Objects with a mass of exactly 0.0 ('Infinite mass') are influenced the full amount.
+				// For objects with non-zero mass, use the ratio between the 'moving' object and the 'hit' object:
+				if (hit_mass > 0.0f)
+				{
+					const auto mass = collision.get_mass();
+
+					//const auto mass_ratio = std::min(((mass - hit_mass) / mass), 1.0f);
+					const auto mass_ratio = std::min((mass / hit_mass), 1.0f);
+
+					influence_strength = mass_ratio;
+				}
+				else
+				{
+					/*
+						If we're moving the `hit_entity` forward the full distance,
+						we don't need to correct the path of `entity`.
+								
+						Likewise, skippping the adjustment phase will
+						forego the `OnKinematicAdjustment` event.
+					*/
+					apply_correction = false;
+				}
+
+				// Determine how far `entity` intended to move:
+				const auto intended_movement_distance = glm::length(impact_velocity);
+				
+				// The influence applied to the `hit_entity` is the length of the intended movement, multiplied by
+				// the reversed direction of the surface normal (now forward, instead of backward)
+				// that intersected the originating entity's path.
+				influence = ((intended_movement_distance * influence_strength) * -hit_normal);
+
+				// Update the transform of `hit_entity` 
+				auto hit_tform = world.get_transform(hit_entity);
+						
+				auto hit_old_position = hit_tform.get_position();
+				auto hit_new_position = (hit_old_position + influence);
+
+				hit_tform.set_position(hit_new_position);
+						
+				// Re-validation is not needed at this time.
+				// (Allows for further resolution on the next update)
+				//hit_tform.validate_collision_shallow();
+
+				// Notify listeners that `hit_entity` was moved (influenced) kinematically.
+				world.queue_event
+				(
+					OnKinematicInfluence
+					{
+						.influencer = entity,
+
+						.target =
+						{
+							.entity = hit_entity,
+
+							.old_position = hit_old_position,
+							.new_position = hit_new_position,
+
+							.influence_applied = influence
+						},
+								
+						.contact =
+						{
+							.point  = hit_point_in_world,
+							.normal = hit_normal
+						}
+					}
+				);
+			};
+
+			auto adjust_entity_position = [&]()
+			{
+				if (!apply_correction)
+				{
+					return;
+				}
+
+				const auto& hit_adjustment = penetration;
+				const auto& radius = half_obj_size;
+
+				auto edge_offset = (hit_normal * radius);
+				auto correction  = (edge_offset - hit_adjustment);
+
+				auto adjusted_position = (new_position + correction + influence);
+
+				transform.set_position(adjusted_position);
+
+				// TODO: May cause side effect of collision-update happening again. (Need to look into this more)
+				// Re-validation not needed at this time.
+				//transform.validate_collision_shallow();
+
+				const auto& expected_position = new_position;
+
+				world.queue_event<OnKinematicAdjustment>
+				(
+					entity, hit_entity,
+					old_position, adjusted_position, expected_position
+				);
+			};
+
+			handle_influence_on_hit_entity();
+			adjust_entity_position();
+
+			// Notify listeners that this `entity` contacted `hit_entity`'s surface:
+			world.queue_event
+			(
+				OnSurfaceContact
+				{
+					// General information.
+					.collision =
+					{
+						.a = entity,
+						.b = hit_entity,
+
+						.position = hit_point_in_world,
+						.normal   = hit_normal,
+
+						.penetration = glm::length(penetration),
+
+						.contact_type = ContactType::Surface
+					},
+					
+					.impact_velocity = impact_velocity
+				}
+			);
 		};
 
 		switch (kinematic_resolution.cast_method)
@@ -366,7 +585,7 @@ namespace engine
 
 				if (result)
 				{
-					kinematic_resolve(result, ContactType::Surface);
+					kinematic_resolve(result);
 				}
 
 				break;
@@ -383,7 +602,7 @@ namespace engine
 
 				if (result)
 				{
-					kinematic_resolve(result, ContactType::Surface);
+					kinematic_resolve(result);
 				}
 
 				break;
@@ -524,6 +743,23 @@ namespace engine
 	math::Vector PhysicsSystem::get_physics_gravity() const
 	{
 		return math::to_vector(collision_world->getGravity());
+	}
+
+	template <typename CollisionEventType>
+	void PhysicsSystem::forward_collision_event(const CollisionEventType& event_obj)
+	{
+		// Automatically forward the `collision` field to `OnCollision` listeners.
+		world.event<OnCollision>(event_obj.collision);
+	}
+
+	void PhysicsSystem::on_surface_contact(const OnSurfaceContact& surface)
+	{
+		forward_collision_event(surface);
+	}
+
+	void PhysicsSystem::on_intersection(const OnIntersection& intersection)
+	{
+		forward_collision_event(intersection);
 	}
 
 	// Internal routine, used for `ENGINE_COLLISION_MOTION_STATE_ALTERNATIVE_IMPL`.

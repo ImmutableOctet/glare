@@ -113,9 +113,10 @@ namespace engine
 		enable<OnStageLoaded>();
 		enable<OnEntityCreated>();
 		enable<OnParentChanged>();
-		enable<OnCollision>();
 
 		// Disabled for now.
+		//enable<OnAABBOverlap>();
+		//enable<OnCollision>();
 		//enable<OnTransformChanged>();
 
 		// Component construction events:
@@ -188,6 +189,11 @@ namespace engine
 		auto [position, rotation, scale] = tform.get_vectors();
 
 		print("Transform of {} changed. (Position: [{}], Rotation: [{}], Scale: [{}])", data.entity, position, rotation, scale);
+	}
+
+	void DebugListener::operator()(const OnAABBOverlap& data)
+	{
+		print("AABB Overlap detected: {} in {} [Contacts: {}]", data.entity, data.bounding, data.number_of_contacts);
 	}
 
 	void DebugListener::operator()(const OnCollision& data)

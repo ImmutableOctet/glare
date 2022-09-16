@@ -46,10 +46,14 @@
 
 #include <format>
 
+// Debugging related:
+#include <engine/world/physics/collision_component.hpp>
+#include <engine/types.hpp>
+
 namespace glare
 {
 	Glare::Glare():
-		Game("Project Glare", 1600, 900, 60, true, false),
+		Game("Project Glare", 1600, 900, 60, true, true), // false
 		dbg_listener(world)
 	{
 		using namespace graphics;
@@ -74,17 +78,58 @@ namespace glare
 		(
 			world, "assets/objects/cube/cube.b3d", engine::null,
 			engine::EntityType::Object,
-			true, true, 0.0f,
+			true, false, 0.0f,
 			engine::CollisionGroup::Object,
 			engine::CollisionGroup::All,
 			engine::CollisionGroup::All
 		);
 
-		world.set_name(cube, "TestBox");
+		attach_collision(world, cube, resource_manager.generate_sphere_collision(2.0f).collision_shape, engine::EntityType::Object);
 
-		auto cube_t = world.get_transform(cube);
+		world.set_name(cube, "Cube");
 
-		cube_t.set_position({ -6.20467f, 166.5406f, 39.1254f });
+		auto cube2 = engine::load_model
+		(
+			world, "assets/objects/cube/cube.b3d", engine::null,
+			engine::EntityType::Object,
+			true, false, 0.0f,
+			engine::CollisionGroup::Object,
+			engine::CollisionGroup::All,
+			engine::CollisionGroup::All
+		);
+
+		auto& resource_manager = world.get_resource_manager();
+
+		attach_collision(world, cube2, resource_manager.generate_sphere_collision(4.0f).collision_shape, engine::EntityType::Object);
+
+		world.set_name(cube2, "Cube2");
+
+		auto& registry = world.get_registry();
+
+		auto& cube_c = registry.get<engine::CollisionComponent>(cube);
+
+		cube_c.set_mass(0.5f);
+
+		auto& cube2_c = registry.get<engine::CollisionComponent>(cube2);
+
+		cube2_c.set_mass(2.0f);
+
+
+
+		auto& camera_c = registry.get<engine::CollisionComponent>(world.get_camera());
+
+		camera_c.set_mass(2.0f);
+
+		world.transform_and_reset_collision(cube, [&](auto& cube_t)
+		{
+			cube_t.set_position({ -6.20467f, 166.5406f, 39.1254f });
+		});
+
+		world.transform_and_reset_collision(cube2, [&](auto& cube2_t)
+		{
+			//cube2_t.set_scale(4.0f);
+			cube2_t.set_position({ -6.20467f, 180.5406f, 39.1254f });
+		});
 	}
 
 	engine::Transform Glare::get_named_transform(std::string_view name)
@@ -111,13 +156,65 @@ namespace glare
 
 		if (keyboard.get_key(SDL_SCANCODE_R))
 		{
-			auto box = world.get_by_name("TestBox");
+			auto box = world.get_by_name("Cube");
 
 			auto t = world.get_transform(box);
 
 			const auto& dt = world.get_delta_time();
 
 			auto m = math::Vector { 0.0f, std::sinf((dt.current_frame_time() / 1000.0f)) * 1.0f * dt, 0.0f };
+
+			t.move(m);
+		}
+
+		if (keyboard.get_key(SDL_SCANCODE_U))
+		{
+			auto box = world.get_by_name("Cube");
+
+			auto t = world.get_transform(box);
+
+			const auto& dt = world.get_delta_time();
+
+			auto m = math::Vector{ 0.0f, 0.25f * dt, 0.0f };
+
+			t.move(m);
+		}
+
+		if (keyboard.get_key(SDL_SCANCODE_J))
+		{
+			auto box = world.get_by_name("Cube");
+
+			auto t = world.get_transform(box);
+
+			const auto& dt = world.get_delta_time();
+
+			auto m = math::Vector{ 0.0f, -0.25f * dt, 0.0f };
+
+			t.move(m);
+		}
+
+		if (keyboard.get_key(SDL_SCANCODE_I))
+		{
+			auto box = world.get_by_name("Cube2");
+
+			auto t = world.get_transform(box);
+
+			const auto& dt = world.get_delta_time();
+
+			auto m = math::Vector{ 0.0f, 0.25f * dt, 0.0f };
+
+			t.move(m);
+		}
+
+		if (keyboard.get_key(SDL_SCANCODE_K))
+		{
+			auto box = world.get_by_name("Cube2");
+
+			auto t = world.get_transform(box);
+
+			const auto& dt = world.get_delta_time();
+
+			auto m = math::Vector{ 0.0f, -0.25f * dt, 0.0f };
 
 			t.move(m);
 		}
@@ -133,6 +230,17 @@ namespace glare
 
 	void Glare::on_update(float delta)
 	{
+		/*
+		math::Vector direction = {};
+
+		{
+			auto t = world.get_transform(world.get_camera());
+			direction = t.get_direction_vector();
+		}
+
+		print("Camera direction: {}", direction);
+		*/
+
 		engine::position_in_titlebar(*this, world.get_camera(), std::format("FPS: {} | ", graphics.framerate));
 	}
 
@@ -201,43 +309,14 @@ namespace glare
 			graphics.context->set_flags(graphics::ContextFlags::Wireframe, !graphics.context->get_flag(graphics::ContextFlags::Wireframe));
 
 			break;
+		case SDLK_QUOTE:
+			
 
+			break;
 		case SDLK_q:
 		{
 			//print("World: {}", world);
 			print_children(world, world.get_root());
-
-			break;
-		}
-
-		case SDLK_k:
-		{
-			print("Moving camera down.");
-
-			auto camera = world.get_camera();
-
-			if (camera == engine::null)
-				break;
-
-			auto t = world.get_transform(camera);
-
-			t.move({0.0f, -40.0f, 0.0f});
-
-			break;
-		}
-
-		case SDLK_l:
-		{
-			print("Moving camera up.");
-
-			auto camera = world.get_camera();
-
-			if (camera == engine::null)
-				break;
-
-			auto t = world.get_transform(camera);
-
-			t.move({ 0.0f, 40.0f, 0.0f });
 
 			break;
 		}

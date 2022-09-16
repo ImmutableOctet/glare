@@ -99,6 +99,8 @@ namespace game
 						[this, &physics](auto& bullet_dbg)
 						{
 							physics.register_debug_drawer(bullet_dbg.get_debug_drawer());
+
+							//bullet_dbg.disable();
 						}
 					)
 				)

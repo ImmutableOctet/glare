@@ -192,6 +192,14 @@ namespace engine
 				}
 			}
 
+			inline void set_position_and_reset_collision(Entity entity, const math::Vector& position)
+			{
+				transform_and_reset_collision(entity, [&position](Transform& tform)
+				{
+					tform.set_position(position);
+				});
+			}
+
 			math::Vector get_up_vector(math::Vector up={ 0.0f, 1.0f, 0.0f }) const;
 
 			Entity get_parent(Entity entity) const;
