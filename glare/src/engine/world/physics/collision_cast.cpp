@@ -32,10 +32,10 @@ namespace engine
 		// TODO: Determine if this is needed in Release builds.
 		// (Probably not, since it's circumventing a `btAssert`)
 
-		auto diff = (to_bt - from_bt); diff.normalize();
+		auto diff = (to_bt - from_bt); // diff.normalize();
 
 		//return (glm::length(from - to) == 0.0f); // <-- Non-Bullet version.
-		return (diff.fuzzyZero()); // (diff.length2() < SIMD_EPSILON* SIMD_EPSILON);
+		return !(diff.fuzzyZero()); // fuzzyZero: (diff.length2() < SIMD_EPSILON* SIMD_EPSILON);
 	}
 
 	static const btCollisionObject* resolve_self(PhysicsSystem& physics, const RayCastSelf& self)
