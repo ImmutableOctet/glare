@@ -198,6 +198,23 @@ namespace math
 	}
 
 	Quaternion slerp(Quaternion v0, Quaternion v1, float t);
+
+	// Utility function; provides the cross-product (third vector) of `normal` and `adjacent`.
+	// See also: `get_surface_slope`.
+	math::Vector get_surface_forward
+	(
+		const math::Vector& normal,
+		const math::Vector& adjacent={1.0f, 0.0f, 0.0f}
+	);
+
+	// Returns the slope of the surface (`normal`)
+	// from the approach angle (`angle`).
+	float get_surface_slope
+	(
+		const math::Vector& normal,
+		const math::Vector& angle,
+		const math::Vector& adjacent={1.0f, 0.0f, 0.0f}
+	);
 }
 
 namespace graphics

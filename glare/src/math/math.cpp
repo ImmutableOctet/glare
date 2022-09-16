@@ -141,4 +141,16 @@ namespace math
 
 		return (v0 * std::cos(theta) + v2 * std::sin(theta));
 	}
+
+	math::Vector get_surface_forward(const math::Vector& normal, const math::Vector& adjacent)
+	{
+		return glm::cross(normal, adjacent);
+	}
+
+	float get_surface_slope(const math::Vector& normal, const math::Vector& angle, const math::Vector& adjacent)
+	{
+		auto forward = get_surface_forward(normal, adjacent);
+
+		return glm::dot(angle, forward);
+	}
 }
