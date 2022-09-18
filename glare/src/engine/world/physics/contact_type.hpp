@@ -10,7 +10,7 @@ namespace engine
 		None = 0,
 
 		// For event-triggers, zones, etc.
-		//EventTrigger,
+		Interaction,
 
 		// Indicates that an object is touching another object, but not intersecting it.
 		// This is commonly produced from a convex-cast or ray-cast.
