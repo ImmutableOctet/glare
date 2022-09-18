@@ -10,7 +10,8 @@ class btCollisionObject;
 
 namespace engine
 {
-	struct OnAABBOverlap
+	// NOTE: AABB overlaps are triggered on both 'collidable' and 'interactable' objects.
+	struct OnAABBOverlap // CollisionIntersectionMetadata
 	{
 		// The target entity that is within the AABB of `bounding`.
 		Entity entity;
@@ -112,6 +113,8 @@ namespace engine
 		}
 	};
 
+	// This is triggered any time a standard collision intersection takes place.
+	// (For resolvable collisions)
 	struct OnIntersection
 	{
 		// General collision information.
@@ -119,6 +122,26 @@ namespace engine
 
 		// The positional-correction applied to `a`.
 		math::Vector correction;
+	};
+
+	// This is triggered similarly to `OnIntersection` but in the case of interactable objects.
+	// This event type and `OnIntersection` are not mutually exclusive, and could trigger for the same intersection.
+	// By convention, this is unlikely, but possible. For this reason, the internal `collision` object is not event-aliased.
+	struct OnInteractionIntersection
+	{
+		OnCollision collision;
+
+		// The entity that instigated the interaction.
+		inline Entity instigator() const
+		{
+			return collision.a;
+		}
+
+		// The entity being interacted with.
+		inline Entity interacted_with() const
+		{
+			return collision.b;
+		}
 	};
 
 	// TODO: Look into splitting the different `ContactType` enum values into their own types.
