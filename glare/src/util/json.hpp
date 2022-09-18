@@ -1,12 +1,13 @@
 #pragma once
 
 #include <types.hpp>
-#include <math/math.hpp>
+
+#include <math/types.hpp>
 //#include <graphics/types.hpp>
 
 #include <nlohmann/json.hpp>
 
-#include <tuple>
+//#include <tuple>
 //#include <string>
 //#include <string_view>
 
@@ -14,41 +15,13 @@ namespace util
 {
 	using json = nlohmann::json;
 
-	inline math::Vector3D to_vector(const json& j)
-	{
-		return { j["x"].get<float>(), j["y"].get<float>(), j["z"].get<float>() };
-	}
+	math::TransformVectors get_transform(const json& data);
 
-	inline math::vec2i to_vec2i(const json& j)
-	{
-		return { j["x"].get<int>(), j["y"].get<int>() };
-	}
+	math::Vector3D to_vector(const json& j);
+	math::vec2i to_vec2i(const json& j);
 
-	inline graphics::ColorRGBA to_color(const json& j, float default_alpha=1.0f)
-	{
-		return
-		{
-			j["r"].get<float>(),
-			j["g"].get<float>(),
-			j["b"].get<float>(),
-			
-			(
-				(j.contains("a"))
-				? j["a"].get<float>()
-				: default_alpha
-			)
-		};
-	}
-
-	inline graphics::ColorRGB to_color_rgb(const json& j)
-	{
-		return
-		{
-			j["r"].get<float>(),
-			j["g"].get<float>(),
-			j["b"].get<float>()
-		};
-	}
+	graphics::ColorRGBA to_color(const json& j, float default_alpha=1.0f);
+	graphics::ColorRGB to_color_rgb(const json& j);
 
 	template <typename T, typename UIDType>
 	inline T get_value(const json& data, const UIDType& name, T default_value={})
@@ -87,15 +60,6 @@ namespace util
 	inline graphics::ColorRGB get_color_rgb(const json& data, const UIDType& color_name, graphics::ColorRGB default_value = { 1.0f, 1.0f, 1.0f})
 	{
 		return (data.contains(color_name) ? to_color_rgb(data[color_name]) : default_value);
-	}
-
-	inline math::TransformVectors get_transform(const json& data)
-	{
-		auto position = get_vector(data, "position");
-		auto rotation = math::radians(get_vector(data, "rotation"));
-		auto scale = get_vector(data, "scale", { 1.0f, 1.0f, 1.0f });
-
-		return { position, rotation, scale };
 	}
 
 	template <typename T, typename UIDType>
