@@ -323,8 +323,8 @@ namespace engine
 			}
 		);
 		
-		// NOTE: Alternatively, we could simply forward `std::nullopt` values
-		// and grab these filters back out of Bullet via `btCollisionObject`.
+		// NOTE: This forwarding operation from `collision` is required in the general case,
+		// as 'intersections' and 'solids' are grouped together on Bullet's end.
 		auto filter_group_bt = static_cast<int>(filter_group.value_or((collision) ? collision->get_group() : CollisionGroup::All));
 		auto filter_mask_bt  = static_cast<int>(filter_mask.value_or((collision) ? collision->get_solids() : CollisionGroup::All));
 
