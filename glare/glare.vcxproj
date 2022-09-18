@@ -258,6 +258,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\core.hpp" />
     <ClInclude Include="src\debug.hpp" />
     <ClInclude Include="src\engine\action.hpp" />
+    <ClInclude Include="src\engine\multi_types.hpp" />
     <ClInclude Include="src\engine\world\animation\bone_component.hpp" />
     <ClInclude Include="src\engine\input_events.hpp" />
     <ClInclude Include="src\engine\system_manager.hpp" />
@@ -342,6 +343,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\world\world.hpp" />
     <ClInclude Include="src\engine\world\world_properties.hpp" />
     <ClInclude Include="src\engine\world\world_system.hpp" />
+    <ClInclude Include="src\engine\world\zones\zones.hpp" />
     <ClInclude Include="src\game\effects.hpp" />
     <ClInclude Include="src\game\game.hpp" />
     <ClInclude Include="src\game\graphics.hpp" />
@@ -375,9 +377,13 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\graphics\types.hpp" />
     <ClInclude Include="src\graphics\vertex.hpp" />
     <ClInclude Include="src\engine\world\render\world_render_state.hpp" />
+    <ClInclude Include="src\math\aabb.hpp" />
     <ClInclude Include="src\math\assimp.hpp" />
     <ClInclude Include="src\math\bullet.hpp" />
+    <ClInclude Include="src\math\conversion.hpp" />
+    <ClInclude Include="src\math\io.hpp" />
     <ClInclude Include="src\math\math.hpp" />
+    <ClInclude Include="src\math\types.hpp" />
     <ClInclude Include="src\tests\signal_test\signal_test.hpp" />
     <ClInclude Include="src\tests\timer_test\timer_test.hpp" />
     <ClInclude Include="src\types.hpp" />
@@ -486,6 +492,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\engine\world\behaviors\target_behavior.cpp" />
     <ClCompile Include="src\engine\world\world.cpp" />
     <ClCompile Include="src\engine\world\world_system.cpp" />
+    <ClCompile Include="src\engine\world\zones\zones.cpp" />
     <ClCompile Include="src\game\effects.cpp" />
     <ClCompile Include="src\game\game.cpp" />
     <ClCompile Include="src\game\screen.cpp" />
@@ -516,6 +523,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\tests\timer_test\timer_test.cpp" />
     <ClCompile Include="src\tests\vertex_element_types\vertex_element_types.cpp" />
     <ClCompile Include="src\util\io.cpp" />
+    <ClCompile Include="src\util\json.cpp" />
     <ClCompile Include="src\util\lib.cpp" />
     <ClCompile Include="src\util\string.cpp" />
   </ItemGroup>
