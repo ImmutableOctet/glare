@@ -75,7 +75,7 @@ namespace math
 		return (rotation_yaw(rv.y) * rotation_pitch(rv.x) * rotation_roll(rv.z));
 	}
 	
-	Vector abs(Vector v)
+	Vector abs(const Vector& v)
 	{
 		return { std::abs(v.x), std::abs(v.y), std::abs(v.z) };
 	}
@@ -91,7 +91,7 @@ namespace math
 		return std::atan2(dir.x, -dir.z);
 	}
 
-	float nlerp_radians(Vector origin, Vector destination, float speed)
+	float nlerp_radians(const Vector& origin, const Vector& destination, float speed)
 	{
 		auto lerp_dir = nlerp(origin, destination, speed);
 
@@ -108,11 +108,13 @@ namespace math
 		return std::atan2(dir.y, dir.x);
 	}
 
-	Quaternion slerp(Quaternion v0, Quaternion v1, float t)
+	Quaternion slerp(const Quaternion& v0, const Quaternion& v1, float t)
 	{
-		v0 = glm::normalize(v0);
-		v1 = glm::normalize(v1);
+		return slerp_unnormalized(glm::normalize(v0), glm::normalize(v1), t);
+	}
 
+	Quaternion slerp_unnormalized(Quaternion v0, Quaternion v1, float t)
+	{
 		auto dot = glm::dot(v0, v1);
 
 		constexpr auto DOT_THRESHOLD = 0.9995f;
