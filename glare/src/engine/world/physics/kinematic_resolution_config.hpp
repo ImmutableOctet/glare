@@ -2,6 +2,8 @@
 
 #include "collision_cast_method.hpp"
 
+#include <math/types.hpp>
+
 #include <variant>
 
 namespace engine
@@ -12,10 +14,26 @@ namespace engine
 	// This is used to supply data to 
 	struct KinematicResolutionConfig
 	{
-		// Uses an AABB for the shape/body.
+		// Uses an AABB for the shape/body. (Single 'length' value extracted)
 		// (based on Bullet's `getAabb` and related functions)
 		// NOTE: Bullet sometimes pads the size of AABBs.
 		struct AABBType {};
+
+		/*
+			Uses an AABB for the shape/body. (All three dimensions)
+			Similar to `AABBType`, but uses exact lengths for each dimension.
+		*/
+		struct AABBVectorType {};
+
+		/*
+			Uses an AABB for the shape/body. (All three dimensions)
+			
+			Similar to `AABBVectorType` and `AABBType`, but lengths are
+			relative to the orientation of the object.
+
+			NOTE: We do not further account for approach angle, just the transform.
+		*/
+		struct OrientedAABBVectorType {};
 
 		/*
 			Uses sphere-radius of object/shape.
@@ -38,16 +56,17 @@ namespace engine
 		// This is based on `CollisionComponent::get_inner_radius`.
 		struct InnerSphereType {};
 
-		// Allows the user to specify an exact size.
-		struct SizeType
+		// Implementation template for user-supplied size types.
+		template <typename SizeType, bool apply_orientation=false>
+		struct SizeTypeImpl
 		{
 			protected:
-				float half_size;
+				SizeType half_size;
 
 				// Alternate implementation:
-				//float size;
+				//SizeType size;
 			public:
-				inline SizeType(float size):
+				inline SizeTypeImpl(SizeType size):
 					//size(size),
 					half_size(size * 0.5f)
 				{}
@@ -55,15 +74,32 @@ namespace engine
 				//SizeType(const SizeType&) = default;
 				//SizeType(SizeType&&) = default;
 
-				inline float get_size() const { return (half_size * 2.0f); }
-				inline float get_half_size() const { return half_size; }
+				inline SizeType get_size() const { return (half_size * 2.0f); }
+				inline SizeType get_half_size() const { return half_size; }
 
 				// Alternate implementation:
-				//float get_size() const { return size; }
-				//inline float get_half_size() const { return (size / 2.0f); }
+				//SizeType get_size() const { return size; }
+				//inline SizeType get_half_size() const { return (size / 2.0f); }
 		};
 
-		using SizeConfig = std::variant<std::monostate, AABBType, SphereType, InnerSphereType, SizeType>;
+		// Allows the user to specify an exact size.
+		using SizeType = SizeTypeImpl<float, false>;
+
+		// Allows the user to specify an exact size on all three axes.
+		using VectorSizeType = SizeTypeImpl<math::Vector, false>;
+
+		// Similar to `VectorSizeType`, but accounts for object orientation.
+		// NOTE: We do not further account for approach angle, just the transform.
+		using OrientedVectorSizeType = SizeTypeImpl<math::Vector, true>;
+
+		// Used to select between different size-type options at runtime.
+		using SizeConfig = std::variant
+		<
+			std::monostate,
+			AABBType, AABBVectorType, OrientedAABBVectorType,
+			SphereType, InnerSphereType,
+			SizeType, VectorSizeType, OrientedVectorSizeType
+		>;
 
 		CollisionCastMethod cast_method = CollisionCastMethod::None;
 		SizeConfig size = std::monostate{};
@@ -81,5 +117,8 @@ namespace engine
 
 		float get_size(const CollisionComponent& collision) const;
 		float get_half_size(const CollisionComponent& collision) const;
+
+		math::Vector get_size_vector(const CollisionComponent& collision) const;
+		math::Vector get_half_size_vector(const CollisionComponent& collision) const;
 	};
 }
