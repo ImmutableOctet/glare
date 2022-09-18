@@ -39,7 +39,7 @@ namespace engine
 		ProjectileSolids = (ObjectSolids | Projectile | Bone),
 
 		// 'Interaction' filters for different groups:
-		PlayerInteractions      = All, // (All & ~(StaticGeometry)),
+		PlayerInteractions      = (All & ~(StaticGeometry)), // All
 		ObjectInteractions      = (Actor | Object | Zone | AllGeometry),
 		CollectableInteractions = (Actor | Zone), // `Actor` for obvious reasons, `Zone` for kill-planes, etc.
 		EnemyInteractions       = ObjectInteractions, // (Actor | Object | Zone),
