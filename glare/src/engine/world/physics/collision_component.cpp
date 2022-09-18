@@ -4,6 +4,7 @@
 
 #include <engine/world/world.hpp>
 
+#include <math/math.hpp>
 #include <math/bullet.hpp>
 
 #include <bullet/btBulletCollisionCommon.h>
@@ -194,12 +195,14 @@ namespace engine
 		if (peek_convex_shape())
 		{
 			////return { CollisionCastMethod::ConvexCast, KinematicResolutionConfig::AABBType {}, true, true }; // CollisionCastMethod::ConvexKinematicCast
-			return { CollisionCastMethod::ConvexCast, KinematicResolutionConfig::InnerSphereType {}, true, true, true };
+			//return { CollisionCastMethod::ConvexCast, KinematicResolutionConfig::InnerSphereType {}, true, true, true };
+			return { CollisionCastMethod::ConvexCast, KinematicResolutionConfig::OrientedAABBVectorType {}, true, true, true };
 		}
 
 		// Everything else gets a simple ray-cast approach.
 		////return { CollisionCastMethod::RayCast, KinematicResolutionConfig::AABBType {}, true, true };
-		return { CollisionCastMethod::RayCast, KinematicResolutionConfig::InnerSphereType {}, true, true, true };
+		//return { CollisionCastMethod::RayCast, KinematicResolutionConfig::InnerSphereType {}, true, true, true };
+		return { CollisionCastMethod::RayCast, KinematicResolutionConfig::OrientedAABBVectorType {}, true, true, true };
 	}
 
 	btCollisionObject* CollisionComponent::get_collision_object()
@@ -522,6 +525,30 @@ namespace engine
 		}
 
 		update_collision_object_transform(*collision, tform);
+	}
+
+	math::Matrix CollisionComponent::get_collision_object_transform() const
+	{
+		auto* collision = get_collision_object();
+
+		if (!collision)
+		{
+			return math::identity_matrix();
+		}
+
+		return math::to_matrix(collision->getWorldTransform());
+	}
+
+	math::Matrix3x3 CollisionComponent::get_collision_object_orientation() const
+	{
+		auto* collision = get_collision_object();
+
+		if (!collision)
+		{
+			return math::identity_matrix();
+		}
+
+		return math::to_matrix(collision->getWorldTransform().getBasis());
 	}
 
 	CollisionComponent::Shape CollisionComponent::get_shape() const

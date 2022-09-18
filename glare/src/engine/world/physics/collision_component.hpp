@@ -232,6 +232,9 @@ namespace engine
 			// This does not directly affect the Entity's `TransformComponent`.
 			void update_transform(const math::Matrix& tform);
 
+			math::Matrix get_collision_object_transform() const;
+			math::Matrix3x3 get_collision_object_orientation() const;
+
 			inline CollisionGroup get_group() const        { return group; }
 			inline CollisionGroup get_interactions() const { return interaction_mask; }
 			inline CollisionGroup get_solids() const       { return solid_mask; }
