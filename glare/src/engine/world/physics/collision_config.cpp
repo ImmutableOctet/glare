@@ -14,7 +14,9 @@ namespace engine
 			case EntityType::Bone: return CollisionGroup::Bone;
 
 			case EntityType::Object: return CollisionGroup::Object;
-			case EntityType::Camera: return CollisionGroup::Object;
+
+			// TODO: Determine which group is most suitable for cameras.
+			case EntityType::Camera: return CollisionGroup::Actor; // CollisionGroup::Object;
 			
 			case EntityType::Player: return CollisionGroup::Actor;
 			case EntityType::Enemy: return CollisionGroup::Actor;
@@ -82,7 +84,10 @@ namespace engine
 			//case EntityType::Bone: return CollisionGroup::None;
 			case EntityType::Object: return CollisionGroup::ObjectInteractions;
 			case EntityType::Player: return CollisionGroup::PlayerInteractions;
-			//case EntityType::Camera: return CollisionGroup::ObjectInteractions;
+			
+			// TODO: Determine which interactions cameras should be involved with.
+			case EntityType::Camera: return CollisionGroup::ObjectInteractions;
+
 			case EntityType::Enemy: return CollisionGroup::EnemyInteractions;
 			case EntityType::FriendlyActor: return CollisionGroup::ObjectInteractions;
 			case EntityType::Collectable: return CollisionGroup::CollectableInteractions;
