@@ -7,6 +7,7 @@
 
 #include <engine/world/world.hpp>
 
+#include <math/math.hpp>
 #include <math/bullet.hpp>
 
 #include <bullet/btBulletCollisionCommon.h>

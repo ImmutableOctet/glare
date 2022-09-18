@@ -7,6 +7,8 @@ class btCollisionObject;
 
 namespace engine
 {
+	// TODO: Unify these result types with their corresponding event types.
+	
 	struct CollisionCastResult
 	{
 		Entity cast_entity;
@@ -24,14 +26,12 @@ namespace engine
 			const btCollisionObject* hit_object;
 		} native;
 	};
-
+	
 	struct ConvexCastResult : public CollisionCastResult
 	{
-		
 	};
 
 	struct RayCastResult : public CollisionCastResult
 	{
-
 	};
 }

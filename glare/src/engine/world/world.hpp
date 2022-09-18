@@ -12,7 +12,7 @@
 //#include <graphics/types.hpp> // Not actually needed. (`ColorRGB` is actually located in math)
 #include <app/delta_time.hpp>
 
-#include <math/math.hpp>
+#include <math/types.hpp>
 #include <util/json.hpp>
 
 #include <string_view>

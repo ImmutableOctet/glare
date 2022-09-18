@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include <math/math.hpp>
+#include <math/types.hpp>
 
 #include "types.hpp"
 //#include "skeleton.hpp"

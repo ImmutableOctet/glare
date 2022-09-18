@@ -89,6 +89,8 @@ namespace engine
 		{
 			auto tform = world.get_transform(entity);
 			
+			// TODO: Implement collision object offset, similar to `update_collision_object_transform`.
+			
 			tform.set_matrix(math::to_matrix(worldTrans));
 		}
 	#endif

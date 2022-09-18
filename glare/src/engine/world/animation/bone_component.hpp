@@ -1,6 +1,6 @@
 #pragma once
 
-#include <math/math.hpp>
+#include <math/types.hpp>
 #include <engine/types.hpp>
 
 // TODO: Look into workarounds for including this header directly.

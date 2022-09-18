@@ -2,7 +2,7 @@
 
 #include <types.hpp>
 #include <graphics/types.hpp>
-#include <math/math.hpp>
+#include <math/types.hpp>
 
 #include <entt/entt.hpp>
 

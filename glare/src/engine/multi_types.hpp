@@ -7,7 +7,7 @@
 //#include <types.hpp>
 #include "types.hpp"
 
-#include <math/math.hpp>
+#include <math/types.hpp>
 
 #include <vector>
 

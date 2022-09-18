@@ -2,7 +2,6 @@
 #include "mesh.hpp"
 #include "material.hpp"
 
-#include <math/math.hpp>
 #include <engine/resource_manager/resource_manager.hpp>
 
 #include <algorithm>

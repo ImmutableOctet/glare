@@ -4,7 +4,7 @@
 #include "collision_group.hpp"
 
 #include <engine/types.hpp>
-#include <math/math.hpp>
+#include <math/types.hpp>
 
 #include <optional>
 #include <variant>

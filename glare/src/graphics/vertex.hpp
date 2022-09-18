@@ -9,8 +9,9 @@
 ///#include <half/half.hpp>
 
 #include "types.hpp"
+
 #include <util/algorithm.hpp>
-#include <math/math.hpp>
+#include <math/types.hpp>
 
 #define DECLARE_ATTRIBUTE(vertex_type, member) Vertex::get_attribute<decltype(member)>(offsetof(vertex_type, member)) // Vertex::get_attribute
 

@@ -4,7 +4,7 @@
 
 //#include <engine/events.hpp>
 #include <engine/types.hpp>
-#include <math/math.hpp>
+#include <math/types.hpp>
 
 class btCollisionObject;
 

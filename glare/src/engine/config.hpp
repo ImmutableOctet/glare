@@ -1,6 +1,6 @@
 #pragma once
 
-#include <math/math.hpp>
+#include <math/types.hpp>
 #include <util/json.hpp>
 
 namespace engine

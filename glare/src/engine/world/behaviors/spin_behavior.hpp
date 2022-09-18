@@ -2,7 +2,7 @@
 
 #include <types.hpp>
 
-#include <math/math.hpp>
+#include <math/types.hpp>
 #include <engine/types.hpp>
 
 namespace engine

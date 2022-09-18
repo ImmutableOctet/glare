@@ -5,7 +5,7 @@
 
 //#include <graphics/collision_geometry.hpp>
 
-#include <math/math.hpp>
+#include <math/types.hpp>
 
 #include "collision_group.hpp"
 #include "collision_body_type.hpp"
