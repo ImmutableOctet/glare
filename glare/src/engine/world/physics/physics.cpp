@@ -137,10 +137,10 @@ namespace engine
 			retrieve_bullet_transforms();
 		#endif
 
-		resolve_intersections();
+		handle_intersections();
 	}
 
-	void PhysicsSystem::resolve_intersections(bool check_resolution_flags)
+	void PhysicsSystem::handle_intersections(bool check_resolution_flags)
 	{
 		auto& dispatcher = *collision_dispatcher;
 
@@ -189,44 +189,6 @@ namespace engine
 				continue;
 			}
 
-			// An object must be flagged as kinematic in order to resolve its intersections here:
-			bool is_kinematic = (a->getCollisionFlags() & btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT);
-
-			if (!is_kinematic)
-			{
-				continue;
-			}
-
-			if (check_resolution_flags)
-			{
-				auto& registry = world.get_registry();
-
-				const auto* a_collision = registry.try_get<CollisionComponent>(a_ent);
-
-				if (!a_collision)
-				{
-					continue;
-				}
-
-				auto kinematic_resolution = a_collision->get_kinematic_resolution();
-
-				if (kinematic_resolution.has_value())
-				{
-					if (!kinematic_resolution->accepts_influence)
-					{
-						continue;
-					}
-
-					if (!kinematic_resolution->resolve_intersections) // (kinematic_resolution->cast_method != CollisionCastMethod::None)
-					{
-						continue;
-					}
-				}
-			}
-
-			auto a_tranform = world.get_transform(a_ent);
-			//auto a_position = a_tranform.get_position();
-
 			// Average accumulators:
 
 			// NOTE: We're using Bullet's vector types for efficiency purposes here.
@@ -267,7 +229,77 @@ namespace engine
 			avg_hit_normal         /= contact_count_f;
 			avg_penetration_depth  /= contact_count_f;
 
-			correction             /= contact_count_f;
+			// Apply correction, if applicable:
+
+			// An object must be flagged as kinematic in order to resolve its intersections here:
+			bool is_kinematic = (a->getCollisionFlags() & btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT);
+
+			if (!is_kinematic)
+			{
+				continue;
+			}
+
+			auto& registry = world.get_registry();
+
+			const auto* a_collision = registry.try_get<CollisionComponent>(a_ent);
+
+			if (!a_collision)
+			{
+				continue;
+			}
+
+			int b_group = b->getBroadphaseHandle()->m_collisionFilterGroup;
+
+			if (b_group & static_cast<int>(a_collision->get_interactions()))
+			{
+				// Notify listeners that this `entity` interacted with `hit_entity` via intersection.
+ 				world.queue_event
+				(
+					OnInteractionIntersection
+					{
+						.collision =
+						{
+							.a = a_ent,
+							.b = b_ent,
+
+							.position    = math::to_vector(avg_world_hit_position),
+							.normal      = math::to_vector(avg_hit_normal),
+							.penetration = avg_penetration_depth,
+
+							.contact_type = ContactType::Intersection
+						}
+					}
+				);
+
+				// NOTE: Since 'interaction' collision groups and 'solid' collision
+				// groups are not mutually exclusive, we do not short-circuit here.
+			}
+
+			// Ensure `b_group` is considered solid; if not, continue to the next loop iteration.
+			if (!(b_group & static_cast<int>(a_collision->get_solids())))
+			{
+				continue;
+			}
+
+			auto kinematic_resolution = a_collision->get_kinematic_resolution();
+
+			if (kinematic_resolution.has_value())
+			{
+				if (!kinematic_resolution->accepts_influence)
+				{
+					continue;
+				}
+
+				if (!kinematic_resolution->resolve_intersections) // (kinematic_resolution->cast_method != CollisionCastMethod::None)
+				{
+					continue;
+				}
+			}
+
+			correction /= contact_count_f;
+
+			auto a_tranform = world.get_transform(a_ent);
+			//auto a_position = a_tranform.get_position();
 
 			a_tranform.move(correction);
 
@@ -406,8 +438,6 @@ namespace engine
 			const auto impact_velocity = (new_position - old_position);
 			const auto penetration = (new_position - hit_point_in_world);
 
-			auto half_obj_size = kinematic_resolution.get_half_size(collision);
-
 			// The influence applied to the `hit_entity`, if any.
 			// This variable is modified in `handle_influence_on_hit_entity`
 			// and optionally read in `adjust_entity_position`.
@@ -528,9 +558,10 @@ namespace engine
 				}
 
 				const auto& hit_adjustment = penetration;
-				const auto& radius = half_obj_size;
 
-				auto edge_offset = (hit_normal * radius);
+				auto object_half_dimensions = kinematic_resolution.get_half_size_vector(collision);
+
+				auto edge_offset = (hit_normal * object_half_dimensions);
 				auto correction  = (edge_offset - hit_adjustment);
 
 				auto adjusted_position = (new_position + correction + influence);

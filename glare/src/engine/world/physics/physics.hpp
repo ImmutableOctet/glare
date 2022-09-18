@@ -76,7 +76,6 @@ namespace engine
 
 			// TODO: Change this to a dedicated field.
 			inline constexpr auto get_max_ray_distance() const { return 2000.0f; }
-			inline constexpr auto ray_minimum_distance() const { return; }
 		protected:
 			void update_collision_world(float delta);
 
@@ -87,7 +86,7 @@ namespace engine
 				Transform& transform
 			);
 
-			void resolve_intersections(bool check_resolution_flags=true);
+			void handle_intersections(bool check_resolution_flags=true);
 			
 			void update_motion(Entity entity, Transform& transform, PhysicsComponent& ph, float delta);
 			void update_collision_object(btCollisionObject& obj, const math::Matrix& m);
