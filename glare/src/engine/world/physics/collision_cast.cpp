@@ -39,7 +39,8 @@ namespace engine
 		return !(diff.fuzzyZero()); // fuzzyZero: (diff.length2() < SIMD_EPSILON* SIMD_EPSILON);
 	}
 
-	static const btCollisionObject* resolve_self(PhysicsSystem& physics, const RayCastSelf& self)
+	template <typename CollisionComponentCallback>
+	static const btCollisionObject* resolve_self(PhysicsSystem& physics, const RayCastSelf& self, CollisionComponentCallback&& callback)
 	{
 		const btCollisionObject* self_collision_obj = nullptr;
 
@@ -53,12 +54,14 @@ namespace engine
 				self_collision_obj = &c_obj;
 			},
 
-			[&self_collision_obj](const CollisionComponent& collision)
+			[&self_collision_obj, &callback](const CollisionComponent& collision)
 			{
 				self_collision_obj = collision.get_collision_object();
+
+				callback(collision);
 			},
 
-			[&physics, &self_collision_obj](Entity entity)
+			[&physics, &self_collision_obj, &callback](Entity entity)
 			{
 				auto& world    = physics.get_world();
 				auto& registry = world.get_registry();
@@ -71,10 +74,17 @@ namespace engine
 				}
 
 				self_collision_obj = collision->get_collision_object();
+
+				callback(*collision);
 			}
 		);
 
 		return self_collision_obj;
+	}
+
+	static const btCollisionObject* resolve_self(PhysicsSystem& physics, const RayCastSelf& self)
+	{
+		return resolve_self(physics, self, [](const CollisionComponent&) {});
 	}
 
 	static math::Vector resolve_origin_vector(PhysicsSystem& physics, const RayCastSelf& self)
@@ -456,7 +466,29 @@ namespace engine
 		}
 
 		const auto* collision_world = physics.get_collision_world();
-		const auto* self_collision_obj = resolve_self(physics, self);
+		
+		const auto* self_collision_obj = resolve_self
+		(
+			physics, self,
+
+			// In the event of a `CollisionComponent` object as `self`, circumvent the
+			// default collision-object path for `register_collision_filters` (called below):
+			[&](const CollisionComponent& collision)
+			{
+				// NOTE: This is a workaround for handling interaction-filters, when we
+				// know ahead-of-time to exclude them. (i.e. we have a `CollisionComponent` object)
+
+				if (!filter_group.has_value())
+				{
+					filter_group = collision.get_group();
+				}
+
+				if (!filter_mask.has_value())
+				{
+					filter_mask = collision.get_solids();
+				}
+			}
+		);
 
 		// btCollisionWorld::RayResultCallback
 		auto callback = btKinematicClosestNotMeRayResultCallback // btClosestNotMeConvexResultCallback
