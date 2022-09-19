@@ -2,6 +2,7 @@
 
 #include "types.hpp"
 #include "collision_cast_result.hpp"
+#include "collision_cast.hpp"
 
 #include <util/memory.hpp>
 
@@ -75,6 +76,30 @@ namespace engine
 
 			void update_collision_object(CollisionComponent& col, Transform& transform);
 			void update_collision_object(btCollisionObject& obj, Transform& transform);
+
+			// Performs a collision cast (convex, ray, etc.) from `obj`'s current position to `destination`.
+			// This is a utility function for handling dispatch to different casting algorithms.
+			// If you know exactly which type of cast you need to perform, use the free-function casting API instead.
+			std::optional<CollisionCastResult> cast_to
+			(
+				const RayCastSelf& obj,
+				const math::Vector& destination,
+
+				std::optional<CollisionGroup> filter_group=std::nullopt,
+				std::optional<CollisionGroup> filter_mask=std::nullopt
+			);
+
+			// Explicit overload for `CollisionComponent`, shared for multiple visit paths.
+			// See main `RayCastSelf` overload for details.
+			std::optional<CollisionCastResult> cast_to
+			(
+				const CollisionComponent& collision,
+				const math::Vector& destination,
+
+				std::optional<CollisionGroup> filter_group = std::nullopt,
+				std::optional<CollisionGroup> filter_mask = std::nullopt,
+				bool check_kinematic_resolution=false
+			);
 
 			inline World& get_world() const { return world; }
 

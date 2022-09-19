@@ -648,13 +648,120 @@ namespace engine
 		}
 	}
 
+	std::optional<CollisionCastResult> PhysicsSystem::cast_to
+	(
+		const RayCastSelf& obj,
+		const math::Vector& destination,
+
+		std::optional<CollisionGroup> filter_group,
+		std::optional<CollisionGroup> filter_mask
+	)
+	{
+		CollisionCastMethod cast_method = CollisionCastMethod::None;
+
+		std::optional<CollisionCastResult> result = std::nullopt;
+
+		util::visit
+		(
+			obj,
+
+			[&](const btCollisionObject& c_obj)
+			{
+				const auto* shape = c_obj.getCollisionShape();
+				const btConvexShape* convex_shape = nullptr;
+
+				bool is_convex = shape->isConvex();
+
+				if (is_convex)
+				{
+					// NOTE: Safer option, but significantly slower.
+					//convex_shape = dynamic_cast<const btConvexShape*>(shape);
+					//is_convex = (convex_shape != nullptr);
+
+					// NOTE: This option is faster, but it takes Bullet's `getShapeType` at face-value. (Possibly unsafe)
+					convex_shape = reinterpret_cast<const btConvexShape*>(shape);
+				}
+
+				if (is_convex)
+				{
+					result = convex_cast_to
+					(
+						*this,
+						CollisionObjectAndConvexShape{ c_obj, *convex_shape },
+						destination, filter_group, filter_mask
+					);
+				}
+				else
+				{
+					result = ray_cast_to(*this, c_obj, destination, filter_group, filter_mask);
+				}
+			},
+
+			[&](const CollisionComponent& collision)
+			{
+				result = cast_to(collision, destination, filter_group, filter_mask);
+			},
+
+			[&](Entity entity)
+			{
+				auto& registry = world.get_registry();
+				auto* collision = registry.try_get<CollisionComponent>(entity);
+
+				if (collision)
+				{
+					result = cast_to(*collision, destination, filter_group, filter_mask);
+				}
+			},
+
+			[](const std::monostate&) {}
+		);
+
+		return result;
+	}
+
+	std::optional<CollisionCastResult> PhysicsSystem::cast_to
+	(
+		const CollisionComponent& collision,
+		const math::Vector& destination,
+
+		std::optional<CollisionGroup> filter_group,
+		std::optional<CollisionGroup> filter_mask,
+
+		bool check_kinematic_resolution
+	)
+	{
+		bool is_convex = collision.is_convex();
+
+		if (is_convex && check_kinematic_resolution)
+		{
+			auto kinematic_resolution_opt = collision.get_kinematic_resolution();
+
+			if (kinematic_resolution_opt.has_value())
+			{
+				is_convex = (kinematic_resolution_opt->cast_method == CollisionCastMethod::ConvexCast);
+			}
+		}
+
+		if (is_convex)
+		{
+			return convex_cast_to(*this, collision, destination, filter_group, filter_mask);
+		}
+
+		return ray_cast_to(*this, collision, destination, filter_group, filter_mask);
+	}
+
 	void PhysicsSystem::update_motion(Entity entity, Transform& transform, PhysicsComponent& ph, float delta)
 	{
 		math::Vector movement = {};
 
 		if (ph.apply_gravity())
 		{
-			movement += (get_gravity() * delta);
+			// Check gravity:
+			auto gravity = (get_gravity() * delta);
+
+			movement += gravity;
+
+			//cast_to(...)
 		}
 
 		if (ph.apply_velocity())
