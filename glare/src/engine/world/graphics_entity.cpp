@@ -69,6 +69,11 @@ namespace engine
 		pass_ref<graphics::Shader> shader
 	)
 	{
+		if (path.empty())
+		{
+			return null;
+		}
+
 		auto& resource_manager = world.get_resource_manager();
 
 		const auto& model_data = resource_manager.load_model(path, collision_enabled, shader);
