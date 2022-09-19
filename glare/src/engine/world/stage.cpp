@@ -525,17 +525,19 @@ namespace engine
 			auto& player_idx_counter = indices.players.player_idx_counter;
 			auto& player_objects = indices.players.player_objects;
 
-			auto player_tform  = get_transform_data(player_cfg);
-			auto player_char   = get_character(util::get_value<std::string>(player_cfg, "character", "default"));
-			auto player_name   = util::get_value<std::string>(player_cfg, "name", DEFAULT_PLAYER_NAME);
-			auto player_idx    = util::get_value<PlayerIndex>(player_cfg, "index", player_idx_counter);
-			auto player_parent = stage; // null;
+			auto player_character = util::get_value<std::string>(player_cfg, "character", DEFAULT_CHARACTER);
+			auto player_name      = util::get_value<std::string>(player_cfg, "name", DEFAULT_PLAYER_NAME);
+			auto player_idx       = util::get_value<PlayerIndex>(player_cfg, "index", player_idx_counter);
+			auto player_parent    = stage; // null;
 
 			print("Player #{}", player_idx);
 			print("Name: {}", player_name);
-			print("Character: {}", static_cast<std::uint8_t>(player_char));
+			print("Character: {}", player_character);
 
-			auto player = create_player(world, player_tform, player_char, player_name, player_parent, player_idx);
+			std::filesystem::path character_path;
+
+			auto character_data = load_character_data(player_character);
+			auto player = create_player(world, character_data, player_name, player_parent, player_idx);
 
 			print("Entity: {}", player);
 			print("Parent: {}", player_parent);
@@ -544,6 +546,10 @@ namespace engine
 			{
 				player_objects[player_idx] = player;
 			}
+
+			apply_transform(world, player, player_cfg);
+
+			world.event<OnPlayerLoaded>(player, character_path);
 
 			/*
 			if (util::get_value(player_cfg, "debug", false))
