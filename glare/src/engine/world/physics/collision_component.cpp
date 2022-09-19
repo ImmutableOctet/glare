@@ -196,13 +196,13 @@ namespace engine
 		{
 			////return { CollisionCastMethod::ConvexCast, KinematicResolutionConfig::AABBType {}, true, true }; // CollisionCastMethod::ConvexKinematicCast
 			//return { CollisionCastMethod::ConvexCast, KinematicResolutionConfig::InnerSphereType {}, true, true, true };
-			return { CollisionCastMethod::ConvexCast, KinematicResolutionConfig::OrientedAABBVectorType {}, true, true, true };
+			return { CollisionCastMethod::ConvexCast, KinematicResolutionConfig::AABBVectorType {}, true, true, true };
 		}
 
 		// Everything else gets a simple ray-cast approach.
 		////return { CollisionCastMethod::RayCast, KinematicResolutionConfig::AABBType {}, true, true };
 		//return { CollisionCastMethod::RayCast, KinematicResolutionConfig::InnerSphereType {}, true, true, true };
-		return { CollisionCastMethod::RayCast, KinematicResolutionConfig::OrientedAABBVectorType {}, true, true, true };
+		return { CollisionCastMethod::RayCast, KinematicResolutionConfig::AABBVectorType {}, true, true, true };
 	}
 
 	btCollisionObject* CollisionComponent::get_collision_object()
