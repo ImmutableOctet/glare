@@ -21,6 +21,15 @@ namespace engine
 		std::optional<std::filesystem::path> path = std::nullopt;
 	};
 
+	// Indicates that a player object has finished loading.
+	struct OnPlayerLoaded
+	{
+		Entity player;
+
+		// An optional file-path indicating the definition for the player's character.
+		std::optional<std::filesystem::path> path = std::nullopt;
+	};
+
 	/*
 		Indicates that the transformation of an entity has changed in some way.
 		This can occur due to parent entities changing their transformations as well.
