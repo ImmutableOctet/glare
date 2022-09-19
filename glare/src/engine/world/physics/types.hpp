@@ -9,7 +9,6 @@
 
 #include "collision_group.hpp"
 #include "collision_body_type.hpp"
-#include "motion_flags.hpp"
 
 //#include <bullet/btBulletCollisionCommon.h>
 //#include <bullet/btBulletDynamicsCommon.h>

@@ -218,6 +218,7 @@ namespace glare
 
 			const auto& dt = world.get_delta_time();
 
+			//auto m = math::Vector{ 0.0f, -0.25f * dt, 0.0f };
 			auto m = math::Vector{ 0.0f, -0.25f * dt, 0.0f };
 
 			t.move(m);

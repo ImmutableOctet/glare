@@ -4,7 +4,7 @@
 
 #include "graphics_entity.hpp"
 
-#include "physics/physics_component.hpp"
+#include "physics/motion_component.hpp"
 #include "physics/collision.hpp"
 
 #include <util/string.hpp>
@@ -111,7 +111,7 @@ namespace engine
 
 		registry.emplace<PlayerState>(player, PlayerState::Action::Default, index);
 		
-		attach_physics(world, player, MotionFlags::StandardMovement);
+		registry.emplace<MotionComponent>(player);
 
 		load_player_model(world, player, character["model"], character_path);
 		generate_player_collision(world, player, character["collision"]);

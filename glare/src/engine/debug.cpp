@@ -198,7 +198,10 @@ namespace engine
 
 	void DebugListener::operator()(const OnCollision& data)
 	{
-		print("Collision detected between entities {} and {} at {}. (Contact type: {})", data.a, data.b, data.position, static_cast<int>(data.contact_type));
+		//if (data.contact_type == ContactType::Surface)
+		{
+			print("Collision detected between entities {} and {} at {}. (Contact type: {})", data.a, data.b, data.position, static_cast<int>(data.contact_type));
+		}
 	}
 
 	void DebugListener::on_skeleton(Registry& registry, Entity entity)

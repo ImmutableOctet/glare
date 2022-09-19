@@ -2,7 +2,7 @@
 
 #include <engine/transform.hpp>
 #include <engine/world/world.hpp>
-#include <engine/world/physics/physics_component.hpp>
+#include <engine/world/physics/motion_component.hpp>
 
 #include <math/math.hpp>
 #include <cmath>
@@ -69,13 +69,13 @@ namespace engine
 
 		auto movement_vector = (direction * std::min(std::min(follow_speed, distance), following_distance));
 
-		auto* physics = registry.try_get<PhysicsComponent>(entity);
+		auto* motion = registry.try_get<MotionComponent>(entity);
 
 		if (distance > following_distance)
 		{
-			if (physics)
+			if (motion)
 			{
-				physics->motion.velocity = movement_vector;
+				motion->velocity = movement_vector;
 			}
 			else
 			{
@@ -88,9 +88,9 @@ namespace engine
 		}
 		else
 		{
-			if (physics)
+			if (motion)
 			{
-				physics->motion.velocity = {};
+				motion->velocity = {};
 			}
 		}
 	}

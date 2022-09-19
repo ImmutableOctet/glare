@@ -40,7 +40,7 @@ namespace engine
 {
 	// Components:
 	struct Transform;
-	struct PhysicsComponent;
+	struct MotionComponent;
 	struct CollisionComponent;
 
 	// Events:
@@ -121,7 +121,7 @@ namespace engine
 
 			void handle_intersections(bool check_resolution_flags=true);
 			
-			void update_motion(Entity entity, Transform& transform, PhysicsComponent& ph, float delta);
+			void update_motion(Entity entity, Transform& transform, MotionComponent& motion, CollisionComponent& collision, float delta);
 			void update_collision_object(btCollisionObject& obj, const math::Matrix& m);
 
 			// Internal shorthand for `world.get_gravity()`.

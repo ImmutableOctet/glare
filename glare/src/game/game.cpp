@@ -54,7 +54,7 @@ namespace game
 		}
 
 		// Default systems:
-		system<engine::PhysicsSystem>(world);
+		auto& physics = system<engine::PhysicsSystem>(world);
 		system<engine::AnimationSystem>(world);
 		system<engine::ZoneSystem>(world);
 

@@ -1,5 +1,5 @@
 #include "physics.hpp"
-#include "physics_component.hpp"
+#include "motion_component.hpp"
 
 #include "collision.hpp"
 #include "collision_component.hpp"
@@ -98,14 +98,14 @@ namespace engine
 
 		update_collision_world(delta);
 
-		auto view = registry.view<PhysicsComponent>(); // <TransformComponent, ...> (auto& tf_comp)
+		auto view = registry.view<MotionComponent, CollisionComponent>(); // <TransformComponent, ...> (auto& tf_comp)
 
 		// Apply motion (gravity, velocity, deceleration, etc.) and resolve collisions between old and new positions:
-		view.each([&](auto entity, auto& ph)
+		view.each([&](auto entity, auto& motion, auto& collision)
 		{
 			auto transform = world.get_transform(entity);
 
-			update_motion(entity, transform, ph, delta);
+			update_motion(entity, transform, motion, collision, delta);
 		});
 	}
 
@@ -611,6 +611,7 @@ namespace engine
 			);
 		};
 
+		// TODO: Look into whether we should replace this switch-statement with the `cast_to` member-function.
 		switch (kinematic_resolution.cast_method)
 		{
 			case CollisionCastMethod::ConvexCast:
@@ -750,36 +751,62 @@ namespace engine
 		return ray_cast_to(*this, collision, destination, filter_group, filter_mask);
 	}
 
-	void PhysicsSystem::update_motion(Entity entity, Transform& transform, PhysicsComponent& ph, float delta)
+	void PhysicsSystem::update_motion(Entity entity, Transform& transform, MotionComponent& motion, CollisionComponent& collision, float delta)
 	{
 		math::Vector movement = {};
 
-		if (ph.apply_gravity())
+		if (motion.apply_gravity)
 		{
-			// Check gravity:
 			auto gravity = (get_gravity() * delta);
 
-			movement += gravity;
+			if (!motion.on_ground)
+			{
+				movement += gravity;
+			}
+
+			// Check gravity:
+			auto when_gravity_applied = (transform.get_position() + gravity);
+
+			auto ground = cast_to(collision, when_gravity_applied);
+
+			if (ground)
+			{
+				if (!motion.on_ground)
+				{
+					print("Hit the ground.");
+
+					motion.on_ground = true;
+				}
+			}
+			else
+			{
+				if (motion.on_ground)
+				{
+					print("Off ground");
+
+					motion.on_ground = false;
+				}
+			}
 
 			//cast_to(...)
 		}
 
-		if (ph.apply_velocity())
+		if (motion.apply_velocity)
 		{
-			movement += (ph.motion.velocity * delta);
+			movement += (motion.velocity * delta);
 		}
 
-		auto decel = std::abs(ph.motion.deceleration);
+		auto decel = std::abs(motion.ground_deceleration);
 
 		if (decel > 0.0f)
 		{
-			if (glm::length(ph.motion.velocity) > MIN_SPEED)
+			if (glm::length(motion.velocity) > MIN_SPEED)
 			{
-				ph.motion.velocity -= (ph.motion.velocity * decel * delta); // math::Vector
+				motion.velocity -= (motion.velocity * decel * delta); // math::Vector
 			}
 			else
 			{
-				ph.motion.velocity = {};
+				motion.velocity = {};
 			}
 		}
 
