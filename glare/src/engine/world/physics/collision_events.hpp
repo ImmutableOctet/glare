@@ -67,50 +67,42 @@ namespace engine
 		math::Vector impact_velocity;
 
 		// Shorthand for a field of the same name, found in `collision`.
-		inline float penetration() const
-		{
-			return collision.penetration;
-		}
+		float penetration() const;
 
 		// The speed of the contact made to entity `b`'s surface.
 		// (Movement speed of `a`; length of `impact_velocity`)
-		inline float contact_speed() const
-		{
-			return glm::length(impact_velocity);
-		}
+		float contact_speed() const;
 
 		// Entity `a`'s angle of approach.
 		// (Normalized direction of `impact_velocity`)
-		inline math::Vector direction() const
-		{
-			return glm::normalize(impact_velocity);
-		}
+		math::Vector direction() const;
 
 		// Length-vector indicating the intended penetration of this surface.
 		// (`a`'s intended movement-depth into `b` along the `direction` of approach)
-		inline math::Vector penetration_vector() const
-		{
-			return (direction() * penetration());
-		}
+		math::Vector penetration_vector() const;
 
-		inline float force_applied() const
-		{
-			return (contact_speed() - penetration());
-		}
+		// Force applied to the surface.
+		// (Difference between contact-speed and penetration amount)
+		float force_applied() const;
 
 		// Ratio of `force_applied` to the `penetration` observed.
-		inline float residual() const
-		{
-			return (force_applied() / penetration());
-		}
+		float residual() const;
 
 		// The slope of the contacted surface; computed from the
 		// surface `normal` and the movement `direction` imposed by `a`.
 		// Ranges from -1.0 (downward) to 1.0 (upward) along the surface.
-		inline float slope() const
-		{
-			return math::get_surface_slope(collision.normal, direction());
-		}
+		float slope() const;
+
+		// The slope of the contacted surface.
+		// (Dot-product of the `forward` vector and the `direction`)
+		float slope(const math::Vector& surface_forward) const;
+
+		// The slope of the contacted surface.
+		// (Calls the surface-forward overload of `slope` with the second (`forward`) vector)
+		float slope(const math::OrthogonalVectors& orientation) const;
+
+		// Retrieves the three orthogonal vectors representing the orientation of the surface.
+		math::OrthogonalVectors surface_orientation_vectors(const math::Vector& adjacent={1.0f, 0.0f, 0.0f}) const;
 	};
 
 	// This is triggered any time a standard collision intersection takes place.
