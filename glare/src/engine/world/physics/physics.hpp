@@ -11,15 +11,20 @@
 
 #include <optional>
 
+// Bullet includes required in header due to usage with `entt::any`/`std::any`.
+#include <bullet/btBulletCollisionCommon.h>
+#include <bullet/btBulletDynamicsCommon.h>
+#include <bullet/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+
 // Forward declarations:
 
 // Bullet:
-class btDefaultCollisionConfiguration;
-class btCollisionDispatcher;
-struct btDbvtBroadphase;
-class btSequentialImpulseConstraintSolver;
-class btDiscreteDynamicsWorld;
+//class btDiscreteDynamicsWorld;
+//class btSequentialImpulseConstraintSolver;
 class btCollisionWorld;
+class btDefaultCollisionConfiguration;
+struct btDbvtBroadphase;
+class btCollisionDispatcher;
 class btCollisionObject;
 class btCollisionShape;
 
@@ -50,6 +55,9 @@ namespace engine
 
 			PhysicsSystem(World& world);
 			~PhysicsSystem();
+
+			PhysicsSystem(const PhysicsSystem&) = delete;
+			PhysicsSystem(PhysicsSystem&&) noexcept = default;
 
 			void on_subscribe(World& world) override;
 			void on_update(World& world, float delta) override;

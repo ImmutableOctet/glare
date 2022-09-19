@@ -21,9 +21,12 @@
 #include <math/bullet.hpp>
 #include <util/variant.hpp>
 
+// See notes in header for these includes.
+/*
 #include <bullet/btBulletCollisionCommon.h>
 #include <bullet/btBulletDynamicsCommon.h>
 #include <bullet/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+*/
 
 #include <glm/glm.hpp>
 

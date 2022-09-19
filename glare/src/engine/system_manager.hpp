@@ -5,7 +5,8 @@
 #include <engine/service.hpp>
 #include <engine/world/behaviors/meta.hpp>
 
-#include <vector>
+//#include <vector>
+#include <unordered_map>
 
 namespace engine
 {
@@ -14,24 +15,24 @@ namespace engine
 	class SystemManager
 	{
 		public:
-			using Opaque = memory::opaque_unique_ptr; // entt::any;
-			using RawOpaquePointer = void*; // entt::any;
+			using Opaque           = entt::any;  // std::any;
+			using RawOpaquePointer = void*;
 
-			// TODO: Look into whether we should replace `opaque_unique_ptr` with `std::any` or `entt::any`.
-			// (Has storage and copy/move assignment implications)
-			// Represents an automatically managed unique allocation of any type.
-			using System = memory::opaque_unique_ptr;
+			using System           = entt::any; // std::any;
+			using SystemID         = entt::id_type;
 
 			SystemManager(Service& service);
 
-			/*
-				Adds `system` to an internal list of active `System` objects,
-				then returns a (void) pointer to the underlying opaque object.
-				
-				If the underlying object-type of `system` is known, then it is safe
-				to `reinterpret_cast` this to the appropriate pointer-type.
-			*/
-			RawOpaquePointer add_system(System&& system);
+			// TODO: Look into scenarios where the underlying object of `system` could be moved as well.
+			// Such scenarios are usually unsafe, since the underlying object is likely subscribed to one or more event sinks.
+			// 
+			// Moves `system` into an internal container, associated by its `entt::type_hash`.
+			template <typename SystemType>
+			inline System& add_system(System&& system)
+			{
+				// Associate `system` with the `entt::type_hash` of `SystemType`.
+				return add_system(entt::type_hash<SystemType>::value(), std::move(system));
+			}
 
 			/*
 				Constructs a `SystemType` object using the arguments provided, then adds the
@@ -43,11 +44,47 @@ namespace engine
 			template <typename SystemType, typename...Args>
 			inline SystemType& emplace_system(Args&&... args)
 			{
-				auto ptr = add_system(memory::make_opaque<SystemType>(std::forward<Args>(args)...));
+				// Add an empty opaque `System` reference to allocate space for `SystemType`.
+				auto& system = add_system<SystemType>({});
+
+				// Emplace a new object inside of the `System` object we allocated.
+				system.emplace<SystemType>(std::forward<Args>(args)...);
+
+				// Retrieve a raw/opaque pointer to the new `SystemType` instance.
+				auto ptr = system.data();
+
+				// Ensure `ptr` is valid.
+				assert(ptr);
+
+				// Reinterpret `ptr` as the `SystemType` instance we created.
+				return *reinterpret_cast<SystemType*>(ptr);
+			}
+
+			// Retrieves an instance of `SystemType`, if one exists.
+			// If a `SystemType` object has not been registered, this will return `nullptr`.
+			template <typename SystemType>
+			inline SystemType* get_system()
+			{
+				// Check if an instance of `SystemType` has been registered:
+				auto it = systems.find(entt::type_hash<SystemType>::value());
+
+				if (it == systems.end())
+				{
+					return nullptr;
+				}
+
+				auto& system = it->second;
+
+				auto ptr = system.data();
 
 				assert(ptr);
 
-				return *reinterpret_cast<SystemType*>(ptr);
+				if (!ptr)
+				{
+					return nullptr;
+				}
+
+				return reinterpret_cast<SystemType*>(ptr);
 			}
 			
 			// TODO: Look into rolling `register_behavior` and `unregister_behavior` into one routine.
@@ -93,9 +130,19 @@ namespace engine
 			}
 
 		protected:
+			/*
+				Moves `system` into an internal container of active `System` objects,
+				then returns a reference at the new memory location within the container.
+
+				If the underlying object-type of `system` is known, then it is safe
+				to `reinterpret_cast` back to the appropriate pointer-type from `System::data`.
+			*/
+			System& add_system(SystemID system_id, System&& system);
+
+			// The service this system-manager is linked to.
 			Service& service;
 
-			// Opaque vector of smart pointers to systems and their resources.
-			std::vector<System> systems;
+			// Opaque map of type-hashes to systems and their resources.
+			std::unordered_map<SystemID, System> systems;
 	};
 }

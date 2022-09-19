@@ -6,12 +6,10 @@ namespace engine
 		: service(service)
 	{}
 
-	SystemManager::RawOpaquePointer SystemManager::add_system(System&& system)
+	SystemManager::System& SystemManager::add_system(SystemID system_id, System&& system)
 	{
-		RawOpaquePointer system_ptr = system.get();
+		auto& any_instance = (systems[system_id] = std::move(system));
 
-		systems.push_back(std::move(system));
-
-		return system_ptr;
+		return any_instance;
 	}
 }
