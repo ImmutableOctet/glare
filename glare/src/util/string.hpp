@@ -13,6 +13,8 @@ struct aiString;
 namespace util
 {
 	std::string lowercase(std::string str);
+	std::string lowercase(std::string_view str);
+
 	std::smatch get_regex_groups(const std::string& s, const std::regex& re);
 	std::smatch parse_regex(const std::string& str, const std::string& regex_str);
 
