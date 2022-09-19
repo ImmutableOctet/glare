@@ -343,6 +343,11 @@ namespace engine
 		return false;
 	}
 
+	bool CollisionComponent::is_convex() const
+	{
+		return (peek_convex_shape());
+	}
+
 	bool CollisionComponent::has_collision_object() const
 	{
 		if (collision_object_in_monostate())

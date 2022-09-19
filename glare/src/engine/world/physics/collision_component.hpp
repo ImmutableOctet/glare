@@ -298,6 +298,7 @@ namespace engine
 			bool is_kinematic() const;
 			bool is_dynamic() const;
 			bool is_static() const;
+			bool is_convex() const;
 
 			bool has_collision_object() const;
 			bool has_motion_state() const;
