@@ -218,4 +218,49 @@ namespace engine
 		// TODO: Implement logic to handle different paths to the same resource.
 		return path;
 	}
+
+	CollisionData ResourceManager::generate_shape(const util::json& collision_data)
+	{
+		using enum CollisionShapePrimitive;
+
+		auto shape_primitive = collision_shape_primitive(util::get_value<std::string>(collision_data, "shape", "capsule"));
+
+		switch (shape_primitive)
+		{
+			case Capsule:
+			{
+				auto radius = util::get_value<float>(collision_data, "radius", 2.0f);
+				auto height = util::get_value<float>(collision_data, "height", 8.0f);
+
+				return generate_capsule_collision(radius, height);
+			}
+			case Cube:
+			{
+				if (collision_data.contains("size"))
+				{
+					auto size = util::get_vector(collision_data, "size", { 4.0f, 4.0f, 4.0f });
+
+					return generate_cube_collision(size);
+				}
+				
+				auto radius = util::get_value<float>(collision_data, "radius", 4.0f);
+
+				return generate_cube_collision(radius);
+			}
+			case Sphere:
+			{
+				auto radius = util::get_value<float>(collision_data, "radius", 4.0f);
+
+				return generate_sphere_collision(radius);
+			}
+
+			default:
+				// Unsupported shape primitive.
+				//assert(false);
+
+				break;
+		}
+
+		return {};
+	}
 }
