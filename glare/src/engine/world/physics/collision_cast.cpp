@@ -77,7 +77,7 @@ namespace engine
 		return self_collision_obj;
 	}
 
-	static math::Vector resolve_from_vector(PhysicsSystem& physics, const RayCastSelf& self)
+	static math::Vector resolve_origin_vector(PhysicsSystem& physics, const RayCastSelf& self)
 	{
 		const auto* collision_obj = resolve_self(physics, self);
 
@@ -543,7 +543,7 @@ namespace engine
 		return ray_cast
 		(
 			physics,
-			resolve_from_vector(physics, self),
+			resolve_origin_vector(physics, self),
 			destination,
 			filter_group, filter_mask,
 			self
@@ -566,7 +566,7 @@ namespace engine
 		return directional_ray_cast
 		(
 			physics,
-			resolve_from_vector(physics, self),
+			resolve_origin_vector(physics, self),
 			direction,
 			max_distance,
 			filter_group, filter_mask,
