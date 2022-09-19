@@ -39,6 +39,7 @@ namespace math
 	using Quat = Quaternion;
 
 	using TransformVectors = std::tuple<Vector, Vector, Vector>; // Position, Rotation, Scale
+	using OrthogonalVectors = std::tuple<Vector, Vector, Vector>; // Left, Up, Forward
 }
 
 // TODO: Move this into its own header/module.
