@@ -49,6 +49,9 @@
 // Debugging related:
 #include <engine/world/physics/collision_component.hpp>
 #include <engine/types.hpp>
+#include <engine/world/zones/zones.hpp>
+#include <math/bullet.hpp>
+#include <bullet/btBulletCollisionCommon.h>
 
 namespace glare
 {
@@ -114,8 +117,6 @@ namespace glare
 
 		cube2_c.set_mass(2.0f);
 
-
-
 		auto& camera_c = registry.get<engine::CollisionComponent>(world.get_camera());
 
 		camera_c.set_mass(2.0f);
@@ -130,6 +131,9 @@ namespace glare
 			//cube2_t.set_scale(4.0f);
 			cube2_t.set_position({ -6.20467f, 180.5406f, 39.1254f });
 		});
+
+		auto zone = create_zone(world, math::AABB { { -144.822, 150.215, -141.586 }, { -74.4793, 71.374, -203.555 } });
+		world.set_name(zone, "Zone");
 	}
 
 	engine::Transform Glare::get_named_transform(std::string_view name)
@@ -316,7 +320,14 @@ namespace glare
 		case SDLK_q:
 		{
 			//print("World: {}", world);
-			print_children(world, world.get_root());
+			//print_children(world, world.get_root());
+
+			auto zone = world.get_by_name("Zone");
+			const auto& collision = world.get_registry().get<engine::CollisionComponent>(zone);
+
+			auto* obj = collision.get_collision_object();
+
+			print("Collision object is located at: {}", math::to_vector(obj->getWorldTransform().getOrigin()));
 
 			break;
 		}

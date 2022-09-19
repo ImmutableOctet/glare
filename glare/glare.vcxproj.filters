@@ -459,6 +459,7 @@
     <ClInclude Include="src\math\types.hpp" />
     <ClInclude Include="src\math\io.hpp" />
     <ClInclude Include="src\math\conversion.hpp" />
+    <ClInclude Include="src\engine\collision_shape_primitive.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\shaders\light_box.frag">
@@ -875,6 +876,10 @@
     <ClCompile Include="src\engine\world\physics\kinematic_resolution_config.cpp" />
     <ClCompile Include="src\util\json.cpp" />
     <ClCompile Include="src\engine\world\zones\zones.cpp" />
+    <ClCompile Include="src\math\aabb.cpp" />
+    <ClCompile Include="src\math\bullet.cpp" />
+    <ClCompile Include="src\engine\world\physics\collision_events.cpp" />
+    <ClCompile Include="src\engine\collision_shape_primitive.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />

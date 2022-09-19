@@ -273,6 +273,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\world\physics\collision_cast_result.hpp" />
     <ClInclude Include="src\engine\world\physics\collision_cast_method.hpp" />
     <ClInclude Include="src\engine\world\physics\collision_events.hpp" />
+    <ClInclude Include="src\engine\collision_shape_primitive.hpp" />
     <ClInclude Include="src\engine\world\physics\contact_type.hpp" />
     <ClInclude Include="src\engine\world\physics\collision_cast.hpp" />
     <ClInclude Include="src\engine\world\physics\kinematic_resolution_config.hpp" />
@@ -472,9 +473,11 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\engine\world\light.cpp" />
     <ClCompile Include="src\engine\world\meta\controls.cpp" />
     <ClCompile Include="src\engine\world\physics\collision_config.cpp" />
+    <ClCompile Include="src\engine\world\physics\collision_events.cpp" />
     <ClCompile Include="src\engine\world\physics\collision_group.cpp" />
     <ClCompile Include="src\engine\world\physics\collision_motion_state.cpp" />
     <ClCompile Include="src\engine\world\physics\collision_cast.cpp" />
+    <ClCompile Include="src\engine\collision_shape_primitive.cpp" />
     <ClCompile Include="src\engine\world\physics\kinematic_resolution_config.cpp" />
     <ClCompile Include="src\engine\world\physics\physics.cpp" />
     <ClCompile Include="src\engine\world\physics\physics_component.cpp" />
@@ -518,6 +521,8 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\graphics\texture.cpp" />
     <ClCompile Include="src\graphics\types.cpp" />
     <ClCompile Include="src\graphics\vertex.cpp" />
+    <ClCompile Include="src\math\aabb.cpp" />
+    <ClCompile Include="src\math\bullet.cpp" />
     <ClCompile Include="src\math\math.cpp" />
     <ClCompile Include="src\tests\signal_test\signal_test.cpp" />
     <ClCompile Include="src\tests\timer_test\timer_test.cpp" />
