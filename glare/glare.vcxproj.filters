@@ -220,7 +220,7 @@
     <ClInclude Include="src\engine\world\light.hpp">
       <Filter>src\engine\world</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\world\physics\physics.hpp">
+    <ClInclude Include="src\engine\world\physics\physics_system.hpp">
       <Filter>src\engine\world</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\world\player.hpp">
@@ -422,7 +422,7 @@
     <ClInclude Include="src\engine\service_events.hpp" />
     <ClInclude Include="src\engine\world\world_system.hpp" />
     <ClInclude Include="src\math\assimp.hpp" />
-    <ClInclude Include="src\engine\world\physics\motion_component.hpp" />
+    <ClInclude Include="src\engine\world\motion\motion_component.hpp" />
     <ClInclude Include="src\engine\world\physics\types.hpp" />
     <ClInclude Include="src\engine\world\types.hpp" />
     <ClInclude Include="src\engine\world\physics\collision.hpp" />
@@ -459,6 +459,10 @@
     <ClInclude Include="src\math\io.hpp" />
     <ClInclude Include="src\math\conversion.hpp" />
     <ClInclude Include="src\engine\collision_shape_primitive.hpp" />
+    <ClInclude Include="src\engine\world\motion\motion_events.hpp" />
+    <ClInclude Include="src\engine\world\motion\motion_system.hpp" />
+    <ClInclude Include="src\engine\world\physics\physics.hpp" />
+    <ClInclude Include="src\engine\world\motion\motion.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\shaders\light_box.frag">
@@ -721,7 +725,7 @@
     <ClCompile Include="src\engine\world\light.cpp">
       <Filter>src\engine\world</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\world\physics\physics.cpp">
+    <ClCompile Include="src\engine\world\physics\physics_system.cpp">
       <Filter>src\engine\world</Filter>
     </ClCompile>
     <ClCompile Include="src\engine\world\player.cpp">
@@ -864,7 +868,6 @@
     <ClCompile Include="src\engine\world\physics\collision_group.cpp" />
     <ClCompile Include="src\engine\world\behaviors\meta.cpp" />
     <ClCompile Include="src\engine\service.cpp" />
-    <ClCompile Include="src\engine\system_manager.cpp" />
     <ClCompile Include="src\graphics\collision_geometry.cpp" />
     <ClCompile Include="src\engine\world\animation\skeletal_component.cpp" />
     <ClCompile Include="src\engine\world\animation\bone_component.cpp" />
@@ -878,6 +881,7 @@
     <ClCompile Include="src\math\bullet.cpp" />
     <ClCompile Include="src\engine\world\physics\collision_events.cpp" />
     <ClCompile Include="src\engine\collision_shape_primitive.cpp" />
+    <ClCompile Include="src\engine\world\motion\motion_system.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />

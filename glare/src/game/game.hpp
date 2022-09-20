@@ -15,6 +15,7 @@
 #include <engine/resource_manager/resource_manager.hpp>
 
 #include <engine/world/world.hpp>
+#include <engine/world/world_system.hpp>
 #include <engine/system_manager.hpp>
 
 #include <engine/world/render/world_renderer.hpp>
@@ -33,6 +34,8 @@ namespace engine
 
 	//struct OnMouseState;
 	//struct OnKeyboardState;
+
+	using WorldSystemManager = SystemManager<World>;
 }
 
 namespace game
@@ -51,8 +54,7 @@ namespace game
 			engine::ResourceManager resource_manager;
 			
 			engine::World world;
-			engine::SystemManager systems;
-
+			engine::WorldSystemManager systems;
 			engine::WorldRenderer renderer;
 		public:
 			Game

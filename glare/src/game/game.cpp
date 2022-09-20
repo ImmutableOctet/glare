@@ -1,6 +1,7 @@
 #include "game.hpp"
 
 #include <engine/world/physics/physics.hpp>
+#include <engine/world/motion/motion.hpp>
 #include <engine/world/animation/animation.hpp>
 #include <engine/world/zones/zones.hpp>
 
@@ -55,9 +56,12 @@ namespace game
 
 		// Default systems:
 		auto& physics = system<engine::PhysicsSystem>(world);
+		system<engine::MotionSystem>(world, physics);
+
 		system<engine::AnimationSystem>(world);
 		system<engine::ZoneSystem>(world);
 
+		// Behaviors:
 		behavior<engine::FreeLookBehavior>();
 		behavior<engine::DebugMoveBehavior>();
 

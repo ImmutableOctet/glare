@@ -266,6 +266,8 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\world\animation\skeletal_component.hpp" />
     <ClInclude Include="src\engine\world\behaviors\behaviors.hpp" />
     <ClInclude Include="src\engine\world\behaviors\meta.hpp" />
+    <ClInclude Include="src\engine\world\motion\motion.hpp" />
+    <ClInclude Include="src\engine\world\motion\motion_system.hpp" />
     <ClInclude Include="src\engine\world\physics\bullet_util\btClosestNotMeConvexResultCallback.hpp" />
     <ClInclude Include="src\engine\world\physics\bullet_util\btKinematicClosestNotMeConvexResultCallback.hpp" />
     <ClInclude Include="src\engine\world\physics\bullet_util\btKinematicClosestNotMeRayResultCallback.hpp" />
@@ -277,6 +279,8 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\world\physics\contact_type.hpp" />
     <ClInclude Include="src\engine\world\physics\collision_cast.hpp" />
     <ClInclude Include="src\engine\world\physics\kinematic_resolution_config.hpp" />
+    <ClInclude Include="src\engine\world\motion\motion_events.hpp" />
+    <ClInclude Include="src\engine\world\physics\physics.hpp" />
     <ClInclude Include="src\engine\world\render\bullet_debug_render_phase.hpp" />
     <ClInclude Include="src\engine\world\world_events.hpp" />
     <ClInclude Include="src\engine\world\physics\collision.hpp" />
@@ -318,8 +322,8 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\world\physics\collision_config.hpp" />
     <ClInclude Include="src\engine\world\physics\collision_group.hpp" />
     <ClInclude Include="src\engine\world\physics\collision_motion_state.hpp" />
-    <ClInclude Include="src\engine\world\physics\physics.hpp" />
-    <ClInclude Include="src\engine\world\physics\motion_component.hpp" />
+    <ClInclude Include="src\engine\world\physics\physics_system.hpp" />
+    <ClInclude Include="src\engine\world\motion\motion_component.hpp" />
     <ClInclude Include="src\engine\world\physics\types.hpp" />
     <ClInclude Include="src\engine\world\player.hpp" />
     <ClInclude Include="src\engine\world\behaviors\rave_behavior.hpp" />
@@ -445,10 +449,10 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\app\timer.cpp" />
     <ClCompile Include="src\app\window.cpp" />
     <ClCompile Include="src\engine\service.cpp" />
-    <ClCompile Include="src\engine\system_manager.cpp" />
     <ClCompile Include="src\engine\world\animation\bone_component.cpp" />
     <ClCompile Include="src\engine\world\animation\skeletal_component.cpp" />
     <ClCompile Include="src\engine\world\behaviors\meta.cpp" />
+    <ClCompile Include="src\engine\world\motion\motion_system.cpp" />
     <ClCompile Include="src\engine\world\physics\collision_component.cpp" />
     <ClCompile Include="src\engine\config.cpp" />
     <ClCompile Include="src\engine\debug.cpp" />
@@ -478,7 +482,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\engine\world\physics\collision_cast.cpp" />
     <ClCompile Include="src\engine\collision_shape_primitive.cpp" />
     <ClCompile Include="src\engine\world\physics\kinematic_resolution_config.cpp" />
-    <ClCompile Include="src\engine\world\physics\physics.cpp" />
+    <ClCompile Include="src\engine\world\physics\physics_system.cpp" />
     <ClCompile Include="src\engine\world\player.cpp" />
     <ClCompile Include="src\engine\world\behaviors\rave_behavior.cpp" />
     <ClCompile Include="src\engine\world\render\bullet_debug_render_phase.cpp" />
