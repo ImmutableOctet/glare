@@ -48,6 +48,13 @@ namespace engine
 		// Penetration amount into `b` from `a`.
 		float penetration;
 
+		// Native collision data, objects, etc.
+		struct
+		{
+			const btCollisionObject* a_object;
+			const btCollisionObject* b_object;
+		} native;
+
 		// The type of contact that triggered this event.
 		ContactType contact_type;
 	};
@@ -104,6 +111,9 @@ namespace engine
 		// Retrieves the three orthogonal vectors representing the orientation of the surface.
 		math::OrthogonalVectors surface_orientation_vectors(const math::Vector& adjacent={1.0f, 0.0f, 0.0f}) const;
 	};
+
+	// TODO: Rework `OnSurfaceContact`/`CollisionSurface` into a non-event type.
+	using CollisionSurface = OnSurfaceContact;
 
 	// This is triggered any time a standard collision intersection takes place.
 	// (For resolvable collisions)

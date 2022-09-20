@@ -258,6 +258,12 @@ namespace engine
 							.normal      = math::to_vector(avg_hit_normal),
 							.penetration = avg_penetration_depth,
 
+							.native =
+							{
+								.a_object = a,
+								.b_object = b
+							},
+
 							.contact_type = ContactType::Intersection
 						}
 					}
@@ -308,6 +314,12 @@ namespace engine
 						.position    = math::to_vector(avg_world_hit_position),
 						.normal      = math::to_vector(avg_hit_normal),
 						.penetration = avg_penetration_depth,
+
+						.native =
+						{
+							.a_object = a,
+							.b_object = b
+						},
 
 						.contact_type = ContactType::Intersection
 					},
@@ -591,6 +603,12 @@ namespace engine
 						.normal   = hit_normal,
 
 						.penetration = glm::length(penetration),
+
+						.native =
+						{
+							.a_object = &collision_obj,
+							.b_object = hit_object
+						},
 
 						.contact_type = ContactType::Surface
 					},
