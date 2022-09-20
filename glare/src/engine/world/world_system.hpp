@@ -13,7 +13,6 @@ namespace engine
 {
 	// Forward declaractions:
 	class World;
-	class SystemManager;
 	class Service;
 
 	// Event types:
@@ -24,8 +23,6 @@ namespace engine
 	class WorldSystem
 	{
 		public:
-			friend class SystemManager;
-
 			// NOTE: Subscription is deferred until the system is fully constructed.
 			// See also: `SystemManager`.
 			WorldSystem(World& world, bool allow_multiple_subscriptions=false);
