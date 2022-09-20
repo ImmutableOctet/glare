@@ -7,31 +7,62 @@
 
 //#include <vector>
 #include <unordered_map>
+#include <type_traits>
+#include <tuple>
 
 namespace engine
 {
+	class WorldSystem;
+
 	// Handles persistent opaque storage of systems and behaviors, allowing for systems to run
 	// and events to be dispatched, without the need to manage individual object lifetimes.
+	template <typename ServiceType>
 	class SystemManager
 	{
+		private:
+			template <typename SystemType>
+			inline static constexpr auto key() { return entt::type_hash<SystemType>::value(); }
+
+			template <typename SystemType>
+			inline static constexpr bool has_subscribe()
+			{
+				//return (std::is_base_of_v<WorldSystem, SystemType> && std::is_base_of_v<World, ServiceType>);
+				return true;
+			}
+
+			template <typename SystemType>
+			inline static constexpr bool has_unsubscribe()
+			{
+				return has_subscribe<SystemType>();
+			}
+
 		public:
+			//using ServiceType = ServiceType;
+
 			using Opaque           = entt::any;  // std::any;
 			using RawOpaquePointer = void*;
 
 			using System           = entt::any; // std::any;
 			using SystemID         = entt::id_type;
 
-			SystemManager(Service& service);
+			using SystemCollection = std::unordered_map<SystemID, System>;
+			using SystemIterator   = SystemCollection::iterator;
+
+			inline SystemManager(ServiceType& service)
+				: service(service)
+			{}
 
 			// TODO: Look into scenarios where the underlying object of `system` could be moved as well.
 			// Such scenarios are usually unsafe, since the underlying object is likely subscribed to one or more event sinks.
 			// 
 			// Moves `system` into an internal container, associated by its `entt::type_hash`.
+			// This routine does not subscribe the `system` object to `service`.
+			// For general usage, see `emplace_system`.
 			template <typename SystemType>
 			inline System& add_system(System&& system)
 			{
 				// Associate `system` with the `entt::type_hash` of `SystemType`.
-				return add_system(entt::type_hash<SystemType>::value(), std::move(system));
+				return add_system(key<SystemType>(), std::move(system));
 			}
 
 			/*
@@ -51,22 +82,52 @@ namespace engine
 				system.emplace<SystemType>(std::forward<Args>(args)...);
 
 				// Retrieve a raw/opaque pointer to the new `SystemType` instance.
-				auto ptr = system.data();
+				auto raw_ptr = system.data();
 
 				// Ensure `ptr` is valid.
-				assert(ptr);
+				assert(raw_ptr);
 
 				// Reinterpret `ptr` as the `SystemType` instance we created.
-				return *reinterpret_cast<SystemType*>(ptr);
+				auto ptr = reinterpret_cast<SystemType*>(raw_ptr);
+
+				if constexpr (has_subscribe<SystemType>())
+				{
+					ptr->subscribe(service);
+				}
+
+				return *ptr;
 			}
 
-			// Retrieves an instance of `SystemType`, if one exists.
+			// Destroys a system instance, unsubscribing it from `service` if possible.
+			template <typename SystemType>
+			inline bool destroy_system()
+			{
+				auto& [it, system] = get_system_ex<SystemType>();
+
+				if (it != systems.end() && system)
+				{
+					if constexpr (has_unsubscribe<SystemType>())
+					{
+						// Guarantee that `system` unsubscribes from `service`.
+						system.unsubscribe(service);
+					}
+
+					// Remove the underlying `Service` instance internally.
+					systems.erase(it);
+
+					return true;
+				}
+
+				return false;
+			}
+
+			// Retrieves an instance of `SystemType`, if one exists, as well as its iterator in the internal container.
 			// If a `SystemType` object has not been registered, this will return `nullptr`.
 			template <typename SystemType>
-			inline SystemType* get_system()
+			inline std::tuple<SystemIterator, SystemType*> get_system_ex()
 			{
 				// Check if an instance of `SystemType` has been registered:
-				auto it = systems.find(entt::type_hash<SystemType>::value());
+				auto it = systems.find(key<SystemType>());
 
 				if (it == systems.end())
 				{
@@ -81,10 +142,21 @@ namespace engine
 
 				if (!ptr)
 				{
-					return nullptr;
+					return { systems.end(), nullptr};
 				}
 
-				return reinterpret_cast<SystemType*>(ptr);
+				return { std::move(it), reinterpret_cast<SystemType*>(ptr) };
+			}
+
+			// The `end` iterator of the internal `systems` container.
+			inline auto end_iterator() { return systems.end(); }
+
+			// Retrieves an instance of `SystemType`, if one exists.
+			// If a `SystemType` object has not been registered, this will return `nullptr`.
+			template <typename SystemType>
+			inline SystemType* get_system()
+			{
+				return std::get<1>(get_system_ex());
 			}
 			
 			// TODO: Look into rolling `register_behavior` and `unregister_behavior` into one routine.
@@ -137,12 +209,17 @@ namespace engine
 				If the underlying object-type of `system` is known, then it is safe
 				to `reinterpret_cast` back to the appropriate pointer-type from `System::data`.
 			*/
-			System& add_system(SystemID system_id, System&& system);
+			inline System& add_system(SystemID system_id, System&& system)
+			{
+				auto& any_instance = (systems[system_id] = std::move(system));
+
+				return any_instance;
+			}
 
 			// The service this system-manager is linked to.
-			Service& service;
+			ServiceType& service;
 
 			// Opaque map of type-hashes to systems and their resources.
-			std::unordered_map<SystemID, System> systems;
+			SystemCollection systems;
 	};
 }
