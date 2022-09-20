@@ -17,8 +17,8 @@ namespace app
 		public:
 			Graphics(app::Window& window, WindowFlags flags, bool vsync=true, bool extensions=true);
 
-			ref<graphics::Context> context;
-			ref<graphics::Canvas> canvas;
+			ref<::graphics::Context> context;
+			ref<::graphics::Canvas> canvas;
 
 			FrameCounter framerate = 0;
 
