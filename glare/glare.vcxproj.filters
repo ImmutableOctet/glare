@@ -463,6 +463,7 @@
     <ClInclude Include="src\engine\world\motion\motion_system.hpp" />
     <ClInclude Include="src\engine\world\physics\physics.hpp" />
     <ClInclude Include="src\engine\world\motion\motion.hpp" />
+    <ClInclude Include="src\engine\world\motion\ground.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\shaders\light_box.frag">
@@ -882,6 +883,7 @@
     <ClCompile Include="src\engine\world\physics\collision_events.cpp" />
     <ClCompile Include="src\engine\collision_shape_primitive.cpp" />
     <ClCompile Include="src\engine\world\motion\motion_system.cpp" />
+    <ClCompile Include="src\engine\world\motion\ground.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />

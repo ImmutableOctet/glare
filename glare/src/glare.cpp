@@ -48,6 +48,7 @@
 
 // Debugging related:
 #include <engine/world/physics/collision_component.hpp>
+#include <engine/world/motion/motion_component.hpp>
 #include <engine/types.hpp>
 #include <engine/world/zones/zones.hpp>
 #include <math/bullet.hpp>
@@ -77,6 +78,8 @@ namespace glare
 		// Debugging related:
 		//GLint value = 0; glGetIntegerv(GL_MAX_COMBINED_VERTEX_UNIFORM_COMPONENTS, &value); // GL_MAX_VERTEX_BINDABLE_UNIFORMS_EXT
 
+		auto& registry = world.get_registry();
+
 		auto cube = engine::load_model
 		(
 			world, "assets/objects/cube/cube.b3d", engine::null,
@@ -87,9 +90,16 @@ namespace glare
 			engine::CollisionGroup::All
 		);
 
-		attach_collision(world, cube, resource_manager.generate_sphere_collision(2.0f).collision_shape, engine::EntityType::Object);
-
 		world.set_name(cube, "Cube");
+
+		attach_collision(world, cube, resource_manager.generate_sphere_collision(2.0f).collision_shape, engine::EntityType::Object);
+		auto& cube_c = registry.get<engine::CollisionComponent>(cube);
+		cube_c.set_mass(0.5f);
+
+		world.transform_and_reset_collision(cube, [&](auto& cube_t)
+		{
+			cube_t.set_position({ -6.20467f, 166.5406f, 39.1254f });
+		});
 
 		auto cube2 = engine::load_model
 		(
@@ -101,36 +111,23 @@ namespace glare
 			engine::CollisionGroup::All
 		);
 
-		auto& resource_manager = world.get_resource_manager();
-
-		attach_collision(world, cube2, resource_manager.generate_sphere_collision(4.0f).collision_shape, engine::EntityType::Object);
-
 		world.set_name(cube2, "Cube2");
 
-		auto& registry = world.get_registry();
-
-		auto& cube_c = registry.get<engine::CollisionComponent>(cube);
-
-		cube_c.set_mass(0.5f);
-
+		attach_collision(world, cube2, resource_manager.generate_sphere_collision(4.0f).collision_shape, engine::EntityType::Object);
 		auto& cube2_c = registry.get<engine::CollisionComponent>(cube2);
-
 		cube2_c.set_mass(2.0f);
-
-		auto& camera_c = registry.get<engine::CollisionComponent>(world.get_camera());
-
-		camera_c.set_mass(2.0f);
-
-		world.transform_and_reset_collision(cube, [&](auto& cube_t)
-		{
-			cube_t.set_position({ -6.20467f, 166.5406f, 39.1254f });
-		});
 
 		world.transform_and_reset_collision(cube2, [&](auto& cube2_t)
 		{
 			//cube2_t.set_scale(4.0f);
 			cube2_t.set_position({ -6.20467f, 180.5406f, 39.1254f });
 		});
+
+		registry.emplace<engine::MotionComponent>(cube2);
+
+		auto& camera_c = registry.get<engine::CollisionComponent>(world.get_camera());
+
+		camera_c.set_mass(2.0f);
 
 		auto zone = create_zone(world, math::AABB { { -144.822, 150.215, -141.586 }, { -74.4793, 71.374, -203.555 } });
 		world.set_name(zone, "Zone");

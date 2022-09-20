@@ -2,6 +2,9 @@
 
 #include <engine/types.hpp>
 #include <engine/world/world_system.hpp>
+#include <engine/world/physics/collision_cast_result.hpp>
+
+#include <optional>
 
 namespace engine
 {
@@ -20,6 +23,17 @@ namespace engine
 	class MotionSystem : public WorldSystem
 	{
 		public:
+			struct EntityData
+			{
+				Entity entity;
+				
+				Transform& transform;
+				MotionComponent& motion;
+				CollisionComponent& collision;
+
+				float delta;
+			};
+
 			// TODO: Also look at orientation when determining down vector for surface response values.
 			// Ground threshold.
 			//static constexpr float GROUND = ...; // (Dot product value)
@@ -35,16 +49,17 @@ namespace engine
 			void on_update(World& world, float delta) override;
 
 			// TODO: Handle surface contact behaviors (alignment, etc.).
-			//void on_surface_contact(const OnSurfaceContact& surface);
+			void on_surface_contact(const OnSurfaceContact& surface);
 
-			void update_motion
+			std::optional<CollisionCastResult>
+			handle_ground_to_air
 			(
-				Entity entity,
-				Transform& transform,
-				MotionComponent& motion,
-				CollisionComponent& collision,
-				float delta
+				const EntityData& data,
+				const math::Vector& gravity_movement,
+				const math::Vector& projected_movement
 			);
+
+			void update_motion(const EntityData& data);
 
 			// Internal shorthand for `world.get_gravity()`.
 			math::Vector get_gravity() const;

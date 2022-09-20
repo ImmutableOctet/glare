@@ -266,6 +266,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\world\animation\skeletal_component.hpp" />
     <ClInclude Include="src\engine\world\behaviors\behaviors.hpp" />
     <ClInclude Include="src\engine\world\behaviors\meta.hpp" />
+    <ClInclude Include="src\engine\world\motion\ground.hpp" />
     <ClInclude Include="src\engine\world\motion\motion.hpp" />
     <ClInclude Include="src\engine\world\motion\motion_system.hpp" />
     <ClInclude Include="src\engine\world\physics\bullet_util\btClosestNotMeConvexResultCallback.hpp" />
@@ -452,6 +453,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\engine\world\animation\bone_component.cpp" />
     <ClCompile Include="src\engine\world\animation\skeletal_component.cpp" />
     <ClCompile Include="src\engine\world\behaviors\meta.cpp" />
+    <ClCompile Include="src\engine\world\motion\ground.cpp" />
     <ClCompile Include="src\engine\world\motion\motion_system.cpp" />
     <ClCompile Include="src\engine\world\physics\collision_component.cpp" />
     <ClCompile Include="src\engine\config.cpp" />
