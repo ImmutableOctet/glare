@@ -4,7 +4,7 @@
 
 #include "graphics_entity.hpp"
 
-#include "physics/motion_component.hpp"
+#include "motion/motion_component.hpp"
 #include "physics/collision.hpp"
 
 #include <util/string.hpp>
