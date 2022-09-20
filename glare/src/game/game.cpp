@@ -192,7 +192,7 @@ namespace game
 
 		if (mouse.locked())
 		{
-			input.poll(world.get_event_handler());
+			input.poll(world.get_active_event_handler());
 		}
 
 		world.update(time);
