@@ -2,9 +2,10 @@
 
 #include <engine/transform.hpp>
 #include <engine/world/world.hpp>
-#include <engine/world/physics/motion_component.hpp>
+#include <engine/world/motion/motion_component.hpp>
 
 #include <math/math.hpp>
+
 #include <cmath>
 
 namespace engine
