@@ -8,7 +8,6 @@
 #include "kinematic_resolution_config.hpp"
 
 #include "collision_events.hpp"
-#include "motion_events.hpp"
 
 #include "bullet_util/bullet_util.hpp"
 
