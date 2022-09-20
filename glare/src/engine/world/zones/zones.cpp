@@ -9,7 +9,7 @@
 namespace engine
 {
 	ZoneSystem::ZoneSystem(World& world)
-		: world(world)
+		: WorldSystem(world)
 	{}
 
 	void ZoneSystem::on_subscribe(World& world)

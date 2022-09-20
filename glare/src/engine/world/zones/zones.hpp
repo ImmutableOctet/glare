@@ -13,6 +13,7 @@
 namespace engine
 {
 	class World;
+	struct OnInteractionIntersection;
 
 	using ZoneTarget = std::variant<Entity, Entities, EntityType, EntityTypes>;
 	using ZoneCaptures = EntityOrEntities;
@@ -40,6 +41,8 @@ namespace engine
 
 	struct ZoneComponent
 	{
+		// Rules rules;
+
 		bool activated = false;
 	};
 
@@ -48,12 +51,13 @@ namespace engine
 		public:
 			ZoneSystem(World& world);
 
+			// TODO: Handle intersections.
+			//void on_interaction_intersection(const OnInteractionIntersection& intersection);
+
 			inline World& get_world() const { return world; }
 		protected:
 			void on_subscribe(World& world) override;
 			void on_update(World& world, float delta) override;
-
-			World& world;
 	};
 
 	Entity create_zone(World& world, const math::AABB& bounds, EntityType type=EntityType::EventTrigger, Entity parent=null, bool update_transform=true);
