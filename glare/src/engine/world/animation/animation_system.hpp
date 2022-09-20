@@ -24,7 +24,5 @@ namespace engine
 			void on_update(World& world, float delta_time) override;
 		protected:
 			void on_parent_changed(const OnParentChanged& parent_changed);
-
-			World& world;
 	};
 }

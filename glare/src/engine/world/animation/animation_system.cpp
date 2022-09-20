@@ -17,10 +17,8 @@
 namespace engine
 {
 	AnimationSystem::AnimationSystem(World& world)
-		: world(world)
-	{
-		world.subscribe(*this);
-	}
+		: WorldSystem(world)
+	{}
 
 	void AnimationSystem::on_subscribe(World& world)
 	{
