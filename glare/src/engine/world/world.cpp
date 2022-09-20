@@ -45,8 +45,8 @@ namespace engine
 	World::World(Config& config, ResourceManager& resource_manager, UpdateRate update_rate)
 		: config(config), resource_manager(resource_manager), delta_time(update_rate)
 	{
-		register_event<OnTransformChanged, &World::on_transform_change>();
-		register_event<OnEntityDestroyed, &World::on_entity_destroyed>();
+		register_event<OnTransformChanged, &World::on_transform_change>(*this);
+		register_event<OnEntityDestroyed, &World::on_entity_destroyed>(*this);
 
 		subscribe(resource_manager);
 

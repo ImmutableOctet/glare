@@ -71,38 +71,6 @@ namespace engine
 
 			virtual ~World();
 
-			// TODO: Re-route most of these template functions to their `Service` equivalents.
-
-			template <typename EventType, auto fn, typename obj_type>
-			inline void register_event(obj_type& obj)
-			{
-				event_handler.sink<EventType>().connect<fn>(obj);
-			}
-
-			template <typename EventType, auto fn, typename obj_type>
-			inline void unregister_event(obj_type& obj)
-			{
-				event_handler.sink<EventType>().disconnect<fn>(obj);
-			}
-
-			template <typename EventType, auto Fn>
-			inline void register_event()
-			{
-				register_event<EventType, Fn>(*this);
-			}
-
-			template <typename EventType, auto Fn>
-			inline void unregister_event()
-			{
-				unregister_event<EventType, Fn>(*this);
-			}
-
-			template <typename obj_type>
-			inline void unregister(obj_type& obj)
-			{
-				event_handler.disconnect(obj);
-			}
-
 			template <typename subscriber_type>
 			inline World& subscribe(subscriber_type& sub)
 			{
@@ -117,18 +85,6 @@ namespace engine
 				unregister(sub);
 
 				return *this;
-			}
-
-			template <typename EventType, auto fn>
-			inline void register_free_function()
-			{
-				event_handler.sink<EventType>().connect<fn>();
-			}
-
-			template <typename EventType, auto fn>
-			inline void unregister_free_function()
-			{
-				event_handler.sink<EventType>().disconnect<fn>();
 			}
 
 			Registry& get_registry() override;
