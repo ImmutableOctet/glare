@@ -2,13 +2,18 @@
 
 #include <engine/types.hpp>
 
+#include "ground.hpp"
+
 namespace engine
 {
 	class World;
 
 	struct MotionComponent
 	{
-		Entity ground = null;
+		// The most recent ground contact.
+		// If `on_ground` is true, this is the ground the entity is currently standing on.
+		// If `on_ground` is false, this represents the previous ground the entity contacted.
+		Ground ground;
 
 		math::Vector velocity = {};
 
@@ -24,7 +29,6 @@ namespace engine
 
 		// State:
 		bool on_ground         : 1 = false;
-		bool ground_is_static  : 1 = true;
 
 		//bool is_moving       : 1;
 		//bool most_last_frame : 1;
