@@ -1,14 +1,14 @@
-#include "physics.hpp"
-#include "motion_component.hpp"
+#include "physics_system.hpp"
 
 #include "collision.hpp"
+
 #include "collision_component.hpp"
-#include "collision_events.hpp"
-#include "collision_motion_state.hpp"
-
 #include "collision_cast.hpp"
-
+#include "collision_motion_state.hpp"
 #include "kinematic_resolution_config.hpp"
+
+#include "collision_events.hpp"
+#include "motion_events.hpp"
 
 #include "bullet_util/bullet_util.hpp"
 
@@ -48,7 +48,7 @@ namespace engine
 	// PhysicsSystem:
 	PhysicsSystem::PhysicsSystem(World& world)
 	:
-		world(world),
+		WorldSystem(world),
 
 		collision_configuration(std::make_unique<btDefaultCollisionConfiguration>()),
 		collision_dispatcher(std::make_unique<btCollisionDispatcher>(collision_configuration.get())),
@@ -68,10 +68,12 @@ namespace engine
 		world.subscribe(*this);
 	}
 
+	/*
 	PhysicsSystem::~PhysicsSystem()
 	{
 		unsubscribe(world);
 	}
+	*/
 
 	void PhysicsSystem::on_subscribe(World& world)
 	{
@@ -94,19 +96,7 @@ namespace engine
 	// TODO: We need to look at `OnTransformChanged`/`on_transform_change` and how it relates to the collision side of this routine.
 	void PhysicsSystem::on_update(World& world, float delta)
 	{
-		auto& registry = world.get_registry();
-
 		update_collision_world(delta);
-
-		auto view = registry.view<MotionComponent, CollisionComponent>(); // <TransformComponent, ...> (auto& tf_comp)
-
-		// Apply motion (gravity, velocity, deceleration, etc.) and resolve collisions between old and new positions:
-		view.each([&](auto entity, auto& motion, auto& collision)
-		{
-			auto transform = world.get_transform(entity);
-
-			update_motion(entity, transform, motion, collision, delta);
-		});
 	}
 
 	void PhysicsSystem::on_render(World& world, app::Graphics& graphics)
@@ -749,68 +739,6 @@ namespace engine
 		}
 
 		return ray_cast_to(*this, collision, destination, filter_group, filter_mask);
-	}
-
-	void PhysicsSystem::update_motion(Entity entity, Transform& transform, MotionComponent& motion, CollisionComponent& collision, float delta)
-	{
-		math::Vector movement = {};
-
-		if (motion.apply_gravity)
-		{
-			auto gravity = (get_gravity() * delta);
-
-			if (!motion.on_ground)
-			{
-				movement += gravity;
-			}
-
-			// Check gravity:
-			auto when_gravity_applied = (transform.get_position() + gravity);
-
-			auto ground = cast_to(collision, when_gravity_applied);
-
-			if (ground)
-			{
-				if (!motion.on_ground)
-				{
-					print("Hit the ground.");
-
-					motion.on_ground = true;
-				}
-			}
-			else
-			{
-				if (motion.on_ground)
-				{
-					print("Off ground");
-
-					motion.on_ground = false;
-				}
-			}
-
-			//cast_to(...)
-		}
-
-		if (motion.apply_velocity)
-		{
-			movement += (motion.velocity * delta);
-		}
-
-		auto decel = std::abs(motion.ground_deceleration);
-
-		if (decel > 0.0f)
-		{
-			if (glm::length(motion.velocity) > MIN_SPEED)
-			{
-				motion.velocity -= (motion.velocity * decel * delta); // math::Vector
-			}
-			else
-			{
-				motion.velocity = {};
-			}
-		}
-
-		transform.move(movement);
 	}
 
 	void PhysicsSystem::on_create_collider(Registry& registry, Entity entity)
