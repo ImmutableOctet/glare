@@ -28,7 +28,7 @@ namespace util
 
     // Last recursive pipeline phase. (1:1)
     template<typename CurrentPhase>
-    auto execute_phases(typename first_argument_type<CurrentPhase> input_value, CurrentPhase last_phase)
+    auto execute_phases(typename first_argument_type<CurrentPhase> input_value, CurrentPhase& last_phase)
     {
         return last_phase(input_value);
     }
@@ -41,22 +41,24 @@ namespace util
         (sizeof...(NextPhases) > 0),
         typename pipeline_output<CurrentPhase, NextPhases...>::type
     >::type
-    execute_phases(typename pipeline_input<CurrentPhase, NextPhases...>::type input_value, CurrentPhase current_phase, NextPhases... next_phases)
+    execute_phases(typename pipeline_input<CurrentPhase, NextPhases...>::type input_value, CurrentPhase current_phase, NextPhases&... next_phases)
     {
         return execute_phases(current_phase(input_value), next_phases...);
     }
 
     // Expand a tuple into variadic arguments, and apply `execute_phases`.
     template <typename InputValue, typename Phases, size_t... PhaseIndices>
-    constexpr auto execute_phases_expansion(InputValue& input_value, Phases& phases, std::index_sequence<PhaseIndices...>)
+    constexpr auto execute_phases_expansion(InputValue&& input_value, Phases& phases, std::index_sequence<PhaseIndices...>)
     {
-        return execute_phases(input_value, std::get<PhaseIndices>(phases)...);
+        //return execute_phases(input_value, std::get<PhaseIndices>(phases)...);
+        //return execute_phases(input_value, std::forward<PhaseIndices>(std::get<PhaseIndices>(phases))...);
+        return execute_phases(std::forward<InputValue>(input_value), std::get<PhaseIndices>(phases)...);
     }
 
     template <typename InputValue, typename Phases>
-    constexpr auto execute_phases_tuple(InputValue& input_value, Phases& phases)
+    constexpr auto execute_phases_tuple(InputValue&& input_value, Phases& phases)
     {
-        return execute_phases_expansion(input_value, phases, std::make_index_sequence<std::tuple_size<Phases>::value>{});
+        return execute_phases_expansion(std::forward<InputValue>(input_value), phases, std::make_index_sequence<std::tuple_size<Phases>::value>{});
     }
 
     // Creates a pipeline from multiple phases, supplied as template parameters. (see also: `make_pipeline`)

@@ -5,6 +5,8 @@
 
 #include "render_parameters.hpp"
 
+#include <engine/transform.hpp>
+
 namespace game
 {
 	class Game;
@@ -24,6 +26,7 @@ namespace engine
 	struct ModelComponent;
 	struct TransformComponent;
 	struct Relationship;
+	struct CameraParameters;
 
 	class RenderPhase;
 
@@ -103,6 +106,24 @@ namespace engine
 				graphics::CanvasDrawMode additional_draw_modes=graphics::CanvasDrawMode::None,
 				bool _combine_view_proj_matrices=false,
 				bool _bind_dynamic_textures=false
+			);
+
+			Transform get_camera_matrices
+			(
+				World& world,
+				const graphics::Viewport& viewport,
+				Entity camera, const engine::CameraParameters& camera_params,
+
+				math::Matrix& projection, math::Matrix& view
+			);
+
+			Transform get_camera_matrices
+			(
+				World& world,
+				const graphics::Viewport& viewport,
+				Entity camera,
+
+				math::Matrix& projection, math::Matrix& view
 			);
 
 			// Not required due to util::pipeline allowing for any return type to be passed forward, etc.

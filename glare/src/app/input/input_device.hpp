@@ -1,6 +1,14 @@
 #pragma once
 
 #include <engine/types.hpp>
+#include <entt/signal/dispatcher.hpp>
+
+/*
+namespace entt
+{
+	class dispatcher;
+}
+*/
 
 namespace app::input
 {
@@ -16,7 +24,7 @@ namespace app::input
 
 			inline State get_state() const { return state; }
 
-			inline State poll(engine::EventHandler& event_handler)
+			inline State poll(entt::dispatcher& event_handler) // engine::EventHandler&
 			{
 				this->state = peek();
 

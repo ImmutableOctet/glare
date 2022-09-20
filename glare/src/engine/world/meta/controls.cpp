@@ -5,10 +5,11 @@
 
 #include <engine/world/world.hpp>
 #include <engine/relationship.hpp>
-#include <engine/bone_component.hpp>
+#include <engine/world/animation/bone_component.hpp>
 #include <engine/transform.hpp>
-#include <engine/world/animator.hpp>
-#include <engine/world/animation.hpp>
+
+#include <engine/world/animation/animation.hpp>
+
 #include <graphics/animation.hpp>
 
 #include <math/math.hpp>

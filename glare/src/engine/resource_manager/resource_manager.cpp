@@ -1,4 +1,5 @@
 #include "resource_manager.hpp"
+#include "collision_data.hpp"
 
 #include <graphics/model.hpp>
 #include <graphics/shader.hpp>
@@ -7,6 +8,8 @@
 
 #include <memory>
 #include <tuple>
+
+#include <math/bullet.hpp>
 
 #include <util/string.hpp>
 #include <util/algorithm.hpp>
@@ -157,9 +160,28 @@ namespace engine
 		return shader;
 	}
 
-	CollisionData ResourceManager::generate_capsule_collision(float radius, float height) // ref<btCapsuleShape>
+	// TODO: Implement some form of caching/optimization for basic shapes.
+	CollisionData ResourceManager::generate_capsule_collision(float radius, float height)
 	{
 		return { std::static_pointer_cast<CollisionRaw>(std::make_shared<btCapsuleShape>(radius, height)) };
+	}
+
+	// TODO: Implement some form of caching/optimization for basic shapes.
+	CollisionData ResourceManager::generate_sphere_collision(float radius)
+	{
+		return { std::static_pointer_cast<CollisionRaw>(std::make_shared<btSphereShape>(radius)) };
+	}
+
+	// TODO: Implement some form of caching/optimization for basic shapes.
+	CollisionData ResourceManager::generate_cube_collision(float radius)
+	{
+		return generate_cube_collision({radius, radius, radius});
+	}
+
+	// TODO: Implement some form of caching/optimization for basic shapes.
+	CollisionData ResourceManager::generate_cube_collision(const math::Vector& size)
+	{
+		return { std::static_pointer_cast<CollisionRaw>(std::make_shared<btBoxShape>(math::to_bullet_vector(size))) };
 	}
 
 	const CollisionData* ResourceManager::get_collision(const WeakModelRef model) const
@@ -195,5 +217,50 @@ namespace engine
 	{
 		// TODO: Implement logic to handle different paths to the same resource.
 		return path;
+	}
+
+	CollisionData ResourceManager::generate_shape(const util::json& collision_data)
+	{
+		using enum CollisionShapePrimitive;
+
+		auto shape_primitive = collision_shape_primitive(util::get_value<std::string>(collision_data, "shape", "capsule"));
+
+		switch (shape_primitive)
+		{
+			case Capsule:
+			{
+				auto radius = util::get_value<float>(collision_data, "radius", 2.0f);
+				auto height = util::get_value<float>(collision_data, "height", 8.0f);
+
+				return generate_capsule_collision(radius, height);
+			}
+			case Cube:
+			{
+				if (collision_data.contains("size"))
+				{
+					auto size = util::get_vector(collision_data, "size", { 4.0f, 4.0f, 4.0f });
+
+					return generate_cube_collision(size);
+				}
+				
+				auto radius = util::get_value<float>(collision_data, "radius", 4.0f);
+
+				return generate_cube_collision(radius);
+			}
+			case Sphere:
+			{
+				auto radius = util::get_value<float>(collision_data, "radius", 4.0f);
+
+				return generate_sphere_collision(radius);
+			}
+
+			default:
+				// Unsupported shape primitive.
+				//assert(false);
+
+				break;
+		}
+
+		return {};
 	}
 }

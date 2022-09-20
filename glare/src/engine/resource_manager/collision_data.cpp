@@ -1,10 +1,13 @@
 #include "collision_data.hpp"
 
+#include <graphics/collision_geometry.hpp>
+#include <bullet/btBulletCollisionCommon.h>
+
 #include <memory>
 
 namespace engine
 {
-	CollisionShape CollisionData::build_mesh_shape(const CollisionGeometry& geometry_storage, bool optimize)
+	CollisionShape CollisionData::build_mesh_shape(const CollisionData::Geometry& geometry_storage, bool optimize)
 	{
 		auto desc = geometry_storage.mesh_interface.get(); // auto*
 
@@ -12,6 +15,7 @@ namespace engine
 
 		auto shape = std::make_shared<btBvhTriangleMeshShape>(desc, optimize); // std::shared_ptr<btTriangleMeshShape>
 
+		// Return the generated `shape` object as a pointer to a generic shape, rather than as a triangle-mesh shape. (Internally a `btCollisionShape` type)
 		return std::static_pointer_cast<CollisionRaw>(shape);
 	}
 

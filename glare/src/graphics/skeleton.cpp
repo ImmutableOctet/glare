@@ -2,6 +2,7 @@
 
 #include <assimp/mesh.h>
 
+#include <math/math.hpp>
 #include <util/string.hpp>
 
 namespace graphics

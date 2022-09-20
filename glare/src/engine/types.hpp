@@ -1,12 +1,11 @@
 #pragma once
 
-#include <entt/entt.hpp>
-#include <math/math.hpp>
 #include <types.hpp>
 #include <graphics/types.hpp>
 
-#include <vector>
+#include <entt/entt.hpp>
 
+// TODO: Look into removing this from the main 'types' header.
 namespace graphics
 {
 	struct Animation;
@@ -14,22 +13,22 @@ namespace graphics
 
 namespace engine
 {
+	// Standard forward declarations:
+	class World;
 	class ResourceManager;
+
+	// TODO: Look into removing this from the main 'types' header.
 	struct AnimationData;
 
-	class World;
-
+	// Aliases:
 	using Registry     = entt::registry;
 	using Entity       = entt::entity;
 	using EntityIDType = entt::id_type;
 	using EventHandler = entt::dispatcher;
 
-	using Spline = std::vector<math::Vector>;
-
-	using Animation = graphics::Animation;
-	using AnimationID = graphics::AnimationID;
-
-	using BoneID = graphics::BoneID;
+	using Animation    = graphics::Animation;
+	using AnimationID  = graphics::AnimationID;
+	using BoneID       = graphics::BoneID;
 
 	/*
 	template <typename... delegate_params>

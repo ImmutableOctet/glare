@@ -9,8 +9,9 @@
 ///#include <half/half.hpp>
 
 #include "types.hpp"
+
 #include <util/algorithm.hpp>
-#include <math/math.hpp>
+#include <math/types.hpp>
 
 #define DECLARE_ATTRIBUTE(vertex_type, member) Vertex::get_attribute<decltype(member)>(offsetof(vertex_type, member)) // Vertex::get_attribute
 
@@ -154,6 +155,8 @@ namespace graphics
 	using TexturedVertex = A_TexCoords<Vertex>;
 	using StandardVertex = A_Bitangent<A_Tangent<A_TexCoords<A_Normal<Vertex>>>>;
 	using StandardAnimationVertex = AnimatedVertex<StandardVertex>;
+
+	using SimpleColoredVertex = A_RGB<Vertex>;
 
 	static constexpr unsigned int VERTEX_MAX_BONE_INFLUENCE = 4;
 

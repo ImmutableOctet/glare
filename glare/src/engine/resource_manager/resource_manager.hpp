@@ -12,9 +12,15 @@
 #include <optional>
 
 #include <types.hpp>
+//#include <engine/types.hpp>
+
+#include <engine/collision_shape_primitive.hpp>
+
 #include <graphics/model.hpp>
 
-#include <engine/collision.hpp>
+#include <util/json.hpp>
+
+//#include <engine/world/physics/collision.hpp>
 
 #include "animation_data.hpp"
 #include "collision_data.hpp"
@@ -41,6 +47,9 @@ namespace engine
 	class WorldRenderer;
 
 	struct RenderScene;
+
+	// TODO: Revisit weak vs. strong references for caching.
+	// Theoretically we could use weak references but return strong references upon initial request.
 
 	struct Resources
 	{
@@ -115,29 +124,17 @@ namespace engine
 			) const;
 
 			ShaderRef get_shader(const std::string& vertex_path, const std::string& fragment_path, bool force_reload=false, bool cache_result=true) const; // const graphics::ShaderSource& shader_source
-
+			
 			// Optionally returns a pointer to a 'CollisionData' object for the 'model' specified.
 			//const CollisionData* get_collision(WeakModelRef model);
 
-			// TODO: Implement caching for primitive collision shapes.
-			// NOTE: When using this template, you should already have the desired collision shapes included from Bullet.
-			/*
-			template <typename... Args>
-			inline constexpr CollisionData get_collision_shape(CollisionShape shape, Args&&... args) const
-			{
-				switch (shape)
-				{
-					case CollisionShape::Capsule:
-						return std::static_pointer_cast<CollisionRaw>(std::make_shared<btCapsuleShape>(std::forward<Args>(args)...));
-					case CollisionShape::Box:
-						return std::static_pointer_cast<CollisionRaw>(std::make_shared<btBoxShape>(std::forward<Args>(args)...));
-				}
+			CollisionData generate_capsule_collision(float radius, float height);
+			CollisionData generate_sphere_collision(float radius);
+			CollisionData generate_cube_collision(float radius);
+			CollisionData generate_cube_collision(const math::Vector& size);
 
-				return nullptr;
-			}
-			*/
+			CollisionData generate_shape(const util::json& collision_data);
 
-			CollisionData generate_capsule_collision(float radius, float height); // ref<btCapsuleShape>
 			const CollisionData* get_collision(const WeakModelRef model) const;
 			const ref<AnimationData> get_animation_data(const WeakModelRef model) const;
 

@@ -65,5 +65,5 @@ namespace engine
 		}
 	};
 
-	Entity create_camera(World& world, CameraParameters params={}, Entity parent=null, bool make_active=false);
+	Entity create_camera(World& world, CameraParameters params={}, Entity parent=null, bool make_active=false, bool collision_enabled=false);
 }

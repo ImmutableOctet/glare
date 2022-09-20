@@ -6,7 +6,7 @@
 #include <tuple>
 //#include <vector>
 
-#include <math/math.hpp>
+#include <math/types.hpp>
 #include <engine/types.hpp>
 
 #include <spdlog/spdlog.h>

@@ -2,7 +2,6 @@
 #include "mesh.hpp"
 #include "material.hpp"
 
-#include <math/math.hpp>
 #include <engine/resource_manager/resource_manager.hpp>
 
 #include <algorithm>
@@ -73,30 +72,5 @@ namespace graphics
 		}
 
 		return {};
-	}
-	
-	Model::CollisionGeometry::CollisionGeometry(Container&& mesh_data)
-		: mesh_interface(std::make_unique<Descriptor>()), mesh_data(std::move(mesh_data))
-	{
-		constexpr auto ph_index_type = ((sizeof(SimpleMeshData::Index) == 4) ? PHY_INTEGER : PHY_SHORT);
-
-		for (const auto& m : this->mesh_data)
-		{
-			btIndexedMesh part = {};
-
-			part.m_vertexBase = reinterpret_cast<const unsigned char*>(m.vertices.data());
-			part.m_vertexStride = sizeof(SimpleMeshData::Vertex); // SimpleVertex
-			part.m_numVertices = static_cast<int>(m.vertices.size());
-
-			if (m.indices)
-			{
-				part.m_triangleIndexBase = reinterpret_cast<const unsigned char*>(m.indices->data());
-				part.m_triangleIndexStride = (sizeof(SimpleMeshData::Index) * 3); // 3 indices per-triangle.
-				part.m_numTriangles = static_cast<int>(m.indices->size() / 3); // 3 indices per-triangle.
-				part.m_indexType = ph_index_type;
-			}
-
-			mesh_interface->addIndexedMesh(part, ph_index_type);
-		}
 	}
 }

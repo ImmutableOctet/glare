@@ -20,6 +20,19 @@ namespace memory
 	template <typename T>
 	using pass_ref = const ref<T>&;
 
+	/*
+		A type-erased `unique_ptr` type:
+		Used to store uniquely-allocated objects without
+		the need to track type information and lifetimes.
+
+		Note: This type is only safe to use if the deleter function (provided during construction)
+		has the necessary static type information available.
+
+		For this reason, please use `make_unique_void` and similar factory
+		routines in order to construct objects of this type.
+	*/
+	using opaque_unique_ptr = std::unique_ptr<void, void(*)(void*)>;
+
 	// TODO: Swap with 'std::span'.
 	template <typename T>
 	struct array_view
@@ -58,5 +71,40 @@ namespace memory
 	unique_ref<T> unique(Args&&... args)
 	{
 		return (std::make_unique<T>(args...)); // std::forward<Args>(args)
+	}
+
+	/*
+		Allocates an object of type `T` as an opaque unique-pointer. For more details, please view `opaque_unique_ptr`.
+		Ownership of this object is tied to the lifetime of the returned `opaque_unique_ptr` object.
+		
+		To further reference the allocated `T` object, use `reinterpret_cast` on the result of `opaque_unique_ptr::get()` -- Example:
+		```
+		auto x = make_opaque<T>(...);
+		auto* x_as_t = reinterpret_cast<T>(x.get());
+
+		x_as_t->some_member_function();
+		```
+	*/
+	template <typename T, typename ...Args>
+	opaque_unique_ptr make_opaque(Args&&... args)
+	{
+		return opaque_unique_ptr
+		(
+			new T(std::forward<Args>(args)...),
+			[](void* ptr_no_type)
+			{
+				/*
+				Since this is an embedded lambda that already knows statically that `ptr_no_type` is of type `T` (since we're making `T` right away),
+				we can safely `reinterpret_cast` back to `T` in order to delete appropriately.
+				
+				`void_unique_ptr` stores a function-pointer to this deleter without needing to know what `T` is at runtime,
+				but as stated previously, we can already safely convert back to `T` as part of our opaque implementation.
+				*/
+				auto* ptr = reinterpret_cast<T*>(ptr_no_type);
+
+				//std::default_delete<T>(ptr)();
+				delete ptr;
+			}
+		);
 	}
 }

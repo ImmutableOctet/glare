@@ -304,6 +304,35 @@ namespace graphics
 				return GL_NONE;
 			}
 
+			static GLenum get_access_mode(BufferAccessMode access_mode)
+			{
+				switch (access_mode)
+				{
+					case BufferAccessMode::StaticCopy:
+						return GL_STATIC_COPY;
+					case BufferAccessMode::StaticDraw:
+						return GL_STATIC_DRAW;
+					case BufferAccessMode::StaticRead:
+						return GL_STATIC_READ;
+
+					case BufferAccessMode::DynamicCopy:
+						return GL_DYNAMIC_COPY;
+					case BufferAccessMode::DynamicDraw:
+						return GL_DYNAMIC_DRAW;
+					case BufferAccessMode::DynamicRead:
+						return GL_DYNAMIC_READ;
+
+					case BufferAccessMode::StreamCopy:
+						return GL_STREAM_COPY;
+					case BufferAccessMode::StreamDraw:
+						return GL_STREAM_DRAW;
+					case BufferAccessMode::StreamRead:
+						return GL_STREAM_READ;
+				}
+
+				return GL_STATIC_DRAW;
+			}
+
 			static GLenum get_format_from_channels(int channels, bool integer_format=false)
 			{
 				if (integer_format)
@@ -662,7 +691,7 @@ namespace graphics
 				switch (primitive)
 				{
 					case Primitive::Point:           return GL_POINTS;
-					case Primitive::Line:            return GL_LINE;
+					case Primitive::Line:            return GL_LINES;
 					case Primitive::LineLoop:        return GL_LINE_LOOP;
 					case Primitive::LineStrip:       return GL_LINE_STRIP;
 					case Primitive::Triangle:        return GL_TRIANGLES;
@@ -790,71 +819,88 @@ namespace graphics
 				return obj;
 			}
 			
-			static Flags handle_flag(ContextState& state, Flags flags, Flags target_flag, GLenum gl_target, bool value)
+			static bool handle_gl_flag(ContextState& state, Flags flags, Flags target_flag, GLenum gl_target, bool value)
 			{
 				if ((flags & target_flag))
 				{
 					if (value)
 					{
 						glEnable(gl_target);
-
-						state.flags |= target_flag;
 					}
 					else
 					{
-						state.flags &= target_flag;
-
 						glDisable(gl_target);
 					}
 				}
 
-				return state.flags;
+				return value;
 			}
 
 			static Flags set_flags(ContextState& state, Flags flags, bool value)
 			{
-				// TODO: Look into compile-time maps.
-				// (Data driven solution vs. code driven solution)
-				handle_flag(state, flags, Flags::DepthTest, GL_DEPTH_TEST, value);
-
-				bool swap_interval = (static_cast<int>(flags & Flags::VSync) > 0);
-
-				SDL_GL_SetSwapInterval(swap_interval);
-
-				// Depth-testing:
-				if ((flags & Flags::DepthTest))
+				// Depth testing:
+				if (handle_gl_flag(state, flags, Flags::DepthTest, GL_DEPTH_TEST, value))
 				{
 					glDepthFunc(GL_LESS);
 					//glDepthRange(0.0, 1.0);
 				}
 
-				// Face culling:
-				handle_flag(state, flags, Flags::FaceCulling, GL_CULL_FACE, value);
-
-				if ((flags & Flags::FaceCulling))
+				// Vertical sync:
+				if ((flags & Flags::VSync))
 				{
+					SDL_GL_SetSwapInterval(value);
+				}
+
+				// Face culling:
+				if (handle_gl_flag(state, flags, Flags::FaceCulling, GL_CULL_FACE, value))
+				{
+					// Default behavior:
+					glFrontFace(GL_CCW);
+					glCullFace(GL_BACK);
+
+					// Debugging related:
+
 					// Discard back-faces, keep front-faces.
 					//glCullFace(GL_FRONT_AND_BACK); // GL_FRONT // GL_BACK
 					//glCullFace(GL_FRONT);
 
-					// Default behavior:
-					glFrontFace(GL_CCW);
-					//glFrontFace(GL_CW);
-
 					//set_winding_order(VertexWinding::CounterClockwise);
 					//set_winding_order(VertexWinding::Clockwise);
-
-					glCullFace(GL_BACK);
+					
+					//glFrontFace(GL_CW);
 					//glCullFace(GL_FRONT);
+					
+					//glDisable(GL_CULL_FACE);
+					//glDisable(GL_DEPTH_TEST);
 				}
 
-				// Debugging related:
-				/*
-				//glFrontFace(GL_CCW);
-				glDisable(GL_CULL_FACE);
-				glDisable(GL_DEPTH_TEST);
-				*/
+				// Wireframe:
+				if ((flags & Flags::Wireframe))
+				{
+					if (value)
+					{
+						glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+					}
+					else
+					{
+						glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+					}
+				}
 
+				// Update the context-state to reflect the new flag values.
+				state.set_flag_value(flags, value);
+
+				// Return the updated flags.
+				return state.get_flags();
+			}
+
+			static bool get_flag(ContextState& state, Flags flags)
+			{
+				return state.enabled(flags);
+			}
+
+			static Flags get_flags(ContextState& state)
+			{
 				return state.get_flags();
 			}
 		protected:
@@ -1110,7 +1156,7 @@ namespace graphics
 		}
 
 		// Initial configuration:
-		toggle(flags, true);
+		set_flags(flags, true);
 
 		//glEnable(GL_DEPTH_TEST);
 
@@ -1132,9 +1178,19 @@ namespace graphics
 		delete reinterpret_cast<Driver*>(native_context);
 	}
 
-	Context::Flags Context::toggle(Flags flags, bool value)
+	Context::Flags Context::set_flags(Flags flags, bool value)
 	{
 		return Driver::set_flags(*state, flags, value);
+	}
+
+	Context::Flags Context::get_flags() const
+	{
+		return Driver::get_flags(*state);
+	}
+
+	bool Context::get_flag(Flags flag) const
+	{
+		return Driver::get_flag(*state, flag);
 	}
 
 	void Context::flip(app::Window& wnd)
@@ -1797,7 +1853,7 @@ namespace graphics
 		}
 	}
 
-	MeshComposition Context::generate_mesh(memory::memory_view vertices, std::size_t vertex_size, memory::array_view<VertexAttribute> attributes, memory::array_view<MeshIndex> indices) noexcept
+	MeshComposition Context::generate_mesh(memory::memory_view vertices, std::size_t vertex_size, memory::array_view<VertexAttribute> attributes, memory::array_view<MeshIndex> indices, BufferAccessMode access_mode) noexcept
 	{
 		assert(vertices);
 		assert(vertex_size);
@@ -1805,66 +1861,94 @@ namespace graphics
 
 		GLComposition mesh = {};
 
-		const void* vertex_data_offset = 0;
-		const bool indices_available = (indices.has_data());
-
 		glGenVertexArrays(1, &mesh.VAO);
 
 		// TODO: Handle shared VBOs for memory optimization:
 		glGenBuffers(1, &mesh.VBO);
 
-		if (indices_available)
+		if (indices.has_data())
 		{
 			glGenBuffers(1, &mesh.EBO);
 		}
 
-		// TODO: Potentially unify this implementation with standard bind operations.
-		glBindVertexArray(mesh.VAO);
+		// TODO: Look into unifying this implementation with standard bind operations.
+		auto mesh_comp = MeshComposition { mesh };
 
+		update_mesh(mesh_comp, vertices, vertex_size, attributes, indices, access_mode);
+
+		return mesh_comp;
+	}
+
+	void Context::update_mesh
+	(
+		MeshComposition& mesh, memory::memory_view vertices, std::size_t vertex_size,
+		memory::array_view<VertexAttribute> attributes, memory::array_view<MeshIndex> indices,
+		BufferAccessMode access_mode,
+		bool reuse_buffer_allocation, bool update_attributes
+	) noexcept
+	{
+		const GLintptr gpu_vertex_data_offset = 0;
+
+		glBindVertexArray(mesh.gl.VAO);
 
 		// Vertex Data:
-		glBindBuffer(GL_ARRAY_BUFFER, mesh.VBO);
+		glBindBuffer(GL_ARRAY_BUFFER, mesh.gl.VBO);
 
-		// TODO: Handle Static vs. Dynamic mesh data.
-		glBufferData(GL_ARRAY_BUFFER, (vertices.size() * vertex_size), vertices.data(), GL_STATIC_DRAW);
-
-		// Index Data:
-		if (indices_available)
+		if (reuse_buffer_allocation)
 		{
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.EBO);
-
-			// TODO: Handle Static vs. Dynamic mesh data. (Less of a problem for indices)
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, (indices.size() * sizeof(MeshIndex)), indices.data(), GL_STATIC_DRAW);
+			glBufferSubData(GL_ARRAY_BUFFER, gpu_vertex_data_offset, (vertices.size() * vertex_size), vertices.data());
+		}
+		else
+		{
+			glBufferData(GL_ARRAY_BUFFER, (vertices.size() * vertex_size), vertices.data(), Driver::get_access_mode(access_mode)); // GL_STATIC_DRAW
 		}
 
+		// Index Data:
+		if (indices.has_data())
+		{
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.gl.EBO);
+
+			if (reuse_buffer_allocation)
+			{
+				glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, gpu_vertex_data_offset, (indices.size() * sizeof(MeshIndex)), indices.data());
+			}
+			else
+			{
+				// TODO: Handle Static vs. Dynamic mesh data. (Less of a problem for indices)
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER, (indices.size() * sizeof(MeshIndex)), indices.data(), Driver::get_access_mode(access_mode)); // GL_STATIC_DRAW
+			}
+		}
+
+		// Attributes:
 		const auto* fields = attributes.data();
 
 		// TODO: Look into unsigned sizes.
-		for (std::size_t i = 0; i < (attributes.size()); i++) // static_cast<int>(...)
+		if ((update_attributes) || (!reuse_buffer_allocation))
 		{
-			const auto& attribute = fields[i];
+			for (std::size_t i = 0; i < (attributes.size()); i++) // static_cast<int>(...)
+			{
+				const auto& attribute = fields[i];
 
-			const auto index = static_cast<GLuint>(i);
-			const auto type = Driver::get_element_type(attribute.type);
-			const auto element_count = static_cast<GLint>(attribute.num_elements);
-			const auto stride = static_cast<GLsizei>(vertex_size);
+				const auto index = static_cast<GLuint>(i);
+				const auto type = Driver::get_element_type(attribute.type);
+				const auto element_count = static_cast<GLint>(attribute.num_elements);
+				const auto stride = static_cast<GLsizei>(vertex_size);
 
-			const void* offset = (reinterpret_cast<const std::int8_t*>(vertex_data_offset) + attribute.offset);
+				const void* offset = (reinterpret_cast<const std::int8_t*>(gpu_vertex_data_offset) + attribute.offset);
 
-			assert(type != GL_NONE);
+				assert(type != GL_NONE);
 
-			glEnableVertexAttribArray(index);
+				glEnableVertexAttribArray(index);
 
-			// TODO: Look into normalization flag for OpenGL driver.
-			glVertexAttribPointer(index, element_count, type, GL_FALSE, stride, offset);
+				// TODO: Look into normalization flag for OpenGL driver.
+				glVertexAttribPointer(index, element_count, type, GL_FALSE, stride, offset);
+			}
 		}
 
 		glBindVertexArray(GL_NONE);
-
-		return { mesh };
 	}
 
-	void Context::release_mesh(MeshComposition&& mesh)
+	void Context::release_mesh(MeshComposition&& mesh) noexcept
 	{
 		const auto& native_rep = mesh.gl;
 

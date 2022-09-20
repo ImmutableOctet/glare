@@ -1,7 +1,7 @@
 #pragma once
 
 #include <types.hpp>
-#include <math/math.hpp>
+#include <math/types.hpp>
 
 #include <utility>
 
@@ -304,6 +304,7 @@ namespace graphics
 		DepthTest        = (1 << 1),
 		FaceCulling      = (1 << 2),
 		VSync            = (1 << 3),
+		Wireframe        = (1 << 4),
 
 		Default          = (DepthTest|FaceCulling|VSync),
 	};
@@ -354,6 +355,25 @@ namespace graphics
 		DepthStencil,
 
 		Unknown,
+	};
+
+	// Used to describe how vertex data will be accessed.
+	enum class BufferAccessMode : std::uint8_t
+	{
+		// Static:
+		StaticCopy,
+		StaticDraw,
+		StaticRead,
+		
+		// Dynamic:
+		DynamicCopy,
+		DynamicDraw,
+		DynamicRead,
+
+		// Stream:
+		StreamCopy,
+		StreamDraw,
+		StreamRead,
 	};
 
 	using Vector = math::Vector;

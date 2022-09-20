@@ -11,7 +11,9 @@
 #include <optional>
 
 #include <util/memory.hpp>
-#include <math/math.hpp>
+
+// TODO: Look into removing/replacing this.
+#include <math/types.hpp>
 
 #include "types.hpp"
 

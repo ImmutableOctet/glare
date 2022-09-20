@@ -35,7 +35,7 @@ namespace engine
 
 				shader_preprocessor
 			)
-		) {} 
+		) {}
 
 	const RenderParameters& DeferredShadingPhase::operator()(const RenderParameters& parameters)
 	{

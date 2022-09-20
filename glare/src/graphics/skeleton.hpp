@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <string_view>
 
-#include <math/math.hpp>
+#include <math/types.hpp>
 
 #include "types.hpp"
 

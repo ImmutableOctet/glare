@@ -1,89 +1,14 @@
 #pragma once
 
-#define GLM_FORCE_CTOR_INIT
+#include "types.hpp"
 
-#include <types.hpp>
-
-//#include <cmath>
-#include <glm/glm.hpp>
-#include <glm/gtx/quaternion.hpp>
-//#include <glm/gtc/quaternion.hpp>
-#include <glm/mat3x4.hpp>
-
-#include <assimp/vector3.h>
-#include <assimp/matrix4x4.h>
-#include <assimp/Quaternion.h>
-
-#include <tuple>
-
-// Bullet types:
-class btVector3;
-class btTransform;
-
-// Assimp types:
-//class aiVector3D;
+#include "aabb.hpp"
+#include "conversion.hpp"
 
 namespace math
 {
-	// Types:
-	using Vector2D = glm::vec2; using vec2f = Vector2D; using vec2 = vec2f;
-	using Vector3D = glm::vec3; using vec3f = Vector3D; using vec3 = vec3f;
-	using Vector4D = glm::vec4; using vec4f = Vector4D; using vec4 = vec4f;
-
-	using vec3i = glm::ivec3;
-	using vec2i = glm::ivec2;
-	using vec4i = glm::ivec4;
-
-	using Matrix2x2 = glm::mat2; using mat2f = Matrix2x2; using mat2 = mat2f;
-	using Matrix3x3 = glm::mat3; using mat3f = Matrix3x3; using mat3 = mat3f;
-	using Matrix4x4 = glm::mat4; using mat4f = Matrix4x4; using mat4 = mat4f;
-
-	//using AffineMatrix4 = glm::mat4x4;
-	using AffineMatrix4 = glm::mat3x4;
-	using affine_mat4 = AffineMatrix4;
-
-	using Vector = Vector3D;
-	using Matrix = Matrix4x4; // AffineMatrix4;
-	using RotationMatrix = Matrix3x3;
-
-	using Quaternion = glm::quat;
-	using Quat = Quaternion;
-
-	using TransformVectors = std::tuple<Vector, Vector, Vector>; // Position, Rotation, Scale
-
 	template <typename T>
-	static constexpr T _Pi = static_cast<T>(3.141592653589793); // M_PI
-
-	static constexpr auto Pi = _Pi<float>;
-
-	template <typename T>
-	inline constexpr T degrees(T r)
-	{
-		static constexpr T R_TO_DEG = (static_cast<T>(180) / _Pi<T>);
-
-		return (r * R_TO_DEG);
-	}
-
-	inline constexpr Vector degrees(Vector r)
-	{
-		return { degrees(r.x), degrees(r.y), degrees(r.z) };
-	}
-
-	template <typename T>
-	inline constexpr T radians(T d)
-	{
-		static constexpr T DEG_TO_R = (_Pi<T> / static_cast<T>(180));
-
-		return (d * DEG_TO_R);
-	}
-
-	inline constexpr Vector radians(Vector d)
-	{
-		return { radians(d.x), radians(d.y), radians(d.z) };
-	}
-
-	template <typename T>
-	inline T sq(T x)
+	inline T sq(const T& x)
 	{
 		return (x * x);
 	}
@@ -100,9 +25,9 @@ namespace math
 	template <typename mat_type>
 	inline Vector3D get_scaling(const mat_type& m) // Matrix
 	{
-		auto i_l = glm::length(m[0]);
-		auto j_l = glm::length(m[1]);
-		auto k_l = glm::length(m[2]);
+		const auto i_l = glm::length(m[0]);
+		const auto j_l = glm::length(m[1]);
+		const auto k_l = glm::length(m[2]);
 
 		return { i_l, j_l, k_l };
 	}
@@ -126,8 +51,8 @@ namespace math
 
 	inline Vector3D operator*(const Matrix4x4& m, const Vector3D& v)
 	{
-		auto v4d = Vector4D(v, 0.0f);
-		auto mv = (m * v4d);
+		const auto v4d = Vector4D(v, 0.0f);
+		const auto mv = (m * v4d);
 
 		return Vector3D(mv);
 	}
@@ -149,22 +74,13 @@ namespace math
 
 	inline Vector3D to_vector(const Vector3D& v) { return v; }
 
-	Vector3D to_vector(const btVector3& v);
-	Vector3D to_vector(const aiVector3D& v);
-
-	Matrix to_matrix(const btTransform& t);
-	Matrix to_matrix(const aiMatrix4x4& m);
-
-	Quaternion to_quat(const aiQuaternion& q); // to_quaternion(...)
-	Quaternion to_quat_flipped(const aiQuaternion& q);
-
-	Vector abs(Vector v);
+	Vector abs(const Vector& v);
 
 	float direction_to_angle(const Vector2D& dir);
 	float direction_to_yaw(const Vector& dir); // Vector3D
 
 	template <typename T>
-	inline T clamp(T value, T min_value, T max_value)
+	inline T clamp(const T& value, const T& min_value, const T& max_value)
 	{
 		if (value <= min_value)
 		{
@@ -191,21 +107,21 @@ namespace math
 	}
 
 	template <typename T_Value, typename T_Delta>
-	inline auto lerp(T_Value value, T_Value dest, T_Delta delta)
+	inline auto lerp(T_Value&& value, T_Value&& dest, T_Delta&& delta)
 	{
 		return (value + ((dest - value) * delta));
 	}
 
-	inline Vector nlerp(Vector a, Vector b, float speed)
+	inline Vector nlerp(const Vector& a, const Vector& b, float speed)
 	{
 		return glm::normalize(lerp(a, b, speed));
 
 		//return (a + (glm::normalize(b - a) * speed));
 	}
 
-	float nlerp_radians(Vector origin, Vector destination, float speed);
+	float nlerp_radians(const Vector& origin, const Vector& destination, float speed);
 
-	inline float nlerp_degrees(Vector origin, Vector destination, float speed)
+	inline float nlerp_degrees(const Vector& origin, const Vector& destination, float speed)
 	{
 		return degrees(nlerp_radians(origin, destination, speed));
 	}
@@ -217,31 +133,28 @@ namespace math
 		return degrees(nlerp_radians(degrees(origin), degrees(destination), speed));
 	}
 
-	Quaternion slerp(Quaternion v0, Quaternion v1, float t);
-}
+	// NOTE:
+	// If `v0` and `v1` are already normalized, you can safely call
+	// `slerp_unnormalized` instead for a minor performance improvement.
+	Quaternion slerp(const Quaternion& v0, const Quaternion& v1, float t);
 
-namespace graphics
-{
-	using ColorRGB = math::vec3f;
-	using ColorRGBA = math::vec4f;
+	// Same as `slerp`, but skips the normalization step.
+	Quaternion slerp_unnormalized(Quaternion v0, Quaternion v1, float t);
 
-	using Color = ColorRGB;
-}
+	// Utility function; provides the cross-product (third direction-vector) of `normal` and `adjacent`.
+	// See also: `get_surface_slope`.
+	math::Vector get_surface_forward
+	(
+		const math::Vector& normal,
+		const math::Vector& adjacent={1.0f, 0.0f, 0.0f}
+	);
 
-template <typename OutStream>
-inline auto& operator<<(OutStream& os, const math::Vector& v)
-{
-	os << v.x << ", " << v.y << ", " << v.z;
-
-	return os;
-}
-
-template <typename OutStream>
-inline auto& operator<<(OutStream& os, const math::TransformVectors& v)
-{
-	os << "{" << std::get<0>(v) << "}, ";
-	os << "{" << std::get<1>(v) << "}, ";
-	os << "{" << std::get<2>(v) << "}";
-
-	return os;
+	// Returns the slope of the surface (`normal`)
+	// from the approach angle (`angle`).
+	float get_surface_slope
+	(
+		const math::Vector& normal,
+		const math::Vector& angle,
+		const math::Vector& adjacent={1.0f, 0.0f, 0.0f}
+	);
 }

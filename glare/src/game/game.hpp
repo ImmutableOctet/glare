@@ -6,14 +6,22 @@
 
 #include "graphics.hpp"
 
+#include <util/memory.hpp>
+
 #include <graphics/types.hpp>
 
 #include <engine/config.hpp>
+#include <engine/input_events.hpp>
 #include <engine/resource_manager/resource_manager.hpp>
+
 #include <engine/world/world.hpp>
+#include <engine/world/world_system.hpp>
+#include <engine/system_manager.hpp>
+
 #include <engine/world/render/world_renderer.hpp>
 
 #include <util/shorthand.hpp>
+#include <utility>
 
 namespace graphics
 {
@@ -23,6 +31,11 @@ namespace graphics
 namespace engine
 {
 	struct WorldRenderState;
+
+	//struct OnMouseState;
+	//struct OnKeyboardState;
+
+	using WorldSystemManager = SystemManager<World>;
 }
 
 namespace game
@@ -39,8 +52,9 @@ namespace game
 			Effects effects;
 
 			engine::ResourceManager resource_manager;
+			
 			engine::World world;
-
+			engine::WorldSystemManager systems;
 			engine::WorldRenderer renderer;
 		public:
 			Game
@@ -57,6 +71,13 @@ namespace game
 
 				unique_ref<engine::RenderPipeline>&& rendering_pipeline=nullptr
 			);
+
+			// Alias for `emplace_system`; allocates a system internally and returns a reference to it.
+			template <typename SystemType, typename...Args>
+			inline SystemType& system(Args&&... args) { return systems.emplace_system<SystemType>(std::forward<Args>(args)...); }
+
+			template <typename BehaviorType>
+			inline void behavior() { systems.register_behavior<BehaviorType>(); }
 
 			inline engine::World& get_world() { return world; }
 

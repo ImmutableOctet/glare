@@ -1,128 +1,123 @@
 #include "player.hpp"
 #include "world.hpp"
-#include "physics.hpp"
+#include "entity.hpp"
+
+#include "graphics_entity.hpp"
+
+#include "motion/motion_component.hpp"
+#include "physics/collision.hpp"
 
 #include <util/string.hpp>
+#include <util/log.hpp>
 
 #include <engine/resource_manager/resource_manager.hpp>
 #include <engine/name_component.hpp>
-#include <engine/collision.hpp>
 
 //#include <bullet/BulletCollision/CollisionShapes/btCapsuleShape.h>
 #include <bullet/btBulletCollisionCommon.h>
 
 #include <algorithm>
-#include <string>
-
-// Debugging related:
-#include <iostream>
+#include <fstream>
+#include <utility>
 
 #include <engine/model_component.hpp>
 
 namespace engine
 {
 	const char* DEFAULT_PLAYER_NAME = "Player";
+	const char* DEFAULT_CHARACTER = "Glare";
+	const char* DEFAULT_CHARACTER_ROOT_PATH = "assets/characters";
 
-    Entity create_player(World& world, const math::TransformVectors& tform, Character character, const std::string& name, Entity parent, PlayerIndex index)
-    {
-		auto [position, rotation, scale] = tform;
+	CharacterData load_character_data
+	(
+		const std::string& character,
+		const filesystem::path& root_path
+	)
+	{
+		util::json character_data;
 
-		auto& registry = world.get_registry();
+		std::filesystem::path character_path = root_path;
 
-		std::string model_path;
+		character_path /= character;
 
-		float c_mass = 1.0f;
-		float c_gravity = 1.0f;
+		std::string character_name;
 
-		switch (character)
+		print("Loading player JSON...");
+
+		try
 		{
-			case engine::Character::Glare:
-				////model_path = "assets/characters/test/character.b3d";
+			std::ifstream player_data_stream((character_path / "character.json"));
 
-				//model_path = "assets/geometry/sphere.b3d";
-				//model_path = "assets/geometry/torus.b3d";
-				
-				//model_path = "assets/characters/sonic/sonic.b3d";
-				//model_path = "assets/objects/turret/turret.b3d";
-				model_path = "assets/geometry/Multi_Torus.b3d";
-				//model_path = "assets/geometry/direction_boxes-4.b3d";
+			character_data = util::json::parse(player_data_stream);
 
-				///model_path = "assets/geometry/Multi_Torus_Pose.b3d";
-				
+			character_name = util::get_value<std::string>(character_data, "name", character);
+		}
+		catch (std::exception& e)
+		{
+			print_warn("Error parsing JSON file: {}", e.what());
 
-				//model_path = "assets/geometry/boxes.b3d";
-				//model_path = "assets/geometry/direction_boxes.b3d";
-				//model_path = "assets/geometry/direction_boxes-2.b3d";
-				//model_path = "assets/geometry/direction_boxes-3.b3d";
-				//model_path = "assets/geometry/direction_boxes-move-up.b3d";
-				//model_path = "assets/geometry/direction_boxes-move-left.b3d";
-				//model_path = "assets/geometry/direction_boxes-move-forward.b3d";
-				//model_path = "assets/geometry/direction_boxes-scale.b3d";
-				//model_path = "assets/geometry/direction_boxes-rotate-x.b3d";
-				//model_path = "assets/geometry/direction_boxes-rotate-y.b3d";
-				
-				///model_path = "assets/geometry/direction_boxes-rotate-z.b3d";
-
-				//model_path = "assets/geometry/anims_with_full_rotations_between_keys.dae";
-				
-				//model_path = "assets/geometry/vampire/dancing_vampire.dae";
-				//model_path = "assets/geometry/direction_boxes.b3d";
-				//model_path = "assets/objects/skeleton_test/a.b3d";
-
-				//model_path = "assets/characters/nanosuit/nanosuit.obj";
-
-				break;
-			default:
-				//assert(false, "Invalid character specified.");
-
-				break;
+			assert(false);
 		}
 
-		//auto player = load_model(world, "assets/tests/model_test/cube.b3d", parent, EntityType::Player);
-		auto player = create_pivot(world, parent, EntityType::Player);
-		
-		auto player_model = load_model(world, model_path, player);
+		return { std::move(character_name), std::move(character_path), std::move(character_data) };
+	}
+
+	Entity load_player_model(World& world, Entity player, const util::json& model_data, const std::filesystem::path& base_path)
+	{
+		auto& registry = world.get_registry();
+
+		auto model_path = (base_path / util::get_value<std::string>(model_data, "path"));
+
+		auto player_model = load_model(world, model_path.string(), player);
+
+		if (model_data.contains("offset"))
+		{
+			auto tform = world.get_transform(player_model);
+
+			tform.set_local_position(util::get_vector(model_data, "offset"));
+		}
 		
 		registry.emplace_or_replace<NameComponent>(player_model, "model");
 
-		registry.emplace<NameComponent>(player, name);
+		return player_model;
+	}
 
-		world.apply_transform(player, tform);
-
-		attach_physics(world, player, MotionFlags::StandardMovement);
-
+	void generate_player_collision(World& world, Entity player, const util::json& collision_data)
+	{
 		auto& resource_manager = world.get_resource_manager();
+		auto shape_data = resource_manager.generate_shape(collision_data);
 
-		auto collision_data = resource_manager.generate_capsule_collision(1.0f, 2.0f); // get_collision_shape(CollisionShape::Capsule, 1.0f, 2.0f);
+		attach_collision(world, player, shape_data.collision_shape, EntityType::Player);
+	}
 
-		float mass = 1.0f;
+    Entity create_player
+	(
+		World& world,
+		const CharacterData& character_data,
+		const std::string& name,
+		Entity parent,
+		PlayerIndex index
+	)
+    {
+		const auto& character_name = std::get<0>(character_data);
+		const auto& character_path = std::get<1>(character_data);
+		const auto& character      = std::get<2>(character_data);
 
-		//auto interaction_mask = CollisionGroup::All;
-		auto solid_mask = CollisionGroup::Actor;
+		auto& registry = world.get_registry();
 
-		attach_collision(world, player, collision_data.collision_shape, EntityType::Player, mass);
+		auto player = create_pivot(world, parent, EntityType::Player);
+
+		world.set_name(player, ((name.empty()) ? character_name : name));
 
 		registry.emplace<PlayerState>(player, PlayerState::Action::Default, index);
+		
+		registry.emplace<MotionComponent>(player);
+
+		load_player_model(world, player, character["model"], character_path);
+		generate_player_collision(world, player, character["collision"]);
 
 		//world.set_parent(camera, player);
 
 		return player;
     }
-	
-	Entity create_player(World& world, math::Vector position, Character character, const std::string& name, Entity parent, PlayerIndex index)
-	{
-		return create_player(world, { position, { 0.0f, math::radians(180.0f), 0.0f }, { 1.0f, 1.0f, 1.0f } }, character, name, parent, index);
-	}
-
-	Character get_character(const std::string& char_name)
-	{
-		std::string name = util::lowercase(char_name);
-
-		if (name == "glare") // "default"
-		{
-			return Character::Glare;
-		}
-
-		return Character::Default;
-	}
 }

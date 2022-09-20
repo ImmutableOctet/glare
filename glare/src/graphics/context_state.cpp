@@ -112,4 +112,16 @@ namespace graphics
 
 		return false;
 	}
+
+	void ContextState::set_flag_value(Flags flag, bool value)
+	{
+		if (value)
+		{
+			this->flags |= flag;
+		}
+		else
+		{
+			this->flags &= ~flag;
+		}
+	}
 }

@@ -1,19 +1,16 @@
 #include "world.hpp"
+
 #include "entity.hpp"
 #include "camera.hpp"
-#include "physics.hpp"
 #include "player.hpp"
 #include "stage.hpp"
+#include "light.hpp"
 
-#include "animator.hpp"
-#include "spin_component.hpp"
-#include "target_component.hpp"
-#include "follow_component.hpp"
-#include "billboard_behavior.hpp"
-#include "rave_component.hpp"
+//#include "animator.hpp"
+#include "graphics_entity.hpp"
 
-#include "debug/debug_camera.hpp"
-#include "debug/debug_move.hpp"
+#include "animation/bone_component.hpp"
+#include "physics/collision_component.hpp"
 
 #include <math/math.hpp>
 
@@ -28,16 +25,12 @@
 #include <graphics/shader.hpp>
 
 #include <engine/config.hpp>
-#include <engine/collision.hpp>
 #include <engine/resource_manager/resource_manager.hpp>
-#include <engine/free_look.hpp>
 #include <engine/relationship.hpp>
-#include <engine/transform.hpp>
-#include <engine/type_component.hpp>
-#include <engine/bone_component.hpp>
 
-//#include <engine/name_component.hpp>
-#include <engine/components.hpp>
+#include <engine/type_component.hpp>
+#include <engine/name_component.hpp>
+
 #include <app/input/input.hpp>
 
 #include <algorithm>
@@ -45,25 +38,17 @@
 #include <utility>
 //#include <filesystem>
 
-#include <bullet/btBulletCollisionCommon.h>
-
-// Debugging related:
-#include <iostream>
+//#include <bullet/btBulletCollisionCommon.h>
 
 namespace engine
 {
 	World::World(Config& config, ResourceManager& resource_manager, UpdateRate update_rate)
 		: config(config), resource_manager(resource_manager), delta_time(update_rate)
 	{
-		register_event<app::input::MouseState,    &World::on_mouse_input>();
-		register_event<app::input::KeyboardState, &World::on_keyboard_input>();
-		register_event<OnComponentAdd<engine::CollisionComponent>, &World::on_new_collider>();
-		register_event<OnTransformChange, &World::on_transform_change>();
-		register_event<OnEntityDestroyed, &World::on_entity_destroyed>();
+		register_event<OnTransformChanged, &World::on_transform_change>(*this);
+		register_event<OnEntityDestroyed, &World::on_entity_destroyed>(*this);
 
 		subscribe(resource_manager);
-		subscribe(physics);
-		subscribe(animation);
 
 		root = create_pivot(*this);
 		set_name(root, "Root");
@@ -91,24 +76,21 @@ namespace engine
 
 	World::~World()
 	{
-		// Not actually needed:
-		/*
-		unsubscribe(resource_manager);
-		unsubscribe(physics);
-		unsubscribe(animation);
-		*/
+		// unsubscribe(...);
 	}
 
-	Entity World::load(const filesystem::path& root_path, bool override_current, const std::string& json_file)
+	Registry& World::get_registry()
 	{
-		bool is_child_stage = (!override_current) && (stage != null);
-		auto parent = root;
+		return registry;
+	}
 
-		if (is_child_stage)
-		{
-			parent = stage;
-		}
+	const Registry& World::get_registry() const
+	{
+		return registry;
+	}
 
+	Entity World::load(const filesystem::path& root_path, const std::string& json_file, Entity parent)
+	{
 		auto map_data_path = (root_path / json_file).string();
 		
 		print("Loading map from \"{}\"...", map_data_path);
@@ -123,12 +105,7 @@ namespace engine
 
 			print("Loading...");
 
-			auto map = Stage::Load(*this, parent, root_path, map_data); // { .geometry = false }
-
-			if (!is_child_stage)
-			{
-				stage = map;
-			}
+			auto map = Stage::Load(*this, root_path, map_data, parent); // { .geometry = false }
 
 			event<OnStageLoaded>(map, root_path);
 
@@ -151,17 +128,10 @@ namespace engine
 		delta_time << time;
 
 		// Update systems:
-		Service::update();
+		Service::update(delta_time);
 
-		physics.update(*this, delta_time);
-		animation.update(*this, delta_time);
-
-		SpinBehavior::update(*this);
-		TargetComponent::update(*this);
-		SimpleFollowComponent::update(*this);
-		BillboardBehavior::update(*this);
-		RaveComponent::update(*this);
-
+		// TODO: Look into workarounds for collision objects updating a frame behind.
+		// Handle changes in entity transforms.
 		handle_transform_events(delta_time);
 	}
 
@@ -172,9 +142,11 @@ namespace engine
 		{
 			tf.on_flag(TransformComponent::Flag::EventFlag, [this, entity]()
 			{
-				this->queue_event<OnTransformChange>(entity);
+				//this->queue_event<OnTransformChanged>(entity);
+				this->event<OnTransformChanged>(entity);
 			});
 
+			// Already handled by `on_flag`.
 			//tf.validate(TransformComponent::Dirty::EventFlag);
 		});
 
@@ -210,6 +182,14 @@ namespace engine
 		transform.apply(tform);
 
 		return transform;
+	}
+
+	void World::apply_transform_and_reset_collision(Entity entity, const math::TransformVectors& tform_data)
+	{
+		transform_and_reset_collision(entity, [&tform_data](Transform& tform)
+		{
+			tform.apply(tform_data);
+		});
 	}
 
 	Transform World::set_position(Entity entity, const math::Vector& position)
@@ -446,58 +426,54 @@ namespace engine
 		return null;
 	}
 
-	void World::add_camera(Entity camera, bool make_active)
+	math::Vector World::get_gravity() const
+	{
+		return properties.gravity;
+	}
+
+	void World::set_gravity(const math::Vector& gravity)
+	{
+		// Temporarily store the old gravity vector.
+		auto old_gravity = properties.gravity;
+		
+		// Assign the newly provided gravity vector.
+		properties.gravity = gravity;
+
+		// Notify listeners that the world's gravity has changed.
+		event<OnGravityChanged>(old_gravity, gravity);
+	}
+
+	void World::set_properties(const WorldProperties& properties)
+	{
+		constexpr bool trigger_events = true;
+
+		// Event-enabled properties:
+		if constexpr (trigger_events)
+		{
+			set_gravity(properties.gravity);
+		}
+
+		this->properties = properties;
+	}
+
+	math::Vector World::down() const
+	{
+		//return { 0.0f, -1.0f, 0.0f };
+		return glm::normalize(get_gravity());
+	}
+
+	void World::set_camera(Entity camera)
 	{
 		assert(registry.try_get<CameraParameters>(camera));
 
-		if ((this->camera == null) || make_active)
-		{
-			this->camera = camera;
-		}
-
-		cameras.push_back(camera);
+		this->camera = camera;
 	}
 
-	void World::remove_camera(Entity camera)
-	{
-		assert(registry.try_get<CameraParameters>(camera));
-
-		auto it = std::find(cameras.begin(), cameras.end(), camera);
-
-		if (it != cameras.end())
-		{
-			cameras.erase(it);
-		}
-
-		if (cameras.empty())
-		{
-			this->camera = null;
-		}
-		else
-		{
-			this->camera = cameras[0];
-		}
-	}
-
-	void World::on_mouse_input(const app::input::MouseState& mouse)
-	{
-		FreeLook::update(*this, mouse);
-	}
-
-	void World::on_keyboard_input(const app::input::KeyboardState& keyboard)
-	{
-		engine::debug::DebugMove::update(*this, keyboard);
-	}
-
-	void World::on_new_collider(const OnComponentAdd<CollisionComponent>& new_col)
-	{
-		physics.on_new_collider(*this, new_col);
-	}
-
-	void World::on_transform_change(const OnTransformChange& tform_change)
+	void World::on_transform_change(const OnTransformChanged& tform_change)
 	{
 		auto entity = tform_change.entity;
 
+		// TODO: Move this into a separate lighting system/event-handler...?
 		// Update shadow-maps for light entities.
 		update_shadows(*this, entity); // *point_shadows
 
@@ -525,14 +501,6 @@ namespace engine
 		auto parent          = destruct.parent;
 		auto type            = destruct.type;
 		auto destroy_orphans = destruct.destroy_orphans;
-
-		// Handle collision:
-		auto* col = registry.try_get<CollisionComponent>(entity);
-
-		if (col)
-		{
-			physics.on_destroy_collider(*this, entity, *col);
-		}
 
 		// Handle entity relationships:
 		auto* relationship = registry.try_get<Relationship>(entity);
@@ -566,5 +534,47 @@ namespace engine
 		}
 
 		registry.destroy(entity);
+	}
+
+	// This exists purely to circumvent having a complete type definition for `CollisionComponent` in the header.
+	CollisionComponent* World::get_collision_component(Entity entity)
+	{
+		return registry.try_get<CollisionComponent>(entity);
+	}
+
+	bool World::_transform_and_reset_collision_store_active_state(CollisionComponent* collision)
+	{
+		bool collision_active = false;
+
+		// Null-check added for safety.
+		if (collision)
+		{
+			collision_active = collision->is_active();
+
+			collision->deactivate();
+		}
+
+		return collision_active;
+	}
+
+	void World::_transform_and_reset_collision_revert_active_state(CollisionComponent* collision, const math::Matrix& tform_matrix, bool collision_active)
+	{
+		// Null-check added for safety.
+		if (collision)
+		{
+			/*
+				This will trigger a `OnTransformChanged` event, which
+				in turn *may* update the collision-object again.
+
+				Regardless, we still perform a transform update/assignment to
+				ensure that nothing is out-of-sync with the physics engine.
+			*/
+			collision->update_transform(tform_matrix);
+
+			if (collision_active)
+			{
+				collision->activate();
+			}
+		}
 	}
 }

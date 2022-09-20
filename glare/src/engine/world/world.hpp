@@ -1,32 +1,25 @@
 #pragma once
 
-#include <engine/types.hpp>
+#include "types.hpp"
+
 #include <engine/action.hpp>
 #include <engine/service.hpp>
-#include <engine/events/events.hpp>
+#include <engine/transform.hpp>
 
-#include <graphics/types.hpp>
+#include "world_events.hpp"
+#include "world_properties.hpp"
+
+//#include <graphics/types.hpp> // Not actually needed. (`ColorRGB` is actually located in math)
 #include <app/delta_time.hpp>
-#include <math/math.hpp>
+
+#include <math/types.hpp>
 #include <util/json.hpp>
 
-#include <vector>
 #include <string_view>
 #include <filesystem>
 #include <utility>
 #include <variant>
 #include <optional>
-//#include <fstream>
-
-// TODO: Move most of these includes to `world.cpp`:
-#include "entity.hpp"
-#include "camera.hpp"
-#include "light.hpp"
-#include "player.hpp"
-#include "physics.hpp"
-#include "animation.hpp"
-
-#include "graphics_entity.hpp"
 
 namespace filesystem = std::filesystem;
 
@@ -48,6 +41,7 @@ namespace engine
 {
 	class ResourceManager;
 	class Config;
+	struct CollisionComponent;
 
 	class World : public Service
 	{
@@ -59,70 +53,23 @@ namespace engine
 			
 			app::DeltaTime delta_time;
 
+			// TODO: Allow the user to specify a registry, rather than owning it outright.
 			mutable Registry registry;
-
-			PhysicsSystem physics;
-			AnimationSystem animation;
 
 			// Scene root-node; parent to all world-bound entities.
 			Entity root   = null;
 
-			// First entity of stage mesh. (Child of 'root')
-			Entity stage  = null;
-
 			// Currently-active/last-bound camera.
 			Entity camera = null;
+
+			WorldProperties properties;
 		public:
-			std::vector<Entity> cameras;
-
-			struct _properties
-			{
-				graphics::ColorRGB ambient_light = { 0.8f, 0.8f, 0.8f };
-
-				_properties() = default;
-
-				inline _properties(const util::json& data) : _properties()
-				{
-					ambient_light = util::get_color_rgb(data, "ambient_light", ambient_light);
-				}
-			} properties;
-
 			World(Config& config, ResourceManager& resource_manager, UpdateRate update_rate);
 
 			// Constructs a 'World' object, then immediately loads a map from the 'path' specified.
 			World(Config& config, ResourceManager& resource_manager, UpdateRate update_rate, const filesystem::path& path);
 
-			~World();
-
-			template <typename EventType, auto fn, typename obj_type>
-			inline void register_event(obj_type& obj)
-			{
-				event_handler.sink<EventType>().connect<fn>(obj);
-			}
-
-			template <typename EventType, auto fn, typename obj_type>
-			inline void unregister_event(obj_type& obj)
-			{
-				event_handler.sink<EventType>().disconnect<fn>(obj);
-			}
-
-			template <typename EventType, auto Fn>
-			inline void register_event()
-			{
-				register_event<EventType, Fn>(*this);
-			}
-
-			template <typename EventType, auto Fn>
-			inline void unregister_event()
-			{
-				unregister_event<EventType, Fn>(*this);
-			}
-
-			template <typename obj_type>
-			inline void unregister(obj_type& obj)
-			{
-				event_handler.disconnect(obj);
-			}
+			virtual ~World();
 
 			template <typename subscriber_type>
 			inline World& subscribe(subscriber_type& sub)
@@ -140,7 +87,10 @@ namespace engine
 				return *this;
 			}
 
-			Entity load(const filesystem::path& root_path, bool override_current=false, const std::string& json_file="map.json");
+			Registry& get_registry() override;
+			const Registry& get_registry() const override;
+
+			Entity load(const filesystem::path& root_path, const std::string& json_file="map.json", Entity parent=null);
 
 			void update(app::Milliseconds time);
 
@@ -151,9 +101,60 @@ namespace engine
 			void update_camera_parameters(int width, int height);
 
 			Transform apply_transform(Entity entity, const math::TransformVectors& tform);
+
+			// See `transform_and_reset_collision` for details.
+			void apply_transform_and_reset_collision(Entity entity, const math::TransformVectors& tform_data);
+
 			Transform set_position(Entity entity, const math::Vector& position);
 
 			Transform get_transform(Entity entity);
+
+			// Calls `callback` with the `Transform` of `entity` while handling updates
+			// to the collision-component's activation-status and world-transform.
+			// For most purposes, it's recommended to use `get_transform` normally.
+			// This works as a utility function for object creation and reset routines.
+			template <typename callback_fn>
+			inline void transform_and_reset_collision(Entity entity, callback_fn&& callback)
+			{
+				auto* collision = get_collision_component(entity);
+
+				math::Matrix tform_matrix;
+
+				bool collision_active;
+
+				// Store activity status and deactivate.
+				if (collision)
+				{
+					collision_active = _transform_and_reset_collision_store_active_state(collision);
+				}
+
+				// Execute `callback` and store the resulting matrix if needed:
+				{
+					auto tform = get_transform(entity);
+
+					callback(tform);
+
+					// Only store the transformation matrix if a collision component exists:
+					if (collision)
+					{
+						tform_matrix = tform.get_matrix();
+					}
+				}
+
+				// Revert the collision component's activity state and update its world-transform.
+				if (collision)
+				{
+					_transform_and_reset_collision_revert_active_state(collision, tform_matrix, collision_active);
+				}
+			}
+
+			inline void set_position_and_reset_collision(Entity entity, const math::Vector& position)
+			{
+				transform_and_reset_collision(entity, [&position](Transform& tform)
+				{
+					tform.set_position(position);
+				});
+			}
 
 			math::Vector get_up_vector(math::Vector up={ 0.0f, 1.0f, 0.0f }) const;
 
@@ -187,10 +188,7 @@ namespace engine
 			// Retrieves the first child-entity found with the name specified, regardless of other attributes/components. (includes both bone & non-bone children)
 			Entity get_child_by_name(Entity entity, std::string_view child_name, bool recursive=true);
 
-			inline Registry& get_registry() { return registry; }
 			inline ResourceManager& get_resource_manager() { return resource_manager; }
-
-			inline PhysicsSystem& get_physics() { return physics; }
 
 			inline const Config& get_config() const { return config; }
 			
@@ -199,23 +197,26 @@ namespace engine
 
 			// The actively bound camera. (Does not always represent the rendering camera)
 			inline Entity get_camera() const { return camera; }
+			void set_camera(Entity camera);
 
 			inline const app::DeltaTime& get_delta_time() const { return delta_time; }
 
 			Entity get_player(PlayerIndex player=engine::PRIMARY_LOCAL_PLAYER) const;
 
-			inline math::Vector gravity() const { return physics.get_gravity(); }
-			inline math::Vector down() const { return { 0.0f, -1.0f, 0.0f }; }
+			math::Vector get_gravity() const;
+			void set_gravity(const math::Vector& gravity);
+
+			// Returns a normalized down vector.
+			// (Direction vector of 'gravity')
+			math::Vector down() const;
+
+			void set_properties(const WorldProperties& properties);
+			const WorldProperties& get_properties() const { return properties; }
+
 			inline float delta() const { return delta_time; }
 			inline operator Entity() const { return get_root(); }
 
-			void add_camera(Entity camera, bool make_active=false);
-			void remove_camera(Entity camera);
-
-			void on_mouse_input(const app::input::MouseState& mouse);
-			void on_keyboard_input(const app::input::KeyboardState& keyboard);
-			void on_new_collider(const OnComponentAdd<CollisionComponent>& new_col);
-			void on_transform_change(const OnTransformChange& tform_change);
+			void on_transform_change(const OnTransformChanged& tform_change);
 			void on_entity_destroyed(const OnEntityDestroyed& destruct);
 
 			// Same as `defer`, but implicitly forwards `this` prior to any arguments following the target function; useful for deferring member functions.
@@ -224,6 +225,11 @@ namespace engine
 			{
 				defer(std::forward<fn_t>(f), this, std::forward<arguments>(args)...);
 			}
+		private:
+			CollisionComponent* get_collision_component(Entity entity);
+
+			bool _transform_and_reset_collision_store_active_state(CollisionComponent* collision);
+			void _transform_and_reset_collision_revert_active_state(CollisionComponent* collision, const math::Matrix& tform_matrix, bool collision_active);
 	};
 
 	using Scene = World;

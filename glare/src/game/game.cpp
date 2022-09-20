@@ -1,8 +1,22 @@
 #include "game.hpp"
 
+#include <engine/world/physics/physics.hpp>
+#include <engine/world/motion/motion.hpp>
+#include <engine/world/animation/animation.hpp>
+#include <engine/world/zones/zones.hpp>
+
 #include <engine/world/render/world_render_state.hpp>
 #include <engine/world/render/deferred_render_pipeline.hpp>
 #include <engine/world/render/render_scene.hpp>
+
+// Debugging related:
+#include <engine/world/render/bullet_debug_render_phase.hpp>
+
+// TODO: Automate behavior registration in some way.
+// (May also be applicable to systems)
+// Behaviors:
+#include <engine/world/behaviors/free_look_behavior.hpp>
+#include <engine/world/behaviors/debug_move_behavior.hpp>
 
 #include <utility>
 
@@ -25,6 +39,7 @@ namespace game
 		
 		resource_manager(graphics.context),
 		world(cfg, resource_manager, update_rate),
+		systems(world),
 
 		// May split this out in body of constructor. -- This would
 		// allow for a different renderer (forward, etc.)
@@ -38,6 +53,29 @@ namespace game
 		{
 			input.get_mouse().lock();
 		}
+
+		// Default systems:
+		auto& physics = system<engine::PhysicsSystem>(world);
+		system<engine::MotionSystem>(world, physics);
+
+		system<engine::AnimationSystem>(world);
+		system<engine::ZoneSystem>(world);
+
+		// Behaviors:
+		behavior<engine::FreeLookBehavior>();
+		behavior<engine::DebugMoveBehavior>();
+
+		//behavior<engine::TargetBehavior>();
+		//behavior<engine::BillboardBehavior>();
+		/*
+		// TODO: Look into which behaviors we want to enable by default.
+		// TODO: Look into auto-detecting construction of certain component types and initializing behaviors/systems automatically.
+		system<engine::SpinBehavior>(world);
+		system<engine::TargetComponent>(world);
+		system<engine::SimpleFollowComponent>(world);
+		system<engine::BillboardBehavior>(world);
+		system<engine::RaveComponent>(world);
+		*/
 
 		if (!renderer)
 		{
@@ -59,7 +97,18 @@ namespace game
 						}
 					),
 
-					engine::DeferredShadingPhase { graphics.context, effects.get_preprocessor() }
+					engine::DeferredShadingPhase { graphics.context, effects.get_preprocessor() },
+
+					util::inspect_and_store
+					(
+						engine::BulletDebugRenderPhase { graphics.context, effects.get_preprocessor() },
+						[this, &physics](auto& bullet_dbg)
+						{
+							physics.register_debug_drawer(bullet_dbg.get_debug_drawer());
+
+							//bullet_dbg.disable();
+						}
+					)
 				)
 			);
 		}
@@ -101,6 +150,9 @@ namespace game
 
 		renderer.render(camera, screen, viewport, render_state);
 
+		// Execute rendering events.
+		world.render(graphics);
+
 		auto& gbuffer = screen.render();
 
 		on_render(render_state);
@@ -140,7 +192,7 @@ namespace game
 
 		if (mouse.locked())
 		{
-			input.poll(world.get_event_handler());
+			input.poll(world.get_active_event_handler());
 		}
 
 		world.update(time);

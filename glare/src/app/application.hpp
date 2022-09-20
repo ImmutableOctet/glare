@@ -18,7 +18,6 @@ union SDL_Event;
 namespace app
 {
 	class Window;
-	class EventHandler;
 
 	class Application : public TimedEventManager
 	{
@@ -30,7 +29,6 @@ namespace app
 
 			using keyboard_event_t = SDL_KeyboardEvent;
 		protected:
-			friend EventHandler;
 			friend Window;
 
 			struct Libraries

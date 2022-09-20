@@ -1,7 +1,6 @@
 #pragma once
 
 #include <debug.hpp>
-#include <math/math.hpp>
 
 #include <utility>
 #include <optional>

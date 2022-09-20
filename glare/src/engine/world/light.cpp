@@ -15,7 +15,7 @@
 //#include <graphics/shader.hpp>
 #include <graphics/texture.hpp>
 #include <graphics/framebuffer.hpp>
-#include <graphics\shadow_map.hpp>
+#include <graphics/shadow_map.hpp>
 
 #include <cmath>
 

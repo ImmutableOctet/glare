@@ -5,7 +5,8 @@
 #include <engine/world/world.hpp>
 #include <engine/type_component.hpp>
 
-#include <engine/events/events.hpp>
+#include <engine/events.hpp>
+//#include "world_events.hpp"
 
 namespace engine
 {
@@ -72,6 +73,8 @@ namespace engine
 		world.queue_event<OnEntityDestroyed>(entity, parent, type, destroy_orphans);
 	}
 
+	// Currently no difference between a pivot and a default entity state.
+	// (Other than the default value of the `type` field)
 	Entity create_pivot(World& world, Entity parent, EntityType type)
 	{
 		return create_entity(world, parent, type);

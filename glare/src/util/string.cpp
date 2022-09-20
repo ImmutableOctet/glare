@@ -13,6 +13,11 @@ namespace util
         return str;
     }
 
+    std::string lowercase(std::string_view str)
+    {
+        return lowercase(std::string(str));
+    }
+
     std::smatch get_regex_groups(const std::string& s, const std::regex& re)
     {
         if (std::regex_match(s, re))
