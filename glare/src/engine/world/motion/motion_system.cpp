@@ -75,8 +75,7 @@ namespace engine
 		}
 	}
 
-	std::optional<CollisionCastResult>
-	MotionSystem::handle_ground_to_air
+	std::optional<CollisionCastResult> MotionSystem::detect_air
 	(
 		const EntityData& data,
 		const math::Vector& gravity_movement,
@@ -99,8 +98,6 @@ namespace engine
 
 		if (!ground_check)
 		{
-			print("Off ground");
-
 			// NOTE: The reverse scenario, `OnAirToGround` occurs in the `on_surface_contact` routine.
 			world.event<OnGroundToAir>
 			(

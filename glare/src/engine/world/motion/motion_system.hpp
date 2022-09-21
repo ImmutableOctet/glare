@@ -51,8 +51,7 @@ namespace engine
 			// TODO: Handle surface contact behaviors (alignment, etc.).
 			void on_surface_contact(const OnSurfaceContact& surface);
 
-			std::optional<CollisionCastResult>
-			handle_ground_to_air
+			std::optional<CollisionCastResult> detect_air
 			(
 				const EntityData& data,
 				const math::Vector& gravity_movement,
