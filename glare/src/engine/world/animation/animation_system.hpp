@@ -12,6 +12,7 @@ namespace engine
 	struct AnimationTransition;
 
 	struct OnParentChanged;
+	struct BoneComponent;
 
 	class AnimationSystem : public WorldSystem
 	{
@@ -23,6 +24,9 @@ namespace engine
 			void on_subscribe(World& world) override;
 			void on_update(World& world, float delta_time) override;
 		protected:
+			// Used internally by `on_parent_changed`.
+			void set_bone_skeleton(Registry& registry, Entity entity, BoneComponent& bone_component, Entity new_skeleton);
+
 			void on_parent_changed(const OnParentChanged& parent_changed);
 	};
 }

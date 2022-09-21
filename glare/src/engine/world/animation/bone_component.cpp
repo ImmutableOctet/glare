@@ -3,6 +3,7 @@
 
 #include <engine/relationship.hpp>
 #include <engine/name_component.hpp>
+#include <engine/forwarding_component.hpp>
 
 #include <engine/world/world.hpp>
 
@@ -86,6 +87,9 @@ namespace engine
 		}
 
 		registry.emplace<BoneComponent>(entity, skeleton, bone_id, std::string(bone_name), offset); // offset;
+
+		// Forward relevant events, logic, etc. to the `skeleton` entity.
+		registry.emplace<ForwardingComponent>(entity, skeleton);
 
 		{
 			auto tform = world.get_transform(entity);
