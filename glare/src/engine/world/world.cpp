@@ -27,6 +27,7 @@
 #include <engine/config.hpp>
 #include <engine/resource_manager/resource_manager.hpp>
 #include <engine/relationship.hpp>
+#include <engine/forwarding_component.hpp>
 
 #include <engine/type_component.hpp>
 #include <engine/name_component.hpp>
@@ -173,6 +174,18 @@ namespace engine
 				camera_component.update_aspect_ratio(width, height);
 			}
 		});
+	}
+
+	Entity World::get_forwarded(Entity entity)
+	{
+		auto* forwarding = registry.try_get<ForwardingComponent>(entity);
+
+		if (forwarding)
+		{
+			return forwarding->root_entity;
+		}
+
+		return entity;
 	}
 
 	Transform World::apply_transform(Entity entity, const math::TransformVectors& tform)

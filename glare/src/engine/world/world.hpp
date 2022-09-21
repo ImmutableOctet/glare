@@ -98,8 +98,16 @@ namespace engine
 
 			//void on_child_removed(const Event_ChildRemoved& e);
 
+			// TODO: Look into reworking/replacing this. (Maybe a dedicated `CameraSystem`...?)
 			void update_camera_parameters(int width, int height);
 
+			// If `entity` has a `ForwardingComponent` attached, this returns the `root_entity` from that component.
+			// If no `ForwardingComponent` is found, `entity` is returned back to the caller.
+			Entity get_forwarded(Entity entity);
+
+			// Applies the transformation vectors specified to `entity`.
+			// This routine does not explicitly handle side effects of collision.
+			// See also: `apply_transform_and_reset_collision`
 			Transform apply_transform(Entity entity, const math::TransformVectors& tform);
 
 			// See `transform_and_reset_collision` for details.
