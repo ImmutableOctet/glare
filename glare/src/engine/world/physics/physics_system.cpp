@@ -254,6 +254,9 @@ namespace engine
 							.a = a_ent,
 							.b = b_ent,
 
+							.a_position = math::to_vector(a->getWorldTransform().getOrigin()),
+							.b_position = math::to_vector(b->getWorldTransform().getOrigin()),
+
 							.position    = math::to_vector(avg_world_hit_position),
 							.normal      = math::to_vector(avg_hit_normal),
 							.penetration = avg_penetration_depth,
@@ -310,6 +313,11 @@ namespace engine
 					{
 						.a = a_ent,
 						.b = b_ent,
+
+						// NOTE: We could probably 'optimize'/change this by storing `a_transform.get_position()`
+						// prior to applying the correction, but this is more consistent with `b`'s method, etc.
+						.a_position = math::to_vector(a->getWorldTransform().getOrigin()),
+						.b_position = math::to_vector(b->getWorldTransform().getOrigin()),
 
 						.position    = math::to_vector(avg_world_hit_position),
 						.normal      = math::to_vector(avg_hit_normal),
@@ -436,7 +444,7 @@ namespace engine
 			const auto& hit_normal = result->hit_normal;
 			const auto& hit_point_in_world = result->hit_position;
 
-			auto old_position = math::to_vector(collision.get_collision_object()->getWorldTransform().getOrigin());
+			auto old_position = math::to_vector(collision_obj.getWorldTransform().getOrigin());
 			auto new_position = transform.get_position();
 
 			const auto impact_velocity = (new_position - old_position);
@@ -518,7 +526,7 @@ namespace engine
 
 				// Update the transform of `hit_entity` 
 				auto hit_tform = world.get_transform(hit_entity);
-						
+				
 				auto hit_old_position = hit_tform.get_position();
 				auto hit_new_position = (hit_old_position + influence);
 
@@ -569,7 +577,7 @@ namespace engine
 				auto correction  = (edge_offset - hit_adjustment);
 
 				auto adjusted_position = (new_position + correction + influence);
-
+				
 				transform.set_position(adjusted_position);
 
 				// TODO: May cause side effect of collision-update happening again. (Need to look into this more)
@@ -588,6 +596,10 @@ namespace engine
 			handle_influence_on_hit_entity();
 			adjust_entity_position();
 
+			// NOTE: Faster than always handling another `Transform` object,
+			// or somehow forwarding from the `handle_influence_on_hit_entity` step.
+			auto hit_old_position = math::to_vector(hit_object->getWorldTransform().getOrigin());
+
 			// Notify listeners that this `entity` contacted `hit_entity`'s surface:
 			world.queue_event
 			(
@@ -598,6 +610,9 @@ namespace engine
 					{
 						.a = entity,
 						.b = hit_entity,
+
+						.a_position = old_position,
+						.b_position = hit_old_position,
 
 						.position = hit_point_in_world,
 						.normal   = hit_normal,

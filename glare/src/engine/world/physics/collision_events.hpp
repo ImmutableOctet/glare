@@ -38,6 +38,18 @@ namespace engine
 		// Contacted entity.
 		Entity b;
 
+		// The world-space position of `a` at the time of collision.
+		// (According to its collision object)
+		//
+		// NOTE: This does not take into account influences or corrections.
+		math::Vector a_position;
+
+		// The world-space position of `b` at the time of collision.
+		// (According to its collision object)
+		//
+		// NOTE: This does not take into account influences or corrections.
+		math::Vector b_position;
+
 		// World-space position where the collision took place.
 		math::Vector position;
 
@@ -88,12 +100,37 @@ namespace engine
 		// (`a`'s intended movement-depth into `b` along the `direction` of approach)
 		math::Vector penetration_vector() const;
 
+		// Returns the dot-product of the normal and the `direction` vector (approach angle).
+		// 
+		// NOTE: Since the `normal` vector and the movement direction are always
+		// on opposite sides of each other this will only return positive values.
+		// 
+		// If you're using the dot-product for floor/ceiling detection,
+		// see the `floor_product` helper function and `slope` for a simpler interface.
+		float dot_product() const;
+
 		// Force applied to the surface.
 		// (Difference between contact-speed and penetration amount)
 		float force_applied() const;
 
 		// Ratio of `force_applied` to the `penetration` observed.
 		float residual() const;
+
+		// Similar to `dot_product`, but produces a -1.0 to 1.0 range.
+		// This function multiplies `dot_product` by the `vertical_sign`
+		// to get an accurate indicator for floor/ceiling detection.
+		float floor_product() const;
+
+		// Positive (from above) subset of `floor_product`.
+		float floor() const;
+
+		// Negative (from below) subset of `floor_product`.
+		// See also: `ceiling`.
+		float ceiling_no_convert() const;
+
+		// Negative (from below) subset of `floor_product`, converted to a positive value.
+		// See also: `ceiling_no_convert`.
+		float ceiling() const;
 
 		// The slope of the contacted surface; computed from the
 		// surface `normal` and the movement `direction` imposed by `a`.
@@ -110,6 +147,11 @@ namespace engine
 
 		// Retrieves the three orthogonal vectors representing the orientation of the surface.
 		math::OrthogonalVectors surface_orientation_vectors(const math::Vector& adjacent={1.0f, 0.0f, 0.0f}) const;
+
+		// Returns -1 for collision from above,
+		// and 1 for collision from below.
+		// (from the perspective of `a`)
+		float vertical_sign() const;
 	};
 
 	// TODO: Rework `OnSurfaceContact`/`CollisionSurface` into a non-event type.
