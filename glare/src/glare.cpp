@@ -96,6 +96,11 @@ namespace glare
 		auto& cube_c = registry.get<engine::CollisionComponent>(cube);
 		cube_c.set_mass(0.5f);
 
+		if (auto& kinematic_resolution = cube_c.get_kinematic_resolution(); kinematic_resolution)
+		{
+			kinematic_resolution->accepts_influence = false;
+		}
+
 		world.transform_and_reset_collision(cube, [&](auto& cube_t)
 		{
 			cube_t.set_position({ -6.20467f, 166.5406f, 39.1254f });
@@ -120,10 +125,14 @@ namespace glare
 		world.transform_and_reset_collision(cube2, [&](auto& cube2_t)
 		{
 			//cube2_t.set_scale(4.0f);
-			cube2_t.set_position({ -6.20467f, 180.5406f, 39.1254f });
+			////cube2_t.set_position({ -6.20467f, 180.5406f, 39.1254f });
+			cube2_t.set_position({ 38.3709, 45.9637, 120.579 });
 		});
 
-		registry.emplace<engine::MotionComponent>(cube2);
+		auto& cube2_motion = registry.emplace<engine::MotionComponent>(cube2);
+
+		cube2_motion.attach_to_dynamic_ground = true;
+		cube2_motion.apply_gravity = false;
 
 		auto& camera_c = registry.get<engine::CollisionComponent>(world.get_camera());
 
@@ -311,10 +320,6 @@ namespace glare
 			graphics.context->set_flags(graphics::ContextFlags::Wireframe, !graphics.context->get_flag(graphics::ContextFlags::Wireframe));
 
 			break;
-		case SDLK_QUOTE:
-			
-
-			break;
 		case SDLK_q:
 		{
 			//print("World: {}", world);
@@ -326,6 +331,56 @@ namespace glare
 			auto* obj = collision.get_collision_object();
 
 			print("Collision object is located at: {}", math::to_vector(obj->getWorldTransform().getOrigin()));
+
+			break;
+		}
+
+		case SDLK_y:
+		{
+			auto camera = world.get_camera();
+
+			//world.set_parent(camera, world.get_by_name("Player"));
+
+			auto cube = world.get_by_name("Cube");
+			auto root = world.get_root();
+
+			math::Matrix local_camera_matrix;
+
+			{
+				auto camera_t = world.get_transform(camera);
+				auto cube_t = world.get_transform(cube);
+				auto root_t = world.get_transform(root);
+
+				auto camera_matrix = camera_t.get_matrix();
+				auto cube_matrix = cube_t.get_matrix();
+				auto root_matrix = root_t.get_matrix();
+
+				auto cube_inv_matrix = cube_t.get_inverse_matrix();
+
+				print("cube_t.get_position(): {}", cube_t.get_position());
+				print("cube_t.get_matrix(): {}", math::get_translation(cube_matrix));
+				print("cube_t.get_inverse_matrix(): {}", math::get_translation(cube_inv_matrix));
+			}
+
+			world.set_parent(camera, cube);
+
+			/*
+			auto& registry = world.get_registry();
+			auto& relationship = registry.get<engine::Relationship>(camera);
+			auto camera_parent = relationship.get_parent();
+			auto& camera_parent_relationship = registry.get<engine::Relationship>(camera_parent);
+			camera_parent_relationship.remove_child(registry, camera, camera_parent);
+			*/
+
+			//auto camera_t = world.get_transform(camera);
+			//camera_t.set_matrix(local_camera_matrix);
+
+			//camera_t.set_local_matrix(local_camera_matrix);
+			
+
+			world.set_parent(camera, root);
+
+			world.set_parent(camera, cube);
 
 			break;
 		}

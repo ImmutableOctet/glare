@@ -41,6 +41,11 @@ namespace engine
 		{
 			return surface.collision.position;
 		}
+
+		inline bool is_dynamic_ground() const
+		{
+			return surface.is_dynamic;
+		}
 	};
 
 	// Triggered once an entity (that had previously been on the ground) enters the air.
@@ -67,5 +72,28 @@ namespace engine
 		{
 			return surface.entity();
 		}
+
+		inline bool was_dynamic_ground() const
+		{
+			return surface.is_dynamic;
+		}
+	};
+
+	// Triggered when an entity 'attaches' to another entity.
+	// (e.g. player lands on moving platform)
+	// This is the opposite scenario of `OnMotionDetachment`.
+	struct OnMotionAttachment
+	{
+		Entity entity;
+		Entity attached_to;
+	};
+
+	// Triggered when an entity 'detaches' from another entity.
+	// (e.g. player jumps off of moving platform)
+	// This is the opposite scenario of `OnMotionAttachment`.
+	struct OnMotionDetachment
+	{
+		Entity entity;
+		Entity detached_from;
 	};
 }

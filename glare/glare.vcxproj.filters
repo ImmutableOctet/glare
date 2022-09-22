@@ -464,6 +464,8 @@
     <ClInclude Include="src\engine\world\physics\physics.hpp" />
     <ClInclude Include="src\engine\world\motion\motion.hpp" />
     <ClInclude Include="src\engine\world\motion\ground.hpp" />
+    <ClInclude Include="src\engine\forwarding_component.hpp" />
+    <ClInclude Include="src\engine\world\motion\motion_attachment_proxy.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\shaders\light_box.frag">

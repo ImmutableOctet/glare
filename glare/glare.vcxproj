@@ -266,8 +266,10 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\world\animation\skeletal_component.hpp" />
     <ClInclude Include="src\engine\world\behaviors\behaviors.hpp" />
     <ClInclude Include="src\engine\world\behaviors\meta.hpp" />
+    <ClInclude Include="src\engine\world\motion\motion_attachment_proxy.hpp" />
     <ClInclude Include="src\engine\world\motion\ground.hpp" />
     <ClInclude Include="src\engine\world\motion\motion.hpp" />
+    <ClInclude Include="src\engine\forwarding_component.hpp" />
     <ClInclude Include="src\engine\world\motion\motion_system.hpp" />
     <ClInclude Include="src\engine\world\physics\bullet_util\btClosestNotMeConvexResultCallback.hpp" />
     <ClInclude Include="src\engine\world\physics\bullet_util\btKinematicClosestNotMeConvexResultCallback.hpp" />
