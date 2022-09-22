@@ -260,14 +260,12 @@ namespace engine
 
 		if (defer_action) // && (!_is_deferred)
 		{
-			print("Deferring parental assignment for: {} to new parent {}", label(entity), label(parent));
+			//print("Deferring parental assignment for: {} to new parent {}", label(entity), label(parent));
 
 			later(&World::set_parent, entity, parent, false, _null_as_root, true);
 		}
 		else
 		{
-			//print("Adding child: {} to {}", label(entity), label(parent));
-
 			auto prev_parent = Relationship::set_parent(registry, entity, parent);
 			event<OnParentChanged>(entity, prev_parent, parent);
 		}

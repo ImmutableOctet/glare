@@ -176,6 +176,17 @@ namespace engine
 				bool _null_as_root=true, bool _is_deferred=false
 			);
 
+			inline void remove_parent
+			(
+				Entity entity, Entity parent,
+				bool defer_action = false,
+
+				bool _null_as_root = true, bool _is_deferred = false
+			)
+			{
+				set_parent(entity, root, defer_action, _null_as_root, _is_deferred);
+			}
+
 			// Returns a label for the entity specified.
 			// If no `NameComponent` is associated with the entity, the entity number will be used.
 			std::string label(Entity entity);
