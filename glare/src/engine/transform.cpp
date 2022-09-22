@@ -136,6 +136,7 @@ namespace engine
 		print("Children: [{}]", fmt::join(children, ", "));
 		*/
 
+		///*
 		relationship.enumerate_children(registry, [&](auto child, auto& child_relationship, auto next_child)
 		{
 			//print("Invalidating world matrix - I am: {}", child);
@@ -146,6 +147,7 @@ namespace engine
 
 			return true;
 		});
+		//*/
 
 		return *this;
 	}
@@ -293,7 +295,19 @@ namespace engine
 	{
 		auto parent = get_parent();
 
-		set_local_position((parent) ? (parent->get_inverse_matrix() * position) : position);
+		if (parent)
+		{
+			auto parent_inv_matrix = parent->get_inverse_matrix(true);
+			auto new_local_position = (parent_inv_matrix * math::Vector4D(position, 1.0f));
+			
+			set_local_position(math::Vector3D(new_local_position));
+		}
+		else
+		{
+			set_local_position(position);
+		}
+
+		//set_local_position((parent) ? (parent->get_inverse_matrix() * position) : position);
 
 		//invalidate();
 
@@ -391,20 +405,21 @@ namespace engine
 		return set_rotation({ rotation.x, rotation.y, rz });
 	}
 
+	math::Vector Transform::align_vector(const math::Vector& v)
+	{
+		auto basis = get_local_basis(); // get_basis();
+
+		return (basis * v);
+	}
+
 	Transform& Transform::move(const math::Vector& tv, bool local)
 	{
-		// TODO: Review behavior of 'local'.
-		if (!local)
+		if (local)
 		{
-			return set_local_position(get_local_position() + tv);
+			return set_local_position(get_local_position() + align_vector(tv));
 		}
 
-		auto basis = get_local_basis(); //get_basis();
-
-		auto movement = (basis * tv);
-
-		//set_position(get_position() + movement);
-		return set_local_position(get_local_position() + movement);
+		return set_local_position(get_local_position() + tv);
 	}
 
 	math::RotationMatrix Transform::look_at(const math::Vector& target, const math::Vector& up)
@@ -477,7 +492,8 @@ namespace engine
 		{
 			auto parent = get_parent();
 
-			transform._w = ((parent) ? (parent->get_matrix() * get_local_matrix()) : get_local_matrix());
+			// TODO: Look into whether we should be passing `force` to parent transforms and local as well.
+			transform._w = ((parent) ? (parent->get_matrix(force) * get_local_matrix(force)) : get_local_matrix(force));
 
 			validate(Dirty::W);
 		}
@@ -489,7 +505,8 @@ namespace engine
 	{
 		if (invalid(Dirty::IW) || (force))
 		{
-			transform._iw = glm::inverse(get_matrix());
+			// TODO: Determine if we should be passing the `force` parameter to `get_matrix`.
+			transform._iw = glm::inverse(get_matrix(force));
 
 			validate(Dirty::IW);
 		}
@@ -497,43 +514,36 @@ namespace engine
 		return transform._iw;
 	}
 
-	math::Matrix Transform::get_local_matrix()
+	math::Matrix Transform::get_local_matrix(bool force)
 	{
-		return update_local_matrix();
+		return update_local_matrix(force);
 	}
 
-	math::Matrix Transform::get_inverse_local_matrix()
+	math::Matrix Transform::get_inverse_local_matrix(bool force)
 	{
-		return glm::inverse(get_local_matrix());
+		return glm::inverse(get_local_matrix(force));
 	}
 
 	Transform& Transform::set_matrix(const math::Matrix& m)
 	{
-		auto& matrix = m; // transform._m;
+		auto parent = get_parent();
 
-		auto scale = math::get_scaling(matrix);
+		//invalidate(); <-- Already handled by subroutines.
 
-		math::Vector translation = math::get_translation(matrix); // matrix[3]
+		if (parent)
+		{
+			auto parent_inverse_matrix = parent->get_inverse_matrix();
 
-		////std::cout << "Setting translation to: " << translation << '\n';
+			return set_local_matrix(parent_inverse_matrix * m);
+		}
 
-		set_local_position(translation);
-
-		//std::cout << "Position is now: " << get_position() << '\n';
-		////std::cout << "Position is now: " << get_local_position() << '\n';
-
-		//set_basis(glm::scale(matrix, { (1.0 / scale.x), (1.0 / scale.y), (1.0 / scale.z) }));
-		//set_scale(scale);
-		set_local_basis(glm::scale(matrix, { (1.0 / scale.x), (1.0 / scale.y), (1.0 / scale.z) }));
-		set_local_scale(scale);
-
-		//invalidate();
-
-		return *this;
+		return set_local_matrix(m);
 	}
 
-	Transform& Transform::set_local_matrix(const math::Matrix& m)
+	Transform& Transform::set_local_matrix(const math::Matrix& matrix)
 	{
+		/*
+		// Unused: Alternative implementation.
 		glm::vec3 scale;
 		glm::vec3 translation;
 		glm::vec3 skew;
@@ -550,6 +560,23 @@ namespace engine
 		set_local_basis_q(rotation);
 
 		return invalidate();
+		*/
+
+		auto scale = math::get_scaling(matrix);
+
+		math::Vector translation = math::get_translation(matrix); // matrix[3]
+
+		set_local_position(translation);
+
+		//set_basis(glm::scale(matrix, { (1.0 / scale.x), (1.0 / scale.y), (1.0 / scale.z) }));
+		//set_scale(scale);
+
+		set_local_basis(glm::scale(matrix, { (1.0 / scale.x), (1.0 / scale.y), (1.0 / scale.z) }));
+		set_local_scale(scale);
+
+		//invalidate(); // <-- Already handled by local-coordinate setters, used above.
+
+		return *this;
 	}
 
 	Transform& Transform::set_local_position(const math::Vector& position)

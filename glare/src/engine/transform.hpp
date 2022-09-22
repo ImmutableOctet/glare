@@ -212,6 +212,11 @@ namespace engine
 			Transform& set_ry(float ry);
 			Transform& set_rz(float rz);
 
+			// Aligns a vector to the direction/basis of this entity.
+			// (Useful for things like determining local movement before it happens)
+			math::Vector align_vector(const math::Vector& v); // const
+
+			// If `local` is true, this applies `align_vector` to `tv` before affecting the local position.
 			Transform& move(const math::Vector& tv, bool local=false);
 
 			// Orients this transform to look at 'target', then returns the new basis.
@@ -233,8 +238,8 @@ namespace engine
 			inline math::RotationMatrix get_local_basis()    const { return transform.basis; }
 
 			// Returns a copy of the 'model' matrix.
-			math::Matrix get_local_matrix();
-			math::Matrix get_inverse_local_matrix();
+			math::Matrix get_local_matrix(bool force=false);
+			math::Matrix get_inverse_local_matrix(bool force=false);
 
 			Transform& set_matrix(const math::Matrix& m);
 
