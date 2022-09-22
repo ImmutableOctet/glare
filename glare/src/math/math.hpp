@@ -7,6 +7,28 @@
 
 namespace math
 {
+	// Returns 1 for values greater than zero,
+	// -1 for values less than zero,
+	// and 0 for exactly 0.
+	template <typename T, typename ResultType=int>
+	inline ResultType sign(T value)
+	{
+		constexpr auto zero = T(0);
+
+		return ResultType((zero < value) - (value < zero));
+	}
+
+	// Returns the `sign` from the result of: (x-y)
+	//
+	// If `x` is less than `y` this returns -1,
+	// if `x` is greater than `y` this returns 1,
+	// if `x` and `y` are equal this returns 0.
+	template <typename T, typename ResultType=int>
+	inline ResultType sign(const T& x, const T& y)
+	{
+		return sign<T, ResultType>((x - y));
+	}
+
 	template <typename T>
 	inline T sq(const T& x)
 	{
