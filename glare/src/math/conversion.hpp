@@ -5,7 +5,7 @@
 namespace math
 {
 	template <typename T>
-	constexpr T _Pi()
+	inline constexpr T _Pi()
 	{
 		return T(3.141592653589793); // M_PI
 	}
@@ -33,4 +33,23 @@ namespace math
 	{
 		return { radians(d.x), radians(d.y), radians(d.z) };
 	}
+
+	inline RotationMatrix to_rotation_matrix(const Quaternion& q)
+	{
+		return glm::toMat3(q);
+	}
+
+	inline Quaternion to_quaternion(const RotationMatrix& r)
+	{
+		return glm::quat_cast(r);
+	}
+
+	inline Quaternion to_quaternion(const Matrix& m)
+	{
+		return glm::quat_cast(m);
+	}
+	
+	// This is mainly here as a placeholder overload, in case
+	// a templated function needs to convert between vector types.
+	inline Vector3D to_vector(const Vector3D& v) { return v; }
 }

@@ -74,6 +74,101 @@ namespace math
 	{
 		return (rotation_yaw(rv.y) * rotation_pitch(rv.x) * rotation_roll(rv.z));
 	}
+
+	Quaternion quaternion_from_orthogonal(const Vector& a, const Vector& b, const Vector& c)
+	{
+		if (auto T = (a.x + b.y + c.z); (T > 0))
+		{
+			auto s = (std::sqrt(T + 1) * 2.0f);
+
+			return Quaternion
+			(
+				(s * 0.25f),       // W
+				((c.y - b.z) / s), // X
+				((a.z - c.x) / s), // Y
+				((b.x - a.y) / s)  // Z
+			);
+		}
+
+		if ((a.x > b.y) && (a.x > c.z))
+		{
+			auto s = (std::sqrt(1 + a.x - b.y - c.z) * 2);
+
+			return Quaternion
+			(
+				((c.y - b.z) / s), // W
+				(s * 0.25f),       // X
+				((b.x + a.y) / s), // Y
+				((a.z + c.x) / s)  // Z
+			);
+		}
+
+		if (b.y > c.z)
+		{
+			auto s = (std::sqrt(1 + b.y - a.x - c.z) * 2.0f);
+
+			return Quaternion
+			(
+				((b.z - c.y) / s), // W
+				((b.x + a.y) / s), // X
+				(s * 0.25f),       // Y
+				((c.y + b.z) / s)  // Z
+			);
+		}
+
+		auto s = (std::sqrt(1 + c.z - a.x - b.y) * 2.0f);
+
+		return Quaternion
+		(
+			((b.x - a.y) / s), // W
+			((a.z + c.x) / s), // X
+			((c.y + b.z) / s), // Y
+			(s * 0.25f)        // Z
+		);
+	}
+
+	Quaternion quaternion_from_orthogonal(const Vector& a, const Vector& b)
+	{
+		return quaternion_from_orthogonal(a, b, cross(a, b));
+	}
+
+	Quaternion quaternion_from_orthogonal(const OrthogonalVectors& ortho_vectors)
+	{
+		const auto& [a, b, c] = ortho_vectors;
+
+		return quaternion_from_orthogonal(a, b, c);
+	}
+
+	RotationMatrix rotation_from_orthogonal(const Vector& a, const Vector& b, const Vector& c)
+	{
+		/*
+		glm::mat4 rotation = identity_matrix();
+
+		auto angle = std::acos(glm::dot(b, a) / (glm::length(b) * glm::length(a)));
+
+		glm::rotate(rotation, angle, c);
+
+		return rotation;
+		*/
+
+		//return glm::lookAt(...);
+
+		auto q = quaternion_from_orthogonal(a, b, c);
+
+		return to_rotation_matrix(q);
+	}
+
+	RotationMatrix rotation_from_orthogonal(const Vector& a, const Vector& b)
+	{
+		return rotation_from_orthogonal(a, b, cross(a, b));
+	}
+
+	RotationMatrix rotation_from_orthogonal(const OrthogonalVectors& ortho_vectors)
+	{
+		const auto& [a, b, c] = ortho_vectors;
+
+		return rotation_from_orthogonal(a, b, c);
+	}
 	
 	Vector abs(const Vector& v)
 	{
@@ -146,7 +241,7 @@ namespace math
 
 	math::Vector get_surface_forward(const math::Vector& normal, const math::Vector& adjacent)
 	{
-		return glm::cross(normal, adjacent);
+		return cross(normal, adjacent);
 	}
 
 	float get_surface_slope(const math::Vector& normal, const math::Vector& angle, const math::Vector& adjacent)

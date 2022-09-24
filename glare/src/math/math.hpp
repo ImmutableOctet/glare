@@ -7,6 +7,9 @@
 
 namespace math
 {
+	// Imported GLM functions:
+	using glm::cross;
+
 	// Returns 1 for values greater than zero,
 	// -1 for values less than zero,
 	// and 0 for exactly 0.
@@ -60,15 +63,10 @@ namespace math
 		return matrix_type(1.0f); // glm::identity<matrix_type>();
 	}
 
+	// Same as calling `identity<Matrix>()`.
 	inline constexpr Matrix identity_matrix()
 	{
 		return identity<Matrix>();
-	}
-
-	template <typename quat_type>
-	inline RotationMatrix to_rotation_matrix(const quat_type& q)
-	{
-		return glm::toMat3(q);
 	}
 
 	inline Vector3D operator*(const Matrix4x4& m, const Vector3D& v)
@@ -92,13 +90,24 @@ namespace math
 	RotationMatrix rotation_yaw(float angle);
 	RotationMatrix rotation_roll(float angle);
 
+	// Aligned basis from direction vector `rv`.
+	// See also: `rotation_from_orthogonal` and `quaternion_from_orthogonal`.
 	RotationMatrix rotation_from_vector(const Vector& rv);
 
-	inline Vector3D to_vector(const Vector3D& v) { return v; }
+	Quaternion quaternion_from_orthogonal(const Vector& a, const Vector& b, const Vector& c);
+	Quaternion quaternion_from_orthogonal(const Vector& a, const Vector& b); // Automatically computes `c`.
+	Quaternion quaternion_from_orthogonal(const OrthogonalVectors& ortho_vectors);
+
+	RotationMatrix rotation_from_orthogonal(const Vector& a, const Vector& b, const Vector& c);
+	RotationMatrix rotation_from_orthogonal(const Vector& a, const Vector& b); // Automatically computes `c`.
+	RotationMatrix rotation_from_orthogonal(const OrthogonalVectors& ortho_vectors);
 
 	Vector abs(const Vector& v);
 
+	// Converts a 2D direction to an euler angle.
 	float direction_to_angle(const Vector2D& dir);
+
+	// Computes the 'yaw' angle of a 3D direction vector.
 	float direction_to_yaw(const Vector& dir); // Vector3D
 
 	template <typename T>
