@@ -77,14 +77,14 @@ namespace engine
 		return (transform._dirty & flag);
 	}
 
-	Transform::Dirty Transform::validate(Dirty flag)
+	Transform::Dirty Transform::validate(Dirty flag) const
 	{
 		transform._dirty &= (~flag);
 
 		return transform._dirty;
 	}
 
-	Transform& Transform::recalculate(bool force)
+	const Transform& Transform::recalculate(bool force) const
 	{
 		update_local_matrix(force);
 		update_matrix(force);
@@ -111,7 +111,7 @@ namespace engine
 		return *this;
 	}
 
-	Transform& Transform::invalidate()
+	const Transform& Transform::invalidate() const
 	{
 		transform._dirty |= (Dirty::M | Dirty::EventFlag);
 
@@ -120,7 +120,7 @@ namespace engine
 		return *this;
 	}
 
-	Transform& Transform::invalidate_world()
+	const Transform& Transform::invalidate_world() const
 	{
 		if ((transform._dirty & Dirty::W))
 		{
@@ -188,7 +188,7 @@ namespace engine
 		return collision_invalid;
 	}
 
-	Transform& Transform::validate_collision()
+	const Transform& Transform::validate_collision() const
 	{
 		validate_collision_shallow();
 
@@ -202,7 +202,7 @@ namespace engine
 		return *this;
 	}
 
-	Transform& Transform::validate_collision_shallow()
+	const Transform& Transform::validate_collision_shallow() const
 	{
 		//validate(Dirty::EventFlag);
 
@@ -211,17 +211,17 @@ namespace engine
 		return *this;
 	}
 
-	math::Matrix Transform::get_matrix(bool force_refresh)
+	const math::Matrix& Transform::get_matrix(bool force_refresh) const
 	{
 		return update_matrix(force_refresh);
 	}
 
-	math::Matrix Transform::get_inverse_matrix(bool force_refresh)
+	const math::Matrix& Transform::get_inverse_matrix(bool force_refresh) const
 	{
 		return update_inverse_matrix(force_refresh);
 	}
 
-	math::Matrix Transform::get_camera_matrix()
+	math::Matrix Transform::get_camera_matrix() const
 	{
 		constexpr auto world_up = glm::vec3(0.0f, 1.0f, 0.0f);
 		constexpr auto world_forward = glm::vec3(0.0f, 0.0f, -1.0f);
@@ -237,12 +237,12 @@ namespace engine
 		//return get_inverse_matrix();
 	}
 
-	math::Vector Transform::get_position()
+	math::Vector Transform::get_position() const
 	{
 		return math::get_translation(get_matrix());
 	}
 
-	math::Vector Transform::get_scale()
+	math::Vector Transform::get_scale() const
 	{
 		auto parent = get_parent();
 
@@ -254,7 +254,7 @@ namespace engine
 		return transform.scale;
 	}
 
-	math::RotationMatrix Transform::get_basis()
+	math::RotationMatrix Transform::get_basis() const
 	{
 		auto parent = get_parent();
 
@@ -266,27 +266,27 @@ namespace engine
 		return transform.basis;
 	}
 
-	math::Quaternion Transform::get_basis_q() // const
+	math::Quaternion Transform::get_basis_q() const
 	{
 		return math::to_quaternion(get_basis());
 	}
 
-	math::Quaternion Transform::get_local_basis_q() // const
+	math::Quaternion Transform::get_local_basis_q() const
 	{
 		return math::to_quaternion(get_local_basis());
 	}
 
-	math::Vector Transform::get_rotation()
+	math::Vector Transform::get_rotation() const
 	{
 		return math::get_rotation(get_basis());
 	}
 
-	math::Vector Transform::get_local_rotation()
+	math::Vector Transform::get_local_rotation() const
 	{
 		return math::get_rotation(get_local_basis());
 	}
 
-	math::Vector Transform::get_direction_vector(const math::Vector& forward)
+	math::Vector Transform::get_direction_vector(const math::Vector& forward) const
 	{
 		return (get_basis() * forward);
 	}
@@ -296,7 +296,7 @@ namespace engine
 		set_basis(math::rotation_from_vector(direction));
 	}
 
-	math::TransformVectors Transform::get_vectors()
+	math::TransformVectors Transform::get_vectors() const
 	{
 		return
 		{
@@ -304,6 +304,11 @@ namespace engine
 			get_rotation(),
 			get_scale()
 		};
+	}
+
+	math::Vector Transform::get_local_direction_vector(const math::Vector forward) const
+	{
+		return (get_local_basis() * forward);
 	}
 
 	Transform& Transform::set_position(const math::Vector& position)
@@ -394,11 +399,6 @@ namespace engine
 		return *this;
 	}
 
-	math::Vector Transform::get_local_direction_vector(const math::Vector forward)
-	{
-		return (get_local_basis() * forward);
-	}
-
 	Transform& Transform::set_rx(float rx)
 	{
 		auto rotation = get_rotation();
@@ -431,22 +431,22 @@ namespace engine
 		return set_ry(math::direction_to_yaw(direction));
 	}
 
-	float Transform::get_pitch() // const
+	float Transform::get_pitch() const
 	{
 		return rx();
 	}
 
-	float Transform::get_yaw() // const
+	float Transform::get_yaw() const
 	{
 		return ry();
 	}
 
-	float Transform::get_roll() // const
+	float Transform::get_roll() const
 	{
 		return rz();
 	}
 
-	math::Vector Transform::align_vector(const math::Vector& v)
+	math::Vector Transform::align_vector(const math::Vector& v) const
 	{
 		auto basis = get_local_basis(); // get_basis();
 
@@ -479,6 +479,13 @@ namespace engine
 		return look_at(t.get_position(), up);
 	}
 
+	math::RotationMatrix Transform::look_at(Entity entity, const math::Vector& up)
+	{
+		auto entity_tform = Transform(registry, entity);
+
+		return look_at(entity_tform.get_position(), up);
+	}
+
 	Transform& Transform::rotate(const math::Vector& rv, bool local)
 	{
 		return apply_basis(math::rotation_from_vector(rv), local);
@@ -499,7 +506,7 @@ namespace engine
 		return apply_basis(math::rotation_roll(rz), local);
 	}
 
-	math::Matrix& Transform::update_local_matrix(const math::Vector& translation, const math::Vector& scale, const math::RotationMatrix& basis)
+	const math::Matrix& Transform::update_local_matrix(const math::Vector& translation, const math::Vector& scale, const math::RotationMatrix& basis) const
 	{
 		math::Matrix m = math::identity<math::Matrix>();
 
@@ -515,7 +522,7 @@ namespace engine
 		return transform._m;
 	}
 
-	math::Matrix& Transform::update_local_matrix(bool force)
+	const math::Matrix& Transform::update_local_matrix(bool force) const
 	{
 		if (invalid(Dirty::M) || (force))
 		{
@@ -527,7 +534,7 @@ namespace engine
 		return transform._m;
 	}
 
-	math::Matrix& Transform::update_matrix(bool force)
+	const math::Matrix& Transform::update_matrix(bool force) const
 	{
 		if (invalid(Dirty::W) || (force))
 		{
@@ -542,7 +549,7 @@ namespace engine
 		return transform._w;
 	}
 
-	math::Matrix& Transform::update_inverse_matrix(bool force)
+	const math::Matrix& Transform::update_inverse_matrix(bool force) const
 	{
 		if (invalid(Dirty::IW) || (force))
 		{
@@ -555,12 +562,12 @@ namespace engine
 		return transform._iw;
 	}
 
-	math::Matrix Transform::get_local_matrix(bool force)
+	math::Matrix Transform::get_local_matrix(bool force) const
 	{
 		return update_local_matrix(force);
 	}
 
-	math::Matrix Transform::get_inverse_local_matrix(bool force)
+	math::Matrix Transform::get_inverse_local_matrix(bool force) const
 	{
 		return glm::inverse(get_local_matrix(force));
 	}
@@ -666,12 +673,12 @@ namespace engine
 		return (_dirty & flag);
 	}
 
-	void TransformComponent::invalidate(TransformComponent::Dirty flag)
+	void TransformComponent::invalidate(TransformComponent::Dirty flag) const
 	{
 		_dirty |= flag;
 	}
 
-	TransformComponent::Dirty TransformComponent::validate(TransformComponent::Dirty flag)
+	TransformComponent::Dirty TransformComponent::validate(TransformComponent::Dirty flag) const
 	{
 		_dirty &= (~flag);
 
