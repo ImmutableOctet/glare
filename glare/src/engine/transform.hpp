@@ -107,6 +107,7 @@ namespace engine
 		Entity entity;
 	};
 
+	// TODO: Fix const-correctness.
 	struct Transform : public TransformViewData
 	{
 		public:
@@ -122,9 +123,6 @@ namespace engine
 			// Additionally, this field assists in optimizing multiple requests for parent data, without incurring dynamic allocation.
 			// Thanks to 'std::optional', this is also type and memory-safe within the scope of this type's utility.
 			std::optional<TransformViewData> parent_data = std::nullopt;
-
-			// Resolves 'parent_data' into a proper 'Transform' object, if applicable.
-			std::optional<Transform> get_parent() const;
 
 			Transform& invalidate();
 			Transform& invalidate_world();
@@ -162,6 +160,9 @@ namespace engine
 			}
 			*/
 
+			// Resolves 'parent_data' into a proper 'Transform' object, if applicable.
+			std::optional<Transform> get_parent() const;
+
 			// TODO: Rename these routines to be more generic.
 			// (i.e. collision is not the only use-case of event flags)
 			bool collision_invalid() const;
@@ -177,6 +178,7 @@ namespace engine
 			math::Vector get_position();
 			math::Vector get_scale();
 			math::RotationMatrix get_basis();
+			math::Quaternion get_basis_q();
 
 			// Retrieves the current rotation in the form of angles. (Pitch, Yaw, Roll)
 			math::Vector get_rotation();
@@ -185,7 +187,17 @@ namespace engine
 			math::Vector get_local_rotation();
 
 			// Retrieves a normalized direction vector based on the transform's basis.
-			math::Vector get_direction_vector(const math::Vector forward={0.0f, 0.0f, -1.0f});
+			math::Vector get_direction_vector(const math::Vector& forward={0.0f, 0.0f, -1.0f}); // {0.0f, 0.0f, 1.0f}
+
+			// Sets the basis of this entity to point towards `direction`.
+			// 
+			// NOTE: This assumes that `direction` is already normalized.
+			// 
+			// NOTE: Since this is a direction vector and not a quaternion,
+			// this does not preserve local orientation -- i.e. `roll`.
+			// 
+			// See also: `set_basis`, `set_basis_q`
+			void set_direction_vector(const math::Vector& direction);
 
 			math::TransformVectors get_vectors(); // const
 
@@ -212,6 +224,21 @@ namespace engine
 			Transform& set_ry(float ry);
 			Transform& set_rz(float rz);
 
+			// Same as `set_ry`.
+			Transform& set_yaw(float yaw);
+
+			// Computes the `yaw` angle of `direction`, then calls `set_ry`.
+			Transform& set_yaw(const math::Vector& direction);
+
+			// Shorthand for `rx`.
+			float get_pitch(); // const;
+
+			// Shorthand for `ry`.
+			float get_yaw(); // const;
+
+			// Shorthand for `rz`.
+			float get_roll(); // const;
+
 			// Aligns a vector to the direction/basis of this entity.
 			// (Useful for things like determining local movement before it happens)
 			math::Vector align_vector(const math::Vector& v); // const
@@ -236,6 +263,8 @@ namespace engine
 			inline math::Vector         get_local_position() const { return transform.translation; } // math::get_translation(transform._m);
 			inline math::Vector         get_local_scale()    const { return transform.scale; }
 			inline math::RotationMatrix get_local_basis()    const { return transform.basis; }
+
+			math::Quaternion get_local_basis_q();
 
 			// Returns a copy of the 'model' matrix.
 			math::Matrix get_local_matrix(bool force=false);

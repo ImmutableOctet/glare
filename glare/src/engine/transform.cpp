@@ -266,6 +266,16 @@ namespace engine
 		return transform.basis;
 	}
 
+	math::Quaternion Transform::get_basis_q() // const
+	{
+		return math::to_quaternion(get_basis());
+	}
+
+	math::Quaternion Transform::get_local_basis_q() // const
+	{
+		return math::to_quaternion(get_local_basis());
+	}
+
 	math::Vector Transform::get_rotation()
 	{
 		return math::get_rotation(get_basis());
@@ -276,9 +286,14 @@ namespace engine
 		return math::get_rotation(get_local_basis());
 	}
 
-	math::Vector Transform::get_direction_vector(const math::Vector forward)
+	math::Vector Transform::get_direction_vector(const math::Vector& forward)
 	{
 		return (get_basis() * forward);
+	}
+
+	void Transform::set_direction_vector(const math::Vector& direction)
+	{
+		set_basis(math::rotation_from_vector(direction));
 	}
 
 	math::TransformVectors Transform::get_vectors()
@@ -403,6 +418,32 @@ namespace engine
 		auto rotation = get_rotation();
 
 		return set_rotation({ rotation.x, rotation.y, rz });
+	}
+
+	Transform& Transform::set_yaw(float yaw)
+	{
+		return set_ry(yaw);
+	}
+
+	// Computes the `yaw` angle of `direction`, then calls `set_ry`.
+	Transform& Transform::set_yaw(const math::Vector& direction)
+	{
+		return set_ry(math::direction_to_yaw(direction));
+	}
+
+	float Transform::get_pitch() // const
+	{
+		return rx();
+	}
+
+	float Transform::get_yaw() // const
+	{
+		return ry();
+	}
+
+	float Transform::get_roll() // const
+	{
+		return rz();
 	}
 
 	math::Vector Transform::align_vector(const math::Vector& v)
