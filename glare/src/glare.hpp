@@ -30,8 +30,6 @@ namespace glare
 		public:
 			static constexpr auto NR_LIGHTS = 32; // 128; // 16;
 
-			engine::DebugListener dbg_listener;
-
 			Glare();
 
 			engine::Transform get_named_transform(std::string_view name);
