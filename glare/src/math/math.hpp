@@ -172,12 +172,12 @@ namespace math
 	// Same as `slerp`, but skips the normalization step.
 	Quaternion slerp_unnormalized(Quaternion v0, Quaternion v1, float t);
 
-	// Utility function; provides the cross-product (third direction-vector) of `normal` and `adjacent`.
+	// Utility function; provides the cross-product (third direction-vector) of `normal` and `forward`.
 	// See also: `get_surface_slope`.
 	math::Vector get_surface_forward
 	(
 		const math::Vector& normal,
-		const math::Vector& adjacent={1.0f, 0.0f, 0.0f}
+		const math::Vector& forward={0.0f, 0.0f, -1.0f}
 	);
 
 	// Returns the slope of the surface (`normal`)
@@ -186,6 +186,6 @@ namespace math
 	(
 		const math::Vector& normal,
 		const math::Vector& angle,
-		const math::Vector& adjacent={1.0f, 0.0f, 0.0f}
+		const math::Vector& forward={0.0f, 0.0f, -1.0f}
 	);
 }
