@@ -14,7 +14,7 @@ namespace engine
 		bool apply_velocity           : 1 = true;
 		bool reorient_in_air          : 1 = true;
 		bool align_to_ground          : 1 = true;
-		bool attach_to_dynamic_ground : 1 = false;
+		bool attach_to_dynamic_ground : 1 = true;
 	};
 
 	struct MotionComponent : public MotionRules
