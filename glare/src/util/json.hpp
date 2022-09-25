@@ -11,9 +11,13 @@
 //#include <string>
 //#include <string_view>
 
+#include <filesystem>
+
 namespace util
 {
 	using json = nlohmann::json;
+
+	json load_json(const std::filesystem::path& path);
 
 	math::TransformVectors get_transform(const json& data);
 

@@ -4,8 +4,17 @@
 
 #include <math/conversion.hpp>
 
+#include <fstream>
+
 namespace util
 {
+	json load_json(const std::filesystem::path& path)
+	{
+		std::ifstream map_data_stream(path);
+
+		return util::json::parse(map_data_stream);
+	}
+
 	math::TransformVectors get_transform(const json& data)
 	{
 		auto position = get_vector(data, "position");
