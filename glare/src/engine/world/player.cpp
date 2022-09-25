@@ -5,6 +5,8 @@
 #include "graphics_entity.hpp"
 
 #include "motion/motion_component.hpp"
+#include "motion/alignment_component.hpp"
+
 #include "physics/collision.hpp"
 
 #include <util/string.hpp>
@@ -77,7 +79,7 @@ namespace engine
 			tform.set_local_position(util::get_vector(model_data, "offset"));
 		}
 		
-		registry.emplace_or_replace<NameComponent>(player_model, "model");
+		registry.emplace_or_replace<NameComponent>(player_model, "player_model");
 
 		return player_model;
 	}
@@ -111,9 +113,15 @@ namespace engine
 
 		registry.emplace<PlayerState>(player, PlayerState::Action::Default, index);
 		
-		registry.emplace<MotionComponent>(player);
+		auto& motion = registry.emplace<MotionComponent>(player);
 
-		load_player_model(world, player, character["model"], character_path);
+		//motion.apply_gravity = false;
+
+		auto player_model = load_player_model(world, player, character["model"], character_path);
+
+		// Set the alignment entity to `player_model`, since it's meant to be floor-aligned.
+		registry.emplace<AlignmentComponent>(player, player_model);
+
 		generate_player_collision(world, player, character["collision"]);
 
 		//world.set_parent(camera, player);
