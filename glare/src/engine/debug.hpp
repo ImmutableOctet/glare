@@ -2,6 +2,7 @@
 
 #include "types.hpp"
 //#include "world/world.hpp"
+#include "world/world_system.hpp"
 
 #include <string>
 #include <string_view>
@@ -27,22 +28,18 @@ namespace engine
 	struct OnTransformChanged;
 	struct OnAABBOverlap;
 	struct OnCollision;
+	struct OnKinematicInfluence;
+	struct OnKinematicAdjustment;
 
 	void print_children(World& registry, Entity entity, bool recursive=true, bool summary_info=true, bool recursive_labels=false, const std::string& prefix="->");
 	void position_in_titlebar(game::Game& game, Entity entity, std::optional<std::string_view> prefix=std::nullopt);
 	
-	class DebugListener
+	class DebugListener : public WorldSystem
 	{
-		protected:
-			World& world;
-
-		private:
-			template <typename EventType>
-			void enable();
-
 		public:
 			DebugListener(World& world);
-			~DebugListener();
+
+			void on_subscribe(World& world) override;
 
 			void operator()(const OnStageLoaded& data);
 			void operator()(const OnEntityCreated& data);
@@ -51,16 +48,16 @@ namespace engine
 			void operator()(const OnTransformChanged& data);
 			void operator()(const OnAABBOverlap& data);
 			void operator()(const OnCollision& data);
+			void operator()(const OnKinematicInfluence& data);
+			void operator()(const OnKinematicAdjustment& data);
 
 			void on_skeleton(Registry& registry, Entity entity);
 
 			std::string label(Entity entity);
 
-			inline World& get_world() const
-			{
-				return world;
-			}
-
 			Registry& get_registry() const;
+		private:
+			template <typename EventType>
+			void enable();
 	};
 }

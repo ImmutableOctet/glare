@@ -1,6 +1,6 @@
 #include "debug.hpp"
 
-#include <format>
+#include <util/log.hpp>
 
 #include <game/game.hpp>
 
@@ -105,7 +105,9 @@ namespace engine
 	}
 
 	DebugListener::DebugListener(World& world)
-		: world(world)
+		: WorldSystem(world) {}
+
+	void DebugListener::on_subscribe(World& world)
 	{
 		auto& registry = world.get_registry();
 
@@ -116,16 +118,15 @@ namespace engine
 
 		// Disabled for now.
 		//enable<OnAABBOverlap>();
-		//enable<OnCollision>();
+		
+		////enable<OnCollision>();
+
 		//enable<OnTransformChanged>();
+		enable<OnKinematicInfluence>();
+		enable<OnKinematicAdjustment>();
 
 		// Component construction events:
 		registry.on_construct<SkeletalComponent>().connect<&DebugListener::on_skeleton>(*this);
-	}
-
-	DebugListener::~DebugListener()
-	{
-		world.unsubscribe(*this);
 	}
 
 	Registry& DebugListener::get_registry() const
@@ -198,10 +199,29 @@ namespace engine
 
 	void DebugListener::operator()(const OnCollision& data)
 	{
-		//if (data.contact_type == ContactType::Surface)
+		switch (data.contact_type)
 		{
-			print("Collision detected between entities {} and {} at {}. (Contact type: {})", data.a, data.b, data.position, static_cast<int>(data.contact_type));
+			case ContactType::Interaction:
+				print("Interaction detected.");
+
+				break;
+
+			//case ContactType::Surface:
+			case ContactType::Intersection:
+				print("Collision detected between entities {} and {} at {}. (Contact type: {})", data.a, data.b, data.position, static_cast<int>(data.contact_type));
+
+				break;
 		}
+	}
+
+	void DebugListener::operator()(const OnKinematicInfluence& data)
+	{
+		print("Kinematic influence: {} influenced by {}", data.target.entity, data.influencer);
+	}
+
+	void DebugListener::operator()(const OnKinematicAdjustment& data)
+	{
+		print("Kinematic adjustment: {} adjusted by {}", data.entity, data.adjusted_by);
 	}
 
 	void DebugListener::on_skeleton(Registry& registry, Entity entity)
