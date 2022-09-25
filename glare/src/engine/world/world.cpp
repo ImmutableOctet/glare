@@ -92,17 +92,15 @@ namespace engine
 
 	Entity World::load(const filesystem::path& root_path, const std::string& json_file, Entity parent)
 	{
-		auto map_data_path = (root_path / json_file).string();
+		auto map_data_path = (root_path / json_file);
 		
-		print("Loading map from \"{}\"...", map_data_path);
-
-		std::ifstream map_data_stream(map_data_path);
+		print("Loading map from \"{}\"...", map_data_path.string());
 
 		//try
 		{
 			print("Parsing JSON...");
 
-			util::json map_data = util::json::parse(map_data_stream);
+			auto map_data = util::load_json(map_data_path);
 
 			print("Loading...");
 
