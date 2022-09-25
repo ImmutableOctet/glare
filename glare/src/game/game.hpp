@@ -76,6 +76,15 @@ namespace game
 			template <typename SystemType, typename...Args>
 			inline SystemType& system(Args&&... args) { return systems.emplace_system<SystemType>(std::forward<Args>(args)...); }
 
+			template <typename SystemType>
+			inline SystemType& system() { return systems.emplace_system<SystemType>(); }
+
+			template <typename WorldSystemType, typename...Args>
+			inline WorldSystemType& world_system(Args&&... args) { return systems.emplace_system<WorldSystemType>(world, std::forward<Args>(args)...); }
+
+			template <typename WorldSystemType>
+			inline WorldSystemType& world_system() { return systems.emplace_system<WorldSystemType>(world); }
+
 			template <typename BehaviorType>
 			inline void behavior() { systems.register_behavior<BehaviorType>(); }
 

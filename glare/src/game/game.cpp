@@ -55,11 +55,11 @@ namespace game
 		}
 
 		// Default systems:
-		auto& physics = system<engine::PhysicsSystem>(world);
-		system<engine::MotionSystem>(world, physics);
+		auto& physics = world_system<engine::PhysicsSystem>();
+		world_system<engine::MotionSystem>(physics);
 
-		system<engine::AnimationSystem>(world);
-		system<engine::ZoneSystem>(world);
+		world_system<engine::AnimationSystem>();
+		world_system<engine::ZoneSystem>();
 
 		// Behaviors:
 		behavior<engine::FreeLookBehavior>();
@@ -190,6 +190,8 @@ namespace game
 	{
 		auto& mouse = input.get_mouse();
 
+		// Currently based on mouse's lock-status.
+		// (May change this in the future)
 		if (mouse.locked())
 		{
 			input.poll(world.get_active_event_handler());
