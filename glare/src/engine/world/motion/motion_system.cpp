@@ -3,6 +3,7 @@
 #include "motion_component.hpp"
 #include "motion_events.hpp"
 #include "motion_attachment_proxy.hpp"
+#include "alignment_component.hpp"
 #include "ground.hpp"
 
 #include <engine/transform.hpp>
@@ -56,8 +57,6 @@ namespace engine
 
 		auto floor_detection = surface.floor();
 
-		print("FLOOR: {}", floor_detection);
-
 		// TODO: Add surface dot-product handling so we don't treat everything we touch like it's ground.
 		if (floor_detection < GROUND)
 		{
@@ -65,7 +64,12 @@ namespace engine
 			return;
 		}
 
-		print("Ground surface detected.");
+		if ((int)entity == 14)
+		{
+			print("Ground surface detected.");
+			print("surface.slope(): {}", surface.slope());
+			print("Forward: {}", surface.forward());
+		}
 
 		motion->ground = surface;
 		motion->ground.update_metadata(world);
@@ -87,13 +91,37 @@ namespace engine
 			//*/
 
 			motion->on_ground = true;
+
+			// Debugging related:
+			//motion->apply_gravity = false;
+		}
+
+		if (motion->align_to_ground)
+		{
+			Entity alignment_entity = entity; // null;
+
+			if (auto* alignment_proxy = registry.try_get<AlignmentComponent>(entity))
+			{
+				if (alignment_proxy->entity != null)
+				{
+					alignment_entity = alignment_proxy->entity;
+				}
+			}
+
+			if (alignment_entity != null)
+			{
+				auto alignment_tform = world.get_transform(alignment_entity);
+
+				auto yaw = alignment_tform.get_yaw();
+
+				alignment_tform.set_basis(surface.alignment());
+				alignment_tform.rotateY(yaw, false);
+			}
 		}
 	}
 
 	Entity MotionSystem::detach_motion_proxy(Entity entity, MotionComponent& motion, Entity _opt_new_proxy)
 	{
-		print("Detached.");
-
 		auto& registry = world.get_registry();
 		auto& attachment_proxy = registry.get_or_emplace<MotionAttachmentProxy>(entity, null);
 
@@ -111,8 +139,20 @@ namespace engine
 				return proxy;
 			}
 
+			print("Detached.");
+
+			{
+				auto tform = world.get_transform(entity);
+				print("BEFORE DETACH: {}", tform.get_position());
+			}
+
 			// Restore the old/intended parent entity.
 			world.set_parent(entity, attachment_proxy.intended_parent);
+
+			{
+				auto tform = world.get_transform(entity);
+				print("AFTER DETACH: {}", tform.get_position());
+			}
 
 			// Set the intended parent back to `null`, changing `attachment_proxy` to 'inactive' by extension.
 			attachment_proxy.intended_parent = null;
@@ -169,7 +209,6 @@ namespace engine
 
 	void MotionSystem::on_air_to_ground(const OnAirToGround& to_ground)
 	{
-		return;
 		auto& registry = world.get_registry();
 
 		auto entity = to_ground.entity();
@@ -191,7 +230,6 @@ namespace engine
 
 	void MotionSystem::on_ground_to_air(const OnGroundToAir& to_air)
 	{
-		return;
 		auto& registry = world.get_registry();
 		
 		auto entity = to_air.entity();
@@ -199,6 +237,25 @@ namespace engine
 
 		if (to_air.was_dynamic_ground() && (motion.is_attached))
 		{
+			/*
+			auto parent = world.get_parent(entity);
+			auto parent_name = world.get_name(parent);
+			auto parent_tform = world.get_transform(parent);
+			auto parent_position = parent_tform.get_position();
+
+			auto entity_tform = world.get_transform(entity);
+			auto entity_position = entity_tform.get_position();
+
+			print("parent_position: {} ({})", parent_position, parent_position.y);
+			print("entity_position: {} ({})", entity_position, entity_position.y);
+
+			print("Y Diff: {}", (entity_position.y-parent_position.y));
+
+			print("WOULD DETACH");
+
+			return;
+			*/
+
 			detach_motion_proxy(entity, motion);
 		}
 	}
@@ -220,8 +277,10 @@ namespace engine
 			return std::nullopt;
 		}
 
+		constexpr auto gravity_margin = 0.0f;
+
 		auto entity_position = transform.get_position();
-		auto if_gravity_applied = (entity_position + gravity_movement);
+		auto if_gravity_applied = (entity_position + (gravity_movement * (1.0f+gravity_margin)));
 		auto ground_check = physics.cast_to(collision, if_gravity_applied);
 
 		if (ground_check)
