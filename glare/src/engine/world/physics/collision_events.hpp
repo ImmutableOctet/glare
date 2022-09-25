@@ -146,7 +146,17 @@ namespace engine
 		float slope(const math::OrthogonalVectors& orientation) const;
 
 		// Retrieves the three orthogonal vectors representing the orientation of the surface.
-		math::OrthogonalVectors surface_orientation_vectors(const math::Vector& adjacent={1.0f, 0.0f, 0.0f}) const;
+		math::OrthogonalVectors surface_orientation_vectors(const math::Vector& forward={0.0f, 0.0f, -1.0f}) const;
+
+		// Retrieves the forward vector of the surface.
+		// (Angle perpendicular to `normal`)
+		// 
+		// NOTE: This essentially calls `surface_orientation_vectors` and
+		// throws out the `normal` and `adjacent` direction vectors.
+		math::Vector forward(const math::Vector& forward={0.0f, 0.0f, -1.0f}) const;
+
+		math::RotationMatrix alignment(const math::Vector& forward={0.0f, 0.0f, -1.0f}) const;
+		math::Quaternion alignment_q(const math::Vector& forward={0.0f, 0.0f, -1.0f}) const;
 
 		// Returns -1 for collision from above,
 		// and 1 for collision from below.
