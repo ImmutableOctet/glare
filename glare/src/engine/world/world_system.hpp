@@ -87,7 +87,9 @@ namespace engine
 
 			// Called by `subscribe` after default subscription actions are performed.
 			virtual void on_subscribe(World& world) = 0;
-			virtual void on_update(World& world, float delta) = 0;
+			
+			// Default implementation; blank.
+			virtual void on_update(World& world, float delta);
 
 			// Default implementation; blank.
 			virtual void on_render(World& world, app::Graphics& graphics);

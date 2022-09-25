@@ -46,6 +46,11 @@ namespace engine
 		// Empty implementation.
 	}
 
+	void WorldSystem::on_update(World& world, float delta)
+	{
+		// Empty implementation.
+	}
+
 	bool WorldSystem::subscribe(World& world)
 	{
 		bool is_same_as_internal = is_bound_world(world);
