@@ -466,6 +466,19 @@
     <ClInclude Include="src\engine\world\motion\ground.hpp" />
     <ClInclude Include="src\engine\forwarding_component.hpp" />
     <ClInclude Include="src\engine\world\motion\motion_attachment_proxy.hpp" />
+    <ClInclude Include="src\engine\world\motion\alignment_component.hpp" />
+    <ClInclude Include="src\app\input\gamepad.hpp" />
+    <ClInclude Include="src\app\input\gamepad_manager.hpp" />
+    <ClInclude Include="src\app\input\gamepad_deadzone.hpp" />
+    <ClInclude Include="src\app\input\events.hpp" />
+    <ClInclude Include="src\app\input\keyboard_state.hpp" />
+    <ClInclude Include="src\app\input\mouse_state.hpp" />
+    <ClInclude Include="src\app\input\gamepad_state.hpp" />
+    <ClInclude Include="src\app\input\gamepad_profile.hpp" />
+    <ClInclude Include="src\math\fixed_range.hpp" />
+    <ClInclude Include="src\math\joyhat.hpp" />
+    <ClInclude Include="src\math\format.hpp" />
+    <ClInclude Include="src\engine\format.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\shaders\light_box.frag">
@@ -886,6 +899,11 @@
     <ClCompile Include="src\engine\collision_shape_primitive.cpp" />
     <ClCompile Include="src\engine\world\motion\motion_system.cpp" />
     <ClCompile Include="src\engine\world\motion\ground.cpp" />
+    <ClCompile Include="src\app\input\gamepad.cpp" />
+    <ClCompile Include="src\app\input\gamepad_manager.cpp" />
+    <ClCompile Include="src\app\input\gamepad_profile.cpp" />
+    <ClCompile Include="src\app\input\gamepad_state.cpp" />
+    <ClCompile Include="src\app\input\events.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />

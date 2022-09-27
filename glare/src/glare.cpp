@@ -12,6 +12,7 @@
 
 #include <app/events.hpp>
 #include <app/input/keycodes.hpp>
+
 #include <engine/engine.hpp>
 
 #include <util/variant.hpp>
@@ -57,7 +58,7 @@
 namespace glare
 {
 	Glare::Glare():
-		Game("Project Glare", 1600, 900, 60, true, true) // false
+		Game("Project Glare", 1600, 900, 60, true, false) // true
 	{
 		using namespace graphics;
 
@@ -66,9 +67,6 @@ namespace glare
 		// TODO: Look into this again.
 		world.register_event<app::input::KeyboardState, &Glare::on_user_keyboard_input>(*this);
 		world.register_event<app::input::MouseState, &Glare::on_user_mouse_input>(*this);
-
-		// Normally, we lock when starting the game, but don't here for testing purposes.
-		//input.get_mouse().lock();
 
 		world.load("assets/maps/test01");
 		//world.load("assets/maps/story/2.ice-world/ice-connector");
@@ -155,9 +153,6 @@ namespace glare
 
 		auto zone = create_zone(world, math::AABB { { -144.822, 150.215, -141.586 }, { -74.4793, 71.374, -203.555 } });
 		world.set_name(zone, "Zone");
-
-		auto& gamepad = input.get_gamepads().get_gamepad(0);
-		print("GAMEPAD: {}", gamepad.get_device_name());
 	}
 
 	engine::Transform Glare::get_named_transform(std::string_view name)
