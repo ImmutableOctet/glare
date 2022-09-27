@@ -178,7 +178,13 @@ namespace math
 	float direction_to_angle(const Vector2D& dir)
 	{
 		//return std::atan2(std::cos(dir.y), std::sin(dir.x));
-		return std::atan2(dir.y, dir.x);
+		//return std::atan2(dir.y, dir.x);
+		return std::atan2(dir.x, dir.y);
+	}
+
+	float direction_to_angle_90_degrees(const Vector2D& dir)
+	{
+		return std::atan2(dir.x, -dir.y);
 	}
 
 	float direction_to_yaw(const Vector& dir)

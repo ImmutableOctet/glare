@@ -32,6 +32,28 @@ namespace math
 		return sign<T, ResultType>((x - y));
 	}
 
+	// Forces `value` to be positive.
+	template <typename T>
+	inline T positive(const T& value)
+	{
+		return (value * sign(value));
+	}
+
+	// Forces `value` to be negative.
+	template <typename T>
+	inline T negative(const T& value)
+	{
+		return -positive(value);
+	}
+
+	// Inverts the sign of `value`.
+	// (Equivalent to unary `-` operator)
+	template <typename T>
+	inline T negate(const T& value)
+	{
+		return -value;
+	}
+
 	template <typename T>
 	inline T sq(const T& x)
 	{
@@ -106,6 +128,10 @@ namespace math
 
 	// Converts a 2D direction to an euler angle.
 	float direction_to_angle(const Vector2D& dir);
+
+	// Similar to `direction_to_angle`, but rotated 90 degrees.
+	// This is useful for analog gamepad input.
+	float direction_to_angle_90_degrees(const Vector2D& dir);
 
 	// Computes the 'yaw' angle of a 3D direction vector.
 	float direction_to_yaw(const Vector& dir); // Vector3D
