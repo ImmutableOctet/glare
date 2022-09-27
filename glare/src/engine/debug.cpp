@@ -1,9 +1,4 @@
 #include "debug.hpp"
-
-#include <util/log.hpp>
-
-#include <game/game.hpp>
-
 #include "events.hpp"
 
 #include "world/world.hpp"
@@ -12,8 +7,15 @@
 
 // Components:
 #include "relationship.hpp"
-
 #include "world/animation/skeletal_component.hpp"
+
+#include <util/log.hpp>
+
+#include <app/input/events.hpp>
+#include <game/game.hpp>
+
+// Debugging related:
+#include <math/math.hpp>
 
 namespace engine
 {
@@ -125,8 +127,19 @@ namespace engine
 		enable<OnKinematicInfluence>();
 		enable<OnKinematicAdjustment>();
 
+		enable<app::input::OnGamepadConnected>();
+		enable<app::input::OnGamepadDisconnected>();
+		enable<app::input::OnGamepadButtonDown>();
+		enable<app::input::OnGamepadButtonUp>();
+		enable<app::input::OnGamepadAnalogInput>();
+
 		// Component construction events:
 		registry.on_construct<SkeletalComponent>().connect<&DebugListener::on_skeleton>(*this);
+	}
+
+	void DebugListener::on_skeleton(Registry& registry, Entity entity)
+	{
+		print("Skeleton attached to: {}", entity);
 	}
 
 	Registry& DebugListener::get_registry() const
@@ -224,8 +237,28 @@ namespace engine
 		print("Kinematic adjustment: {} adjusted by {}", data.entity, data.adjusted_by);
 	}
 
-	void DebugListener::on_skeleton(Registry& registry, Entity entity)
+	void DebugListener::operator()(const app::input::OnGamepadConnected& data)
 	{
-		print("Skeleton attached to: {}", entity);
+		print("Controller #{} connected.", data.device_index);
+	}
+
+	void DebugListener::operator()(const app::input::OnGamepadDisconnected& data)
+	{
+		print("Controller #{} disconnected.", data.device_index);
+	}
+
+	void DebugListener::operator()(const app::input::OnGamepadButtonDown& data)
+	{
+		print("Controller #{} - Button Down: {}", data.device_index, data.button);
+	}
+
+	void DebugListener::operator()(const app::input::OnGamepadButtonUp& data)
+	{
+		print("Controller #{} - Button Up: {}", data.device_index, data.button);
+	}
+
+	void DebugListener::operator()(const app::input::OnGamepadAnalogInput& data)
+	{
+		print("Controller #{} - Analog Input [{}]: {} ({})", data.device_index, static_cast<unsigned int>(data.analog), data.value, math::degrees(data.angle()));
 	}
 }

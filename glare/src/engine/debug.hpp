@@ -19,6 +19,15 @@ namespace game
 	class Game;
 }
 
+namespace app::input
+{
+	struct OnGamepadConnected;
+	struct OnGamepadDisconnected;
+	struct OnGamepadButtonDown;
+	struct OnGamepadButtonUp;
+	struct OnGamepadAnalogInput;
+}
+
 namespace engine
 {
 	struct OnStageLoaded;
@@ -40,6 +49,11 @@ namespace engine
 			DebugListener(World& world);
 
 			void on_subscribe(World& world) override;
+			void on_skeleton(Registry& registry, Entity entity);
+
+			Registry& get_registry() const;
+
+			std::string label(Entity entity);
 
 			void operator()(const OnStageLoaded& data);
 			void operator()(const OnEntityCreated& data);
@@ -51,11 +65,11 @@ namespace engine
 			void operator()(const OnKinematicInfluence& data);
 			void operator()(const OnKinematicAdjustment& data);
 
-			void on_skeleton(Registry& registry, Entity entity);
-
-			std::string label(Entity entity);
-
-			Registry& get_registry() const;
+			void operator()(const app::input::OnGamepadConnected& data);
+			void operator()(const app::input::OnGamepadDisconnected& data);
+			void operator()(const app::input::OnGamepadButtonDown& data);
+			void operator()(const app::input::OnGamepadButtonUp& data);
+			void operator()(const app::input::OnGamepadAnalogInput& data);
 		private:
 			template <typename EventType>
 			void enable();
