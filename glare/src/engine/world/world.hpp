@@ -6,7 +6,6 @@
 #include <engine/service.hpp>
 #include <engine/transform.hpp>
 
-#include "world_events.hpp"
 #include "world_properties.hpp"
 
 //#include <graphics/types.hpp> // Not actually needed. (`ColorRGB` is actually located in math)
@@ -42,6 +41,9 @@ namespace engine
 	class ResourceManager;
 	class Config;
 	struct CollisionComponent;
+
+	struct OnTransformChanged;
+	struct OnEntityDestroyed;
 
 	class World : public Service
 	{
