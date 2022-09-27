@@ -49,7 +49,7 @@ namespace app
 			
 			if (mouse.locked())
 			{
-				return false;
+				return Application::process_event(e);
 			}
 
 			if (ImGui_ImplSDL2_ProcessEvent(&e))
@@ -58,6 +58,6 @@ namespace app
 			}
 		}
 
-		return false;
+		return Application::process_event(e);
 	}
 }

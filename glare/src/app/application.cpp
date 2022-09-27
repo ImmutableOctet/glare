@@ -103,7 +103,7 @@ namespace app
 
 					if (window->get_id() == window_event.windowID)
 					{
-						if (!window->handle_event(e, window_event, *this))
+						if (!window->process_event(e, window_event, *this))
 						{
 							return false;
 						}
@@ -153,12 +153,21 @@ namespace app
 	// Empty implementations:
 	void Application::begin_render() {}
 	void Application::end_render() {}
-
+	entt::dispatcher* Application::get_event_handler() { return nullptr; }
 	void Application::on_keydown(const keyboard_event_t& event) {}
 	void Application::on_keyup(const keyboard_event_t& event) {}
 	void Application::on_window_resize(Window& window, int width, int height) {}
 
-	bool Application::process_event(const SDL_Event& e) { return false; }
+	bool Application::process_event(const SDL_Event& e)
+	{
+		// TODO: Implement method of passing an event-handler object to `input.process_event`.
+		if (input.process_event(e, get_event_handler()))
+		{
+			return true;
+		}
+
+		return false;
+	}
 
 	// Date/time related:
 	Application::time_point Application::now() const

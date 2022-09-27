@@ -11,6 +11,8 @@
 #include "timer.hpp"
 #include "input/input.hpp"
 
+#include <entt/signal/dispatcher.hpp>
+
 // SDL:
 struct SDL_KeyboardEvent;
 union SDL_Event;
@@ -77,9 +79,12 @@ namespace app
 
 			virtual void update(Milliseconds time) abstract; // const DeltaTime& delta_time
 
-			virtual void begin_render();
 			virtual void render() abstract;
+			virtual void begin_render();
 			virtual void end_render();
+
+			// Optional; empty implementation.
+			virtual entt::dispatcher* get_event_handler();
 
 			virtual void on_keydown(const keyboard_event_t& event);
 			virtual void on_keyup(const keyboard_event_t& event);

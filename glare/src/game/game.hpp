@@ -101,6 +101,8 @@ namespace game
 			virtual void on_update(float delta) abstract;
 			virtual void on_render(RenderState& render_state) {}
 			virtual void on_resize(int width, int height) {}
+
+			entt::dispatcher* get_event_handler() override;
 		protected:
 			virtual void on_window_resize(app::Window& window, int width, int height) override;
 

@@ -201,4 +201,9 @@ namespace game
 
 		on_update(world.get_delta_time());
 	}
+
+	entt::dispatcher* Game::get_event_handler()
+	{
+		return &(world.get_active_event_handler());
+	}
 }
