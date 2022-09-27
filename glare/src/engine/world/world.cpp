@@ -1,5 +1,6 @@
 #include "world.hpp"
 
+#include "world_events.hpp"
 #include "entity.hpp"
 #include "camera.hpp"
 #include "player.hpp"
@@ -31,8 +32,6 @@
 
 #include <engine/type_component.hpp>
 #include <engine/name_component.hpp>
-
-#include <app/input/input.hpp>
 
 #include <algorithm>
 #include <fstream>

@@ -1,7 +1,9 @@
 #include "service.hpp"
 #include "input_events.hpp"
 
-#include <app/input/types.hpp>
+#include <app/input/mouse_state.hpp>
+#include <app/input/keyboard_state.hpp>
+//#include <app/input/gamepad_state.hpp>
 
 namespace engine
 {
