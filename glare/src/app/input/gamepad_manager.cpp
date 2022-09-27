@@ -3,13 +3,14 @@
 
 #include <sdl2/SDL_events.h>
 #include <sdl2/SDL_joystick.h>
+#include <sdl2/SDL_hints.h>
 
 #include <util/log.hpp>
 #include <util/json.hpp>
 
 namespace app::input
 {
-	GamepadManager::GamepadManager(const std::filesystem::path& profile_root_path, bool enable_events)
+	GamepadManager::GamepadManager(const std::filesystem::path& profile_root_path, bool enable_events, bool background_events)
 		: profile_root_path(profile_root_path)
 	{
 		// Reserve for the standard number of gamepads (4).
@@ -17,6 +18,8 @@ namespace app::input
 
 		if (enable_events)
 		{
+			set_background_input(background_events);
+
 			SDL_JoystickEventState(SDL_ENABLE);
 		}
 	}
@@ -139,6 +142,22 @@ namespace app::input
 	void GamepadManager::apply_profile(Gamepad& gamepad, const GamepadProfile& profile)
 	{
 		gamepad.set_deadzone(profile.deadzone);
+	}
+
+	void GamepadManager::set_background_input(bool enabled, bool force)
+	{
+		SDL_SetHintWithPriority
+		(
+			SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS,
+			
+			(enabled)
+			? "1"
+			: "0",
+
+			(force)
+			? SDL_HintPriority::SDL_HINT_OVERRIDE
+			: SDL_HintPriority::SDL_HINT_DEFAULT
+		);
 	}
 
 	void GamepadManager::on_gamepad_connected(GamepadDeviceIndex device_index)
