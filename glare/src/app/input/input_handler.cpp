@@ -6,6 +6,7 @@ namespace app::input
 	{
 		devices.mouse.poll(event_handler);
 		devices.keyboard.poll(event_handler);
+		devices.gamepads.poll(event_handler);
 
 		return devices;
 	}

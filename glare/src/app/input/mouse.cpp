@@ -1,8 +1,5 @@
 #include "mouse.hpp"
 
-// Debugging related:
-#include <iostream>
-
 // SDL:
 #include <sdl2/SDL_hints.h>
 #include <sdl2/SDL_mouse.h>
@@ -17,17 +14,13 @@ namespace app::input
 		}
 	}
 
-	Mouse::State Mouse::peek()
+	void Mouse::peek(State& state) const
 	{
-		State state;
-
 		auto buttons = SDL_GetRelativeMouseState(&state.x, &state.y);
 
-		state.left = (buttons & SDL_BUTTON(1));
+		state.left   = (buttons & SDL_BUTTON(1));
 		state.middle = (buttons & SDL_BUTTON(2));
-		state.right = (buttons & SDL_BUTTON(3));
-
-		return state;
+		state.right  = (buttons & SDL_BUTTON(3));
 	}
 
 	bool Mouse::lock()
