@@ -157,11 +157,16 @@ namespace engine
 			}
 		protected:
 			// Called during `subscribe`; return true on success, false on failure.
+			// NOTE: If no subscription/registration is performed by your `on_subscribe` implementation, do not return true.
 			virtual bool on_subscribe(ServiceType& service) = 0;
 
 			// Called during normal usage of `unsubscribe`; return true on success, false on failure.
 			// NOTE: This is not called during destruction due to virtual calls being prohibited.
-			virtual bool on_unsubscribe(ServiceType& service) = 0;
+			virtual bool on_unsubscribe(ServiceType& service)
+			{
+				// Empty implementation.
+				return true;
+			}
 
 			// Default implementation; allows all services. (Override this if needed)
 			virtual bool is_allowed_service(const ServiceType& service) const
