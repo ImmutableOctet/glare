@@ -165,17 +165,17 @@ namespace engine
 			inline void register_behavior()
 			{
 				// Check for all possible behavior event-handlers:
-				if constexpr (engine::HAS_STATIC_MEMBER_FUNCTION(BehaviorType, on_update))
+				if constexpr (engine::has_on_update<BehaviorType>())
 				{
 					service.register_free_function<engine::OnServiceUpdate, engine::behavior_impl::bridge_on_update<BehaviorType>>();
 				}
 
-				if constexpr (engine::HAS_STATIC_MEMBER_FUNCTION(BehaviorType, on_mouse))
+				if constexpr (engine::has_on_mouse<BehaviorType>())
 				{
 					service.register_free_function<engine::OnMouseState, engine::behavior_impl::bridge_on_mouse<BehaviorType>>();
 				}
 
-				if constexpr (engine::HAS_STATIC_MEMBER_FUNCTION(BehaviorType, on_keyboard))
+				if constexpr (engine::has_on_keyboard<BehaviorType>())
 				{
 					service.register_free_function<engine::OnKeyboardState, engine::behavior_impl::bridge_on_keyboard<BehaviorType>>();
 				}
@@ -185,17 +185,17 @@ namespace engine
 			inline void unregister_behavior()
 			{
 				// Check for all possible behavior event-handlers:
-				if constexpr (engine::HAS_STATIC_MEMBER_FUNCTION(BehaviorType, on_update))
+				if constexpr (engine::has_on_update<BehaviorType>())
 				{
 					service.unregister_free_function<engine::OnServiceUpdate, engine::behavior_impl::bridge_on_update<BehaviorType>>();
 				}
 
-				if constexpr (engine::HAS_STATIC_MEMBER_FUNCTION(BehaviorType, on_mouse))
+				if constexpr (engine::has_on_mouse<BehaviorType>())
 				{
 					service.unregister_free_function<engine::OnMouseState, engine::behavior_impl::bridge_on_mouse<BehaviorType>>();
 				}
 
-				if constexpr (engine::HAS_STATIC_MEMBER_FUNCTION(BehaviorType, on_keyboard))
+				if constexpr (engine::has_on_keyboard<BehaviorType>())
 				{
 					service.unregister_free_function<engine::OnKeyboardState, engine::behavior_impl::bridge_on_keyboard<BehaviorType>>();
 				}
