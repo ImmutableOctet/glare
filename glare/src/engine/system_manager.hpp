@@ -1,5 +1,7 @@
 #pragma once
 
+#include "meta.hpp"
+
 #include <util/memory.hpp>
 
 #include <engine/service.hpp>
@@ -23,17 +25,36 @@ namespace engine
 			template <typename SystemType>
 			inline static constexpr auto key() { return entt::type_hash<SystemType>::value(); }
 
+			template <template<typename, typename> typename TraitType, typename SystemType>
+			inline static constexpr bool has_method()
+			{
+				using Type = std::decay_t<SystemType>;
+
+				if constexpr (TraitType<Type, bool(ServiceType&)>::value)
+				{
+					return true;
+				}
+				else if constexpr (TraitType<Type, bool(Service&)>::value)
+				{
+					return true;
+				}
+
+				//return (std::is_base_of_v<WorldSystem, SystemType> && std::is_base_of_v<World, ServiceType>);
+
+				return false;
+			}
+
 			template <typename SystemType>
 			inline static constexpr bool has_subscribe()
 			{
-				//return (std::is_base_of_v<WorldSystem, SystemType> && std::is_base_of_v<World, ServiceType>);
-				return true;
+				return has_method<engine::has_method_subscribe, SystemType>();
 			}
 
 			template <typename SystemType>
 			inline static constexpr bool has_unsubscribe()
 			{
-				return has_subscribe<SystemType>();
+				//return has_subscribe<SystemType>();
+				return has_method<engine::has_method_unsubscribe, SystemType>();
 			}
 
 		public:
