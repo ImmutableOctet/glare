@@ -1,6 +1,7 @@
 #pragma once
 
 #include <engine/types.hpp>
+//#include <engine/basic_system.hpp>
 
 // If this macro is defined, we will always assume an inbound service-event is coming from a `World` object.
 // This can act as a minor speedup as we won't have to use RTTI (`dynamic_cast`) in order to determine the exact `Service` type.
@@ -22,7 +23,7 @@ namespace engine
 	struct OnServiceRender;
 
 	// Utility class for systems within a `World`.
-	class WorldSystem
+	class WorldSystem // : public BasicSystemImpl<World>
 	{
 		public:
 			// NOTE: Subscription is deferred until the system is fully constructed.
