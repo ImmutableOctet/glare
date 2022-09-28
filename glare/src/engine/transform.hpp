@@ -14,7 +14,7 @@ namespace engine
 	class World;
 	struct Transform;
 
-	enum _TransformComponent_Dirty : std::uint8_t
+	enum class _TransformComponent_Dirty : std::uint8_t
 	{
 		None = 0,
 
