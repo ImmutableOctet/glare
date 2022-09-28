@@ -1,6 +1,6 @@
 #pragma once
 
-#include <util/static_member_function.hpp>
+#include <util/member_function_traits.hpp>
 #include <engine/service_events.hpp>
 #include <engine/input_events.hpp>
 
@@ -25,9 +25,9 @@ namespace engine
     //struct OnKeyboardState;
 
     // Possible behavior event triggers:
-    GENERATE_STATIC_MEMBER_FUNCTION_CHECK(on_update, void (*)(engine::World&, float));
-    GENERATE_STATIC_MEMBER_FUNCTION_CHECK(on_mouse, void(*)(World&, float, const app::input::MouseState&));
-    GENERATE_STATIC_MEMBER_FUNCTION_CHECK(on_keyboard, void(*)(World&, float, const app::input::KeyboardState&));
+    GENERATE_EXACT_FUNCTION_TRAIT_SIMPLIFIED(on_update,   void(engine::World&, float));
+    GENERATE_EXACT_FUNCTION_TRAIT_SIMPLIFIED(on_mouse,    void(World&, float, const app::input::MouseState&));
+    GENERATE_EXACT_FUNCTION_TRAIT_SIMPLIFIED(on_keyboard, void(World&, float, const app::input::KeyboardState&));
 
     namespace behavior_impl
     {
