@@ -108,6 +108,16 @@ namespace engine
 		return true;
 	}
 
+	World& WorldSystem::get_world() const
+	{
+		return world;
+	}
+
+	Registry& WorldSystem::get_registry() const
+	{
+		return world.get_registry();
+	}
+
 	bool WorldSystem::is_bound_world(Service* svc) const
 	{
 		return (svc == &this->world);

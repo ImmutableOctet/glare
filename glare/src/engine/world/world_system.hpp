@@ -1,5 +1,7 @@
 #pragma once
 
+#include <engine/types.hpp>
+
 // If this macro is defined, we will always assume an inbound service-event is coming from a `World` object.
 // This can act as a minor speedup as we won't have to use RTTI (`dynamic_cast`) in order to determine the exact `Service` type.
 //#define WORLD_SYSTEM_ASSUME_SERVICE_IS_ALWAYS_WORLD 1
@@ -47,9 +49,13 @@ namespace engine
 			bool unsubscribe(World& world);
 
 			// Retrieves the internal `World` object this service was created with.
-			// NOTE: This `World` object may only be 'symbolically linked' if a subscription has not taken place.
+			// NOTE: This `World` object may be 'only symbolically linked' if a subscription has not taken place.
 			// To enasure that subscription has happened successfully, please check against `is_subscribed`.
-			inline World& get_world() const { return world; }
+			World& get_world() const;
+
+			// Retrieves a registry from `world`.
+			// Equivalent to: `get_world().get_registry()`
+			Registry& get_registry() const;
 
 			// Indicates whether a subscription has been established with the internal `World` object.
 			// This does not report when other services have subscriptions with this system.
