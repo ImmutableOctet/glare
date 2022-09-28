@@ -80,6 +80,9 @@ namespace engine
 
 			void update(const OnServiceUpdate& update_event);
 			void render(const OnServiceRender& render_event);
+
+			// Implementation of `unsubscribe`. (Used internally)
+			bool unsubscribe_impl(World& world, bool _dispatch=true);
 		protected:
 			// Safely retrieves a `World` pointer from a base `Service` pointer.
 			// NOTE: If `allow_multiple_subscriptions` is false, this will only
@@ -92,7 +95,7 @@ namespace engine
 			// Unsubscribes from the internally stored `world` object.
 			inline bool unsubscribe() { return unsubscribe(world); }
 
-			// Called by `subscribe` after default subscription actions are performed.
+			// Called by `subscribe` after regular subscription actions are performed.
 			virtual void on_subscribe(World& world) = 0;
 			
 			// Default implementation; blank.
@@ -102,6 +105,10 @@ namespace engine
 			virtual void on_render(World& world, app::Graphics& graphics);
 
 			// Empty implementation provided by default.
+			// 
+			// NOTE:
+			// This is not called if the unsubscription
+			// was performed during destruction.
 			virtual void on_unsubscribe(World& world);
 
 			// The `World` instance this system is linked to.
