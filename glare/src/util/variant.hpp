@@ -71,6 +71,15 @@ namespace util
 		}
 	}
 
+	// Retrieves a pointer from an `std::reference_wrapper<T>` value in `VariantType`.
+	template <typename T, typename VariantType>
+	T* get_if_wrapped(VariantType& v)
+	{
+		auto* wrapped = std::get_if<std::reference_wrapper<T>>(&v);
+
+		return &(wrapped.get()); // &(static_cast<T&>(wrapped));
+	}
+
 	template<typename VT, typename T, std::size_t index = 0>
 	constexpr std::size_t variant_index()
 	{
