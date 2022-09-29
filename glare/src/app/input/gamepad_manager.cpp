@@ -7,11 +7,13 @@
 
 #include <util/log.hpp>
 #include <util/json.hpp>
+#include <util/format.hpp>
+
+#include <stdexcept>
 
 namespace app::input
 {
-	GamepadManager::GamepadManager(const std::filesystem::path& profile_root_path, bool enable_events, bool background_events)
-		: profile_root_path(profile_root_path)
+	GamepadManager::GamepadManager(std::optional<std::filesystem::path> profile_path, bool enable_events, bool background_events)
 	{
 		// Reserve for the standard number of gamepads (4).
 		gamepads.reserve(4); // gamepads.resize(4);
@@ -21,6 +23,53 @@ namespace app::input
 			set_background_input(background_events);
 
 			SDL_JoystickEventState(SDL_ENABLE);
+		}
+
+		if (profile_path)
+		{
+			load_profiles(*profile_path);
+		}
+	}
+
+	void GamepadManager::load_profiles(const std::filesystem::path& path)
+	{
+		auto data = util::load_json(path);
+
+		// Load profiles:
+		if (const auto profile_entries_it = data.find("profiles"); profile_entries_it != data.end())
+		{
+			const auto& profile_entries = *profile_entries_it;
+
+			for (const auto& proxy : profile_entries.items())
+			{
+				const auto& profile_entry = proxy.value();
+
+				auto profile_name = profile_entry["name"].get<std::string>();
+
+				//profiles[profile_name] = GamepadProfile(profile_entry);
+				profiles.emplace(profile_name, profile_entry);
+			}
+		}
+
+		// Load device mappings:
+		if (const auto gamepads_it = data.find("gamepads"); gamepads_it != data.end())
+		{
+			const auto& gamepads = *gamepads_it;
+
+			for (const auto& proxy : gamepads.items())
+			{
+				const auto& device_entry = proxy.value();
+
+				auto device_name  = device_entry["device_name"].get<std::string>();
+				auto profile_name = device_entry["profile"].get<std::string>();
+
+				auto result = map_device_to_profile(device_name, profile_name);
+
+				if (!result)
+				{
+					throw std::runtime_error(format("Unable to find gamepad profile: \"{}\"", profile_name));
+				}
+			}
 		}
 	}
 
@@ -48,7 +97,8 @@ namespace app::input
 					opt_event_handler->enqueue<OnGamepadConnected>(*gamepad_id);
 				}
 
-				// No need to pass the SDL event on, since we already generated a `OnGamepadConnected` event.
+				// No need to pass the SDL event on, since we
+				// already generated a `OnGamepadConnected` event.
 				return true;
 
 			case SDL_JOYDEVICEREMOVED:
@@ -61,7 +111,8 @@ namespace app::input
 					opt_event_handler->enqueue<OnGamepadDisconnected>(*gamepad_id);
 				}
 
-				// No need to pass the event on, since we're disconnecting the gamepad + generating `OnGamepadDisconnected`.
+				// No need to pass the event on, since we're disconnecting
+				// the gamepad + generating `OnGamepadDisconnected`.
 				return true; // false;
 
 			case SDL_JOYBUTTONUP:
@@ -125,18 +176,21 @@ namespace app::input
 		return gamepad;
 	}
 
-	std::optional<GamepadProfile> GamepadManager::get_profile(const std::string& device_name) const
+	const GamepadProfile* GamepadManager::get_profile(const std::string& device_name) const
 	{
 		if (device_name.empty())
 		{
-			return std::nullopt;
+			return {};
+		}
+		
+		auto it = device_profile_map.find(device_name);
+
+		if (it != device_profile_map.end())
+		{
+			return it->second;
 		}
 
-		auto path = (profile_root_path / (device_name + ".json"));
-
-		print("Loading gamepad profile from: \"{}\"...", path.string());
-		
-		return GamepadProfile(util::load_json(path));
+		return {};
 	}
 
 	void GamepadManager::apply_profile(Gamepad& gamepad, const GamepadProfile& profile)
@@ -158,6 +212,53 @@ namespace app::input
 			? SDL_HintPriority::SDL_HINT_OVERRIDE
 			: SDL_HintPriority::SDL_HINT_DEFAULT
 		);
+	}
+
+	const GamepadProfile* GamepadManager::map_device_to_profile(const std::string& device_name, const std::string& profile_name)
+	{
+		auto profile_it = profiles.find(profile_name);
+
+		if (profile_it != profiles.end())
+		{
+			const auto* profile = &profile_it->second;
+
+			if (map_device_to_profile(device_name, profile))
+			{
+				return profile;
+			}
+		}
+
+		return nullptr;
+	}
+
+	bool GamepadManager::map_device_to_profile(const std::string& device_name, const GamepadProfile* profile)
+	{
+		auto device_it = device_profile_map.find(device_name);
+
+		if (device_it != device_profile_map.end())
+		{
+			return false;
+		}
+
+		device_profile_map[device_name] = profile;
+
+		return true;
+	}
+
+	bool GamepadManager::unmap_device_profile(const std::string& device_name)
+	{
+		auto device_it = device_profile_map.find(device_name);
+
+		if (device_it != device_profile_map.end())
+		{
+			device_profile_map.erase(device_it);
+
+			// Device mapping successfully removed.
+			return true;
+		}
+
+		// Couldn't find a mapping for `device_name`.
+		return false;
 	}
 
 	void GamepadManager::on_gamepad_connected(GamepadDeviceIndex device_index)

@@ -27,7 +27,7 @@ namespace app::input
 
 	void GamepadProfile::load(const util::json& json)
 	{
-		if (auto deadzone_data = json.find("deadzone"); deadzone_data != json.end())
+		if (auto deadzone_data = json.find("deadzones"); deadzone_data != json.end())
 		{
 			util::retrieve_from(*deadzone_data, "left_analog", deadzone.left_analog, read_analog);
 			util::retrieve_from(*deadzone_data, "right_analog", deadzone.right_analog, read_analog);
