@@ -1,0 +1,42 @@
+{
+	"gamepads":
+	[
+		{
+			"device_name": "Xbox 360 Controller",
+			"profile": "default"
+		}
+	],
+
+	"profiles":
+	[
+		{
+			"name": "default",
+
+			"buttons":
+			{
+				"Jump":         "A",
+				"HeavyAttack":  "B",
+				"Interact":     "X",
+				"MediumAttack": "Y",
+
+				"Shield":       "LT",
+				"FirstPerson":  "R3"
+			},
+
+			"deadzones":
+			{
+				"left_analog":
+				{
+					"x": { "threshold": 0.05 },
+					"y": { "threshold": 0.05 }
+				},
+
+				"right_analog":
+				{
+					"x": { "threshold": 0.05 },
+					"y": { "threshold": 0.05 }
+				}
+			}
+		}
+	]
+}
