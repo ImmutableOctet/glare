@@ -1,5 +1,8 @@
 #pragma once
 
+#include <engine/types.hpp>
+//#include <engine/basic_system.hpp>
+
 // If this macro is defined, we will always assume an inbound service-event is coming from a `World` object.
 // This can act as a minor speedup as we won't have to use RTTI (`dynamic_cast`) in order to determine the exact `Service` type.
 //#define WORLD_SYSTEM_ASSUME_SERVICE_IS_ALWAYS_WORLD 1
@@ -20,7 +23,7 @@ namespace engine
 	struct OnServiceRender;
 
 	// Utility class for systems within a `World`.
-	class WorldSystem
+	class WorldSystem // : public BasicSystemImpl<World>
 	{
 		public:
 			// NOTE: Subscription is deferred until the system is fully constructed.
@@ -47,9 +50,13 @@ namespace engine
 			bool unsubscribe(World& world);
 
 			// Retrieves the internal `World` object this service was created with.
-			// NOTE: This `World` object may only be 'symbolically linked' if a subscription has not taken place.
+			// NOTE: This `World` object may be 'only symbolically linked' if a subscription has not taken place.
 			// To enasure that subscription has happened successfully, please check against `is_subscribed`.
-			inline World& get_world() const { return world; }
+			World& get_world() const;
+
+			// Retrieves a registry from `world`.
+			// Equivalent to: `get_world().get_registry()`
+			Registry& get_registry() const;
 
 			// Indicates whether a subscription has been established with the internal `World` object.
 			// This does not report when other services have subscriptions with this system.
@@ -73,6 +80,9 @@ namespace engine
 
 			void update(const OnServiceUpdate& update_event);
 			void render(const OnServiceRender& render_event);
+
+			// Implementation of `unsubscribe`. (Used internally)
+			bool unsubscribe_impl(World& world, bool _dispatch=true);
 		protected:
 			// Safely retrieves a `World` pointer from a base `Service` pointer.
 			// NOTE: If `allow_multiple_subscriptions` is false, this will only
@@ -85,14 +95,20 @@ namespace engine
 			// Unsubscribes from the internally stored `world` object.
 			inline bool unsubscribe() { return unsubscribe(world); }
 
-			// Called by `subscribe` after default subscription actions are performed.
+			// Called by `subscribe` after regular subscription actions are performed.
 			virtual void on_subscribe(World& world) = 0;
-			virtual void on_update(World& world, float delta) = 0;
+			
+			// Default implementation; blank.
+			virtual void on_update(World& world, float delta);
 
 			// Default implementation; blank.
 			virtual void on_render(World& world, app::Graphics& graphics);
 
 			// Empty implementation provided by default.
+			// 
+			// NOTE:
+			// This is not called if the unsubscription
+			// was performed during destruction.
 			virtual void on_unsubscribe(World& world);
 
 			// The `World` instance this system is linked to.

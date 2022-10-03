@@ -7,6 +7,53 @@
 
 namespace math
 {
+	// Imported GLM functions:
+	using glm::cross;
+
+	// Returns 1 for values greater than zero,
+	// -1 for values less than zero,
+	// and 0 for exactly 0.
+	template <typename T, typename ResultType=int>
+	inline ResultType sign(T value)
+	{
+		constexpr auto zero = T(0);
+
+		return ResultType((zero < value) - (value < zero));
+	}
+
+	// Returns the `sign` from the result of: (x-y)
+	//
+	// If `x` is less than `y` this returns -1,
+	// if `x` is greater than `y` this returns 1,
+	// if `x` and `y` are equal this returns 0.
+	template <typename T, typename ResultType=int>
+	inline ResultType sign(const T& x, const T& y)
+	{
+		return sign<T, ResultType>((x - y));
+	}
+
+	// Forces `value` to be positive.
+	template <typename T>
+	inline T positive(const T& value)
+	{
+		return (value * sign(value));
+	}
+
+	// Forces `value` to be negative.
+	template <typename T>
+	inline T negative(const T& value)
+	{
+		return -positive(value);
+	}
+
+	// Inverts the sign of `value`.
+	// (Equivalent to unary `-` operator)
+	template <typename T>
+	inline T negate(const T& value)
+	{
+		return -value;
+	}
+
 	template <typename T>
 	inline T sq(const T& x)
 	{
@@ -38,15 +85,10 @@ namespace math
 		return matrix_type(1.0f); // glm::identity<matrix_type>();
 	}
 
+	// Same as calling `identity<Matrix>()`.
 	inline constexpr Matrix identity_matrix()
 	{
 		return identity<Matrix>();
-	}
-
-	template <typename quat_type>
-	inline RotationMatrix to_rotation_matrix(const quat_type& q)
-	{
-		return glm::toMat3(q);
 	}
 
 	inline Vector3D operator*(const Matrix4x4& m, const Vector3D& v)
@@ -70,13 +112,28 @@ namespace math
 	RotationMatrix rotation_yaw(float angle);
 	RotationMatrix rotation_roll(float angle);
 
+	// Aligned basis from direction vector `rv`.
+	// See also: `rotation_from_orthogonal` and `quaternion_from_orthogonal`.
 	RotationMatrix rotation_from_vector(const Vector& rv);
 
-	inline Vector3D to_vector(const Vector3D& v) { return v; }
+	Quaternion quaternion_from_orthogonal(const Vector& a, const Vector& b, const Vector& c);
+	Quaternion quaternion_from_orthogonal(const Vector& a, const Vector& b); // Automatically computes `c`.
+	Quaternion quaternion_from_orthogonal(const OrthogonalVectors& ortho_vectors);
+
+	RotationMatrix rotation_from_orthogonal(const Vector& a, const Vector& b, const Vector& c);
+	RotationMatrix rotation_from_orthogonal(const Vector& a, const Vector& b); // Automatically computes `c`.
+	RotationMatrix rotation_from_orthogonal(const OrthogonalVectors& ortho_vectors);
 
 	Vector abs(const Vector& v);
 
+	// Converts a 2D direction to an euler angle.
 	float direction_to_angle(const Vector2D& dir);
+
+	// Similar to `direction_to_angle`, but rotated 90 degrees.
+	// This is useful for analog gamepad input.
+	float direction_to_angle_90_degrees(const Vector2D& dir);
+
+	// Computes the 'yaw' angle of a 3D direction vector.
 	float direction_to_yaw(const Vector& dir); // Vector3D
 
 	template <typename T>
@@ -141,12 +198,12 @@ namespace math
 	// Same as `slerp`, but skips the normalization step.
 	Quaternion slerp_unnormalized(Quaternion v0, Quaternion v1, float t);
 
-	// Utility function; provides the cross-product (third direction-vector) of `normal` and `adjacent`.
+	// Utility function; provides the cross-product (third direction-vector) of `normal` and `forward`.
 	// See also: `get_surface_slope`.
 	math::Vector get_surface_forward
 	(
 		const math::Vector& normal,
-		const math::Vector& adjacent={1.0f, 0.0f, 0.0f}
+		const math::Vector& forward={0.0f, 0.0f, -1.0f}
 	);
 
 	// Returns the slope of the surface (`normal`)
@@ -155,6 +212,6 @@ namespace math
 	(
 		const math::Vector& normal,
 		const math::Vector& angle,
-		const math::Vector& adjacent={1.0f, 0.0f, 0.0f}
+		const math::Vector& forward={0.0f, 0.0f, -1.0f}
 	);
 }

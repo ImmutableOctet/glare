@@ -286,7 +286,9 @@ namespace graphics
 		Write   = (1 << 2),
 
 		ReadWrite = (Read | Write),
-	}; FLAG_ENUM(std::uint32_t, FrameBufferType);
+	};
+	
+	FLAG_ENUM(std::uint32_t, FrameBufferType);
 
 	enum class BufferType : std::uint32_t
 	{

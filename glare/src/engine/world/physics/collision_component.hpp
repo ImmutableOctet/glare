@@ -348,6 +348,7 @@ namespace engine
 
 			void set_kinematic_resolution(const KinematicResolutionConfig& resolution);
 			const std::optional<KinematicResolutionConfig>& get_kinematic_resolution() const;
+			std::optional<KinematicResolutionConfig>& get_kinematic_resolution();
 		protected:
 			std::optional<KinematicResolutionConfig> kinematic_resolution;
 

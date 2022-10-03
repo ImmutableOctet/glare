@@ -2,12 +2,11 @@
 
 #include "format.hpp"
 
-#include <memory>
-#include <tuple>
-//#include <vector>
+// Module format headers:
+#include <engine/format.hpp>
+#include <math/format.hpp>
 
-#include <math/types.hpp>
-#include <engine/types.hpp>
+#include <memory>
 
 #include <spdlog/spdlog.h>
 
@@ -68,124 +67,3 @@ namespace util
 
 using util::log::print;
 using util::log::print_warn;
-
-template <>
-struct fmt::formatter<math::Vector>
-{
-    // Presentation format: 'f' - fixed, 'e' - exponential.
-    char presentation = 'f';
-
-    // Parses format specifications of the form ['f' | 'e'].
-    constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
-        // Parse the presentation format and store it in the formatter:
-        auto it = ctx.begin(), end = ctx.end();
-        
-        if (it != end && (*it == 'f' || *it == 'e'))
-            presentation = *it++;
-
-        // Check if reached the end of the range.
-        if (it != end && *it != '}')
-            throw format_error("invalid format");
-
-        // Return an iterator past the end of the parsed range.
-        return it;
-    }
-
-    template <typename FormatContext>
-    auto format(const math::Vector& v, FormatContext& ctx) -> decltype(ctx.out())
-    {
-        return (presentation == 'f')
-              ? fmt::format_to(ctx.out(), "({:.1f}, {:.1f}, {:.1f})", v.x, v.y, v.z)
-              : fmt::format_to(ctx.out(), "({:.1e}, {:.1e}, {:.1e})", v.x, v.y, v.z);
-    }
-};
-
-template <>
-struct fmt::formatter<math::TransformVectors>
-{
-    constexpr auto parse(format_parse_context& ctx)
-    {
-        auto it = ctx.begin(), end = ctx.end();
-
-        // Check if reached the end of the range:
-        if (it != end && *it != '}')
-            throw format_error("invalid format");
-
-        // Return an iterator past the end of the parsed range:
-        return it;
-    }
-
-    template <typename FormatContext>
-    auto format(const math::TransformVectors& v, FormatContext& ctx)
-    {
-        const auto& [position, rotation, scale] = v;
-
-        return format_to
-        (
-            ctx.out(),
-            "[({:.1f}, {:.1f}, {:.1f}), ({:.1f}, {:.1f}, {:.1f}), ({:.1f}, {:.1f}, {:.1f})]",
-            position.x, position.y, position.z,
-            rotation.x, rotation.y, rotation.z,
-            scale.x, scale.y, scale.z
-        );
-    }
-};
-
-template <>
-struct fmt::formatter<engine::Entity>
-{
-    using IntType = engine::EntityIDType;
-
-    formatter<IntType> int_formatter;
-
-    constexpr auto parse(format_parse_context& ctx)
-    {
-        //return int_formatter.parse(ctx);
-
-        auto it = ctx.begin(), end = ctx.end();
-
-        // Check if reached the end of the range:
-        if (it != end && *it != '}')
-            throw format_error("invalid format");
-
-        // Return an iterator past the end of the parsed range:
-        return it;
-    }
-
-    template <typename FormatContext>
-    auto format(const engine::Entity& e, FormatContext& ctx)
-    {
-        if (e == engine::null)
-        {
-            return format_to
-            (
-                ctx.out(),
-                "null",
-                static_cast<IntType>(e)
-            );
-        }
-
-        return int_formatter.format(static_cast<IntType>(e), ctx);
-    }
-};
-
-/*
-template <>
-struct fmt::formatter<std::vector<engine::Entity>>
-{
-    using IntType = engine::EntityIDType;
-
-    formatter<std::vector<IntType>> int_formatter;
-
-    constexpr auto parse(format_parse_context& ctx)
-    {
-        return int_formatter.parse(ctx);
-    }
-
-    template <typename FormatContext>
-    auto format(const std::vector<engine::Entity>& ev, FormatContext& ctx)
-    {
-        return int_formatter.format(*reinterpret_cast<std::vector<IntType>>(&ev), ctx);
-    }
-};
-*/

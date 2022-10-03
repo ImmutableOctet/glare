@@ -2,7 +2,10 @@
 
 #define _ENABLE_ATOMIC_ALIGNMENT_FIX
 
-#include <app/input/types.hpp>
+#include "types.hpp"
+#include "input_device.hpp"
+#include "mouse_state.hpp"
+
 //#include <atomic>
 
 namespace app::input
@@ -12,7 +15,9 @@ namespace app::input
 		public:
 			Mouse(bool locked=false);
 
-			virtual State peek() override;
+			virtual void peek(State& state) const override;
+
+			//bool process_event(const SDL_Event& e, entt::dispatcher* opt_event_handler=nullptr) override { return false; }
 
 			bool lock();
 			bool unlock();

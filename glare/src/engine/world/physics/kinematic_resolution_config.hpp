@@ -107,13 +107,25 @@ namespace engine
 		// If true, this object can influence the position of other kinematic objects.
 		// The affected object must also be accepting influences. (see `accepts_influence`)
 		// NOTE: Kinematic influences are only applicable to objects that can collide with one another.
-		bool is_influencer     = false;
+		bool is_influencer          : 1 = false;
 
 		// If true, this object can be kinematically influenced by another object.
-		bool accepts_influence = false;
+		bool accepts_influence      : 1 = false;
 
 		// If true, this object is subject to intersection resolution outside of casting.
-		bool resolve_intersections = true;
+		bool resolve_intersections  : 1 = true;
+
+		// If true, an object can influence its children.
+		// (Children in this case includes motion attachments)
+		// 
+		// This is useful for entities like platforms where you don't want to influence the objects on top of them,
+		// but you do want to affect their position/rotation using a parent-child relationship.
+		// NOTE: This also includes adjustments to children.
+		bool can_influence_children : 1 = false;
+
+		// Similar to `can_influence_children`, this controls whether a child entity can influence this entity.
+		// NOTE: This also includes adjustments made because of potential overlap with children.
+		bool can_be_influenced_by_children : 1 = false;
 
 		float get_size(const CollisionComponent& collision) const;
 		float get_half_size(const CollisionComponent& collision) const;

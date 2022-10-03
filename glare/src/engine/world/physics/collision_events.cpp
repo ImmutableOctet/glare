@@ -28,6 +28,11 @@ namespace engine
 		return (direction() * penetration());
 	}
 
+	float OnSurfaceContact::dot_product() const
+	{
+		return glm::dot(collision.normal, direction());
+	}
+
 	float OnSurfaceContact::force_applied() const
 	{
 		return (contact_speed() - penetration());
@@ -37,6 +42,41 @@ namespace engine
 	float OnSurfaceContact::residual() const
 	{
 		return (force_applied() / penetration());
+	}
+
+	float OnSurfaceContact::floor_product() const
+	{
+		return (dot_product() * vertical_sign()); // math::abs(dot_product())
+	}
+
+	float OnSurfaceContact::floor() const
+	{
+		auto fp = floor_product();
+
+		if (fp > 0.0f)
+		{
+			return fp;
+		}
+
+		return 0.0f;
+	}
+
+	float OnSurfaceContact::ceiling_no_convert() const
+	{
+		auto fp = floor_product();
+
+		if (fp < 0.0f)
+		{
+			return fp;
+		}
+
+		return 0.0f;
+	}
+
+	float OnSurfaceContact::ceiling() const
+	{
+		// Flip from negative values to positive values.
+		return -ceiling_no_convert();
 	}
 
 	float OnSurfaceContact::slope(const math::Vector& surface_forward) const
@@ -56,10 +96,33 @@ namespace engine
 		return slope(std::get<1>(orientation));
 	}
 
-	math::OrthogonalVectors OnSurfaceContact::surface_orientation_vectors(const math::Vector& adjacent) const
+	math::OrthogonalVectors OnSurfaceContact::surface_orientation_vectors(const math::Vector& forward) const
 	{
-		auto forward = math::get_surface_forward(collision.normal, adjacent);
+		auto right = math::cross(collision.normal, forward); // glm::normalize(...)
 
-		return { adjacent, collision.normal, forward };
+		return { right, collision.normal, forward };
+	}
+
+	math::Vector OnSurfaceContact::forward(const math::Vector& forward) const
+	{
+		auto orientation_vectors = surface_orientation_vectors(forward);
+
+		// Retrieve only the `forward` vector.
+		return std::get<2>(orientation_vectors);
+	}
+
+	math::RotationMatrix OnSurfaceContact::alignment(const math::Vector& forward) const
+	{
+		return glm::inverse(math::rotation_from_orthogonal(surface_orientation_vectors(-forward)));
+	}
+
+	math::Quaternion OnSurfaceContact::alignment_q(const math::Vector& forward) const
+	{
+		return glm::inverse(math::quaternion_from_orthogonal(surface_orientation_vectors(-forward)));
+	}
+
+	float OnSurfaceContact::vertical_sign() const
+	{
+		return math::sign<float, float>(collision.position.y, collision.a_position.y);
 	}
 }

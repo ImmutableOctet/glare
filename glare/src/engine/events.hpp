@@ -9,8 +9,14 @@
 
 #include "types.hpp"
 
+//#include <app/input/events.hpp>
+
 namespace engine
 {
+	// Input event types:
+	//using app::input::OnGamepadConnected;
+	//using app::input::OnGamepadDisconnected;
+
 	// A notification that an entity has been created.
 	// This notification is deferred until the next update/event-dispatch after the creation took place.
 	// For immediate events, please see entt's `basic_registry::on_construct` event sink(s).

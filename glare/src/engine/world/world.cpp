@@ -1,8 +1,9 @@
 #include "world.hpp"
 
+#include "world_events.hpp"
 #include "entity.hpp"
 #include "camera.hpp"
-#include "player.hpp"
+#include "player/player.hpp"
 #include "stage.hpp"
 #include "light.hpp"
 
@@ -27,11 +28,10 @@
 #include <engine/config.hpp>
 #include <engine/resource_manager/resource_manager.hpp>
 #include <engine/relationship.hpp>
+#include <engine/forwarding_component.hpp>
 
 #include <engine/type_component.hpp>
 #include <engine/name_component.hpp>
-
-#include <app/input/input.hpp>
 
 #include <algorithm>
 #include <fstream>
@@ -91,17 +91,15 @@ namespace engine
 
 	Entity World::load(const filesystem::path& root_path, const std::string& json_file, Entity parent)
 	{
-		auto map_data_path = (root_path / json_file).string();
+		auto map_data_path = (root_path / json_file);
 		
-		print("Loading map from \"{}\"...", map_data_path);
-
-		std::ifstream map_data_stream(map_data_path);
+		print("Loading map from \"{}\"...", map_data_path.string());
 
 		//try
 		{
 			print("Parsing JSON...");
 
-			util::json map_data = util::json::parse(map_data_stream);
+			auto map_data = util::load_json(map_data_path);
 
 			print("Loading...");
 
@@ -173,6 +171,18 @@ namespace engine
 				camera_component.update_aspect_ratio(width, height);
 			}
 		});
+	}
+
+	Entity World::get_forwarded(Entity entity)
+	{
+		auto* forwarding = registry.try_get<ForwardingComponent>(entity);
+
+		if (forwarding)
+		{
+			return forwarding->root_entity;
+		}
+
+		return entity;
 	}
 
 	Transform World::apply_transform(Entity entity, const math::TransformVectors& tform)
@@ -247,14 +257,12 @@ namespace engine
 
 		if (defer_action) // && (!_is_deferred)
 		{
-			print("Deferring parental assignment for: {} to new parent {}", label(entity), label(parent));
+			//print("Deferring parental assignment for: {} to new parent {}", label(entity), label(parent));
 
 			later(&World::set_parent, entity, parent, false, _null_as_root, true);
 		}
 		else
 		{
-			//print("Adding child: {} to {}", label(entity), label(parent));
-
 			auto prev_parent = Relationship::set_parent(registry, entity, parent);
 			event<OnParentChanged>(entity, prev_parent, parent);
 		}

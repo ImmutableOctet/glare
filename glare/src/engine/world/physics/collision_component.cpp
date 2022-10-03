@@ -520,6 +520,11 @@ namespace engine
 		return kinematic_resolution;
 	}
 
+	std::optional<KinematicResolutionConfig>& CollisionComponent::get_kinematic_resolution()
+	{
+		return kinematic_resolution;
+	}
+
 	void CollisionComponent::update_transform(const math::Matrix& tform)
 	{
 		auto* collision = get_collision_object();

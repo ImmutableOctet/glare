@@ -1,10 +1,11 @@
 #include "stage.hpp"
 
 #include "world.hpp"
+#include "world_events.hpp"
 #include "entity.hpp"
 #include "camera.hpp"
 #include "light.hpp"
-#include "player.hpp"
+#include "player/player.hpp"
 #include "graphics_entity.hpp"
 
 #include "physics/collision_component.hpp"

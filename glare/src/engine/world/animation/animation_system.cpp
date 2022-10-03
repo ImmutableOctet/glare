@@ -6,6 +6,7 @@
 #include "skeletal_component.hpp"
 
 #include <engine/relationship.hpp>
+#include <engine/forwarding_component.hpp>
 #include <engine/world/world.hpp>
 #include <engine/resource_manager/resource_manager.hpp>
 #include <engine/events.hpp>
@@ -191,6 +192,14 @@ namespace engine
 		});
 	}
 
+	void AnimationSystem::set_bone_skeleton(Registry& registry, Entity entity, BoneComponent& bone_component, Entity new_skeleton)
+	{
+		bone_component.skeleton = new_skeleton;
+
+		// Set the forwarding component to the `new_skeleton` entity.
+		registry.emplace_or_replace<ForwardingComponent>(entity, new_skeleton);
+	}
+
 	void AnimationSystem::on_parent_changed(const OnParentChanged& parent_changed)
 	{
 		auto& registry = world.get_registry();
@@ -219,12 +228,12 @@ namespace engine
 		// If the newly assigned parent entity is a bone, forward its skeleton field:
 		if (auto* new_parent_bone_component = registry.try_get<BoneComponent>(parent_changed.to_parent); new_parent_bone_component)
 		{
-			bone_component->skeleton = new_parent_bone_component->skeleton;
+			set_bone_skeleton(registry, parent_changed.entity, *bone_component, new_parent_bone_component->skeleton);
 		}
 		else // Parent is not a bone:
 		{
 			// Point our own skeleton field to the new parent/skeleton entity.
-			bone_component->skeleton = parent_changed.to_parent;
+			set_bone_skeleton(registry, parent_changed.entity, *bone_component, parent_changed.to_parent);
 
 			// Attach a skeleton to the new parent.
 			if (!attach_skeleton(world, parent_changed.to_parent, parent_changed.entity)) // In the event of failure:
@@ -257,7 +266,7 @@ namespace engine
 			if (!bone)
 				return true;
 
-			bone->skeleton = parent_changed.to_parent;
+			set_bone_skeleton(registry, child, *bone, parent_changed.to_parent);
 
 			return true;
 		}, true);

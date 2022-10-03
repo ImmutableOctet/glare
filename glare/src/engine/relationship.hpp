@@ -48,10 +48,11 @@ namespace engine
 			std::tuple<Entity, Relationship*> get_first_child(Registry& registry) const;
 			std::tuple<Entity, Relationship*> get_last_child(Registry& registry) const;
 
+			// TODO: Finish documenting this overload.
+			// 
 			// Enumerates children, calling `fn` on each child.
 			// `recursive` allows for traversal of the entire relationship tree.
 			// `on_exit` is called once recursion has completed, or immediately after `fn` if recursion is disabled.
-			// ``
 			template
 			<
 				typename response_type, // = decltype(enum_fn(std::declval<Entity>(), std::declval<Relationship&>(), std::declval<Entity>()))
@@ -109,6 +110,8 @@ namespace engine
 			}
 
 			// `fn` must return a boolean value, or a value convertible to one.
+			// The `fn` callable's signature must be:
+			// `bool fn(Entity child, [const] Relationship& child_relationship, Entity next_child)` - or similar.
 			template <typename enum_fn, typename exit_fn, typename response_type=bool> // typename enter_fn
 			inline Entity enumerate_children(Registry& registry, enum_fn fn, bool recursive, exit_fn on_exit) const
 			{
@@ -126,6 +129,8 @@ namespace engine
 			}
 
 			// `fn` must return a boolean value, or a value convertible to one.
+			// The `fn` callable's signature must be:
+			// `bool fn(Entity child, [const] Relationship& child_relationship, Entity next_child)` - or similar.
 			template <typename enum_fn, typename response_type=bool>
 			inline Entity enumerate_children(Registry& registry, enum_fn fn, bool recursive=false) const
 			{
@@ -138,8 +143,10 @@ namespace engine
 				); // []{}
 			}
 
+			// Enumerates children and adds them to `out` via `push_back`.
+			// NOTE: This routine is intended for `std::vector`-like containers.
 			template <typename Container>
-			inline std::uint32_t get_children(Registry& registry, Container& out) const
+			inline std::uint32_t get_children(Registry& registry, Container& out, bool recursive=false) const
 			{
 				std::uint32_t child_count = 0;
 
@@ -150,20 +157,28 @@ namespace engine
 					child_count++;
 
 					return true;
-				});
+				}, recursive);
 
 				return child_count;
 			}
 
-			inline auto get_children(Registry& registry) const
+			// Retrieves an `std::vector` of child entities.
+			// If populating an existing container, please use the templated container-based overload.
+			inline auto get_children(Registry& registry, bool recursive=false) const
 			{
 				std::vector<Entity> out;
 
-				get_children(registry, out);
+				get_children(registry, out, recursive);
 
 				return out;
 			}
 
+			// Simple single-level entity enumeration of this relationship's children.
+			// For a more robust (and optionally recursive) enumeration routine, see `enumerate_children`.
+			// 
+			// The `fn` parameter is a callable that must return a boolean indicating whether to continue enumeration.
+			// If enumeration is short-circuited, the entity returned is the last entity sent to `fn`.
+			// If enumeration completes, the returned entity will be `null`.
 			template <typename enum_fn>
 			inline Entity enumerate_child_entities(Registry& registry, enum_fn fn) const
 			{

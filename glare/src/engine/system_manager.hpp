@@ -1,5 +1,7 @@
 #pragma once
 
+#include "meta.hpp"
+
 #include <util/memory.hpp>
 
 #include <engine/service.hpp>
@@ -23,17 +25,36 @@ namespace engine
 			template <typename SystemType>
 			inline static constexpr auto key() { return entt::type_hash<SystemType>::value(); }
 
+			template <template<typename, typename> typename TraitType, typename SystemType>
+			inline static constexpr bool has_method()
+			{
+				using Type = std::decay_t<SystemType>;
+
+				if constexpr (TraitType<Type, bool(ServiceType&)>::value)
+				{
+					return true;
+				}
+				else if constexpr (TraitType<Type, bool(Service&)>::value)
+				{
+					return true;
+				}
+
+				//return (std::is_base_of_v<WorldSystem, SystemType> && std::is_base_of_v<World, ServiceType>);
+
+				return false;
+			}
+
 			template <typename SystemType>
 			inline static constexpr bool has_subscribe()
 			{
-				//return (std::is_base_of_v<WorldSystem, SystemType> && std::is_base_of_v<World, ServiceType>);
-				return true;
+				return has_method<engine::has_method_subscribe, SystemType>();
 			}
 
 			template <typename SystemType>
 			inline static constexpr bool has_unsubscribe()
 			{
-				return has_subscribe<SystemType>();
+				//return has_subscribe<SystemType>();
+				return has_method<engine::has_method_unsubscribe, SystemType>();
 			}
 
 		public:
@@ -165,17 +186,17 @@ namespace engine
 			inline void register_behavior()
 			{
 				// Check for all possible behavior event-handlers:
-				if constexpr (engine::HAS_STATIC_MEMBER_FUNCTION(BehaviorType, on_update))
+				if constexpr (engine::has_on_update<BehaviorType>())
 				{
 					service.register_free_function<engine::OnServiceUpdate, engine::behavior_impl::bridge_on_update<BehaviorType>>();
 				}
 
-				if constexpr (engine::HAS_STATIC_MEMBER_FUNCTION(BehaviorType, on_mouse))
+				if constexpr (engine::has_on_mouse<BehaviorType>())
 				{
 					service.register_free_function<engine::OnMouseState, engine::behavior_impl::bridge_on_mouse<BehaviorType>>();
 				}
 
-				if constexpr (engine::HAS_STATIC_MEMBER_FUNCTION(BehaviorType, on_keyboard))
+				if constexpr (engine::has_on_keyboard<BehaviorType>())
 				{
 					service.register_free_function<engine::OnKeyboardState, engine::behavior_impl::bridge_on_keyboard<BehaviorType>>();
 				}
@@ -185,17 +206,17 @@ namespace engine
 			inline void unregister_behavior()
 			{
 				// Check for all possible behavior event-handlers:
-				if constexpr (engine::HAS_STATIC_MEMBER_FUNCTION(BehaviorType, on_update))
+				if constexpr (engine::has_on_update<BehaviorType>())
 				{
 					service.unregister_free_function<engine::OnServiceUpdate, engine::behavior_impl::bridge_on_update<BehaviorType>>();
 				}
 
-				if constexpr (engine::HAS_STATIC_MEMBER_FUNCTION(BehaviorType, on_mouse))
+				if constexpr (engine::has_on_mouse<BehaviorType>())
 				{
 					service.unregister_free_function<engine::OnMouseState, engine::behavior_impl::bridge_on_mouse<BehaviorType>>();
 				}
 
-				if constexpr (engine::HAS_STATIC_MEMBER_FUNCTION(BehaviorType, on_keyboard))
+				if constexpr (engine::has_on_keyboard<BehaviorType>())
 				{
 					service.unregister_free_function<engine::OnKeyboardState, engine::behavior_impl::bridge_on_keyboard<BehaviorType>>();
 				}

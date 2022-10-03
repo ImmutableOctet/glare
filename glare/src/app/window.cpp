@@ -77,7 +77,7 @@ namespace app
 		return (static_cast<float>(width) / static_cast<float>(height));
 	}
 
-	bool Window::handle_event(const SDL_Event& event, const SDL_WindowEvent& window_event, Application& app)
+	bool Window::process_event(const SDL_Event& event, const SDL_WindowEvent& window_event, Application& app)
 	{
 		switch (event.window.event)
 		{

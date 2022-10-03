@@ -6,7 +6,6 @@
 #include <engine/service.hpp>
 #include <engine/transform.hpp>
 
-#include "world_events.hpp"
 #include "world_properties.hpp"
 
 //#include <graphics/types.hpp> // Not actually needed. (`ColorRGB` is actually located in math)
@@ -42,6 +41,9 @@ namespace engine
 	class ResourceManager;
 	class Config;
 	struct CollisionComponent;
+
+	struct OnTransformChanged;
+	struct OnEntityDestroyed;
 
 	class World : public Service
 	{
@@ -98,8 +100,16 @@ namespace engine
 
 			//void on_child_removed(const Event_ChildRemoved& e);
 
+			// TODO: Look into reworking/replacing this. (Maybe a dedicated `CameraSystem`...?)
 			void update_camera_parameters(int width, int height);
 
+			// If `entity` has a `ForwardingComponent` attached, this returns the `root_entity` from that component.
+			// If no `ForwardingComponent` is found, `entity` is returned back to the caller.
+			Entity get_forwarded(Entity entity);
+
+			// Applies the transformation vectors specified to `entity`.
+			// This routine does not explicitly handle side effects of collision.
+			// See also: `apply_transform_and_reset_collision`
 			Transform apply_transform(Entity entity, const math::TransformVectors& tform);
 
 			// See `transform_and_reset_collision` for details.
@@ -167,6 +177,17 @@ namespace engine
 				
 				bool _null_as_root=true, bool _is_deferred=false
 			);
+
+			inline void remove_parent
+			(
+				Entity entity, Entity parent,
+				bool defer_action = false,
+
+				bool _null_as_root = true, bool _is_deferred = false
+			)
+			{
+				set_parent(entity, root, defer_action, _null_as_root, _is_deferred);
+			}
 
 			// Returns a label for the entity specified.
 			// If no `NameComponent` is associated with the entity, the entity number will be used.

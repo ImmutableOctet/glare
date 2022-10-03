@@ -1,5 +1,7 @@
 #include "game.hpp"
 
+#include <app/input/profile_metadata.hpp>
+
 #include <engine/world/physics/physics.hpp>
 #include <engine/world/motion/motion.hpp>
 #include <engine/world/animation/animation.hpp>
@@ -8,6 +10,8 @@
 #include <engine/world/render/world_render_state.hpp>
 #include <engine/world/render/deferred_render_pipeline.hpp>
 #include <engine/world/render/render_scene.hpp>
+
+#include <engine/input/input_system.hpp>
 
 // Debugging related:
 #include <engine/world/render/bullet_debug_render_phase.hpp>
@@ -54,64 +58,7 @@ namespace game
 			input.get_mouse().lock();
 		}
 
-		// Default systems:
-		auto& physics = system<engine::PhysicsSystem>(world);
-		system<engine::MotionSystem>(world, physics);
-
-		system<engine::AnimationSystem>(world);
-		system<engine::ZoneSystem>(world);
-
-		// Behaviors:
-		behavior<engine::FreeLookBehavior>();
-		behavior<engine::DebugMoveBehavior>();
-
-		//behavior<engine::TargetBehavior>();
-		//behavior<engine::BillboardBehavior>();
-		/*
-		// TODO: Look into which behaviors we want to enable by default.
-		// TODO: Look into auto-detecting construction of certain component types and initializing behaviors/systems automatically.
-		system<engine::SpinBehavior>(world);
-		system<engine::TargetComponent>(world);
-		system<engine::SimpleFollowComponent>(world);
-		system<engine::BillboardBehavior>(world);
-		system<engine::RaveComponent>(world);
-		*/
-
-		if (!renderer)
-		{
-			renderer.set_pipeline
-			(
-				engine::make_render_pipeline
-				(
-					engine::PointLightShadowPhase  { graphics.context, effects.get_preprocessor() },
-					engine::DirectionalShadowPhase { graphics.context, effects.get_preprocessor() },
-				
-					util::inspect_and_store
-					(
-						engine::GeometryRenderPhase { graphics.context, effects.get_preprocessor() },
-
-						[this](auto&& geometry_phase)
-						{
-							this->resource_manager.set_default_shader(geometry_phase.get_shader());
-							this->resource_manager.set_default_animated_shader(geometry_phase.get_animated_shader());
-						}
-					),
-
-					engine::DeferredShadingPhase { graphics.context, effects.get_preprocessor() },
-
-					util::inspect_and_store
-					(
-						engine::BulletDebugRenderPhase { graphics.context, effects.get_preprocessor() },
-						[this, &physics](auto& bullet_dbg)
-						{
-							physics.register_debug_drawer(bullet_dbg.get_debug_drawer());
-
-							//bullet_dbg.disable();
-						}
-					)
-				)
-			);
-		}
+		init_default_systems((!renderer));
 	}
 
 	void Game::set_title(std::string_view title)
@@ -122,6 +69,22 @@ namespace game
 		}
 
 		window->set_title(title);
+	}
+
+	void Game::update(app::Milliseconds time)
+	{
+		auto& mouse = input.get_mouse();
+
+		// Currently based on mouse's lock-status.
+		// (May change this in the future)
+		if (mouse.locked())
+		{
+			input.poll(world.get_active_event_handler());
+		}
+
+		world.update(time);
+
+		on_update(world.get_delta_time());
 	}
 
 	void Game::render()
@@ -186,17 +149,92 @@ namespace game
 		return render_state;
 	}
 
-	void Game::update(app::Milliseconds time)
+	void Game::load_input_profiles(engine::InputSystem& input_system, app::input::InputHandler& input_handler)
 	{
-		auto& mouse = input.get_mouse();
+		auto& gamepads = input_handler.get_gamepads();
 
-		if (mouse.locked())
+		gamepads.load_profiles
+		(
+			{
+				// Path:
+				.path = std::filesystem::path("config/input/gamepads.json"),
+				
+				// Input:
+				.buttons = input_handler.get_buttons(),
+				.analogs = input_handler.get_analogs(),
+				
+				// Output:
+				.player_mappings_out = input_handler.get_player_device_map()
+			}
+		);
+
+		// TODO: Implement profiles for mouse and keyboard input.
+	}
+
+	entt::dispatcher* Game::get_event_handler()
+	{
+		return &(world.get_active_event_handler());
+	}
+
+	void Game::init_default_systems(bool init_renderer)
+	{
+		// World systems:
+		auto& physics = world_system<engine::PhysicsSystem>();
+		world_system<engine::MotionSystem>(physics);
+
+		world_system<engine::AnimationSystem>();
+		world_system<engine::ZoneSystem>();
+
+		// Behaviors:
+		behavior<engine::FreeLookBehavior>();
+		behavior<engine::DebugMoveBehavior>();
+
+		//behavior<engine::TargetBehavior>();
+		//behavior<engine::BillboardBehavior>();
+		/*
+		// TODO: Look into which behaviors we want to enable by default.
+		// TODO: Look into auto-detecting construction of certain component types and initializing behaviors/systems automatically.
+		system<engine::SpinBehavior>(world);
+		system<engine::TargetComponent>(world);
+		system<engine::SimpleFollowComponent>(world);
+		system<engine::BillboardBehavior>(world);
+		system<engine::RaveComponent>(world);
+		*/
+
+		if (init_renderer)
 		{
-			input.poll(world.get_active_event_handler());
+			renderer.set_pipeline
+			(
+				engine::make_render_pipeline
+				(
+					engine::PointLightShadowPhase  { graphics.context, effects.get_preprocessor() },
+					engine::DirectionalShadowPhase { graphics.context, effects.get_preprocessor() },
+				
+					util::inspect_and_store
+					(
+						engine::GeometryRenderPhase { graphics.context, effects.get_preprocessor() },
+
+						[this](auto&& geometry_phase)
+						{
+							this->resource_manager.set_default_shader(geometry_phase.get_shader());
+							this->resource_manager.set_default_animated_shader(geometry_phase.get_animated_shader());
+						}
+					),
+
+					engine::DeferredShadingPhase { graphics.context, effects.get_preprocessor() },
+
+					util::inspect_and_store
+					(
+						engine::BulletDebugRenderPhase { graphics.context, effects.get_preprocessor() },
+						[this, &physics](auto& bullet_dbg)
+						{
+							physics.register_debug_drawer(bullet_dbg.get_debug_drawer());
+
+							//bullet_dbg.disable();
+						}
+					)
+				)
+			);
 		}
-
-		world.update(time);
-
-		on_update(world.get_delta_time());
 	}
 }

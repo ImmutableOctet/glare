@@ -12,6 +12,7 @@
 
 #include <app/events.hpp>
 #include <app/input/keycodes.hpp>
+
 #include <engine/engine.hpp>
 
 #include <util/variant.hpp>
@@ -26,14 +27,16 @@
 #include <engine/world/render/world_render_state.hpp>
 
 #include <engine/events.hpp>
-#include <engine/world/world_events.hpp>
 #include <engine/type_component.hpp>
 #include <engine/model_component.hpp>
 
+#include <engine/world/world_events.hpp>
 #include <engine/world/graphics_entity.hpp>
 #include <engine/world/light.hpp>
-
 #include <engine/world/behaviors/behaviors.hpp>
+
+#include <engine/input/input.hpp>
+#include <engine/input/buttons.hpp>
 
 #include <sdl2/SDL_video.h>
 #include <sdl2/SDL_events.h>
@@ -57,24 +60,29 @@
 namespace glare
 {
 	Glare::Glare():
-		Game("Project Glare", 1600, 900, 60, true, true), // false
-		dbg_listener(world)
+		Game("Project Glare", 1600, 900, 60, true, false) // true
 	{
 		using namespace graphics;
+
+		init_input_system([](auto& input_system, auto& input_handler)
+		{
+			// TODO: Migrate this to the `glare` namespace.
+			engine::generate_button_map(input_handler.get_buttons());
+
+			engine::generate_analog_map(input_handler.get_analogs());
+		});
+
+		world_system<engine::DebugListener>();
 
 		// TODO: Look into this again.
 		world.register_event<app::input::KeyboardState, &Glare::on_user_keyboard_input>(*this);
 		world.register_event<app::input::MouseState, &Glare::on_user_mouse_input>(*this);
-
-		// Normally, we lock when starting the game, but don't here for testing purposes.
-		//input.get_mouse().lock();
 
 		world.load("assets/maps/test01");
 		//world.load("assets/maps/story/2.ice-world/ice-connector");
 		//world.load("assets/maps/test01 - old");
 		//world.load("assets/maps/room");
 		//world.load("assets/maps/collision_test");
-
 		// Debugging related:
 		//GLint value = 0; glGetIntegerv(GL_MAX_COMBINED_VERTEX_UNIFORM_COMPONENTS, &value); // GL_MAX_VERTEX_BINDABLE_UNIFORMS_EXT
 
@@ -92,13 +100,22 @@ namespace glare
 
 		world.set_name(cube, "Cube");
 
-		attach_collision(world, cube, resource_manager.generate_sphere_collision(2.0f).collision_shape, engine::EntityType::Object);
+		attach_collision(world, cube, resource_manager.generate_sphere_collision(20.0f).collision_shape, engine::EntityType::Object);
 		auto& cube_c = registry.get<engine::CollisionComponent>(cube);
 		cube_c.set_mass(0.5f);
 
+		if (auto& kinematic_resolution = cube_c.get_kinematic_resolution())
+		{
+			kinematic_resolution->accepts_influence = false;
+			//kinematic_resolution->resolve_intersections = false;
+			kinematic_resolution->can_influence_children = false;
+			kinematic_resolution->can_be_influenced_by_children = false;
+			//kinematic_resolution->cast_method = engine::CollisionCastMethod::None;
+		}
+
 		world.transform_and_reset_collision(cube, [&](auto& cube_t)
 		{
-			cube_t.set_position({ -6.20467f, 166.5406f, 39.1254f });
+			cube_t.set_position({ -6.20467f, 160.5406f, 39.1254f });
 		});
 
 		auto cube2 = engine::load_model
@@ -116,14 +133,28 @@ namespace glare
 		attach_collision(world, cube2, resource_manager.generate_sphere_collision(4.0f).collision_shape, engine::EntityType::Object);
 		auto& cube2_c = registry.get<engine::CollisionComponent>(cube2);
 		cube2_c.set_mass(2.0f);
+		
+		if (auto& kinematic_resolution = cube2_c.get_kinematic_resolution())
+		{
+			//kinematic_resolution->accepts_influence = true;
+			
+			//kinematic_resolution->resolve_intersections = true;
+			//kinematic_resolution->resolve_intersections = false;
+
+			//kinematic_resolution->cast_method = engine::CollisionCastMethod::RayCast;
+		}
 
 		world.transform_and_reset_collision(cube2, [&](auto& cube2_t)
 		{
 			//cube2_t.set_scale(4.0f);
 			cube2_t.set_position({ -6.20467f, 180.5406f, 39.1254f });
+			//cube2_t.set_position({ 38.3709, 45.9637, 120.579 });
 		});
 
-		registry.emplace<engine::MotionComponent>(cube2);
+		auto& cube2_motion = registry.emplace<engine::MotionComponent>(cube2);
+
+		cube2_motion.attach_to_dynamic_ground = true;
+		//cube2_motion.apply_gravity = false;
 
 		auto& camera_c = registry.get<engine::CollisionComponent>(world.get_camera());
 
@@ -155,6 +186,80 @@ namespace glare
 		//auto angle = glm::normalize(transform.get_position() - camera_pos);
 		//float delta = world.delta();
 
+		if (keyboard.get_key(SDL_SCANCODE_Q))
+		{
+			auto player = world.get_by_name("player_model");
+
+			if (player != engine::null)
+			{
+				auto player_t = world.get_transform(player);
+
+				const auto& dt = world.get_delta_time();
+
+				player_t.rotateX(math::radians(4.0f) * dt);
+
+				print("Player Pitch: {}", math::degrees(player_t.get_pitch()));
+			}
+		}
+
+		if (keyboard.get_key(SDL_SCANCODE_2))
+		{
+			auto player = world.get_by_name("player_model");
+
+			if (player != engine::null)
+			{
+				auto player_t = world.get_transform(player);
+
+				const auto& dt = world.get_delta_time();
+
+				player_t.rotateY(math::radians(4.0f) * dt);
+
+				print("Player Yaw: {}", math::degrees(player_t.get_yaw()));
+			}
+		}
+
+		if (keyboard.get_key(SDL_SCANCODE_E))
+		{
+			auto player = world.get_by_name("player_model");
+
+			if (player != engine::null)
+			{
+				auto player_t = world.get_transform(player);
+
+				const auto& dt = world.get_delta_time();
+
+				player_t.rotateZ(math::radians(4.0f) * dt);
+
+				print("Player Roll: {}", math::degrees(player_t.get_roll()));
+			}
+		}
+
+		if (keyboard.get_key(SDL_SCANCODE_G))
+		{
+			auto player = world.get_by_name("Player");
+			auto camera = world.get_camera();
+
+			auto player_t = world.get_transform(player);
+			auto camera_t = world.get_transform(camera);
+
+			auto new_position = camera_t.get_position();
+
+			player_t.set_position({ new_position.x, (new_position.y - 5.0f), new_position.z });
+		}
+
+		if (keyboard.get_key(SDL_SCANCODE_V))
+		{
+			auto player = world.get_by_name("Player");
+
+			auto t = world.get_transform(player);
+
+			const auto& dt = world.get_delta_time();
+
+			auto m = math::Vector{ 0.0f, 1.25f * dt, 0.0f };
+
+			t.move(m);
+		}
+
 		if (keyboard.get_key(SDL_SCANCODE_R))
 		{
 			auto box = world.get_by_name("Cube");
@@ -166,6 +271,18 @@ namespace glare
 			auto m = math::Vector { 0.0f, std::sinf((dt.current_frame_time() / 1000.0f)) * 1.0f * dt, 0.0f };
 
 			t.move(m);
+
+			/*
+			auto new_pos = t.get_position();
+			print("MOVING: PARENT NEW POSITION IS: {} ({})", new_pos, new_pos.y);
+
+			auto other_t = world.get_transform(world.get_by_name("Cube2"));
+			auto other_new_pos = other_t.get_position();
+
+			print("MOVING: CHILD NEW POSITION IS: {} ({})", other_new_pos, other_new_pos.y);
+
+			print("MOVING: YDIFF: {}", (other_new_pos.y - new_pos.y));
+			*/
 		}
 
 		if (keyboard.get_key(SDL_SCANCODE_U))
@@ -202,7 +319,7 @@ namespace glare
 
 			const auto& dt = world.get_delta_time();
 
-			auto m = math::Vector{ 0.0f, 0.25f * dt, 0.0f };
+			auto m = math::Vector{ 0.0f, 1.25f * dt, 0.0f };
 
 			t.move(m);
 		}
@@ -219,6 +336,29 @@ namespace glare
 			auto m = math::Vector{ 0.0f, -0.25f * dt, 0.0f };
 
 			t.move(m);
+		}
+
+		if (keyboard.get_key(SDL_SCANCODE_B))
+		{
+			auto box = world.get_by_name("Cube2");
+
+			auto t = world.get_transform(box);
+
+			const auto& dt = world.get_delta_time();
+
+			auto m = math::Vector{ 0.0f, 0.0f, 0.5f * dt };
+
+			t.move(m, true);
+		}
+
+		if (keyboard.get_key(SDL_SCANCODE_7))
+		{
+			auto box = world.get_by_name("Cube");
+			auto t = world.get_transform(box);
+
+			const auto& dt = world.get_delta_time();
+
+			t.rotate({ 0.0f, 0.01 * dt, 0.0f });
 		}
 	}
 
@@ -263,7 +403,7 @@ namespace glare
 		auto player = world.get_player();
 		assert(player != engine::null);
 
-		auto player_model = world.get_child_by_name(player, "model", false);
+		auto player_model = world.get_child_by_name(player, "player_model", false);
 		assert(player_model != engine::null);
 
 		auto target = player_model;
@@ -311,11 +451,8 @@ namespace glare
 			graphics.context->set_flags(graphics::ContextFlags::Wireframe, !graphics.context->get_flag(graphics::ContextFlags::Wireframe));
 
 			break;
-		case SDLK_QUOTE:
-			
 
-			break;
-		case SDLK_q:
+		case SDLK_F2:
 		{
 			//print("World: {}", world);
 			//print_children(world, world.get_root());
@@ -326,6 +463,58 @@ namespace glare
 			auto* obj = collision.get_collision_object();
 
 			print("Collision object is located at: {}", math::to_vector(obj->getWorldTransform().getOrigin()));
+
+			break;
+		}
+
+		case SDLK_y:
+		{
+			auto camera = world.get_camera();
+
+			//world.set_parent(camera, world.get_by_name("Player"));
+
+			auto cube = world.get_by_name("Cube");
+			auto cube2 = world.get_by_name("Cube2");
+			auto root = world.get_root();
+
+			math::Matrix local_camera_matrix;
+
+			{
+				auto camera_t = world.get_transform(camera);
+				auto cube_t = world.get_transform(cube);
+				auto root_t = world.get_transform(root);
+
+				auto camera_matrix = camera_t.get_matrix();
+				auto cube_matrix = cube_t.get_matrix();
+				auto root_matrix = root_t.get_matrix();
+
+				auto cube_inv_matrix = cube_t.get_inverse_matrix();
+
+				print("cube_t.get_position(): {}", cube_t.get_position());
+				print("cube_t.get_matrix(): {}", math::get_translation(cube_matrix));
+				print("cube_t.get_inverse_matrix(): {}", math::get_translation(cube_inv_matrix));
+			}
+
+			world.set_parent(camera, cube);
+
+			/*
+			auto& registry = world.get_registry();
+			auto& relationship = registry.get<engine::Relationship>(camera);
+			auto camera_parent = relationship.get_parent();
+			auto& camera_parent_relationship = registry.get<engine::Relationship>(camera_parent);
+			camera_parent_relationship.remove_child(registry, camera, camera_parent);
+			*/
+
+			//auto camera_t = world.get_transform(camera);
+			//camera_t.set_matrix(local_camera_matrix);
+
+			//camera_t.set_local_matrix(local_camera_matrix);
+			
+
+			world.set_parent(camera, root);
+
+			world.set_parent(camera, cube);
+			world.set_parent(camera, cube2);
 
 			break;
 		}

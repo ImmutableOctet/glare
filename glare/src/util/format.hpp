@@ -6,6 +6,8 @@
 #include <fmt/core.h>
 #include <fmt/format.h>
 
+//#include <magic_enum/magic_enum_format.hpp>
+
 // Standard alternative:
 //#include <format>
 //using fmt = std;

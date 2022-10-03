@@ -14,11 +14,12 @@
 #include <engine/world/world.hpp>
 #include <engine/world/world_events.hpp>
 
+#include <engine/relationship.hpp>
 #include <engine/transform.hpp>
-//#include <engine/relationship.hpp>
 
 #include <math/bullet.hpp>
 #include <util/variant.hpp>
+#include <util/optional.hpp>
 
 // See notes in header for these includes.
 /*
@@ -254,6 +255,9 @@ namespace engine
 							.a = a_ent,
 							.b = b_ent,
 
+							.a_position = math::to_vector(a->getWorldTransform().getOrigin()),
+							.b_position = math::to_vector(b->getWorldTransform().getOrigin()),
+
 							.position    = math::to_vector(avg_world_hit_position),
 							.normal      = math::to_vector(avg_hit_normal),
 							.penetration = avg_penetration_depth,
@@ -264,7 +268,7 @@ namespace engine
 								.b_object = b
 							},
 
-							.contact_type = ContactType::Intersection
+							.contact_type = ContactType::Interaction // ContactType::Intersection
 						}
 					}
 				);
@@ -283,6 +287,7 @@ namespace engine
 
 			if (kinematic_resolution.has_value())
 			{
+				// TODO: Look into whether we should keep this check.
 				if (!kinematic_resolution->accepts_influence)
 				{
 					continue;
@@ -310,6 +315,11 @@ namespace engine
 					{
 						.a = a_ent,
 						.b = b_ent,
+
+						// NOTE: We could probably 'optimize'/change this by storing `a_transform.get_position()`
+						// prior to applying the correction, but this is more consistent with `b`'s method, etc.
+						.a_position = math::to_vector(a->getWorldTransform().getOrigin()),
+						.b_position = math::to_vector(b->getWorldTransform().getOrigin()),
 
 						.position    = math::to_vector(avg_world_hit_position),
 						.normal      = math::to_vector(avg_hit_normal),
@@ -407,6 +417,7 @@ namespace engine
 		}
 	}
 
+	// TODO: Look into the pros and cons of refactoring this into multiple internal functions.
 	void PhysicsSystem::handle_transform_resolution
 	(
 		Entity entity, CollisionComponent& collision,
@@ -414,6 +425,8 @@ namespace engine
 		Transform& transform
 	)
 	{
+		auto& registry = world.get_registry(); // Used below.
+
 		const auto kinematic_resolution_opt = collision.get_kinematic_resolution();
 
 		if (!kinematic_resolution_opt.has_value())
@@ -436,7 +449,9 @@ namespace engine
 			const auto& hit_normal = result->hit_normal;
 			const auto& hit_point_in_world = result->hit_position;
 
-			auto old_position = math::to_vector(collision.get_collision_object()->getWorldTransform().getOrigin());
+			//world.set_position(create_cube(world), hit_point_in_world);
+
+			auto old_position = math::to_vector(collision_obj.getWorldTransform().getOrigin());
 			auto new_position = transform.get_position();
 
 			const auto impact_velocity = (new_position - old_position);
@@ -447,30 +462,111 @@ namespace engine
 			// and optionally read in `adjust_entity_position`.
 			math::Vector influence = {};
 
+			const auto* hit_collision = registry.try_get<CollisionComponent>(hit_entity);
+
+			auto hit_resolution = util::optional_inspect<KinematicResolutionConfig>
+			(
+				hit_collision,
+				[](const auto& hit_collision){ return hit_collision->get_kinematic_resolution(); }
+			);
+
+			bool apply_influence  = true;
 			bool apply_correction = true;
-			//world.set_position(create_cube(world), hit_point_in_world);
+
+			// TODO: Integrate this flag into collision-events in some way.
+			// 
+			// NOTE: We update this value if `child_enumeration_required` is true,
+			// but we otherwise assume false to be the correct value.
+			bool hit_entity_is_child = false;
+
+			// TODO: Integrate this flag into collision-events in some way.
+			// 
+			// Similar to `hit_entity_is_child`, we update this value later,
+			// but until then, we assume false to be correct.
+			bool hit_entity_is_parent = false;
+
+			if (hit_resolution) // <-- Currently a requirement for enumeration; may change later.
+			{
+				bool hit_child_enumeration_required  = ((!hit_resolution->can_be_influenced_by_children) || (!hit_resolution->can_influence_children)); // || ...
+
+				if (hit_child_enumeration_required)
+				{
+					// Since the `hit_entity` is stating that children can't influence it,
+					// we'll need to determine if we're one of its children:
+					if (auto* hit_relationship = registry.try_get<Relationship>(hit_entity))
+					{
+						// Enumerate `hit_entity`'s children, comparing against ourself (`entity`):
+						hit_relationship->enumerate_children(registry, [entity, &hit_entity_is_parent](Entity child, const Relationship& child_relationship, Entity next_child) -> bool
+						{
+							if (child == entity)
+							{
+								// We are one of `hit_entity`'s children, stop enumeration:
+								hit_entity_is_parent = true;
+
+								// Short-circuit enumeration.
+								return false;
+							}
+
+							// Continue enumeration.
+							return true;
+						}, true);
+					}
+				}
+			}
+
+			// Determine if we need to look through our relationship tree:
+			bool child_enumeration_required = ((!kinematic_resolution.can_influence_children) || (!kinematic_resolution.can_be_influenced_by_children));
+
+			if (child_enumeration_required)
+			{
+				if (auto* relationship = registry.try_get<Relationship>(entity))
+				{
+					// Enumerate this entity's children, comparing against `hit_entity`:
+					relationship->enumerate_children(registry, [hit_entity, &hit_entity_is_child, &kinematic_resolution, &apply_influence, &apply_correction](Entity child, const Relationship& child_relationship, Entity next_child) -> bool
+					{
+						if (child == hit_entity)
+						{
+							if (!kinematic_resolution.can_influence_children)
+							{
+								// The entity we hit is a child and we're not allowed to influence it.
+								apply_influence = false;
+							}
+
+							if (!kinematic_resolution.can_be_influenced_by_children)
+							{
+								apply_correction = false;
+							}
+
+							hit_entity_is_child = true;
+
+							// Short-circuit enumeration.
+							return false;
+						}
+
+						// Continue enumeration.
+						return true;
+					}, true);
+				}
+			}
 
 			auto handle_influence_on_hit_entity = [&]()
 			{
+				// Check if influences are enabled:
+				if (!apply_influence)
+				{
+					return;
+				}
+
+				// Check if we're allowed to influence an object:
 				if (!kinematic_resolution.is_influencer)
 				{
 					return;
 				}
 
-				auto& registry = world.get_registry();
-
-				const auto* hit_collision = registry.try_get<CollisionComponent>(hit_entity);
-
-				if (!hit_collision)
-				{
-					return;
-				}
-
-				const auto& hit_resolution = hit_collision->get_kinematic_resolution();
-
 				// Check if we're supposed to resolve this hit/influence:
 				if (!hit_resolution.has_value())
 				{
+					// A `hit_resolution` instance is required to influence an object.
 					return;
 				}
 
@@ -478,6 +574,17 @@ namespace engine
 				if (!hit_resolution->accepts_influence)
 				{
 					return;
+				}
+
+				// Check if we're a child of `entity`:
+				if (hit_entity_is_parent)
+				{
+					// Check if `hit_entity` forbids influences from children:
+					if (!hit_resolution->can_be_influenced_by_children)
+					{
+						// `hit_entity` reported that we can't influence it; return immediately.
+						return;
+					}
 				}
 
 				// The strength (%) of movement translated from `entity` to `hit_entity`.
@@ -518,7 +625,7 @@ namespace engine
 
 				// Update the transform of `hit_entity` 
 				auto hit_tform = world.get_transform(hit_entity);
-						
+				
 				auto hit_old_position = hit_tform.get_position();
 				auto hit_new_position = (hit_old_position + influence);
 
@@ -561,6 +668,19 @@ namespace engine
 					return;
 				}
 
+				// Check if `hit_entity` is our parent:
+				if (hit_entity_is_parent)
+				{
+					if (hit_resolution)
+					{
+						// Check if this adjustment falls within the influencing rules of our parent:
+						if (!hit_resolution->can_influence_children)
+						{
+							return;
+						}
+					}
+				}
+
 				const auto& hit_adjustment = penetration;
 
 				auto object_half_dimensions = kinematic_resolution.get_half_size_vector(collision);
@@ -569,7 +689,7 @@ namespace engine
 				auto correction  = (edge_offset - hit_adjustment);
 
 				auto adjusted_position = (new_position + correction + influence);
-
+				
 				transform.set_position(adjusted_position);
 
 				// TODO: May cause side effect of collision-update happening again. (Need to look into this more)
@@ -588,8 +708,12 @@ namespace engine
 			handle_influence_on_hit_entity();
 			adjust_entity_position();
 
+			// NOTE: Faster than always handling another `Transform` object,
+			// or somehow forwarding from the `handle_influence_on_hit_entity` step.
+			auto hit_old_position = math::to_vector(hit_object->getWorldTransform().getOrigin());
+
 			// Notify listeners that this `entity` contacted `hit_entity`'s surface:
-			world.queue_event
+			world.event // world.queue_event
 			(
 				OnSurfaceContact
 				{
@@ -598,6 +722,9 @@ namespace engine
 					{
 						.a = entity,
 						.b = hit_entity,
+
+						.a_position = old_position,
+						.b_position = hit_old_position,
 
 						.position = hit_point_in_world,
 						.normal   = hit_normal,

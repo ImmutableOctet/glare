@@ -8,6 +8,21 @@
 
 namespace engine
 {
+	// Internal helper function; similar to `Transform::get_transform_safe`.
+	static std::optional<Transform> get_transform_safe(Registry& registry, Entity entity, const Relationship& relationship)
+	{
+		//return Transform::get_transform_safe(registry, entity);
+
+		auto* transform_component = registry.try_get<TransformComponent>(entity);
+
+		if (transform_component)
+		{
+			return Transform(registry, entity, relationship, *transform_component);
+		}
+
+		return std::nullopt;
+	}
+
 	Relationship::Relationship(Entity parent)
 		: parent(parent), first(null), prev(null), next(null) {}
 
@@ -83,6 +98,29 @@ namespace engine
 
 		auto* prev_rel = remove_previous_parent(registry, child, child_relationship);
 
+		std::optional<math::Matrix> current_matrix;
+
+		// Only attempt to retrieve the current matrix if there was already a relationship object established. (No need, otherwise):
+		if (prev_rel)
+		{
+			if (std::optional<Transform> child_transform = get_transform_safe(registry, child, *prev_rel))
+			{
+				// Retrieve the child's current matrix.
+				// NOTE: Since we always call `remove_previous_parent` first, this will always be in world-space, regardless of local vs. non-local.
+				current_matrix = child_transform->get_matrix(); // child_transform->get_local_matrix();
+
+				//print("adding child -> current_matrix (a): {}", math::get_translation(*current_matrix));
+
+				if (std::optional<Transform> self_transform = get_transform_safe(registry, self, *this))
+				{
+					// Convert the child's transform from world-space into the local-space of this parent entity.
+					current_matrix = (self_transform->get_inverse_matrix() * (*current_matrix));
+
+					//print("adding child -> current_matrix (b): {}", math::get_translation(*current_matrix));
+				}
+			}
+		}
+
 		Relationship relationship;
 		
 		if (prev_rel != nullptr)
@@ -114,34 +152,20 @@ namespace engine
 			append_child(last_child_rel, relationship, last_child, child);
 		}
 
-		math::Matrix current_matrix;
-
-		std::optional<Transform> child_transform = Transform::get_transform_safe(registry, child);
-
-		if (child_transform)
-		{
-			if (std::optional<Transform> self_transform = Transform::get_transform_safe(registry, self))
-			{
-				current_matrix = self_transform->get_inverse_matrix() * child_transform->get_local_matrix();
-			}
-		}
-
-		/*
-		if ((self != null) && (((int)self) != 0))
-		{
-			print("Adding child ({}) to parent ({})", (int)child, (int)self);
-
-			//_dbg_is_actual_add = true;
-		}
-		*/
-
-		registry.emplace_or_replace<Relationship>(child, std::move(relationship));
+		registry.emplace_or_replace<Relationship>(child, relationship);
 
 		this->child_count++;
 
-		if (child_transform)
+		if (current_matrix)
 		{
-			child_transform->set_matrix(current_matrix);
+			// NOTE: Since we've changed the relationship tree, we will need to re-establish the `child_transform` object.
+			// NOTE: It's safe to use the local copy of `relationship` here, since it reflects the copy in the `registry` perfectly.
+			if (std::optional<Transform> child_transform = get_transform_safe(registry, child, relationship))
+			{
+				child_transform->set_local_matrix(*current_matrix); // child_transform->set_matrix(*current_matrix);
+				
+				//print("adding child -> child_transform->get_matrix(): {}", math::get_translation(child_transform->get_matrix()));
+			}
 		}
 
 		return child;
@@ -149,27 +173,21 @@ namespace engine
 
 	Entity Relationship::remove_child(Registry& registry, Entity child, Entity self, bool remove_in_registry)
 	{
-		//bool _dbg_is_actual_removal = false;
-
-		// Debugging related:
-		if ((self != null) && (((int)self) != 0))
-		{
-			//auto con = util::log::get_console();
-			////std::cout << "Removing child (" << (int)child << ") from parent (" << (int)self << ")\n";
-
-			//_dbg_is_actual_removal = true;
-		}
-
 		auto child_relationship = registry.get<Relationship>(child);
 
-		///*
 		std::optional<math::Matrix> current_matrix = std::nullopt;
 
-		if (std::optional<Transform> child_transform = Transform::get_transform_safe(registry, child))
+		// If we're removing from the registry, we can't restore the matrix, so only attempt this during normal execution:
+		if (!remove_in_registry)
 		{
-			current_matrix = child_transform->get_matrix();
+			if (std::optional<Transform> child_transform = get_transform_safe(registry, child, child_relationship))
+			{
+				// Retrieve the current matrix.
+				current_matrix = child_transform->get_matrix();
+
+				//print("Current matrix: {}", math::get_translation(*current_matrix));
+			}
 		}
-		//*/
 
 		collapse_child(registry, child_relationship, self, child);
 
@@ -180,22 +198,19 @@ namespace engine
 		else
 		{
 			registry.replace<Relationship>(child, std::move(child_relationship)); // [&](auto& r) { r = child_relationship; }
-		}
 
-		///*
-		if (current_matrix)
-		{
-			if (std::optional<Transform> child_transform = Transform::get_transform_safe(registry, child))
+			if (current_matrix)
 			{
-				//if (_dbg_is_actual_removal)
-				//{
-				print("Re-applying matrix...");
-				//}
-
-				child_transform->set_matrix(*current_matrix);
+				// NOTE: We need to re-establish the `child_transform` object here, since we've changed the relationship hierarchy.
+				// NOTE: The local copy of the `child_relationship` object works fine here, since it's the same as the registry's version at this point.
+				if (std::optional<Transform> child_transform = get_transform_safe(registry, child, child_relationship))
+				{
+					// Re-apply the current matrix.
+					child_transform->set_matrix(*current_matrix);
+				}
 			}
 		}
-		//*/
+
 
 		return child;
 	}

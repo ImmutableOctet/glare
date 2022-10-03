@@ -11,9 +11,14 @@
 //#include <string>
 //#include <string_view>
 
+#include <optional>
+#include <filesystem>
+
 namespace util
 {
 	using json = nlohmann::json;
+
+	json load_json(const std::filesystem::path& path);
 
 	math::TransformVectors get_transform(const json& data);
 
@@ -32,9 +37,26 @@ namespace util
 	template <typename T, typename UIDType, typename get_fn>
 	inline void retrieve_value(const json& data, const UIDType& name, T& dest, get_fn&& fn)
 	{
+		/*
+		if (auto element = data.find(name); (element != data.end()))
+		{
+			dest = fn(*element);
+		}
+		*/
+
 		if (data.contains(name))
 		{
 			dest = fn(data, name);
+		}
+	}
+
+	// Retrieves a JSON node using `name` from `data`, then calls `fn` with this node and `dest`.
+	template <typename T, typename UIDType, typename get_fn>
+	inline void retrieve_from(const json& data, const UIDType& name, T& dest, get_fn&& fn)
+	{
+		if (auto element = data.find(name); (element != data.end()))
+		{
+			fn(*element, dest);
 		}
 	}
 

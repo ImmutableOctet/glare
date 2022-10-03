@@ -14,7 +14,7 @@ namespace engine
 	WorldSystem::~WorldSystem()
 	{
 		// Unsubscribe from `world`.
-		unsubscribe(world);
+		unsubscribe_impl(world, false);
 	}
 
 	void WorldSystem::update(const OnServiceUpdate& update_event)
@@ -42,6 +42,11 @@ namespace engine
 	}
 
 	void WorldSystem::on_render(World& world, app::Graphics& graphics)
+	{
+		// Empty implementation.
+	}
+
+	void WorldSystem::on_update(World& world, float delta)
 	{
 		// Empty implementation.
 	}
@@ -77,6 +82,11 @@ namespace engine
 
 	bool WorldSystem::unsubscribe(World& world)
 	{
+		return unsubscribe_impl(world, true);
+	}
+
+	bool WorldSystem::unsubscribe_impl(World& world, bool _dispatch)
+	{
 		bool is_same_as_internal = is_bound_world(world);
 
 		if (is_same_as_internal && !subscribed)
@@ -93,7 +103,10 @@ namespace engine
 
 		world.unsubscribe(*this);
 
-		on_unsubscribe(world);
+		if (_dispatch)
+		{
+			on_unsubscribe(world);
+		}
 
 		if (is_same_as_internal)
 		{
@@ -101,6 +114,16 @@ namespace engine
 		}
 
 		return true;
+	}
+
+	World& WorldSystem::get_world() const
+	{
+		return world;
+	}
+
+	Registry& WorldSystem::get_registry() const
+	{
+		return world.get_registry();
 	}
 
 	bool WorldSystem::is_bound_world(Service* svc) const
@@ -115,7 +138,7 @@ namespace engine
 
 	void WorldSystem::on_unsubscribe(World& world)
 	{
-		// Empty implementation; override with your own if desired.
+		// Empty implementation; override with your own, if desired.
 	}
 
 	// Safely retrieves a `World` pointer from a base `Service` pointer.

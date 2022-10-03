@@ -5,6 +5,8 @@
 
 #include <entt/entt.hpp>
 
+#include <string>
+
 // TODO: Look into removing this from the main 'types' header.
 namespace graphics
 {
@@ -20,15 +22,10 @@ namespace engine
 	// TODO: Look into removing this from the main 'types' header.
 	struct AnimationData;
 
-	// Aliases:
 	using Registry     = entt::registry;
 	using Entity       = entt::entity;
 	using EntityIDType = entt::id_type;
 	using EventHandler = entt::dispatcher;
-
-	using Animation    = graphics::Animation;
-	using AnimationID  = graphics::AnimationID;
-	using BoneID       = graphics::BoneID;
 
 	/*
 	template <typename... delegate_params>
@@ -37,6 +34,13 @@ namespace engine
 	template <typename... sink_parameters>
 	using Sink = entt::sink<sink_parameters...>;
 	*/
+
+	using Animation    = graphics::Animation;
+	using AnimationID  = graphics::AnimationID;
+	using BoneID       = graphics::BoneID;
+
+	// NOTE: Must be equivalent to `app::input::PlayerInputID`.
+	using PlayerIndex = std::uint16_t;
 
 	enum class Axis : std::uint8_t
 	{
@@ -88,4 +92,6 @@ namespace engine
 	};
 
 	constexpr auto& null = entt::null;
+
+	constexpr PlayerIndex PRIMARY_LOCAL_PLAYER = 1;
 }

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <app/input/types.hpp>
-
-#include "keycodes.hpp"
+#include "types.hpp"
+#include "input_device.hpp"
+#include "keyboard_state.hpp"
 
 namespace app::input
 {
@@ -11,6 +11,7 @@ namespace app::input
 		public:
 			Keyboard();
 
-			virtual State peek() override;
+			virtual void peek(State& state) const override;
+			//bool process_event(const SDL_Event& e, entt::dispatcher* opt_event_handler=nullptr) override { return false; }
 	};
 }
