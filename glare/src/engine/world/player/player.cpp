@@ -1,13 +1,16 @@
 #include "player.hpp"
-#include "world.hpp"
-#include "entity.hpp"
 
-#include "graphics_entity.hpp"
+#include <engine/input/types.hpp>
+#include <engine/input/input_component.hpp>
 
-#include "motion/motion_component.hpp"
-#include "motion/alignment_component.hpp"
+#include <engine/world/world.hpp>
+#include <engine/world/entity.hpp>
+#include <engine/world/graphics_entity.hpp>
 
-#include "physics/collision.hpp"
+#include <engine/world/motion/motion_component.hpp>
+#include <engine/world/motion/alignment_component.hpp>
+
+#include <engine/world/physics/collision.hpp>
 
 #include <util/string.hpp>
 #include <util/log.hpp>
@@ -123,6 +126,9 @@ namespace engine
 		registry.emplace<AlignmentComponent>(player, player_model);
 
 		generate_player_collision(world, player, character["collision"]);
+
+		registry.emplace<InputComponent>(player, static_cast<InputStateIndex>(index));
+		//registry.emplace<PlayerControlComponent>(player);
 
 		//world.set_parent(camera, player);
 

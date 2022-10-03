@@ -133,7 +133,7 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalOptions>/Zm100 /external:I "dependencies/*" /external:I "D:\vcpkg\installed\x64-windows\include\*" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Zm100 /external:I "dependencies" /external:I "D:\vcpkg\installed" %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -142,7 +142,8 @@
     </Link>
     <PostBuildEvent>
       <Command>xcopy "$(ProjectDir)bin\$(Platform)" "$(TargetDir)" /e /y /i /r /exclude:exclude.txt
-xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.txt</Command>
+xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.txt
+xcopy "$(ProjectDir)config" "$(TargetDir)config" /e /y /i /r /exclude:exclude.txt</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -157,7 +158,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalOptions>/Zm100 /external:I "dependencies/*" /external:I "D:\vcpkg\installed\x64-windows\include\*" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Zm100 /external:I "dependencies" /external:I "D:\vcpkg\installed" %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -166,7 +167,8 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     </Link>
     <PostBuildEvent>
       <Command>xcopy "$(ProjectDir)bin\$(Platform)" "$(TargetDir)" /e /y /i /r /exclude:exclude.txt
-xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.txt</Command>
+xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.txt
+xcopy "$(ProjectDir)config" "$(TargetDir)config" /e /y /i /r /exclude:exclude.txt</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -182,7 +184,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
       <AdditionalIncludeDirectories>D:\Projects\glare\glare\dependencies\include;D:\vcpkg\installed\x86-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalOptions>/Zm100 /external:I "dependencies/*" /external:I "D:\vcpkg\installed\x64-windows\include\*" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Zm100 /external:I "dependencies" /external:I "D:\vcpkg\installed" %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -193,7 +195,8 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     </Link>
     <PostBuildEvent>
       <Command>xcopy "$(ProjectDir)bin\$(Platform)" "$(TargetDir)" /e /y /i /r /exclude:exclude.txt
-xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.txt</Command>
+xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.txt
+xcopy "$(ProjectDir)config" "$(TargetDir)config" /e /y /i /r /exclude:exclude.txt</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -209,7 +212,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
       <AdditionalIncludeDirectories>D:\Projects\glare\glare\dependencies\include;D:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalOptions>/Zm100 /external:I "dependencies/*" /external:I "D:\vcpkg\installed\x64-windows\include\*" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Zm100 /external:I "dependencies" /external:I "D:\vcpkg\installed" %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -220,7 +223,8 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     </Link>
     <PostBuildEvent>
       <Command>xcopy "$(ProjectDir)bin\$(Platform)" "$(TargetDir)" /e /y /i /r /exclude:exclude.txt
-xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.txt</Command>
+xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.txt
+xcopy "$(ProjectDir)config" "$(TargetDir)config" /e /y /i /r /exclude:exclude.txt</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -255,6 +259,8 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\app\input\devices.hpp" />
     <ClInclude Include="src\app\input\events.hpp" />
     <ClInclude Include="src\app\input\gamepad.hpp" />
+    <ClInclude Include="src\app\input\gamepad_analog.hpp" />
+    <ClInclude Include="src\app\input\gamepad_buttons.hpp" />
     <ClInclude Include="src\app\input\gamepad_deadzone.hpp" />
     <ClInclude Include="src\app\input\gamepad_manager.hpp" />
     <ClInclude Include="src\app\input\gamepad_profile.hpp" />
@@ -262,11 +268,14 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\app\input\input.hpp" />
     <ClInclude Include="src\app\input\input_device.hpp" />
     <ClInclude Include="src\app\input\input_handler.hpp" />
+    <ClInclude Include="src\app\input\input_profile.hpp" />
+    <ClInclude Include="src\app\input\input_states.hpp" />
     <ClInclude Include="src\app\input\keyboard.hpp" />
     <ClInclude Include="src\app\input\keyboard_state.hpp" />
     <ClInclude Include="src\app\input\keycodes.hpp" />
     <ClInclude Include="src\app\input\mouse.hpp" />
     <ClInclude Include="src\app\input\mouse_state.hpp" />
+    <ClInclude Include="src\app\input\profile_metadata.hpp" />
     <ClInclude Include="src\app\input\types.hpp" />
     <ClInclude Include="src\app\timer.hpp" />
     <ClInclude Include="src\app\types.hpp" />
@@ -274,7 +283,18 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\core.hpp" />
     <ClInclude Include="src\debug.hpp" />
     <ClInclude Include="src\engine\action.hpp" />
+    <ClInclude Include="src\engine\basic_system.hpp" />
     <ClInclude Include="src\engine\format.hpp" />
+    <ClInclude Include="src\engine\input\analogs.hpp" />
+    <ClInclude Include="src\engine\input\buttons.hpp" />
+    <ClInclude Include="src\engine\input\events.hpp" />
+    <ClInclude Include="src\engine\input\input.hpp" />
+    <ClInclude Include="src\engine\input\input_component.hpp" />
+    <ClInclude Include="src\engine\input\input_event.hpp" />
+    <ClInclude Include="src\engine\input\input_state.hpp" />
+    <ClInclude Include="src\engine\input\input_system.hpp" />
+    <ClInclude Include="src\engine\input\types.hpp" />
+    <ClInclude Include="src\engine\meta.hpp" />
     <ClInclude Include="src\engine\multi_types.hpp" />
     <ClInclude Include="src\engine\world\animation\bone_component.hpp" />
     <ClInclude Include="src\engine\input_events.hpp" />
@@ -302,6 +322,8 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\world\physics\kinematic_resolution_config.hpp" />
     <ClInclude Include="src\engine\world\motion\motion_events.hpp" />
     <ClInclude Include="src\engine\world\physics\physics.hpp" />
+    <ClInclude Include="src\engine\world\player\player_control_component.hpp" />
+    <ClInclude Include="src\engine\world\player\player_control_system.hpp" />
     <ClInclude Include="src\engine\world\render\bullet_debug_render_phase.hpp" />
     <ClInclude Include="src\engine\world\world_events.hpp" />
     <ClInclude Include="src\engine\world\physics\collision.hpp" />
@@ -346,7 +368,7 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\engine\world\physics\physics_system.hpp" />
     <ClInclude Include="src\engine\world\motion\motion_component.hpp" />
     <ClInclude Include="src\engine\world\physics\types.hpp" />
-    <ClInclude Include="src\engine\world\player.hpp" />
+    <ClInclude Include="src\engine\world\player\player.hpp" />
     <ClInclude Include="src\engine\world\behaviors\rave_behavior.hpp" />
     <ClInclude Include="src\engine\world\render\deferred_render_pipeline.hpp" />
     <ClInclude Include="src\engine\world\render\deferred_shading.hpp" />
@@ -424,11 +446,12 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\util\json.hpp" />
     <ClInclude Include="src\util\lib.hpp" />
     <ClInclude Include="src\util\log.hpp" />
+    <ClInclude Include="src\util\map.hpp" />
     <ClInclude Include="src\util\memory.hpp" />
     <ClInclude Include="src\util\optional.hpp" />
     <ClInclude Include="src\util\pipeline.hpp" />
     <ClInclude Include="src\util\shorthand.hpp" />
-    <ClInclude Include="src\util\static_member_function.hpp" />
+    <ClInclude Include="src\util\member_function_traits.hpp" />
     <ClInclude Include="src\util\string.hpp" />
     <ClInclude Include="src\util\util.hpp" />
     <ClInclude Include="src\util\variant.hpp" />
@@ -477,6 +500,11 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\app\input\mouse.cpp" />
     <ClCompile Include="src\app\timer.cpp" />
     <ClCompile Include="src\app\window.cpp" />
+    <ClCompile Include="src\engine\input\analogs.cpp" />
+    <ClCompile Include="src\engine\input\buttons.cpp" />
+    <ClCompile Include="src\engine\input\input_event.cpp" />
+    <ClCompile Include="src\engine\input\input_state.cpp" />
+    <ClCompile Include="src\engine\input\input_system.cpp" />
     <ClCompile Include="src\engine\service.cpp" />
     <ClCompile Include="src\engine\world\animation\bone_component.cpp" />
     <ClCompile Include="src\engine\world\animation\skeletal_component.cpp" />
@@ -513,8 +541,9 @@ xcopy "$(ProjectDir)assets" "$(TargetDir)assets" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\engine\collision_shape_primitive.cpp" />
     <ClCompile Include="src\engine\world\physics\kinematic_resolution_config.cpp" />
     <ClCompile Include="src\engine\world\physics\physics_system.cpp" />
-    <ClCompile Include="src\engine\world\player.cpp" />
+    <ClCompile Include="src\engine\world\player\player.cpp" />
     <ClCompile Include="src\engine\world\behaviors\rave_behavior.cpp" />
+    <ClCompile Include="src\engine\world\player\player_control_system.cpp" />
     <ClCompile Include="src\engine\world\render\bullet_debug_render_phase.cpp" />
     <ClCompile Include="src\engine\world\render\deferred_shading.cpp" />
     <ClCompile Include="src\engine\world\render\directional_shadows.cpp" />

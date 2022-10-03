@@ -50,7 +50,7 @@
     <ClCompile Include="src\engine\collision_shape_primitive.cpp" />
     <ClCompile Include="src\engine\world\physics\kinematic_resolution_config.cpp" />
     <ClCompile Include="src\engine\world\physics\physics_system.cpp" />
-    <ClCompile Include="src\engine\world\player.cpp" />
+    <ClCompile Include="src\engine\world\player\player.cpp" />
     <ClCompile Include="src\engine\world\behaviors\rave_behavior.cpp" />
     <ClCompile Include="src\engine\world\render\bullet_debug_render_phase.cpp" />
     <ClCompile Include="src\engine\world\render\deferred_shading.cpp" />
@@ -127,6 +127,12 @@
     <ClCompile Include="dependencies\modules\stb\stb_vorbis.c">
       <Filter>third-party\stb</Filter>
     </ClCompile>
+    <ClCompile Include="src\engine\world\player\player_control_system.cpp" />
+    <ClCompile Include="src\engine\input\input_system.cpp" />
+    <ClCompile Include="src\engine\input\input_event.cpp" />
+    <ClCompile Include="src\engine\input\buttons.cpp" />
+    <ClCompile Include="src\engine\input\input_state.cpp" />
+    <ClCompile Include="src\engine\input\analogs.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dependencies\modules\stb\deprecated\rrsprintf.h" />
@@ -231,7 +237,7 @@
     <ClInclude Include="src\engine\world\physics\physics_system.hpp" />
     <ClInclude Include="src\engine\world\motion\motion_component.hpp" />
     <ClInclude Include="src\engine\world\physics\types.hpp" />
-    <ClInclude Include="src\engine\world\player.hpp" />
+    <ClInclude Include="src\engine\world\player\player.hpp" />
     <ClInclude Include="src\engine\world\behaviors\rave_behavior.hpp" />
     <ClInclude Include="src\engine\world\render\deferred_render_pipeline.hpp" />
     <ClInclude Include="src\engine\world\render\deferred_shading.hpp" />
@@ -313,7 +319,7 @@
     <ClInclude Include="src\util\optional.hpp" />
     <ClInclude Include="src\util\pipeline.hpp" />
     <ClInclude Include="src\util\shorthand.hpp" />
-    <ClInclude Include="src\util\static_member_function.hpp" />
+    <ClInclude Include="src\util\member_function_traits.hpp" />
     <ClInclude Include="src\util\string.hpp" />
     <ClInclude Include="src\util\util.hpp" />
     <ClInclude Include="src\util\variant.hpp" />
@@ -377,6 +383,25 @@
     <ClInclude Include="dependencies\modules\stb\stb_voxel_render.h">
       <Filter>third-party\stb</Filter>
     </ClInclude>
+    <ClInclude Include="src\engine\world\player\player_control_system.hpp" />
+    <ClInclude Include="src\engine\world\player\player_control_component.hpp" />
+    <ClInclude Include="src\engine\input\input.hpp" />
+    <ClInclude Include="src\engine\input\input_system.hpp" />
+    <ClInclude Include="src\engine\basic_system.hpp" />
+    <ClInclude Include="src\engine\meta.hpp" />
+    <ClInclude Include="src\engine\input\events.hpp" />
+    <ClInclude Include="src\engine\input\input_state.hpp" />
+    <ClInclude Include="src\engine\input\buttons.hpp" />
+    <ClInclude Include="src\engine\input\types.hpp" />
+    <ClInclude Include="src\engine\input\input_event.hpp" />
+    <ClInclude Include="src\app\input\input_states.hpp" />
+    <ClInclude Include="src\app\input\profile_metadata.hpp" />
+    <ClInclude Include="src\app\input\gamepad_buttons.hpp" />
+    <ClInclude Include="src\app\input\input_profile.hpp" />
+    <ClInclude Include="src\engine\input\input_component.hpp" />
+    <ClInclude Include="src\util\map.hpp" />
+    <ClInclude Include="src\engine\input\analogs.hpp" />
+    <ClInclude Include="src\app\input\gamepad_analog.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />

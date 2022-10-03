@@ -139,6 +139,8 @@ namespace app
 
 		start();
 
+		on_execute();
+
 		std::cout << "Running...\n";
 
 		run();
@@ -188,6 +190,11 @@ namespace app
 	Milliseconds Application::milliseconds() const
 	{
 		return std::chrono::duration_cast<std::chrono::milliseconds>(now() - start_point).count();
+	}
+
+	void Application::on_execute()
+	{
+		// Empty implementation.
 	}
 
 	void Application::fixed_update()

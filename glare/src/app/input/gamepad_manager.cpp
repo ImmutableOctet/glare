@@ -1,5 +1,6 @@
 #include "gamepad_manager.hpp"
 #include "events.hpp"
+#include "profile_metadata.hpp"
 
 #include <sdl2/SDL_events.h>
 #include <sdl2/SDL_joystick.h>
@@ -13,7 +14,7 @@
 
 namespace app::input
 {
-	GamepadManager::GamepadManager(std::optional<std::filesystem::path> profile_path, bool enable_events, bool background_events)
+	GamepadManager::GamepadManager(bool enable_events, bool background_events)
 	{
 		// Reserve for the standard number of gamepads (4).
 		gamepads.reserve(4); // gamepads.resize(4);
@@ -24,16 +25,17 @@ namespace app::input
 
 			SDL_JoystickEventState(SDL_ENABLE);
 		}
-
-		if (profile_path)
-		{
-			load_profiles(*profile_path);
-		}
 	}
 
-	void GamepadManager::load_profiles(const std::filesystem::path& path)
+	GamepadManager::GamepadManager(const ProfileMetadata& profile_metadata, bool enable_events, bool background_events)
+		: GamepadManager(enable_events, background_events)
 	{
-		auto data = util::load_json(path);
+		load_profiles(profile_metadata);
+	}
+
+	void GamepadManager::load_profiles(const ProfileMetadata& profile_metadata)
+	{
+		auto data = util::load_json(profile_metadata.path);
 
 		// Load profiles:
 		if (const auto profile_entries_it = data.find("profiles"); profile_entries_it != data.end())
@@ -43,15 +45,14 @@ namespace app::input
 			for (const auto& proxy : profile_entries.items())
 			{
 				const auto& profile_entry = proxy.value();
+				const auto  profile_name  = profile_entry["name"].get<std::string>();
 
-				auto profile_name = profile_entry["name"].get<std::string>();
-
-				//profiles[profile_name] = GamepadProfile(profile_entry);
-				profiles.emplace(profile_name, profile_entry);
+				profiles[profile_name] = GamepadProfile(profile_metadata, profile_entry);
+				//profiles.emplace(profile_name, profile_metadata, profile_entry);
 			}
 		}
 
-		// Load device mappings:
+		// Load device-to-profile mappings:
 		if (const auto gamepads_it = data.find("gamepads"); gamepads_it != data.end())
 		{
 			const auto& gamepads = *gamepads_it;
@@ -69,6 +70,22 @@ namespace app::input
 				{
 					throw std::runtime_error(format("Unable to find gamepad profile: \"{}\"", profile_name));
 				}
+			}
+		}
+
+		// Load device-to-player mappings:
+		if (const auto players_it = data.find("players"); players_it != data.end())
+		{
+			const auto& players = *players_it;
+
+			for (const auto& proxy : players.items())
+			{
+				const auto& player_entry = proxy.value();
+
+				auto device_name  = player_entry["device_name"].get<std::string>();
+				auto player_index = player_entry["player_index"].get<PlayerInputID>();
+
+				profile_metadata.player_mappings_out[device_name] = player_index;
 			}
 		}
 	}
@@ -145,7 +162,7 @@ namespace app::input
 		return false;
 	}
 
-	Gamepad& GamepadManager::get_gamepad(GamepadDeviceIndex index)
+	Gamepad& GamepadManager::get_gamepad(GamepadDeviceIndex index) const
 	{
 		auto new_container_size = (static_cast<std::size_t>(index) + 1);
 
@@ -178,11 +195,16 @@ namespace app::input
 
 	const GamepadProfile* GamepadManager::get_profile(const std::string& device_name) const
 	{
+		return get_profile(std::string_view { device_name });
+	}
+
+	const GamepadProfile* GamepadManager::get_profile(std::string_view device_name) const
+	{
 		if (device_name.empty())
 		{
 			return {};
 		}
-		
+
 		auto it = device_profile_map.find(device_name);
 
 		if (it != device_profile_map.end())
@@ -193,9 +215,19 @@ namespace app::input
 		return {};
 	}
 
-	void GamepadManager::apply_profile(Gamepad& gamepad, const GamepadProfile& profile)
+	const GamepadProfile* GamepadManager::get_profile(GamepadDeviceIndex index) const
 	{
-		gamepad.set_deadzone(profile.deadzone);
+		return get_profile(get_gamepad(index));
+	}
+
+	const GamepadProfile* GamepadManager::get_profile(const Gamepad& gamepad) const
+	{
+		return get_profile(gamepad.get_device_name_as_view());
+	}
+
+	void GamepadManager::apply_profile(Gamepad& gamepad, const GamepadProfile& profile) const
+	{
+		gamepad.apply_profile(profile);
 	}
 
 	void GamepadManager::set_background_input(bool enabled, bool force)
@@ -212,6 +244,20 @@ namespace app::input
 			? SDL_HintPriority::SDL_HINT_OVERRIDE
 			: SDL_HintPriority::SDL_HINT_DEFAULT
 		);
+	}
+
+	int GamepadManager::count_open_gamepads() const
+	{
+		//return enumerate_gamepads([]() { return true });
+
+		int gamepad_count = 0; // GamepadDeviceIndex
+
+		for (const auto& gamepad : gamepads)
+		{
+			gamepad_count += static_cast<int>(gamepad.is_open());
+		}
+
+		return gamepad_count;
 	}
 
 	const GamepadProfile* GamepadManager::map_device_to_profile(const std::string& device_name, const std::string& profile_name)

@@ -14,7 +14,7 @@ namespace app::input
 
 	//GamepadState::~GamepadState() {}
 
-	void GamepadState::update_buttons(ButtonsRaw buttons_encoded, bool value)
+	void GamepadState::update_buttons(GamepadButtonsRaw buttons_encoded, bool value)
 	{
 		if (value)
 		{
@@ -28,12 +28,12 @@ namespace app::input
 
 	void GamepadState::set_button(GamepadButtonID index, bool value)
 	{
-		update_buttons((static_cast<ButtonsRaw>(2) << static_cast<ButtonsRaw>(index)), value);
+		update_buttons((static_cast<GamepadButtonsRaw>(1) << static_cast<GamepadButtonsRaw>(index)), value);
 	}
 
 	bool GamepadState::get_button(GamepadButtonID index) const
 	{
-		return (buttons.bits & (static_cast<ButtonsRaw>(2) << static_cast<ButtonsRaw>(index)));
+		return (buttons.bits & (static_cast<GamepadButtonsRaw>(1) << static_cast<GamepadButtonsRaw>(index)));
 	}
 
 	GamepadState::Vector GamepadState::dpad_direction() const
@@ -48,7 +48,7 @@ namespace app::input
 
 	void GamepadState::clear_dpad()
 	{
-		constexpr auto dpad_apply_mask = (static_cast<ButtonsRaw>(SDL_DPAD_MASK) << DPAD_BIT_OFFSET);
+		constexpr auto dpad_apply_mask = (static_cast<GamepadButtonsRaw>(SDL_DPAD_MASK) << DPAD_BIT_OFFSET);
 
 		// Clear the current D-Pad state.
 		update_buttons(dpad_apply_mask, false);
@@ -61,7 +61,7 @@ namespace app::input
 			clear_dpad();
 		}
 
-		update_buttons((static_cast<ButtonsRaw>(sdl_dpad_bits & SDL_DPAD_MASK) << DPAD_BIT_OFFSET), true);
+		update_buttons((static_cast<GamepadButtonsRaw>(sdl_dpad_bits & SDL_DPAD_MASK) << DPAD_BIT_OFFSET), true);
 	}
 
 	bool GamepadState::no_directional_input() const

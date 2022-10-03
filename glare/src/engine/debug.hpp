@@ -35,10 +35,16 @@ namespace engine
 	struct OnParentChanged;
 	struct OnGravityChanged;
 	struct OnTransformChanged;
+	
 	struct OnAABBOverlap;
 	struct OnCollision;
 	struct OnKinematicInfluence;
 	struct OnKinematicAdjustment;
+
+	struct OnButtonDown;
+	struct OnButtonReleased;
+	struct OnButtonPressed;
+	struct OnAnalogInput;
 
 	void print_children(World& registry, Entity entity, bool recursive=true, bool summary_info=true, bool recursive_labels=false, const std::string& prefix="->");
 	void position_in_titlebar(game::Game& game, Entity entity, std::optional<std::string_view> prefix=std::nullopt);
@@ -60,16 +66,26 @@ namespace engine
 			void operator()(const OnParentChanged& data);
 			void operator()(const OnGravityChanged& data);
 			void operator()(const OnTransformChanged& data);
+
+			// Collision/physics debugging:
 			void operator()(const OnAABBOverlap& data);
 			void operator()(const OnCollision& data);
 			void operator()(const OnKinematicInfluence& data);
 			void operator()(const OnKinematicAdjustment& data);
 
+			// Gamepad debugging:
 			void operator()(const app::input::OnGamepadConnected& data);
 			void operator()(const app::input::OnGamepadDisconnected& data);
 			void operator()(const app::input::OnGamepadButtonDown& data);
 			void operator()(const app::input::OnGamepadButtonUp& data);
 			void operator()(const app::input::OnGamepadAnalogInput& data);
+
+			// High-level input system:
+			void operator()(const OnButtonDown& data);
+			void operator()(const OnButtonReleased& data);
+			void operator()(const OnButtonPressed& data);
+			void operator()(const OnAnalogInput& data);
+
 		private:
 			template <typename EventType>
 			void enable();

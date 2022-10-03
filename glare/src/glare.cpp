@@ -27,14 +27,16 @@
 #include <engine/world/render/world_render_state.hpp>
 
 #include <engine/events.hpp>
-#include <engine/world/world_events.hpp>
 #include <engine/type_component.hpp>
 #include <engine/model_component.hpp>
 
+#include <engine/world/world_events.hpp>
 #include <engine/world/graphics_entity.hpp>
 #include <engine/world/light.hpp>
-
 #include <engine/world/behaviors/behaviors.hpp>
+
+#include <engine/input/input.hpp>
+#include <engine/input/buttons.hpp>
 
 #include <sdl2/SDL_video.h>
 #include <sdl2/SDL_events.h>
@@ -62,6 +64,14 @@ namespace glare
 	{
 		using namespace graphics;
 
+		init_input_system([](auto& input_system, auto& input_handler)
+		{
+			// TODO: Migrate this to the `glare` namespace.
+			engine::generate_button_map(input_handler.get_buttons());
+
+			engine::generate_analog_map(input_handler.get_analogs());
+		});
+
 		world_system<engine::DebugListener>();
 
 		// TODO: Look into this again.
@@ -73,7 +83,6 @@ namespace glare
 		//world.load("assets/maps/test01 - old");
 		//world.load("assets/maps/room");
 		//world.load("assets/maps/collision_test");
-
 		// Debugging related:
 		//GLint value = 0; glGetIntegerv(GL_MAX_COMBINED_VERTEX_UNIFORM_COMPONENTS, &value); // GL_MAX_VERTEX_BINDABLE_UNIFORMS_EXT
 

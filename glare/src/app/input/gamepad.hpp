@@ -8,12 +8,15 @@
 #include <sdl2/SDL_joystick.h>
 
 #include <string>
+#include <string_view>
 
 //struct _SDL_Joystick;
 //typedef struct _SDL_Joystick SDL_Joystick;
 
 namespace app::input
 {
+	struct GamepadProfile;
+
 	class Gamepad : public InputDevice<GamepadState>
 	{
 		public:
@@ -53,6 +56,8 @@ namespace app::input
 				return *this;
 			}
 
+			void apply_profile(const GamepadProfile& profile);
+
 			inline bool is_open()   const { return (handle); }
 			inline bool is_closed() const { return !is_open(); }
 
@@ -78,6 +83,9 @@ namespace app::input
 			// If a handle to the device has not been opened,
 			// this will return an empty string.
 			std::string get_device_name() const;
+
+			// Optimized version of `get_device_name`. (Avoids allocations)
+			std::string_view get_device_name_as_view() const;
 
 			virtual void peek(State& state) const override;
 			virtual bool process_event(const SDL_Event& e, entt::dispatcher* opt_event_handler=nullptr) override;

@@ -3,7 +3,7 @@
 #include "world_events.hpp"
 #include "entity.hpp"
 #include "camera.hpp"
-#include "player.hpp"
+#include "player/player.hpp"
 #include "stage.hpp"
 #include "light.hpp"
 

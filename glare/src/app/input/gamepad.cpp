@@ -1,5 +1,7 @@
 #include "gamepad.hpp"
 #include "events.hpp"
+#include "gamepad_analog.hpp"
+#include "gamepad_profile.hpp"
 
 #include <sdl2/SDL_joystick.h>
 
@@ -24,6 +26,11 @@ namespace app::input
 	Gamepad::~Gamepad()
 	{
 		close();
+	}
+
+	void Gamepad::apply_profile(const GamepadProfile& profile)
+	{
+		set_deadzone(profile.deadzone);
 	}
 
 	bool Gamepad::open(bool force)
@@ -80,6 +87,11 @@ namespace app::input
 
 	std::string Gamepad::get_device_name() const
 	{
+		return std::string(get_device_name_as_view());
+	}
+
+	std::string_view Gamepad::get_device_name_as_view() const
+	{
 		if (is_open())
 		{
 			//SDL_JoystickGetDeviceProduct(device_index);
@@ -104,7 +116,7 @@ namespace app::input
 				auto device_id = static_cast<GamepadDeviceIndex>(e.jaxis.which);
 				auto value = e.jaxis.value;
 
-				std::optional<GamepadAnalogInput> analog = std::nullopt;
+				std::optional<GamepadAnalog> analog = std::nullopt;
 				GamepadState::Vector direction = {};
 
 				switch (e.jaxis.axis)
@@ -112,7 +124,7 @@ namespace app::input
 					case 0: // Left stick, X-axis.
 						next_state.left_analog.x = deadzone.left_analog.get_x(value);
 
-						analog = GamepadAnalogInput::Left;
+						analog = GamepadAnalog::Left;
 						direction = next_state.left_analog;
 						
 						break;
@@ -120,7 +132,7 @@ namespace app::input
 					case 1: // Left stick, Y-axis.
 						next_state.left_analog.y = -deadzone.left_analog.get_y(value);
 
-						analog = GamepadAnalogInput::Left;
+						analog = GamepadAnalog::Left;
 						direction = next_state.left_analog;
 
 						break;
@@ -128,7 +140,7 @@ namespace app::input
 					case 2: // Right stick, X-axis.
 						next_state.right_analog.x = deadzone.right_analog.get_x(value);
 
-						analog = GamepadAnalogInput::Right;
+						analog = GamepadAnalog::Right;
 						direction = next_state.right_analog;
 
 						break;
@@ -136,7 +148,7 @@ namespace app::input
 					case 3: // Right stick, Y-axis.
 						next_state.right_analog.y = -deadzone.right_analog.get_y(value);
 
-						analog = GamepadAnalogInput::Right;
+						analog = GamepadAnalog::Right;
 						direction = next_state.right_analog;
 
 						break;
@@ -144,7 +156,7 @@ namespace app::input
 					case 4: // Left trigger.
 						next_state.triggers.x = deadzone.triggers.get_x(value);
 
-						analog = GamepadAnalogInput::Triggers;
+						analog = GamepadAnalog::Triggers;
 						direction = next_state.triggers;
 
 						break;
@@ -152,7 +164,7 @@ namespace app::input
 					case 5: // Right trigger.
 						next_state.triggers.y = deadzone.triggers.get_y(value);
 
-						analog = GamepadAnalogInput::Triggers;
+						analog = GamepadAnalog::Triggers;
 						direction = next_state.triggers;
 
 						break;
@@ -192,7 +204,7 @@ namespace app::input
 							(
 								device_id,
 								next_state,
-								GamepadAnalogInput::DPad,
+								GamepadAnalog::DPad,
 								next_state.dpad_direction()
 							);
 						}

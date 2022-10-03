@@ -1,4 +1,8 @@
 #include "gamepad_profile.hpp"
+#include "profile_metadata.hpp"
+
+//#include "gamepad_state.hpp"
+#include "gamepad_buttons.hpp"
 
 #include <cmath>
 
@@ -19,19 +23,29 @@ namespace app::input
 		util::retrieve_from(data, "y", analog.y, read_range);
 	}
 
-	GamepadProfile::GamepadProfile(const util::json& json)
+	GamepadProfile::GamepadProfile(const ProfileMetadata& profile_metadata, const util::json& json)
 		: GamepadProfile()
 	{
-		load(json);
+		load(profile_metadata, json);
 	}
 
-	void GamepadProfile::load(const util::json& json)
+	void GamepadProfile::load(const ProfileMetadata& profile_metadata, const util::json& json)
 	{
-		if (auto deadzone_data = json.find("deadzones"); deadzone_data != json.end())
+		if (const auto deadzone_data = json.find("deadzones"); deadzone_data != json.end())
 		{
-			util::retrieve_from(*deadzone_data, "left_analog", deadzone.left_analog, read_analog);
-			util::retrieve_from(*deadzone_data, "right_analog", deadzone.right_analog, read_analog);
-			util::retrieve_from(*deadzone_data, "triggers", deadzone.triggers, read_analog);
+			util::retrieve_from(*deadzone_data, "Left", deadzone.left_analog, read_analog); // "left_analog"
+			util::retrieve_from(*deadzone_data, "Right", deadzone.right_analog, read_analog); // "right_analog"
+			util::retrieve_from(*deadzone_data, "Triggers", deadzone.triggers, read_analog); // "triggers"
+		}
+
+		if (const auto button_data = json.find("buttons"); button_data != json.end())
+		{
+			read_button_mapping(profile_metadata.buttons, *button_data);
+		}
+
+		if (const auto analog_data = json.find("analogs"); analog_data != json.end())
+		{
+			read_analog_mapping(profile_metadata.analogs, *analog_data);
 		}
 	}
 }

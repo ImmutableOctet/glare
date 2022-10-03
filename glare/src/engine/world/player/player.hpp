@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.hpp"
+#include <engine/world/types.hpp>
 
 #include <util/json.hpp>
 

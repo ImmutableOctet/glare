@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.hpp"
+#include "gamepad_buttons.hpp"
 
 #include <math/types.hpp>
 
@@ -13,12 +14,11 @@ namespace app::input
 		// 2D vector type used to store normalized analog/axis values.
 		using Vector = math::Vector2D;
 
-		// Integral type used to represent a button bitfield.
-		using ButtonsRaw = std::uint16_t;
+		using ButtonBit = GamepadButtonBits;
 
 		// Maximum number of bits allocated to `Buttons::bits`.
-		static constexpr std::size_t MAX_BUTTONS = (sizeof(ButtonsRaw) * 8); // 16;
-		static constexpr ButtonsRaw DPAD_BIT_OFFSET = 10; // Starting at 0. (Bits 11-14)
+		static constexpr std::size_t MAX_BUTTONS = (sizeof(GamepadButtonsRaw) * 8); // 16;
+		static constexpr GamepadButtonsRaw DPAD_BIT_OFFSET = 10; // Starting at 0. (Bits 11-14)
 
 		GamepadState();
 		//GamepadState(const GamepadState&) = default;
@@ -28,8 +28,9 @@ namespace app::input
 
 		union Buttons
 		{
-			ButtonsRaw bits;
+			GamepadButtonsRaw bits;
 
+			// NOTE: This should follow the same layout as `GamepadButtonBit`.
 			// NOTE: Technically UB according to the C++ standard,
 			// but supported on most platforms anyway:
 			struct
@@ -65,10 +66,22 @@ namespace app::input
 
 		Buttons buttons;
 
-		void update_buttons(ButtonsRaw buttons_encoded, bool value);
+		void update_buttons(GamepadButtonsRaw buttons_encoded, bool value);
 		
 		void set_button(GamepadButtonID index, bool value);
 		bool get_button(GamepadButtonID index) const;
+
+		// Type-safe version of `GamepadButtonID` overload; see `GamepadButtonBit`.
+		inline void set_button(ButtonBit button_index_bit, bool value)
+		{
+			set_button(static_cast<GamepadButtonID>(button_index_bit), value);
+		}
+
+		// Type-safe version of `GamepadButtonID` overload; see `GamepadButtonBit`.
+		inline bool get_button(ButtonBit button_index_bit) const
+		{
+			return get_button(static_cast<GamepadButtonID>(button_index_bit));
+		}
 
 		Vector dpad_direction() const;
 		float dpad_angle() const;

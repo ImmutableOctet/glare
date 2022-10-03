@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.hpp"
+#include "gamepad_analog.hpp"
 #include "gamepad_state.hpp"
 
 namespace app::input
@@ -32,37 +33,37 @@ namespace app::input
 		GamepadState state;
 	};
 
-	//  Triggered when a button is pressed or held.
-	struct OnGamepadButtonDown : public GamepadStateEvent
+	// Base event type for button-related actions.
+	// (Not currently aliased or triggered directly)
+	struct GamepadButtonEvent : public GamepadStateEvent
 	{
-		// The button that has been held/pressed.
+		// The button that has been pressed, held, or released.
 		GamepadButtonID button;
 	};
 
+	//  Triggered when a button is pressed or held.
+	struct OnGamepadButtonDown : public GamepadButtonEvent {};
+
 	//  Triggered when a button is released.
-	struct OnGamepadButtonUp : public GamepadStateEvent
-	{
-		// The button that has been released.
-		GamepadButtonID button;
-	};
+	struct OnGamepadButtonUp : public GamepadButtonEvent {};
 
 	// Triggered for analog inputs (Left, Right and Triggers), as well as D-Pad usage.
 	struct OnGamepadAnalogInput : public GamepadStateEvent
 	{
 		// The analog source this input is coming from.
-		GamepadAnalogInput analog;
+		GamepadAnalog analog;
 
 		/*
-			For all input types except for `GamepadAnalogInput::Triggers`,
+			For all input types except for `GamepadAnalog::Triggers`,
 			this represents the normalized XY direction of the input.
 			
-			For `GamepadAnalogInput::Triggers` in particular, `x` represents
+			For `GamepadAnalog::Triggers` in particular, `x` represents
 			the left trigger, whilst `y` represents the right.
 		*/
 		math::Vector2D value;
 
 		// The angle of the direction-vector `value`.
-		// For `GamepadAnalogInput::Triggers`, this always returns zero.
+		// For `GamepadAnalog::Triggers`, this always returns zero.
 		float angle() const;
 	};
 }

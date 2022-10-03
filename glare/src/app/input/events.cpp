@@ -9,7 +9,7 @@ namespace app::input
 	{
 		switch (analog)
 		{
-			case GamepadAnalogInput::Triggers:
+			case GamepadAnalog::Triggers:
 				return 0.0f;
 		}
 

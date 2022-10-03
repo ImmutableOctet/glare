@@ -1,18 +1,21 @@
 #include "debug.hpp"
 #include "events.hpp"
+#include "relationship.hpp"
 
 #include "world/world.hpp"
 #include "world/world_events.hpp"
 #include "world/physics/collision_events.hpp"
-
-// Components:
-#include "relationship.hpp"
 #include "world/animation/skeletal_component.hpp"
 
-#include <util/log.hpp>
+#include "input/events.hpp"
 
 #include <app/input/events.hpp>
+
 #include <game/game.hpp>
+
+#include <util/format.hpp>
+#include <util/log.hpp>
+#include <magic_enum/magic_enum_format.hpp>
 
 // Debugging related:
 #include <math/math.hpp>
@@ -113,6 +116,9 @@ namespace engine
 	{
 		auto& registry = world.get_registry();
 
+		// Component construction events:
+		registry.on_construct<SkeletalComponent>().connect<&DebugListener::on_skeleton>(*this);
+
 		// Standard event types:
 		enable<OnStageLoaded>();
 		enable<OnEntityCreated>();
@@ -127,14 +133,16 @@ namespace engine
 		enable<OnKinematicInfluence>();
 		enable<OnKinematicAdjustment>();
 
-		enable<app::input::OnGamepadConnected>();
-		enable<app::input::OnGamepadDisconnected>();
-		enable<app::input::OnGamepadButtonDown>();
-		enable<app::input::OnGamepadButtonUp>();
-		enable<app::input::OnGamepadAnalogInput>();
+		//enable<app::input::OnGamepadConnected>();
+		//enable<app::input::OnGamepadDisconnected>();
+		//enable<app::input::OnGamepadButtonDown>();
+		//enable<app::input::OnGamepadButtonUp>();
+		//enable<app::input::OnGamepadAnalogInput>();
 
-		// Component construction events:
-		registry.on_construct<SkeletalComponent>().connect<&DebugListener::on_skeleton>(*this);
+		enable<OnButtonDown>();
+		enable<OnButtonReleased>();
+		enable<OnButtonPressed>();
+		enable<OnAnalogInput>();
 	}
 
 	void DebugListener::on_skeleton(Registry& registry, Entity entity)
@@ -260,5 +268,23 @@ namespace engine
 	void DebugListener::operator()(const app::input::OnGamepadAnalogInput& data)
 	{
 		print("Controller #{} - Analog Input [{}]: {} ({})", data.device_index, static_cast<unsigned int>(data.analog), data.value, math::degrees(data.angle()));
+	}
+
+	void DebugListener::operator()(const OnButtonDown& data)
+	{
+		print(std::format("{}", data.button));
+	}
+
+	void DebugListener::operator()(const OnButtonReleased& data)
+	{
+	}
+	
+	void DebugListener::operator()(const OnButtonPressed& data)
+	{
+	}
+
+	void DebugListener::operator()(const OnAnalogInput& data)
+	{
+		print("Analog input - {}: {} ({})", std::format("{}", data.analog), data.value, math::degrees(data.angle));
 	}
 }

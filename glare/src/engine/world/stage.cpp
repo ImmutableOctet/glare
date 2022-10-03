@@ -5,7 +5,7 @@
 #include "entity.hpp"
 #include "camera.hpp"
 #include "light.hpp"
-#include "player.hpp"
+#include "player/player.hpp"
 #include "graphics_entity.hpp"
 
 #include "physics/collision_component.hpp"

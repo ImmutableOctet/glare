@@ -75,6 +75,8 @@ namespace app
 				return (1000 / fixed_update_rate);
 			}
 
+			virtual void on_execute();
+
 			virtual void fixed_update();
 
 			virtual void update(Milliseconds time) abstract; // const DeltaTime& delta_time
