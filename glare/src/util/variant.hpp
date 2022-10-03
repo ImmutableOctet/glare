@@ -77,7 +77,7 @@ namespace util
 	{
 		auto* wrapped = std::get_if<std::reference_wrapper<T>>(&v);
 
-		return &(wrapped.get()); // &(static_cast<T&>(wrapped));
+		return &(wrapped->get()); // &(static_cast<T&>(wrapped));
 	}
 
 	template<typename VT, typename T, std::size_t index = 0>
