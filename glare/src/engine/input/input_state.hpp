@@ -25,11 +25,13 @@ namespace engine
 					bool Interact     : 1; // 3
 					bool MediumAttack : 1; // 4
 
-					// TODO: Change to a different bit.
-					bool Shield : 1; // 5
+					bool Pause : 1; // 5
 
 					// TODO: Change to a different bit.
-					bool FirstPerson : 1; // 6
+					bool Shield : 1; // 6
+
+					// TODO: Change to a different bit.
+					bool FirstPerson : 1; // 7
 				};
 			};
 

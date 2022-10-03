@@ -27,6 +27,8 @@
 				"Interact":     "X",
 				"MediumAttack": "Y",
 
+				"Pause": "Start",
+
 				"Shield":       "LT",
 				"FirstPerson":  "R3"
 			},

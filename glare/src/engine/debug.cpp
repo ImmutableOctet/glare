@@ -285,6 +285,6 @@ namespace engine
 
 	void DebugListener::operator()(const OnAnalogInput& data)
 	{
-		print("Analog input - {}: {} ({})", std::format("{}", data.analog), data.value, math::degrees(data.angle));
+		//print("Analog input - {}: {} ({})", std::format("{}", data.analog), data.value, math::degrees(data.angle));
 	}
 }
