@@ -1,4 +1,12 @@
 {
+	"players":
+	[
+		{
+			"device_name": "Xbox 360 Controller",
+			"player_index": 1
+		}
+	],
+
 	"gamepads":
 	[
 		{
@@ -23,15 +31,22 @@
 				"FirstPerson":  "R3"
 			},
 
+			"analogs":
+			{
+				"Movement": "Left",
+				"Camera": "Right",
+				"Orientation": "Triggers"
+			},
+
 			"deadzones":
 			{
-				"left_analog":
+				"Left":
 				{
 					"x": { "threshold": 0.05 },
 					"y": { "threshold": 0.05 }
 				},
 
-				"right_analog":
+				"Right":
 				{
 					"x": { "threshold": 0.05 },
 					"y": { "threshold": 0.05 }
