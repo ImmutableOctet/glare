@@ -5,8 +5,7 @@
 
 namespace app::input
 {
-	// Keyboard:
-	Keyboard::Keyboard() { peek(this->state); }
+	Keyboard::Keyboard() {} // { peek(this->state); }
 
 	void Keyboard::peek(Keyboard::State& state) const
 	{
@@ -14,19 +13,10 @@ namespace app::input
 
 		auto* key_data = SDL_GetKeyboardState(&num_keys);
 
-		state = { reinterpret_cast<decltype(KeyboardState::keys)>(key_data), static_cast<decltype(KeyboardState::num_keys)>(num_keys) };
-	}
-
-	// KeyboardState:
-	bool KeyboardState::get_key(int scan_code) const
-	{
-		if (!has_keys() || (scan_code < 0) || (scan_code > num_keys))
+		state =
 		{
-			return false;
-		}
-
-		return (keys[scan_code] != 0);
+			reinterpret_cast<decltype(KeyboardState::keys)>(key_data),
+			static_cast<decltype(KeyboardState::num_keys)>(num_keys)
+		};
 	}
-
-	bool KeyboardState::has_keys() const { return ((keys != nullptr) && (num_keys > 0)); }
 }
