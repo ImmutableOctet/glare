@@ -1158,6 +1158,12 @@ namespace graphics
 		// Initial configuration:
 		set_flags(flags, true);
 
+		// Check if vertical sync is disabled:
+		if (!(flags & Flags::VSync))
+		{
+			set_flags(Flags::VSync, false);
+		}
+
 		//glEnable(GL_DEPTH_TEST);
 
 
