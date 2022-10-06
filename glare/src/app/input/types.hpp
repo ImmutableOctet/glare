@@ -14,6 +14,9 @@ namespace app::input
 	using MouseDeviceIndex = std::uint8_t;
 	using MouseButtonID = std::uint8_t;
 
+	using KeyboardDeviceIndex = std::uint8_t;
+	using KeyboardButtonID = std::uint16_t; // std::uint32_t;
+
 	using GamepadDeviceIndex = std::uint8_t; // SDL_JoystickID;
 	using GamepadButtonID = std::uint8_t;
 
