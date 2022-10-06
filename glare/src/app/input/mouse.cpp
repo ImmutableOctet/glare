@@ -146,6 +146,16 @@ namespace app::input
 		}
 	}
 
+	std::string Mouse::get_device_name() const
+	{
+		return std::string(peek_device_name());
+	}
+
+	std::string_view Mouse::peek_device_name() const
+	{
+		return "Mouse";
+	}
+
 	bool Mouse::lock()
 	{
 		if (unlocked())

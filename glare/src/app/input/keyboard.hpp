@@ -13,5 +13,8 @@ namespace app::input
 
 			virtual void peek(State& state) const override;
 			//bool process_event(const SDL_Event& e, entt::dispatcher* opt_event_handler=nullptr) override { return false; }
+
+			std::string get_device_name() const;
+			std::string_view peek_device_name() const;
 	};
 }

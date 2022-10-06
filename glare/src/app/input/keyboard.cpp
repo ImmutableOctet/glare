@@ -19,4 +19,14 @@ namespace app::input
 			static_cast<decltype(KeyboardState::num_keys)>(num_keys)
 		};
 	}
+
+	std::string Keyboard::get_device_name() const
+	{
+		return std::string(peek_device_name());
+	}
+
+	std::string_view Keyboard::peek_device_name() const
+	{
+		return "Keyboard";
+	}
 }

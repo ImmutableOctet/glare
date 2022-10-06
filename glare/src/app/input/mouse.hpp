@@ -7,7 +7,8 @@
 #include "mouse_state.hpp"
 #include "mouse_buttons.hpp"
 
-//#include <atomic>
+#include <string>
+#include <string_view>
 
 namespace app::input
 {
@@ -24,6 +25,9 @@ namespace app::input
 			const State& poll(entt::dispatcher* opt_event_handler=nullptr) override;
 			void peek(State& state) const override;
 			void flush() override;
+
+			std::string get_device_name() const;
+			std::string_view peek_device_name() const;
 
 			bool lock();
 			bool unlock();
