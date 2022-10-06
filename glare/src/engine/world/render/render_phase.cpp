@@ -66,8 +66,7 @@ namespace engine
 		auto model_transform = Transform(registry, entity, relationship, transform);
 
 		// TODO: Check if forcing a refresh is 100% necessary.
-		auto model_matrix = model_transform.get_matrix(true); // get_local_matrix();
-		//auto model_matrix = model_transform.get_local_matrix();
+		auto model_matrix = model_transform.get_matrix(false); // true
 
 		shader["model"] = model_matrix;
 
