@@ -6,12 +6,18 @@
 #include "input_device.hpp"
 #include "mouse_state.hpp"
 #include "mouse_buttons.hpp"
+#include "mouse_profile.hpp"
 
 #include <string>
 #include <string_view>
+#include <optional>
+//#include <functional>
 
 namespace app::input
 {
+	struct ProfileMetadata;
+	//struct MouseProfile;
+
 	// TODO: Rework mouse button-down events to be continuous.
 	class Mouse : public InputDevice<MouseState>
 	{
@@ -29,6 +35,15 @@ namespace app::input
 			std::string get_device_name() const;
 			std::string_view peek_device_name() const;
 
+			// Returns a temporary read-only pointer to the profile loaded for this mouse device.
+			// If a profile has not been defined, this will return `nullptr`.
+			const MouseProfile* get_profile() const; // std::optional<std::reference_wrapper<const MouseProfile>>
+
+			// Loads a mouse device-profile using the `profile_metadata` specified.
+			// If a profile already exists, and the data loaded from `profile_metadata.path` has a valid profile, this will replace it.
+			// The returned value is a temporary read-only pointer to the internally held device-profile object.
+			const MouseProfile* load_profile(const ProfileMetadata& profile_metadata);
+
 			bool lock();
 			bool unlock();
 
@@ -41,6 +56,10 @@ namespace app::input
 		protected:
 			// Mutable due to interface for `peek`.
 			mutable State next_state;
+
+			// Optional profile object, used to configure device-specific parameters,
+			// as well as handle button mappings for game engines, etc.
+			std::optional<MouseProfile> device_profile;
 
 			bool get_button(MouseButton button) const;
 			void set_button(MouseButton button, bool value);

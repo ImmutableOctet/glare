@@ -14,6 +14,7 @@ namespace app::input
 		Forward = 5,
 
 		// Alternate names:
+		/*
 		X1 = Back,
 		X2 = Forward,
 
@@ -22,5 +23,6 @@ namespace app::input
 		M3 = Middle,
 		M4 = X1,
 		M5 = X2,
+		*/
 	};
 }

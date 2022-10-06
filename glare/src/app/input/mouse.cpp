@@ -1,5 +1,10 @@
 #include "mouse.hpp"
 #include "mouse_events.hpp"
+#include "profile_metadata.hpp"
+
+#include "input_profile_impl.hpp"
+
+#include <util/json.hpp>
 
 // SDL:
 #include <sdl2/SDL_hints.h>
@@ -10,6 +15,10 @@
 
 namespace app::input
 {
+	// Internal loading routines for mouse profiles:
+	
+
+	// Mouse:
 	Mouse::Mouse(bool locked, bool use_sdl_events) :
 		event_motion(false),
 		event_buttons(true),
@@ -153,7 +162,32 @@ namespace app::input
 
 	std::string_view Mouse::peek_device_name() const
 	{
+		// Currently hard-coded to be "Mouse".
+		// TODO: It may be worth looking into mouse-specific configurations/profiles.
+		// (Not sure if SDL supports querying mouse device names)
 		return "Mouse";
+	}
+
+	const MouseProfile* Mouse::get_profile() const
+	{
+		if (device_profile)
+		{
+			return &(device_profile.value());
+		}
+
+		return nullptr;
+	}
+
+	// TODO: Look into the ability to manage multiple mouse profiles.
+	const MouseProfile* Mouse::load_profile(const ProfileMetadata& profile_metadata)
+	{
+		return input_profile_impl::load_profile
+		(
+			profile_metadata,
+			this->device_profile,
+			"mice",
+			this->peek_device_name()
+		);
 	}
 
 	bool Mouse::lock()

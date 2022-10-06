@@ -18,12 +18,12 @@ namespace app::input
 
 		inline bool process_event(const SDL_Event& e, entt::dispatcher* opt_event_handler=nullptr)
 		{
-			if (mouse.process_event(e))
+			if (mouse.process_event(e, opt_event_handler))
 			{
 				return true;
 			}
 
-			if (keyboard.process_event(e))
+			if (keyboard.process_event(e, opt_event_handler))
 			{
 				return true;
 			}
