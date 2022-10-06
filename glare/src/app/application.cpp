@@ -35,7 +35,7 @@ namespace app
 	bool Application::stop()
 	{
 		//events.stop();
-
+		
 		running = false;
 
 		retrieve_stop_time();

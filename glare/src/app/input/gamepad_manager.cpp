@@ -90,11 +90,11 @@ namespace app::input
 		}
 	}
 
-	void GamepadManager::poll(entt::dispatcher& event_handler)
+	void GamepadManager::poll(entt::dispatcher* opt_event_handler)
 	{
 		for (auto& gamepad : gamepads)
 		{
-			gamepad.poll(event_handler);
+			gamepad.poll(opt_event_handler);
 		}
 	}
 

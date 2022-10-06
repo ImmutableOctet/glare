@@ -8,11 +8,11 @@ namespace app::input
 		buttons(std::move(button_name_to_value))
 	{}
 
-	const InputDevices& InputHandler::poll(engine::EventHandler& event_handler)
+	const InputDevices& InputHandler::poll(engine::EventHandler* opt_event_handler)
 	{
-		devices.mouse.poll(event_handler);
-		devices.keyboard.poll(event_handler);
-		devices.gamepads.poll(event_handler);
+		devices.mouse.poll(opt_event_handler);
+		devices.keyboard.poll(opt_event_handler);
+		devices.gamepads.poll(opt_event_handler);
 
 		return devices;
 	}

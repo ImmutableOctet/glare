@@ -33,7 +33,7 @@ namespace app::input
 			// NOTE: Although `profile_metadata` is a const-ref here, its contents may specify output parameters.
 			void load_profiles(const ProfileMetadata& profile_metadata);
 
-			void poll(entt::dispatcher& event_handler);
+			void poll(entt::dispatcher* opt_event_handler);
 			bool process_event(const SDL_Event& e, entt::dispatcher* opt_event_handler=nullptr);
 
 			// NOTE: `Gamepad` handles are not guaranteed to remain valid.
