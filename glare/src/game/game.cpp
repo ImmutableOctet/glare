@@ -1,6 +1,10 @@
 #include "game.hpp"
 
 #include <app/input/profile_metadata.hpp>
+#include <app/input/input_handler.hpp>
+#include <app/input/mouse.hpp>
+#include <app/input/keyboard.hpp>
+#include <app/input/gamepad.hpp>
 
 #include <engine/world/physics/physics.hpp>
 #include <engine/world/motion/motion.hpp>
@@ -170,7 +174,39 @@ namespace game
 			}
 		);
 
-		// TODO: Implement profiles for mouse and keyboard input.
+		auto& mouse = input_handler.get_mouse();
+		
+		mouse.load_profile
+		(
+			{
+				// Path:
+				.path = std::filesystem::path("config/input/mouse.json"),
+
+				// Input:
+				.buttons = input_handler.get_buttons(),
+				.analogs = input_handler.get_analogs(),
+
+				// Output:
+				.player_mappings_out = input_handler.get_player_device_map()
+			}
+		);
+
+		auto& keyboard = input_handler.get_keyboard();
+
+		keyboard.load_profile
+		(
+			{
+				// Path:
+				.path = std::filesystem::path("config/input/keyboard.json"),
+
+				// Input:
+				.buttons = input_handler.get_buttons(),
+				.analogs = input_handler.get_analogs(),
+
+				// Output:
+				.player_mappings_out = input_handler.get_player_device_map()
+			}
+		);
 	}
 
 	entt::dispatcher* Game::get_event_handler()
