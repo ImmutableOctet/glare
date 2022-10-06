@@ -98,6 +98,7 @@ namespace engine
 		}
 
 		// Debugging related:
+		/*
 		auto dbg_parent = entity; // null;
 
 		auto dbg = engine::load_model(world, "assets/geometry/directions.b3d", dbg_parent, type, false);
@@ -109,6 +110,7 @@ namespace engine
 		{
 			dbg_name->name = "Debug"; // "Debug Orientation";
 		}
+		*/
 
 		//auto dbg = engine::load_model(world, "assets/geometry/sphere.b3d", dbg_parent, type, false);
 		//auto dbg = engine::load_model(world, "assets/geometry/cone.b3d", dbg_parent, type, false);
