@@ -272,7 +272,10 @@ namespace engine
 
 	void DebugListener::operator()(const OnButtonDown& data)
 	{
-		print(std::format("{}", data.button));
+		const auto& player_id = data.state_index;
+		const auto& button    = data.button;
+
+		print("Player: {} - {}", player_id, std::format("{}", button));
 	}
 
 	void DebugListener::operator()(const OnButtonReleased& data)
