@@ -1,0 +1,36 @@
+{
+	"players":
+	[
+		{
+			"device_name": "Keyboard",
+			"player_index": 1
+		}
+	],
+
+	"keyboards":
+	[
+		{
+			"device_name": "Keyboard",
+			"profile": "default"
+		}
+	],
+
+	"profiles":
+	[
+		{
+			"name": "default",
+
+			"buttons":
+			{
+				"Jump": "Space",
+				"HeavyAttack":  "R",
+				"Interact":     "E",
+
+				"Pause": "Esc",
+
+				"Shield":       "LeftShift",
+				"FirstPerson":  "PauseBreak"
+			}
+		}
+	]
+}
