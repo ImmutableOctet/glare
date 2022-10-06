@@ -11,6 +11,9 @@
 
 namespace app::input
 {
+	using MouseDeviceIndex = std::uint8_t;
+	using MouseButtonID = std::uint8_t;
+
 	using GamepadDeviceIndex = std::uint8_t; // SDL_JoystickID;
 	using GamepadButtonID = std::uint8_t;
 
@@ -42,4 +45,19 @@ namespace app::input
 
 	// Maps string-based device names to player input identifiers.
 	using PlayerDeviceMap = std::unordered_map<std::string, PlayerInputID>;
+
+	// Event-type templates:
+	
+	// Base template type for device events that capture a snapshot of the input-state.
+	// This type is not aliased, nor is it triggered directly.
+	template <typename IndexType, typename StateType>
+	struct InputStateEvent
+	{
+		// The device that triggered this input event.
+		// NOTE: In the case of mice and keyboards, this is usually index 0.
+		IndexType device_index;
+
+		// A snapshot of the device's state at the time of this event.
+		StateType state;
+	};
 }
