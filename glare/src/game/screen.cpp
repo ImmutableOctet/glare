@@ -12,7 +12,8 @@ namespace game
 	Screen::Screen(const ref<graphics::Context>& ctx, const Size& screen_size, const ref<graphics::Shader>& display_shader):
 		context(ctx),
 		gbuffer(ctx, screen_size),
-		display_shader(display_shader)
+		display_shader(display_shader),
+		screen_size(screen_size)
 	{
 		if (!display_shader)
 		{
@@ -141,6 +142,8 @@ namespace game
 				context->set_viewport(viewport);
 				
 				//resize(w_width, w_height); // <-- Should already be triggered via window-event through `Game`.
+
+				//this->screen_size = { w_width, w_height };
 			}
 		}
 
@@ -163,7 +166,7 @@ namespace game
 	
 	void Screen::resize(Size size)
 	{
-		auto [width, height] = size;
+		const auto& [width, height] = size;
 
 		return resize(width, height);
 	}
@@ -171,5 +174,12 @@ namespace game
 	void Screen::resize(int width, int height)
 	{
 		gbuffer.resize(width, height);
+
+		screen_size = { width, height };
+	}
+
+	Screen::Size Screen::get_size() const
+	{
+		return screen_size;
 	}
 }

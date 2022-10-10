@@ -53,6 +53,7 @@ namespace game
 			ref<graphics::Context> context;
 			ref<graphics::Shader> display_shader;
 
+			Size screen_size;
 		public:
 			GBufferDisplayMode display_mode = GBufferDisplayMode::Combined;
 
@@ -72,6 +73,8 @@ namespace game
 
 			void resize(Size size);
 			void resize(int width, int height);
+
+			Size get_size() const;
 
 			void set_display_shader(const ref<graphics::Shader>& display_shader)
 			{
