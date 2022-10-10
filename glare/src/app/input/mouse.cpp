@@ -433,6 +433,7 @@ namespace app::input
 		(
 			device_index,
 			next_state,
+			MouseMotion::Movement,
 			x, y
 		);
 	}
@@ -448,6 +449,7 @@ namespace app::input
 		(
 			device_index,
 			next_state,
+			MouseMotion::Scroll,
 			wheel_x, wheel_y
 		);
 	}

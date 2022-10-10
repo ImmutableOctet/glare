@@ -4,6 +4,7 @@
 
 #include "mouse_state.hpp"
 #include "mouse_buttons.hpp"
+#include "mouse_motion.hpp"
 
 namespace app::input
 {
@@ -26,13 +27,20 @@ namespace app::input
 	// Triggered when a mouse button is released.
 	struct OnMouseButtonUp : public MouseButtonEvent {};
 
+	// Base event type for motion/analog actions.
+	// (Not currently aliased or triggered directly)
+	struct MouseAnalogEvent : public MouseStateEvent
+	{
+		MouseMotion analog;
+	};
+
 	// Triggered when the mouse is moved.
-	struct OnMouseMove : public MouseStateEvent
+	struct OnMouseMove : public MouseAnalogEvent
 	{
 		int x, y;
 	};
 
-	struct OnMouseScroll : public MouseStateEvent
+	struct OnMouseScroll : public MouseAnalogEvent
 	{
 		int wheel_x, wheel_y;
 	};
