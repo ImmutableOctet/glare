@@ -22,8 +22,9 @@ namespace app::input
 		ButtonMapping button_mapping;
 		AnalogMapping analog_mapping;
 			
-		template <typename NativeEnumType, typename InternalMappingType, typename InputDataType>
-		static void translate_map(InternalMappingType& mappings_out, const InputDataType& data_in, const util::json& json)
+		// `resolve` must be a callable taking in an `std::string` and returning an `std::optional<InternalMappingType::value_type>`-like type.
+		template <typename InternalMappingType, typename InputDataType, typename ResolveFn>
+		static void translate_map(InternalMappingType& mappings_out, const InputDataType& data_in, const util::json& json, ResolveFn&& resolve)
 		{
 			if (data_in.empty())
 			{
@@ -32,22 +33,32 @@ namespace app::input
 
 			for (const auto& engine_entry : data_in)
 			{
-				const auto& engine_name = engine_entry.first;
-				const auto& engine_value  = engine_entry.second;
-				const auto gamepad_element_name = util::get_value<std::string>(json, engine_name);
+				const auto& engine_name  = engine_entry.first;
+				const auto& engine_value = engine_entry.second;
 
-				if (gamepad_element_name.empty())
+				const auto element_name = util::get_value<std::string>(json, engine_name);
+
+				if (element_name.empty())
 				{
 					continue;
 				}
 
-				const auto native_value = magic_enum::enum_cast<NativeEnumType>(gamepad_element_name);
+				const auto native_value = resolve(element_name);
 
 				if (native_value)
 				{
 					mappings_out[*native_value] = engine_value;
 				}
 			}
+		}
+
+		template <typename NativeEnumType, typename InternalMappingType, typename InputDataType>
+		static void translate_map(InternalMappingType& mappings_out, const InputDataType& data_in, const util::json& json)
+		{
+			translate_map(mappings_out, data_in, json, [](const auto& element_name)
+			{
+				return magic_enum::enum_cast<NativeEnumType>(element_name);
+			});
 		}
 
 		// Reads button mappings from a JSON object. (Usually called "buttons")
