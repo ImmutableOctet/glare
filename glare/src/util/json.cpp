@@ -6,13 +6,25 @@
 
 #include <fstream>
 
+// Debugging related:
+#include "log.hpp"
+
 namespace util
 {
 	json load_json(const std::filesystem::path& path)
 	{
-		std::ifstream map_data_stream(path);
+		try
+		{
+			std::ifstream map_data_stream(path);
 
-		return util::json::parse(map_data_stream);
+			return util::json::parse(map_data_stream);
+		}
+		catch (const std::exception& e)
+		{
+			print("JSON Error: {}", e.what());
+
+			throw e;
+		}
 	}
 
 	math::TransformVectors get_transform(const json& data)
