@@ -6,7 +6,6 @@
 #include "gamepad_analog.hpp"
 #include "gamepad_deadzone.hpp"
 #include "gamepad_buttons.hpp"
-#include "gamepad_state.hpp"
 
 #include <util/json.hpp>
 //#include "button_mapping.hpp"
@@ -25,9 +24,10 @@ namespace app::input
 	struct GamepadProfile : public InputProfile<GamepadButtonBits, GamepadAnalog>
 	{
 		GamepadProfile() = default;
-		GamepadProfile(const ProfileMetadata& profile_metadata, const util::json& json); // , button_definitions
 		GamepadProfile(const GamepadProfile&) = default;
 		GamepadProfile(GamepadProfile&&) noexcept = default;
+
+		GamepadProfile(const ProfileMetadata& profile_metadata, const util::json& json); // , button_definitions
 
 		GamepadProfile& operator=(GamepadProfile&&) noexcept = default;
 		GamepadProfile& operator=(const GamepadProfile&) = default;

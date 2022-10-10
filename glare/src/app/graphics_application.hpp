@@ -45,7 +45,13 @@ namespace app
 
 			Graphics graphics;
 
-			GraphicsApplication(std::string_view title, int width, int height, WindowFlags flags=app::WindowFlags::OpenGL|app::WindowFlags::Resizable, UpdateRate update_rate=DEFAULT_FRAMERATE, bool vsync=true, bool imgui_enabled=true)
+			GraphicsApplication
+			(
+				std::string_view title, int width, int height,
+				WindowFlags flags=app::WindowFlags::OpenGL|app::WindowFlags::Resizable,
+				UpdateRate update_rate=DEFAULT_FRAMERATE,
+				bool vsync=true, bool imgui_enabled=true
+			)
 				: Application(update_rate), graphics(make_window(width, height, title, flags), flags, vsync, imgui_enabled), _imgui_enabled(imgui_enabled)
 			{
 				auto time = milliseconds();

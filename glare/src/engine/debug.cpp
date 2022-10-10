@@ -272,11 +272,18 @@ namespace engine
 
 	void DebugListener::operator()(const OnButtonDown& data)
 	{
-		print(std::format("{}", data.button));
+		const auto& player_id = data.state_index;
+		const auto& button    = data.button;
+
+		print("Player: {} - Button Held: {}", player_id, std::format("{}", button));
 	}
 
 	void DebugListener::operator()(const OnButtonReleased& data)
 	{
+		const auto& player_id = data.state_index;
+		const auto& button = data.button;
+
+		print("Player: {} - Button Released: {}", player_id, std::format("{}", button));
 	}
 	
 	void DebugListener::operator()(const OnButtonPressed& data)
@@ -285,6 +292,6 @@ namespace engine
 
 	void DebugListener::operator()(const OnAnalogInput& data)
 	{
-		print("Analog input - {}: {} ({})", std::format("{}", data.analog), data.value, math::degrees(data.angle));
+		print("Analog input [Player {}] - {}: {} ({})", data.state_index, std::format("{}", data.analog), data.value, math::degrees(data.angle));
 	}
 }

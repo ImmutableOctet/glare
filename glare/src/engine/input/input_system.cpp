@@ -6,11 +6,16 @@
 #include <engine/service.hpp>
 
 #include <app/input/events.hpp>
+#include <app/input/mouse.hpp>
 #include <app/input/input_handler.hpp>
 #include <app/input/gamepad_buttons.hpp>
 #include <app/input/gamepad_profile.hpp>
+#include <app/input/keyboard_motion.hpp>
+
+#include <game/screen.hpp>
 
 #include <util/map.hpp>
+#include <math/math.hpp>
 
 // Debugging related:
 #include <util/log.hpp>
@@ -19,8 +24,47 @@
 
 namespace engine
 {
-	InputSystem::InputSystem(Service& service, InputHandler& input_handler, bool subscribe_immediately)
-		: BasicSystem(service), input_handler(input_handler)
+	// Internal routine to translate from a device-specific Hat-based 'analog event' into an engine-defined `Analog` value.
+	template <typename NativeAnalogType, NativeAnalogType runtime_analog_offset, typename ProfileType, typename AnalogEventType>
+	static std::optional<Analog> translate_hat_analog(const ProfileType& profile, const AnalogEventType& analog_event)
+	{
+		const auto analog_raw = static_cast<std::size_t>(analog_event.analog);
+		const auto runtime_offset = static_cast<std::size_t>(runtime_analog_offset); // NativeAnalogType::RuntimeAnalogOffset
+
+		if (analog_raw < runtime_offset)
+		{
+			// Statically-defined analogs are not supported by this routine.
+			return std::nullopt;
+		}
+
+		const auto hat_index = static_cast<NativeAnalogType>(analog_raw - runtime_offset);
+
+		const auto& mapping = profile.analog_mapping;
+
+		auto hat_mapping_it = mapping.find(hat_index);
+		
+		if (hat_mapping_it == mapping.end())
+		{
+			return std::nullopt;
+		}
+
+		return static_cast<Analog>(hat_mapping_it->second);
+	}
+
+	math::Vector2D InputSystem::mouse_motion_to_analog_input(int mouse_x, int mouse_y, float mouse_sensitivity, int screen_width, int screen_height)
+	{
+		auto half_screen_width = static_cast<float>(screen_width / 2);
+		auto half_screen_height = static_cast<float>(screen_height / 2);
+
+		return math::Vector2D
+		{
+			math::clamp(((static_cast<float>(mouse_x) * mouse_sensitivity) / half_screen_width), -1.0f, 1.0f),
+			math::clamp(((static_cast<float>(-mouse_y) * mouse_sensitivity) / half_screen_height), -1.0f, 1.0f)
+		};
+	}
+
+	InputSystem::InputSystem(Service& service, InputHandler& input_handler, const game::Screen& screen, bool subscribe_immediately)
+		: BasicSystem(service), input_handler(input_handler), screen(screen)
 	{
 		states.reserve(4);
 		gamepad_assignment.reserve(4);
@@ -42,6 +86,17 @@ namespace engine
 
 		// Meta:
 		service.register_event<OnServiceUpdate, &InputSystem::on_update>(*this);
+
+		// Mouse:
+		service.register_event<app::input::OnMouseButtonDown, &InputSystem::on_mouse_button_down>(*this);
+		service.register_event<app::input::OnMouseButtonUp,   &InputSystem::on_mouse_button_up>(*this);
+		service.register_event<app::input::OnMouseMove,       &InputSystem::on_mouse_move>(*this);
+		service.register_event<app::input::OnMouseScroll,     &InputSystem::on_mouse_scroll>(*this);
+
+		// Keyboard:
+		service.register_event<app::input::OnKeyboardButtonDown,  &InputSystem::on_keyboard_button_down>(*this);
+		service.register_event<app::input::OnKeyboardButtonUp,    &InputSystem::on_keyboard_button_up>(*this);
+		service.register_event<app::input::OnKeyboardAnalogInput, &InputSystem::on_keyboard_analog_input>(*this);
 
 		// Gamepad:
 		service.register_event<app::input::OnGamepadConnected,    &InputSystem::on_gamepad_connected>(*this);
@@ -91,27 +146,26 @@ namespace engine
 
 	void InputSystem::handle_gamepad_mappings(const Gamepad& gamepad, std::optional<StateIndex> opt_state_index)
 	{
-		const auto& device_mapping = input_handler.get_player_device_map();
+		auto state_index = resolve_state_index(gamepad);
 
-		// TODO: Look into optimizing this via heterogeneous lookup.
-		if (auto it = device_mapping.find(gamepad.get_device_name()); it != device_mapping.end()) // get_device_name_as_view()
+		if (!state_index)
 		{
-			auto state_index = static_cast<StateIndex>(it->second);
-
-			if (opt_state_index)
-			{
-				if (state_index != (*opt_state_index))
-				{
-					return;
-				}
-			}
-
-			// Ensure we have data allocated for the index retrieved.
-			allocate_input_data(state_index);
-
-			// Bind `gamepad_index` to the state-index.
-			bind_gamepad(gamepad.index(), state_index);
+			return;
 		}
+
+		if (opt_state_index)
+		{
+			if ((*state_index) != (*opt_state_index))
+			{
+				return;
+			}
+		}
+
+		// Ensure we have data allocated for the index retrieved.
+		allocate_input_data(*state_index);
+
+		// Bind `gamepad_index` to the state-index.
+		bind_gamepad(gamepad.index(), *state_index);
 	}
 
 	void InputSystem::handle_gamepad_mappings(GamepadIndex gamepad_index, std::optional<StateIndex> opt_state_index)
@@ -133,7 +187,7 @@ namespace engine
 			handle_gamepad_mappings(gamepad, state_index);
 
 			// Continue enumeration regardless of outcome.
-			// NOTE: Multiple gamepad devices can map to the player, etc.
+			// NOTE: Multiple gamepad devices can map to the same index/player.
 			return true;
 		});
 	}
@@ -158,84 +212,6 @@ namespace engine
 		}
 
 		return states[index];
-	}
-
-	void InputSystem::clear_input_data(StateIndex index)
-	{
-		assert(index < states.size());
-
-		clear_input_data(states[index]);
-	}
-
-	void InputSystem::clear_input_data(StateData& state)
-	{
-		state = {};
-	}
-
-	std::optional<Button> InputSystem::translate_button(const Gamepad& gamepad, const GamepadButtonEvent& button_event) const
-	{
-		auto& gamepads = input_handler.get_gamepads();
-		const auto* profile = gamepads.get_profile(button_event.device_index);
-
-		if (!profile)
-		{
-			//print("GAMEPAD PROFILE MISSING.");
-
-			return std::nullopt;
-		}
-
-		auto gamepad_button_bit = static_cast<app::input::GamepadButtonBits>(button_event.button);
-
-		auto& button_mapping = profile->button_mapping;
-		auto it = button_mapping.find(gamepad_button_bit);
-
-		if (it != button_mapping.end())
-		{
-			return static_cast<Button>(it->second);
-		}
-
-		return std::nullopt;
-	}
-
-	std::optional<Analog> InputSystem::translate_analog(const Gamepad& gamepad, const GamepadAnalogEvent& analog_event) const
-	{
-		auto& gamepads = input_handler.get_gamepads();
-		const auto* profile = gamepads.get_profile(analog_event.device_index);
-
-		if (!profile)
-		{
-			//print("GAMEPAD PROFILE MISSING.");
-
-			return std::nullopt;
-		}
-
-		const auto& gamepad_analog = analog_event.analog;
-
-		auto& analog_mapping = profile->analog_mapping;
-		auto it = analog_mapping.find(gamepad_analog);
-
-		if (it != analog_mapping.end())
-		{
-			return static_cast<Analog>(it->second);
-		}
-
-		return std::nullopt;
-	}
-
-	void InputSystem::on_gamepad_connected(const app::input::OnGamepadConnected& data)
-	{
-		// Debugging related:
-		print("Device connected: {}", data.device_index);
-
-		handle_gamepad_mappings(data.device_index);
-	}
-	
-	void InputSystem::on_gamepad_disconnected(const app::input::OnGamepadDisconnected& data)
-	{
-		// Debugging related:
-		print("Device disconnected: {}", data.device_index);
-
-		unbind_gamepad(data.device_index);
 	}
 
 	void InputSystem::on_update(const OnServiceUpdate& data)
@@ -350,6 +326,266 @@ namespace engine
 		service->event<OnAnalogInput>(source, state_index, state, analog, value, angle_out);
 	}
 
+	void InputSystem::clear_input_data(StateIndex index)
+	{
+		assert(index < states.size());
+
+		clear_input_data(states[index]);
+	}
+
+	void InputSystem::clear_input_data(StateData& state)
+	{
+		state = {};
+	}
+
+	std::optional<Button> InputSystem::translate_button(const Mouse& mouse, const MouseButtonEvent& button_event) const
+	{
+		const auto* profile = mouse.get_profile();
+
+		if (!profile)
+		{
+			//print("MOUSE PROFILE MISSING.");
+
+			return std::nullopt;
+		}
+
+		// No need to cast, since the event (currently) uses a proper enum-class type.
+		// TODO: Look into whether we want to continue using the enum type in this context.
+		const auto& mouse_button_raw = button_event.button;
+		//auto mouse_button_raw = static_cast<app::input::MouseButtonID>(button_event.button);
+
+		const auto& button_mapping = profile->button_mapping;
+		const auto it = button_mapping.find(mouse_button_raw);
+		
+		if (it != button_mapping.end())
+		{
+			return static_cast<Button>(it->second);
+		}
+
+		return std::nullopt;
+	}
+
+	std::optional<Button> InputSystem::translate_button(const Keyboard& keyboard, const KeyboardButtonEvent& button_event) const
+	{
+		const auto* profile = keyboard.get_profile();
+
+		if (!profile)
+		{
+			//print("KEYBOARD PROFILE MISSING.");
+
+			return std::nullopt;
+		}
+
+		const auto& keyboard_button = button_event.button;
+
+		const auto& button_mapping = profile->button_mapping;
+		const auto it = button_mapping.find(keyboard_button);
+
+		if (it != button_mapping.end())
+		{
+			return static_cast<Button>(it->second);
+		}
+
+		return std::nullopt;
+	}
+
+	std::optional<Button> InputSystem::translate_button(const GamepadProfile& gamepad_profile, const GamepadButtonEvent& button_event) const
+	{
+		return translate_button_impl<GamepadProfile, GamepadButtonEvent, app::input::GamepadButtonBits>(gamepad_profile, button_event);
+	}
+
+	std::optional<Button> InputSystem::translate_button(const Gamepad& gamepad, const GamepadButtonEvent& button_event) const
+	{
+		const auto& gamepads = input_handler.get_gamepads();
+		const auto* profile = gamepads.get_profile(button_event.device_index);
+
+		if (!profile)
+		{
+			//print("GAMEPAD PROFILE MISSING.");
+
+			return std::nullopt;
+		}
+
+		return translate_button(*profile, button_event);
+	}
+
+	std::optional<Analog> InputSystem::translate_analog(const GamepadProfile& gamepad_profile, const GamepadAnalogEvent& analog_event) const
+	{
+		return translate_analog_impl(gamepad_profile, analog_event);
+	}
+
+	std::optional<Analog> InputSystem::translate_analog(const Gamepad& gamepad, const GamepadAnalogEvent& analog_event) const
+	{
+		const auto& gamepads = input_handler.get_gamepads();
+		const auto* profile = gamepads.get_profile(analog_event.device_index);
+
+		if (!profile)
+		{
+			//print("GAMEPAD PROFILE MISSING.");
+
+			return std::nullopt;
+		}
+
+		return translate_analog(*profile, analog_event);
+	}
+
+	std::optional<Analog> InputSystem::translate_analog(const KeyboardProfile& keyboard_profile, const KeyboardAnalogEvent& analog_event) const
+	{
+		// NOTE: Statically-defined analogs are not currently supported for `Keyboard` devices.
+		return translate_hat_analog<app::input::KeyboardMotion, app::input::KeyboardMotion::RuntimeAnalogOffset>(keyboard_profile, analog_event); // 0
+	}
+
+	std::optional<Analog> InputSystem::translate_analog(const MouseProfile& mouse_profile, const MouseAnalogEvent& analog_event) const
+	{
+		return translate_analog_impl(mouse_profile, analog_event);
+	}
+
+	void InputSystem::on_mouse_button_down(const app::input::OnMouseButtonDown& data)
+	{
+		if (!is_supported_event(data))
+		{
+			return;
+		}
+
+		const auto& mouse = input_handler.get_mouse();
+
+		if (auto button = translate_button(mouse, data))
+		{
+			if (auto state_index = resolve_state_index(mouse))
+			{
+				on_button_down(mouse, *state_index, *button);
+			}
+		}
+	}
+
+	void InputSystem::on_mouse_button_up(const app::input::OnMouseButtonUp& data)
+	{
+		if (!is_supported_event(data))
+		{
+			return;
+		}
+
+		const auto& mouse = input_handler.get_mouse();
+
+		if (auto button = translate_button(mouse, data))
+		{
+			if (auto state_index = resolve_state_index(mouse))
+			{
+				on_button_up(mouse, *state_index, *button);
+			}
+		}
+	}
+
+	void InputSystem::on_mouse_move(const app::input::OnMouseMove& data)
+	{
+		assert(data.analog == app::input::MouseMotion::Movement);
+
+		on_mouse_analog_input_impl
+		(
+			data, [this](const auto& mouse, const auto& profile, const auto& event_data, auto state_index, auto engine_analog)
+			{
+				const auto& [screen_width, screen_height] = this->screen.get_size();
+
+				return mouse_motion_to_analog_input
+				(
+					event_data.x, event_data.y, profile.sensitivity,
+					screen_width, screen_height
+				);
+			}
+		);
+	}
+
+	void InputSystem::on_mouse_scroll(const app::input::OnMouseScroll& data)
+	{
+		assert(data.analog == app::input::MouseMotion::Scroll);
+
+		on_mouse_analog_input_impl
+		(
+			data, [this](const auto& mouse, const auto& profile, const auto& event_data, auto state_index, auto engine_analog)
+			{
+				return math::Vector2D { math::sign(event_data.wheel_x), math::sign(event_data.wheel_y) };
+			}
+		);
+	}
+
+	void InputSystem::on_keyboard_button_down(const app::input::OnKeyboardButtonDown& data)
+	{
+		if (!is_supported_event(data))
+		{
+			return;
+		}
+
+		const auto& keyboard = input_handler.get_keyboard();
+
+		if (auto button = translate_button(keyboard, data))
+		{
+			if (auto state_index = resolve_state_index(keyboard))
+			{
+				on_button_down(keyboard, *state_index, *button);
+			}
+		}
+	}
+
+	void InputSystem::on_keyboard_button_up(const app::input::OnKeyboardButtonUp& data)
+	{
+		if (!is_supported_event(data))
+		{
+			return;
+		}
+
+		const auto& keyboard = input_handler.get_keyboard();
+
+		if (auto button = translate_button(keyboard, data))
+		{
+			if (auto state_index = resolve_state_index(keyboard))
+			{
+				on_button_up(keyboard, *state_index, *button);
+			}
+		}
+	}
+
+	void InputSystem::on_keyboard_analog_input(const app::input::OnKeyboardAnalogInput& data)
+	{
+		if (!is_supported_event(data))
+		{
+			return;
+		}
+
+		const auto& keyboard = input_handler.get_keyboard();
+
+		const auto* profile = keyboard.get_profile();
+
+		if (!profile)
+		{
+			// No Hat definitions available.
+			return;
+		}
+
+		if (auto analog = translate_analog(*profile, data))
+		{
+			if (auto state_index = resolve_state_index(keyboard))
+			{
+				on_analog_input(keyboard, *state_index, *analog, data.value, data.angle());
+			}
+		}
+	}
+
+	void InputSystem::on_gamepad_connected(const app::input::OnGamepadConnected& data)
+	{
+		// Debugging related:
+		//print("Device connected: {}", data.device_index);
+
+		handle_gamepad_mappings(data.device_index);
+	}
+	
+	void InputSystem::on_gamepad_disconnected(const app::input::OnGamepadDisconnected& data)
+	{
+		// Debugging related:
+		//print("Device disconnected: {}", data.device_index);
+
+		unbind_gamepad(data.device_index);
+	}
+
 	void InputSystem::on_gamepad_button_down(const app::input::OnGamepadButtonDown& data)
 	{
 		const auto& gamepads   = input_handler.get_gamepads();
@@ -405,6 +641,31 @@ namespace engine
 		gamepad_assignment.erase(gamepad_index);
 	}
 
+	const InputSystem::Mouse& InputSystem::get_mouse() const
+	{
+		return input_handler.get_mouse();
+	}
+
+	const InputSystem::Keyboard& InputSystem::get_keyboard() const
+	{
+		return input_handler.get_keyboard();
+	}
+
+	const InputSystem::MouseProfile* InputSystem::get_profile(const Mouse& mouse) const
+	{
+		return mouse.get_profile();
+	}
+
+	const InputSystem::KeyboardProfile* InputSystem::get_profile(const Keyboard& keyboard) const
+	{
+		return keyboard.get_profile();
+	}
+
+	const InputSystem::PlayerDeviceMap& InputSystem::get_player_device_map() const
+	{
+		return input_handler.get_player_device_map();
+	}
+
 	InputState InputSystem::get_input_state(StateIndex index) const
 	{
 		const auto& state_data = peek_state_data(index);
@@ -429,5 +690,15 @@ namespace engine
 		}
 
 		return std::nullopt;
+	}
+
+	bool InputSystem::is_supported_event(const MouseStateEvent& mouse_event) const
+	{
+		return (mouse_event.device_index == Mouse::DEFAULT_MOUSE_DEVICE_INDEX);
+	}
+
+	bool InputSystem::is_supported_event(const KeyboardStateEvent& keyboard_event) const
+	{
+		return (keyboard_event.device_index == Keyboard::DEFAULT_KEYBOARD_DEVICE_INDEX);
 	}
 }

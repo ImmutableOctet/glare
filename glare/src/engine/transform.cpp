@@ -129,6 +129,8 @@ namespace engine
 
 		transform._dirty |= (Dirty::W | Dirty::IW);
 
+		//return *this;
+
 		/*
 		std::vector<unsigned int> children;
 		relationship.get_children(registry, children);
@@ -137,6 +139,7 @@ namespace engine
 		*/
 
 		///*
+		// Recursive `Transform` version:
 		relationship.enumerate_children(registry, [&](auto child, auto& child_relationship, auto next_child)
 		{
 			//print("Invalidating world matrix - I am: {}", child);
@@ -148,6 +151,18 @@ namespace engine
 			return true;
 		});
 		//*/
+
+		// Manual recursive child enumeration version:
+		/*
+		relationship.enumerate_children(registry, [&](auto child, auto& child_relationship, auto next_child)
+		{
+			auto* tform = registry.try_get<TransformComponent>(child);
+
+			tform->_dirty |= (Dirty::W | Dirty::IW);
+
+			return true;
+		}, true);
+		*/
 
 		return *this;
 	}
@@ -166,6 +181,8 @@ namespace engine
 
 	Transform::~Transform()
 	{
+		// TODO: Look into optimization.
+		// (Removing this line gives a minor performance improvement)
 		recalculate(false);
 	}
 

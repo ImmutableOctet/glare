@@ -22,6 +22,10 @@ namespace engine
 										// Gamepad equivalent:
 		DirectionVector movement;    // Left stick
 		DirectionVector camera;      // Right stick
+		
+		// Camera zoom; X axis is reserved, only Y axis is used under normal conditions.
+		DirectionVector zoom;        // No gamepad equivalent (yet)
+
 		DirectionVector menu_select; // D-Pad
 
 		// TODO: Ability-related - need to finalize control-scheme.
@@ -44,6 +48,7 @@ namespace engine
 	{
 		Movement    = offsetof(InputAnalogStates, movement),
 		Camera      = offsetof(InputAnalogStates, camera),
+		Zoom        = offsetof(InputAnalogStates, zoom),
 		MenuSelect  = offsetof(InputAnalogStates, menu_select),
 		Orientation = offsetof(InputAnalogStates, orientation),
 

@@ -87,6 +87,11 @@ namespace app::input
 			// Optimized version of `get_device_name`. (Avoids allocations)
 			std::string_view get_device_name_as_view() const;
 
+			inline std::string_view peek_device_name() const
+			{
+				return get_device_name_as_view();
+			}
+
 			virtual void peek(State& state) const override;
 			virtual bool process_event(const SDL_Event& e, entt::dispatcher* opt_event_handler=nullptr) override;
 		protected:

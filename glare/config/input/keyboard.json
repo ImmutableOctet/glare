@@ -1,0 +1,63 @@
+{
+	"players":
+	[
+		{
+			"device_name": "Keyboard",
+			"player_index": 1
+		}
+	],
+
+	"keyboards":
+	[
+		{
+			"device_name": "Keyboard",
+			"profile": "default"
+		}
+	],
+
+	"profiles":
+	[
+		{
+			"name": "default",
+
+			"hats":
+			[
+				{
+					"name": "movement",
+
+					"up":    "W",
+					"left":  "A",
+					"down":  "S",
+					"right": "D"
+				},
+
+				{
+					"name": "camera",
+
+					"up":    "UP",
+					"left":  "LEFT",
+					"down":  "DOWN",
+					"right": "RIGHT"
+				}
+			],
+
+			"buttons":
+			{
+				"Jump":         "SPACE",
+				"HeavyAttack":  "R",
+				"Interact":     "E",
+
+				"Pause":        "ESCAPE",
+
+				"Shield":       "LSHIFT",
+				"FirstPerson":  "PAUSE"
+			},
+
+			"analogs":
+			{
+				"Movement": "movement",
+				"Camera":   "camera"
+			}
+		}
+	]
+}

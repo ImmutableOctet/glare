@@ -133,6 +133,12 @@
     <ClCompile Include="src\engine\input\buttons.cpp" />
     <ClCompile Include="src\engine\input\input_state.cpp" />
     <ClCompile Include="src\engine\input\analogs.cpp" />
+    <ClCompile Include="src\app\input\keyboard_state.cpp" />
+    <ClCompile Include="src\app\input\mouse_profile.cpp" />
+    <ClCompile Include="src\app\input\input_profile_impl.cpp" />
+    <ClCompile Include="src\app\input\keyboard_profile.cpp" />
+    <ClCompile Include="src\app\input\keyboard_events.cpp" />
+    <ClCompile Include="src\math\joyhat.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dependencies\modules\stb\deprecated\rrsprintf.h" />
@@ -402,6 +408,18 @@
     <ClInclude Include="src\util\map.hpp" />
     <ClInclude Include="src\engine\input\analogs.hpp" />
     <ClInclude Include="src\app\input\gamepad_analog.hpp" />
+    <ClInclude Include="src\app\input\mouse_buttons.hpp" />
+    <ClInclude Include="src\app\input\mouse_events.hpp" />
+    <ClInclude Include="src\app\input\gamepad_events.hpp" />
+    <ClInclude Include="src\app\input\mouse_profile.hpp" />
+    <ClInclude Include="src\app\input\mouse_motion.hpp" />
+    <ClInclude Include="src\app\input\input_profile_impl.hpp" />
+    <ClInclude Include="src\app\input\keyboard_buttons.hpp" />
+    <ClInclude Include="src\app\input\keyboard_motion.hpp" />
+    <ClInclude Include="src\app\input\keyboard_profile.hpp" />
+    <ClInclude Include="src\app\input\keyboard_events.hpp" />
+    <ClInclude Include="src\app\input\keyboard_hat.hpp" />
+    <ClInclude Include="src\app\input\hat.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />

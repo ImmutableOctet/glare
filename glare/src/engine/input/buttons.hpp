@@ -21,11 +21,13 @@ namespace engine
 		Interact     = (1 << 2), // Gamepad: X
 		MediumAttack = (1 << 3), // Gamepad: Y
 
-		// TODO: Change to a different bit.
-		Shield = (1 << 4), // Gamepad: LT
+		Pause = (1 << 4), // Gamepad: Start
 
 		// TODO: Change to a different bit.
-		FirstPerson = (1 << 5), // Gamepad: R3
+		Shield = (1 << 5), // Gamepad: LT
+
+		// TODO: Change to a different bit.
+		FirstPerson = (1 << 6), // Gamepad: R3
 
 		// Aliases:
 		Slide = Shield,   // Gamepad: LT

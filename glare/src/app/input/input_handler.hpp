@@ -59,6 +59,6 @@ namespace app::input
 			}
 
 			// Polls input on all device types.
-			const InputDevices& poll(engine::EventHandler& event_handler);
+			const InputDevices& poll(engine::EventHandler* opt_event_handler);
 	};
 }

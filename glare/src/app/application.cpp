@@ -4,6 +4,9 @@
 #include "application.hpp"
 #include "window.hpp"
 
+// Debugging related:
+#include <util/log.hpp>
+
 namespace app
 {
 	Application::Application(UpdateRate update_rate) :
@@ -35,7 +38,7 @@ namespace app
 	bool Application::stop()
 	{
 		//events.stop();
-
+		
 		running = false;
 
 		retrieve_stop_time();

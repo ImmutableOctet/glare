@@ -1,0 +1,40 @@
+{
+	"players":
+	[
+		{
+			"device_name": "Mouse",
+			"player_index": 1
+		}
+	],
+
+	"mice":
+	[
+		{
+			"device_name": "Mouse",
+			"profile": "default"
+		}
+	],
+
+	"profiles":
+	[
+		{
+			"name": "default",
+
+			"sensitivity": 8.0,
+
+			"buttons":
+			{
+				"MediumAttack": "Left",
+				"Shield":       "Right",
+				"Interact":     "Middle",
+				"HeavyAttack":  "Back"
+			},
+
+			"analogs":
+			{
+				"Camera": "Movement",
+				"Zoom":   "Scroll"
+			}
+		}
+	]
+}

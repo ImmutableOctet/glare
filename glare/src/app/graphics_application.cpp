@@ -54,7 +54,10 @@ namespace app
 
 			if (ImGui_ImplSDL2_ProcessEvent(&e))
 			{
-				return true;
+				if (e.type != SDL_WINDOWEVENT)
+				{
+					return true;
+				}
 			}
 		}
 

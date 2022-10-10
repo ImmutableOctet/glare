@@ -60,15 +60,14 @@
 namespace glare
 {
 	Glare::Glare():
-		Game("Project Glare", 1600, 900, 60, true, false) // true
+		Game("Project Glare", 1600, 900, 60, false, false) // true
 	{
 		using namespace graphics;
 
 		init_input_system([](auto& input_system, auto& input_handler)
 		{
-			// TODO: Migrate this to the `glare` namespace.
+			// TODO: Migrate these to the `glare` namespace:
 			engine::generate_button_map(input_handler.get_buttons());
-
 			engine::generate_analog_map(input_handler.get_analogs());
 		});
 

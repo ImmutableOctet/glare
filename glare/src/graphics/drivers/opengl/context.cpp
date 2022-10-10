@@ -184,9 +184,8 @@ namespace graphics
 			// NOTE: 'name' must be a null-terminated string.
 			gl_uniform_location get_uniform(Shader& shader, std::string_view name)
 			{
-				return glGetUniformLocation(shader.get_handle(), name.data());
+				//return glGetUniformLocation(shader.get_handle(), name.data());
 
-				///*
 				auto& uniform_location_map = uniform_location_cache[shader.get_handle()];
 
 				auto name_safe = std::string(name);
@@ -197,7 +196,6 @@ namespace graphics
 				{
 					return it->second;
 				}
-				//*/
 
 				auto uniform_location = glGetUniformLocation(shader.get_handle(), name.data()); // name_safe.data()
 
@@ -1157,6 +1155,12 @@ namespace graphics
 
 		// Initial configuration:
 		set_flags(flags, true);
+
+		// Check if vertical sync is disabled:
+		if (!(flags & Flags::VSync))
+		{
+			set_flags(Flags::VSync, false);
+		}
 
 		//glEnable(GL_DEPTH_TEST);
 

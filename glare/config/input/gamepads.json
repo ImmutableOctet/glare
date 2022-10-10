@@ -27,14 +27,16 @@
 				"Interact":     "X",
 				"MediumAttack": "Y",
 
+				"Pause":        "Start",
+
 				"Shield":       "LT",
 				"FirstPerson":  "R3"
 			},
 
 			"analogs":
 			{
-				"Movement": "Left",
-				"Camera": "Right",
+				"Movement":    "Left",
+				"Camera":      "Right",
 				"Orientation": "Triggers"
 			},
 
