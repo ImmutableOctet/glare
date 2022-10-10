@@ -14,8 +14,24 @@
 // Device-specific input events:
 namespace app::input
 {
-	struct GamepadButtonEvent;
+	// Mouse events:
+	struct MouseStateEvent;
+	struct MouseButtonEvent;
+	struct MouseAnalogEvent;
+	struct OnMouseButtonDown;
+	struct OnMouseButtonUp;
+	struct OnMouseMove;
+	struct OnMouseScroll;
 
+	// Keyboard events:
+	struct KeyboardStateEvent;
+	struct KeyboardButtonEvent;
+	struct OnKeyboardButtonDown;
+	struct OnKeyboardButtonUp;
+	struct OnKeyboardAnalogInput;
+
+	// Gamepad events:
+	struct GamepadButtonEvent;
 	struct OnGamepadConnected;
 	struct OnGamepadDisconnected;
 	struct OnGamepadButtonDown;
@@ -26,6 +42,17 @@ namespace app::input
 
 	struct GamepadProfile;
 	class Gamepad;
+
+	struct MouseProfile;
+	class Mouse;
+
+	struct KeyboardProfile;
+	class Keyboard;
+}
+
+namespace game
+{
+	class Screen;
 }
 
 namespace engine
@@ -42,6 +69,7 @@ namespace engine
 	{
 		public:
 			using InputHandler = app::input::InputHandler;
+			using PlayerDeviceMap = app::input::PlayerDeviceMap;
 
 			// Storage for next and previous input states.
 			struct StateData
@@ -61,18 +89,74 @@ namespace engine
 				bool state_has_changed : 1 = false;
 			};
 
-			using Gamepad            = app::input::Gamepad;
-			using GamepadProfile     = app::input::GamepadProfile;
-			using GamepadButtonEvent = app::input::GamepadButtonEvent;
-			using GamepadAnalogEvent = app::input::OnGamepadAnalogInput;
-			using GamepadIndex       = app::input::GamepadDeviceIndex;
-			using StateIndex         = InputStateIndex;
+			using Gamepad             = app::input::Gamepad;
+			using GamepadProfile      = app::input::GamepadProfile;
+			using GamepadButtonEvent  = app::input::GamepadButtonEvent;
+			using GamepadAnalogEvent  = app::input::OnGamepadAnalogInput;
+			using GamepadIndex        = app::input::GamepadDeviceIndex;
 
-			InputSystem(Service& service, InputHandler& input_handler, bool subscribe_immediately=false);
+			using Mouse               = app::input::Mouse;
+			using MouseProfile        = app::input::MouseProfile;
+			using MouseStateEvent     = app::input::MouseStateEvent;
+			using MouseButtonEvent    = app::input::MouseButtonEvent;
+			using MouseAnalogEvent    = app::input::MouseAnalogEvent;
+			using MouseIndex          = app::input::MouseDeviceIndex;
+
+			using Keyboard            = app::input::Keyboard;
+			using KeyboardProfile     = app::input::KeyboardProfile;
+			using KeyboardStateEvent  = app::input::KeyboardStateEvent;
+			using KeyboardButtonEvent = app::input::KeyboardButtonEvent;
+			using KeyboardAnalogEvent = app::input::OnKeyboardAnalogInput; // app::input::KeyboardAnalogEvent;
+			using KeyboardIndex       = app::input::KeyboardDeviceIndex;
+
+			using StateIndex          = InputStateIndex;
+
+			InputSystem(Service& service, InputHandler& input_handler, const game::Screen& screen, bool subscribe_immediately=false);
 
 			// Button/analog translation routines:
+
+			// Translates a button input from a mouse device to an engine-defined equivalent.
+			// This returns the engine-defined button if translation was successful.
+			std::optional<Button> translate_button(const Mouse& mouse, const MouseButtonEvent& button_event) const;
+
+			// Translates a button input from a keyboard device to an engine-defined equivalent.
+			// This returns the engine-defined button if translation was successful.
+			std::optional<Button> translate_button(const Keyboard& keyboard, const KeyboardButtonEvent& button_event) const;
+
+			// Translates a button input from a gamepad device to an engine-defined equivalent.
+			// This returns the engine-defined button if translation was successful.
+			std::optional<Button> translate_button(const GamepadProfile& gamepad_profile, const GamepadButtonEvent& button_event) const;
+
+			// Shorthand overload using a `Gamepad` object, rather than its profile.
+			// (Uses `input_handler` to lookup the gamepad's profile by index)
 			std::optional<Button> translate_button(const Gamepad& gamepad, const GamepadButtonEvent& button_event) const;
+
+			// Translates a gamepad device's analog input into an engine-defined equivalent.
+			// This returns the engine-defined 'analog' if translation was successful.
+			std::optional<Analog> translate_analog(const GamepadProfile& gamepad_profile, const GamepadAnalogEvent& analog_event) const;
+
+			// Shorthand overload using a `Gamepad` object, rather than its profile.
+			// (Uses `input_handler` to lookup the gamepad's profile by index)
 			std::optional<Analog> translate_analog(const Gamepad& gamepad, const GamepadAnalogEvent& analog_event) const;
+
+			// Translates a keyboard's 'analog' input into an engine-defined equivalent.
+			// This returns the engine-defined 'analog' if translation was successful.
+			std::optional<Analog> translate_analog(const KeyboardProfile& keyboard_profile, const KeyboardAnalogEvent& analog_event) const;
+
+			// Translates a mouse's 'analog' input into an engine-defined equivalent.
+			// This returns the engine-defined 'analog' if translation was successful.
+			std::optional<Analog> translate_analog(const MouseProfile& mouse_profile, const MouseAnalogEvent& analog_event) const;
+
+			// Mouse events:
+			void on_mouse_button_down(const app::input::OnMouseButtonDown& data);
+			void on_mouse_button_up(const app::input::OnMouseButtonUp& data);
+			void on_mouse_move(const app::input::OnMouseMove& data);
+			void on_mouse_scroll(const app::input::OnMouseScroll& data);
+
+			// Keyboard events:
+			void on_keyboard_button_down(const app::input::OnKeyboardButtonDown& data);
+			void on_keyboard_button_up(const app::input::OnKeyboardButtonUp& data);
+			void on_keyboard_analog_input(const app::input::OnKeyboardAnalogInput& data);
 
 			// Gamepad events:
 			void on_gamepad_connected(const app::input::OnGamepadConnected& data);
@@ -81,9 +165,109 @@ namespace engine
 			void on_gamepad_button_up(const app::input::OnGamepadButtonUp& data);
 			void on_gamepad_analog_input(const app::input::OnGamepadAnalogInput& data);
 
+			// Binds a gamepad by its device index to a high-level input state via its own index.
 			void bind_gamepad(GamepadIndex gamepad_index, StateIndex state_index);
+
+			// Unbinds a gamepad from all high-level state indices.
 			void unbind_gamepad(GamepadIndex gamepad_index);
 		protected:
+			const Mouse& get_mouse() const;
+			const Keyboard& get_keyboard() const;
+
+			const MouseProfile* get_profile(const Mouse& mouse) const;
+			const KeyboardProfile* get_profile(const Keyboard& keyboard) const;
+
+			// Generates a floating-point vector with values between -1.0 and 1.0, based on the sensitivity and screen size specified.
+			// This routine is useful for translating a relative mouse input into a format usable by regular analog input routines. (i.e. gamepad-oriented)
+			static math::Vector2D mouse_motion_to_analog_input(int mouse_x, int mouse_y, float mouse_sensitivity, int screen_width, int screen_height);
+
+			const PlayerDeviceMap& get_player_device_map() const;
+
+			// Retrieves the state-index associated with a device.
+			// (Lookup is performed using the device's name)
+			template <typename DeviceType>
+			std::optional<StateIndex> resolve_state_index(const DeviceType& device) const
+			{
+				const auto& device_mapping = get_player_device_map();
+
+				// TODO: Look into optimizing this via heterogeneous lookup.
+				if (const auto it = device_mapping.find(device.get_device_name()); it != device_mapping.end()) // peek_device_name()
+				{
+					return static_cast<StateIndex>(it->second);
+				}
+
+				return std::nullopt;
+			}
+
+			// Basic implementation for device-specific analog to engine-defined `Analog` translation, using a `profile` (`InputProfile`) object.
+			// TODO: Add handling of Hat-based analogs to this implementation.
+			template <typename ProfileType, typename AnalogEventType>
+			std::optional<Analog> translate_analog_impl(const ProfileType& profile, const AnalogEventType& analog_event) const
+			{
+				const auto& analog = analog_event.analog;
+				const auto& analog_mapping = profile.analog_mapping;
+				
+				if (const auto it = analog_mapping.find(analog); it != analog_mapping.end())
+				{
+					return static_cast<Analog>(it->second);
+				}
+
+				return std::nullopt;
+			}
+
+			// Basic implementation for device-specific button to engine-defined `Button` translation, using a `profile` (`InputProfile`) object.
+			template <typename ProfileType, typename ButtonEventType, typename TrueButtonType=decltype(ButtonEventType::button)>
+			std::optional<Button> translate_button_impl(const ProfileType& profile, const ButtonEventType& button_event) const
+			{
+				const auto native_button = static_cast<TrueButtonType>(button_event.button);
+				const auto& button_mapping = profile.button_mapping;
+
+				if (const auto it = button_mapping.find(native_button); it != button_mapping.end())
+				{
+					return static_cast<Button>(it->second);
+				}
+
+				return std::nullopt;
+			}
+
+			template <typename MouseAnalogEventType, typename Callback>
+			std::optional<StateIndex> on_mouse_analog_input_impl(const MouseAnalogEventType& data, Callback&& callback)
+			{
+				if (!is_supported_event(data))
+				{
+					return std::nullopt;
+				}
+
+				const auto& mouse = get_mouse();
+				const auto* profile = get_profile(mouse);
+
+				if (!profile)
+				{
+					return std::nullopt;
+				}
+
+				auto state_index = resolve_state_index(mouse);
+
+				if (!state_index)
+				{
+					return std::nullopt;
+				}
+
+				auto engine_analog = translate_analog(*profile, data);
+
+				if (!engine_analog)
+				{
+					return std::nullopt;
+				}
+
+				auto value = callback(mouse, *profile, data, *state_index, *engine_analog);
+
+				on_analog_input(mouse, *state_index, *engine_analog, value);
+
+				return state_index;
+			}
+
+			// Triggered when this system subscribes to a service.
 			bool on_subscribe(Service& service) override;
 
 			// Triggered once per service update; used to handle
@@ -109,7 +293,7 @@ namespace engine
 			// NOTE: `input_handler` maps state/player indices using the device's name internally.
 			void handle_gamepad_mappings(GamepadIndex gamepad_index, std::optional<StateIndex> opt_state_index=std::nullopt);
 
-			// See index-based overload for details.
+			// See index-based overload for details. (Convenience overload)
 			void handle_gamepad_mappings(const Gamepad& gamepad, std::optional<StateIndex> opt_state_index=std::nullopt);
 
 			// Called when the first concurrent listener for `index` is registered.
@@ -118,7 +302,10 @@ namespace engine
 			// Called when the last listener for `index` is unregistered.
 			void on_stop_listening(StateIndex state_index, StateData& state);
 
+			// Called when an `InputComponent` has been created/attached to `entity`.
 			void on_create_input(Registry& registry, Entity entity);
+
+			// Called when an `InputComponent` has been destroyed/detached from `entity`.
 			void on_destroy_input(Registry& registry, Entity entity);
 
 			// Changes (updates via a `Registry`) are considered forbidden.
@@ -145,12 +332,24 @@ namespace engine
 			// Retrieves the input-state index associated with `gamepad_id`, if applicable.
 			std::optional<StateIndex> get_gamepad_state_index(GamepadIndex gamepad_id) const;
 
+			// Reference to the application's input handler.
+			// (Responsible for device-specific input)
 			InputHandler& input_handler;
+
+			// Reference to the application's screen.
+			// (Used for input coordinate normalization)
+			// 
+			// TODO: Look into lighter-weight option than the `Screen` class.
+			const game::Screen& screen;
 
 			// Container of states (previous and next/current) for each bound device.
 			std::vector<StateData> states;
 
+			// Map of gamepad indices to their corresponding high-level state indices.
 			// TODO: Optimize with `std::vector`.
 			std::unordered_map<GamepadIndex, StateIndex> gamepad_assignment;
+		private:
+			bool is_supported_event(const MouseStateEvent& mouse_event) const;
+			bool is_supported_event(const KeyboardStateEvent& keyboard_event) const;
 	};
 }
