@@ -11,13 +11,25 @@
 
 namespace app::input
 {
+	// Device instance identifier for physical `Mouse` and touch-related devices.
 	using MouseDeviceIndex = std::uint8_t;
+	
+	// Underlying integral type used for `MouseButton` enumeration.
 	using MouseButtonID = std::uint8_t;
 
+	// Device instance identifier for physical `Keyboard` devices.
 	using KeyboardDeviceIndex = std::uint8_t;
+
+	// Underlying integral type used for `KeyboardButton` enumeration.
 	using KeyboardButtonID = std::uint16_t; // std::uint32_t;
 
+	// Smallest type that holds a key's held/released state.
+	using KeyboardButtonValue = std::uint8_t;
+
+	// Device instance identifier for `Gamepad` objects.
 	using GamepadDeviceIndex = std::uint8_t; // SDL_JoystickID;
+
+	// Minimal integral type used to represent individual (unencoded) buttons of a `Gamepad`.
 	using GamepadButtonID = std::uint8_t;
 
 	// Integral type used to represent a gamepad's button bitfield. (see `GamepadState::Buttons`)
