@@ -146,7 +146,7 @@ namespace math
 
 		if (value >= max_value)
 		{
-			return value;
+			return max_value;
 		}
 
 		return value;
