@@ -56,7 +56,7 @@ namespace app::input
 		*/
 		math::Vector2D value;
 
-		// The angle of the direction-vector `value`.
+		// The angle of the direction-vector, `value`.
 		// For `GamepadAnalog::Triggers`, this always returns zero.
 		float angle() const;
 	};

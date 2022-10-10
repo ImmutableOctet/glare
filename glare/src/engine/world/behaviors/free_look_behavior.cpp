@@ -8,6 +8,9 @@
 
 //#include <math/math.hpp>
 
+// Debugging related:
+#include <util/log.hpp>
+
 namespace engine
 {
 	void FreeLookBehavior::on_mouse(World& world, float delta, const MouseState& mouse_state)
@@ -25,6 +28,8 @@ namespace engine
 	void FreeLookBehavior::apply(World& world, Entity entity, Transform& transform, const FreeLookBehavior::MouseState& input)
 	{
 		auto sens = this->sensitivity;
+
+		//print("input: {},{}", input.x, input.y);
 
 		transform.rotate({ 0.0f, (sens * input.x), 0.0f }, true); // false <-- Need to verify if this behaves correctly when set to 'false'.
 		transform.rotateX((-sens * input.y), false); // true

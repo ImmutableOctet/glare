@@ -133,7 +133,7 @@ namespace game
 			template <typename generate_buttons_fn>
 			inline engine::InputSystem& init_input_system(generate_buttons_fn&& generate_buttons)
 			{
-				auto& input_system = system<engine::InputSystem>(world, input);
+				auto& input_system = system<engine::InputSystem>(world, input, screen);
 
 				generate_buttons(input_system, input);
 

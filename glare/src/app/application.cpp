@@ -4,6 +4,9 @@
 #include "application.hpp"
 #include "window.hpp"
 
+// Debugging related:
+#include <util/log.hpp>
+
 namespace app
 {
 	Application::Application(UpdateRate update_rate) :
