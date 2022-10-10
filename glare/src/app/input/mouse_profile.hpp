@@ -30,5 +30,7 @@ namespace app::input
 		// TODO: Look into 'deadzones' for mice.
 		// (Minimum required movement)
 		//MouseDeadZone deadzone;
+
+		float sensitivity = 2.0f;
 	};
 }
