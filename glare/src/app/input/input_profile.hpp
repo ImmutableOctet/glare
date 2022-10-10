@@ -36,18 +36,59 @@ namespace app::input
 				const auto& engine_name  = engine_entry.first;
 				const auto& engine_value = engine_entry.second;
 
-				const auto element_name = util::get_value<std::string>(json, engine_name);
+				auto it = json.find(engine_name);
 
-				if (element_name.empty())
+				if (it == json.end())
 				{
 					continue;
 				}
 
-				const auto native_value = resolve(element_name);
-
-				if (native_value)
+				const auto& entry = *it;
+					
+				if (entry.empty())
 				{
-					mappings_out[*native_value] = engine_value;
+					continue;
+				}
+
+				auto process_entry = [&resolve, &mappings_out, &engine_value](const auto& single_entry)
+				{
+					const auto element_name = single_entry.get<std::string>();
+
+					if (element_name.empty())
+					{
+						return;
+					}
+
+					const auto native_value = resolve(element_name);
+
+					if (native_value)
+					{
+						mappings_out[*native_value] = engine_value;
+					}
+				};
+
+				switch (entry.type())
+				{
+					case util::json::value_t::array:
+					{
+						for (const auto& proxy : entry.items())
+						{
+							const auto& single_entry = proxy.value();
+
+							process_entry(single_entry);
+						}
+
+						break;
+					}
+					case util::json::value_t::string:
+					{
+						process_entry(entry);
+
+						break;
+					}
+
+					default:
+						continue;
 				}
 			}
 		}

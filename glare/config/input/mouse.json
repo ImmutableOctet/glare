@@ -30,6 +30,11 @@
 				"HeavyAttack":  "Back"
 			},
 
+			"virtual_buttons":
+			{
+				"MediumAttack": "-Movement.x|0.25"
+			},
+
 			"analogs":
 			{
 				"Camera": "Movement",
