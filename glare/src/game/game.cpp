@@ -157,18 +157,18 @@ namespace game
 
 	void Game::load_input_profiles(engine::InputSystem& input_system, app::input::InputHandler& input_handler)
 	{
-		auto& gamepads = input_handler.get_gamepads();
+		auto& keyboard = input_handler.get_keyboard();
 
-		gamepads.load_profiles
+		keyboard.load_profile
 		(
 			{
 				// Path:
-				.path = std::filesystem::path("config/input/gamepads.json"),
-				
+				.path = std::filesystem::path("config/input/keyboard.json"),
+
 				// Input:
 				.buttons = input_handler.get_buttons(),
 				.analogs = input_handler.get_analogs(),
-				
+
 				// Output:
 				.player_mappings_out = input_handler.get_player_device_map()
 			}
@@ -191,13 +191,13 @@ namespace game
 			}
 		);
 
-		auto& keyboard = input_handler.get_keyboard();
+		auto& gamepads = input_handler.get_gamepads();
 
-		keyboard.load_profile
+		gamepads.load_profiles
 		(
 			{
 				// Path:
-				.path = std::filesystem::path("config/input/keyboard.json"),
+				.path = std::filesystem::path("config/input/gamepads.json"),
 
 				// Input:
 				.buttons = input_handler.get_buttons(),
