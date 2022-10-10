@@ -20,16 +20,20 @@
 		{
 			"name": "default",
 
+			"sensitivity": 8.0,
+
 			"buttons":
 			{
 				"MediumAttack": "Left",
-				"Shield": "Right",
-				"Interact": "Middle"
+				"Shield":       "Right",
+				"Interact":     "Middle",
+				"HeavyAttack":  "Back"
 			},
 
 			"analogs":
 			{
-				"Camera": "Look"
+				"Camera": "Movement",
+				"Zoom":   "Scroll"
 			}
 		}
 	]
