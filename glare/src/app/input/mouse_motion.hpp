@@ -9,13 +9,16 @@ namespace app::input
 	enum class MouseMotion : std::uint8_t
 	{
 		// Standard relative mouse movement.
-		Movement,     // XY
+		Movement,      // XY
 
 		// Encompasses both horizontal and vertical scroll capabilities.
-		Scroll,       // XY
+		Scroll,        // XY
 
 		// Currently unused:
-		Gyroscope,    // XYZ
-		Accelerometer // XYZ
+		Gyroscope,     // XYZ
+		Accelerometer, // XYZ
+
+		// Indicates the starting index for dynamically defined 'analogs'.
+		RuntimeAnalogOffset
 	};
 }

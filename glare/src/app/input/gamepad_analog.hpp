@@ -11,5 +11,8 @@ namespace app::input
 		Right,
 		Triggers,
 		DPad,
+
+		// Indicates the starting index for dynamically defined 'analogs'.
+		RuntimeAnalogOffset
 	};
 }
