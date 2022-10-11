@@ -139,8 +139,8 @@ namespace engine
 		//enable<app::input::OnGamepadButtonUp>();
 		//enable<app::input::OnGamepadAnalogInput>();
 
-		enable<OnButtonDown>();
-		enable<OnButtonReleased>();
+		//enable<OnButtonDown>();
+		//enable<OnButtonReleased>();
 		enable<OnButtonPressed>();
 		enable<OnAnalogInput>();
 	}
@@ -288,6 +288,10 @@ namespace engine
 	
 	void DebugListener::operator()(const OnButtonPressed& data)
 	{
+		const auto& player_id = data.state_index;
+		const auto& button = data.button;
+
+		print("Player: {} - Button Pressed: {}", player_id, std::format("{}", button));
 	}
 
 	void DebugListener::operator()(const OnAnalogInput& data)
