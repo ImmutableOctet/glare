@@ -113,6 +113,11 @@ namespace app::input
 			{
 				self.read_analog_mapping(profile_metadata.analogs, *analog_data);
 			}
+
+			if (const auto virtual_button_data = json.find("virtual_buttons"); virtual_button_data != json.end())
+			{
+				self.read_virtual_button_mapping(profile_metadata.buttons, *virtual_button_data);
+			}
 		}
 	}
 }
