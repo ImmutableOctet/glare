@@ -170,6 +170,18 @@ namespace engine
 
 			// Unbinds a gamepad from all high-level state indices.
 			void unbind_gamepad(GamepadIndex gamepad_index);
+
+			// Handles button-down changes for the state specified.
+			void on_button_down(InputSource source, StateIndex state_index, Button button);
+
+			// Handles button-up changes for the state specified.
+			void on_button_up(InputSource source, StateIndex state_index, Button button);
+
+			// Handles analog input for the state specified.
+			void on_analog_input(InputSource source, StateIndex state_index, Analog analog, const math::Vector2D& value, std::optional<float> angle=std::nullopt);
+
+			// Retrieves a temporary reference to the data associated with an input-state index.
+			const StateData& peek_state_data(StateIndex index) const;
 		protected:
 			const Mouse& get_mouse() const;
 			const Keyboard& get_keyboard() const;
@@ -264,6 +276,8 @@ namespace engine
 
 				on_analog_input(mouse, *state_index, *engine_analog, value);
 
+				handle_virtual_button_simulation(mouse, *state_index, *profile, data, value);
+
 				return state_index;
 			}
 
@@ -278,15 +292,6 @@ namespace engine
 			// (Used to update the `state_has_changed` flag, etc.)
 			void on_state_update(StateData& state_data);
 
-			// Handles button-down changes for the state specified.
-			void on_button_down(InputSource source, StateIndex state_index, Button button);
-
-			// Handles button-up changes for the state specified.
-			void on_button_up(InputSource source, StateIndex state_index, Button button);
-
-			// Handles analog input for the state specified.
-			void on_analog_input(InputSource source, StateIndex state_index, Analog analog, const math::Vector2D& value, std::optional<float> angle=std::nullopt);
-
 			// Retrieves gamepad device mappings from `input_handler`.
 			// If `opt_state_index` is specified, this will only apply device mappings
 			// where the intended state-index/player is equal to the value provided.
@@ -295,6 +300,22 @@ namespace engine
 
 			// See index-based overload for details. (Convenience overload)
 			void handle_gamepad_mappings(const Gamepad& gamepad, std::optional<StateIndex> opt_state_index=std::nullopt);
+
+			// Handles threshold detection for virtual buttons tied to a mouse.
+			// Called automatically by `on_mouse_analog_input_impl`.
+			void handle_virtual_button_simulation
+			(
+				InputSource source, StateIndex state_index, const MouseProfile& profile,
+				const MouseAnalogEvent& event_data, const math::Vector2D& value
+			);
+
+			// Handles threshold detection for virtual buttons tied to a gamepad.
+			// Called automatically by `on_gamepad_analog_input`.
+			void handle_virtual_button_simulation
+			(
+				InputSource source, StateIndex state_index, const GamepadProfile& profile,
+				const GamepadAnalogEvent& event_data, const math::Vector2D& value
+			);
 
 			// Called when the first concurrent listener for `index` is registered.
 			void on_start_listening(StateIndex state_index, StateData& state);
@@ -325,9 +346,6 @@ namespace engine
 
 			// Retrieves a copy of the current/next input state.
 			InputState get_input_state(StateIndex index) const;
-
-			// Retrieves a temporary reference to the data associated with an input-state index.
-			const StateData& peek_state_data(StateIndex index) const;
 
 			// Retrieves the input-state index associated with `gamepad_id`, if applicable.
 			std::optional<StateIndex> get_gamepad_state_index(GamepadIndex gamepad_id) const;

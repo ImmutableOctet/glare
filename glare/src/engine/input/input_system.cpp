@@ -11,6 +11,7 @@
 #include <app/input/gamepad_buttons.hpp>
 #include <app/input/gamepad_profile.hpp>
 #include <app/input/keyboard_motion.hpp>
+#include <app/input/virtual_button.hpp>
 
 #include <game/screen.hpp>
 
@@ -49,6 +50,47 @@ namespace engine
 		}
 
 		return static_cast<Analog>(hat_mapping_it->second);
+	}
+
+	// Implementation of threshold detection for virtual buttons.
+	template <typename ProfileType, typename AnalogEventType>
+	static void handle_virtual_button_simulation_impl
+	(
+		InputSystem& input_system,
+		InputSource source, InputSystem::StateIndex state_index,
+		const ProfileType& profile, const AnalogEventType& event_data, const math::Vector2D& value
+	)
+	{
+		const auto& virtual_button_mapping = profile.virtual_button_mapping;
+		const auto& analog = event_data.analog;
+
+		const auto vb_it = virtual_button_mapping.find(analog);
+
+		if (vb_it == virtual_button_mapping.end())
+		{
+			return;
+		}
+
+		const auto& virtual_buttons = vb_it->second;
+
+		for (const auto& virtual_button : virtual_buttons)
+		{
+			const auto button = static_cast<Button>(virtual_button.engine_button);
+
+			if (virtual_button.is_down(value))
+			{
+				input_system.on_button_down(source, state_index, button);
+			}
+			else
+			{
+				const auto& state = input_system.peek_state_data(state_index);
+
+				if (state.previous.held.get_button(button))
+				{
+					input_system.on_button_up(source, state_index, button);
+				}
+			}
+		}
 	}
 
 	math::Vector2D InputSystem::mouse_motion_to_analog_input(int mouse_x, int mouse_y, float mouse_sensitivity, int screen_width, int screen_height)
@@ -176,6 +218,24 @@ namespace engine
 		handle_gamepad_mappings(gamepad, opt_state_index);
 	}
 
+	void InputSystem::handle_virtual_button_simulation
+	(
+		InputSource source, StateIndex state_index, const MouseProfile& profile,
+		const MouseAnalogEvent& event_data, const math::Vector2D& value
+	)
+	{
+		handle_virtual_button_simulation_impl(*this, source, state_index, profile, event_data, value);
+	}
+
+	void InputSystem::handle_virtual_button_simulation
+	(
+		InputSource source, StateIndex state_index, const GamepadProfile& profile,
+		const GamepadAnalogEvent& event_data, const math::Vector2D& value
+	)
+	{
+		handle_virtual_button_simulation_impl(*this, source, state_index, profile, event_data, value);
+	}
+
 	void InputSystem::on_start_listening(StateIndex state_index, StateData& state)
 	{
 		const auto& gamepads = input_handler.get_gamepads();
@@ -216,7 +276,7 @@ namespace engine
 
 	void InputSystem::on_update(const OnServiceUpdate& data)
 	{
-		if (allowed_service(*data.service))
+		if (!allowed_service(*data.service))
 		{
 			return;
 		}
@@ -622,11 +682,25 @@ namespace engine
 		const auto& gamepad_id = data.device_index;
 		auto& gamepad = gamepads.get_gamepad(gamepad_id);
 
-		if (auto analog = translate_analog(gamepad, data))
+		const auto* profile = gamepads.get_profile(gamepad_id);
+
+		if (!profile)
+		{
+			//print("GAMEPAD PROFILE MISSING.");
+
+			return;
+		}
+
+		if (auto analog = translate_analog(*profile, data))
 		{
 			if (auto state_index = get_gamepad_state_index(gamepad_id))
 			{
-				on_analog_input(gamepad, *state_index, *analog, data.value, data.angle());
+				const auto& value = data.value;
+				const auto angle = data.angle();
+
+				on_analog_input(gamepad, *state_index, *analog, value, angle);
+
+				handle_virtual_button_simulation(gamepad, *state_index, *profile, data, value);
 			}
 		}
 	}
