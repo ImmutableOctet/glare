@@ -37,7 +37,13 @@
 			{
 				"Movement":    "Left",
 				"Camera":      "Right",
-				"Orientation": "Triggers"
+				"Orientation": "Triggers",
+				"MenuSelect":  "DPad"
+			},
+
+			"virtual_buttons":
+			{
+				"Shield": "DPad.x<-0.5"
 			},
 
 			"deadzones":

@@ -20,7 +20,7 @@
 		{
 			"name": "default",
 
-			"sensitivity": 8.0,
+			"sensitivity": 1.0,
 
 			"buttons":
 			{
@@ -28,11 +28,6 @@
 				"Shield":       "Right",
 				"Interact":     "Middle",
 				"HeavyAttack":  "Back"
-			},
-
-			"virtual_buttons":
-			{
-				"MediumAttack": "-Movement.x|0.25"
 			},
 
 			"analogs":
