@@ -5,10 +5,15 @@
 #include "aabb.hpp"
 #include "conversion.hpp"
 
+#include <cmath>
+
 namespace math
 {
 	// Imported GLM functions:
 	using glm::cross;
+
+	// Standard math functions:
+	using std::abs;
 
 	// Returns 1 for values greater than zero,
 	// -1 for values less than zero,
