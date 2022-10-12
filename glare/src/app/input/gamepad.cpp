@@ -2,6 +2,7 @@
 #include "events.hpp"
 #include "gamepad_analog.hpp"
 #include "gamepad_profile.hpp"
+#include "gamepad_buttons.hpp"
 #include "input_device_impl.hpp"
 
 #include <sdl2/SDL_joystick.h>
@@ -15,8 +16,19 @@
 
 namespace app::input
 {
-	Gamepad::Gamepad(DeviceIndex device_index, const DeadZone& deadzone, bool open_immediately)
-		: device_index(device_index), deadzone(deadzone), handle(nullptr)
+	Gamepad::Gamepad
+	(
+		DeviceIndex device_index,
+		bool event_based_button_down,
+		bool event_based_button_release,
+		const DeadZone& deadzone,
+		bool open_immediately
+	) :
+		device_index(device_index),
+		event_based_button_down(event_based_button_down),
+		event_based_button_release(event_based_button_release),
+		deadzone(deadzone),
+		handle(nullptr)
 	{
 		if (open_immediately)
 		{
@@ -104,9 +116,14 @@ namespace app::input
 
 	const Gamepad::State& Gamepad::poll(GamepadProfile* profile, entt::dispatcher* opt_event_handler)
 	{
-		if ((opt_event_handler) && (profile))
+		if (opt_event_handler)
 		{
-			handle_hat_event_detection(*opt_event_handler, *profile, next_state);
+			if (profile)
+			{
+				handle_hat_event_detection(*opt_event_handler, *profile, next_state);
+			}
+
+			handle_button_changes(*opt_event_handler, next_state, get_state());
 		}
 
 		return poll(opt_event_handler);
@@ -250,32 +267,74 @@ namespace app::input
 		return false;
 	}
 
+	int Gamepad::handle_button_changes(entt::dispatcher& event_handler, const State& state, const State& prev_state) const
+	{
+		const auto device_id = this->device_index; // const auto&
+
+		int buttons_changed = 0;
+
+		// Button-released detection:
+		if (!event_based_button_release)
+		{
+			buttons_changed += state.on_button_change(prev_state, [&event_handler, device_id, &state](GamepadButtonBits button, bool value)
+			{
+				if (!value)
+				{
+					event_handler.enqueue<OnGamepadButtonUp>(device_id, state, static_cast<GamepadButtonID>(button));
+				}
+			});
+		}
+
+		// Continuous button-held events:
+		if (!event_based_button_down)
+		{
+			buttons_changed += state.on_button_active([&event_handler, device_id, &state](GamepadButtonBits button)
+			{
+				event_handler.enqueue<OnGamepadButtonDown>(device_id, state, static_cast<GamepadButtonID>(button));
+			});
+		}
+
+		return buttons_changed;
+	}
+
 	bool Gamepad::process_button_event(const SDL_JoyButtonEvent& e, entt::dispatcher* opt_event_handler)
 	{
 		assert(e.button < GamepadState::MAX_BUTTONS);
 
 		const auto device_id = static_cast<GamepadDeviceIndex>(e.which);
-		const auto button = static_cast<GamepadButtonID>(e.button);
 
-		next_state.set_button(button, (e.state == SDL_PRESSED)); // (e.state != SDL_RELEASED)
+		// TODO: Look into converting `GamepadButtonEvent` to use `GamepadButtonBits` instead.
+		const auto button_id = static_cast<GamepadButtonID>(e.button);
+
+		next_state.set_button(button_id, (e.state == SDL_PRESSED)); // (e.state != SDL_RELEASED)
 
 		if (opt_event_handler)
 		{
 			switch (e.type)
 			{
 				case SDL_JOYBUTTONDOWN:
-					opt_event_handler->enqueue<OnGamepadButtonDown>(device_id, next_state, button);
+					// If we're opting to use continuous button-down events instead,
+					// we don't need/want to generate an event here:
+					if (event_based_button_down)
+					{
+						opt_event_handler->enqueue<OnGamepadButtonDown>(device_id, next_state, button_id);
+					}
 
-					break;
+					break; // return true;
 
 				case SDL_JOYBUTTONUP:
-					opt_event_handler->enqueue<OnGamepadButtonUp>(device_id, next_state, button);
+					// If we're opting to use polling-based button-release events,
+					// don't worry about generating an event here:
+					if (event_based_button_release)
+					{
+						opt_event_handler->enqueue<OnGamepadButtonUp>(device_id, next_state, button_id);
+					}
 
-					break;
+					break; // return true;
 			}
 		}
 
-		return true;
+		return true; // false;
 	}
 
 	// NOTE: This method is called automatically via the profile-enabled `poll` method.

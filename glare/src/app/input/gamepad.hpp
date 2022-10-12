@@ -33,9 +33,20 @@ namespace app::input
 			SDL_Joystick* handle;
 
 			State next_state;
+
+			bool event_based_button_down    : 1 = false;
+			bool event_based_button_release : 1 = true;
 		public:
 			// NOTE: `Gamepad` objects are not open immediately by default.
-			Gamepad(DeviceIndex device_index=0, const DeadZone& deadzone={}, bool open_immediately=false);
+			Gamepad
+			(
+				DeviceIndex device_index=0,
+				bool event_based_button_down=false,
+				bool event_based_button_release=true,
+				const DeadZone& deadzone={},
+				bool open_immediately=false
+			);
+
 			~Gamepad();
 			
 			inline Gamepad(Gamepad&& gamepad) noexcept
@@ -99,6 +110,11 @@ namespace app::input
 			//const State& poll(entt::dispatcher* opt_event_handler = nullptr) override;
 			using InputDevice<GamepadState>::poll;
 		protected:
+			// Checks for differences between `next_state` and `prev_state`, generating button events appropriately.
+			// This is an alternative to generating events immediately, while handling SDL event types.
+			// The value returned indicates the number of buttons that have changed.
+			int handle_button_changes(entt::dispatcher& event_handler, const State& state, const State& prev_state) const;
+
 			bool process_button_event(const SDL_JoyButtonEvent& e, entt::dispatcher* opt_event_handler=nullptr);
 
 			// Enumerates button-based Hat descriptors, generating `OnGamepadAnalogInput` events appropriately.
