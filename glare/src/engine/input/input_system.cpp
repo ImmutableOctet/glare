@@ -38,11 +38,11 @@ namespace engine
 			return std::nullopt;
 		}
 
-		const auto hat_index = static_cast<NativeAnalogType>(analog_raw - runtime_offset);
+		const auto hat_as_analog = static_cast<NativeAnalogType>(analog_raw); // - runtime_offset
 
 		const auto& mapping = profile.analog_mapping;
 
-		auto hat_mapping_it = mapping.find(hat_index);
+		auto hat_mapping_it = mapping.find(hat_as_analog);
 		
 		if (hat_mapping_it == mapping.end())
 		{
@@ -130,10 +130,11 @@ namespace engine
 		service.register_event<OnServiceUpdate, &InputSystem::on_update>(*this);
 
 		// Mouse:
-		service.register_event<app::input::OnMouseButtonDown, &InputSystem::on_mouse_button_down>(*this);
-		service.register_event<app::input::OnMouseButtonUp,   &InputSystem::on_mouse_button_up>(*this);
-		service.register_event<app::input::OnMouseMove,       &InputSystem::on_mouse_move>(*this);
-		service.register_event<app::input::OnMouseScroll,     &InputSystem::on_mouse_scroll>(*this);
+		service.register_event<app::input::OnMouseButtonDown,         &InputSystem::on_mouse_button_down>(*this);
+		service.register_event<app::input::OnMouseButtonUp,           &InputSystem::on_mouse_button_up>(*this);
+		service.register_event<app::input::OnMouseMove,               &InputSystem::on_mouse_move>(*this);
+		service.register_event<app::input::OnMouseScroll,             &InputSystem::on_mouse_scroll>(*this);
+		service.register_event<app::input::OnMouseVirtualAnalogInput, &InputSystem::on_mouse_virtual_analog_input>(*this);
 
 		// Keyboard:
 		service.register_event<app::input::OnKeyboardButtonDown,  &InputSystem::on_keyboard_button_down>(*this);
@@ -491,7 +492,9 @@ namespace engine
 
 	std::optional<Analog> InputSystem::translate_analog(const KeyboardProfile& keyboard_profile, const KeyboardAnalogEvent& analog_event) const
 	{
-		// NOTE: Statically-defined analogs are not currently supported for `Keyboard` devices.
+		// NOTES:
+		// * Statically-defined analogs are not currently supported for `Keyboard` devices.
+		// * The `translate_hat_analog` function handles cases where `analog_event.analog` is not within the Hat-designated range/offset.
 		return translate_hat_analog<app::input::KeyboardMotion, app::input::KeyboardMotion::RuntimeAnalogOffset>(keyboard_profile, analog_event); // 0
 	}
 
@@ -565,6 +568,21 @@ namespace engine
 			{
 				return math::Vector2D { math::sign(event_data.wheel_x), math::sign(event_data.wheel_y) };
 			}
+		);
+	}
+
+	void InputSystem::on_mouse_virtual_analog_input(const app::input::OnMouseVirtualAnalogInput& data)
+	{
+		assert(data.analog >= app::input::MouseMotion::RuntimeAnalogOffset);
+
+		on_mouse_analog_input_impl
+		(
+			data, [this](const auto& mouse, const auto& profile, const auto& event_data, auto state_index, auto engine_analog)
+			{
+				return event_data.value;
+			},
+
+			true // false
 		);
 	}
 

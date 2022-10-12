@@ -94,7 +94,9 @@ namespace app::input
 	{
 		for (auto& gamepad : gamepads)
 		{
-			gamepad.poll(opt_event_handler);
+			auto* profile = get_profile(gamepad);
+
+			gamepad.poll(profile, opt_event_handler);
 		}
 	}
 
@@ -181,7 +183,7 @@ namespace app::input
 
 			if (is_open)
 			{
-				auto profile = get_profile(gamepad.get_device_name());
+				const auto* profile = get_profile(gamepad.get_device_name());
 
 				if (profile)
 				{
@@ -205,7 +207,7 @@ namespace app::input
 			return {};
 		}
 
-		auto it = device_profile_map.find(device_name);
+		const auto it = device_profile_map.find(device_name);
 
 		if (it != device_profile_map.end())
 		{
@@ -260,13 +262,35 @@ namespace app::input
 		return gamepad_count;
 	}
 
+	GamepadProfile* GamepadManager::get_profile(std::string_view device_name)
+	{
+		if (device_name.empty())
+		{
+			return {};
+		}
+
+		auto it = device_profile_map.find(device_name);
+
+		if (it != device_profile_map.end())
+		{
+			return it->second;
+		}
+
+		return {};
+	}
+
+	GamepadProfile* GamepadManager::get_profile(const Gamepad& gamepad)
+	{
+		return get_profile(gamepad.get_device_name_as_view());
+	}
+
 	const GamepadProfile* GamepadManager::map_device_to_profile(const std::string& device_name, const std::string& profile_name)
 	{
 		auto profile_it = profiles.find(profile_name);
 
 		if (profile_it != profiles.end())
 		{
-			const auto* profile = &profile_it->second;
+			auto* profile = &profile_it->second;
 
 			if (map_device_to_profile(device_name, profile))
 			{
@@ -277,7 +301,7 @@ namespace app::input
 		return nullptr;
 	}
 
-	bool GamepadManager::map_device_to_profile(const std::string& device_name, const GamepadProfile* profile)
+	bool GamepadManager::map_device_to_profile(const std::string& device_name, GamepadProfile* profile)
 	{
 		auto device_it = device_profile_map.find(device_name);
 

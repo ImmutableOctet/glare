@@ -2,6 +2,7 @@
 #include "events.hpp"
 #include "gamepad_analog.hpp"
 #include "gamepad_profile.hpp"
+#include "input_device_impl.hpp"
 
 #include <sdl2/SDL_joystick.h>
 
@@ -100,6 +101,25 @@ namespace app::input
 
 		return {};
 	}
+
+	const Gamepad::State& Gamepad::poll(GamepadProfile* profile, entt::dispatcher* opt_event_handler)
+	{
+		if ((opt_event_handler) && (profile))
+		{
+			handle_hat_event_detection(*opt_event_handler, *profile, next_state);
+		}
+
+		return poll(opt_event_handler);
+	}
+
+	/*
+	const Gamepad::State& Gamepad::poll(entt::dispatcher* opt_event_handler)
+	{
+		// No additional actions required.
+
+		return InputDevice<GamepadState>::poll(opt_event_handler);
+	}
+	*/
 
 	void Gamepad::peek(State& state) const
 	{
@@ -256,5 +276,34 @@ namespace app::input
 		}
 
 		return true;
+	}
+
+	// NOTE: This method is called automatically via the profile-enabled `poll` method.
+	// If this input device is used via a virtual call to `poll`, this routine will not execute as expected.
+	void Gamepad::handle_hat_event_detection(entt::dispatcher& event_handler, GamepadProfile& device_profile, State& state) const
+	{
+		handle_hat_event_detection_impl<GamepadAnalog>
+		(
+			device_profile, state,
+
+			// get_button_state:
+			[](const auto& state, const auto& button)
+			{
+				return state.get_button(button);
+			},
+
+			[this, &event_handler](const auto& state, const auto& analog, const auto& input_direction)
+			{
+				const auto& device_id = this->device_index;
+
+				event_handler.enqueue<OnGamepadAnalogInput>
+				(
+					device_id,
+					state,
+					analog,
+					input_direction
+				);
+			}
+		);
 	}
 }

@@ -59,7 +59,7 @@ namespace app::input
 
 			// Optional profile object, used to configure device-specific parameters,
 			// as well as handle button mappings for game engines, etc.
-			std::optional<MouseProfile> device_profile;
+			mutable std::optional<MouseProfile> device_profile;
 
 			bool get_button(MouseButton button) const;
 			void set_button(MouseButton button, bool value);
@@ -89,6 +89,9 @@ namespace app::input
 				entt::dispatcher& event_handler,
 				bool check_motion, bool check_buttons, bool check_wheel
 			) const;
+
+			// Enumerates button-based Hat descriptors, generating `OnMouseVirtualAnalogInput` events appropriately.
+			void handle_hat_event_detection(entt::dispatcher& event_handler, State& state, MouseDeviceIndex device_index=DEFAULT_MOUSE_DEVICE_INDEX) const;
 
 			void trigger_mouse_button_event
 			(

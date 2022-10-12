@@ -33,17 +33,29 @@
 				"FirstPerson":  "R3"
 			},
 
-			"analogs":
-			{
-				"Movement":    "Left",
-				"Camera":      "Right",
-				"Orientation": "Triggers",
-				"MenuSelect":  "DPad"
-			},
-
 			"virtual_buttons":
 			{
 				"Shield": "DPad.x<-0.5"
+			},
+
+			"hats":
+			[
+				{
+					"name": "face_buttons",
+
+					"up":    "Y",
+					"left":  "X",
+					"down":  "A",
+					"right": "B"
+				}
+			],
+
+			"analogs":
+			{
+				"Movement":    ["DPad", "Left"],
+				"Camera":      "Right",
+				"Orientation": "Triggers",
+				"MenuSelect":  "DPad"
 			},
 
 			"deadzones":

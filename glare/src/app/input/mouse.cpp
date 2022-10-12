@@ -1,8 +1,10 @@
 #include "mouse.hpp"
 #include "mouse_events.hpp"
+#include "mouse_motion.hpp"
 #include "profile_metadata.hpp"
 
 #include "input_profile_impl.hpp"
+#include "input_device_impl.hpp"
 
 #include <util/json.hpp>
 
@@ -130,6 +132,8 @@ namespace app::input
 				*opt_event_handler,
 				manual_motion, manual_buttons, manual_wheel
 			);
+
+			handle_hat_event_detection(*opt_event_handler, next_state);
 		}
 
 		return InputDevice<MouseState>::poll(opt_event_handler);
@@ -392,6 +396,36 @@ namespace app::input
 
 		// Notify the caller if a state change was detected.
 		return change_detected;
+	}
+
+	void Mouse::handle_hat_event_detection(entt::dispatcher& event_handler, State& state, MouseDeviceIndex device_index) const
+	{
+		if (!device_profile)
+		{
+			return;
+		}
+
+		handle_hat_event_detection_impl<MouseMotion>
+		(
+			*device_profile, state,
+
+			// get_button_state:
+			[](const auto& state, const auto& button)
+			{
+				return state.get_button(button);
+			},
+
+			[this, &event_handler, &device_index](const auto& state, const auto& analog, const auto& input_direction)
+			{
+				event_handler.enqueue<OnMouseVirtualAnalogInput>
+				(
+					device_index,
+					state,
+					analog,
+					input_direction
+				);
+			}
+		);
 	}
 
 	void Mouse::trigger_mouse_button_event

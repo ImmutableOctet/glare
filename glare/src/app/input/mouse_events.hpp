@@ -6,6 +6,8 @@
 #include "mouse_buttons.hpp"
 #include "mouse_motion.hpp"
 
+#include <math/types.hpp>
+
 namespace app::input
 {
 	// Mouse event types:
@@ -40,8 +42,15 @@ namespace app::input
 		int x, y;
 	};
 
+	// Triggered when the mouse's scroll wheel is used.
 	struct OnMouseScroll : public MouseAnalogEvent
 	{
 		int wheel_x, wheel_y;
+	};
+
+	// Triggered for virtual mouse analog inputs. (e.g. Hat simulation)
+	struct OnMouseVirtualAnalogInput : public MouseAnalogEvent
+	{
+		math::Vector2D value;
 	};
 }

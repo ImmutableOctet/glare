@@ -83,13 +83,19 @@ namespace app::input
 
 			int count_open_gamepads() const; // GamepadDeviceIndex
 		protected:
+			// Used internally by `poll`.
+			GamepadProfile* get_profile(std::string_view device_name);
+
+			// Used internally by `poll`.
+			GamepadProfile* get_profile(const Gamepad& gamepad);
+
 			// Maps a device (by name) to a profile (by name).
 			// This returns `nullptr` if a profile named `profile_name` could not be found.
 			const GamepadProfile* map_device_to_profile(const std::string& device_name, const std::string& profile_name);
 
 			// Maps devices named `device_name` to `profile`.
 			// This returns false if a mapping already exists.
-			bool map_device_to_profile(const std::string& device_name, const GamepadProfile* profile);
+			bool map_device_to_profile(const std::string& device_name, GamepadProfile* profile);
 
 			// Removes existing profile-mapping for `device_name`.
 			// If no mapping currently exists, this will return false.
@@ -102,7 +108,7 @@ namespace app::input
 			std::map<std::string, GamepadProfile, std::less<>> profiles; // unordered_map // std::hash<std::string>
 
 			// Maps device names to corresponding profile entries in `profiles`.
-			std::map<std::string, const GamepadProfile*, std::less<>> device_profile_map; // unordered_map // std::hash<std::string>
+			std::map<std::string, GamepadProfile*, std::less<>> device_profile_map; // unordered_map // std::hash<std::string> // const GamepadProfile*
 
 			// Container of gamepad instances. Indices generally correspond to their respective device IDs.
 			mutable std::vector<Gamepad> gamepads;

@@ -2,6 +2,7 @@
 
 #include "types.hpp"
 #include "virtual_button.hpp"
+#include "hat.hpp"
 
 #include <magic_enum/magic_enum.hpp>
 #include <util/json.hpp>
@@ -11,6 +12,8 @@
 #include <unordered_map>
 #include <string>
 #include <string_view>
+#include <vector>
+#include <optional>
 
 // TODO: Look for better RegEx alternative.
 #include <regex>
@@ -21,8 +24,11 @@ namespace app::input
 	template <typename NativeButtonType, typename NativeAnalogType>
 	struct InputProfile
 	{
-		using ButtonType = NativeButtonType;
-		using AnalogType = NativeAnalogType;
+		using ButtonType   = NativeButtonType;
+		using AnalogType   = NativeAnalogType;
+
+		using Hat          = Hat<NativeButtonType>;
+		using HatContainer = std::vector<Hat>; // util::small_vector<Hat, 4>;
 
 		using ButtonMapping        = std::unordered_map<NativeButtonType, EngineButtonsRaw>;
 		using AnalogMapping        = std::unordered_map<NativeAnalogType, EngineAnalogsRaw>;
@@ -31,12 +37,78 @@ namespace app::input
 
 		using VirtualButtonMapping = std::unordered_map<NativeAnalogType, VirtualButtonContainer>;
 
+		static constexpr AnalogType hat_index_to_analog_type(std::size_t hat_index)
+		{
+			return static_cast<AnalogType>
+			(
+				(hat_index)
+				+
+				static_cast<std::size_t> // May change this later.
+				(AnalogType::RuntimeAnalogOffset)
+			);
+		}
+
 		ButtonMapping button_mapping;
 		AnalogMapping analog_mapping;
 		VirtualButtonMapping virtual_button_mapping;
 
-		// TODO: Migrate 'Hat' functionality to this type.
+		HatContainer hat_descriptors; // std::unordered_map<std::string, Hat>
+
+		inline const HatContainer& get_hats() const { return hat_descriptors; }
+		inline HatContainer& get_hats() { return hat_descriptors; }
+		inline bool has_hats() const { return !hat_descriptors.empty(); }
+
+		// NOTE: This does not generate any kind of event.
+		inline void clear_hat_activity()
+		{
+			for (auto& hat : hat_descriptors)
+			{
+				hat.set_active(false);
+			}
+		}
 		
+		inline std::optional<std::size_t> get_hat_index(std::string_view hat_name) const
+		{
+			for (std::size_t i = 0; i < hat_descriptors.size(); i++)
+			{
+				const auto& hat = hat_descriptors[i];
+
+				if (hat.name == hat_name)
+				{
+					return i;
+				}
+			}
+
+			return std::nullopt;
+		}
+
+		inline std::optional<AnalogType> get_hat_index_as_analog(std::string_view hat_name) const
+		{
+			const auto hat_index = get_hat_index(hat_name);
+
+			if (hat_index)
+			{
+				return hat_index_to_analog_type(*hat_index);
+			}
+
+			return std::nullopt;
+		}
+
+		// Returns a temporary pointer to the first Hat descriptor found matching `hat_name`.
+		// If no match could be found, this returns `nullptr`.
+		inline const Hat* get_hat(std::string_view hat_name) const
+		{
+			for (const auto& hat : hat_descriptors)
+			{
+				if (hat.name == hat_name)
+				{
+					return &hat;
+				}
+			}
+
+			return nullptr;
+		}
+
 		/*
 			`resolve` must be a callable taking in an `std::string`, and
 			returning an `std::optional<InternalMappingType::value_type>`-like type.
@@ -146,12 +218,25 @@ namespace app::input
 
 		inline void read_analog_mapping(const EngineAnalogMap& analogs, const util::json& json)
 		{
-			translate_map<NativeAnalogType>(analog_mapping, analogs, json);
+			translate_map(analog_mapping, analogs, json, [this](const auto& element_name) -> std::optional<NativeAnalogType>
+			{
+				if (const auto analog = magic_enum::enum_cast<NativeAnalogType>(element_name))
+				{
+					return analog;
+				}
+
+				if (const auto hat_analog = get_hat_index_as_analog(element_name))
+				{
+					return hat_analog;
+				}
+
+				return std::nullopt;
+			});
 		}
 
 		// Reads 'virtual button' mappings (analog -> button construct) from a JSON object.
 		// TODO: Look into possible optimizations of `match[INDEX].str()` usage.
-		inline void read_virtual_button_mapping(const EngineButtonMap& buttons, const util::json& json)
+		inline void read_virtual_button_mapping(const EngineButtonMap& buttons, const util::json& json, bool check_hats=true) // check_hats=false
 		{
 			const auto virtual_button_rgx = std::regex("([\\w]+)(\\.([xyz\\|]+))?(([\\>|\\<|\\|])?([\\+\\-\\d\\.]+)?)");
 			std::smatch rgx_match;
@@ -162,14 +247,27 @@ namespace app::input
 				buttons, json,
 				
 				// Resolve:
-				[&virtual_button_rgx, &rgx_match](const auto& device_element) -> std::optional<NativeAnalogType>
+				[this, &virtual_button_rgx, &rgx_match, &check_hats](const auto& device_element) -> std::optional<NativeAnalogType>
 				{
 					if (std::regex_search(device_element.begin(), device_element.end(), rgx_match, virtual_button_rgx))
 					{
 						// TODO: Look into possible optimizations.
 						const auto& element_name = rgx_match[1].str();
 
-						return magic_enum::enum_cast<NativeAnalogType>(element_name);
+						if (const auto result = magic_enum::enum_cast<NativeAnalogType>(element_name))
+						{
+							return result;
+						}
+
+						if (check_hats)
+						{
+							if (const auto hat_analog = get_hat_index_as_analog(element_name))
+							{
+								return hat_analog;
+							}
+						}
+
+						return std::nullopt;
 					}
 
 					return std::nullopt;
@@ -195,12 +293,10 @@ namespace app::input
 
 						for (const auto& axis_symbol : axis_str)
 						{
-							const auto axis_symbol_value = magic_enum::enum_cast<VirtualButton::Axis>
-							(
-								// NOTE: Raw character values are interpreted as integral and therefore need to
-								// be wrapped in an `std::string_view` for `magic_enum` to read them.
-								std::string_view { &axis_symbol, 1 }
-							);
+							// NOTE: Raw character values are interpreted as integral and therefore need to
+							// be wrapped in an `std::string_view` for `magic_enum` to read them.
+							const auto axis_symbol_view = std::string_view { &axis_symbol, 1 };
+							const auto axis_symbol_value = magic_enum::enum_cast<VirtualButton::Axis>(axis_symbol_view);
 
 							if (!axis_symbol_value)
 							{
@@ -251,6 +347,23 @@ namespace app::input
 					);
 				}
 			);
+		}
+
+		inline void read_hat_descriptors(const util::json& json)
+		{
+			for (const auto& proxy : json.items())
+			{
+				const auto& hat_entry = proxy.value();
+
+				auto hat_name = hat_entry["name"].get<std::string>();
+
+				if (hat_name.empty())
+				{
+					continue;
+				}
+
+				hat_descriptors.emplace_back(hat_entry, hat_name);
+			}
 		}
 	};
 }

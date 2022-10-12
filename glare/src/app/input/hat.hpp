@@ -21,13 +21,15 @@ namespace app::input
 		using Button = ButtonType;
 
 		// URDL layout (meant to mimic SDL):
-		Button up;
-		Button right;
-		Button down;
-		Button left;
+		std::optional<Button> up;
+		std::optional<Button> right;
+		std::optional<Button> down;
+		std::optional<Button> left;
 
 		// Name of this hat object. (optional)
 		std::string name;
+
+		bool is_active : 1 = false;
 
 		Hat(const Hat&) = default;
 		Hat(Hat&&) noexcept = default;
@@ -37,7 +39,7 @@ namespace app::input
 
 		//Hat() {}
 
-		Hat(Button up, Button right, Button down, Button left, const std::string& name={})
+		Hat(std::optional<Button> up, std::optional<Button> right, std::optional<Button> down, std::optional<Button> left, const std::string& name={})
 			: up(up), right(right), down(down), left(left), name(name) {}
 
 		Hat(const util::json& data, const std::string& name, bool load_name)
@@ -49,18 +51,38 @@ namespace app::input
 		Hat(const util::json& data, const std::string& name={})
 			: Hat(data, name, name.empty()) {}
 
-		void load_button(const util::json& data, Button& button, std::string_view button_name)
+		void load_button(const util::json& data, std::optional<Button>& button, std::string_view button_name)
 		{
+			const auto button_data_it = data.find(std::string(button_name));
+
+			if (button_data_it == data.end())
+			{
+				return;
+			}
+
 			// TODO: Optimize via heterogeneous lookup...?
-			auto raw_value = data[std::string(button_name)].get<std::string>();
-			auto binding   = magic_enum::enum_cast<ButtonType>(raw_value);
+			const auto& button_data = *button_data_it;
+
+			if (button_data.empty())
+			{
+				return;
+			}
+
+			auto raw_value = button_data.get<std::string>();
+
+			if (raw_value.empty())
+			{
+				return;
+			}
+
+			auto binding = magic_enum::enum_cast<ButtonType>(raw_value);
 
 			if (!binding)
 			{
 				throw std::runtime_error(format("Unable to resolve binding for Hat button: \"{}\"", button_name));
 			}
 
-			button = *binding;
+			button = *binding; // binding;
 		}
 
 		void load(const util::json& data, bool load_name=true)
@@ -74,6 +96,16 @@ namespace app::input
 			{
 				name = data["name"].get<std::string>();
 			}
+		}
+
+		void set_active(bool value)
+		{
+			is_active = value;
+		}
+
+		bool get_active() const
+		{
+			return is_active;
 		}
 	};
 }

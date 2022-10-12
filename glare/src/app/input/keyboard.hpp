@@ -30,7 +30,7 @@ namespace app::input
 			bool handle_manual_event_detection(entt::dispatcher& event_handler, bool check_buttons) const;
 
 			// Enumerates key-based Hat descriptors, generating `OnKeyboardAnalogInput` events appropriately.
-			void handle_hat_event_detection(entt::dispatcher& event_handler, State& state, KeyboardDeviceIndex device_index=DEFAULT_KEYBOARD_DEVICE_INDEX);
+			void handle_hat_event_detection(entt::dispatcher& event_handler, State& state, KeyboardDeviceIndex device_index=DEFAULT_KEYBOARD_DEVICE_INDEX) const;
 
 			std::string get_device_name() const;
 			std::string_view peek_device_name() const;
@@ -64,7 +64,7 @@ namespace app::input
 
 			// Optional profile object, used to configure device-specific parameters,
 			// as well as handle button mappings for game engines, etc.
-			std::optional<KeyboardProfile> device_profile;
+			mutable std::optional<KeyboardProfile> device_profile;
 
 			// Mutable due to interface for `peek`.
 			mutable State next_state;

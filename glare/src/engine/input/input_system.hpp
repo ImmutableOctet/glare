@@ -22,6 +22,7 @@ namespace app::input
 	struct OnMouseButtonUp;
 	struct OnMouseMove;
 	struct OnMouseScroll;
+	struct OnMouseVirtualAnalogInput;
 
 	// Keyboard events:
 	struct KeyboardStateEvent;
@@ -152,6 +153,7 @@ namespace engine
 			void on_mouse_button_up(const app::input::OnMouseButtonUp& data);
 			void on_mouse_move(const app::input::OnMouseMove& data);
 			void on_mouse_scroll(const app::input::OnMouseScroll& data);
+			void on_mouse_virtual_analog_input(const app::input::OnMouseVirtualAnalogInput& data);
 
 			// Keyboard events:
 			void on_keyboard_button_down(const app::input::OnKeyboardButtonDown& data);
@@ -243,7 +245,7 @@ namespace engine
 			}
 
 			template <typename MouseAnalogEventType, typename Callback>
-			std::optional<StateIndex> on_mouse_analog_input_impl(const MouseAnalogEventType& data, Callback&& callback)
+			std::optional<StateIndex> on_mouse_analog_input_impl(const MouseAnalogEventType& data, Callback&& callback, bool check_virtual_buttons=true)
 			{
 				if (!is_supported_event(data))
 				{
@@ -276,7 +278,10 @@ namespace engine
 
 				on_analog_input(mouse, *state_index, *engine_analog, value);
 
-				handle_virtual_button_simulation(mouse, *state_index, *profile, data, value);
+				if (check_virtual_buttons)
+				{
+					handle_virtual_button_simulation(mouse, *state_index, *profile, data, value);
+				}
 
 				return state_index;
 			}
