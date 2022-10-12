@@ -75,7 +75,6 @@ namespace glare
 
 		// TODO: Look into this again.
 		world.register_event<app::input::KeyboardState, &Glare::on_user_keyboard_input>(*this);
-		world.register_event<app::input::MouseState, &Glare::on_user_mouse_input>(*this);
 
 		world.load("assets/maps/test01");
 		//world.load("assets/maps/story/2.ice-world/ice-connector");
@@ -358,14 +357,6 @@ namespace glare
 			const auto& dt = world.get_delta_time();
 
 			t.rotate({ 0.0f, 0.01 * dt, 0.0f });
-		}
-	}
-
-	void Glare::on_user_mouse_input(const app::input::MouseState& mouse)
-	{
-		if (mouse.left)
-		{
-			print("Hello world");
 		}
 	}
 
