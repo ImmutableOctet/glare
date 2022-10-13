@@ -79,14 +79,9 @@ namespace game
 	{
 		auto& mouse = input.get_mouse();
 
-		// Currently based on mouse's lock-status.
-		// (May change this in the future)
-		if (mouse.locked())
-		{
-			auto& event_handler = world.get_active_event_handler();
-			
-			input.poll(&event_handler);
-		}
+		auto& event_handler = world.get_active_event_handler();
+
+		input.poll(&event_handler);
 
 		world.update(time);
 

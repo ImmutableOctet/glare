@@ -23,7 +23,7 @@ namespace app::input
 	{
 		public:
 			using State = T;
-		public:
+			
 			InputDevice() = default;
 			InputDevice(State&& state) noexcept : state(std::move(state)) {}
 			InputDevice(const State& state) : state(state) {}
@@ -75,8 +75,7 @@ namespace app::input
 
 				if (opt_event_handler)
 				{
-					// Post the input state to the event-handler.
-					opt_event_handler->enqueue(this->state);
+					submit_state(*opt_event_handler, this->state);
 				}
 
 				// Perform any flush operations required by the device.
@@ -86,8 +85,13 @@ namespace app::input
 				return this->state;
 			}
 
+		protected:
+			virtual void submit_state(entt::dispatcher& event_handler, const State& state) // const
+			{
+				// Post the input state to the event-handler.
+				event_handler.enqueue(state);
+			}
 		private:
-		//protected:
 			/*
 				A snapshot of this device's state at a given point in time.
 				This is updated periodically via the `poll` command.
