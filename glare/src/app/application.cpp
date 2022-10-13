@@ -165,7 +165,6 @@ namespace app
 
 	bool Application::process_event(const SDL_Event& e)
 	{
-		// TODO: Implement method of passing an event-handler object to `input.process_event`.
 		if (input.process_event(e, get_event_handler()))
 		{
 			return true;

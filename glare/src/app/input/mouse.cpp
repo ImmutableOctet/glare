@@ -124,18 +124,15 @@ namespace app::input
 
 		poll_next_state(manual_motion, manual_buttons, manual_wheel, false);
 
-		if (advertise())
+		if (opt_event_handler)
 		{
-			if (opt_event_handler)
-			{
-				handle_manual_event_detection
-				(
-					*opt_event_handler,
-					manual_motion, manual_buttons, manual_wheel
-				);
+			handle_manual_event_detection
+			(
+				*opt_event_handler,
+				manual_motion, manual_buttons, manual_wheel
+			);
 
-				handle_hat_event_detection(*opt_event_handler, next_state);
-			}
+			handle_hat_event_detection(*opt_event_handler, next_state);
 		}
 
 		return InputDevice<MouseState>::poll(opt_event_handler);
@@ -284,16 +281,6 @@ namespace app::input
 
 				break;
 		}
-	}
-
-	void Mouse::submit_state(entt::dispatcher& event_handler, const State& state)
-	{
-		if (!advertise())
-		{
-			return;
-		}
-
-		InputDevice<MouseState>::submit_state(event_handler, state);
 	}
 
 	Mouse::State& Mouse::poll_next_state

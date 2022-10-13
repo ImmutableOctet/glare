@@ -33,7 +33,7 @@ namespace game
 	Game::Game
 	(
 		std::string_view title, int width, int height,
-		UpdateRate update_rate, bool vsync, bool lock_mouse,
+		UpdateRate update_rate, bool vsync, bool input_lock_status,
 		app::WindowFlags window_flags,
 		bool imgui_enabled,
 
@@ -57,10 +57,7 @@ namespace game
 			std::move(rendering_pipeline)
 		)
 	{
-		if (lock_mouse)
-		{
-			input.get_mouse().lock();
-		}
+		set_input_lock(input_lock_status);
 
 		init_default_systems((!renderer));
 	}
@@ -73,6 +70,40 @@ namespace game
 		}
 
 		window->set_title(title);
+	}
+
+	void Game::lock_input()
+	{
+		input.get_mouse().lock();
+		input.set_event_status(true);
+	}
+
+	void Game::unlock_input()
+	{
+		input.get_mouse().unlock();
+		input.set_event_status(false);
+	}
+
+	void Game::set_input_lock(bool value)
+	{
+		if (value)
+		{
+			lock_input();
+		}
+		else
+		{
+			unlock_input();
+		}
+	}
+
+	void Game::toggle_input_lock()
+	{
+		set_input_lock(!is_input_locked());
+	}
+
+	bool Game::is_input_locked() const
+	{
+		return input.get_event_status();
 	}
 
 	void Game::update(app::Milliseconds time)

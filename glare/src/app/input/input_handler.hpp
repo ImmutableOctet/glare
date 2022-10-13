@@ -20,9 +20,10 @@ namespace app::input
 
 			// Mapping of device names to their corresponding player identifiers.
 			PlayerDeviceMap player_device_names;
+
+			bool events_enabled : 1 = true;
 		public:
-			InputHandler() = default;
-			InputHandler(EngineButtonMap&& button_name_to_value);
+			InputHandler(bool events_enabled=true);
 
 			//InputHandler(const InputHandler&) = default;
 			//InputHandler(InputHandler&&) noexcept = default;
@@ -52,13 +53,18 @@ namespace app::input
 			// (Useful for population during a configuration loading routine, etc.)
 			inline PlayerDeviceMap& get_player_device_map() { return player_device_names; }
 
+			// Determines if event-handlers (where present) are utilized.
+			void set_event_status(bool value);
+
+			// Indicates whether events can be generated.
+			bool get_event_status() const;
+
 			// Simple forwarding overload for `InputDevices::process_event`.
-			inline bool process_event(const SDL_Event& e, entt::dispatcher* opt_event_handler=nullptr)
-			{
-				return devices.process_event(e, opt_event_handler);
-			}
+			bool process_event(const SDL_Event& e, entt::dispatcher* opt_event_handler=nullptr);
 
 			// Polls input on all device types.
 			const InputDevices& poll(engine::EventHandler* opt_event_handler);
+		private:
+			const InputDevices& poll_impl(engine::EventHandler* opt_event_handler);
 	};
 }

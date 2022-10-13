@@ -63,8 +63,6 @@ namespace app::input
 			bool get_button(MouseButton button) const;
 			void set_button(MouseButton button, bool value);
 
-			void submit_state(entt::dispatcher& event_handler, const State& state) override;
-
 			/*
 				Manually updates (polls) `next_state` for the elements requested.
 				This is called automatically during `peek` if any of the 'event' flags is set to false.
@@ -116,8 +114,6 @@ namespace app::input
 				MouseDeviceIndex device_index=DEFAULT_MOUSE_DEVICE_INDEX
 			) const;
 		private:
-			inline bool advertise() const { return locked(); }
-
 			bool is_locked                   : 1 = false;
 			bool event_motion                : 1 = false;
 			bool event_buttons               : 1 = false;

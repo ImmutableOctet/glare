@@ -410,8 +410,7 @@ namespace glare
 
 		if (ImGui::Button("Switch to Game"))
 		{
-			auto& mouse = input.get_mouse();
-			mouse.toggle_lock();
+			toggle_input_lock();
 		}
 
 		auto& io = ImGui::GetIO();
@@ -431,9 +430,7 @@ namespace glare
 			break;
 		case SDLK_TAB:
 		{
-			auto& mouse = input.get_mouse();
-
-			mouse.toggle_lock();
+			toggle_input_lock();
 
 			break;
 		}
