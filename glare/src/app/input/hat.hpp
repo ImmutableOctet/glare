@@ -5,7 +5,7 @@
 #include <util/json.hpp>
 #include <util/format.hpp>
 
-#include <magic_enum/magic_enum.hpp>
+#include <util/magic_enum.hpp>
 
 #include <string>
 #include <string_view>

@@ -8,7 +8,7 @@
 
 #include <util/json.hpp>
 
-#include <magic_enum/magic_enum.hpp>
+#include <util/magic_enum.hpp>
 
 // SDL:
 #include <sdl2/SDL_hints.h>

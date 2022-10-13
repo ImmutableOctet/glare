@@ -459,6 +459,7 @@ xcopy "$(ProjectDir)config" "$(TargetDir)config" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\util\json.hpp" />
     <ClInclude Include="src\util\lib.hpp" />
     <ClInclude Include="src\util\log.hpp" />
+    <ClInclude Include="src\util\magic_enum.hpp" />
     <ClInclude Include="src\util\map.hpp" />
     <ClInclude Include="src\util\memory.hpp" />
     <ClInclude Include="src\util\optional.hpp" />

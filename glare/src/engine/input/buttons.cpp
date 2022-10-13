@@ -1,6 +1,6 @@
 #include "buttons.hpp"
 
-#include <magic_enum/magic_enum.hpp>
+#include <util/magic_enum.hpp>
 
 namespace engine
 {

@@ -6,7 +6,7 @@
 
 #include <math/types.hpp>
 
-#include <magic_enum/magic_enum.hpp>
+#include <util/magic_enum.hpp>
 #include <optional>
 
 namespace app::input

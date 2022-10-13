@@ -8,7 +8,7 @@
 #include <math/math.hpp>
 
 #include <sdl2/SDL_joystick.h>
-#include <magic_enum/magic_enum.hpp>
+#include <util/magic_enum.hpp>
 
 #include <optional>
 

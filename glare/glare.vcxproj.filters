@@ -424,6 +424,7 @@
     <ClInclude Include="src\app\input\virtual_button.hpp" />
     <ClInclude Include="src\util\small_vector.hpp" />
     <ClInclude Include="src\app\input\input_device_impl.hpp" />
+    <ClInclude Include="src\util\magic_enum.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />

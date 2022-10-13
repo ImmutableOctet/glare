@@ -4,7 +4,7 @@
 #include "virtual_button.hpp"
 #include "hat.hpp"
 
-#include <magic_enum/magic_enum.hpp>
+#include <util/magic_enum.hpp>
 #include <util/json.hpp>
 #include <util/string.hpp>
 #include <util/small_vector.hpp>

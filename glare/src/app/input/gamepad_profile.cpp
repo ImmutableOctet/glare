@@ -7,7 +7,7 @@
 
 #include "input_profile_impl.hpp"
 
-#include <magic_enum/magic_enum.hpp>
+#include <util/magic_enum.hpp>
 
 #include <cmath>
 
