@@ -1,12 +1,14 @@
 #pragma once
 
 #include "format.hpp"
+#include "magic_enum.hpp"
 
 // Module format headers:
 #include <engine/format.hpp>
 #include <math/format.hpp>
 
 #include <memory>
+//#include <type_traits>
 
 #include <spdlog/spdlog.h>
 
@@ -62,8 +64,24 @@ namespace util
 
             return console;
         }
+
+        template <typename EnumType>
+        inline void print_enum_values()
+        {
+            magic_enum::enum_for_each<EnumType>([](EnumType value)
+            {
+                print
+                (
+                    "{}: {}",
+
+                    magic_enum::enum_name<EnumType>(value),
+                    magic_enum::enum_integer<EnumType>(value) // static_cast<std::underlying_type<EnumType>>(value)
+                );
+            });
+        }
 	}
 }
 
 using util::log::print;
 using util::log::print_warn;
+using util::log::print_enum_values;
