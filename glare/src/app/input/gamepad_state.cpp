@@ -36,6 +36,34 @@ namespace app::input
 		return (buttons.bits & (static_cast<GamepadButtonsRaw>(1) << static_cast<GamepadButtonsRaw>(index)));
 	}
 
+	GamepadState::ButtonBit GamepadState::get_dpad_button(DPad_Direction direction) const
+	{
+		using enum DPad_Direction;
+
+		switch (direction)
+		{
+			case Up:
+				return ButtonBit::UP;
+			case Right:
+				return ButtonBit::RIGHT;
+			case Down:
+				return ButtonBit::DOWN;
+			case Left:
+				return ButtonBit::LEFT;
+		}
+
+		// This should not happen; invalid directional input.
+		assert(false);
+
+		// If nothing else, return the `UP` button.
+		return ButtonBit::UP;
+	}
+
+	bool GamepadState::get_dpad(DPad_Direction direction) const
+	{
+		return get_button(get_dpad_button(direction));
+	}
+
 	std::optional<GamepadState::Vector> GamepadState::get_analog(GamepadAnalog analog) const
 	{
 		using enum GamepadAnalog;
