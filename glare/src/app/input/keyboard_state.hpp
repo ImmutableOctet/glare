@@ -6,9 +6,10 @@
 
 #include <util/memory.hpp>
 
+#include <span>
 #include <array>
 #include <bitset>
-#include <span>
+#include <optional>
 
 namespace app::input
 {
@@ -104,6 +105,16 @@ namespace app::input
 
 			// Checks if the `key` specified is currently being held/pressed.
 			bool get_key(KeyboardButton key) const;
+
+			inline bool get_key(std::optional<KeyboardButton> opt_key) const
+			{
+				if (!opt_key)
+				{
+					return false;
+				}
+
+				return get_key(*opt_key);
+			}
 
 			// Checks if the `key` (raw value) specified is currently being held/pressed.
 			bool get_key(SizeType scan_code_idx) const;

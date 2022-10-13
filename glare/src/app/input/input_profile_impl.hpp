@@ -109,9 +109,19 @@ namespace app::input
 				self.read_button_mapping(profile_metadata.buttons, *button_data);
 			}
 
+			if (const auto hat_data = json.find("hats"); hat_data != json.end())
+			{
+				self.read_hat_descriptors(*hat_data);
+			}
+
 			if (const auto analog_data = json.find("analogs"); analog_data != json.end())
 			{
 				self.read_analog_mapping(profile_metadata.analogs, *analog_data);
+			}
+
+			if (const auto virtual_button_data = json.find("virtual_buttons"); virtual_button_data != json.end())
+			{
+				self.read_virtual_button_mapping(profile_metadata.buttons, *virtual_button_data);
 			}
 		}
 	}

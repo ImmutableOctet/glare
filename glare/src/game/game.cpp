@@ -33,7 +33,7 @@ namespace game
 	Game::Game
 	(
 		std::string_view title, int width, int height,
-		UpdateRate update_rate, bool vsync, bool lock_mouse,
+		UpdateRate update_rate, bool vsync, bool input_lock_status,
 		app::WindowFlags window_flags,
 		bool imgui_enabled,
 
@@ -57,10 +57,7 @@ namespace game
 			std::move(rendering_pipeline)
 		)
 	{
-		if (lock_mouse)
-		{
-			input.get_mouse().lock();
-		}
+		set_input_lock(input_lock_status);
 
 		init_default_systems((!renderer));
 	}
@@ -75,18 +72,47 @@ namespace game
 		window->set_title(title);
 	}
 
+	void Game::lock_input()
+	{
+		input.get_mouse().lock();
+		input.set_lock_status(true);
+	}
+
+	void Game::unlock_input()
+	{
+		input.get_mouse().unlock();
+		input.set_lock_status(false);
+	}
+
+	void Game::set_input_lock(bool value)
+	{
+		if (value)
+		{
+			lock_input();
+		}
+		else
+		{
+			unlock_input();
+		}
+	}
+
+	void Game::toggle_input_lock()
+	{
+		set_input_lock(!is_input_locked());
+	}
+
+	bool Game::is_input_locked() const
+	{
+		return input.get_lock_status();
+	}
+
 	void Game::update(app::Milliseconds time)
 	{
 		auto& mouse = input.get_mouse();
 
-		// Currently based on mouse's lock-status.
-		// (May change this in the future)
-		if (mouse.locked())
-		{
-			auto& event_handler = world.get_active_event_handler();
-			
-			input.poll(&event_handler);
-		}
+		auto& event_handler = world.get_active_event_handler();
+
+		input.poll(&event_handler);
 
 		world.update(time);
 
@@ -157,18 +183,18 @@ namespace game
 
 	void Game::load_input_profiles(engine::InputSystem& input_system, app::input::InputHandler& input_handler)
 	{
-		auto& gamepads = input_handler.get_gamepads();
+		auto& keyboard = input_handler.get_keyboard();
 
-		gamepads.load_profiles
+		keyboard.load_profile
 		(
 			{
 				// Path:
-				.path = std::filesystem::path("config/input/gamepads.json"),
-				
+				.path = std::filesystem::path("config/input/keyboard.json"),
+
 				// Input:
 				.buttons = input_handler.get_buttons(),
 				.analogs = input_handler.get_analogs(),
-				
+
 				// Output:
 				.player_mappings_out = input_handler.get_player_device_map()
 			}
@@ -191,13 +217,13 @@ namespace game
 			}
 		);
 
-		auto& keyboard = input_handler.get_keyboard();
+		auto& gamepads = input_handler.get_gamepads();
 
-		keyboard.load_profile
+		gamepads.load_profiles
 		(
 			{
 				// Path:
-				.path = std::filesystem::path("config/input/keyboard.json"),
+				.path = std::filesystem::path("config/input/gamepads.json"),
 
 				// Input:
 				.buttons = input_handler.get_buttons(),

@@ -33,9 +33,22 @@ namespace app::input
 			SDL_Joystick* handle;
 
 			State next_state;
+
+			bool event_based_button_down    : 1 = false;
+			bool event_based_button_release : 1 = true;
+			bool continuous_analog_input    : 1 = true;
 		public:
-			// NOTE: `Gamepad` objects are not open immediately by default.
-			Gamepad(DeviceIndex device_index=0, const DeadZone& deadzone={}, bool open_immediately=false);
+			// NOTE: `Gamepad` objects are not immediately open by default.
+			Gamepad
+			(
+				DeviceIndex device_index=0,
+				bool event_based_button_down=false,
+				bool event_based_button_release=true,
+				bool continuous_analog_input=true,
+				const DeadZone& deadzone={},
+				bool open_immediately=false
+			);
+
 			~Gamepad();
 			
 			inline Gamepad(Gamepad&& gamepad) noexcept
@@ -92,9 +105,24 @@ namespace app::input
 				return get_device_name_as_view();
 			}
 
+			virtual const State& poll(GamepadProfile* profile=nullptr, entt::dispatcher* opt_event_handler=nullptr);
 			virtual void peek(State& state) const override;
 			virtual bool process_event(const SDL_Event& e, entt::dispatcher* opt_event_handler=nullptr) override;
+		private:
+			//const State& poll(entt::dispatcher* opt_event_handler = nullptr) override;
+			using InputDevice<GamepadState>::poll;
 		protected:
+			// Checks for differences between `next_state` and `prev_state`, generating button events appropriately.
+			// This is an alternative to generating events immediately, while handling SDL event types.
+			// The value returned indicates the number of buttons that have changed.
+			int handle_button_changes(entt::dispatcher& event_handler, const State& state, const State& prev_state) const;
+
+			// Handles analog event generation for continuous inputs.
+			void handle_analog_events(entt::dispatcher& event_handler, const GamepadProfile& profile, const State& state, const State& prev_state) const;
+
 			bool process_button_event(const SDL_JoyButtonEvent& e, entt::dispatcher* opt_event_handler=nullptr);
+
+			// Enumerates button-based Hat descriptors, generating `OnGamepadAnalogInput` events appropriately.
+			void handle_hat_event_detection(entt::dispatcher& event_handler, GamepadProfile& device_profile, State& state) const;
 	};
 }

@@ -18,6 +18,18 @@ namespace util
         return lowercase(std::string(str));
     }
 
+    std::string uppercase(std::string str)
+    {
+        std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) { return std::toupper(c); });
+
+        return str;
+    }
+
+    std::string uppercase(std::string_view str)
+    {
+        return uppercase(std::string(str));
+    }
+
     std::smatch get_regex_groups(const std::string& s, const std::regex& re)
     {
         if (std::regex_match(s, re))

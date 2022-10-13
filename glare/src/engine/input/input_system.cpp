@@ -11,6 +11,7 @@
 #include <app/input/gamepad_buttons.hpp>
 #include <app/input/gamepad_profile.hpp>
 #include <app/input/keyboard_motion.hpp>
+#include <app/input/virtual_button.hpp>
 
 #include <game/screen.hpp>
 
@@ -37,11 +38,11 @@ namespace engine
 			return std::nullopt;
 		}
 
-		const auto hat_index = static_cast<NativeAnalogType>(analog_raw - runtime_offset);
+		const auto hat_as_analog = static_cast<NativeAnalogType>(analog_raw); // - runtime_offset
 
 		const auto& mapping = profile.analog_mapping;
 
-		auto hat_mapping_it = mapping.find(hat_index);
+		auto hat_mapping_it = mapping.find(hat_as_analog);
 		
 		if (hat_mapping_it == mapping.end())
 		{
@@ -49,6 +50,47 @@ namespace engine
 		}
 
 		return static_cast<Analog>(hat_mapping_it->second);
+	}
+
+	// Implementation of threshold detection for virtual buttons.
+	template <typename ProfileType, typename AnalogEventType>
+	static void handle_virtual_button_simulation_impl
+	(
+		InputSystem& input_system,
+		InputSource source, InputSystem::StateIndex state_index,
+		const ProfileType& profile, const AnalogEventType& event_data, const math::Vector2D& value
+	)
+	{
+		const auto& virtual_button_mapping = profile.virtual_button_mapping;
+		const auto& analog = event_data.analog;
+
+		const auto vb_it = virtual_button_mapping.find(analog);
+
+		if (vb_it == virtual_button_mapping.end())
+		{
+			return;
+		}
+
+		const auto& virtual_buttons = vb_it->second;
+
+		for (const auto& virtual_button : virtual_buttons)
+		{
+			const auto button = static_cast<Button>(virtual_button.engine_button);
+
+			if (virtual_button.is_down(value))
+			{
+				input_system.on_button_down(source, state_index, button);
+			}
+			else
+			{
+				const auto& state = input_system.peek_state_data(state_index);
+
+				if (state.previous.held.get_button(button))
+				{
+					input_system.on_button_up(source, state_index, button);
+				}
+			}
+		}
 	}
 
 	math::Vector2D InputSystem::mouse_motion_to_analog_input(int mouse_x, int mouse_y, float mouse_sensitivity, int screen_width, int screen_height)
@@ -88,10 +130,11 @@ namespace engine
 		service.register_event<OnServiceUpdate, &InputSystem::on_update>(*this);
 
 		// Mouse:
-		service.register_event<app::input::OnMouseButtonDown, &InputSystem::on_mouse_button_down>(*this);
-		service.register_event<app::input::OnMouseButtonUp,   &InputSystem::on_mouse_button_up>(*this);
-		service.register_event<app::input::OnMouseMove,       &InputSystem::on_mouse_move>(*this);
-		service.register_event<app::input::OnMouseScroll,     &InputSystem::on_mouse_scroll>(*this);
+		service.register_event<app::input::OnMouseButtonDown,         &InputSystem::on_mouse_button_down>(*this);
+		service.register_event<app::input::OnMouseButtonUp,           &InputSystem::on_mouse_button_up>(*this);
+		service.register_event<app::input::OnMouseMove,               &InputSystem::on_mouse_move>(*this);
+		service.register_event<app::input::OnMouseScroll,             &InputSystem::on_mouse_scroll>(*this);
+		service.register_event<app::input::OnMouseVirtualAnalogInput, &InputSystem::on_mouse_virtual_analog_input>(*this);
 
 		// Keyboard:
 		service.register_event<app::input::OnKeyboardButtonDown,  &InputSystem::on_keyboard_button_down>(*this);
@@ -176,6 +219,24 @@ namespace engine
 		handle_gamepad_mappings(gamepad, opt_state_index);
 	}
 
+	void InputSystem::handle_virtual_button_simulation
+	(
+		InputSource source, StateIndex state_index, const MouseProfile& profile,
+		const MouseAnalogEvent& event_data, const math::Vector2D& value
+	)
+	{
+		handle_virtual_button_simulation_impl(*this, source, state_index, profile, event_data, value);
+	}
+
+	void InputSystem::handle_virtual_button_simulation
+	(
+		InputSource source, StateIndex state_index, const GamepadProfile& profile,
+		const GamepadAnalogEvent& event_data, const math::Vector2D& value
+	)
+	{
+		handle_virtual_button_simulation_impl(*this, source, state_index, profile, event_data, value);
+	}
+
 	void InputSystem::on_start_listening(StateIndex state_index, StateData& state)
 	{
 		const auto& gamepads = input_handler.get_gamepads();
@@ -216,7 +277,7 @@ namespace engine
 
 	void InputSystem::on_update(const OnServiceUpdate& data)
 	{
-		if (allowed_service(*data.service))
+		if (!allowed_service(*data.service))
 		{
 			return;
 		}
@@ -242,6 +303,8 @@ namespace engine
 				// Reset the 'state changed' flag.
 				state_data.state_has_changed = false;
 			}
+
+			//print("MOVE: {}", state_data.next.directional_input.movement);
 
 			// Must increment; `continue` not allowed.
 			index++;
@@ -431,7 +494,9 @@ namespace engine
 
 	std::optional<Analog> InputSystem::translate_analog(const KeyboardProfile& keyboard_profile, const KeyboardAnalogEvent& analog_event) const
 	{
-		// NOTE: Statically-defined analogs are not currently supported for `Keyboard` devices.
+		// NOTES:
+		// * Statically-defined analogs are not currently supported for `Keyboard` devices.
+		// * The `translate_hat_analog` function handles cases where `analog_event.analog` is not within the Hat-designated range/offset.
 		return translate_hat_analog<app::input::KeyboardMotion, app::input::KeyboardMotion::RuntimeAnalogOffset>(keyboard_profile, analog_event); // 0
 	}
 
@@ -505,6 +570,21 @@ namespace engine
 			{
 				return math::Vector2D { math::sign(event_data.wheel_x), math::sign(event_data.wheel_y) };
 			}
+		);
+	}
+
+	void InputSystem::on_mouse_virtual_analog_input(const app::input::OnMouseVirtualAnalogInput& data)
+	{
+		assert(data.analog >= app::input::MouseMotion::RuntimeAnalogOffset);
+
+		on_mouse_analog_input_impl
+		(
+			data, [this](const auto& mouse, const auto& profile, const auto& event_data, auto state_index, auto engine_analog)
+			{
+				return event_data.value;
+			},
+
+			true // false
 		);
 	}
 
@@ -622,11 +702,25 @@ namespace engine
 		const auto& gamepad_id = data.device_index;
 		auto& gamepad = gamepads.get_gamepad(gamepad_id);
 
-		if (auto analog = translate_analog(gamepad, data))
+		const auto* profile = gamepads.get_profile(gamepad_id);
+
+		if (!profile)
+		{
+			//print("GAMEPAD PROFILE MISSING.");
+
+			return;
+		}
+
+		if (auto analog = translate_analog(*profile, data))
 		{
 			if (auto state_index = get_gamepad_state_index(gamepad_id))
 			{
-				on_analog_input(gamepad, *state_index, *analog, data.value, data.angle());
+				const auto& value = data.value;
+				const auto angle = data.angle();
+
+				on_analog_input(gamepad, *state_index, *analog, value, angle);
+
+				handle_virtual_button_simulation(gamepad, *state_index, *profile, data, value);
 			}
 		}
 	}

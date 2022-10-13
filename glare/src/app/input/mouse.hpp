@@ -18,7 +18,6 @@ namespace app::input
 	struct ProfileMetadata;
 	//struct MouseProfile;
 
-	// TODO: Rework mouse button-down events to be continuous.
 	class Mouse : public InputDevice<MouseState>
 	{
 		public:
@@ -59,7 +58,7 @@ namespace app::input
 
 			// Optional profile object, used to configure device-specific parameters,
 			// as well as handle button mappings for game engines, etc.
-			std::optional<MouseProfile> device_profile;
+			mutable std::optional<MouseProfile> device_profile;
 
 			bool get_button(MouseButton button) const;
 			void set_button(MouseButton button, bool value);
@@ -90,6 +89,9 @@ namespace app::input
 				bool check_motion, bool check_buttons, bool check_wheel
 			) const;
 
+			// Enumerates button-based Hat descriptors, generating `OnMouseVirtualAnalogInput` events appropriately.
+			void handle_hat_event_detection(entt::dispatcher& event_handler, State& state, MouseDeviceIndex device_index=DEFAULT_MOUSE_DEVICE_INDEX) const;
+
 			void trigger_mouse_button_event
 			(
 				entt::dispatcher& event_handler,
@@ -112,10 +114,10 @@ namespace app::input
 				MouseDeviceIndex device_index=DEFAULT_MOUSE_DEVICE_INDEX
 			) const;
 		private:
-			bool is_locked      : 1 = false;
-
-			bool event_motion  : 1 = false;
-			bool event_buttons : 1 = true;
-			bool event_wheel   : 1 = true;
+			bool is_locked                   : 1 = false;
+			bool event_motion                : 1 = false;
+			bool event_buttons               : 1 = false;
+			bool event_wheel                 : 1 = true;
+			bool poll_continuous_button_down : 1 = true;
 	};
 }

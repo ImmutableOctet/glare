@@ -47,10 +47,10 @@
 				"HeavyAttack":  "R",
 				"Interact":     "E",
 
-				"Pause":        "ESCAPE",
+				"Pause":        ["PAUSE", "ESCAPE"],
 
 				"Shield":       "LSHIFT",
-				"FirstPerson":  "PAUSE"
+				"FirstPerson":  "HOME"
 			},
 
 			"analogs":

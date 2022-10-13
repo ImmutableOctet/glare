@@ -28,6 +28,8 @@ namespace app::input
 
 	// Base event type for button-related actions.
 	// (Not currently aliased or triggered directly)
+	// 
+	// TODO: Look into converting to `GamepadButtonBits` for `button`, rather than `GamepadButtonID`.
 	struct GamepadButtonEvent : public GamepadStateEvent
 	{
 		// TODO: Look into changing this to use the `GamepadButton` enum instead.

@@ -3,6 +3,7 @@
 #include "keyboard_events.hpp"
 
 #include "input_profile_impl.hpp"
+#include "input_device_impl.hpp"
 
 #include <math/types.hpp>
 #include <math/joyhat.hpp>
@@ -64,49 +65,34 @@ namespace app::input
 		return InputDevice<KeyboardState>::poll(opt_event_handler);
 	}
 
-	void Keyboard::handle_hat_event_detection(entt::dispatcher& event_handler, State& state, KeyboardDeviceIndex device_index)
+	void Keyboard::handle_hat_event_detection(entt::dispatcher& event_handler, State& state, KeyboardDeviceIndex device_index) const
 	{
-		if (!device_profile.has_value())
+		if (!device_profile)
 		{
 			return;
 		}
 
-		std::size_t hat_index = static_cast<std::size_t>(KeyboardMotion::RuntimeAnalogOffset);
+		handle_hat_event_detection_impl<KeyboardMotion>
+		(
+			*device_profile, state,
 
-		for (const auto& hat : device_profile->get_hats())
-		{
-			auto up    = state.get_key(hat.up);
-			auto right = state.get_key(hat.right);
-			auto down  = state.get_key(hat.down);
-			auto left  = state.get_key(hat.left);
-
-			// If there's no input at all, continue to the next Hat descriptor instead.
-			//if ((!up) && (!right) && (!down) && (!left))
-			if ((up == down) && (left == right))
+			// get_button_state:
+			[](const auto& state, const auto& button)
 			{
-				// Hat index must be incremented each loop.
-				hat_index++;
+				return state.get_key(button);
+			},
 
-				continue;
+			[this, &event_handler, &device_index](const auto& state, const auto& analog, const auto& input_direction)
+			{
+				event_handler.enqueue<OnKeyboardAnalogInput>
+				(
+					device_index,
+					state,
+					analog,
+					input_direction
+				);
 			}
-
-			// Retrieve the user's input direction.
-			const auto direction = math::joyhat(up, down, left, right);
-
-			const auto analog = static_cast<KeyboardMotion>(hat_index);
-
-			// Generate an analog event.
-			event_handler.enqueue<OnKeyboardAnalogInput>
-			(
-				device_index,
-				state,
-				analog,
-				direction
-			);
-
-			// Hat index must be incremented each loop.
-			hat_index++;
-		}
+		);
 	}
 
 	void Keyboard::peek(Keyboard::State& state) const

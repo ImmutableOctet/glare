@@ -269,6 +269,7 @@ xcopy "$(ProjectDir)config" "$(TargetDir)config" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\app\input\hat.hpp" />
     <ClInclude Include="src\app\input\input.hpp" />
     <ClInclude Include="src\app\input\input_device.hpp" />
+    <ClInclude Include="src\app\input\input_device_impl.hpp" />
     <ClInclude Include="src\app\input\input_handler.hpp" />
     <ClInclude Include="src\app\input\input_profile.hpp" />
     <ClInclude Include="src\app\input\input_profile_impl.hpp" />
@@ -276,7 +277,6 @@ xcopy "$(ProjectDir)config" "$(TargetDir)config" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\app\input\keyboard.hpp" />
     <ClInclude Include="src\app\input\keyboard_buttons.hpp" />
     <ClInclude Include="src\app\input\keyboard_events.hpp" />
-    <ClInclude Include="src\app\input\keyboard_hat.hpp" />
     <ClInclude Include="src\app\input\keyboard_motion.hpp" />
     <ClInclude Include="src\app\input\keyboard_profile.hpp" />
     <ClInclude Include="src\app\input\keyboard_state.hpp" />
@@ -289,6 +289,7 @@ xcopy "$(ProjectDir)config" "$(TargetDir)config" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\app\input\mouse_state.hpp" />
     <ClInclude Include="src\app\input\profile_metadata.hpp" />
     <ClInclude Include="src\app\input\types.hpp" />
+    <ClInclude Include="src\app\input\virtual_button.hpp" />
     <ClInclude Include="src\app\timer.hpp" />
     <ClInclude Include="src\app\types.hpp" />
     <ClInclude Include="src\app\window.hpp" />
@@ -464,6 +465,7 @@ xcopy "$(ProjectDir)config" "$(TargetDir)config" /e /y /i /r /exclude:exclude.tx
     <ClInclude Include="src\util\pipeline.hpp" />
     <ClInclude Include="src\util\shorthand.hpp" />
     <ClInclude Include="src\util\member_function_traits.hpp" />
+    <ClInclude Include="src\util\small_vector.hpp" />
     <ClInclude Include="src\util\string.hpp" />
     <ClInclude Include="src\util\util.hpp" />
     <ClInclude Include="src\util\variant.hpp" />
@@ -515,6 +517,8 @@ xcopy "$(ProjectDir)config" "$(TargetDir)config" /e /y /i /r /exclude:exclude.tx
     <ClCompile Include="src\app\input\keyboard_state.cpp" />
     <ClCompile Include="src\app\input\mouse.cpp" />
     <ClCompile Include="src\app\input\mouse_profile.cpp" />
+    <ClCompile Include="src\app\input\mouse_state.cpp" />
+    <ClCompile Include="src\app\input\virtual_button.cpp" />
     <ClCompile Include="src\app\timer.cpp" />
     <ClCompile Include="src\app\window.cpp" />
     <ClCompile Include="src\engine\input\analogs.cpp" />

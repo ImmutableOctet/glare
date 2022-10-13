@@ -1,10 +1,14 @@
 #include "mouse.hpp"
 #include "mouse_events.hpp"
+#include "mouse_motion.hpp"
 #include "profile_metadata.hpp"
 
 #include "input_profile_impl.hpp"
+#include "input_device_impl.hpp"
 
 #include <util/json.hpp>
+
+#include <magic_enum/magic_enum.hpp>
 
 // SDL:
 #include <sdl2/SDL_hints.h>
@@ -19,10 +23,7 @@ namespace app::input
 	
 
 	// Mouse:
-	Mouse::Mouse(bool locked, bool use_sdl_events) :
-		event_motion(false),
-		event_buttons(true),
-		event_wheel(true)
+	Mouse::Mouse(bool locked, bool use_sdl_events)
 	{
 		if (locked)
 		{
@@ -130,6 +131,8 @@ namespace app::input
 				*opt_event_handler,
 				manual_motion, manual_buttons, manual_wheel
 			);
+
+			handle_hat_event_detection(*opt_event_handler, next_state);
 		}
 
 		return InputDevice<MouseState>::poll(opt_event_handler);
@@ -344,40 +347,18 @@ namespace app::input
 
 		if (check_buttons)
 		{
-			if (next_state.left != state.left)
+			magic_enum::enum_for_each<MouseButton>([&](MouseButton button)
 			{
-				trigger_mouse_button_event(event_handler, MouseButton::Left, next_state.left);
+				auto next     = next_state.get_button(button);
+				auto previous = state.get_button(button);
 
-				change_detected = true;
-			}
+				if ((next != previous) || ((poll_continuous_button_down) && (next)))
+				{
+					trigger_mouse_button_event(event_handler, button, next);
 
-			if (next_state.right != state.right)
-			{
-				trigger_mouse_button_event(event_handler, MouseButton::Right, next_state.right);
-
-				change_detected = true;
-			}
-
-			if (next_state.middle != state.middle)
-			{
-				trigger_mouse_button_event(event_handler, MouseButton::Middle, next_state.middle);
-
-				change_detected = true;
-			}
-
-			if (next_state.forward != state.forward)
-			{
-				trigger_mouse_button_event(event_handler, MouseButton::Forward, next_state.forward);
-
-				change_detected = true;
-			}
-
-			if (next_state.back != state.back)
-			{
-				trigger_mouse_button_event(event_handler, MouseButton::Back, next_state.back);
-
-				change_detected = true;
-			}
+					change_detected = true;
+				}
+			});
 		}
 
 		if (check_wheel)
@@ -392,6 +373,36 @@ namespace app::input
 
 		// Notify the caller if a state change was detected.
 		return change_detected;
+	}
+
+	void Mouse::handle_hat_event_detection(entt::dispatcher& event_handler, State& state, MouseDeviceIndex device_index) const
+	{
+		if (!device_profile)
+		{
+			return;
+		}
+
+		handle_hat_event_detection_impl<MouseMotion>
+		(
+			*device_profile, state,
+
+			// get_button_state:
+			[](const auto& state, const auto& button)
+			{
+				return state.get_button(button);
+			},
+
+			[this, &event_handler, &device_index](const auto& state, const auto& analog, const auto& input_direction)
+			{
+				event_handler.enqueue<OnMouseVirtualAnalogInput>
+				(
+					device_index,
+					state,
+					analog,
+					input_direction
+				);
+			}
+		);
 	}
 
 	void Mouse::trigger_mouse_button_event

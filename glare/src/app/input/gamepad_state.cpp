@@ -36,6 +36,25 @@ namespace app::input
 		return (buttons.bits & (static_cast<GamepadButtonsRaw>(1) << static_cast<GamepadButtonsRaw>(index)));
 	}
 
+	std::optional<GamepadState::Vector> GamepadState::get_analog(GamepadAnalog analog) const
+	{
+		using enum GamepadAnalog;
+
+		switch (analog)
+		{
+			case Left:
+				return left_analog;
+			case Right:
+				return right_analog;
+			case Triggers:
+				return triggers;
+			case DPad:
+				return dpad_direction();
+		}
+
+		return std::nullopt;
+	}
+
 	GamepadState::Vector GamepadState::dpad_direction() const
 	{
 		return math::joyhat(buttons.UP, buttons.DOWN, buttons.LEFT, buttons.RIGHT);

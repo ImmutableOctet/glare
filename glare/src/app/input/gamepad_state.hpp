@@ -2,8 +2,12 @@
 
 #include "types.hpp"
 #include "gamepad_buttons.hpp"
+#include "gamepad_analog.hpp"
 
 #include <math/types.hpp>
+
+#include <magic_enum/magic_enum.hpp>
+#include <optional>
 
 namespace app::input
 {
@@ -19,6 +23,19 @@ namespace app::input
 		// Maximum number of bits allocated to `Buttons::bits`.
 		static constexpr std::size_t MAX_BUTTONS = (sizeof(GamepadButtonsRaw) * 8); // 16;
 		static constexpr GamepadButtonsRaw DPAD_BIT_OFFSET = 10; // Starting at 0. (Bits 11-14)
+
+		// Enumerates values in the underlying button enum-type.
+		template <typename Callback>
+		static void enumerate_button_sequence(Callback&& callback)
+		{
+			magic_enum::enum_for_each<ButtonBit>
+			(
+				[&callback](auto button)
+				{
+					callback(button);
+				}
+			);
+		}
 
 		GamepadState();
 		//GamepadState(const GamepadState&) = default;
@@ -71,6 +88,8 @@ namespace app::input
 		void set_button(GamepadButtonID index, bool value);
 		bool get_button(GamepadButtonID index) const;
 
+		std::optional<Vector> get_analog(GamepadAnalog analog) const;
+
 		// Type-safe version of `GamepadButtonID` overload; see `GamepadButtonBit`.
 		inline void set_button(ButtonBit button_index_bit, bool value)
 		{
@@ -81,6 +100,78 @@ namespace app::input
 		inline bool get_button(ButtonBit button_index_bit) const
 		{
 			return get_button(static_cast<GamepadButtonID>(button_index_bit));
+		}
+
+		// Retrieves the current value for each button.
+		// 
+		// `callback` is a callable taking in a `GamepadButtonBits` value,
+		// and a boolean value indicating the button's state.
+		template <typename Callback>
+		inline void inspect_buttons(Callback&& callback) const
+		{
+			enumerate_button_sequence([this, &callback](const auto& button)
+			{
+				const auto value = this->get_button(button);
+
+				callback(button, value);
+			});
+		}
+
+		template <typename Callback>
+		inline int on_button_value(Callback&& callback, bool target_value) const
+		{
+			int buttons_found = 0;
+
+			inspect_buttons([&callback, target_value, &buttons_found](const auto& button, bool value)
+			{
+				if (value == target_value)
+				{
+					callback(button);
+
+					buttons_found++;
+				}
+			});
+
+			return buttons_found;
+		}
+
+		template <typename Callback>
+		inline int on_button_active(Callback&& callback) const
+		{
+			return on_button_value(callback, true);
+		}
+
+		template <typename Callback>
+		inline int on_button_inactive(Callback&& callback) const
+		{
+			return on_button_value(callback, false);
+		}
+
+		template <typename Callback>
+		inline int on_button_change(const GamepadState& prev_state, Callback&& callback) const
+		{
+			// Check if the `bits` bitfield is exactly the same:
+			if (this->buttons.bits == prev_state.buttons.bits)
+			{
+				// No buttons have changed, exit early.
+				return 0;
+			}
+
+			int buttons_changed = 0;
+
+			inspect_buttons([&prev_state, &callback, &buttons_changed](const auto& button, const auto& value)
+			{
+				const auto prev_value = prev_state.get_button(button);
+
+				if (value != prev_value)
+				{
+					callback(button, value); // , prev_value
+
+					buttons_changed++;
+				}
+			});
+
+			return buttons_changed;
 		}
 
 		Vector dpad_direction() const;

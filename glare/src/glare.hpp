@@ -28,15 +28,12 @@ namespace glare
 	class Glare : public Game
 	{
 		public:
-			static constexpr auto NR_LIGHTS = 32; // 128; // 16;
-
 			Glare();
 
 			engine::Transform get_named_transform(std::string_view name);
 
 			//void on_stage_loaded(const engine::OnStageLoaded& stage_info);
 			void on_user_keyboard_input(const app::input::KeyboardState& keyboard);
-			void on_user_mouse_input(const app::input::MouseState& mouse);
 
 			void on_update(float delta) override;
 			void on_render(RenderState& render_state) override;

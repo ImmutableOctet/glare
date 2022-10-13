@@ -3,6 +3,8 @@
 //#include <types.hpp>
 //#include <math/types.hpp>
 
+#include "mouse_buttons.hpp"
+
 namespace app::input
 {
 	struct MouseState
@@ -25,5 +27,7 @@ namespace app::input
 		bool right   : 1 = false;
 		bool back    : 1 = false;
 		bool forward : 1 = false;
+
+		bool get_button(MouseButton button) const;
 	};
 }

@@ -67,7 +67,7 @@ namespace game
 				int width=1600, int height=900,
 				UpdateRate update_rate=DEFAULT_FRAMERATE,
 
-				bool vsync=true, bool lock_mouse=true,
+				bool vsync=true, bool input_lock_status=true,
 
 				app::WindowFlags window_flags=(app::WindowFlags::OpenGL|app::WindowFlags::Resizable),
 				bool imgui_enabled=true,
@@ -96,6 +96,12 @@ namespace game
 			// Proxy for underlying `Window` object's `set_title` member-function.
 			// `title` must be zero-terminated.
 			void set_title(std::string_view title);
+
+			void lock_input();
+			void unlock_input();
+			void set_input_lock(bool value);
+			void toggle_input_lock();
+			bool is_input_locked() const;
 
 			void update(app::Milliseconds time) override;
 			void render() override;

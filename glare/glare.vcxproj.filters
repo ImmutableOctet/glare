@@ -139,6 +139,8 @@
     <ClCompile Include="src\app\input\keyboard_profile.cpp" />
     <ClCompile Include="src\app\input\keyboard_events.cpp" />
     <ClCompile Include="src\math\joyhat.cpp" />
+    <ClCompile Include="src\app\input\virtual_button.cpp" />
+    <ClCompile Include="src\app\input\mouse_state.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dependencies\modules\stb\deprecated\rrsprintf.h" />
@@ -418,8 +420,10 @@
     <ClInclude Include="src\app\input\keyboard_motion.hpp" />
     <ClInclude Include="src\app\input\keyboard_profile.hpp" />
     <ClInclude Include="src\app\input\keyboard_events.hpp" />
-    <ClInclude Include="src\app\input\keyboard_hat.hpp" />
     <ClInclude Include="src\app\input\hat.hpp" />
+    <ClInclude Include="src\app\input\virtual_button.hpp" />
+    <ClInclude Include="src\util\small_vector.hpp" />
+    <ClInclude Include="src\app\input\input_device_impl.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />
