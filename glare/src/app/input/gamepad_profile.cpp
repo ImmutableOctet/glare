@@ -3,8 +3,11 @@
 
 //#include "gamepad_state.hpp"
 #include "gamepad_buttons.hpp"
+#include "gamepad_analog.hpp"
 
 #include "input_profile_impl.hpp"
+
+#include <magic_enum/magic_enum.hpp>
 
 #include <cmath>
 
@@ -35,9 +38,19 @@ namespace app::input
 	{
 		if (const auto deadzone_data = json.find("deadzones"); deadzone_data != json.end())
 		{
-			util::retrieve_from(*deadzone_data, "Left", deadzone.left_analog, read_analog); // "left_analog"
-			util::retrieve_from(*deadzone_data, "Right", deadzone.right_analog, read_analog); // "right_analog"
-			util::retrieve_from(*deadzone_data, "Triggers", deadzone.triggers, read_analog); // "triggers"
+			magic_enum::enum_for_each<GamepadAnalog>([&](auto analog)
+			{
+				auto* analog_out = deadzone.get_analog(analog);
+
+				if (!analog_out)
+				{
+					return;
+				}
+
+				const auto analog_name = magic_enum::enum_name<GamepadAnalog>(analog);
+
+				util::retrieve_from(*deadzone_data, analog_name, *analog_out, read_analog);
+			});
 		}
 
 		input_profile_impl::profile_load_basics(*this, profile_metadata, json);

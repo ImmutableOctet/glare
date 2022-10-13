@@ -30,18 +30,6 @@
 				"HeavyAttack":  "Back"
 			},
 
-			"hats":
-			[
-				{
-					"name": "click_movement",
-
-					"up": "Right",
-					"down": "Left",
-					"left": "Forward",
-					"right": "Back"
-				}
-			],
-
 			"analogs":
 			{
 				"Camera": "Movement",

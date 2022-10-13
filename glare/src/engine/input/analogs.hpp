@@ -19,7 +19,7 @@ namespace engine
 	{
 		using DirectionVector = math::Vector2D;
 
-										// Gamepad equivalent:
+		                             // Gamepad equivalent:
 		DirectionVector movement;    // Left stick
 		DirectionVector camera;      // Right stick
 		

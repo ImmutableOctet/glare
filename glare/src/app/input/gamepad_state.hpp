@@ -2,10 +2,12 @@
 
 #include "types.hpp"
 #include "gamepad_buttons.hpp"
+#include "gamepad_analog.hpp"
 
 #include <math/types.hpp>
 
 #include <magic_enum/magic_enum.hpp>
+#include <optional>
 
 namespace app::input
 {
@@ -85,6 +87,8 @@ namespace app::input
 		
 		void set_button(GamepadButtonID index, bool value);
 		bool get_button(GamepadButtonID index) const;
+
+		std::optional<Vector> get_analog(GamepadAnalog analog) const;
 
 		// Type-safe version of `GamepadButtonID` overload; see `GamepadButtonBit`.
 		inline void set_button(ButtonBit button_index_bit, bool value)

@@ -5,28 +5,40 @@
 #include "gamepad_buttons.hpp"
 #include "input_device_impl.hpp"
 
+#include <math/math.hpp>
+
 #include <sdl2/SDL_joystick.h>
+#include <magic_enum/magic_enum.hpp>
 
 #include <optional>
 
 // Debugging related:
 #include <cmath>
-#include <math/math.hpp>
 #include <util/log.hpp>
 
 namespace app::input
 {
+	// Converts values from the range (-1.0 to 1.0) into (0.0 to 1.0).
+	static auto convert_triggers(const auto& value)
+	{
+		//return value;
+		//return math::abs((value + 1.0f) / 2.0f);
+		return ((value + 1.0f) / 2.0f);
+	}
+
 	Gamepad::Gamepad
 	(
 		DeviceIndex device_index,
 		bool event_based_button_down,
 		bool event_based_button_release,
+		bool continuous_analog_input,
 		const DeadZone& deadzone,
 		bool open_immediately
 	) :
 		device_index(device_index),
 		event_based_button_down(event_based_button_down),
 		event_based_button_release(event_based_button_release),
+		continuous_analog_input(continuous_analog_input),
 		deadzone(deadzone),
 		handle(nullptr)
 	{
@@ -118,12 +130,15 @@ namespace app::input
 	{
 		if (opt_event_handler)
 		{
+			const auto& prev_state = get_state();
+
 			if (profile)
 			{
+				handle_analog_events(*opt_event_handler, *profile, next_state, prev_state);
 				handle_hat_event_detection(*opt_event_handler, *profile, next_state);
 			}
 
-			handle_button_changes(*opt_event_handler, next_state, get_state());
+			handle_button_changes(*opt_event_handler, next_state, prev_state);
 		}
 
 		return poll(opt_event_handler);
@@ -191,7 +206,7 @@ namespace app::input
 						break;
 
 					case 4: // Left trigger.
-						next_state.triggers.x = deadzone.triggers.get_x(value);
+						next_state.triggers.x = convert_triggers(deadzone.triggers.get_x(value));
 
 						analog = GamepadAnalog::Triggers;
 						direction = next_state.triggers;
@@ -199,7 +214,7 @@ namespace app::input
 						break;
 
 					case 5: // Right trigger.
-						next_state.triggers.y = deadzone.triggers.get_y(value);
+						next_state.triggers.y = convert_triggers(deadzone.triggers.get_y(value));
 
 						analog = GamepadAnalog::Triggers;
 						direction = next_state.triggers;
@@ -207,15 +222,18 @@ namespace app::input
 						break;
 				}
 
-				if (opt_event_handler && analog.has_value())
+				if (!continuous_analog_input)
 				{
-					opt_event_handler->enqueue<OnGamepadAnalogInput>
-					(
-						device_id,
-						next_state,
-						*analog,
-						direction
-					);
+					if (opt_event_handler && analog.has_value())
+					{
+						opt_event_handler->enqueue<OnGamepadAnalogInput>
+						(
+							device_id,
+							next_state,
+							*analog,
+							direction
+						);
+					}
 				}
 
 				return true;
@@ -235,15 +253,18 @@ namespace app::input
 
 						next_state.update_dpad(e.jhat.value);
 
-						if (opt_event_handler)
+						if (!continuous_analog_input)
 						{
-							opt_event_handler->enqueue<OnGamepadAnalogInput>
-							(
-								device_id,
-								next_state,
-								GamepadAnalog::DPad,
-								next_state.dpad_direction()
-							);
+							if (opt_event_handler)
+							{
+								opt_event_handler->enqueue<OnGamepadAnalogInput>
+								(
+									device_id,
+									next_state,
+									GamepadAnalog::DPad,
+									next_state.dpad_direction()
+								);
+							}
 						}
 
 						return true;
@@ -295,6 +316,69 @@ namespace app::input
 		}
 
 		return buttons_changed;
+	}
+
+	void Gamepad::handle_analog_events(entt::dispatcher& event_handler, const GamepadProfile& profile, const State& state, const State& prev_state) const
+	{
+		if (!continuous_analog_input)
+		{
+			return;
+		}
+
+		const auto device_id = this->device_index;
+
+		auto handle_analog = [device_id, &event_handler, &profile, &state, &prev_state](GamepadAnalog analog)
+		{
+			const auto value = state.get_analog(analog);
+
+			if (!value)
+			{
+				return;
+			}
+
+			auto should_generate_event = [&]() -> bool
+			{
+				if (const auto prev_value = prev_state.get_analog(analog))
+				{
+					//if (*value != *prev_value)
+					if ((value->x != prev_value->x) || (value->y != prev_value->y))
+					{
+						return true;
+					}
+				}
+
+				if (const auto* analog_range = profile.deadzone.get_analog(analog))
+				{
+					return analog_range->beyond_threshold(*value);
+				}
+
+				// Non-zero value check (generally unreliable):
+				return
+				(
+					static_cast<bool>(value->x)
+					||
+					static_cast<bool>(value->y)
+				);
+			};
+
+			if (!should_generate_event())
+			{
+				return;
+			}
+
+			event_handler.enqueue<OnGamepadAnalogInput>
+			(
+				device_id,
+				state,
+				analog,
+				*value
+			);
+		};
+
+		magic_enum::enum_for_each<GamepadAnalog>([&handle_analog](auto analog)
+		{
+			handle_analog(analog);
+		});
 	}
 
 	bool Gamepad::process_button_event(const SDL_JoyButtonEvent& e, entt::dispatcher* opt_event_handler)

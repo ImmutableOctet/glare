@@ -75,13 +75,13 @@ namespace game
 	void Game::lock_input()
 	{
 		input.get_mouse().lock();
-		input.set_event_status(true);
+		input.set_lock_status(true);
 	}
 
 	void Game::unlock_input()
 	{
 		input.get_mouse().unlock();
-		input.set_event_status(false);
+		input.set_lock_status(false);
 	}
 
 	void Game::set_input_lock(bool value)
@@ -103,7 +103,7 @@ namespace game
 
 	bool Game::is_input_locked() const
 	{
-		return input.get_event_status();
+		return input.get_lock_status();
 	}
 
 	void Game::update(app::Milliseconds time)

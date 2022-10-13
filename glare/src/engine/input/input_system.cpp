@@ -304,6 +304,8 @@ namespace engine
 				state_data.state_has_changed = false;
 			}
 
+			//print("MOVE: {}", state_data.next.directional_input.movement);
+
 			// Must increment; `continue` not allowed.
 			index++;
 		}

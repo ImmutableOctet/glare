@@ -36,13 +36,15 @@ namespace app::input
 
 			bool event_based_button_down    : 1 = false;
 			bool event_based_button_release : 1 = true;
+			bool continuous_analog_input    : 1 = true;
 		public:
-			// NOTE: `Gamepad` objects are not open immediately by default.
+			// NOTE: `Gamepad` objects are not immediately open by default.
 			Gamepad
 			(
 				DeviceIndex device_index=0,
 				bool event_based_button_down=false,
 				bool event_based_button_release=true,
+				bool continuous_analog_input=true,
 				const DeadZone& deadzone={},
 				bool open_immediately=false
 			);
@@ -114,6 +116,9 @@ namespace app::input
 			// This is an alternative to generating events immediately, while handling SDL event types.
 			// The value returned indicates the number of buttons that have changed.
 			int handle_button_changes(entt::dispatcher& event_handler, const State& state, const State& prev_state) const;
+
+			// Handles analog event generation for continuous inputs.
+			void handle_analog_events(entt::dispatcher& event_handler, const GamepadProfile& profile, const State& state, const State& prev_state) const;
 
 			bool process_button_event(const SDL_JoyButtonEvent& e, entt::dispatcher* opt_event_handler=nullptr);
 

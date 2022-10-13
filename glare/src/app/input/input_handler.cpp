@@ -4,34 +4,49 @@
 
 namespace app::input
 {
-	InputHandler::InputHandler(bool events_enabled)
-		: events_enabled(events_enabled)
+	InputHandler::InputHandler(bool locked)
+		: locked(locked)
 	{}
 
-	void InputHandler::set_event_status(bool value)
+	void InputHandler::set_lock_status(bool value)
 	{
-		events_enabled = value;
+		locked = value;
 	}
 
-	bool InputHandler::get_event_status() const
+	bool InputHandler::get_lock_status() const
 	{
-		return events_enabled;
+		return locked;
 	}
 
 	bool InputHandler::process_event(const SDL_Event& e, entt::dispatcher* opt_event_handler)
 	{
-		return devices.process_event(e, (events_enabled) ? opt_event_handler : nullptr);
+		const auto mk_event_handler = ((locked) ? opt_event_handler : nullptr);
+
+		if (devices.mouse.process_event(e, mk_event_handler))
+		{
+			return true;
+		}
+
+		if (devices.keyboard.process_event(e, mk_event_handler))
+		{
+			return true;
+		}
+
+		if (devices.gamepads.process_event(e, opt_event_handler))
+		{
+			return true;
+		}
+
+		return false;
 	}
 
 	const InputDevices& InputHandler::poll(engine::EventHandler* opt_event_handler)
 	{
-		return poll_impl((events_enabled) ? opt_event_handler : nullptr);
-	}
+		const auto mk_event_handler = ((locked) ? opt_event_handler : nullptr);
 
-	const InputDevices& InputHandler::poll_impl(engine::EventHandler* opt_event_handler)
-	{
-		devices.mouse.poll(opt_event_handler);
-		devices.keyboard.poll(opt_event_handler);
+		devices.mouse.poll(mk_event_handler);
+		devices.keyboard.poll(mk_event_handler);
+
 		devices.gamepads.poll(opt_event_handler);
 
 		return devices;
