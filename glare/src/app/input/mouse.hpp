@@ -18,7 +18,6 @@ namespace app::input
 	struct ProfileMetadata;
 	//struct MouseProfile;
 
-	// TODO: Rework mouse button-down events to be continuous.
 	class Mouse : public InputDevice<MouseState>
 	{
 		public:
@@ -117,10 +116,12 @@ namespace app::input
 				MouseDeviceIndex device_index=DEFAULT_MOUSE_DEVICE_INDEX
 			) const;
 		private:
-			bool is_locked      : 1 = false;
+			inline bool advertise() const { return locked(); }
 
-			bool event_motion  : 1 = false;
-			bool event_buttons : 1 = true;
-			bool event_wheel   : 1 = true;
+			bool is_locked                   : 1 = false;
+			bool event_motion                : 1 = false;
+			bool event_buttons               : 1 = false;
+			bool event_wheel                 : 1 = true;
+			bool poll_continuous_button_down : 1 = true;
 	};
 }

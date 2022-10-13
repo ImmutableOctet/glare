@@ -8,6 +8,8 @@
 
 #include <util/json.hpp>
 
+#include <magic_enum/magic_enum.hpp>
+
 // SDL:
 #include <sdl2/SDL_hints.h>
 #include <sdl2/SDL_mouse.h>
@@ -21,10 +23,7 @@ namespace app::input
 	
 
 	// Mouse:
-	Mouse::Mouse(bool locked, bool use_sdl_events) :
-		event_motion(false),
-		event_buttons(true),
-		event_wheel(true)
+	Mouse::Mouse(bool locked, bool use_sdl_events)
 	{
 		if (locked)
 		{
@@ -125,15 +124,18 @@ namespace app::input
 
 		poll_next_state(manual_motion, manual_buttons, manual_wheel, false);
 
-		if (opt_event_handler)
+		if (advertise())
 		{
-			handle_manual_event_detection
-			(
-				*opt_event_handler,
-				manual_motion, manual_buttons, manual_wheel
-			);
+			if (opt_event_handler)
+			{
+				handle_manual_event_detection
+				(
+					*opt_event_handler,
+					manual_motion, manual_buttons, manual_wheel
+				);
 
-			handle_hat_event_detection(*opt_event_handler, next_state);
+				handle_hat_event_detection(*opt_event_handler, next_state);
+			}
 		}
 
 		return InputDevice<MouseState>::poll(opt_event_handler);
@@ -286,7 +288,7 @@ namespace app::input
 
 	void Mouse::submit_state(entt::dispatcher& event_handler, const State& state)
 	{
-		if (!locked())
+		if (!advertise())
 		{
 			return;
 		}
@@ -358,40 +360,18 @@ namespace app::input
 
 		if (check_buttons)
 		{
-			if (next_state.left != state.left)
+			magic_enum::enum_for_each<MouseButton>([&](MouseButton button)
 			{
-				trigger_mouse_button_event(event_handler, MouseButton::Left, next_state.left);
+				auto next     = next_state.get_button(button);
+				auto previous = state.get_button(button);
 
-				change_detected = true;
-			}
+				if ((next != previous) || ((poll_continuous_button_down) && (next)))
+				{
+					trigger_mouse_button_event(event_handler, button, next);
 
-			if (next_state.right != state.right)
-			{
-				trigger_mouse_button_event(event_handler, MouseButton::Right, next_state.right);
-
-				change_detected = true;
-			}
-
-			if (next_state.middle != state.middle)
-			{
-				trigger_mouse_button_event(event_handler, MouseButton::Middle, next_state.middle);
-
-				change_detected = true;
-			}
-
-			if (next_state.forward != state.forward)
-			{
-				trigger_mouse_button_event(event_handler, MouseButton::Forward, next_state.forward);
-
-				change_detected = true;
-			}
-
-			if (next_state.back != state.back)
-			{
-				trigger_mouse_button_event(event_handler, MouseButton::Back, next_state.back);
-
-				change_detected = true;
-			}
+					change_detected = true;
+				}
+			});
 		}
 
 		if (check_wheel)
