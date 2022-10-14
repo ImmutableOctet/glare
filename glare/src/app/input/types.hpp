@@ -46,7 +46,7 @@ namespace app::input
 
 	// Raw integral type used to represent a bitfield
 	// of button states used by a game engine.
-	using EngineButtonsRaw = std::uint32_t; // std::uint64_t;
+	using EngineButtonsRaw = std::uint64_t; // std::uint32_t;
 
 	// Raw integral type used to represent an enumeration type
 	// for analog/floating-point inputs used by a game engine.
