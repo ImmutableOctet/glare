@@ -140,9 +140,9 @@ namespace engine
 		//enable<app::input::OnGamepadAnalogInput>();
 
 		//enable<OnButtonDown>();
-		//enable<OnButtonReleased>();
-		//enable<OnButtonPressed>();
-		enable<OnAnalogInput>();
+		enable<OnButtonReleased>();
+		enable<OnButtonPressed>();
+		//enable<OnAnalogInput>();
 	}
 
 	void DebugListener::on_skeleton(Registry& registry, Entity entity)
