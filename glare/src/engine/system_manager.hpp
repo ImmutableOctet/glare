@@ -182,6 +182,9 @@ namespace engine
 			
 			// TODO: Look into rolling `register_behavior` and `unregister_behavior` into one routine.
 			// (Maybe through an RAII-based approach...?)
+			// 
+			// TODO: Look into changing the registration methods into free functions,
+			// so we can encapsulating them within the `behaviors` submodule.
 			template <typename BehaviorType>
 			inline void register_behavior()
 			{
@@ -199,6 +202,26 @@ namespace engine
 				if constexpr (engine::has_on_keyboard<BehaviorType>())
 				{
 					service.register_free_function<engine::OnKeyboardState, engine::behavior_impl::bridge_on_keyboard<BehaviorType>>();
+				}
+
+				if constexpr (engine::has_on_input_update<BehaviorType>())
+				{
+					service.register_free_function<engine::OnInput, engine::behavior_impl::bridge_on_input_update<BehaviorType>>();
+				}
+
+				if constexpr (engine::has_on_button_down<BehaviorType>())
+				{
+					service.register_free_function<engine::OnButtonDown, engine::behavior_impl::bridge_on_button_down<BehaviorType>>();
+				}
+
+				if constexpr (engine::has_on_button_up<BehaviorType>())
+				{
+					service.register_free_function<engine::OnButtonReleased, engine::behavior_impl::bridge_on_button_up<BehaviorType>>();
+				}
+
+				if constexpr (engine::has_on_button_pressed<BehaviorType>())
+				{
+					service.register_free_function<engine::OnButtonPressed, engine::behavior_impl::bridge_on_button_pressed<BehaviorType>>();
 				}
 			}
 
@@ -219,6 +242,26 @@ namespace engine
 				if constexpr (engine::has_on_keyboard<BehaviorType>())
 				{
 					service.unregister_free_function<engine::OnKeyboardState, engine::behavior_impl::bridge_on_keyboard<BehaviorType>>();
+				}
+
+				if constexpr (engine::has_on_input_update<BehaviorType>())
+				{
+					service.unregister_free_function<engine::OnInput, engine::behavior_impl::bridge_on_input_update<BehaviorType>>();
+				}
+
+				if constexpr (engine::has_on_button_down<BehaviorType>())
+				{
+					service.unregister_free_function<engine::OnButtonDown, engine::behavior_impl::bridge_on_button_down<BehaviorType>>();
+				}
+
+				if constexpr (engine::has_on_button_up<BehaviorType>())
+				{
+					service.unregister_free_function<engine::OnButtonReleased, engine::behavior_impl::bridge_on_button_up<BehaviorType>>();
+				}
+
+				if constexpr (engine::has_on_button_pressed<BehaviorType>())
+				{
+					service.unregister_free_function<engine::OnButtonPressed, engine::behavior_impl::bridge_on_button_pressed<BehaviorType>>();
 				}
 			}
 
