@@ -3,6 +3,7 @@
 #include "types.hpp"
 #include "input_state.hpp"
 
+#include <engine/service_originated_event.hpp>
 #include <util/variant.hpp>
 
 namespace app::input
@@ -16,7 +17,7 @@ namespace engine
 {
 	// Abstract base-type for input events; handles input sources, etc.
 	// NOTE: This is not triggered directly, or through event-aliasing.
-	struct InputEvent
+	struct InputEvent : public ServiceOriginatedEvent
 	{
 		// Utility function for retrieving the index of a (wrapped) type within `InputSource`.
 		template <typename ActualType>
