@@ -43,11 +43,10 @@ namespace app
 				~Libraries() {}
 			};
 
+			bool running : 1 = false;
+
 			Libraries init_libraries;
 			unique_ref<Window> window;
-
-			// Atomic so that we can see if the application is running from another thread.
-			bool running = false; // <-- May change later. (Could use a mutex for this, etc) // std::atomic<bool>
 
 			std::chrono::time_point<std::chrono::system_clock> start_point;
 			std::chrono::time_point<std::chrono::system_clock> stop_point;
@@ -56,7 +55,10 @@ namespace app
 			std::uint64_t render_counter = 0;
 
 			//DeltaTime delta_time;
+
+			// TODO: Migrate this field to the `Game` class.
 			input::InputHandler input;
+
 			UpdateRate fixed_update_rate;
 		protected:
 			Application(UpdateRate update_rate);
