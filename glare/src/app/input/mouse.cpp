@@ -61,8 +61,7 @@ namespace app::input
 				{
 					const auto mouse_device_id = static_cast<MouseDeviceIndex>(e.motion.which);
 
-					const auto& x_motion = e.motion.xrel;
-					const auto& y_motion = e.motion.yrel;
+					const auto [x_motion, y_motion] = process_analog_value({ e.motion.xrel, e.motion.yrel });
 
 					next_state.x = x_motion;
 					next_state.y = y_motion;
@@ -193,6 +192,16 @@ namespace app::input
 		);
 	}
 
+	MouseAnalogInput Mouse::process_analog_value(MouseAnalogInput raw_input) const
+	{
+		if (device_profile)
+		{
+			return device_profile->get_analog_value(raw_input);
+		}
+
+		return raw_input;
+	}
+
 	bool Mouse::lock()
 	{
 		if (unlocked())
@@ -294,15 +303,17 @@ namespace app::input
 			next_state = {};
 		}
 
-		int motion_x = 0;
-		int motion_y = 0;
+		int x_motion_raw = 0;
+		int y_motion_raw = 0;
 		
-		auto buttons = SDL_GetRelativeMouseState(&motion_x, &motion_y);
+		auto buttons = SDL_GetRelativeMouseState(&x_motion_raw, &y_motion_raw);
 
 		if (update_motion)
 		{
-			next_state.x = motion_x;
-			next_state.y = motion_y;
+			const auto [x_motion, y_motion] = process_analog_value({ x_motion_raw, y_motion_raw });
+
+			next_state.x = x_motion;
+			next_state.y = y_motion;
 		}
 
 		if (update_buttons)

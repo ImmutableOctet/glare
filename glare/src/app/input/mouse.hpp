@@ -43,6 +43,9 @@ namespace app::input
 			// The returned value is a temporary read-only pointer to the internally held device-profile object.
 			const MouseProfile* load_profile(const ProfileMetadata& profile_metadata);
 
+			// Applies post-processing via the internal input profile, if present.
+			MouseAnalogInput process_analog_value(MouseAnalogInput raw_input) const;
+
 			bool lock();
 			bool unlock();
 

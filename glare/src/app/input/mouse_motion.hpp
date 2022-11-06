@@ -3,6 +3,8 @@
 //#include "types.hpp"
 #include <types.hpp>
 
+#include <tuple>
+
 namespace app::input
 {
 	// `Mouse` equivalent to `GamepadAnalog`.
@@ -21,4 +23,7 @@ namespace app::input
 		// Indicates the starting index for dynamically defined 'analogs'.
 		RuntimeAnalogOffset
 	};
+
+	using MouseAnalogInputRaw = std::int32_t; // int;
+	using MouseAnalogInput = std::tuple<MouseAnalogInputRaw, MouseAnalogInputRaw>;
 }
