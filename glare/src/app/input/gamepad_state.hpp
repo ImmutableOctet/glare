@@ -6,7 +6,7 @@
 
 #include <math/types.hpp>
 
-#include <magic_enum/magic_enum.hpp>
+#include <util/magic_enum.hpp>
 #include <optional>
 
 namespace app::input
@@ -19,6 +19,7 @@ namespace app::input
 		using Vector = math::Vector2D;
 
 		using ButtonBit = GamepadButtonBits;
+		using DPad_Direction = GamepadDPadDirection;
 
 		// Maximum number of bits allocated to `Buttons::bits`.
 		static constexpr std::size_t MAX_BUTTONS = (sizeof(GamepadButtonsRaw) * 8); // 16;
@@ -36,12 +37,6 @@ namespace app::input
 				}
 			);
 		}
-
-		GamepadState();
-		//GamepadState(const GamepadState&) = default;
-		//GamepadState(GamepadState&&) noexcept = default;
-
-		//~GamepadState();
 
 		union Buttons
 		{
@@ -77,6 +72,12 @@ namespace app::input
 			};
 		};
 
+		GamepadState();
+		//GamepadState(const GamepadState&) = default;
+		//GamepadState(GamepadState&&) noexcept = default;
+
+		//~GamepadState();
+
 		Vector left_analog;
 		Vector right_analog;
 		Vector triggers;
@@ -87,6 +88,9 @@ namespace app::input
 		
 		void set_button(GamepadButtonID index, bool value);
 		bool get_button(GamepadButtonID index) const;
+		bool get_dpad(DPad_Direction direction) const;
+
+		ButtonBit get_dpad_button(DPad_Direction direction) const;
 
 		std::optional<Vector> get_analog(GamepadAnalog analog) const;
 

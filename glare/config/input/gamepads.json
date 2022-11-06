@@ -29,13 +29,13 @@
 
 				"Pause":        "Start",
 
-				"Shield":       "LT",
 				"FirstPerson":  "R3"
 			},
 
 			"virtual_buttons":
 			{
-				"Shield": "Left.x<-0.5"
+				"Shield":       "Triggers.x",
+				"ChangeStance": "Triggers.y"
 			},
 
 			"hats":
@@ -52,7 +52,7 @@
 
 			"analogs":
 			{
-				"Movement":    ["DPad", "Left"],
+				"Movement":    "Left",
 				"Camera":      "Right",
 				"Orientation": "Triggers",
 				"MenuSelect":  "DPad"

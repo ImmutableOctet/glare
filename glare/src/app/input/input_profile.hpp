@@ -4,7 +4,7 @@
 #include "virtual_button.hpp"
 #include "hat.hpp"
 
-#include <magic_enum/magic_enum.hpp>
+#include <util/magic_enum.hpp>
 #include <util/json.hpp>
 #include <util/string.hpp>
 #include <util/small_vector.hpp>
@@ -327,8 +327,10 @@ namespace app::input
 
 							if (number_of_matches > 6)
 							{
-								const auto threshold_input = rgx_match[6].str();
-								threshold = std::stof(threshold_input);
+								if (const auto threshold_input = rgx_match[6].str(); !threshold_input.empty())
+								{
+									threshold = std::stof(threshold_input);
+								}
 							}
 						}
 					}

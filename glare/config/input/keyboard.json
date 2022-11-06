@@ -46,11 +46,9 @@
 				"Jump":         "SPACE",
 				"HeavyAttack":  "R",
 				"Interact":     "E",
-
-				"Pause":        ["PAUSE", "ESCAPE"],
-
 				"Shield":       "LSHIFT",
-				"FirstPerson":  "HOME"
+				"FirstPerson":  "HOME",
+				"Pause":        ["PAUSE", "ESCAPE"]
 			},
 
 			"analogs":

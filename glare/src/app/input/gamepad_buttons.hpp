@@ -34,4 +34,12 @@ namespace app::input
 		DOWN,
 		LEFT
 	};
+
+	enum class GamepadDPadDirection : std::uint8_t
+	{
+		Up,
+		Right,
+		Down,
+		Left
+	};
 }

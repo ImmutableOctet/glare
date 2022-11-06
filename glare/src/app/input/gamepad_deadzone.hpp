@@ -34,15 +34,41 @@ namespace app::input
         {
             std::optional<Range> x = std::nullopt;
             std::optional<Range> y = std::nullopt;
+            //std::optional<Range> z = std::nullopt;
 
-            inline FloatingType get(const std::optional<Range>& range, auto raw_value) const
+            bool invert_x : 1 = false;
+            bool invert_y : 1 = false;
+            //bool invert_z : 1 = false;
+
+            inline FloatingType get(const std::optional<Range>& range, auto raw_value, bool invert_value=false) const
             {
+                FloatingType output;
+
                 if (range)
                 {
-                    return range->get(raw_value);
+                    output = range->get(raw_value);
+                }
+                else
+                {
+                    output = Range::to_floating_point(raw_value);
                 }
 
-                return Range::to_floating_point(raw_value);
+                if (invert_value)
+                {
+                    return -output;
+                }
+
+                return output;
+            }
+
+            inline auto get_x(auto raw_value) const
+            {
+                return get(x, raw_value, invert_x);
+            }
+
+            inline auto get_y(auto raw_value) const
+            {
+                return get(y, raw_value, invert_y);
             }
 
             inline bool beyond_threshold(const std::optional<Range>& range, auto raw_value) const
@@ -53,16 +79,6 @@ namespace app::input
                 }
 
                 return static_cast<bool>(raw_value); // > 0
-            }
-
-            inline auto get_x(auto raw_value) const
-            {
-                return get(x, raw_value);
-            }
-
-            inline auto get_y(auto raw_value) const
-            {
-                return get(y, raw_value);
             }
 
             inline bool x_beyond_threshold(auto raw_value) const

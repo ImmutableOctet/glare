@@ -7,7 +7,7 @@
 
 #include "input_profile_impl.hpp"
 
-#include <magic_enum/magic_enum.hpp>
+#include <util/magic_enum.hpp>
 
 #include <cmath>
 
@@ -26,6 +26,10 @@ namespace app::input
 	{
 		util::retrieve_from(data, "x", analog.x, read_range);
 		util::retrieve_from(data, "y", analog.y, read_range);
+
+		analog.invert_x = util::get_value(data, "invert_x", analog.invert_x);
+		analog.invert_y = util::get_value(data, "invert_y", analog.invert_y);
+		//analog.invert_z = util::get_value(data, "invert_z", analog.invert_z);
 	}
 
 	GamepadProfile::GamepadProfile(const ProfileMetadata& profile_metadata, const util::json& json)

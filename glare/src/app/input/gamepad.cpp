@@ -8,7 +8,7 @@
 #include <math/math.hpp>
 
 #include <sdl2/SDL_joystick.h>
-#include <magic_enum/magic_enum.hpp>
+#include <util/magic_enum.hpp>
 
 #include <optional>
 
@@ -166,6 +166,12 @@ namespace app::input
 			case SDL_JOYAXISMOTION:
 			{
 				auto device_id = static_cast<GamepadDeviceIndex>(e.jaxis.which);
+
+				if (!is_this_device(device_id))
+				{
+					return false;
+				}
+
 				auto value = e.jaxis.value;
 
 				std::optional<GamepadAnalog> analog = std::nullopt;
@@ -222,6 +228,7 @@ namespace app::input
 						break;
 				}
 
+				// Single-trigger event handling:
 				if (!continuous_analog_input)
 				{
 					if (opt_event_handler && analog.has_value())
@@ -241,18 +248,34 @@ namespace app::input
 			
 			case SDL_JOYBUTTONDOWN:
 			case SDL_JOYBUTTONUP:
+			{
+				const auto device_id = static_cast<GamepadDeviceIndex>(e.jbutton.which);
+
+				if (!is_this_device(device_id))
+				{
+					return false;
+				}
+
 				return process_button_event(e.jbutton, opt_event_handler);
+			}
 
 			case SDL_JOYHATMOTION:
 			{
+				const auto device_id = static_cast<GamepadDeviceIndex>(e.jhat.which);
+
+				if (!is_this_device(device_id))
+				{
+					return false;
+				}
+
 				switch (e.jhat.hat)
 				{
 					case 0: // D-Pad
 					{
-						auto device_id = static_cast<GamepadDeviceIndex>(e.jhat.which);
+						// Update internal DPad state. (Button representation)
+						handle_dpad_changes(e.jhat.value, next_state, get_state(), opt_event_handler);
 
-						next_state.update_dpad(e.jhat.value);
-
+						// Single-trigger event handling:
 						if (!continuous_analog_input)
 						{
 							if (opt_event_handler)
@@ -381,6 +404,48 @@ namespace app::input
 		});
 	}
 
+	void Gamepad::handle_dpad_changes(std::uint8_t sdl_dpad_bits, State& state, const State& prev_state, entt::dispatcher* opt_event_handler) const
+	{
+		// Update the DPad's button up/down states.
+		state.update_dpad(sdl_dpad_bits);
+
+		if (opt_event_handler)
+		{
+			// Check for DPad button release:
+			if (event_based_button_release)
+			{
+				// NOTE: This is only needed for event-based button detection, since
+				// `handle_button_changes` would already cover this for polling-driven detection:
+
+				const auto device_id = this->device_index; // const auto&
+				auto& event_handler = *opt_event_handler;
+
+				auto check_dpad_release = [device_id, &state, &prev_state, &event_handler](GamepadDPadDirection dpad_direction)
+				{
+					const auto dpad_button = prev_state.get_dpad_button(dpad_direction);
+
+					// Check for previous button 'held', current button 'released'.
+					if (prev_state.get_button(dpad_button) && !state.get_button(dpad_button))
+					{
+						// Notify listeners that the DPad button was released.
+						event_handler.enqueue<OnGamepadButtonUp>
+						(
+							device_id,
+							state,
+							static_cast<GamepadButtonID>(dpad_button)
+						);
+					}
+				};
+
+				// Enumerate DPad directions, checking each for 'release' status.
+				magic_enum::enum_for_each<GamepadDPadDirection>([&check_dpad_release](GamepadDPadDirection dpad_direction)
+				{
+					check_dpad_release(dpad_direction);
+				});
+			}
+		}
+	}
+
 	bool Gamepad::process_button_event(const SDL_JoyButtonEvent& e, entt::dispatcher* opt_event_handler)
 	{
 		assert(e.button < GamepadState::MAX_BUTTONS);
@@ -392,6 +457,7 @@ namespace app::input
 
 		next_state.set_button(button_id, (e.state == SDL_PRESSED)); // (e.state != SDL_RELEASED)
 
+		// Single-trigger event handling:
 		if (opt_event_handler)
 		{
 			switch (e.type)

@@ -291,7 +291,7 @@ namespace engine
 			if (state_data.state_has_changed)
 			{
 				// Trigger the 'state changed' event; `OnInput`.
-				service->event<OnInput>(std::monostate{}, index, state_data.next, state_data.previous);
+				service->event<OnInput>(service, std::monostate{}, index, state_data.next, state_data.previous);
 
 				// Copy the current state into the previous state.
 				state_data.previous = state_data.next;
@@ -344,11 +344,11 @@ namespace engine
 			state.held.set_button(button, true);
 
 			// Trigger the 'button pressed' event.
-			service->event<OnButtonPressed>(source, state_index, state, button);
+			service->event<OnButtonPressed>(service, source, state_index, state, button);
 		}
 
 		// Trigger the continuous 'button held/down' event.
-		service->event<OnButtonDown>(source, state_index, state, button);
+		service->event<OnButtonDown>(service, source, state_index, state, button);
 	}
 
 	void InputSystem::on_button_up(InputSource source, StateIndex state_index, Button button)
@@ -369,7 +369,7 @@ namespace engine
 		state.released.set_button(button, true);
 
 		// Trigger the 'button released' event.
-		service->event<OnButtonReleased>(source, state_index, state, button);
+		service->event<OnButtonReleased>(service, source, state_index, state, button);
 	}
 
 	void InputSystem::on_analog_input(InputSource source, StateIndex state_index, Analog analog, const math::Vector2D& value, std::optional<float> angle)
@@ -386,7 +386,7 @@ namespace engine
 		auto angle_out = (angle.has_value() ? (*angle) : state.directional_input.angle_of(value));
 
 		// Trigger the 'analog input' event.
-		service->event<OnAnalogInput>(source, state_index, state, analog, value, angle_out);
+		service->event<OnAnalogInput>(service, source, state_index, state, analog, value, angle_out);
 	}
 
 	void InputSystem::clear_input_data(StateIndex index)

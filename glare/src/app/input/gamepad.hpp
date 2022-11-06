@@ -74,6 +74,11 @@ namespace app::input
 			inline bool is_open()   const { return (handle); }
 			inline bool is_closed() const { return !is_open(); }
 
+			inline bool is_this_device(DeviceIndex index) const
+			{
+				return (index == device_index);
+			}
+
 			// The last device index established for this gamepad.
 			inline DeviceIndex index() const { return device_index; }
 
@@ -119,6 +124,9 @@ namespace app::input
 
 			// Handles analog event generation for continuous inputs.
 			void handle_analog_events(entt::dispatcher& event_handler, const GamepadProfile& profile, const State& state, const State& prev_state) const;
+
+			// Detects changes in DPAD state, generating events as needed.
+			void handle_dpad_changes(std::uint8_t sdl_dpad_bits, State& state, const State& prev_state, entt::dispatcher* opt_event_handler=nullptr) const;
 
 			bool process_button_event(const SDL_JoyButtonEvent& e, entt::dispatcher* opt_event_handler=nullptr);
 
