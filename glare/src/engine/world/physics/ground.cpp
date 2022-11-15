@@ -24,6 +24,12 @@ namespace engine
 			{
 				is_dynamic = true;
 			}
+
+			is_contacted = true;
+		}
+		else
+		{
+			is_contacted = false;
 		}
 	}
 }

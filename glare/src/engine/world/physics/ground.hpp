@@ -1,6 +1,7 @@
 #pragma once
 
-#include <engine/world/physics/collision_events.hpp>
+#include "collision_events.hpp"
+//#include "collision_surface.hpp"
 
 class btCollisionObject;
 
@@ -14,12 +15,21 @@ namespace engine
 		public:
 			bool is_dynamic : 1 = false;
 
+			// Used primarily by external systems; updates automatically based on
+			// whether a collision object can be resolved from a contact-surface.
+			// 
+			// NOTE: This can be further changed by an external source. (e.g. for ground detection)
+			bool is_contacted : 1 = true;
+
 			Ground() = default;
 			Ground(const Ground&) = default;
 			Ground(Ground&&) noexcept = default;
 
 			inline Ground(const CollisionSurface& contact)
-				: CollisionSurface(contact) {}
+				: CollisionSurface(contact)
+			{
+				on_new_surface();
+			}
 
 			inline Ground(World& world, const CollisionSurface& contact)
 				: Ground(contact)
@@ -62,6 +72,12 @@ namespace engine
 			{
 				return entity();
 			}
+
+			inline bool get_is_dynamic() const { return is_dynamic; }
+			inline void set_is_dynamic(bool value) { is_dynamic = value; }
+
+			inline bool get_is_contacted() const { return is_contacted; }
+			inline void set_is_contacted(bool value) { is_contacted = value; }
 
 			void update_metadata(World& world);
 		private:
