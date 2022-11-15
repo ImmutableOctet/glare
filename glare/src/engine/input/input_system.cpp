@@ -1,7 +1,8 @@
 #include "input_system.hpp"
-#include "input_component.hpp"
 #include "buttons.hpp"
 #include "events.hpp"
+
+#include "components/input_component.hpp"
 
 #include <engine/service.hpp>
 

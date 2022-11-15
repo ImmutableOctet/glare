@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.hpp"
+#include <engine/input/types.hpp>
 
 namespace engine
 {
@@ -13,5 +13,10 @@ namespace engine
 		// field without a new `InputComponent` object via a registry.
 		// This includes component updates; re-attach instead.
 		InputStateIndex input_index; // const
+
+		inline InputStateIndex get_input_index() const
+		{
+			return input_index;
+		}
 	};
 }
