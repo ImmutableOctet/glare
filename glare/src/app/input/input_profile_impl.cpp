@@ -12,7 +12,10 @@ namespace app::input
 			std::string_view default_profile_name
 		)
 		{
-			if (const auto devices_it = data.find(device_entries_label); devices_it != data.end())
+			// TODO: Optimize. (Heterogeneous lookup issue with `nlohmann::ordered_json`)
+			const auto device_entries_label_s = std::string { device_entries_label };
+
+			if (const auto devices_it = data.find(device_entries_label_s); devices_it != data.end())
 			{
 				const auto& device_entries = *devices_it;
 
