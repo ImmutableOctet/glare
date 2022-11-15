@@ -1,11 +1,12 @@
 #include "light.hpp"
+#include "components/light_component.hpp"
 
 #include <engine/world/world.hpp>
 
 #include <engine/resource_manager/resource_manager.hpp>
 #include <engine/world/graphics_entity.hpp>
 
-#include <engine/model_component.hpp>
+#include <engine/components/model_component.hpp>
 
 #include <util/string.hpp>
 #include <util/algorithm.hpp>
@@ -21,16 +22,13 @@
 
 namespace engine
 {
-	float PointLightComponent::get_radius(const LightProperties& properties, float constant) const
-	{
-		return get_radius(properties.max_brightness(), constant);
-	}
-
+	// NOTE: This implementation is here since `LightProperties` will eventually be migrated to the main `world` module.
 	float LightProperties::calculate_max_brightness(const graphics::ColorRGB& diffuse)
 	{
 		return std::fmaxf(std::fmaxf(diffuse.r, diffuse.g), diffuse.b);
 	}
 
+	// NOTE: This implementation is here since `LightProperties` will eventually be migrated to the main `world` module.
 	float LightProperties::max_brightness() const
 	{
 		return calculate_max_brightness(diffuse);
@@ -277,8 +275,15 @@ namespace engine
 		}
 		else
 		{
-			if (attach_shadows_impl<LightType::Point, PointLightShadows, PointLightShadows::TFormData>(world, light, light_position, resolution, perspective_cfg, update_aspect_ratio)) return true;
-			if (attach_shadows_impl<LightType::Directional, DirectionLightShadows, DirectionLightShadows::TFormData>(world, light, light_position, resolution, perspective_cfg, update_aspect_ratio)) return true;
+			if (attach_shadows_impl<LightType::Point, PointLightShadows, PointLightShadows::TFormData>(world, light, light_position, resolution, perspective_cfg, update_aspect_ratio))
+			{
+				return true;
+			}
+
+			if (attach_shadows_impl<LightType::Directional, DirectionLightShadows, DirectionLightShadows::TFormData>(world, light, light_position, resolution, perspective_cfg, update_aspect_ratio))
+			{
+				return true;
+			}
 		}
 
 		return false;
@@ -296,29 +301,5 @@ namespace engine
 
 			attach_shadows(world, light, light_type);
 		}
-	}
-
-	LightType LightComponent::resolve_light_mode(const std::string& mode)
-	{
-		auto m = util::lowercase(mode);
-
-		if (m.starts_with("direction"))
-		{
-			return LightType::Directional;
-		}
-
-		if (m.starts_with("spot"))
-		{
-			return LightType::Spotlight;
-		}
-
-		/*
-		if (m.starts_with("point"))
-		{
-			return LightType::Point;
-		}
-		*/
-
-		return LightType::Point;
 	}
 }

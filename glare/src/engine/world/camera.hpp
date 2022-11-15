@@ -1,69 +1,22 @@
 #pragma once
 
+#include "components/camera_component.hpp"
+
 //#include <math/math.hpp>
 
-#include "entity.hpp"
+//#include <engine/world/entity.hpp>
+#include <engine/types.hpp>
 
 // Forward declaration not used due to templates.
 #include <util/json.hpp>
 
 namespace engine
 {
-	enum class CameraProjection : std::uint8_t
-	{
-		Perspective,
-		Orthographic,
-
-		Default = Perspective
-	};
-
-	struct CameraParameters // Component type.
-	{
-		using Projection = CameraProjection;
-
-		inline static constexpr float calculate_aspect_ratio(int width, int height)
-		{
-			return (static_cast<float>(width) / static_cast<float>(height));
-		}
-
-		inline static constexpr float calculate_aspect_ratio(const math::vec2i& size)
-		{
-			return calculate_aspect_ratio(size.x, size.y);
-		}
-
-		static Projection resolve_projection_mode(const std::string& mode);
-
-		static constexpr float NEAR_PLANE = 0.1f;
-		static constexpr float FAR_PLANE  = 4000.0f;
-		static constexpr float ASPECT = (16.0f / 9.0f); // calculate_aspect_ratio(16, 9); // 16:9
-
-		static constexpr float DEFAULT_FOV = 75.0f;
-
-		static constexpr bool DEFAULT_FREE_ROTATION = true; // false;
-		static constexpr bool DEFAULT_DYNAMIC_ASPECT_RATIO = true; // false;
-
-		float fov; // Vertical FOV (Radians)
-		float aspect_ratio;
-		float near_plane;
-		float far_plane;
-
-		Projection projection_mode;
-
-		bool free_rotation;
-		bool dynamic_aspect_ratio;
-
-		CameraParameters(const util::json& camera_cfg);
-		CameraParameters(float v_fov_deg=DEFAULT_FOV, float near_plane=NEAR_PLANE, float far_plane=FAR_PLANE, float aspect_ratio=ASPECT, Projection projection_mode=Projection::Default, bool free_rotation=DEFAULT_FREE_ROTATION, bool dynamic_aspect_ratio=DEFAULT_DYNAMIC_ASPECT_RATIO);
-
-		inline auto update_aspect_ratio(int width, int height)
-		{
-			auto ratio = calculate_aspect_ratio(width, height);
-
-			this->aspect_ratio = ratio;
-
-			return ratio;
-		}
-	};
-
+	// Generates a standalone camera entity.
+	// 
+	// The `make_active` parameter allows you to override `world`'s active camera object.
+	// 
+	// The `collision_enabled` parameter allows you to generate a simple collision primitive for this entity.
+	// (TODO: Remove first-class collision support from this interface)
 	Entity create_camera(World& world, CameraParameters params={}, Entity parent=null, bool make_active=false, bool collision_enabled=false);
 }
