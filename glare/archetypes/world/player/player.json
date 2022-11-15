@@ -1,0 +1,19 @@
+{
+	"archetypes":
+	[
+		"actor"
+	],
+
+	"states":
+	[
+		"player_common"
+	],
+
+	"components":
+	{
+		"NameComponent": "Player",
+		"TypeComponent": "EntityType::Player"
+	},
+
+	"default_state": "player_common"
+}

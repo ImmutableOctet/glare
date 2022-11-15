@@ -1,0 +1,13 @@
+{
+	"archetypes":
+	[
+		"world_entity",
+		"motion/kinematic_motion"
+	],
+
+	"components":
+	[
+		"GroundComponent",
+		"GravityComponent"
+	]
+}
