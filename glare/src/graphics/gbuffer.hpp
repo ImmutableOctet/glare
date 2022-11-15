@@ -23,8 +23,8 @@ namespace graphics
 			inline GBuffer(pass_ref<Context> context, std::tuple<int, int> resolution, GBufferFlags flags=GBufferFlags::Default, TextureFlags texture_flags=TextureFlags::None)
 				: GBuffer(context, std::get<0>(resolution), std::get<1>(resolution), flags, texture_flags) {}
 
-			GBuffer(GBuffer&&) = default;
-			GBuffer& operator=(GBuffer&&) = default;
+			GBuffer(GBuffer&&) noexcept = default;
+			GBuffer& operator=(GBuffer&&) noexcept = default;
 
 			void resize(int width, int height);
 

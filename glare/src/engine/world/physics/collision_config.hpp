@@ -25,9 +25,9 @@ namespace engine
 
 		CollisionConfig() = default;
 		CollisionConfig(const CollisionConfig&) = default;
-		CollisionConfig(CollisionConfig&&) = default;
+		CollisionConfig(CollisionConfig&&) noexcept = default;
 
-		CollisionConfig& operator=(CollisionConfig&&) = default;
+		CollisionConfig& operator=(CollisionConfig&&) noexcept = default;
 
 		CollisionConfig(EntityType type);
 

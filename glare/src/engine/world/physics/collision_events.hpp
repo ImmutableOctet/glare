@@ -71,6 +71,7 @@ namespace engine
 		ContactType contact_type;
 	};
 
+	// TODO: Move this type to its own header, etc.
 	struct OnSurfaceContact
 	{
 		// General collision information.

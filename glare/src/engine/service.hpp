@@ -28,7 +28,7 @@ namespace engine
 	{
 		public:
 			Service(bool register_input_events=true);
-			Service(Service&&) = default;
+			Service(Service&&) noexcept = default;
 
 			virtual ~Service() {};
 

@@ -28,7 +28,7 @@ namespace graphics
 
 			KeyVector() = default;
 			KeyVector(const KeyVector& v) = default
-			KeyVector(KeyVector&&) = default;
+			KeyVector(KeyVector&&) noexcept = default;
 
 			inline KeyVector(const math::Vector& vec, float timestamp)
 				: value(vec), timestamp(timestamp) {}
@@ -51,7 +51,7 @@ namespace graphics
 
 			KeyRotation() = default;
 			KeyRotation(const KeyRotation&) = default;
-			KeyRotation(KeyRotation&&) = default;
+			KeyRotation(KeyRotation&&) noexcept = default;
 
 			inline KeyRotation(const math::Quaternion& quat, float timestamp)
 				: value(quat), timestamp(timestamp) {}

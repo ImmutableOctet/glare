@@ -30,7 +30,7 @@ namespace engine
 
 			Config() = default;
 			Config(const Config&) = default;
-			Config(Config&&) = default;
+			Config(Config&&) noexcept = default;
 	};
 
 	void from_json(const Config::JSON& data, Config& cfg);
