@@ -1,5 +1,5 @@
 #include "service.hpp"
-#include "input_events.hpp"
+#include "input/raw_input_events.hpp"
 
 #include <app/input/mouse_state.hpp>
 #include <app/input/keyboard_state.hpp>
