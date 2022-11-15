@@ -10,8 +10,8 @@
 //#include "animator.hpp"
 #include "graphics_entity.hpp"
 
-#include "animation/bone_component.hpp"
-#include "physics/collision_component.hpp"
+#include "animation/components/bone_component.hpp"
+#include "physics/components/collision_component.hpp"
 
 #include <math/math.hpp>
 
@@ -26,12 +26,14 @@
 #include <graphics/shader.hpp>
 
 #include <engine/config.hpp>
-#include <engine/resource_manager/resource_manager.hpp>
-#include <engine/relationship.hpp>
-#include <engine/forwarding_component.hpp>
 
-#include <engine/type_component.hpp>
-#include <engine/name_component.hpp>
+#include <engine/resource_manager/resource_manager.hpp>
+#include <engine/components/relationship_component.hpp>
+#include <engine/components/forwarding_component.hpp>
+
+#include <engine/components/type_component.hpp>
+#include <engine/components/name_component.hpp>
+#include <engine/components/transform_history_component.hpp>
 
 #include <algorithm>
 #include <fstream>
@@ -480,6 +482,15 @@ namespace engine
 	void World::on_transform_change(const OnTransformChanged& tform_change)
 	{
 		auto entity = tform_change.entity;
+
+		auto* tform_history = registry.try_get<TransformHistoryComponent>(entity);
+
+		if (tform_history)
+		{
+			auto tform = get_transform(entity);
+
+			*tform_history << tform;
+		}
 
 		// TODO: Move this into a separate lighting system/event-handler...?
 		// Update shadow-maps for light entities.
