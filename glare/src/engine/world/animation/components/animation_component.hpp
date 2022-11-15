@@ -10,6 +10,8 @@ namespace engine
 	class AnimationSystem;
 
 	// Main animation component type.
+	//
+	// TODO: Rename to `AnimationComponent`.
 	struct Animator
 	{
 		public:
@@ -24,12 +26,12 @@ namespace engine
 
 			struct TransitionState
 			{
-				inline TransitionState(float duration, float prev_anim_time)
-					: duration(duration), prev_time(prev_anim_time) {}
+				inline TransitionState(float duration, float prev_anim_time, float elapsed=0.0f)
+					: duration(duration), prev_time(prev_anim_time), elapsed(elapsed) {}
 
 				float duration;
 				float prev_time;
-				float elapsed = 0.0f;
+				float elapsed;
 			};
 
 			friend AnimationSystem;
@@ -37,21 +39,21 @@ namespace engine
 			static constexpr auto MAX_CHANNELS = graphics::VERTEX_MAX_BONE_INFLUENCE;
 			static constexpr unsigned int MAX_BONES = 128; // 16; // 48;
 
-			static const Animation& get_animation(pass_ref<AnimationData> animations, AnimationID id);
+			static const Animation* resolve_animation(const std::shared_ptr<AnimationData>& animations, AnimationID id);
+			static std::optional<AnimationID> resolve_animation_id(const std::shared_ptr<AnimationData>& animations, const Animation* animation);
 
-			inline Animator(pass_ref<AnimationData> animations, AnimationID current_animation={}, float rate=1.0f, float time=0.0f)
-				: Animator(animations, &(get_animation(animations, current_animation)), rate, time) {}
+			Animator() = default;
 
-			inline const Animation& get_animation(AnimationID id) const
-			{
-				return get_animation(animations, id); //animations->animations[id];
-			}
+			Animator(float rate);
+
+			inline Animator(const std::shared_ptr<AnimationData>& animations, AnimationID current_animation={}, float rate=1.0f, float time=0.0f)
+				: Animator(animations, resolve_animation(animations, current_animation), rate, time) {}
 
 			// Animation rate multiplier.
-			float rate;
+			float rate = 1.0f;
 
 			// Current position/floating frame-position in the animation.
-			float time;
+			float time = 0.0f;
 
 			// Buffer containing the last updated state of each bone.
 			Matrices pose; // bone_matrices;
@@ -79,18 +81,48 @@ namespace engine
 
 				return *this;
 			}
+
+			inline std::optional<AnimationID> resolve_id(const Animation* animation) const
+			{
+				return resolve_animation_id(this->animations, animation);
+			}
 		public:
+			inline const Animation* get_animation(AnimationID id) const
+			{
+				return resolve_animation(animations, id); //animations->animations[id];
+			}
+
+			inline std::optional<AnimationID> get_animation_id() const
+			{
+				return resolve_id(get_current_animation());
+			}
+
+			inline Animator& set_animation_id(AnimationID id)
+			{
+				const auto* animation = get_animation(id);
+
+				// TODO: Determine if a null-check still makes sense here.
+				if (!animation)
+				{
+					return *this;
+				}
+
+				return set_animation(animation);
+			}
+
+			// Alias for `set_animation_id`.
 			inline Animator& set_animation(AnimationID id)
 			{
-				const auto& animation = get_animation(id);
-
-				return set_animation(&animation);
+				return set_animation_id(id);
 			}
 
 			inline const auto& get_animations() const
 			{
 				return animations;
 			}
+
+			// TODO: Need to test this part of the public API.
+			Animator& set_animations(const std::shared_ptr<AnimationData>& animations, State new_state=State::Play);
 
 			inline const Animation* get_current_animation() const { return current_animation; }
 			inline const Animation* get_prev_animation() const { return prev_animation; }
@@ -116,5 +148,6 @@ namespace engine
 			bool toggle();
 	};
 
+	// TODO: Rename `Animator` to `AnimationComponent`.
 	using AnimationComponent = Animator;
 }

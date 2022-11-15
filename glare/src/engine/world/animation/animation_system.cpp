@@ -1,12 +1,12 @@
 #include "animation_system.hpp"
 #include "animation_events.hpp"
-#include "animator.hpp"
 
-#include "bone_component.hpp"
-#include "skeletal_component.hpp"
+#include "components/animation_component.hpp"
+#include "components/bone_component.hpp"
+#include "components/skeletal_component.hpp"
 
-#include <engine/relationship.hpp>
-#include <engine/forwarding_component.hpp>
+#include <engine/components/relationship_component.hpp>
+#include <engine/components/forwarding_component.hpp>
 #include <engine/world/world.hpp>
 #include <engine/resource_manager/resource_manager.hpp>
 #include <engine/events.hpp>

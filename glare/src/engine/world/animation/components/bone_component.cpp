@@ -1,9 +1,9 @@
 #include "bone_component.hpp"
 #include "skeletal_component.hpp"
 
-#include <engine/relationship.hpp>
-#include <engine/name_component.hpp>
-#include <engine/forwarding_component.hpp>
+#include <engine/components/relationship_component.hpp>
+#include <engine/components/name_component.hpp>
+#include <engine/components/forwarding_component.hpp>
 
 #include <engine/world/world.hpp>
 
