@@ -12,17 +12,14 @@ namespace engine
 		graphics::ColorRGB ambient_light = { 0.8f, 0.8f, 0.8f };
 		math::Vector gravity = { 0.0f, -1.0f, 0.0f };
 
-		WorldProperties() = default;
-		WorldProperties(const WorldProperties&) = default;
-		WorldProperties(WorldProperties&&) noexcept = default;
-
-		inline WorldProperties(const util::json& data) : WorldProperties()
+		inline static WorldProperties from_json(const util::json& data)
 		{
-			ambient_light = util::get_color_rgb(data, "ambient_light", ambient_light);
-			gravity = util::get_vector(data, "gravity", gravity);
-		}
+			WorldProperties properties;
 
-		WorldProperties& operator=(const WorldProperties&) = default;
-		WorldProperties& operator=(WorldProperties&&) noexcept = default;
+			properties.ambient_light = util::get_color_rgb(data, "ambient_light", properties.ambient_light);
+			properties.gravity = util::get_vector(data, "gravity", properties.gravity);
+
+			return properties;
+		}
 	} ;
 }
