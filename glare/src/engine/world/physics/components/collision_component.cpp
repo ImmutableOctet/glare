@@ -1,6 +1,7 @@
 //#include "collision.hpp"
 #include "collision_component.hpp"
-#include "collision_motion_state.hpp"
+
+#include <engine/world/physics/collision_motion_state.hpp>
 
 #include <engine/world/world.hpp>
 
@@ -14,6 +15,7 @@
 
 namespace engine
 {
+	// This function is currently an implementation-detail and is not exposed directly.
 	static void set_entity_for_collision_object(btCollisionObject& c_obj, Entity entity)
 	{
 		static_assert(sizeof(int) >= sizeof(entt::id_type));

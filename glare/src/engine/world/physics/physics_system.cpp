@@ -2,7 +2,8 @@
 
 #include "collision.hpp"
 
-#include "collision_component.hpp"
+#include "components/collision_component.hpp"
+
 #include "collision_cast.hpp"
 #include "collision_motion_state.hpp"
 #include "kinematic_resolution_config.hpp"
@@ -14,7 +15,7 @@
 #include <engine/world/world.hpp>
 #include <engine/world/world_events.hpp>
 
-#include <engine/relationship.hpp>
+#include <engine/components/relationship_component.hpp>
 #include <engine/transform.hpp>
 
 #include <math/bullet.hpp>

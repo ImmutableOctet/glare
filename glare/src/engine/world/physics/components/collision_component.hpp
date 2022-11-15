@@ -1,11 +1,11 @@
 #pragma once
 
-#include "collision_group.hpp"
-#include "collision_config.hpp"
-#include "collision_motion_state.hpp"
-#include "collision_body_type.hpp"
-#include "collision_cast_method.hpp"
-#include "kinematic_resolution_config.hpp"
+#include <engine/world/physics/collision_group.hpp>
+#include <engine/world/physics/collision_config.hpp>
+#include <engine/world/physics/collision_motion_state.hpp>
+#include <engine/world/physics/collision_body_type.hpp>
+#include <engine/world/physics/collision_cast_method.hpp>
+#include <engine/world/physics/kinematic_resolution_config.hpp>
 
 #include "types.hpp"
 
@@ -222,8 +222,8 @@ namespace engine
 				}
 			}
 
-			CollisionComponent(CollisionComponent&&) = default;
-			CollisionComponent& operator=(CollisionComponent&&) = default;
+			CollisionComponent(CollisionComponent&&) noexcept = default;
+			CollisionComponent& operator=(CollisionComponent&&) noexcept = default;
 
 			CollisionComponent(const CollisionComponent&) = delete;
 			CollisionComponent& operator=(const CollisionComponent&) = delete;
@@ -384,6 +384,14 @@ namespace engine
 				break;
 		}
 
-		return attach_collision_impl(world, entity, CollisionComponent(collision_shape_data, config, mass, body_type, std::move(motion_state), resolution_method));
+		return attach_collision_impl
+		(
+			world, entity,
+			CollisionComponent
+			(
+				collision_shape_data, config, mass, body_type,
+				std::move(motion_state), resolution_method
+			)
+		);
 	}
 }
