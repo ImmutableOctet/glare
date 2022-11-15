@@ -16,14 +16,12 @@ namespace engine
 {
 	struct Transform;
 
+	// Direct mouse-input driven rotation. Useful for debugging and FPS control schemes.
 	struct FreeLookBehavior
 	{
 		using MouseState = app::input::MouseState;
 
 		static void on_mouse(World& world, float delta, const MouseState& mouse_state);
-
-		//int x = 0;
-		//int y = 0;
 
 		// Mouse sensitivity. (In radians)
 		float sensitivity = glm::radians(0.05f);

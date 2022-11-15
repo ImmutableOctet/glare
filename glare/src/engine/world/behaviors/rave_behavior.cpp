@@ -1,7 +1,7 @@
 #include "rave_behavior.hpp"
 
 #include <engine/world/world.hpp>
-#include <engine/model_component.hpp>
+#include <engine/components/model_component.hpp>
 
 #include <app/delta_time.hpp>
 

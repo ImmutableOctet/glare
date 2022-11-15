@@ -2,7 +2,7 @@
 
 #include <util/member_function_traits.hpp>
 #include <engine/service_events.hpp>
-#include <engine/input_events.hpp>
+#include <engine/input/raw_input_events.hpp>
 
 // TODO: Remove direct usage of `world` header. (currently required for `delta`)
 #include <engine/world/world.hpp>
@@ -55,6 +55,8 @@ namespace engine
     //struct OnServiceUpdate;
     //struct OnMouseState;
     //struct OnKeyboardState;
+
+    //void reflect_behaviors();
 
     namespace behavior_impl
     {

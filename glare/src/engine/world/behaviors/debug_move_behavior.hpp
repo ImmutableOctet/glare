@@ -15,15 +15,18 @@ namespace engine
 {
 	struct Transform;
 
+	// TODO: Rework using new high-level input system.
 	struct DebugMoveBehavior
 	{
 		public:
+			/*
 			enum SpeedPreset
 			{
 				Normal,
 				Fast,
 				Slow
 			};
+			*/
 
 			using KeyboardState = app::input::KeyboardState;
 
