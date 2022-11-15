@@ -27,12 +27,14 @@
 #include <engine/world/render/world_render_state.hpp>
 
 #include <engine/events.hpp>
-#include <engine/type_component.hpp>
-#include <engine/model_component.hpp>
+
+#include <engine/components/type_component.hpp>
+#include <engine/components/model_component.hpp>
+
+#include <engine/world/light.hpp>
 
 #include <engine/world/world_events.hpp>
 #include <engine/world/graphics_entity.hpp>
-#include <engine/world/light.hpp>
 #include <engine/world/behaviors/behaviors.hpp>
 
 #include <engine/input/input.hpp>
@@ -50,11 +52,13 @@
 #include <format>
 
 // Debugging related:
-#include <engine/world/physics/collision_component.hpp>
-#include <engine/world/motion/motion_component.hpp>
-#include <engine/types.hpp>
-#include <engine/world/zones/zones.hpp>
 #include <math/bullet.hpp>
+#include <engine/types.hpp>
+
+#include <engine/world/physics/components/collision_component.hpp>
+#include <engine/world/motion/components/motion_component.hpp>
+
+#include <engine/world/zones/zones.hpp>
 #include <bullet/btBulletCollisionCommon.h>
 
 namespace glare
@@ -390,15 +394,15 @@ namespace glare
 
 		meta_controls();
 
-		auto player = world.get_player();
-		assert(player != engine::null);
+		if (auto player = world.get_player(); player != engine::null)
+		{
+			auto player_model = world.get_child_by_name(player, "player_model", false);
+			assert(player_model != engine::null);
 
-		auto player_model = world.get_child_by_name(player, "player_model", false);
-		assert(player_model != engine::null);
+			auto target = player_model;
 
-		auto target = player_model;
-
-		animation_control(world, target);
+			animation_control(world, target);
+		}
 
 		hierarchy_control(world, world.get_root());
 	}

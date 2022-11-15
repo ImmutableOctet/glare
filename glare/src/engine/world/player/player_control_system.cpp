@@ -1,5 +1,4 @@
 #include "player_control_system.hpp"
-#include "player_control_component.hpp"
 
 #include <engine/world/world.hpp>
 

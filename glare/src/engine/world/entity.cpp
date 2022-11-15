@@ -1,12 +1,16 @@
 #include "entity.hpp"
 
-#include <engine/relationship.hpp>
 #include <engine/transform.hpp>
+
+#include <engine/components/relationship_component.hpp>
+#include <engine/components/type_component.hpp>
+
 #include <engine/world/world.hpp>
-#include <engine/type_component.hpp>
 
 #include <engine/events.hpp>
 //#include "world_events.hpp"
+
+#include <util/json.hpp>
 
 namespace engine
 {
