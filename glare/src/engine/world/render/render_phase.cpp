@@ -11,8 +11,8 @@
 
 #include <engine/config.hpp>
 #include <engine/transform.hpp>
-#include <engine/model_component.hpp>
-#include <engine/relationship.hpp>
+#include <engine/components/model_component.hpp>
+#include <engine/components/relationship_component.hpp>
 
 #include <engine/resource_manager/resource_manager.hpp>
 

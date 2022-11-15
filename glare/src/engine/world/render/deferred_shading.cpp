@@ -8,7 +8,7 @@
 #include <graphics/context.hpp>
 #include <graphics/gbuffer.hpp>
 
-#include <engine/relationship.hpp>
+#include <engine/components/relationship_component.hpp>
 #include <engine/transform.hpp>
 
 #include <engine/world/world.hpp>
@@ -326,7 +326,7 @@ namespace engine
 		auto uniform_prefix = ("directional_lights[" + std::to_string(directional_light_idx) + "].");
 
 		// Helper lambda for assignment to the fully-qualified attribute name of this light.
-		auto attr = [&](const std::string& attr_name, auto&& value) // std::string_view
+		auto attr = [&](const std::string& attr_name, auto value) // std::string_view
 		{
 			shader[(uniform_prefix + attr_name)] = value;
 		};
