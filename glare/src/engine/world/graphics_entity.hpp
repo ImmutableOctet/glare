@@ -1,5 +1,7 @@
 #pragma once
 
+// TODO: Look into reworking/replacing this header with something more cohesive.
+
 //#include "types.hpp"
 #include <types.hpp>
 #include <graphics/types.hpp>

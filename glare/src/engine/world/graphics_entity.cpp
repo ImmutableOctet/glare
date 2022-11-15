@@ -5,16 +5,16 @@
 #include <utility>
 
 #include "animation/animation.hpp"
-#include "animation/skeletal_component.hpp"
-#include "animation/bone_component.hpp"
+#include "animation/components/skeletal_component.hpp"
+#include "animation/components/bone_component.hpp"
 
 //#include "physics/collision_config.hpp"
-#include "physics/collision_component.hpp"
+#include "physics/components/collision_component.hpp"
 
 #include <engine/resource_manager/resource_manager.hpp>
 
-#include <engine/model_component.hpp>
-#include <engine/name_component.hpp>
+#include <engine/components/model_component.hpp>
+#include <engine/components/name_component.hpp>
 
 #include <graphics/model.hpp>
 #include <graphics/shader.hpp>
