@@ -4,89 +4,19 @@
 #include <utility>
 
 #include "types.hpp"
-#include "relationship.hpp"
+
+// TODO: Look into whether we should forward declare this instead.
+#include "components/transform_component.hpp"
+
+#include "components/relationship_component.hpp"
 
 #include <math/math.hpp>
 
 namespace engine
 {
-	// Forward declarations:
 	class World;
-	struct Transform;
 
-	enum class _TransformComponent_Dirty : std::uint8_t
-	{
-		None = 0,
-
-		M                    = 1, // Model
-		W                    = 2, // World
-		IW                   = 4, // Inverse World
-		
-		/*
-			Indicates that a change has taken place;
-			used for collision, dynamic cubemap matrices (shadows, reflections), etc.
-			
-			Order of operations is essentially a mark-and-sweep approach:
-			Modify Transform (flag triggered; mark) -> Detect flags -> Trigger events -> Disable flags (sweep) -> Repeat
-		*/
-		EventFlag = 8,
-
-		All = (M | W | IW),
-	};
-
-	FLAG_ENUM(std::uint8_t, _TransformComponent_Dirty);
-
-	// Data-only component; logic is stored in 'Transformation', as several operations require additional registry access.
-	struct TransformComponent
-	{
-		public:
-			using Dirty = _TransformComponent_Dirty;
-			using Flag  = Dirty;
-		protected:
-			friend Transform;
-			friend World;
-
-			// Local transform:
-
-			// Local position/translation.
-			math::Vector translation = {};
-
-			// Local scale/magnitude.
-			math::Vector scale = { 1.0f, 1.0f, 1.0f }; // _s
-
-			// Local orientation/basis.
-			math::RotationMatrix basis = math::identity<math::RotationMatrix>(); // ('Basis') // _r
-
-			// Matrix caches:
-			mutable math::Matrix _m  = math::affine_mat4(1.0f);        // Model matrix (Representation of 'local transform')
-			mutable math::Matrix _w  = math::identity<math::Matrix>(); // World (Representation of scene-graph matrix multiplication chain)
-			mutable math::Matrix _iw = glm::inverse(_w);               // Inverse world (Inverse of `_w`/world-matrix)
-
-			// Internal cache-management bitfield.
-			mutable Dirty _dirty = Dirty::All; // Dirty::None;
-		public:
-			bool invalid(Dirty flag) const;
-
-			void invalidate(Dirty flag) const;
-			Dirty validate(Dirty flag) const;
-
-			// Helper function for event-flags, etc.
-			template <typename Event>
-			inline bool on_flag(Flag flag, Event&& event_fn) const
-			{
-				if (invalid(flag))
-				{
-					validate(flag);
-
-					event_fn();
-
-					return true;
-				}
-
-				return false;
-			}
-	};
-
+	// TODO: Look into moving this to its own header and source files.
 	struct TransformViewData
 	{
 		static std::optional<TransformViewData> get_parent_data(const TransformViewData& data);
@@ -99,7 +29,8 @@ namespace engine
 
 		// Entity:
 
-		// 'relationship' being a local copy has side-effects, including both larger object size and some very rare edge-cases.
+		// NOTE: 'relationship' being a local copy has side-effects,
+		// including both increased object size and some very rare edge-cases.
 		Relationship relationship; // const Relationship&
 
 		TransformComponent& transform; // mutable
@@ -107,6 +38,10 @@ namespace engine
 		Entity entity;
 	};
 
+	// Temporary/scope-local interface type used to efficiently modify and inspect `TransformComponent` objects.
+	//
+	// TODO: Look into managing updates of the underlying `TransformComponent` via some form of flush/update
+	// procedure that interacts with the `registry` field, rather than direct access + caching. (May be slower overall)
 	struct Transform : public TransformViewData
 	{
 		public:
@@ -147,6 +82,8 @@ namespace engine
 			Transform(Registry& registry, Entity entity);
 			Transform(Registry& registry, Entity entity, const Relationship& relationship);
 			Transform(Registry& registry, Entity entity, const Relationship& relationship, TransformComponent& transform);
+
+			Transform(Registry& registry, Entity entity, TransformComponent& transform);
 
 			~Transform();
 

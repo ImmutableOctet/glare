@@ -179,6 +179,9 @@ namespace engine
 	Transform::Transform(Registry& registry, Entity entity, const Relationship& relationship, TransformComponent& transform)
 		: Transform(TransformViewData({registry, entity, relationship, transform })) {}
 
+	Transform::Transform(Registry& registry, Entity entity, TransformComponent& transform)
+		: Transform(TransformViewData({registry, entity, registry.get<Relationship>(entity), transform })) {}
+
 	Transform::~Transform()
 	{
 		// TODO: Look into optimization.
@@ -681,24 +684,5 @@ namespace engine
 	{
 		//return set_local_basis(glm::mat3_cast(basis));
 		return set_local_basis(math::to_rotation_matrix(glm::conjugate(basis))); // TODO: Review use of 'conjugate'.
-	}
-
-
-	// TransformComponent:
-	bool TransformComponent::invalid(TransformComponent::Dirty flag) const
-	{
-		return (_dirty & flag);
-	}
-
-	void TransformComponent::invalidate(TransformComponent::Dirty flag) const
-	{
-		_dirty |= flag;
-	}
-
-	TransformComponent::Dirty TransformComponent::validate(TransformComponent::Dirty flag) const
-	{
-		_dirty &= (~flag);
-
-		return _dirty;
 	}
 }

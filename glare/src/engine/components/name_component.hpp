@@ -8,6 +8,6 @@ namespace engine
 {
 	struct NameComponent
 	{
-		std::string name;
+		std::string name = "Unknown";
 	};
 }

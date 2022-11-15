@@ -1,5 +1,7 @@
-#include "relationship.hpp"
-#include "transform.hpp"
+#include "relationship_component.hpp"
+
+//#include "transform_component.hpp"
+#include <engine/transform.hpp>
 
 #include <math/math.hpp>
 
@@ -37,7 +39,7 @@ namespace engine
 	}
 	*/
 
-	Entity Relationship::set_parent(Registry& registry, Entity self, Entity parent)
+	Entity Relationship::set_parent(Registry& registry, Entity self, Entity parent, bool fail_on_existing_parent)
 	{
 		assert(self != null);
 
@@ -55,6 +57,11 @@ namespace engine
 		if (prev_rel)
 		{
 			prev_parent = prev_rel->parent;
+
+			if (fail_on_existing_parent && (prev_parent != null))
+			{
+				return null;
+			}
 		}
 
 		//print("I am: {}, my previous parent is: {}, and my new parent is going to be: {}", self, prev_parent, parent);

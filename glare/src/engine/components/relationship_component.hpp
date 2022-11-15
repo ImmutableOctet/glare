@@ -9,11 +9,14 @@
 namespace engine
 {
 	class World;
+	class EntityFactory;
 
+	// TODO: Rename this to `RelationshipComponent` properly.
 	struct Relationship
 	{
 		public:
 			friend World;
+			friend EntityFactory;
 		protected:
 			std::uint32_t child_count = 0;
 
@@ -24,7 +27,7 @@ namespace engine
 			Entity next = null;
 
 			// This returns the previous parent entity, if it existed before a new assignment took place.
-			static Entity set_parent(Registry& registry, Entity self, Entity parent);
+			static Entity set_parent(Registry& registry, Entity self, Entity parent, bool fail_on_existing_parent=false);
 			//Entity set_parent(Registry& registry, Entity self, Entity parent);
 
 			// If `child_relationship` is not specified, a lookup will be performed on `child`.
@@ -32,13 +35,16 @@ namespace engine
 			Entity remove_child(Registry& registry, Entity child, Entity self = null, bool remove_in_registry = false);
 		public:
 			// Internal use only.
+			// 
+			// TODO: Review why this isn't currently protected or private.
 			Relationship(Entity parent=null);
 
-			Relationship(Relationship&&) = default;
-			Relationship& operator=(Relationship&&) = default;
-
+			// TODO: Review why these aren't protected/private:
 			Relationship(const Relationship&) = default;
 			Relationship& operator=(const Relationship&) = default;
+
+			Relationship(Relationship&&) noexcept = default;
+			Relationship& operator=(Relationship&&) noexcept = default;
 
 			inline std::uint32_t children() const { return child_count; }
 			inline bool has_children() const { return (children() > 0); }
@@ -252,4 +258,6 @@ namespace engine
 				return count;
 			}
 	};
+
+	using RelationshipComponent = Relationship;
 }
