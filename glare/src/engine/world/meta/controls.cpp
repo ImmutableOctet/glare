@@ -4,8 +4,8 @@
 #include <util/format.hpp>
 
 #include <engine/world/world.hpp>
-#include <engine/relationship.hpp>
-#include <engine/world/animation/bone_component.hpp>
+#include <engine/components/relationship_component.hpp>
+#include <engine/world/animation/components/bone_component.hpp>
 #include <engine/transform.hpp>
 
 #include <engine/world/animation/animation.hpp>
