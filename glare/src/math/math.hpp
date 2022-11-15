@@ -4,6 +4,7 @@
 
 #include "aabb.hpp"
 #include "conversion.hpp"
+#include "operators.hpp"
 
 #include <cmath>
 
