@@ -5,6 +5,7 @@
 #include <regex>
 #include <utility>
 #include <optional>
+#include <type_traits>
 
 //#include <fmt/core.h>
 
@@ -50,5 +51,74 @@ namespace util
 		return str;
 	}
 
+	// This function executes `callback` for every substring between instances of the `separator` specified.
+	// e.g. a string "A::B::C" will result in 3 function calls for "A", "B" and "C".
+	// 
+	// If `callback` returns false, execution will complete immediately.
+	// 
+	// This function returns true if `str` contains `separator`.
+	template <typename Callback>
+	bool split(std::string_view str, std::string_view separator, Callback callback)
+	{
+		std::size_t find_result = 0;
+
+		bool result = false;
+
+		while (true)
+		{
+			auto begin = (str.begin() + find_result);
+
+			find_result = str.find(separator, find_result);
+
+			if (find_result == std::string_view::npos)
+			{
+				if constexpr (std::is_same_v<std::invoke_result_t<Callback, std::string_view, bool>, bool>)
+				{
+					callback(std::string_view{ begin, str.end() }, true);
+				}
+				else if constexpr (std::is_same_v<std::invoke_result_t<Callback, std::string_view>, bool>)
+				{
+					callback(std::string_view{ begin, str.end() }, true);
+				}
+				else
+				{
+					callback(std::string_view{ begin, str.end() });
+				}
+
+				break;
+			}
+			else
+			{
+				result = true;
+
+				auto substr = std::string_view { begin, (str.begin() + find_result) };
+
+				if constexpr (std::is_same_v<std::invoke_result_t<Callback, std::string_view, bool>, bool>)
+				{
+					if (!callback(substr, false))
+					{
+						break;
+					}
+				}
+				else if constexpr (std::is_same_v<std::invoke_result_t<Callback, std::string_view>, bool>)
+				{
+					if (!callback(substr))
+					{
+						break;
+					}
+				}
+				else
+				{
+					callback(substr);
+				}
+
+				find_result += separator.size();
+			}
+		}
+
+		return result;
+	}
+
+	// TODO: Move this to a different header/file.
 	std::string_view to_string_view(const aiString& str);
 }
