@@ -48,8 +48,15 @@ namespace engine
 	}
 
 	template <>
+	void reflect<MotionComponent>()
+	{
+		engine_meta_type<MotionComponent>();
+	}
+
+	template <>
 	void reflect<MotionSystem>()
 	{
+		reflect<MotionComponent>();
 		reflect<AlignmentComponent>();
 		reflect<VelocityComponent>();
 		reflect<GravityComponent>();
