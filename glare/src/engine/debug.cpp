@@ -1,11 +1,13 @@
 #include "debug.hpp"
 #include "events.hpp"
-#include "relationship.hpp"
+
+#include "components/relationship_component.hpp"
 
 #include "world/world.hpp"
 #include "world/world_events.hpp"
 #include "world/physics/collision_events.hpp"
-#include "world/animation/skeletal_component.hpp"
+
+#include "world/animation/components/skeletal_component.hpp"
 
 #include "input/events.hpp"
 
@@ -142,7 +144,7 @@ namespace engine
 		//enable<OnButtonDown>();
 		enable<OnButtonReleased>();
 		enable<OnButtonPressed>();
-		//enable<OnAnalogInput>();
+		enable<OnAnalogInput>();
 	}
 
 	void DebugListener::on_skeleton(Registry& registry, Entity entity)
