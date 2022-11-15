@@ -19,4 +19,7 @@ namespace engine
 			return (intended_parent != null);
 		}
 	};
+
+	// TODO: Rename `MotionAttachmentProxy` to `MotionAttachmentProxyComponent` or similar.
+	using MotionAttachmentProxyComponent = MotionAttachmentProxy;
 }

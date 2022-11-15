@@ -1,20 +1,42 @@
 #include "motion_system.hpp"
 
-#include "motion_component.hpp"
 #include "motion_events.hpp"
-#include "motion_attachment_proxy.hpp"
-#include "alignment_component.hpp"
-#include "ground.hpp"
+
+#include "components/motion_component.hpp"
+#include "components/velocity_component.hpp"
+#include "components/ground_component.hpp"
+#include "components/gravity_component.hpp"
+#include "components/motion_attachment_proxy_component.hpp"
+#include "components/alignment_component.hpp"
+#include "components/deceleration_component.hpp"
+
+#include <math/types.hpp>
+#include <math/bullet.hpp>
 
 #include <engine/transform.hpp>
-#include <engine/relationship.hpp>
+#include <engine/components/transform_component.hpp>
+#include <engine/components/relationship_component.hpp>
+//#include <engine/components/transform_history_component.hpp>
 
 #include <engine/world/world.hpp>
-#include <engine/world/physics/collision_component.hpp>
+#include <engine/world/physics/ground.hpp>
 #include <engine/world/physics/physics_system.hpp>
+#include <engine/world/physics/components/collision_component.hpp>
 
 namespace engine
 {
+	// Utility function that enumerates entities with a fully qualified `Transform` object.
+	template <typename ...ComponentTypes, typename Callable, typename ...Exclude>
+	static void update_transform(Registry& registry, Callable callback, entt::exclude_t<Exclude>... exclude)
+	{
+		registry.view<RelationshipComponent, TransformComponent, ComponentTypes...>(exclude...).each([&](auto entity, auto& rel_comp, auto& tform_comp, ComponentTypes&... comps)
+		{
+			auto transform = Transform(registry, entity, rel_comp, tform_comp);
+
+			callback(entity, transform, comps...);
+		});
+	}
+
 	MotionSystem::MotionSystem(World& world, PhysicsSystem& physics)
 		: WorldSystem(world), physics(physics)
 	{
@@ -29,17 +51,80 @@ namespace engine
 
 	void MotionSystem::on_update(World& world, float delta)
 	{
-		auto& registry = world.get_registry();
+		apply_velocity(delta);
+		update_gravity(delta);
+		handle_deceleration(delta);
+	}
 
-		auto view = registry.view<MotionComponent, CollisionComponent>(); // <TransformComponent, ...> (auto& tf_comp)
+	void MotionSystem::apply_velocity(float delta)
+	{
+		auto& registry = get_registry();
 
-		// Apply motion (gravity, velocity, deceleration, etc.) and resolve collisions between old and new positions:
-		view.each([&](auto entity, auto& motion, auto& collision)
+		update_transform<VelocityComponent>
+		(
+			registry,
+
+			[delta](Entity entity, Transform& transform, VelocityComponent& vel_comp)
+			{
+				transform.move((vel_comp.velocity * delta), true); // false
+			}
+		);
+	}
+
+	void MotionSystem::update_gravity(float delta)
+	{
+		auto& registry = get_registry();
+
+		auto apply = [this, delta](Entity entity, Transform& transform, const GravityComponent& gravity_comp)
 		{
-			auto transform = world.get_transform(entity);
+			auto gravity = gravity_comp.get_vector(get_gravity(), delta);
 
-			update_motion({ entity, transform, motion, collision, delta });
-		});
+			transform.move(gravity, false); // true
+		};
+
+		update_transform<GroundComponent, CollisionComponent, GravityComponent>
+		(
+			registry,
+
+			[this, &apply, delta](Entity entity, Transform& transform, GroundComponent& ground, const CollisionComponent& collision, const GravityComponent& gravity)
+			{
+				auto ground_check = detect_air(entity, transform, ground, collision, gravity, delta);
+
+				if (!ground_check) // if (!ground_comp.on_ground())
+				{
+					apply(entity, transform, gravity);
+				}
+			}
+		);
+
+		// Gravity component, no ground-detection:
+		update_transform<GravityComponent>(registry, apply, entt::exclude<GroundComponent>);
+	}
+
+	void MotionSystem::handle_deceleration(float delta)
+	{
+		update_transform<VelocityComponent, DecelerationComponent>
+		(
+			get_registry(),
+
+			[delta](Entity entity, Transform& transform, VelocityComponent& vel_comp, DecelerationComponent& decel_comp)
+			{
+				const auto decel_factor = math::abs(decel_comp.deceleration); // decel_comp.deceleration;
+
+				if (decel_factor > 0.0f)
+				{
+					// TODO: Look into replacing statically defined minimum-speed value.
+					if (glm::length(vel_comp.velocity) > MIN_SPEED)
+					{
+						vel_comp.velocity -= ((vel_comp.velocity * decel_factor) * delta);
+					}
+					else
+					{
+						vel_comp.velocity = {};
+					}
+				}
+			}
+		);
 	}
 
 	void MotionSystem::on_surface_contact(const OnSurfaceContact& surface)
@@ -48,22 +133,22 @@ namespace engine
 
 		auto entity = world.get_forwarded(surface.collision.a);
 
-		auto* motion = registry.try_get<MotionComponent>(entity);
+		auto* ground = registry.try_get<GroundComponent>(entity);
 
-		if (!motion)
+		if (!ground)
 		{
 			return;
 		}
 
-		auto floor_detection = surface.floor();
+		const auto floor_detection = surface.floor();
 
-		// TODO: Add surface dot-product handling so we don't treat everything we touch like it's ground.
-		if (floor_detection < GROUND)
+		if (floor_detection < ground->get_detection_threshold()) // GROUND
 		{
 			// The slope we're contacting is too steep to be considered ground.
 			return;
 		}
 
+		// Debugging related:
 		if ((int)entity == 14)
 		{
 			print("Ground surface detected.");
@@ -71,51 +156,59 @@ namespace engine
 			print("Forward: {}", surface.forward());
 		}
 
-		motion->ground = surface;
-		motion->ground.update_metadata(world);
+		auto* motion = registry.try_get<MotionComponent>(entity);
 
-		if (!motion->on_ground)
+		if (!ground->on_ground())
 		{
+			ground->ground = surface;
+			//ground->set_on_ground(true); // <-- Should already happen by default.
+			ground->ground.update_metadata(world);
+
 			print("Hit the ground.");
 
 			auto& ground_position = surface.collision.position;
 
 			auto landing_vector = surface.impact_velocity;
 
-			///*
 			world.event<OnAirToGround>
 			(
-				//entity,
-				motion->ground
+				//entity, // <-- Already handled through the ground/surface object.
+				ground->ground // surface
 			);
-			//*/
 
-			motion->on_ground = true;
+			if (motion)
+			{
+				motion->on_ground = true; // ground->on_ground();
+			}
 
 			// Debugging related:
 			//motion->apply_gravity = false;
 		}
 
-		if (motion->align_to_ground)
+		if (motion)
 		{
-			Entity alignment_entity = entity; // null;
-
-			if (auto* alignment_proxy = registry.try_get<AlignmentComponent>(entity))
+			// TODO: Look into whether this should be a separate component, etc.
+			if (motion->align_to_ground)
 			{
-				if (alignment_proxy->entity != null)
+				Entity alignment_entity = entity; // null;
+
+				if (auto* alignment_proxy = registry.try_get<AlignmentComponent>(entity))
 				{
-					alignment_entity = alignment_proxy->entity;
+					if (alignment_proxy->entity != null)
+					{
+						alignment_entity = alignment_proxy->entity;
+					}
 				}
-			}
 
-			if (alignment_entity != null)
-			{
-				auto alignment_tform = world.get_transform(alignment_entity);
+				if (alignment_entity != null)
+				{
+					auto alignment_tform = world.get_transform(alignment_entity);
 
-				auto yaw = alignment_tform.get_yaw();
+					auto yaw = alignment_tform.get_yaw();
 
-				alignment_tform.set_basis(surface.alignment());
-				alignment_tform.rotateY(yaw, false);
+					alignment_tform.set_basis(surface.alignment());
+					alignment_tform.rotateY(yaw, false);
+				}
 			}
 		}
 	}
@@ -212,19 +305,23 @@ namespace engine
 		auto& registry = world.get_registry();
 
 		auto entity = to_ground.entity();
-		auto& motion = registry.get<MotionComponent>(entity);
-
-		auto ground = to_ground.ground();
+		
+		const auto& ground = registry.get<GroundComponent>(entity);
+		auto new_ground_entity = to_ground.ground();
 
 		// In the event this is the same ground entity we're currently attached to, return immediately. (Sanity check)
-		if ((ground == motion.ground) && (motion.on_ground))
+		if ((new_ground_entity == ground.entity()) && (ground.on_ground()))
 		{
 			return;
 		}
 
-		if ((motion.attach_to_dynamic_ground) && to_ground.is_dynamic_ground())
+		// Handle dynamic ground attachment:
+		if (auto* motion = registry.try_get<MotionComponent>(entity))
 		{
-			attach_motion_proxy(entity, motion, ground);
+			if ((motion->attach_to_dynamic_ground) && to_ground.is_dynamic_ground())
+			{
+				attach_motion_proxy(entity, *motion, new_ground_entity);
+			}
 		}
 	}
 
@@ -233,9 +330,17 @@ namespace engine
 		auto& registry = world.get_registry();
 		
 		auto entity = to_air.entity();
-		auto& motion = registry.get<MotionComponent>(entity);
 
-		if (to_air.was_dynamic_ground() && (motion.is_attached))
+		auto* motion = registry.try_get<MotionComponent>(entity);
+
+		if (!motion)
+		{
+			return;
+		}
+
+		motion->on_ground = false; // to_air.surface.is_contacted;
+
+		if (to_air.was_dynamic_ground() && (motion->is_attached))
 		{
 			/*
 			auto parent = world.get_parent(entity);
@@ -256,32 +361,49 @@ namespace engine
 			return;
 			*/
 
-			detach_motion_proxy(entity, motion);
+			detach_motion_proxy(entity, *motion);
 		}
 	}
 
 	std::optional<CollisionCastResult> MotionSystem::detect_air
 	(
-		const EntityData& data,
-		const math::Vector& gravity_movement,
-		const math::Vector& projected_movement
+		Entity entity,
+		Transform& transform,
+		GroundComponent& ground_comp,
+		const CollisionComponent& collision_comp,
+		const GravityComponent& gravity_comp,
+
+		float delta
 	)
 	{
-		auto& transform = data.transform;
-		auto& motion = data.motion;
-		auto& collision = data.collision;
+		auto& registry = get_registry();
 
-		if (!motion.on_ground)
+		if (!ground_comp.on_ground())
 		{
 			// Already in the air.
 			return std::nullopt;
 		}
 
-		constexpr auto gravity_margin = 0.0f;
+		/*
+		// Reactive version:
+		const auto* collision_obj = collision_comp.get_collision_object();
 
-		auto entity_position = transform.get_position();
-		auto if_gravity_applied = (entity_position + (gravity_movement * (1.0f+gravity_margin)));
-		auto ground_check = physics.cast_to(collision, if_gravity_applied);
+		if (!collision_obj)
+		{
+			return std::nullopt;
+		}
+
+		auto prev_position = math::to_vector(collision_obj->getWorldTransform().getOrigin());
+		auto new_position = transform.get_position();
+		*/
+
+		// Proactive version:
+		const auto gravity = gravity_comp.get_vector(get_gravity(), delta); // transform.align_vector(...);
+
+		const auto prev_position = transform.get_position();
+		const auto new_position  = (prev_position + gravity);
+
+		auto ground_check = physics.cast_to(collision_comp, new_position);
 
 		if (ground_check)
 		{
@@ -289,85 +411,22 @@ namespace engine
 		}
 		else
 		{
+			ground_comp.set_on_ground(false);
+
+			const auto projected_movement = (new_position - prev_position);
+
 			// NOTE: The reverse scenario, `OnAirToGround` occurs in the `on_surface_contact` routine.
 			world.event<OnGroundToAir>
 			(
 				//data.entity,
-				motion.ground,
+				ground_comp.ground,
 
-				entity_position,
+				new_position,
 				projected_movement
 			);
-
-			motion.on_ground = false;
 		}
 
 		return ground_check;
-	}
-
-	void MotionSystem::update_motion(const EntityData& data)
-	{
-		auto& transform = data.transform;
-		auto& motion = data.motion;
-		auto& collision = data.collision;
-		auto& delta = data.delta;
-
-		math::Vector movement = {};
-
-		if (motion.apply_velocity)
-		{
-			movement += (motion.velocity * delta);
-		}
-
-		if (motion.on_ground)
-		{
-			auto decel = std::abs(motion.ground_deceleration);
-
-			if (decel > 0.0f)
-			{
-				if (glm::length(motion.velocity) > MIN_SPEED)
-				{
-					motion.velocity -= (motion.velocity * decel * delta); // math::Vector
-				}
-				else
-				{
-					motion.velocity = {};
-				}
-			}
-		}
-
-		auto orientation = transform.get_basis(); // get_local_basis();
-
-		math::Vector gravity;
-
-		if (motion.apply_gravity)
-		{
-			gravity = (get_gravity() * delta);
-
-			// NOTE: We apply gravity this update, even if `detect_ground` detects a hit.
-			if (!motion.on_ground)
-			{
-				movement += gravity;
-				//velocity += gravity;
-			}
-		}
-
-		// Align the intended movement to the rotation of the entity.
-		movement = transform.align_vector(movement);
-
-		// Handle ground/air detection:
-		if (motion.apply_gravity)
-		{
-			// Before moving this entity, look for ground collision.
-			// 
-			// NOTE: Since gravity is applied based on the entity's local rotation,
-			// we should align `movement` before calling this function.
-			detect_air(data, transform.align_vector(gravity), movement);
-		}
-
-		// NOTE: Since we call `align_vector` before moving the entity,
-		// we don't need to use local (i.e. aligned) movement.
-		transform.move(movement, false);
 	}
 
 	// Internal shorthand for `world.get_gravity()`.
