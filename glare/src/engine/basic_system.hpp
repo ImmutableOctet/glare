@@ -117,7 +117,9 @@ namespace engine
 			// use `is_subscribed_to_intended` to determine this, if needed.
 			ServiceType& get_service() const
 			{
-				return service;
+				assert(service);
+
+				return *service;
 			}
 		private:
 			// Implementation of `unsubscribe`. (Used internally)
