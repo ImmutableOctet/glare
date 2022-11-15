@@ -208,6 +208,47 @@ namespace engine
 		return nullptr;
 	}
 
+	const EntityFactory* ResourceManager::get_existing_factory(const std::string& path) const // std::string_view
+	{
+		auto it = entity_factories.find(path);
+
+		if (it != entity_factories.end())
+		{
+			return &it->second;
+		}
+
+		return nullptr;
+	}
+
+	const EntityFactory* ResourceManager::get_factory(const EntityFactoryContext& context) const
+	{
+		auto path_str = context.paths.instance_path.string();
+
+		if (auto* existing_factory = get_existing_factory(path_str))
+		{
+			return existing_factory;
+		}
+
+		if (auto [it, result] = entity_factories.emplace(path_str, context); result)
+		{
+			return &it->second;
+		}
+
+		return nullptr;
+	}
+
+	Entity ResourceManager::generate_entity(const EntityFactoryContext& factory_context, const EntityConstructionContext& entity_context) const
+	{
+		auto* factory = get_factory(factory_context);
+
+		if (factory)
+		{
+			return factory->create(entity_context);
+		}
+
+		return null;
+	}
+
 	void ResourceManager::subscribe(World& world)
 	{
 		//world.register_event<...>(*this);
