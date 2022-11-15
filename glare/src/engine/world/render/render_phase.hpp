@@ -25,7 +25,7 @@ namespace engine
 
 	struct ModelComponent;
 	struct TransformComponent;
-	struct Relationship;
+	struct RelationshipComponent;
 	struct CameraParameters;
 
 	class RenderPhase;
@@ -51,7 +51,7 @@ namespace engine
 				Entity entity,
 				ModelComponent& model_component,
 				TransformComponent& transform,
-				const Relationship& relationship,
+				const RelationshipComponent& relationship,
 
 				WorldRenderState* render_state=nullptr,
 

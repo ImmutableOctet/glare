@@ -11,7 +11,7 @@
 namespace engine
 {
 	// Internal helper function; similar to `Transform::get_transform_safe`.
-	static std::optional<Transform> get_transform_safe(Registry& registry, Entity entity, const Relationship& relationship)
+	static std::optional<Transform> get_transform_safe(Registry& registry, Entity entity, const RelationshipComponent& relationship)
 	{
 		//return Transform::get_transform_safe(registry, entity);
 
@@ -25,21 +25,21 @@ namespace engine
 		return std::nullopt;
 	}
 
-	Relationship::Relationship(Entity parent)
+	RelationshipComponent::RelationshipComponent(Entity parent)
 		: parent(parent), first(null), prev(null), next(null) {}
 
 	/*
-	void Relationship::set_parent(Registry& registry, Entity self, Entity parent)
+	void RelationshipComponent::set_parent(Registry& registry, Entity self, Entity parent)
 	{
-		auto parent_rel = registry.get_or_emplace<Relationship>(parent);
+		auto parent_rel = registry.get_or_emplace<RelationshipComponent>(parent);
 
 		parent_rel.add_child(registry, parent, self);
 
-		registry.replace<Relationship>(parent, [&](auto& r) { r = parent_rel; });
+		registry.replace<RelationshipComponent>(parent, [&](auto& r) { r = parent_rel; });
 	}
 	*/
 
-	Entity Relationship::set_parent(Registry& registry, Entity self, Entity parent, bool fail_on_existing_parent)
+	Entity RelationshipComponent::set_parent(Registry& registry, Entity self, Entity parent, bool fail_on_existing_parent)
 	{
 		assert(self != null);
 
@@ -49,9 +49,9 @@ namespace engine
 		}
 
 		//auto _test_ent = static_cast<Entity>(37);
-		//auto* _test_rel = (registry.valid(_test_ent)) ? registry.try_get<Relationship>(_test_ent) : nullptr;
+		//auto* _test_rel = (registry.valid(_test_ent)) ? registry.try_get<RelationshipComponent>(_test_ent) : nullptr;
 
-		auto* prev_rel = registry.try_get<Relationship>(self);
+		auto* prev_rel = registry.try_get<RelationshipComponent>(self);
 		Entity prev_parent = null;
 
 		if (prev_rel)
@@ -66,16 +66,16 @@ namespace engine
 
 		//print("I am: {}, my previous parent is: {}, and my new parent is going to be: {}", self, prev_parent, parent);
 
-		auto& parent_relationship = registry.get_or_emplace<Relationship>(parent);
+		auto& parent_relationship = registry.get_or_emplace<RelationshipComponent>(parent);
 
 		parent_relationship.add_child(registry, parent, self, prev_rel);
 
-		//registry.replace<Relationship>(parent, std::move(parent_relationship)); // [&](auto& r) { r = std::move(parent_relationship); }
+		//registry.replace<RelationshipComponent>(parent, std::move(parent_relationship)); // [&](auto& r) { r = std::move(parent_relationship); }
 
 		return prev_parent;
 	}
 
-	Entity Relationship::add_child(Registry& registry, Entity self, Entity child, Relationship* child_relationship)
+	Entity RelationshipComponent::add_child(Registry& registry, Entity self, Entity child, RelationshipComponent* child_relationship)
 	{
 		assert(self != null);
 
@@ -128,17 +128,17 @@ namespace engine
 			}
 		}
 
-		Relationship relationship;
+		RelationshipComponent relationship;
 		
 		if (prev_rel != nullptr)
 		{
-			relationship = Relationship(*prev_rel);
+			relationship = RelationshipComponent(*prev_rel);
 
 			relationship.parent = self;
 		}
 		else
 		{
-			relationship = Relationship(self);
+			relationship = RelationshipComponent(self);
 		}
 
 		bool is_first = (child_count == 0); // (first == null);
@@ -159,7 +159,7 @@ namespace engine
 			append_child(last_child_rel, relationship, last_child, child);
 		}
 
-		registry.emplace_or_replace<Relationship>(child, relationship);
+		registry.emplace_or_replace<RelationshipComponent>(child, relationship);
 
 		this->child_count++;
 
@@ -178,9 +178,9 @@ namespace engine
 		return child;
 	}
 
-	Entity Relationship::remove_child(Registry& registry, Entity child, Entity self, bool remove_in_registry)
+	Entity RelationshipComponent::remove_child(Registry& registry, Entity child, Entity self, bool remove_in_registry)
 	{
-		auto child_relationship = registry.get<Relationship>(child);
+		auto child_relationship = registry.get<RelationshipComponent>(child);
 
 		std::optional<math::Matrix> current_matrix = std::nullopt;
 
@@ -200,11 +200,11 @@ namespace engine
 
 		if (remove_in_registry)
 		{
-			registry.remove<Relationship>(child);
+			registry.remove<RelationshipComponent>(child);
 		}
 		else
 		{
-			registry.replace<Relationship>(child, std::move(child_relationship)); // [&](auto& r) { r = child_relationship; }
+			registry.replace<RelationshipComponent>(child, std::move(child_relationship)); // [&](auto& r) { r = child_relationship; }
 
 			if (current_matrix)
 			{
@@ -222,7 +222,7 @@ namespace engine
 		return child;
 	}
 
-	std::tuple<Entity, Relationship*> Relationship::get_first_child(Registry& registry) const
+	std::tuple<Entity, RelationshipComponent*> RelationshipComponent::get_first_child(Registry& registry) const
 	{
 		auto child = first;
 
@@ -231,14 +231,14 @@ namespace engine
 			return {}; // { null, nullptr };
 		}
 
-		auto& relationship = registry.get<Relationship>(child);
+		auto& relationship = registry.get<RelationshipComponent>(child);
 
 		return { child, &relationship };
 	}
 
-	std::tuple<Entity, Relationship*> Relationship::get_last_child(Registry& registry) const
+	std::tuple<Entity, RelationshipComponent*> RelationshipComponent::get_last_child(Registry& registry) const
 	{
-		Relationship* relationship = nullptr;
+		RelationshipComponent* relationship = nullptr;
 
 		auto child = enumerate_children(registry, [&](auto current, auto& relation, auto next)
 		{
@@ -255,13 +255,13 @@ namespace engine
 		return { child, relationship };
 	}
 
-	Entity Relationship::forward_previous(Registry& registry)
+	Entity RelationshipComponent::forward_previous(Registry& registry)
 	{
 		if (this->prev == null)
 		{
 			if (this->next != null)
 			{
-				auto& next_rel = registry.get<Relationship>(this->next);
+				auto& next_rel = registry.get<RelationshipComponent>(this->next);
 
 				next_rel.prev = this->prev; // null;
 
@@ -271,7 +271,7 @@ namespace engine
 			return null;
 		}
 
-		auto& previous_rel = registry.get<Relationship>(this->prev);
+		auto& previous_rel = registry.get<RelationshipComponent>(this->prev);
 
 		auto self = previous_rel.next;
 
@@ -283,11 +283,11 @@ namespace engine
 		return self;
 	}
 
-	Relationship& Relationship::collapse_child(Registry& registry, Relationship& child_relationship, Entity self, Entity child)
+	RelationshipComponent& RelationshipComponent::collapse_child(Registry& registry, RelationshipComponent& child_relationship, Entity self, Entity child)
 	{
-		//assert(registry.try_get<Relationship>(child));
+		//assert(registry.try_get<RelationshipComponent>(child));
 
-		//auto& child_relationship = registry.get<Relationship>(child);
+		//auto& child_relationship = registry.get<RelationshipComponent>(child);
 
 		//assert((self == null) || (child_relationship.parent == self));
 
@@ -309,7 +309,7 @@ namespace engine
 		return child_relationship;
 	}
 
-	Relationship& Relationship::append_child(Relationship& prev_rel, Relationship& current_rel, Entity prev_child, Entity next_child)
+	RelationshipComponent& RelationshipComponent::append_child(RelationshipComponent& prev_rel, RelationshipComponent& current_rel, Entity prev_child, Entity next_child)
 	{
 		prev_rel.next = next_child;
 		current_rel.prev = prev_child;
@@ -318,13 +318,13 @@ namespace engine
 	}
 
 	// Internal subroutine.
-	Relationship* Relationship::remove_previous_parent(Registry& registry, Entity entity, Relationship* entity_relationship)
+	RelationshipComponent* RelationshipComponent::remove_previous_parent(Registry& registry, Entity entity, RelationshipComponent* entity_relationship)
 	{
 		auto* relationship = entity_relationship;
 		
 		if (!relationship)
 		{
-			relationship = registry.try_get<Relationship>(entity);
+			relationship = registry.try_get<RelationshipComponent>(entity);
 
 			if (!relationship)
 			{
@@ -339,7 +339,7 @@ namespace engine
 			return relationship; // nullptr;
 		}
 
-		auto& parent_relationship = registry.get<Relationship>(parent);
+		auto& parent_relationship = registry.get<RelationshipComponent>(parent);
 
 		// Standard removal method:
 		parent_relationship.remove_child(registry, entity, parent, false);

@@ -12,7 +12,7 @@ namespace engine
 	class EntityFactory;
 
 	// TODO: Rename this to `RelationshipComponent` properly.
-	struct Relationship
+	struct RelationshipComponent
 	{
 		public:
 			friend World;
@@ -31,28 +31,28 @@ namespace engine
 			//Entity set_parent(Registry& registry, Entity self, Entity parent);
 
 			// If `child_relationship` is not specified, a lookup will be performed on `child`.
-			Entity add_child(Registry& registry, Entity self, Entity child, Relationship* child_relationship = nullptr);
+			Entity add_child(Registry& registry, Entity self, Entity child, RelationshipComponent* child_relationship = nullptr);
 			Entity remove_child(Registry& registry, Entity child, Entity self = null, bool remove_in_registry = false);
 		public:
 			// Internal use only.
 			// 
 			// TODO: Review why this isn't currently protected or private.
-			Relationship(Entity parent=null);
+			RelationshipComponent(Entity parent=null);
 
 			// TODO: Review why these aren't protected/private:
-			Relationship(const Relationship&) = default;
-			Relationship& operator=(const Relationship&) = default;
+			RelationshipComponent(const RelationshipComponent&) = default;
+			RelationshipComponent& operator=(const RelationshipComponent&) = default;
 
-			Relationship(Relationship&&) noexcept = default;
-			Relationship& operator=(Relationship&&) noexcept = default;
+			RelationshipComponent(RelationshipComponent&&) noexcept = default;
+			RelationshipComponent& operator=(RelationshipComponent&&) noexcept = default;
 
 			inline std::uint32_t children() const { return child_count; }
 			inline bool has_children() const { return (children() > 0); }
 			
 			inline Entity get_parent() const { return parent; }
 
-			std::tuple<Entity, Relationship*> get_first_child(Registry& registry) const;
-			std::tuple<Entity, Relationship*> get_last_child(Registry& registry) const;
+			std::tuple<Entity, RelationshipComponent*> get_first_child(Registry& registry) const;
+			std::tuple<Entity, RelationshipComponent*> get_last_child(Registry& registry) const;
 
 			// TODO: Finish documenting this overload.
 			// 
@@ -61,7 +61,7 @@ namespace engine
 			// `on_exit` is called once recursion has completed, or immediately after `fn` if recursion is disabled.
 			template
 			<
-				typename response_type, // = decltype(enum_fn(std::declval<Entity>(), std::declval<Relationship&>(), std::declval<Entity>()))
+				typename response_type, // = decltype(enum_fn(std::declval<Entity>(), std::declval<RelationshipComponent&>(), std::declval<Entity>()))
 				typename enum_fn,
 				typename exit_fn,
 				typename get_continuation_fn
@@ -72,7 +72,7 @@ namespace engine
 
 				while (child != null)
 				{
-					auto& relationship = registry.get<Relationship>(child); // *this;
+					auto& relationship = registry.get<RelationshipComponent>(child); // *this;
 
 					auto next_child = relationship.next; // const auto&
 
@@ -117,7 +117,7 @@ namespace engine
 
 			// `fn` must return a boolean value, or a value convertible to one.
 			// The `fn` callable's signature must be:
-			// `bool fn(Entity child, [const] Relationship& child_relationship, Entity next_child)` - or similar.
+			// `bool fn(Entity child, [const] RelationshipComponent& child_relationship, Entity next_child)` - or similar.
 			template <typename enum_fn, typename exit_fn, typename response_type=bool> // typename enter_fn
 			inline Entity enumerate_children(Registry& registry, enum_fn fn, bool recursive, exit_fn on_exit) const
 			{
@@ -136,7 +136,7 @@ namespace engine
 
 			// `fn` must return a boolean value, or a value convertible to one.
 			// The `fn` callable's signature must be:
-			// `bool fn(Entity child, [const] Relationship& child_relationship, Entity next_child)` - or similar.
+			// `bool fn(Entity child, [const] RelationshipComponent& child_relationship, Entity next_child)` - or similar.
 			template <typename enum_fn, typename response_type=bool>
 			inline Entity enumerate_children(Registry& registry, enum_fn fn, bool recursive=false) const
 			{
@@ -156,7 +156,7 @@ namespace engine
 			{
 				std::uint32_t child_count = 0;
 
-				enumerate_children(registry, [&out, &child_count](Entity child, Relationship& relationship, Entity next_child)
+				enumerate_children(registry, [&out, &child_count](Entity child, RelationshipComponent& relationship, Entity next_child)
 				{
 					out.push_back(static_cast<typename Container::value_type>(child));
 
@@ -192,7 +192,7 @@ namespace engine
 
 				while (child != null)
 				{
-					auto& relationship = registry.get<Relationship>(child); // *this;
+					auto& relationship = registry.get<RelationshipComponent>(child); // *this;
 					auto next_child = relationship.next;
 
 					if (child == next_child)
@@ -216,7 +216,7 @@ namespace engine
 			{
 				std::uint32_t count = 0;
 
-				enumerate_children(registry, [&registry, &count](Entity child, const Relationship& relationship, Entity next_child)
+				enumerate_children(registry, [&registry, &count](Entity child, const RelationshipComponent& relationship, Entity next_child)
 				{
 					count++;
 
@@ -231,13 +231,13 @@ namespace engine
 			// Returns the 'Entity' identifier representing this object.
 			Entity forward_previous(Registry& registry);
 
-			Relationship& collapse_child(Registry& registry, Relationship& child_relationship, Entity self, Entity child);
+			RelationshipComponent& collapse_child(Registry& registry, RelationshipComponent& child_relationship, Entity self, Entity child);
 
-			static Relationship& append_child(Relationship& prev_rel, Relationship& current_rel, Entity child, Entity next_child);
+			static RelationshipComponent& append_child(RelationshipComponent& prev_rel, RelationshipComponent& current_rel, Entity child, Entity next_child);
 
-			// Returns 'null' if a 'Relationship' object does not already exist.
+			// Returns 'null' if a 'RelationshipComponent' object does not already exist.
 			// `entity_relationship` is optional; if not specified, a lookup will take place.
-			static Relationship* remove_previous_parent(Registry& registry, Entity entity, Relationship* entity_relationship=nullptr);
+			static RelationshipComponent* remove_previous_parent(Registry& registry, Entity entity, RelationshipComponent* entity_relationship=nullptr);
 		public:
 			template <typename enum_fn>
 			inline std::uint32_t enumerate_parents(Registry& registry, enum_fn)
@@ -248,7 +248,7 @@ namespace engine
 
 				while (entity != null)
 				{
-					auto& relationship = registry.get<Relationship>(entity);
+					auto& relationship = registry.get<RelationshipComponent>(entity);
 
 					enum_fn(entity, relationship, ++count);
 
@@ -258,6 +258,4 @@ namespace engine
 				return count;
 			}
 	};
-
-	using RelationshipComponent = Relationship;
 }

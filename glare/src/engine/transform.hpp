@@ -22,8 +22,8 @@ namespace engine
 		static std::optional<TransformViewData> get_parent_data(const TransformViewData& data);
 
 		TransformViewData(Registry& registry, Entity entity);
-		TransformViewData(Registry& registry, Entity entity, const Relationship& relationship);
-		TransformViewData(Registry& registry, Entity entity, const Relationship& relationship, TransformComponent& transform);
+		TransformViewData(Registry& registry, Entity entity, const RelationshipComponent& relationship);
+		TransformViewData(Registry& registry, Entity entity, const RelationshipComponent& relationship, TransformComponent& transform);
 
 		Registry& registry; // mutable
 
@@ -31,7 +31,7 @@ namespace engine
 
 		// NOTE: 'relationship' being a local copy has side-effects,
 		// including both increased object size and some very rare edge-cases.
-		Relationship relationship; // const Relationship&
+		RelationshipComponent relationship; // const RelationshipComponent&
 
 		TransformComponent& transform; // mutable
 
@@ -80,8 +80,8 @@ namespace engine
 			using Flag = Dirty;
 
 			Transform(Registry& registry, Entity entity);
-			Transform(Registry& registry, Entity entity, const Relationship& relationship);
-			Transform(Registry& registry, Entity entity, const Relationship& relationship, TransformComponent& transform);
+			Transform(Registry& registry, Entity entity, const RelationshipComponent& relationship);
+			Transform(Registry& registry, Entity entity, const RelationshipComponent& relationship, TransformComponent& transform);
 
 			Transform(Registry& registry, Entity entity, TransformComponent& transform);
 

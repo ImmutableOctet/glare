@@ -29,7 +29,7 @@ namespace engine
 	void print_children(World& world, Entity entity, bool recursive, bool summary_info, bool recursive_labels, const std::string& prefix)
 	{
 		auto& registry = world.get_registry();
-		auto* rel = registry.try_get<engine::Relationship>(entity);
+		auto* rel = registry.try_get<engine::RelationshipComponent>(entity);
 
 		if (!rel)
 		{

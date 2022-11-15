@@ -7,7 +7,7 @@
 
 namespace engine
 {
-	struct Relationship;
+	struct RelationshipComponent;
 	struct Transform;
 	struct Animator;
 }
@@ -21,7 +21,7 @@ namespace engine::meta
 {
 	namespace display
 	{
-		struct empty_child_display { void operator()(World& world, Entity child, const Relationship& relationship) {} };
+		struct empty_child_display { void operator()(World& world, Entity child, const RelationshipComponent& relationship) {} };
 		struct on_child_show_all { auto operator()(Entity child) { return true; } };
 
 		std::string name_and_id(World& world, Entity entity);

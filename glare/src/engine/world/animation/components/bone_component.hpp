@@ -24,7 +24,7 @@ namespace engine
 		/*
 			The skeleton this bone belongs to.
 			
-			If this bone's parent (via `Relationship` component) is changed, this will automatically
+			If this bone's parent (via `RelationshipComponent` component) is changed, this will automatically
 			reflect the new skeleton of that entity. Likewise, if this entity's parent is changed to a
 			bone from a different skeleton, this bone will adopt that bone's `skeleton` field.
 			

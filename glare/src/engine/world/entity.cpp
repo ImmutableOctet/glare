@@ -33,19 +33,19 @@ namespace engine
 			world.set_parent(entity, parent);
 
 			/*
-			auto rel = registry.get_or_emplace<Relationship>(entity); // Relationship();
+			auto rel = registry.get_or_emplace<RelationshipComponent>(entity); // RelationshipComponent();
 
 			rel.set_parent(registry, entity, parent);
 
-			registry.emplace_or_replace<Relationship>(entity, rel);
+			registry.emplace_or_replace<RelationshipComponent>(entity, rel);
 			*/
 
 			/*
-			auto parent_relationship = registry.get_or_emplace<Relationship>(parent);
+			auto parent_relationship = registry.get_or_emplace<RelationshipComponent>(parent);
 
 			parent_relationship.add_child(registry, parent, entity);
 
-			registry.replace<Relationship>(parent, [&](auto& r) { r = parent_relationship; });
+			registry.replace<RelationshipComponent>(parent, [&](auto& r) { r = parent_relationship; });
 			*/
 		}
 
@@ -58,7 +58,7 @@ namespace engine
 	{
 		auto& registry = world.get_registry();
 
-		auto* relationship = registry.try_get<Relationship>(entity);
+		auto* relationship = registry.try_get<RelationshipComponent>(entity);
 
 		auto root = world.get_root();
 		

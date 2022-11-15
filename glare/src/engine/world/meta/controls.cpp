@@ -131,7 +131,7 @@ namespace engine::meta
 		void child_tree_ex(World& world, Entity entity, on_display_fn on_display, on_child_fn on_child, std::optional<std::string_view> node_name=std::nullopt)
 		{
 			auto& registry = world.get_registry();
-			const auto& rel = registry.get<Relationship>(entity);
+			const auto& rel = registry.get<RelationshipComponent>(entity);
 
 			bool node_open = false;
 			bool render_tree = true;
@@ -150,7 +150,7 @@ namespace engine::meta
 					registry,
 
 					// Enter:
-					[&world, &on_display, &on_child](Entity child, const Relationship& relationship, Entity next_child, const std::tuple<bool, std::optional<bool>>* parent_response) -> std::tuple<bool, std::optional<bool>>
+					[&world, &on_display, &on_child](Entity child, const RelationshipComponent& relationship, Entity next_child, const std::tuple<bool, std::optional<bool>>* parent_response) -> std::tuple<bool, std::optional<bool>>
 					{
 						bool continue_recursion = true;
 
@@ -189,7 +189,7 @@ namespace engine::meta
 					true,
 
 					// Exit:
-					[](Entity child, const Relationship& relationship, Entity next_child, const auto& response)
+					[](Entity child, const RelationshipComponent& relationship, Entity next_child, const auto& response)
 					{
 						std::optional<bool> expanded = std::get<1>(response);
 
@@ -231,7 +231,7 @@ namespace engine::meta
 			(
 				world, entity,
 
-				[&on_display](World& world, Entity child, const Relationship& relationship)
+				[&on_display](World& world, Entity child, const RelationshipComponent& relationship)
 				{
 					on_display(world, child, relationship);
 
@@ -265,7 +265,7 @@ namespace engine::meta
 			(
 				world, entity,
 
-				[&registry, &on_display](World& world, Entity child, const Relationship& relationship)
+				[&registry, &on_display](World& world, Entity child, const RelationshipComponent& relationship)
 				{
 					/*
 					auto& bone = registry.get<BoneComponent>(child);
@@ -322,7 +322,7 @@ namespace engine::meta
 		display::named_window(world, entity, [&world](Entity entity)
 		{
 			auto& registry = world.get_registry();
-			const auto& rel = registry.get<Relationship>(entity);
+			const auto& rel = registry.get<RelationshipComponent>(entity);
 
 			ImGui::FormatText("Number of Children: {}, {} locally", rel.total_children(registry), rel.children());
 

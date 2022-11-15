@@ -13,12 +13,12 @@ using namespace math;
 namespace engine
 {
 	TransformViewData::TransformViewData(Registry& registry, Entity entity)
-		: TransformViewData(registry, entity, registry.get_or_emplace<Relationship>(entity)) {}
+		: TransformViewData(registry, entity, registry.get_or_emplace<RelationshipComponent>(entity)) {}
 
-	TransformViewData::TransformViewData(Registry& registry, Entity entity, const Relationship& relationship)
+	TransformViewData::TransformViewData(Registry& registry, Entity entity, const RelationshipComponent& relationship)
 		: TransformViewData(registry, entity, relationship, registry.get<TransformComponent>(entity)) {}
 
-	TransformViewData::TransformViewData(Registry& registry, Entity entity, const Relationship& relationship, TransformComponent& transform)
+	TransformViewData::TransformViewData(Registry& registry, Entity entity, const RelationshipComponent& relationship, TransformComponent& transform)
 		: registry(registry), relationship(relationship), transform(transform), entity(entity) {}
 
 	std::optional<TransformViewData> TransformViewData::get_parent_data(const TransformViewData& data)
@@ -171,16 +171,16 @@ namespace engine
 		: TransformViewData(data), parent_data(TransformViewData::get_parent_data(data)) {}
 
 	Transform::Transform(Registry& registry, Entity entity)
-		: Transform(registry, entity, registry.get_or_emplace<Relationship>(entity)) {}
+		: Transform(registry, entity, registry.get_or_emplace<RelationshipComponent>(entity)) {}
 
-	Transform::Transform(Registry& registry, Entity entity, const Relationship& relationship)
+	Transform::Transform(Registry& registry, Entity entity, const RelationshipComponent& relationship)
 		: Transform(registry, entity, relationship, registry.get<TransformComponent>(entity)) {}
 
-	Transform::Transform(Registry& registry, Entity entity, const Relationship& relationship, TransformComponent& transform)
+	Transform::Transform(Registry& registry, Entity entity, const RelationshipComponent& relationship, TransformComponent& transform)
 		: Transform(TransformViewData({registry, entity, relationship, transform })) {}
 
 	Transform::Transform(Registry& registry, Entity entity, TransformComponent& transform)
-		: Transform(TransformViewData({registry, entity, registry.get<Relationship>(entity), transform })) {}
+		: Transform(TransformViewData({registry, entity, registry.get<RelationshipComponent>(entity), transform })) {}
 
 	Transform::~Transform()
 	{

@@ -490,9 +490,9 @@ namespace glare
 
 			/*
 			auto& registry = world.get_registry();
-			auto& relationship = registry.get<engine::Relationship>(camera);
+			auto& relationship = registry.get<engine::RelationshipComponent>(camera);
 			auto camera_parent = relationship.get_parent();
-			auto& camera_parent_relationship = registry.get<engine::Relationship>(camera_parent);
+			auto& camera_parent_relationship = registry.get<engine::RelationshipComponent>(camera_parent);
 			camera_parent_relationship.remove_child(registry, camera, camera_parent);
 			*/
 

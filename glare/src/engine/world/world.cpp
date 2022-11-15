@@ -61,7 +61,7 @@ namespace engine
 	{
 		if (parent != null)
 		{
-			auto& parent_relationship    = registry.get<Relationship>(parent);
+			auto& parent_relationship    = registry.get<RelationshipComponent>(parent);
 			auto& parent_local_transform = registry.get<LocalTransform>(parent);
 			auto& parent_world_transform = registry.get<TransformComponent>(parent);
 
@@ -151,7 +151,7 @@ namespace engine
 		});
 
 		/*
-		registry.view<TransformComponent, Relationship>().each([&](auto entity, auto& tf, auto& rel)
+		registry.view<TransformComponent, RelationshipComponent>().each([&](auto entity, auto& tf, auto& rel)
 		{
 			auto transform = Transform(registry, entity, rel, tf);
 
@@ -227,7 +227,7 @@ namespace engine
 
 	Entity World::get_parent(Entity entity) const
 	{
-		auto* relationship = registry.try_get<Relationship>(entity);
+		auto* relationship = registry.try_get<RelationshipComponent>(entity);
 
 		if (relationship == nullptr)
 		{
@@ -265,7 +265,7 @@ namespace engine
 		}
 		else
 		{
-			auto prev_parent = Relationship::set_parent(registry, entity, parent);
+			auto prev_parent = RelationshipComponent::set_parent(registry, entity, parent);
 			event<OnParentChanged>(entity, prev_parent, parent);
 		}
 	}
@@ -333,14 +333,14 @@ namespace engine
 		if (name.empty())
 			return null;
 
-		auto* relationship = registry.try_get<Relationship>(entity);
+		auto* relationship = registry.try_get<RelationshipComponent>(entity);
 
 		if (!relationship)
 			return null;
 
 		Entity out = null;
 
-		relationship->enumerate_children(registry, [&](Entity child, Relationship& relationship, Entity next_child)
+		relationship->enumerate_children(registry, [&](Entity child, RelationshipComponent& relationship, Entity next_child)
 		{
 			auto* bone = registry.try_get<BoneComponent>(child);
 
@@ -376,14 +376,14 @@ namespace engine
 		if (child_name.empty())
 			return null;
 
-		auto* relationship = registry.try_get<Relationship>(entity);
+		auto* relationship = registry.try_get<RelationshipComponent>(entity);
 
 		if (!relationship)
 			return null;
 
 		Entity out = null;
 
-		relationship->enumerate_children(registry, [&](Entity child, Relationship& relationship, Entity next_child)
+		relationship->enumerate_children(registry, [&](Entity child, RelationshipComponent& relationship, Entity next_child)
 		{
 			auto* name_comp = registry.try_get<NameComponent>(child);
 
@@ -522,12 +522,12 @@ namespace engine
 		auto destroy_orphans = destruct.destroy_orphans;
 
 		// Handle entity relationships:
-		auto* relationship = registry.try_get<Relationship>(entity);
+		auto* relationship = registry.try_get<RelationshipComponent>(entity);
 
 		if (relationship) // <-- Null-check for 'relationship' isn't actually necessary. (MSVC complains)
 		{
 			// Make the assumption this object exists, as if it didn't, we would be in an invalid state.
-			auto* parent_relationship = registry.try_get<Relationship>(parent);
+			auto* parent_relationship = registry.try_get<RelationshipComponent>(parent);
 
 			relationship->enumerate_child_entities(registry, [&](Entity child, Entity next_child) -> bool
 			{
@@ -549,7 +549,7 @@ namespace engine
 				return true;
 			});
 
-			//registry.replace<Relationship>(parent, std::move(parent_relationship)); // [&](auto& r) { r = parent_relationship; }
+			//registry.replace<RelationshipComponent>(parent, std::move(parent_relationship)); // [&](auto& r) { r = parent_relationship; }
 		}
 
 		registry.destroy(entity);

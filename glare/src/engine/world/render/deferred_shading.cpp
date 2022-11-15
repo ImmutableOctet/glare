@@ -272,7 +272,7 @@ namespace engine
 		unsigned int point_light_idx       = 0;
 
 		// Enumerate lights, branching to each lighting subroutine based on the `LightComponent::type` field, incrementing light counters appropriately.
-		registry.view<LightComponent, TransformComponent, Relationship>().each([&](auto entity, const auto& light, auto& transform, const auto& relationship) // const auto&
+		registry.view<LightComponent, TransformComponent, RelationshipComponent>().each([&](auto entity, const auto& light, auto& transform, const auto& relationship) // const auto&
 		{
 			switch (light.type)
 			{
@@ -315,7 +315,7 @@ namespace engine
 		Entity entity,
 		const LightComponent& light,
 		TransformComponent& transform,
-		const Relationship& relationship,
+		const RelationshipComponent& relationship,
 		
 		unsigned int directional_light_idx
 	)
@@ -363,7 +363,7 @@ namespace engine
 		Entity entity,
 		const LightComponent& light,
 		TransformComponent& transform,
-		const Relationship& relationship,
+		const RelationshipComponent& relationship,
 		
 		unsigned int spot_light_idx
 	)
@@ -415,7 +415,7 @@ namespace engine
 		Entity entity,
 		const LightComponent& light,
 		TransformComponent& transform,
-		const Relationship& relationship,
+		const RelationshipComponent& relationship,
 		
 		unsigned int point_light_idx
 	)

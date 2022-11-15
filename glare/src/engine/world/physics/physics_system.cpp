@@ -494,10 +494,10 @@ namespace engine
 				{
 					// Since the `hit_entity` is stating that children can't influence it,
 					// we'll need to determine if we're one of its children:
-					if (auto* hit_relationship = registry.try_get<Relationship>(hit_entity))
+					if (auto* hit_relationship = registry.try_get<RelationshipComponent>(hit_entity))
 					{
 						// Enumerate `hit_entity`'s children, comparing against ourself (`entity`):
-						hit_relationship->enumerate_children(registry, [entity, &hit_entity_is_parent](Entity child, const Relationship& child_relationship, Entity next_child) -> bool
+						hit_relationship->enumerate_children(registry, [entity, &hit_entity_is_parent](Entity child, const RelationshipComponent& child_relationship, Entity next_child) -> bool
 						{
 							if (child == entity)
 							{
@@ -520,10 +520,10 @@ namespace engine
 
 			if (child_enumeration_required)
 			{
-				if (auto* relationship = registry.try_get<Relationship>(entity))
+				if (auto* relationship = registry.try_get<RelationshipComponent>(entity))
 				{
 					// Enumerate this entity's children, comparing against `hit_entity`:
-					relationship->enumerate_children(registry, [hit_entity, &hit_entity_is_child, &kinematic_resolution, &apply_influence, &apply_correction](Entity child, const Relationship& child_relationship, Entity next_child) -> bool
+					relationship->enumerate_children(registry, [hit_entity, &hit_entity_is_child, &kinematic_resolution, &apply_influence, &apply_correction](Entity child, const RelationshipComponent& child_relationship, Entity next_child) -> bool
 					{
 						if (child == hit_entity)
 						{
