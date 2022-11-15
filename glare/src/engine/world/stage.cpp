@@ -8,7 +8,10 @@
 #include "player/player.hpp"
 #include "graphics_entity.hpp"
 
-#include "physics/collision_component.hpp"
+#include <engine/resource_manager/resource_manager.hpp>
+#include <engine/entity_factory.hpp>
+
+#include "physics/components/collision_component.hpp"
 
 // Behaviors supported in stage format:
 #include "behaviors/spin_behavior.hpp"
@@ -20,8 +23,8 @@
 #include "behaviors/debug_move_behavior.hpp"
 
 #include <engine/config.hpp>
-#include <engine/name_component.hpp>
-#include <engine/model_component.hpp>
+#include <engine/components/name_component.hpp>
+#include <engine/components/model_component.hpp>
 
 #include <util/json.hpp>
 #include <util/log.hpp>
@@ -39,8 +42,7 @@
 namespace engine
 {
 	// Stage:
-	const Stage::ObjectCreationMap Stage::ObjectRoutines
-	=
+	const Stage::ObjectCreationMap Stage::ObjectRoutines =
 	{
 		{ "camera",        Stage::CreateCamera       },
 		{ "follow_sphere", Stage::CreateFollowSphere },
@@ -488,7 +490,7 @@ namespace engine
 
 		print("Initializing stage properties...");
 
-		world.set_properties(data);
+		world.set_properties(WorldProperties::from_json(data));
 	}
 
 	void Stage::Loader::load_geometry()
@@ -519,6 +521,8 @@ namespace engine
 
 		print("Loading players...");
 
+		auto& resource_manager = get_resource_manager();
+
 		ForEach(data["players"], [&](const auto& player_cfg)
 		{
 			auto& registry = world.get_registry();
@@ -535,13 +539,44 @@ namespace engine
 			print("Name: {}", player_name);
 			print("Character: {}", player_character);
 
-			std::filesystem::path character_path;
+			auto character_directory = (std::filesystem::path("assets/characters") / player_character);
+			auto character_path = (character_directory / "instance.json");
 
-			auto character_data = load_character_data(player_character);
-			auto player = create_player(world, character_data, player_name, player_parent, player_idx);
+			//auto character_data = load_character_data(player_character);
+			//auto player = create_player(world, character_data, player_name, player_parent, player_idx);
 
+			// [INSERT LOOKUP INTO RESOURCE MANAGER HERE]
+			auto player = resource_manager.generate_entity
+			(
+				{
+					//world,
+					
+					.registry         = world.get_registry(),
+					.resource_manager = world.get_resource_manager(),
+
+					.paths =
+					{
+						.instance_path               = character_path,
+						.instance_directory          = character_directory,
+						.service_archetype_root_path = "archetypes/world"
+					}
+				},
+
+				{
+					.parent = player_parent
+				}
+			);
+
+			//const auto* factory = resource_manager.get_existing_factory(character_path.string());
+			//factory->get_descriptor().set_state(registry, player, "player_common");
+			
 			print("Entity: {}", player);
 			print("Parent: {}", player_parent);
+
+			if (player == null)
+			{
+				return;
+			}
 
 			if (player_idx != NoPlayer)
 			{
@@ -633,5 +668,10 @@ namespace engine
 				obj_idx_counter = std::max((obj_idx_counter + 1), (obj_idx + 1));
 			}
 		});
+	}
+
+	ResourceManager& Stage::Loader::get_resource_manager() const
+	{
+		return world.get_resource_manager();
 	}
 }
