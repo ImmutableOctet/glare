@@ -2,4 +2,13 @@
 
 #include <engine/types.hpp>
 
-// Nothing so far.
+namespace engine
+{
+	enum class CameraProjection : std::uint8_t
+	{
+		Perspective,
+		Orthographic,
+
+		Default = Perspective
+	};
+}
