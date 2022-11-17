@@ -86,7 +86,31 @@ namespace engine
 
 		auto current_state = get_state(entity);
 
-		return descriptor->set_state_by_id(registry, entity, current_state, state_id);
+		if (descriptor->set_state_by_id(registry, entity, current_state, state_id))
+		{
+			const auto& from_state_index = *current_state;
+			const auto& from_state_id = descriptor->states[from_state_index].name;
+
+			const auto new_state = get_state(entity);
+
+			assert(new_state);
+
+			const auto& to_state_index = *new_state;
+			const auto& to_state_id = state_id;
+
+			service->queue_event<OnStateChange>
+			(
+				entity,
+
+				EntityStateInfo{ from_state_index, from_state_id },
+				EntityStateInfo{ to_state_index, to_state_id }
+			);
+
+			return true;
+		}
+
+
+		return false;
 	}
 
 	bool StateSystem::set_state_by_index(Entity entity, EntityStateIndex state_index) const
