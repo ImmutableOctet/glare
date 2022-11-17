@@ -16,6 +16,4 @@ namespace engine
 		const MetaTypeDescriptor* get_definition(MetaType type) const;
 		const MetaTypeDescriptor* get_definition(MetaTypeID type_id) const;
 	};
-
-	using MetaRemovalDescription = util::small_vector<MetaTypeID, 4>; // MetaType
 }

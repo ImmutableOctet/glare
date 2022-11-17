@@ -18,8 +18,8 @@ namespace engine
 	{
 		using SmallSize = std::uint8_t; // std::uint16_t; // std::size_t;
 
-		using Names = util::small_vector<MetaSymbolID, 4>; // 8
-		using Values = util::small_vector<MetaAny, 4>; // 8
+		using Names = MetaSymbolStorage; // util::small_vector<MetaSymbolID, 4>; // 8
+		using Values = MetaStorage; // util::small_vector<MetaAny, 4>; // 8
 
 		static MetaType get_self_type();
 
