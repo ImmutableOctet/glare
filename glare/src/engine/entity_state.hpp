@@ -10,6 +10,9 @@
 
 namespace engine
 {
+	struct FrozenStateComponent;
+	struct StateStorageComponent;
+
 	class EntityState
 	{
 		public:
@@ -30,14 +33,28 @@ namespace engine
 
 				// List of component-types to be explicitly removed upon switching to this state.
 				MetaRemovalDescription remove;
+
+				// List of component-types to be frozen while this state is active.
+				MetaStorageDescription freeze;
+
+				// List of component-types to be stored while this state is inactive.
+				MetaStorageDescription store;
 			} components;
 
 			// Executes appropriate add/remove/persist functions in order to establish this state as current.
-			void update(Registry& registry, Entity entity, const EntityState* previous=nullptr) const;
+			void update(Registry& registry, Entity entity, EntityStateIndex self_index, const EntityState* previous=nullptr, std::optional<EntityStateIndex> prev_index=std::nullopt) const;
 
-			// Utility function for building `components.remove` collection.
-			void build_removals(const util::json& removal_list, bool cross_reference_persist=false);
+			// Utility function for building the `components.remove` collection.
+			std::size_t build_removals(const util::json& removal_list, bool cross_reference_persist=false);
+
+			// Utility function for building the `components.freeze` collection.
+			std::size_t build_frozen(const util::json& frozen_list, bool cross_reference_persist=true);
+
+			// Utility function for building the `components.store` collection.
+			std::size_t build_storage(const util::json& storage_list, bool cross_reference_persist=true);
 		protected:
+			std::size_t build_type_list(const util::json& type_names, MetaIDStorage& types_out, bool cross_reference_persist);
+
 			bool add_component(Registry& registry, Entity entity, const MetaTypeDescriptor& component) const;
 
 			bool remove_component(Registry& registry, Entity entity, const MetaType& type) const;
@@ -47,33 +64,20 @@ namespace engine
 
 			// Returns false if the component does not currently exist for `entity`.
 			// If `value_assignment` is false, no value-assignment actions will be performed. (Status only)
-			bool update_component_fields(Registry& registry, Entity entity, const MetaTypeDescriptor& component, bool value_assignment=true) const;
+			bool update_component_fields(Registry& registry, Entity entity, const MetaTypeDescriptor& component, bool value_assignment=true, bool direct_modify=false) const;
 
-			void decay(Registry& registry, Entity entity, const MetaDescription* next_state_persist=nullptr) const;
+			void decay(Registry& registry, Entity entity, EntityStateIndex self_index, const MetaDescription* next_state_persist=nullptr) const;
+
+			// Adds components to `entity` in `registry`.
+			// Added components are removed during `decay`.
 			void add(Registry& registry, Entity entity) const;
 			void remove(Registry& registry, Entity entity) const;
 			void persist(Registry& registry, Entity entity, bool value_assignment=true) const;
 
-			// Old notes:
-
-			// Persistent components; components that remain between state transitions,
-			// as long as the transitioned-to state has the state in some way as well.
-			//TypeInfo transient_type_info;
-
-			// Temporary components; local only to the current state (temporary).
-			//TypeInfo temporary_type_info;
-
-			/*
-				Types of components we want:
-
-				* Static instantiation for the entity. (instantiated once, during entity construction)
-
-				* Local copy that is reinitialized on state start.
-
-				* Instance is shared between states. (i.e. control, gravity, etc.) -- not to be confused with 'static' components.
-
-				* Local copy that is frozen while in another state,
-				but remains indefinitely, able to 'wake' when coming back to its originating state. (requires dynamic storage)
-			*/
+			FrozenStateComponent& freeze(Registry& registry, Entity entity, EntityStateIndex self_index) const;
+			FrozenStateComponent& unfreeze(Registry& registry, Entity entity, EntityStateIndex self_index) const;
+			
+			StateStorageComponent& store(Registry& registry, Entity entity, EntityStateIndex self_index) const;
+			StateStorageComponent& retrieve(Registry& registry, Entity entity, EntityStateIndex self_index) const;
 	};
 }

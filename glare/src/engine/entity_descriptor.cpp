@@ -1,6 +1,5 @@
 #include "entity_descriptor.hpp"
 #include "meta/meta.hpp"
-#include "state/components/state_component.hpp"
 
 namespace engine
 {
@@ -85,9 +84,7 @@ namespace engine
 
 		const auto& to = states[state_index];
 
-		to.update(registry, entity, from);
-
-		registry.emplace_or_replace<StateComponent>(entity, state_index);
+		to.update(registry, entity, state_index, from, previous_state);
 
 		return true;
 	}

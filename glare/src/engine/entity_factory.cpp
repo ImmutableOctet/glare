@@ -294,7 +294,7 @@ namespace engine
 			state.name = hash(state_name);
 		}
 
-		if (auto persist = util::find_any(data, "persist", "shared", "="); persist != data.end())
+		if (auto persist = util::find_any(data, "persist", "share", "shared", "mutate", "modify", "change", "="); persist != data.end())
 		{
 			process_component_list(state.components.persist, *persist);
 		}
@@ -304,9 +304,19 @@ namespace engine
 			process_component_list(state.components.add, *add);
 		}
 
-		if (auto removal_list = util::find_any(data, "remove", "-", "~", "^"); removal_list != data.end())
+		if (auto removal_list = util::find_any(data, "remove", "-", "~"); removal_list != data.end())
 		{
 			state.build_removals(*removal_list);
+		}
+		
+		if (auto frozen_list = util::find_any(data, "frozen", "freeze", "exclude", "%", "^"); frozen_list != data.end())
+		{
+			state.build_frozen(*frozen_list);
+		}
+
+		if (auto storage_list = util::find_any(data, "store", "storage", "local", "local_storage", "include", "temp", "temporary", "#"); storage_list != data.end())
+		{
+			state.build_storage(*storage_list);
 		}
 
 		if (state.name)

@@ -8,6 +8,8 @@
 #include "types.hpp"
 
 #include "meta/meta.hpp"
+#include "meta/traits.hpp"
+#include "meta/meta_type_descriptor.hpp"
 
 #include <util/reflection.hpp>
 
@@ -118,6 +120,12 @@ namespace engine
     template <typename T>
     bool remove_component(Registry& registry, Entity entity)
     {
+        // Check if we currently have an instance of `T` attached to `entity`:
+        if (!registry.try_get<T>(entity))
+        {
+            return false;
+        }
+
         registry.erase<T>(entity);
 
         return true;
@@ -148,6 +156,56 @@ namespace engine
         return static_cast<bool>(get_component<T>(registry, entity));
     }
 
+    // Moves component `T` from `entity` into an `entt::meta_any` instance,
+    // then removes the component-type from `entity`.
+    template <typename T>
+    entt::meta_any store_meta_component(Registry& registry, Entity entity)
+    {
+        auto* instance = get_component<T>(registry, entity);
+
+        if (!instance)
+        {
+            return {};
+        }
+
+        entt::meta_any output = std::move(*instance);
+
+        registry.erase<T>(entity);
+
+        // Alternate (slower):
+        // remove_component<T>(registry, entity);
+
+        return output;
+    }
+
+    template <typename T>
+    std::size_t patch_meta_component(Registry& registry, Entity entity, const MetaTypeDescriptor& descriptor, std::size_t field_count, std::size_t offset)
+    {
+        assert
+        (
+            (descriptor.type.id() == short_name_hash<T>().value())
+            ||
+            (descriptor.type.id() == entt::type_hash<T>::value())
+        );
+
+        // Ensure `T` is currently a component of `entity`.
+        if (!registry.try_get<T>(entity))
+        {
+            return 0;
+        }
+
+        std::size_t count = 0;
+
+        registry.patch<T>(entity, [&descriptor, &field_count, &offset, &count](T& instance)
+        {
+            auto any_wrapper = entt::forward_as_meta(instance);
+
+            count = descriptor.apply_fields(any_wrapper, field_count, offset);
+        });
+
+        return count;
+    }
+
     // Associates a stripped version of the type's name to its reflection metadata.
     // Allows use of `T` without specifying `engine::T` in contexts where `T` is named dynamically. (e.g. JSON I/O)
     // 
@@ -156,16 +214,34 @@ namespace engine
     template <typename T>
     auto engine_meta_type()
     {
-        return entt::meta<T>()
+        auto type = entt::meta<T>()
             .type(short_name_hash<T>())
 
             .template func<from_meta<T>>("from_meta"_hs)
             .template func<has_component<T>>("has_component"_hs)
             .template func<get_component<T>>("get_component"_hs)
-            .template func<&emplace_meta_component<T>, entt::as_void_t>("emplace_meta_component"_hs)
+            .template func<&emplace_meta_component<T>, entt::as_ref_t>("emplace_meta_component"_hs)
+            .template func<&store_meta_component<T>>("store_meta_component"_hs)
             .template func<&remove_component<T>>("remove_component"_hs)
             .template func<&get_or_emplace_component<T>, entt::as_ref_t>("get_or_emplace_component"_hs)
+            .template func<&patch_meta_component<T>>("patch_meta_component"_hs)
         ;
+
+        if constexpr (has_method_entity<T, Entity()>::value) // std::decay_t<T>
+        {
+            //type.func<&T::entity>("entity"_hs);
+        }
+        else if constexpr (has_method_get_entity<T, Entity()>::value) // std::decay_t<T>
+        {
+            //type.func<&T::get_entity>("entity"_hs);
+        }
+        
+        else if constexpr (has_field_entity<T>::value) // std::decay_t<T>
+        {
+            //type.data<&T::entity>("entity"_hs);
+        }
+
+        return type;
     }
 
     template <typename EnumType>

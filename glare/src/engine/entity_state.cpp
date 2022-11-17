@@ -2,26 +2,115 @@
 
 #include "meta/meta.hpp"
 
+#include "state/components/state_component.hpp"
+#include "state/components/state_storage_component.hpp"
+#include "state/components/frozen_state_component.hpp"
+
 // Debugging related:
 #include <util/log.hpp>
 
 namespace engine
 {
-	void EntityState::update(Registry& registry, Entity entity, const EntityState* previous) const
+	template <typename StorageComponentType>
+	static StorageComponentType& store_components(Registry& registry, Entity entity, EntityStateIndex self_index, const MetaStorageDescription& components)
+	{
+		auto& container = registry.get_or_emplace<StorageComponentType>(entity);
+		auto& storage = container.get_storage(self_index);
+
+		const auto intended_count = components.size();
+		const auto result = storage.store(registry, entity, components);
+
+		// Ensure the correct number of components were stored.
+		assert(result == intended_count);
+
+		return container;
+	}
+
+	template <typename StorageComponentType>
+	static StorageComponentType& retrieve_components(Registry& registry, Entity entity, EntityStateIndex self_index)
+	{
+		auto& container = registry.get_or_emplace<StorageComponentType>(entity); // registry.try_get<StorageComponentType>(entity);
+
+		auto& storage = container.get_storage(self_index);
+
+		const auto intended_count = storage.components.size();
+		const auto result = storage.retrieve(registry, entity);
+
+		// Ensure the correct number of components were retrieved.
+		assert(result == intended_count);
+
+		return container;
+	}
+
+	void EntityState::update(Registry& registry, Entity entity, EntityStateIndex self_index, const EntityState* previous, std::optional<EntityStateIndex> prev_index) const
 	{
 		if (previous)
 		{
-			previous->decay(registry, entity, &components.persist);
+			assert(prev_index);
+
+			previous->decay(registry, entity, *prev_index, &components.persist);
 		}
 
+		freeze(registry, entity, self_index);
+		retrieve(registry, entity, self_index);
 		remove(registry, entity);
 		add(registry, entity);
 		persist(registry, entity);
+
+		registry.emplace_or_replace<StateComponent>(entity, self_index);
 	}
 
-	void EntityState::build_removals(const util::json& removal_list, bool cross_reference_persist)
+	void EntityState::decay(Registry& registry, Entity entity, EntityStateIndex self_index, const MetaDescription* next_state_persist) const
 	{
-		util::json_for_each(removal_list, [this, cross_reference_persist](const util::json& removal_entry)
+		store(registry, entity, self_index);
+
+		for (const auto& component : components.add.type_definitions)
+		{
+			auto& type = component.type;
+
+			if (next_state_persist)
+			{
+				if (next_state_persist->get_definition(type))
+				{
+					continue;
+				}
+			}
+
+			if (components.persist.get_definition(type))
+			{
+				continue;
+			}
+
+			remove_component(registry, entity, type);
+		}
+
+		unfreeze(registry, entity, self_index);
+
+		// Ensure that persistent components are accounted for,
+		// but do not alter any existing state.
+		persist(registry, entity, false);
+	}
+
+	std::size_t EntityState::build_removals(const util::json& removal_list, bool cross_reference_persist)
+	{
+		return build_type_list(removal_list, components.remove, cross_reference_persist);
+	}
+
+	std::size_t EntityState::build_frozen(const util::json& frozen_list, bool cross_reference_persist)
+	{
+		return build_type_list(frozen_list, components.freeze, cross_reference_persist);
+	}
+
+	std::size_t EntityState::build_storage(const util::json& storage_list, bool cross_reference_persist)
+	{
+		return build_type_list(storage_list, components.store, cross_reference_persist);
+	}
+
+	std::size_t EntityState::build_type_list(const util::json& type_names, MetaIDStorage& types_out, bool cross_reference_persist)
+	{
+		std::size_t count = 0;
+
+		util::json_for_each(type_names, [this, &types_out, &count, cross_reference_persist](const util::json& removal_entry)
 		{
 			if (!removal_entry.is_string())
 			{
@@ -29,7 +118,7 @@ namespace engine
 			}
 
 			const auto component_name = removal_entry.get<std::string>();
-			const auto component_type_hash = hash(component_name);
+			const auto component_type_hash = hash(component_name).value();
 
 			auto component_type = resolve(component_type_hash);
 
@@ -44,14 +133,18 @@ namespace engine
 			{
 				if (components.persist.get_definition(component_type))
 				{
-					print_warn("State removal-entry ignored due to overlapping persistent entry. ({}, #{})", component_name, component_type_hash);
+					print_warn("Component entry ignored due to overlapping persistent entry. ({}, #{})", component_name, component_type_hash);
 
 					return;
 				}
 			}
 
-			components.remove.emplace_back(component_type_hash); // std::move(component_type)
+			types_out.emplace_back(component_type_hash); // std::move(component_type)
+
+			count++;
 		});
+
+		return count;
 	}
 
 	bool EntityState::remove_component(Registry& registry, Entity entity, const MetaType& type) const
@@ -81,7 +174,8 @@ namespace engine
 			return false;
 		}
 
-		return true;
+		//return true;
+		return result.cast<bool>();
 	}
 
 	bool EntityState::remove_component(Registry& registry, Entity entity, const MetaTypeDescriptor& component) const
@@ -145,69 +239,74 @@ namespace engine
 		return true;
 	}
 
-	bool EntityState::update_component_fields(Registry& registry, Entity entity, const MetaTypeDescriptor& component, bool value_assignment) const
+	bool EntityState::update_component_fields(Registry& registry, Entity entity, const MetaTypeDescriptor& component, bool value_assignment, bool direct_modify) const
 	{
 		using namespace entt::literals;
 
 		auto& type = component.type;
 
-		auto get_fn = type.func("get_component"_hs);
+		auto patch_fn = type.func("patch_meta_component"_hs);
 
-		if (!get_fn)
+		if (!patch_fn)
 		{
-			print_warn("Unable to resolve component-get function from: #{}", type.id());
+			print_warn("Unable to resolve patch function for: #{}", type.id());
 
 			return false;
 		}
 
-		auto result = get_fn.invoke
-		(
-			{},
-			entt::forward_as_meta(registry),
-			entt::forward_as_meta(entity)
-		);
-				
-		if (auto instance = *result) // ; (*result).cast<bool>()
+		if (value_assignment && (!direct_modify))
 		{
-			if (value_assignment)
+			if (component.size() > 0)
 			{
-				if (component.size() > 0)
+				auto result = patch_fn.invoke
+				(
+					{},
+					entt::forward_as_meta(registry),
+					entt::forward_as_meta(entity),
+					entt::forward_as_meta(component),
+					entt::forward_as_meta(component.size()),
+					entt::forward_as_meta(0)
+				);
+
+				if (result)
 				{
-					return (component.apply_fields(instance) > 0);
+					return (result.cast<std::size_t>() > 0);
 				}
 			}
+		}
+		else
+		{
+			auto get_fn = type.func("get_component"_hs);
 
-			return true;
+			if (!get_fn)
+			{
+				print_warn("Unable to resolve component-get function from: #{}", type.id());
+
+				return false;
+			}
+
+			auto result = get_fn.invoke
+			(
+				{},
+				entt::forward_as_meta(registry),
+				entt::forward_as_meta(entity)
+			);
+
+			if (auto instance = *result) // ; (*result).cast<bool>()
+			{
+				if (value_assignment) // (&& direct_modify) <-- Already implied due to prior clause.
+				{
+					if (component.size() > 0)
+					{
+						return (component.apply_fields(instance) > 0);
+					}
+				}
+
+				return true;
+			}
 		}
 
 		return false;
-	}
-
-	void EntityState::decay(Registry& registry, Entity entity, const MetaDescription* next_state_persist) const
-	{
-		for (const auto& component : components.add.type_definitions)
-		{
-			auto& type = component.type;
-
-			if (next_state_persist)
-			{
-				if (next_state_persist->get_definition(type))
-				{
-					continue;
-				}
-			}
-
-			if (components.persist.get_definition(type))
-			{
-				continue;
-			}
-
-			remove_component(registry, entity, type);
-		}
-
-		// Ensure that persistent components are accounted for,
-		// but do not alter any existing state.
-		persist(registry, entity, false);
 	}
 
 	void EntityState::add(Registry& registry, Entity entity) const
@@ -253,5 +352,25 @@ namespace engine
 				add_component(registry, entity, component);
 			}
 		}
+	}
+
+	FrozenStateComponent& EntityState::freeze(Registry& registry, Entity entity, EntityStateIndex self_index) const
+	{
+		return store_components<FrozenStateComponent>(registry, entity, self_index, components.freeze);
+	}
+
+	FrozenStateComponent& EntityState::unfreeze(Registry& registry, Entity entity, EntityStateIndex self_index) const
+	{
+		return retrieve_components<FrozenStateComponent>(registry, entity, self_index);
+	}
+
+	StateStorageComponent& EntityState::store(Registry& registry, Entity entity, EntityStateIndex self_index) const
+	{
+		return store_components<StateStorageComponent>(registry, entity, self_index, components.store);
+	}
+
+	StateStorageComponent& EntityState::retrieve(Registry& registry, Entity entity, EntityStateIndex self_index) const
+	{
+		return retrieve_components<StateStorageComponent>(registry, entity, self_index);
 	}
 }
