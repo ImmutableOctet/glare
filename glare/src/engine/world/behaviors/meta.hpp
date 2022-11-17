@@ -1,6 +1,6 @@
 #pragma once
 
-#include <util/member_function_traits.hpp>
+#include <util/member_traits.hpp>
 #include <engine/service_events.hpp>
 #include <engine/input/raw_input_events.hpp>
 
