@@ -122,13 +122,15 @@ namespace engine
 		return { name_view, inplace_changes, constructor_arg_count };
 	}
 
-	Entity EntityFactory::create(EntityConstructionContext context) const
+	Entity EntityFactory::create(const EntityConstructionContext& context) const
 	{
 		using namespace entt::literals;
 
-		if (context.entity == null)
+		auto entity = context.opt_entity_out;
+
+		if (entity == null)
 		{
-			context.entity = registry.create();
+			entity = context.registry.create();
 		}
 
 		for (const auto& component : descriptor.components.type_definitions)
@@ -142,8 +144,8 @@ namespace engine
 				result = emplace_fn.invoke
 				(
 					{},
-					entt::forward_as_meta(registry),
-					entt::forward_as_meta(context.entity),
+					entt::forward_as_meta(context.registry),
+					entt::forward_as_meta(entity),
 					entt::forward_as_meta(std::move(instance))
 				);
 			}
@@ -156,14 +158,14 @@ namespace engine
 
 		if (context.parent != null)
 		{
-			RelationshipComponent::set_parent(registry, context.entity, context.parent, true);
+			RelationshipComponent::set_parent(context.registry, entity, context.parent, true);
 		}
 
-		registry.emplace_or_replace<InstanceComponent>(context.entity, paths.instance_path.string());
+		context.registry.emplace_or_replace<InstanceComponent>(entity, paths.instance_path.string());
 
 		if (default_state_index)
 		{
-			auto result = descriptor.set_state_by_index(registry, context.entity, std::nullopt, *default_state_index);
+			auto result = descriptor.set_state_by_index(context.registry, entity, std::nullopt, *default_state_index);
 
 			if (!result)
 			{
@@ -171,7 +173,7 @@ namespace engine
 			}
 		}
 
-		return context.entity;
+		return entity;
 	}
 
 	bool EntityFactory::process_component

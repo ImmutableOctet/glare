@@ -6,6 +6,7 @@
 #include <util/json.hpp>
 
 #include <filesystem>
+#include <string>
 #include <tuple>
 #include <optional>
 #include <string_view>
@@ -18,18 +19,6 @@ namespace engine
 	// TODO: Look into moving `registry` and `resource_manager` out of this type.
 	struct EntityFactoryContext
 	{
-		//EntityFactoryContext(const EntityFactoryContext&) = default;
-		//EntityFactoryContext(EntityFactoryContext&&) noexcept = default;
-
-		//EntityFactoryContext& operator=(const EntityFactoryContext&) = default;
-		//EntityFactoryContext& operator=(EntityFactoryContext&&) noexcept = default;
-
-		//using ServiceType = World;
-		//ServiceType& service;
-
-		Registry& registry;
-		ResourceManager& resource_manager;
-
 		struct
 		{
 			std::filesystem::path instance_path = {};
@@ -45,26 +34,33 @@ namespace engine
 	//template <typename ServiceType>
 	struct EntityConstructionContext
 	{
+		//using ServiceType = World;
+		//ServiceType& service;
+
+		Registry& registry;
+		ResourceManager& resource_manager;
+
 		//std::filesystem::path instance_path;
 
 		Entity parent = null;
 
 		// If this field is left as `null`, a factory will
 		// generate an appropriate Entity instance.
-		Entity entity = null;
+		Entity opt_entity_out = null;
 	};
 
 	class EntityFactory : protected EntityFactoryContext
 	{
+		public:
+			using FactoryKey = std::string;
+			using SmallSize = MetaTypeDescriptor::SmallSize;
+
+			//using json = util::json;
 		protected:
 			EntityDescriptor descriptor;
 
 			std::optional<EntityStateIndex> default_state_index = std::nullopt;
 		public:
-			using SmallSize = MetaTypeDescriptor::SmallSize;
-
-			//using json = util::json;
-
 			std::filesystem::path resolve_reference(const std::filesystem::path& path, const std::filesystem::path& base_path) const;
 
 			EntityFactory(const EntityFactory&) = default;
@@ -75,9 +71,9 @@ namespace engine
 
 			EntityFactory(const EntityFactoryContext& factory_context);
 
-			Entity create(EntityConstructionContext context={}) const;
+			Entity create(const EntityConstructionContext& context) const;
 
-			inline Entity operator()(EntityConstructionContext context = {}) const
+			inline Entity operator()(const EntityConstructionContext& context) const
 			{
 				return create(context);
 			}
