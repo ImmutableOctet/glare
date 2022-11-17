@@ -201,9 +201,11 @@ namespace engine
 
 			// Returns the name associated to the `entity` specified.
 			// If no `NameComponent` is associated with the entity, an empty string will be returned.
-			std::string get_name(Entity entity);
+			std::string get_name(Entity entity); // const;
 
 			void set_name(Entity entity, const std::string& name);
+
+			bool has_name(Entity entity); // const;
 
 			// Retrieves the first entity found with the `name` specified.
 			// NOTE: Multiple entities can share the same name.

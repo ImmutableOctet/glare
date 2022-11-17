@@ -309,6 +309,11 @@ namespace engine
 		}
 	}
 
+	bool World::has_name(Entity entity) // const
+	{
+		return (!get_name(entity).empty());
+	}
+
 	Entity World::get_by_name(std::string_view name)
 	{
 		auto view = registry.view<NameComponent>();
