@@ -40,6 +40,10 @@ namespace engine
 		);
 	}
 
+	TransformHistoryComponent::TransformHistoryComponent()
+		: TransformHistoryComponent(generate_default_transform(), false) // true
+	{}
+
 	TransformHistoryComponent::TransformHistoryComponent(TransformHistory&& previous) noexcept
 		: previous(std::move(previous)) {}
 

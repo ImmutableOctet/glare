@@ -27,7 +27,7 @@ namespace engine
 			// NOTE: We use a `small_vector` here since `std::deque` would require heap storage.
 			using TransformHistory   = util::small_vector<OptimizedTransform, PREALLOCATED_ENTRIES>;
 
-			TransformHistoryComponent() = default;
+			TransformHistoryComponent();
 			TransformHistoryComponent(const TransformHistoryComponent&) = default;
 			TransformHistoryComponent(TransformHistoryComponent&&) noexcept = default;
 
