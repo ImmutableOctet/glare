@@ -11,6 +11,9 @@
 #include "meta/traits.hpp"
 #include "meta/meta_type_descriptor.hpp"
 
+// Disabled for now.
+//#include "service.hpp"
+
 #include <util/reflection.hpp>
 
 #include <string_view>
@@ -46,10 +49,12 @@ namespace engine
 {
 	using namespace entt::literals;
 
+    class Service;
+
     // NOTE: In the default case of `T=void`, the overridden version of this template is used.
     // TODO: Look into best way to handle multiple calls to reflect. (This is currently only managed in `reflect_all`)
     template <typename T=void>
-    void reflect()
+    inline void reflect()
     {
         if constexpr (std::is_enum_v<T>)
         {
@@ -229,17 +234,40 @@ namespace engine
 
         if constexpr (has_method_entity<T, Entity()>::value) // std::decay_t<T>
         {
-            //type.func<&T::entity>("entity"_hs);
+            type = type.data<nullptr, &T::entity>("entity"_hs);
         }
         else if constexpr (has_method_get_entity<T, Entity()>::value) // std::decay_t<T>
         {
-            //type.func<&T::get_entity>("entity"_hs);
+            type = type.data<nullptr, &T::get_entity>("entity"_hs);
         }
-        
         else if constexpr (has_field_entity<T>::value) // std::decay_t<T>
         {
-            //type.data<&T::entity>("entity"_hs);
+            type = type.data<&T::entity>("entity"_hs);
         }
+
+        if constexpr (has_method_service<T, Service*()>::value)
+        {
+            type = type.data<nullptr, &T::service>("service"_hs);
+        }
+        else if constexpr (has_method_service<T, Service&()>::value)
+        {
+            type = type.data<nullptr, &T::service>("service"_hs);
+        }
+        else if constexpr (has_method_get_service<T, Service*()>::value)
+        {
+            type = type.data<nullptr, &T::get_service>("service"_hs);
+        }
+        else if constexpr (has_method_get_service<T, Service&()>::value)
+        {
+            type = type.data<nullptr, &T::get_service>("service"_hs);
+        }
+        /*
+        // Disabled for now. (Requires full definition of `Service` type)
+        else if constexpr (has_field_service<T>::value)
+        {
+            type = type.data<&T::service>("service"_hs);
+        }
+        */
 
         return type;
     }
