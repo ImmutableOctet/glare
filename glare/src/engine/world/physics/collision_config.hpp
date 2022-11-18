@@ -30,6 +30,9 @@ namespace engine
 			CollisionGroup interaction_mask=CollisionGroup::None
 		);
 
+		// Utility overload for exact collision-group input.
+		// If `enabled` is true, groups will be initialized as expected.
+		// If `enabled` is false, no group initialization will take place. (i.e. default construction)
 		CollisionConfig
 		(
 			CollisionGroup group,
