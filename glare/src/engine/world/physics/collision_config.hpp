@@ -23,16 +23,35 @@ namespace engine
 
 		//using CollisionLookupResult = std::tuple<CollisionGroup, CollisionGroup, CollisionGroup>;
 
-		CollisionConfig() = default;
+		CollisionConfig
+		(
+			CollisionGroup group=CollisionGroup::None,
+			CollisionGroup solid_mask=CollisionGroup::None,
+			CollisionGroup interaction_mask=CollisionGroup::None
+		);
+
+		CollisionConfig(EntityType type);
+
+		// Utility overload for `EntityType` input.
+		// If `enabled` is true, `type` will be forwarded as expected.
+		// If `enabled` is false, `EntityType::Default` will be passed, resulting in no collision group assignments. (i.e. default construction)
+		CollisionConfig(EntityType type, bool enabled);
+
 		CollisionConfig(const CollisionConfig&) = default;
 		CollisionConfig(CollisionConfig&&) noexcept = default;
 
+		CollisionConfig& operator=(const CollisionConfig&) = default;
 		CollisionConfig& operator=(CollisionConfig&&) noexcept = default;
 
-		CollisionConfig(EntityType type);
+		bool enabled() const;
 
 		// The full mask represents the final bitmask that should be used for filtering at the outermost level.
 		// (i.e. what we can engage with in some form)
 		inline CollisionGroup get_full_mask() const { return (interaction_mask | solid_mask); }
+
+		inline explicit operator bool() const
+		{
+			return enabled();
+		}
 	};
 }
