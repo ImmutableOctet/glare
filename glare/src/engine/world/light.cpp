@@ -42,7 +42,8 @@ namespace engine
 		{
 			//const auto& res = world.get_resource_manager();
 
-			light = load_model(world, "assets/geometry/cube.b3d", parent, EntityType::Light, false, false, 0.0f, std::nullopt, std::nullopt, std::nullopt, debug_shader); // {}
+			auto type = EntityType::Light;
+			light = load_model(world, "assets/geometry/cube.b3d", parent, type, false, CollisionConfig(type, false), 0.0f, debug_shader); // {}
 
 			auto t = world.set_position(light, position);
 			t.set_scale(4.0f);

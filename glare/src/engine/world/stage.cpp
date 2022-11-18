@@ -34,6 +34,7 @@
 #include <regex>
 
 // Debugging related:
+#include <engine/entity_descriptor.hpp>
 #include "behaviors/rave_behavior.hpp"
 
 // Not sure if this is actually going to be a standard include or not.
@@ -290,9 +291,10 @@ namespace engine
 			model_path = (root_path / model_path).string();
 		}
 
+		auto type = EntityType::Scenery;
 		auto solid = util::get_value<bool>(data, "solid", false);
 
-		auto obj = load_model(world, model_path, parent, EntityType::Scenery, true, solid, 0.0f);
+		auto obj = load_model(world, model_path, parent, type, true, CollisionConfig(type, solid), 0.0f);
 
 		return obj;
 	}
@@ -507,7 +509,8 @@ namespace engine
 
 			print("Loading geometry from \"{}\"...\n", model_path);
 
-			auto model = load_model(world, model_path, stage, EntityType::Geometry, true, collision_enabled);
+			auto type = EntityType::Geometry;
+			auto model = load_model(world, model_path, stage, type, true, CollisionConfig(type, collision_enabled));
 
 			print("Applying transformation to stage geometry...");
 
@@ -549,11 +552,6 @@ namespace engine
 			auto player = resource_manager.generate_entity
 			(
 				{
-					//world,
-					
-					.registry         = world.get_registry(),
-					.resource_manager = world.get_resource_manager(),
-
 					.paths =
 					{
 						.instance_path               = character_path,
@@ -563,13 +561,15 @@ namespace engine
 				},
 
 				{
+					//world,
+
+					.registry = world.get_registry(), // registry,
+					.resource_manager = world.get_resource_manager(),
+
 					.parent = player_parent
 				}
 			);
 
-			//const auto* factory = resource_manager.get_existing_factory(character_path.string());
-			//factory->get_descriptor().set_state(registry, player, "player_common");
-			
 			print("Entity: {}", player);
 			print("Parent: {}", player_parent);
 

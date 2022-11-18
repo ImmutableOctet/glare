@@ -8,7 +8,6 @@
 #include "animation/components/skeletal_component.hpp"
 #include "animation/components/bone_component.hpp"
 
-//#include "physics/collision_config.hpp"
 #include "physics/components/collision_component.hpp"
 
 #include <engine/resource_manager/resource_manager.hpp>
@@ -43,7 +42,7 @@ namespace engine
 		return attach_model(world, entity, model);
 	}
 
-	Entity attach_model(World& world, Entity entity, pass_ref<graphics::Model> model, graphics::ColorRGBA color)
+	Entity attach_model(World& world, Entity entity, pass_ref<graphics::Model> model, graphics::ColorRGBA color, std::optional<bool> update_name)
 	{
 		///assert(model);
 
@@ -52,29 +51,56 @@ namespace engine
 		registry.emplace_or_replace<ModelComponent>(entity, model, color);
 		//registry.emplace_or_replace<RenderFlagsComponent>(entity);
 
+		if (model->has_name())
+		{
+			if (update_name.has_value())
+			{
+				if (*update_name)
+				{
+					world.set_name(entity, model->get_name());
+				}
+			}
+			else
+			{
+				if (!world.has_name(entity))
+				{
+					world.set_name(entity, model->get_name());
+				}
+			}
+		}
+
 		return entity;
 	}
 
-	Entity load_model
+	//entity = create_model(world, model, parent, type);
+
+	Entity load_model_attachment
 	(
-		World& world, const std::string& path, Entity parent, EntityType type,
+		World& world, Entity entity,
+		const std::string& path, // std::string_view path,
 
 		bool allow_multiple,
-		bool collision_enabled, float mass,
 
-		std::optional<CollisionGroup> collision_group,
-		std::optional<CollisionGroup> collision_solid_mask,
-		std::optional<CollisionGroup> collision_interaction_mask,
+		std::optional<CollisionConfig> collision_cfg,
+		float mass,
 
 		pass_ref<graphics::Shader> shader
 	)
 	{
 		if (path.empty())
 		{
-			return null;
+			return entity;
 		}
 
+		auto& registry = world.get_registry();
 		auto& resource_manager = world.get_resource_manager();
+
+		bool collision_enabled = false;
+
+		if (collision_cfg.has_value())
+		{
+			collision_enabled = collision_cfg->enabled();
+		}
 
 		const auto& model_data = resource_manager.load_model(path, collision_enabled, shader);
 
@@ -84,8 +110,6 @@ namespace engine
 		}
 
 		const auto animation_data = resource_manager.get_animation_data(model_data.models[0].model);
-
-		auto& registry = world.get_registry();
 
 		auto create_skeleton = [&](Entity skinned_entity)
 		{
@@ -107,30 +131,34 @@ namespace engine
 			print("Skeleton generated.");
 		};
 
-		auto process_model = [&](ModelData::ModelEntry model_entry, Entity parent) -> Entity
+		auto process_model = [&](ModelData::ModelEntry model_entry, Entity entity) -> Entity
 		{
 			auto& model = model_entry.model;
 
-			auto entity = create_model(world, model, parent, type);
-
-			//world.set_name(entity, std::format("{} - {}", path, model->get_name()));
-			world.set_name(entity, model->get_name());
+			assert(entity != null);
+			
+			entity = attach_model(world, entity, model);
 
 			// Update model's scene-local transform:
 			{
 				auto tform = world.get_transform(entity);
 
-				tform.set_local_matrix(model_entry.transform);
-				//tform.set_matrix(model_entry.transform);
+				tform.set_local_matrix(model_entry.transform); // tform.set_matrix(...);
 			}
 
-			if (collision_enabled)
+			if (collision_enabled) // && (collision_cfg.has_value())
 			{
-				const auto* collision_data = resource_manager.get_collision(model); // auto*
+				const auto* collision_data = resource_manager.get_collision(model);
 
 				if (collision_data)
 				{
-					attach_collision(world, entity, collision_data->collision_shape, CollisionConfig(type), mass);
+					attach_collision
+					(
+						world, entity,
+						collision_data->collision_shape,
+						*collision_cfg,
+						mass
+					);
 				}
 			}
 
@@ -146,33 +174,67 @@ namespace engine
 			return entity;
 		};
 
-		Entity entity = null;
-
 		if (allow_multiple && (model_data.models.size() > 1))
 		{
 			//assert(!model_data.models.empty());
 
-			entity = engine::create_pivot(world, parent);
-			world.set_name(entity, path);
-
 			for (const auto& model : model_data.models)
 			{
-				process_model(model, entity);
+				auto child = engine::create_pivot(world, entity, EntityType::Geometry);
+
+				process_model(model, child);
 			}
 		}
 		else
 		{
 			if (model_data.models.empty())
 			{
-				assert(false); // <-- Debugging related.
+				// Debugging related.
+				assert(false);
 
 				return entity;
 			}
 
-			entity = process_model(model_data.models[0], parent);
+			entity = process_model(model_data.models[0], entity);
 		}
 		
 		return entity;
+	}
+
+	Entity load_model
+	(
+		World& world,
+		const std::string& path, // std::string_view path,
+
+		Entity parent,
+		EntityType type,
+
+		bool allow_multiple,
+
+		std::optional<CollisionConfig> collision_cfg,
+		float mass,
+
+		pass_ref<graphics::Shader> shader
+	)
+	{
+		if (path.empty())
+		{
+			return null;
+		}
+
+		auto& registry = world.get_registry();
+		
+		auto entity = engine::create_pivot(world, parent, type);
+		
+		world.set_name(entity, path);
+		
+		return load_model_attachment
+		(
+			world, entity, path, allow_multiple,
+			collision_cfg,
+			mass,
+			shader
+		);
 	}
 
 	Entity create_cube(World& world, Entity parent, EntityType type)

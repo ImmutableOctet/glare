@@ -7,7 +7,9 @@
 #include <graphics/types.hpp>
 
 #include "entity.hpp"
-#include "physics/collision_group.hpp"
+
+//#include "physics/collision_group.hpp"
+#include "physics/collision_config.hpp"
 
 #include <optional>
 #include <string>
@@ -48,20 +50,34 @@ namespace engine
 	};
 	*/
 
-	// Entity with 3D Model component.
 	Entity create_model(World& world, pass_ref<graphics::Model> model, Entity parent=null, EntityType type=EntityType::Geometry);
-	Entity attach_model(World& world, Entity entity, pass_ref<graphics::Model> model, graphics::ColorRGBA color={1.0f, 1.0f, 1.0f, 1.0f});
+	Entity attach_model(World& world, Entity entity, pass_ref<graphics::Model> model, graphics::ColorRGBA color={1.0f, 1.0f, 1.0f, 1.0f}, std::optional<bool> update_name=std::nullopt);
+
+	Entity load_model_attachment
+	(
+		World& world, Entity entity,
+		const std::string& path, // std::string_view path,
+
+		bool allow_multiple=true,
+
+		std::optional<CollisionConfig> collision_cfg=std::nullopt,
+		float mass=0.0f,
+
+		pass_ref<graphics::Shader> shader={}
+	);
 
 	Entity load_model
 	(
-		World& world, const std::string& path, Entity parent=null, EntityType type=EntityType::Geometry, // std::string_view path,
+		World& world,
+		const std::string& path, // std::string_view path,
+
+		Entity parent=null,
+		EntityType type=EntityType::Geometry,
 		
 		bool allow_multiple=true,
-		bool collision_enabled=false, float mass = 0.0f,
 
-		std::optional<CollisionGroup> collision_group=std::nullopt,
-		std::optional<CollisionGroup> collision_solid_mask=std::nullopt,
-		std::optional<CollisionGroup> collision_interaction_mask=std::nullopt,
+		std::optional<CollisionConfig> collision_cfg = std::nullopt,
+		float mass = 0.0f,
 
 		pass_ref<graphics::Shader> shader={}
 	);

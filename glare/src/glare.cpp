@@ -93,11 +93,16 @@ namespace glare
 		auto cube = engine::load_model
 		(
 			world, "assets/objects/cube/cube.b3d", engine::null,
-			engine::EntityType::Object,
-			true, false, 0.0f,
-			engine::CollisionGroup::Object,
-			engine::CollisionGroup::All,
-			engine::CollisionGroup::All
+			engine::EntityType::Object, true
+
+			/*
+			, engine::CollisionConfig
+			(
+				engine::CollisionGroup::Object,
+				engine::CollisionGroup::All,
+				engine::CollisionGroup::All
+			)
+			*/
 		);
 
 		world.set_name(cube, "Cube");
@@ -123,11 +128,15 @@ namespace glare
 		auto cube2 = engine::load_model
 		(
 			world, "assets/objects/cube/cube.b3d", engine::null,
-			engine::EntityType::Object,
-			true, false, 0.0f,
-			engine::CollisionGroup::Object,
-			engine::CollisionGroup::All,
-			engine::CollisionGroup::All
+			engine::EntityType::Object, true
+			/*
+			, engine::CollisionConfig
+			(
+				engine::CollisionGroup::Object,
+				engine::CollisionGroup::All,
+				engine::CollisionGroup::All
+			)
+			*/
 		);
 
 		world.set_name(cube2, "Cube2");
