@@ -16,9 +16,35 @@
 #include "motion/reflection.hpp"
 // ...
 
+#include "graphics_entity.hpp"
+
 namespace engine
 {
 	class World;
+	struct ModelComponent;
+
+	namespace world_impl
+	{
+		template <typename T>
+		void extend() {}
+
+		template <>
+		inline void extend<ModelComponent>()
+		{
+			entt::meta<ModelComponent>()
+				.func<&attach_model>("attach_model"_hs)
+				.func<&create_model>("create_model"_hs)
+				.func<&load_model>("load_model"_hs)
+				.func<&load_model_attachment>("load_model_attachment"_hs)
+				.func<&create_cube>("create_cube"_hs)
+			;
+		}
+
+		inline void reflect_extensions()
+		{
+			extend<ModelComponent>();
+		}
+	}
 
 	template <>
 	void reflect<CameraComponent>()
@@ -173,5 +199,8 @@ namespace engine
 		reflect<MotionSystem>();
 
 		// ...
+
+		// Extensions:
+		world_impl::reflect_extensions();
 	}
 }
