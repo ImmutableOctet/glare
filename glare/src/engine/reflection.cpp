@@ -87,14 +87,14 @@ namespace engine
 
         reflect_meta();
 
-        if (primitives)
-        {
-            reflect_primitives();
-        }
-
         if (dependencies)
         {
             reflect_dependencies();
+        }
+
+        if (primitives)
+        {
+            reflect_primitives();
         }
 
         reflect_core_components();
