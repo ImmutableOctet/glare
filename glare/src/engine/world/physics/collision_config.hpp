@@ -30,6 +30,15 @@ namespace engine
 			CollisionGroup interaction_mask=CollisionGroup::None
 		);
 
+		CollisionConfig
+		(
+			CollisionGroup group,
+			CollisionGroup solid_mask,
+			CollisionGroup interaction_mask,
+
+			bool enabled
+		);
+
 		CollisionConfig(EntityType type);
 
 		// Utility overload for `EntityType` input.

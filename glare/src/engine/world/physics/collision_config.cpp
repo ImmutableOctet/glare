@@ -122,6 +122,23 @@ namespace engine
 		interaction_mask(interaction_mask)
 	{}
 
+	CollisionConfig::CollisionConfig
+	(
+		CollisionGroup group,
+		CollisionGroup solid_mask,
+		CollisionGroup interaction_mask,
+
+		bool enabled
+	) : CollisionConfig()
+	{
+		if (enabled)
+		{
+			this->group = group;
+			this->solid_mask = solid_mask;
+			this->interaction_mask = interaction_mask;
+		}
+	}
+
 	CollisionConfig::CollisionConfig(EntityType type) :
 		group(resolve_collision_group(type)),
 		solid_mask(resolve_solid_mask(type)),
