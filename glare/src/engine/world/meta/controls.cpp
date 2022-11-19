@@ -77,9 +77,17 @@ namespace engine::meta
 
 		void transform(World& world, Entity entity)
 		{
-			auto t = world.get_transform(entity);
+			auto& registry = world.get_registry();
+			auto* tform_component = registry.try_get<TransformComponent>(entity);
 
-			transform(world, t);
+			if (!tform_component)
+			{
+				return;
+			}
+
+			auto tform = Transform(registry, entity, *tform_component);
+
+			transform(world, tform);
 		}
 
 		void animation(const graphics::Animation& a, std::string_view display_name)
