@@ -20,14 +20,6 @@
 
 namespace engine
 {
-	EntityFactory::EntityFactory(const EntityFactoryContext& factory_context)
-		: EntityFactoryContext(factory_context)
-	{
-		auto instance = util::load_json(paths.instance_path);
-
-		process_archetype(instance, paths.instance_directory);
-	}
-
 	std::filesystem::path EntityFactory::resolve_reference(const std::filesystem::path& path, const std::filesystem::path& base_path) const
 	{
 		auto get_surface_path = [this](const auto& path, const auto& base_path) -> std::filesystem::path
@@ -41,6 +33,11 @@ namespace engine
 			}
 
 			if (auto projected_path = (paths.archetype_root_path / path); std::filesystem::exists(projected_path))
+			{
+				return projected_path;
+			}
+
+			if (auto projected_path = (paths.instance_directory / path); std::filesystem::exists(projected_path))
 			{
 				return projected_path;
 			}
@@ -424,38 +421,5 @@ namespace engine
 				}
 			}
 		}
-	}
-
-	bool EntityFactory::resolve_archetypes(const util::json& instance, const std::filesystem::path& base_path)
-	{
-		auto archetypes = util::find_any(instance, "archetypes", "import", "modules"); // instance.find("archetypes");
-
-		if (archetypes == instance.end())
-		{
-			return false;
-		}
-
-		auto elements_processed = util::json_for_each<util::json::value_t::string>
-		(
-			*archetypes,
-
-			[this, &base_path](const auto& value)
-			{
-				const auto archetype_path_raw = std::filesystem::path(value.get<std::string>());
-				const auto archetype_path = resolve_reference(archetype_path_raw, base_path);
-
-				if (archetype_path.empty())
-				{
-					return;
-				}
-
-				// TODO: Optimize.
-				auto archetype = util::load_json(archetype_path);
-
-				process_archetype(archetype, archetype_path.parent_path());
-			}
-		);
-
-		return (elements_processed > 0);
 	}
 }

@@ -3,8 +3,6 @@
 #include <types.hpp>
 //#include <engine/types.hpp>
 
-#include <engine/entity_factory.hpp>
-
 #include <engine/collision_shape_primitive.hpp>
 
 #include <graphics/model.hpp>
@@ -16,6 +14,8 @@
 #include "animation_data.hpp"
 #include "collision_data.hpp"
 #include "model_data.hpp"
+
+#include "entity_factory_data.hpp"
 
 #include "loaders/loaders.hpp"
 
@@ -82,7 +82,7 @@ namespace engine
 		//std::unordered_map<std::string, TextureData> texture_data;
 
 		// Maps file paths to factory objects able to generate entities of a given specification.
-		mutable std::map<std::string, EntityFactory> entity_factories; // std::filsystem::path // , std::owner_less<>
+		mutable std::map<EntityFactoryKey, EntityFactoryData> entity_factories; // , std::owner_less<>
 	};
 
 	class ResourceManager : protected Resources
@@ -144,8 +144,9 @@ namespace engine
 			const CollisionData* get_collision(const WeakModelRef model) const;
 			const ref<AnimationData> get_animation_data(const WeakModelRef model) const;
 
-			const EntityFactory* get_existing_factory(const std::string& path) const; // std::string_view
-			const EntityFactory* get_factory(const EntityFactoryContext& context) const;
+			const EntityFactoryData* get_existing_factory(const std::string& path) const; // std::string_view
+			const EntityFactoryData* get_factory(const EntityFactoryContext& context) const;
+
 			Entity generate_entity(const EntityFactoryContext& factory_context, const EntityConstructionContext& entity_context) const;
 
 			// Links events from `world` to this resource manager instance.

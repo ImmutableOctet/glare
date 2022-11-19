@@ -8,6 +8,8 @@
 
 #include <memory>
 #include <tuple>
+#include <algorithm>
+#include <limits>
 
 #include <math/bullet.hpp>
 
@@ -208,7 +210,7 @@ namespace engine
 		return nullptr;
 	}
 
-	const EntityFactory* ResourceManager::get_existing_factory(const std::string& path) const // std::string_view
+	const EntityFactoryData* ResourceManager::get_existing_factory(const std::string& path) const // std::string_view
 	{
 		auto it = entity_factories.find(path);
 
@@ -220,7 +222,7 @@ namespace engine
 		return nullptr;
 	}
 
-	const EntityFactory* ResourceManager::get_factory(const EntityFactoryContext& context) const
+	const EntityFactoryData* ResourceManager::get_factory(const EntityFactoryContext& context) const
 	{
 		auto path_str = context.paths.instance_path.string();
 
@@ -229,8 +231,32 @@ namespace engine
 			return existing_factory;
 		}
 
-		if (auto [it, result] = entity_factories.emplace(path_str, context); result)
+		EntityFactoryChildren children;
+
+		auto factory = EntityFactory
+		(
+			context,
+
+			[this, &path_str, &children](const EntityFactory& parent_factory, const EntityFactoryContext& child_context)
+			{
+				// NOTE: Recursion.
+				auto child_factory_data = this->get_factory(child_context);
+
+				assert(child_factory_data);
+
+				if (!child_factory_data)
+				{
+					return;
+				}
+
+				children.push_back(child_context.paths.instance_path.string()); // c_str();
+			}
+		);
+
+		if (auto [it, result] = entity_factories.emplace(path_str, EntityFactoryData { std::move(factory), std::move(children) }); result)
 		{
+			// ...
+
 			return &it->second;
 		}
 
