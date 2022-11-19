@@ -50,9 +50,11 @@ namespace engine
 			return nullptr;
 		}
 		
-		const auto* factory = resource_manager.get_existing_factory(instance_details->instance);
+		const auto* factory_data = resource_manager.get_existing_factory(instance_details->instance);
 
-		const auto& descriptor = factory->get_descriptor();
+		assert(factory_data);
+
+		const auto& descriptor = factory_data->factory.get_descriptor();
 
 		return &descriptor;
 	}
