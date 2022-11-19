@@ -144,9 +144,16 @@ namespace engine
 		{
 			//print("Invalidating world matrix - I am: {}", child);
 
-			auto t = Transform(registry, child, child_relationship);
+			auto* tform_component = registry.try_get<TransformComponent>(child);
 
-			t.invalidate_world();
+			if (!tform_component)
+			{
+				return true;
+			}
+
+			auto tform = Transform(registry, child, child_relationship, *tform_component);
+
+			tform.invalidate_world();
 
 			return true;
 		});
