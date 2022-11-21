@@ -313,9 +313,14 @@ namespace engine
 			state.build_frozen(*frozen_list);
 		}
 
-		if (auto storage_list = util::find_any(data, "store", "storage", "local", "local_storage", "include", "temp", "temporary", "#"); storage_list != data.end())
+		if (auto storage_list = util::find_any(data, "store", "storage", "include", "temp", "temporary", "#"); storage_list != data.end())
 		{
 			state.build_storage(*storage_list);
+		}
+
+		if (auto isolated = util::find_any(data, "isolate", "isolated", "local", "local_storage"); isolated != data.end())
+		{
+			process_state_isolated_components(state, *isolated);
 		}
 
 		if (state.name)
@@ -335,6 +340,80 @@ namespace engine
 		descriptor.states.emplace_back(std::move(state));
 
 		return true;
+	}
+
+	std::size_t EntityFactory::process_state_isolated_components
+	(
+		EntityState& state,
+		const util::json& isolated
+	)
+	{
+		process_component_list(state.components.add, isolated);
+
+		std::size_t count = 0;
+
+		auto process_isolated = [&state, &count](std::string_view component_name)
+		{
+			if (!state.process_type_list_entry(state.components.freeze, component_name, true)) // false
+			{
+				print_warn("Failed to process embedded `freeze` entry from isolation data.");
+
+				return;
+			}
+
+			if (!state.process_type_list_entry(state.components.store, component_name, true)) // false
+			{
+				print_warn("Failed to process embedded `store` entry from isolation data.");
+
+				return;
+			}
+
+			count++;
+		};
+
+		const auto container_type = isolated.type();
+
+		switch (container_type)
+		{
+			case util::json::value_t::object:
+			{
+				for (const auto& proxy : isolated.items())
+				{
+					const auto& component_declaration = proxy.key();
+
+					// Since component declarations can have additional symbols,
+					// we'll need to extract only the 'name' substring.
+					// 
+					// TODO: Optimize by rolling `process_component_list` into this routine. (Parses declarations twice)
+					auto component_decl_info = parse_component_declaration(component_declaration);
+					const auto& component_name = std::get<0>(component_decl_info);
+
+					process_isolated(component_name);
+				}
+
+				break;
+			}
+			case util::json::value_t::array:
+			{
+				for (const auto& proxy : isolated.items())
+				{
+					const auto component_name = proxy.value().get<std::string>();
+
+					process_isolated(std::string_view(component_name));
+				}
+
+				break;
+			}
+			default:
+			{
+				print_warn("Unknown type identified in place of isolation data.");
+
+				break;
+			}
+		}
+
+		// See above for accumulation.
+		return count;
 	}
 
 	void EntityFactory::process_archetype(const util::json& data, const std::filesystem::path& base_path, bool resolve_external_modules)

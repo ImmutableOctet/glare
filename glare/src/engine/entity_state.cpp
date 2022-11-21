@@ -106,42 +106,56 @@ namespace engine
 		return build_type_list(storage_list, components.store, cross_reference_persist);
 	}
 
+	bool EntityState::process_type_list_entry(MetaIDStorage& types_out, const util::json& list_entry, bool cross_reference_persist)
+	{
+		if (!list_entry.is_string())
+		{
+			return false;
+		}
+
+		const auto component_name = list_entry.get<std::string>();
+
+		return process_type_list_entry(types_out, std::string_view(component_name), cross_reference_persist);
+	}
+
+	bool EntityState::process_type_list_entry(MetaIDStorage& types_out, std::string_view component_name, bool cross_reference_persist)
+	{
+		const auto component_type_hash = hash(component_name).value();
+
+		auto component_type = resolve(component_type_hash);
+
+		if (!component_type)
+		{
+			print_warn("Unable to resolve component type: {} (#{})", component_name, component_type_hash);
+
+			return false;
+		}
+
+		if (cross_reference_persist)
+		{
+			if (components.persist.get_definition(component_type))
+			{
+				print_warn("Component entry ignored due to overlapping persistent entry. ({}, #{})", component_name, component_type_hash);
+
+				return false;
+			}
+		}
+
+		types_out.emplace_back(component_type_hash); // std::move(component_type)
+
+		return true;
+	}
+
 	std::size_t EntityState::build_type_list(const util::json& type_names, MetaIDStorage& types_out, bool cross_reference_persist)
 	{
 		std::size_t count = 0;
 
-		util::json_for_each(type_names, [this, &types_out, &count, cross_reference_persist](const util::json& removal_entry)
+		util::json_for_each(type_names, [this, &types_out, &count, cross_reference_persist](const util::json& list_entry)
 		{
-			if (!removal_entry.is_string())
+			if (process_type_list_entry(types_out, list_entry, cross_reference_persist))
 			{
-				return;
+				count++;
 			}
-
-			const auto component_name = removal_entry.get<std::string>();
-			const auto component_type_hash = hash(component_name).value();
-
-			auto component_type = resolve(component_type_hash);
-
-			if (!component_type)
-			{
-				print_warn("Unable to resolve component type: {} (#{})", component_name, component_type_hash);
-
-				return;
-			}
-
-			if (cross_reference_persist)
-			{
-				if (components.persist.get_definition(component_type))
-				{
-					print_warn("Component entry ignored due to overlapping persistent entry. ({}, #{})", component_name, component_type_hash);
-
-					return;
-				}
-			}
-
-			types_out.emplace_back(component_type_hash); // std::move(component_type)
-
-			count++;
 		});
 
 		return count;

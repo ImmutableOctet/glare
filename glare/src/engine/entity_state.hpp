@@ -3,10 +3,15 @@
 #include "meta/types.hpp"
 #include "meta/meta_description.hpp"
 
+#include "entity_state_rule.hpp"
+
 // TODO: Forward declare JSON type.
 #include <util/json.hpp>
 
+#include <util/small_vector.hpp>
+
 #include <optional>
+#include <string_view>
 
 namespace engine
 {
@@ -16,6 +21,8 @@ namespace engine
 	class EntityState
 	{
 		public:
+			using Rules = util::small_vector<EntityStateRule, 2>;
+
 			// The name of this state.
 			std::optional<StringHash> name;
 
@@ -41,6 +48,8 @@ namespace engine
 				MetaStorageDescription store;
 			} components;
 
+			Rules rules;
+
 			// Executes appropriate add/remove/persist functions in order to establish this state as current.
 			void update(Registry& registry, Entity entity, EntityStateIndex self_index, const EntityState* previous=nullptr, std::optional<EntityStateIndex> prev_index=std::nullopt) const;
 
@@ -52,8 +61,17 @@ namespace engine
 
 			// Utility function for building the `components.store` collection.
 			std::size_t build_storage(const util::json& storage_list, bool cross_reference_persist=true);
-		protected:
+
+			// Subroutine of `build_type_list`, meant to handle individual entries, rather than JSON arrays.
+			// This method returns true if a component entry could be processed from `list_entry`.
+			bool process_type_list_entry(MetaIDStorage& types_out, const util::json& list_entry, bool cross_reference_persist);
+
+			// Convenience overload that bypasses JSON-to-string conversion.
+			bool process_type_list_entry(MetaIDStorage& types_out, std::string_view list_entry, bool cross_reference_persist);
+
+			// Shared processing routine for resolving `MetaIDStorage` objects from a JSON array.
 			std::size_t build_type_list(const util::json& type_names, MetaIDStorage& types_out, bool cross_reference_persist);
+		protected:
 
 			bool add_component(Registry& registry, Entity entity, const MetaTypeDescriptor& component) const;
 

@@ -125,6 +125,12 @@ namespace engine
 				std::string_view state_name
 			);
 
+			std::size_t process_state_isolated_components
+			(
+				EntityState& state,
+				const util::json& isolated
+			);
+
 			void process_component_list
 			(
 				EntityDescriptor::TypeInfo& components_out,
