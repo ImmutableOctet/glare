@@ -6,6 +6,7 @@
 #include <utility>
 #include <optional>
 #include <type_traits>
+#include <charconv>
 
 //#include <fmt/core.h>
 
@@ -22,26 +23,159 @@ namespace util
 	std::smatch get_regex_groups(const std::string& s, const std::regex& re);
 	std::smatch parse_regex(const std::string& str, const std::string& regex_str);
 
-	inline std::string quote(const std::string& str)
+	inline std::string_view match_view(std::string_view str, const std::smatch& matches, std::size_t index)
+	{
+		if (index >= matches.size())
+		{
+			return {};
+		}
+
+		if (!matches[index].matched)
+		{
+			return {};
+		}
+
+		if (matches.length(index) == 0)
+		{
+			return {};
+		}
+
+		return
+		{
+			(str.data() + matches.position(index)),
+			static_cast<std::size_t>(matches.length(index))
+		};
+	}
+
+	inline std::string quote(std::string_view str)
 	{
 		//return fmt::format("\"{}\"", str);
 
-		return "\"" + str + "\"";
+		return "\"" + std::string(str) + "\"";
 	}
 
+	template <typename T>
+	inline bool from_string(std::string_view str, T& out)
+	{
+		auto result = std::from_chars(str.data(), (str.data() + str.size()), out);
+
+		return (result.ec == std::errc());
+	}
+
+	template <typename T>
+	inline std::optional<T> from_string(std::string_view str)
+	{
+		if (T out; from_string(str, out)) // auto out = T{};
+		{
+			return out;
+		}
+
+		return std::nullopt;
+	}
+
+	template <typename StringType=std::string_view, typename CharType=typename StringType::value_type>
+	inline bool is_quoted(const StringType& str, CharType quote_char='"')
+	{
+		return
+
+		/*
+			NOTE: This check covers edge-cases where too small of a string is provided.
+			
+			This also means the single-character string `"` is not considered quoted,
+			since it doesn't meet the "quote on both sides" requirement.
+			
+			This is important, since it should always be valid to call `unquote` or `remove_quotes` on a quoted string.
+		*/
+		(str.length() >= 2)
+		&&
+		(
+			str.starts_with(quote_char)
+			&&
+			str.ends_with(quote_char)
+		);
+	}
+
+	template <typename StringType=std::string_view, typename CharType=typename StringType::value_type, typename... Chars>
+	inline bool is_quoted(const StringType& str, CharType quote_char, Chars ...quote_chars)
+	{
+		/*
+		if (str.length() < 2)
+		{
+			return false;
+		}
+		*/
+
+		// TODO: Optimize length check.
+		return is_quoted(str, quote_char) || is_quoted(str, std::forward<Chars>(quote_chars)...);
+	}
+
+	// Removes leading and trailing quotation marks. (One on each side)
+	// 
+	// NOTES:
+	// * This function does not check which quotation symbol is used.
+	// * This function does not check for `is_quoted` before trimming.
+	// 
+	// See also: `unquote_safe`
+	template <typename StringTypeIn=std::string_view, typename StringTypeOut=StringTypeIn> // std::string_view
+	inline StringTypeOut unquote(const StringTypeIn& str, std::size_t quote_symbol_length=1)
+	{
+		return StringTypeOut { (str.data() + (quote_symbol_length)), (str.size() - (quote_symbol_length * 2)) };
+	}
+
+	// Safely removes leading and trailing quotes from a 'quoted' string. (One on each side)
+	// 
+	// NOTE: Performs check using `is_quoted` before trimming `str`.
+	template <typename StringTypeIn=std::string_view, typename StringTypeOut=StringTypeIn> // std::string_view
+	inline StringTypeOut unquote_safe(const StringTypeIn& str)
+	{
+		if (is_quoted(str))
+		{
+			return unquote<StringTypeIn, StringTypeOut>(str);
+		}
+		
+		return StringTypeOut(str);
+	}
+
+	// Removes quotes from an `std::string` instance.
+	// 
+	// NOTE: This function does not perform length or quotation symbol checks.
+	// To perform these checks, use `remove_quotes_safe` instead.
+	inline std::string& remove_quotes(std::string& str)
+	{
+		str.erase(0, 1);
+		str.erase(str.length() - 1);
+
+		return str;
+	}
+
+	inline std::string& remove_quotes_safe(std::string& str)
+	{
+		// NOTE: Length check performed inside `is_quoted`.
+		if (!is_quoted(std::string_view(str)))
+		{
+			return str;
+		}
+
+		return remove_quotes(str);
+	}
+
+	// TODO: Optimize.
 	template <typename First>
 	inline std::string concat(First&& f)
 	{
 		return f;
 	}
 
+	// TODO: Optimize.
 	template <typename First, typename Second, typename ...Remaining>
 	inline std::string concat(First&& first, Second&& second, Remaining&&... strs)
 	{
 		return first + concat<Second, Remaining...>(std::forward<Second&&>(second), strs...);
 	}
 
-	inline std::optional<std::string> opt_str(const std::string& str)
+	// Wraps a string object inside an `std::optional`, where `std::nullopt` is returned only on empty strings.
+	template <typename StringType=std::string>
+	inline std::optional<StringType> opt_str(const StringType& str)
 	{
 		if (str.empty())
 		{
@@ -119,6 +253,14 @@ namespace util
 		return result;
 	}
 
-	// TODO: Move this to a different header/file.
+	inline std::string_view trim(std::string_view str, std::string_view trim_values=" \n")
+	{
+		str.remove_prefix(str.find_first_not_of(trim_values));
+		str.remove_suffix((str.length() - str.find_last_not_of(trim_values) - 1));
+
+		return str;
+	}
+
+	// TODO: Move this to a different source file.
 	std::string_view to_string_view(const aiString& str);
 }
