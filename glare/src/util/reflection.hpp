@@ -1,5 +1,7 @@
 #pragma once
 
+#include "format.hpp"
+
 //#include <entt/meta/meta.hpp>
 #include <entt/entt.hpp>
 
