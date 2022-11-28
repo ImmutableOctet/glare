@@ -3,6 +3,8 @@
 #include <engine/reflection.hpp>
 
 #include "name_component.hpp"
+#include "player_component.hpp"
+#include "player_target_component.hpp"
 #include "type_component.hpp"
 #include "instance_component.hpp"
 #include "forwarding_component.hpp"
@@ -15,13 +17,25 @@
 
 namespace engine
 {
-	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(NameComponent, name);
 	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(TypeComponent, type);
 	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(InstanceComponent, instance);
 	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(ForwardingComponent, root_entity);
+	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(PlayerComponent, player_index);
+	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(PlayerTargetComponent, player_index);
+	//GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(NameComponent, name);
 
 	// TODO: Reflect portions of the public API.
 	GENERATE_EMPTY_TYPE_REFLECTION(RelationshipComponent);
+
+	template <>
+	void reflect<NameComponent>()
+	{
+		engine_meta_type<NameComponent>()
+			.data<&NameComponent::set_name, &NameComponent::get_name>("name"_hs)
+			.data<nullptr, &NameComponent::hash>("hash"_hs)
+			.ctor<std::string>()
+		;
+	}
 
 	template <>
 	void reflect<TransformComponent>()
@@ -87,6 +101,8 @@ namespace engine
 		reflect<TypeComponent>();
 		reflect<InstanceComponent>();
 		reflect<ForwardingComponent>();
+		reflect<PlayerComponent>();
+		reflect<PlayerTargetComponent>();
 		reflect<RelationshipComponent>();
 		reflect<TransformHistoryComponent>();
 
