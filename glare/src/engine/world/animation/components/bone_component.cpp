@@ -108,7 +108,7 @@ namespace engine
 
 		if (dbg_name)
 		{
-			dbg_name->name = "Debug"; // "Debug Orientation";
+			dbg_name->set_name("Debug"); // "Debug Orientation";
 		}
 		*/
 

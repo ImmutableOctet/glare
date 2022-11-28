@@ -283,7 +283,7 @@ namespace engine
 
 		if (name_comp)
 		{
-			return std::format("\"{}\" ({})", name_comp->name, entity_raw);
+			return std::format("\"{}\" ({})", name_comp->get_name(), entity_raw);
 		}
 
 		return std::to_string(entity_raw);
@@ -295,7 +295,7 @@ namespace engine
 
 		if (name_comp)
 		{
-			return name_comp->name;
+			return name_comp->get_name();
 		}
 
 		return {};
@@ -324,7 +324,7 @@ namespace engine
 
 			auto name_comp = registry.get<NameComponent>(entity);
 
-			if (name_comp.name == name)
+			if (name_comp.get_name() == name)
 			{
 				return entity;
 			}
@@ -376,6 +376,16 @@ namespace engine
 		return out;
 	}
 
+	ResourceManager& World::get_resource_manager()
+	{
+		return resource_manager;
+	}
+
+	const ResourceManager& World::get_resource_manager() const
+	{
+		return resource_manager;
+	}
+
 	Entity World::get_child_by_name(Entity entity, std::string_view child_name, bool recursive)
 	{
 		if (child_name.empty())
@@ -396,7 +406,7 @@ namespace engine
 			{
 				//print("Comparing {} with {}", name_comp->name, child_name);
 
-				if (name_comp->name == child_name)
+				if (name_comp->get_name() == child_name)
 				{
 					out = child;
 
@@ -512,7 +522,7 @@ namespace engine
 
 		if (name_component)
 		{
-			name_label = " \"" + name_component->name +"\"";
+			name_label = " \"" + name_component->get_name() +"\"";
 		}
 
 		print("Entity #{}{} ({}) - Transform Changed: {}", entity, name_label, entity_type, get_transform(entity).get_vectors());

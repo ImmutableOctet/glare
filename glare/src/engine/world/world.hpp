@@ -217,7 +217,8 @@ namespace engine
 			// Retrieves the first child-entity found with the name specified, regardless of other attributes/components. (includes both bone & non-bone children)
 			Entity get_child_by_name(Entity entity, std::string_view child_name, bool recursive=true);
 
-			inline ResourceManager& get_resource_manager() { return resource_manager; }
+			ResourceManager& get_resource_manager() override;
+			virtual const ResourceManager& get_resource_manager() const override;
 
 			inline const Config& get_config() const { return config; }
 			
