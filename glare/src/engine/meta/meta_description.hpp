@@ -9,7 +9,7 @@ namespace engine
 {
 	struct MetaDescription
 	{
-		using TypeDescriptors = util::small_vector<MetaTypeDescriptor, 8>;
+		using TypeDescriptors = util::small_vector<MetaTypeDescriptor, 4>; // 6 // 8
 
 		TypeDescriptors type_definitions;
 
