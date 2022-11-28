@@ -1,17 +1,17 @@
 #pragma once
 
+#include "types.hpp"
+#include "delta_time.hpp"
+#include "input/input.hpp"
+#include "timer.hpp"
+
+#include <util/lib.hpp>
+
+#include <entt/signal/dispatcher.hpp>
+
 #include <string_view>
 #include <atomic>
 #include <chrono>
-
-#include "types.hpp"
-#include <util/lib.hpp>
-
-#include "delta_time.hpp"
-#include "timer.hpp"
-#include "input/input.hpp"
-
-#include <entt/signal/dispatcher.hpp>
 
 // SDL:
 struct SDL_KeyboardEvent;

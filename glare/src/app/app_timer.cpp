@@ -1,3 +1,5 @@
+// TODO: Rework/deprecate.
+
 #include "timer.hpp"
 
 #include <algorithm>
