@@ -4,6 +4,7 @@
 #include "meta/meta_description.hpp"
 
 #include <optional>
+#include <memory>
 
 namespace engine
 {
@@ -13,7 +14,7 @@ namespace engine
 
 		// Could also be handled as a map-type, but that would
 		// be less efficient for what is normally a small number of states.
-		using StateCollection = util::small_vector<EntityState, 16>;
+		using StateCollection = util::small_vector<std::unique_ptr<EntityState>, 16>; // util::small_vector<EntityState, 4>;
 
 		// Statically assigned components.
 		MetaDescription components;

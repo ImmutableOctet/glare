@@ -7,14 +7,15 @@ namespace engine
 	{
 		for (const auto& state : states)
 		{
-			if (!state.name)
+			if (!state->name)
 			{
 				continue;
 			}
 
-			if ((*state.name) == name)
+			if ((*state->name) == name)
 			{
-				return &state;
+				//return &state;
+				return state.get();
 			}
 		}
 
@@ -32,12 +33,12 @@ namespace engine
 		{
 			const auto& state = states[i];
 
-			if (!state.name)
+			if (!state->name)
 			{
 				continue;
 			}
 
-			if ((*state.name) == name)
+			if ((*state->name) == name)
 			{
 				return i;
 			}
@@ -79,12 +80,12 @@ namespace engine
 				return false;
 			}
 
-			from = &(states[*previous_state]);
+			from = (states[*previous_state].get()); // &(states[*previous_state]);
 		}
 
 		const auto& to = states[state_index];
 
-		to.update(registry, entity, state_index, from, previous_state);
+		to->update(registry, entity, state_index, from, previous_state);
 
 		return true;
 	}
