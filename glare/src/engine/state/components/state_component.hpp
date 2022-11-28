@@ -8,6 +8,8 @@ namespace engine
 	struct StateComponent
 	{
 		EntityStateIndex state_index;
+		EntityStateIndex prev_state_index;
+
 		//EntityStateHash state_id;
 	};
 }
