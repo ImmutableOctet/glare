@@ -27,6 +27,8 @@ namespace engine
 	using EntityIDType = entt::id_type;
 	using EventHandler = entt::dispatcher;
 
+	using StringHash = entt::id_type; // entt::hashed_string;
+
 	/*
 	template <typename... delegate_params>
 	using Delegate = entt::delegate<delegate_params...>;

@@ -20,7 +20,6 @@ namespace engine
 	using entt::type_hash;
 
 	using TypeInfo     = entt::type_info;
-	using StringHash   = entt::id_type; // entt::hashed_string;
 	using MetaSymbolID = entt::id_type;
 	using MetaTypeID   = entt::id_type; // StringHash;
 	using MetaType     = entt::meta_type;
