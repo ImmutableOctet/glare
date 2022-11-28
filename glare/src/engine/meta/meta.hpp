@@ -7,10 +7,15 @@
 #include "enum.hpp"
 #include "types.hpp"
 
+#include <engine/types.hpp>
+
 #include <util/reflection.hpp>
 
 #include <string_view>
 #include <type_traits>
+#include <optional>
+#include <utility>
+#include <tuple>
 
 namespace engine
 {
@@ -34,6 +39,15 @@ namespace engine
     // Computes a hash for the string specified.
     constexpr entt::hashed_string hash(std::string_view str)
     {
+        //assert(!str.empty());
+
+        /*
+        if (str.empty())
+        {
+            return {};
+        }
+        */
+
         return entt::hashed_string(str.data(), str.size()); // str.length()
     }
 
@@ -79,6 +93,69 @@ namespace engine
     {
         return util::meta_type_from_name(type_name, "engine");
     }
+
+    template <typename MemberID=MetaSymbolID>
+    inline entt::meta_data resolve_data_member_by_id(const entt::meta_type& type, bool check_base_types, MemberID member_name_id)
+    {
+        auto data_member = type.data(member_name_id);
+
+        if (!data_member)
+        {
+            if (check_base_types)
+            {
+                for (const auto& base_type : type.base())
+                {
+                    data_member = resolve_data_member_by_id(base_type.second, check_base_types, member_name_id); // true
+
+                    if (data_member)
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
+        return data_member;
+    }
+
+    template <typename MemberID, typename ...MemberIDs> // MetaSymbolID
+    inline entt::meta_data resolve_data_member_by_id(const entt::meta_type& type, bool check_base_types, MemberID&& member_name_id, MemberIDs&&... member_name_ids)
+    {
+        if (auto data_member = resolve_data_member_by_id(type, check_base_types, member_name_id))
+        {
+            return data_member;
+        }
+
+        return resolve_data_member_by_id(type, check_base_types, std::forward<MemberIDs>(member_name_ids)...);
+    }
+
+    template <typename MemberName=std::string_view>
+    inline std::tuple<MetaSymbolID, entt::meta_data> resolve_data_member(const entt::meta_type& type, bool check_base_types, MemberName&& member_name)
+    {
+        if (std::string_view(member_name).empty())
+        {
+            return {};
+        }
+
+        const auto member_name_id = hash(member_name);
+        auto data_member = resolve_data_member_by_id(type, check_base_types, member_name_id);
+        
+        return { member_name_id, data_member };
+    }
+
+    template <typename MemberName, typename ...MemberNames> // std::string_view
+    inline std::tuple<MetaSymbolID, entt::meta_data> resolve_data_member(const entt::meta_type& type, bool check_base_types, MemberName&& member_name, MemberNames&&... member_names)
+    {
+        if (auto data_member = resolve_data_member(type, check_base_types, member_name); std::get<1>(data_member))
+        {
+            return data_member;
+        }
+
+        return resolve_data_member(type, check_base_types, std::forward<MemberNames>(member_names)...);
+    }
+
+    // Attempts to retrieve a `PlayerIndex` value from `instance`, if applicable.
+    std::optional<PlayerIndex> resolve_player_index(const MetaAny& instance);
 
 	/*
 		Generates reflection meta-data for the `engine` module.
