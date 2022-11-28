@@ -1,3 +1,5 @@
+// TODO: Move this header into a better location.
+
 #pragma once
 
 #include <memory>
