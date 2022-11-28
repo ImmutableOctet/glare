@@ -97,6 +97,7 @@ namespace engine
             reflect_primitives();
         }
 
+        reflect<Command>();
         reflect_core_components();
         reflect_systems();
 

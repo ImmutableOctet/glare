@@ -10,9 +10,10 @@
 #include "meta/meta.hpp"
 #include "meta/traits.hpp"
 #include "meta/meta_type_descriptor.hpp"
+#include "meta/meta_event_listener.hpp"
 
-// Disabled for now.
-//#include "service.hpp"
+#include "service.hpp"
+#include "command.hpp"
 
 #include <util/reflection.hpp>
 
@@ -43,6 +44,17 @@
     inline void reflect<type>()              \
     {                                        \
         engine::engine_meta_type<type>();    \
+    }
+
+// Generates an empty `reflect` function for the specified `engine` type,
+// where `type` is derived from `base_type`.
+#define GENERATE_EMPTY_DERIVED_TYPE_REFLECTION(type, base_type) \
+    template <>                                                 \
+    inline void reflect<type>()                                 \
+    {                                                           \
+        engine::engine_meta_type<type>()                        \
+            .base<base_type>()                                  \
+        ;                                                       \
     }
 
 namespace engine
@@ -211,6 +223,19 @@ namespace engine
         return count;
     }
 
+    template <typename EventType>
+    void trigger_event_from_meta_any(Service& service, entt::meta_any event_instance)
+    {
+        if (auto raw_value = from_meta<EventType>(event_instance))
+        {
+            return service.event<EventType>(std::move(*raw_value)); // *raw_value
+        }
+        else
+        {
+            throw std::exception("Invalid value specified; unable to trigger event.");
+        }
+    }
+
     // Associates a stripped version of the type's name to its reflection metadata.
     // Allows use of `T` without specifying `engine::T` in contexts where `T` is named dynamically. (e.g. JSON I/O)
     // 
@@ -230,8 +255,12 @@ namespace engine
             .template func<&remove_component<T>>("remove_component"_hs)
             .template func<&get_or_emplace_component<T>, entt::as_ref_t>("get_or_emplace_component"_hs)
             .template func<&patch_meta_component<T>>("patch_meta_component"_hs)
+            .template func<&MetaEventListener::connect<T>>("connect_meta_event"_hs)
+            .template func<&MetaEventListener::disconnect<T>>("disconnect_meta_event"_hs)
+            .template func<&trigger_event_from_meta_any<T>>("trigger_event_from_meta_any"_hs);
         ;
 
+        // `entity` data member:
         if constexpr (has_method_entity<T, Entity()>::value) // std::decay_t<T>
         {
             type = type.data<nullptr, &T::entity>("entity"_hs);
@@ -245,6 +274,35 @@ namespace engine
             type = type.data<&T::entity>("entity"_hs);
         }
 
+        // `player` data member:
+        if constexpr (has_method_player<T, Entity()>::value) // std::decay_t<T>
+        {
+            type = type.data<nullptr, &T::player>("player"_hs);
+        }
+        else if constexpr (has_method_get_player<T, Entity()>::value) // std::decay_t<T>
+        {
+            type = type.data<nullptr, &T::get_player>("player"_hs);
+        }
+        else if constexpr (has_field_player<T>::value) // std::decay_t<T>
+        {
+            type = type.data<&T::player>("player"_hs);
+        }
+
+        // `player_index` data member:
+        if constexpr (has_method_player_index<T, PlayerIndex()>::value) // std::decay_t<T>
+        {
+            type = type.data<nullptr, &T::player_index>("player_index"_hs);
+        }
+        else if constexpr (has_method_get_player_index<T, PlayerIndex()>::value) // std::decay_t<T>
+        {
+            type = type.data<nullptr, &T::get_player_index>("player_index"_hs);
+        }
+        else if constexpr (has_field_player_index<T>::value) // std::decay_t<T>
+        {
+            type = type.data<&T::player_index>("player_index"_hs);
+        }
+
+        // `service` data member:
         if constexpr (has_method_service<T, Service*()>::value)
         {
             type = type.data<nullptr, &T::service>("service"_hs);
@@ -261,15 +319,31 @@ namespace engine
         {
             type = type.data<nullptr, &T::get_service>("service"_hs);
         }
-        /*
-        // Disabled for now. (Requires full definition of `Service` type)
+        // NOTE: Requires full definition of `Service` type.
         else if constexpr (has_field_service<T>::value)
         {
             type = type.data<&T::service>("service"_hs);
         }
-        */
 
         return type;
+    }
+
+    template <typename T>
+    auto engine_command_type()
+    {
+        return engine_meta_type<T>()
+            .base<Command>()
+        ;
+    }
+
+    template <>
+    inline void reflect<Command>()
+    {
+        engine_meta_type<Command>()
+            .data<&Command::source>("source"_hs)
+            .data<&Command::target>("target"_hs)
+            //.ctor<decltype(Command::source), decltype(Command::target)>()
+        ;
     }
 
     template <typename EnumType>
