@@ -12,12 +12,11 @@
     <ClCompile Include="src\app\input\input_handler.cpp" />
     <ClCompile Include="src\app\input\keyboard.cpp" />
     <ClCompile Include="src\app\input\mouse.cpp" />
-    <ClCompile Include="src\app\timer.cpp" />
     <ClCompile Include="src\app\window.cpp" />
     <ClCompile Include="src\engine\service.cpp" />
     <ClCompile Include="src\engine\world\animation\components\bone_component.cpp" />
     <ClCompile Include="src\engine\world\animation\components\skeletal_component.cpp" />
-    <ClCompile Include="src\engine\world\behaviors\meta.cpp" />
+    <ClCompile Include="src\engine\world\behaviors\bridge.cpp" />
     <ClCompile Include="src\engine\world\physics\ground.cpp" />
     <ClCompile Include="src\engine\world\motion\motion_system.cpp" />
     <ClCompile Include="src\engine\world\physics\components\collision_component.cpp" />
@@ -154,6 +153,17 @@
     <ClCompile Include="src\engine\entity_descriptor.cpp" />
     <ClCompile Include="src\engine\meta\meta_description.cpp" />
     <ClCompile Include="src\engine\state\state_system.cpp" />
+    <ClCompile Include="src\engine\meta\component_storage.cpp" />
+    <ClCompile Include="src\engine\state\state_storage_manager.cpp" />
+    <ClCompile Include="src\engine\input\reflection_impl_input.cpp" />
+    <ClCompile Include="src\engine\resource_manager\entity_factory_data.cpp" />
+    <ClCompile Include="src\engine\event_trigger_condition.cpp" />
+    <ClCompile Include="src\engine\meta\meta_event_listener.cpp" />
+    <ClCompile Include="src\engine\state\entity_rule_listener.cpp" />
+    <ClCompile Include="src\engine\components\name_component.cpp" />
+    <ClCompile Include="src\engine\timer.cpp" />
+    <ClCompile Include="src\engine\meta\meta.cpp" />
+    <ClCompile Include="src\app\app_timer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dependencies\modules\stb\deprecated\rrsprintf.h" />
@@ -180,7 +190,6 @@
     <ClInclude Include="src\app\input\mouse.hpp" />
     <ClInclude Include="src\app\input\mouse_state.hpp" />
     <ClInclude Include="src\app\input\types.hpp" />
-    <ClInclude Include="src\app\timer.hpp" />
     <ClInclude Include="src\app\types.hpp" />
     <ClInclude Include="src\app\window.hpp" />
     <ClInclude Include="src\core.hpp" />
@@ -194,7 +203,7 @@
     <ClInclude Include="src\engine\world\animation\animation_events.hpp" />
     <ClInclude Include="src\engine\world\animation\components\skeletal_component.hpp" />
     <ClInclude Include="src\engine\world\behaviors\behaviors.hpp" />
-    <ClInclude Include="src\engine\world\behaviors\meta.hpp" />
+    <ClInclude Include="src\engine\world\behaviors\bridge.hpp" />
     <ClInclude Include="src\engine\world\motion\components\alignment_component.hpp" />
     <ClInclude Include="src\engine\world\motion\components\motion_attachment_proxy_component.hpp" />
     <ClInclude Include="src\engine\world\physics\ground.hpp" />
@@ -340,7 +349,7 @@
     <ClInclude Include="src\util\optional.hpp" />
     <ClInclude Include="src\util\pipeline.hpp" />
     <ClInclude Include="src\util\shorthand.hpp" />
-    <ClInclude Include="src\util\member_function_traits.hpp" />
+    <ClInclude Include="src\util\member_traits.hpp" />
     <ClInclude Include="src\util\string.hpp" />
     <ClInclude Include="src\util\util.hpp" />
     <ClInclude Include="src\util\variant.hpp" />
@@ -442,7 +451,6 @@
     <ClInclude Include="src\engine\world\motion\components\ground_component.hpp" />
     <ClInclude Include="src\engine\world\motion\components\gravity_component.hpp" />
     <ClInclude Include="src\engine\reflection.hpp" />
-    <ClInclude Include="src\engine\input\reflection.hpp" />
     <ClInclude Include="src\engine\components\transform_component.hpp" />
     <ClInclude Include="src\engine\components\types.hpp" />
     <ClInclude Include="src\engine\components\reflection.hpp" />
@@ -478,6 +486,23 @@
     <ClInclude Include="src\engine\state\reflection.hpp" />
     <ClInclude Include="src\engine\state\events.hpp" />
     <ClInclude Include="src\engine\state\types.hpp" />
+    <ClInclude Include="src\engine\state\components\frozen_state_component.hpp" />
+    <ClInclude Include="src\engine\state\components\state_storage_component.hpp" />
+    <ClInclude Include="src\engine\meta\component_storage.hpp" />
+    <ClInclude Include="src\engine\state\state_storage_manager.hpp" />
+    <ClInclude Include="src\engine\input\reflection.hpp" />
+    <ClInclude Include="src\engine\entity_state_rule.hpp" />
+    <ClInclude Include="src\engine\resource_manager\entity_factory_data.hpp" />
+    <ClInclude Include="src\engine\event_trigger_condition.hpp" />
+    <ClInclude Include="src\engine\meta\meta_event_listener.hpp" />
+    <ClInclude Include="src\engine\state\entity_rule_listener.hpp" />
+    <ClInclude Include="src\engine\state\commands\state_change_command.hpp" />
+    <ClInclude Include="src\engine\command.hpp" />
+    <ClInclude Include="src\engine\components\player_component.hpp" />
+    <ClInclude Include="src\engine\timed_event.hpp" />
+    <ClInclude Include="src\engine\timer.hpp" />
+    <ClInclude Include="src\engine\components\player_target_component.hpp" />
+    <ClInclude Include="src\app\timer.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />

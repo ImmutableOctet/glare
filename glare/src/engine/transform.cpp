@@ -194,6 +194,9 @@ namespace engine
 		// TODO: Look into optimization.
 		// (Removing this line gives a minor performance improvement)
 		recalculate(false);
+
+		// Signal that the underlying `TransformComponent` object has been modified.
+		//registry.patch<TransformComponent>(entity, [](auto&) {});
 	}
 
 	bool Transform::collision_invalid() const
