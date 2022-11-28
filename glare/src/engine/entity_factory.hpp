@@ -2,6 +2,7 @@
 
 #include "types.hpp"
 #include "entity_descriptor.hpp"
+#include "entity_state_rule.hpp"
 
 #include <util/json.hpp>
 #include <util/algorithm.hpp>
@@ -107,7 +108,26 @@ namespace engine
 			}
 		protected:
 			static std::tuple<std::string_view, bool, std::optional<SmallSize>>
-			parse_component_declaration(const std::string& component_declaration);
+			parse_component_declaration(const std::string& component_declaration); // std::string_view
+
+			static std::tuple
+			<
+				std::string_view, // type_name
+				std::string_view, // member_name
+				std::string_view, // comparison_operator
+				std::string_view  // compared_value
+			>
+			parse_trigger_condition(const std::string& trigger_condition); // std::string_view
+
+			static std::tuple
+			<
+				std::string_view, // command_name
+				std::string_view, // command_content
+				bool              // is_string_content
+			> parse_single_argument_command(const std::string& command); // std::string_view
+
+			// TODO: Move to a different file/class.
+			static EntityStateTransitionRule::TargetType process_rule_target(const util::json& target_data);
 
 			bool process_component
 			(
@@ -125,11 +145,9 @@ namespace engine
 				std::string_view state_name
 			);
 
-			std::size_t process_state_isolated_components
-			(
-				EntityState& state,
-				const util::json& isolated
-			);
+			std::size_t process_state_isolated_components(EntityState& state, const util::json& isolated);
+
+			std::size_t process_state_rules(EntityState& state, const util::json& rules);
 
 			void process_component_list
 			(

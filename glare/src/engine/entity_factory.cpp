@@ -1,13 +1,17 @@
 #include "entity_factory.hpp"
 
+#include "event_trigger_condition.hpp"
+
 #include "components/relationship_component.hpp"
 #include "components/instance_component.hpp"
 
 #include "state/components/state_component.hpp"
 
-#include <engine/meta/meta.hpp>
+#include "meta/meta.hpp"
+#include "meta/serial.hpp"
 
 #include <util/algorithm.hpp>
+#include <util/string.hpp>
 
 #include <algorithm>
 
@@ -24,12 +28,9 @@ namespace engine
 	{
 		auto get_surface_path = [this](const auto& path, const auto& base_path) -> std::filesystem::path
 		{
-			if (!base_path.empty())
+			if (auto projected_path = (paths.instance_directory / path); std::filesystem::exists(projected_path))
 			{
-				if (auto projected_path = (base_path / path); std::filesystem::exists(projected_path))
-				{
-					return projected_path;
-				}
+				return projected_path;
 			}
 
 			if (auto projected_path = (paths.archetype_root_path / path); std::filesystem::exists(projected_path))
@@ -37,14 +38,17 @@ namespace engine
 				return projected_path;
 			}
 
-			if (auto projected_path = (paths.instance_directory / path); std::filesystem::exists(projected_path))
-			{
-				return projected_path;
-			}
-
 			if (!paths.service_archetype_root_path.empty())
 			{
 				if (auto projected_path = (paths.service_archetype_root_path / path); std::filesystem::exists(projected_path))
+				{
+					return projected_path;
+				}
+			}
+
+			if (!base_path.empty())
+			{
+				if (auto projected_path = (base_path / path); std::filesystem::exists(projected_path))
 				{
 					return projected_path;
 				}
@@ -77,28 +81,22 @@ namespace engine
 	}
 
 	std::tuple<std::string_view, bool, std::optional<EntityFactory::SmallSize>>
-	EntityFactory::parse_component_declaration(const std::string& component_declaration)
+	EntityFactory::parse_component_declaration(const std::string& component_declaration) // std::string_view
 	{
 		const auto component_rgx = std::regex("(\\+)?([^\\|]+)(\\|(\\d+))?");
-
-		std::smatch rgx_match;
 
 		std::string_view name_view = {};
 		bool inplace_changes = false;
 		std::optional<SmallSize> constructor_arg_count = std::nullopt;
 
-		if (std::regex_search(component_declaration.begin(), component_declaration.end(), rgx_match, component_rgx))
+		if (std::smatch rgx_match; std::regex_search(component_declaration.begin(), component_declaration.end(), rgx_match, component_rgx))
 		{
 			if (rgx_match[1].matched)
 			{
 				inplace_changes = true;
 			}
 
-			name_view =
-			{
-				(component_declaration.data() + rgx_match.position(2)),
-				static_cast<std::size_t>(rgx_match.length(2))
-			};
+			name_view = util::match_view(component_declaration, rgx_match, 2);
 
 			if (rgx_match[4].matched)
 			{
@@ -117,6 +115,169 @@ namespace engine
 		}
 
 		return { name_view, inplace_changes, constructor_arg_count };
+	}
+
+	std::tuple<std::string_view, std::string_view, std::string_view, std::string_view>
+	EntityFactory::parse_trigger_condition(const std::string& trigger_condition) // std::string_view
+	{
+		const auto trigger_rgx = std::regex("([^\\s\\:\\.\\-\\>]+)\\s*(\\:\\:|\\.|\\-\\>)?\\s*([^\\s]+)?\\s*(==|===|!=|!==|\\|)\\s*(.+)");
+
+		if (std::smatch rgx_match; std::regex_search(trigger_condition.begin(), trigger_condition.end(), rgx_match, trigger_rgx))
+		{
+			auto type_name           = util::match_view(trigger_condition, rgx_match, 1);
+			//auto access_operator   = util::match_view(trigger_condition, rgx_match, 2);
+			auto member_name         = util::match_view(trigger_condition, rgx_match, 3);
+			auto comparison_operator = util::match_view(trigger_condition, rgx_match, 4);
+			auto compared_value      = util::match_view(trigger_condition, rgx_match, 5);
+
+			return { type_name, member_name, comparison_operator, compared_value };
+		}
+
+		return {};
+	}
+
+	std::tuple<std::string_view, std::string_view, bool>
+	EntityFactory::parse_single_argument_command(const std::string& command) // std::string_view
+	{
+		const auto command_rgx = std::regex("([^\\s\\(]+)\\(\\s*(\\\")?([^\\\"]*)(\\\")?\\s*\\)\\s*");
+
+		if (std::smatch rgx_match; std::regex_search(command.begin(), command.end(), rgx_match, command_rgx))
+		{
+			auto command_name    = util::match_view(command, rgx_match, 1);
+			auto command_content = util::match_view(command, rgx_match, 3);
+
+			bool is_string_content = (rgx_match[2].matched && rgx_match[4].matched);
+
+			return { command_name, command_content, is_string_content };
+		}
+
+		return { {}, {}, false };
+	}
+
+	// TODO: Move to a different source file.
+	EntityStateTransitionRule::TargetType EntityFactory::process_rule_target(const util::json& target_data)
+	{
+		using namespace entt::literals;
+
+		using Target = EntityStateTransitionRule;
+
+		switch (target_data.type())
+		{
+			case util::json::value_t::string:
+			{
+				auto raw_value = target_data.get<std::string>();
+
+				if ((raw_value == "self") || (raw_value == "this"))
+				{
+					return Target::SelfTarget {};
+				}
+
+				if (raw_value == "parent")
+				{
+					return Target::ParentTarget {};
+				}
+
+				if (auto [command_name, command_content, is_string_content] = parse_single_argument_command(raw_value); !command_name.empty())
+				{
+					switch (hash(command_name))
+					{
+						case "entity"_hs:
+							if (!is_string_content)
+							{
+								if (auto entity_id_raw = util::from_string<entt::id_type>(raw_value))
+								{
+									return Target::EntityTarget { static_cast<Entity>(*entity_id_raw) };
+								}
+							}
+
+							break;
+
+						case "child"_hs:
+						{
+							if (command_content.contains(','))
+							{
+								auto parameter_idx = 0;
+
+								std::string_view child_name;
+								bool recursive = true;
+
+								util::split(command_content, ",", [&parameter_idx, &child_name, &recursive](std::string_view argument, bool is_last_argument=false) -> bool
+								{
+									argument = util::trim(argument);
+
+									switch (parameter_idx++)
+									{
+										// First argument: `child_name`
+										case 0:
+											child_name = argument;
+
+											break;
+
+										// Second argument: `recursive`
+										case 1:
+										{
+											switch (hash(argument))
+											{
+												// Recursion is enabled by default; no
+												// need to check for positive values:
+												/*
+												case "true"_hs:
+												case "1"_hs:
+													recursive = true;
+
+													break;
+												*/
+
+												//case "f"_hs:
+												case "0"_hs:
+												case "false"_hs:
+													recursive = false;
+
+													break;
+											}
+
+											return false;
+										}
+									}
+
+									return true;
+								});
+
+								return Target::ChildTarget { hash(child_name), recursive };
+							}
+							else
+							{
+								return Target::ChildTarget{ hash(command_content) };
+							}
+						}
+
+						case "player"_hs:
+							if (auto player_index = util::from_string<PlayerIndex>(command_content))
+							{
+								return Target::PlayerTarget { *player_index };
+							}
+
+							break;
+
+						case "parent"_hs:
+							return Target::ParentTarget {};
+
+						case "self"_hs:
+							return Target::SelfTarget {};
+					}
+
+					return Target::EntityNameTarget { hash(command_content) };
+				}
+
+				break;
+			}
+
+			case util::json::value_t::number_integer:
+			case util::json::value_t::number_unsigned:
+				return Target::EntityTarget { static_cast<Entity>(target_data.get<entt::id_type>()) };
+		}
+
+		return Target::SelfTarget {};
 	}
 
 	Entity EntityFactory::create(const EntityConstructionContext& context) const
@@ -323,6 +484,11 @@ namespace engine
 			process_state_isolated_components(state, *isolated);
 		}
 
+		if (auto rules = util::find_any(data, "rules", "triggers"); rules != data.end())
+		{
+			process_state_rules(state, *rules);
+		}
+
 		if (state.name)
 		{
 			auto existing = descriptor.get_state(*state.name);
@@ -337,16 +503,13 @@ namespace engine
 
 		//descriptor.set_state(std::move(state));
 
-		descriptor.states.emplace_back(std::move(state));
+		//descriptor.states.emplace_back(std::move(state));
+		descriptor.states.emplace_back(std::make_unique<EntityState>(std::move(state)));
 
 		return true;
 	}
 
-	std::size_t EntityFactory::process_state_isolated_components
-	(
-		EntityState& state,
-		const util::json& isolated
-	)
+	std::size_t EntityFactory::process_state_isolated_components(EntityState& state, const util::json& isolated)
 	{
 		process_component_list(state.components.add, isolated);
 
@@ -413,6 +576,166 @@ namespace engine
 		}
 
 		// See above for accumulation.
+		return count;
+	}
+
+	std::size_t EntityFactory::process_state_rules(EntityState& state, const util::json& rules)
+	{
+		std::size_t count = 0;
+		
+		auto process_rule = [&state, &count](const std::string& trigger_condition_expr, const util::json& content) -> bool // std::string_view
+		{
+			auto [type_name, member_name, comparison_operator, compared_value_raw] = parse_trigger_condition(trigger_condition_expr);
+
+			if (type_name.empty())
+			{
+				// If we weren't able to parse the input as an expression/condition,
+				// fall back to assuming the string provided is a type.
+				type_name = trigger_condition_expr;
+			}
+
+			auto type_name_id = hash(type_name).value();
+			auto type = resolve(type_name_id);
+
+			if (!type)
+			{
+				print_warn("Unable to resolve trigger/event type: \"{}\" (#{})", type_name, type_name_id);
+
+				return false;
+			}
+
+			auto [member_id, member] = (member_name.empty())
+				? resolve_data_member(type, true, "entity", "target", "button", "self")
+				: resolve_data_member(type, true, member_name)
+			;
+
+			if (!member && (!member_name.empty()))
+			{
+				print_warn("Unable to resolve target member for rule-trigger: \"{}\"", trigger_condition_expr); // type_name
+
+				return false;
+			}
+
+			std::optional<EventTriggerCondition> condition = std::nullopt;
+
+			if (member)
+			{
+				MetaAny compared_value;
+
+				bool resolve_native_value = true;
+
+				if (util::is_quoted(compared_value_raw, '\"', '\''))
+				{
+					resolve_native_value = false;
+
+					compared_value_raw = util::unquote(compared_value_raw);
+				}
+			
+				if (compared_value_raw.empty())
+				{
+					compared_value = static_cast<Entity>(null); // null;
+				}
+				else if (resolve_native_value)
+				{
+					compared_value = meta_any_from_string(compared_value_raw, true, false);
+
+					if (!compared_value)
+					{
+						print_warn("Unable to resolve comparison value for rule/trigger.");
+
+						return false;
+					}
+				}
+				else
+				{
+					compared_value = std::string(compared_value_raw);
+				}
+
+				if (compared_value)
+				{
+					auto comparison_method = (comparison_operator.empty())
+						? EventTriggerCondition::ComparisonMethod::Equal
+						: EventTriggerCondition::get_comparison_method(comparison_operator)
+					;
+
+					condition = EventTriggerCondition
+					{
+						//.event_type = type,
+						.event_type_member = member_id,
+						.comparison_value = std::move(compared_value),
+						.comparison_method = comparison_method
+					};
+				}
+			}
+
+			EntityStateTransitionRule::TargetType target = EntityStateTransitionRule::SelfTarget {};
+
+			if (auto target_data = util::find_any(content, "target", "target_entity"); target_data != content.end())
+			{
+				target = process_rule_target(*target_data);
+			}
+
+			if (auto next_state = util::find_any(content, "state", "next_state"); next_state != content.end())
+			{
+				const auto next_state_name = next_state->get<std::string>();
+				const auto next_state_id = hash(next_state_name);
+
+				auto& rules_out = state.rules[type_name_id];
+
+				rules_out.emplace_back
+				(
+					EntityStateTransitionRule
+					{
+						.target     = std::move(target),
+						.state_name = next_state_id,
+						.condition  = std::move(condition)
+					}
+				);
+
+				count++;
+
+				return true;
+			}
+
+			if (auto command = util::find_any(content, "command", "generate"); command != content.end())
+			{
+				// TODO: Implement commands.
+				assert(false);
+
+				return false;
+			}
+
+			print_warn("Unable to process rule for: {}", trigger_condition_expr);
+
+			return false;
+		};
+
+		const auto has_named_members = (rules.is_object());
+
+		for (const auto& proxy : rules.items())
+		{
+			const auto& declaration = proxy.key();
+			const auto& content = proxy.value();
+
+			if ((!has_named_members) || declaration.empty())
+			{
+				// Embedded (i.e. regular) trigger condition.
+				const auto trigger_condition_expr = content["trigger"].get<std::string>();
+
+				process_rule(trigger_condition_expr, content);
+			}
+			else
+			{
+				// In-place trigger condition.
+				const auto& trigger_condition_expr = declaration;
+
+				print(declaration);
+
+				process_rule(trigger_condition_expr, content);
+			}
+		}
+
+		// See above subroutine.
 		return count;
 	}
 
