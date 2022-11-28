@@ -11,7 +11,6 @@ namespace engine
 	class World;
 	class EntityFactory;
 
-	// TODO: Rename this to `RelationshipComponent` properly.
 	struct RelationshipComponent
 	{
 		public:
