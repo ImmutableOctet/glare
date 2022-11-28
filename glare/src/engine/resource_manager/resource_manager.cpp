@@ -8,7 +8,6 @@
 
 #include <memory>
 #include <tuple>
-#include <algorithm>
 #include <limits>
 
 #include <math/bullet.hpp>
@@ -220,6 +219,22 @@ namespace engine
 		}
 
 		return nullptr;
+	}
+
+	const EntityDescriptor* ResourceManager::get_existing_descriptor(const std::string& path) const
+	{
+		const auto* factory_data = get_existing_factory(path);
+
+		//assert(factory_data);
+
+		if (!factory_data)
+		{
+			return nullptr;
+		}
+
+		const auto& descriptor = factory_data->factory.get_descriptor();
+
+		return &descriptor;
 	}
 
 	const EntityFactoryData* ResourceManager::get_factory(const EntityFactoryContext& context) const

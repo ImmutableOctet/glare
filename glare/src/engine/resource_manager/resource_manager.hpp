@@ -51,6 +51,8 @@ namespace engine
 
 	struct RenderScene;
 
+	struct EntityDescriptor;
+
 	// TODO: Revisit weak vs. strong references for caching.
 	// Theoretically we could use weak references but return strong references upon initial request.
 
@@ -82,7 +84,7 @@ namespace engine
 		//std::unordered_map<std::string, TextureData> texture_data;
 
 		// Maps file paths to factory objects able to generate entities of a given specification.
-		mutable std::map<EntityFactoryKey, EntityFactoryData> entity_factories; // , std::owner_less<>
+		mutable std::unordered_map<EntityFactoryKey, EntityFactoryData> entity_factories; // , std::owner_less<> // std::map
 	};
 
 	class ResourceManager : protected Resources
@@ -145,6 +147,7 @@ namespace engine
 			const ref<AnimationData> get_animation_data(const WeakModelRef model) const;
 
 			const EntityFactoryData* get_existing_factory(const std::string& path) const; // std::string_view
+			const EntityDescriptor* get_existing_descriptor(const std::string& path) const;
 			const EntityFactoryData* get_factory(const EntityFactoryContext& context) const;
 
 			Entity generate_entity(const EntityFactoryContext& factory_context, const EntityConstructionContext& entity_context) const;
