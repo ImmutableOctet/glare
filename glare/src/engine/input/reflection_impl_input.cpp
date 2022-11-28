@@ -6,15 +6,19 @@
 
 #include "components/input_component.hpp"
 
+#include "buttons.hpp"
 #include "events.hpp"
 
 #include <app/input/devices.hpp>
 
+// Debugging related:
+#include <util/log.hpp>
+
 namespace engine
 {
-	GENERATE_EMPTY_TYPE_REFLECTION(OnButtonPressed);
-	GENERATE_EMPTY_TYPE_REFLECTION(OnButtonReleased);
-	GENERATE_EMPTY_TYPE_REFLECTION(OnButtonDown); // OnButtonHeld
+	GENERATE_EMPTY_DERIVED_TYPE_REFLECTION(OnButtonPressed, ButtonEvent);
+	GENERATE_EMPTY_DERIVED_TYPE_REFLECTION(OnButtonReleased, ButtonEvent);
+	GENERATE_EMPTY_DERIVED_TYPE_REFLECTION(OnButtonDown, ButtonEvent); // OnButtonHeld
 
 	template <>
 	void reflect<InputComponent>()
@@ -34,6 +38,9 @@ namespace engine
 			//.data<&InputEvent::source>("source"_hs)
 			
 			.data<&InputEvent::state_index>("state_index"_hs)
+			.data<&InputEvent::state_index>("player_index"_hs)
+			//.data<&InputEvent::state_index>("player"_hs)
+
 			.data<&InputEvent::state>("state"_hs)
 
 			.data<nullptr, &InputEvent::get_mouse>("mouse"_hs)
@@ -74,6 +81,7 @@ namespace engine
 	{
 		engine_meta_type<ButtonEvent>()
 			.data<&ButtonEvent::button>("button"_hs)
+			.base<InputEvent>()
 		;
 	}
 
@@ -90,6 +98,11 @@ namespace engine
 	template <>
 	void reflect<InputSystem>()
 	{
+		// Primitives:
+		
+		// TODO: Change this into something the game instance owns.
+		reflect<Button>();
+
 		// Components:
 		reflect<InputComponent>();
 		// ...
