@@ -12,6 +12,8 @@
 
 #include <optional>
 #include <string_view>
+#include <unordered_map>
+//#include <map>
 
 namespace engine
 {
@@ -21,7 +23,10 @@ namespace engine
 	class EntityState
 	{
 		public:
-			using Rules = util::small_vector<EntityStateRule, 2>;
+			using RuleCollection = EntityStateRuleCollection;
+
+			// TODO: Review whether it makes sense to pair keys and values in a `small_vector` of tuples, rather than a map.
+			using Rules = std::unordered_map<MetaTypeID, RuleCollection>; // std::map<...>;
 
 			// The name of this state.
 			std::optional<StringHash> name;
@@ -71,6 +76,8 @@ namespace engine
 
 			// Shared processing routine for resolving `MetaIDStorage` objects from a JSON array.
 			std::size_t build_type_list(const util::json& type_names, MetaIDStorage& types_out, bool cross_reference_persist);
+
+			const RuleCollection* get_rules(MetaTypeID type_id) const;
 		protected:
 
 			bool add_component(Registry& registry, Entity entity, const MetaTypeDescriptor& component) const;

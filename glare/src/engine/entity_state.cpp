@@ -57,7 +57,7 @@ namespace engine
 		add(registry, entity);
 		persist(registry, entity);
 
-		registry.emplace_or_replace<StateComponent>(entity, self_index);
+		registry.emplace_or_replace<StateComponent>(entity, self_index, prev_index.value_or(self_index));
 	}
 
 	void EntityState::decay(Registry& registry, Entity entity, EntityStateIndex self_index, const MetaDescription* next_state_persist) const
@@ -159,6 +159,18 @@ namespace engine
 		});
 
 		return count;
+	}
+
+	const EntityState::RuleCollection* EntityState::get_rules(MetaTypeID type_id) const
+	{
+		auto it = rules.find(type_id);
+
+		if (it != rules.end())
+		{
+			return &it->second;
+		}
+
+		return nullptr;
 	}
 
 	bool EntityState::remove_component(Registry& registry, Entity entity, const MetaType& type) const
