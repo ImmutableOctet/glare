@@ -65,6 +65,22 @@ namespace util
             return console;
         }
 
+        template <typename ...Args>
+        inline Logger print_error(fmt::format_string<Args...> fmt, Args &&...args)
+        {
+            console->error(fmt, std::forward<Args>(args)...);
+
+            return console;
+        }
+
+        template <typename T>
+        inline Logger print_error(const T& msg)
+        {
+            console->error(msg);
+
+            return console;
+        }
+
         template <typename EnumType>
         inline void print_enum_values()
         {
@@ -84,4 +100,5 @@ namespace util
 
 using util::log::print;
 using util::log::print_warn;
+using util::log::print_error;
 using util::log::print_enum_values;
