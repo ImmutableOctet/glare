@@ -37,13 +37,6 @@ namespace engine
 		}
 	};
 
-	entt::meta_any meta_any_from_string(const util::json& value, bool resolve_symbol)
-	{
-		auto string_value = value.get<engine::impl::StringType>();
-
-		return meta_any_from_string(std::string_view { string_value }, resolve_symbol);
-	}
-
 	entt::meta_any resolve_meta_any(const util::json& value)
 	{
 		using jtype = util::json::value_t;
@@ -100,8 +93,37 @@ namespace engine
 		return resolve_meta_any(value, entt::resolve(type_id));
 	}
 
-	entt::meta_any meta_any_from_string(std::string_view value, bool resolve_symbol)
+	entt::meta_any meta_any_from_string(const util::json& value, bool resolve_symbol, bool strip_quotes)
 	{
+		auto string_value = value.get<engine::impl::StringType>();
+
+		return meta_any_from_string(std::string_view{ string_value }, resolve_symbol, strip_quotes);
+	}
+
+	entt::meta_any meta_any_from_string(const util::json& value)
+	{
+		auto string_value = value.get<engine::impl::StringType>();
+
+		return meta_any_from_string(std::string_view{ string_value });
+	}
+
+	entt::meta_any meta_any_from_string(std::string_view value)
+	{
+		if (util::is_quoted(value))
+		{
+			return meta_any_from_string(util::unquote(value), false, false);
+		}
+
+		return meta_any_from_string(value, true);
+	}
+
+	entt::meta_any meta_any_from_string(std::string_view value, bool resolve_symbol, bool strip_quotes)
+	{
+		if (strip_quotes)
+		{
+			value = util::unquote_safe(value);
+		}
+
 		if (resolve_symbol)
 		{
 			entt::meta_any output;
