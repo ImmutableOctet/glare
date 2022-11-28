@@ -1,4 +1,4 @@
-#include "meta.hpp"
+#include "bridge.hpp"
 
 // Full definitions of `Service` and `World` needed for `dynamic_cast` usage.
 //#include <engine/service.hpp>
