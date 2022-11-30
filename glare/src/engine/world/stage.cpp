@@ -24,6 +24,7 @@
 
 #include <engine/config.hpp>
 #include <engine/components/name_component.hpp>
+#include <engine/components/player_component.hpp>
 #include <engine/components/model_component.hpp>
 
 #include <util/json.hpp>
@@ -582,6 +583,8 @@ namespace engine
 			{
 				player_objects[player_idx] = player;
 			}
+
+			registry.emplace_or_replace<PlayerComponent>(player, player_idx);
 
 			apply_transform(world, player, player_cfg);
 
