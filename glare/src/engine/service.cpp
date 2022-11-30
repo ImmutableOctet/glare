@@ -118,7 +118,10 @@ namespace engine
 
 	void Service::enqueue_timed_event(TimedEvent&& timed_event)
 	{
-		pending_timed_events.emplace_back(std::forward<TimedEvent>(timed_event));
+		// If the event's timer isn't already active, start it.
+		timed_event.delay.activate();
+
+		pending_timed_events.emplace_back(std::move(timed_event));
 	}
 
 	// TODO: Look into whether sorting the `pending_timed_events` collection would improve performance.

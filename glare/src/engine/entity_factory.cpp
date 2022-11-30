@@ -1,5 +1,4 @@
 #include "entity_factory.hpp"
-
 #include "event_trigger_condition.hpp"
 
 #include "components/relationship_component.hpp"
@@ -14,6 +13,7 @@
 #include <util/string.hpp>
 
 #include <algorithm>
+#include <chrono>
 
 // TODO: Change to better regular expression library.
 #include <regex>
@@ -152,6 +152,27 @@ namespace engine
 		}
 
 		return { {}, {}, false };
+	}
+
+	std::optional<Timer::Duration> EntityFactory::parse_time_duration(const std::string& time_expr) // std::string_view
+	{
+		using namespace entt::literals;
+
+		const auto time_rgx = std::regex("([\\d\\.]+)\\s*(.*)"); // (d|h|m|s|ms|us)?
+
+		if (std::smatch rgx_match; std::regex_search(time_expr.begin(), time_expr.end(), rgx_match, time_rgx))
+		{
+			const auto numeric_str = util::match_view(time_expr, rgx_match, 1);
+
+			if (const auto number = util::from_string<Timer::DurationRaw>(numeric_str))
+			{
+				const auto time_symbol = util::match_view(time_expr, rgx_match, 2);
+
+				return Timer::to_duration(*number, time_symbol);
+			}
+		}
+
+		return std::nullopt;
 	}
 
 	// TODO: Move to a different source file.
@@ -583,7 +604,7 @@ namespace engine
 	{
 		std::size_t count = 0;
 		
-		auto process_rule = [&state, &count](const std::string& trigger_condition_expr, const util::json& content) -> bool // std::string_view
+		auto process_rule = [&state, &count](const std::string& trigger_condition_expr, const util::json& content) -> bool // std::string_view // [this, ...]
 		{
 			auto [type_name, member_name, comparison_operator, compared_value_raw] = parse_trigger_condition(trigger_condition_expr);
 
@@ -675,6 +696,35 @@ namespace engine
 				target = process_rule_target(*target_data);
 			}
 
+			std::optional<Timer::Duration> wait_duration = std::nullopt;
+
+			if (auto timer_data = util::find_any(content, "timer", "wait"); timer_data != content.end())
+			{
+				switch (timer_data->type())
+				{
+					case util::json::value_t::string:
+					{
+						if (const auto timer_expr = timer_data->get<std::string>(); !timer_expr.empty())
+						{
+							wait_duration = parse_time_duration(timer_expr);
+						}
+
+						break;
+					}
+
+					case util::json::value_t::number_float:
+						wait_duration = Timer::to_duration(timer_data->get<float>()); // double
+
+						break;
+
+					case util::json::value_t::number_integer:
+					case util::json::value_t::number_unsigned:
+						wait_duration = Timer::Seconds(timer_data->get<std::uint32_t>()); // std::uint64_t
+
+						break;
+				}
+			}
+
 			if (auto next_state = util::find_any(content, "state", "next_state"); next_state != content.end())
 			{
 				const auto next_state_name = next_state->get<std::string>();
@@ -688,7 +738,8 @@ namespace engine
 					{
 						.target     = std::move(target),
 						.state_name = next_state_id,
-						.condition  = std::move(condition)
+						.condition  = std::move(condition),
+						.delay      = wait_duration
 					}
 				);
 

@@ -3,6 +3,9 @@
 #include "components/state_component.hpp"
 #include "commands/state_change_command.hpp"
 
+#include <engine/entity_state.hpp>
+#include <engine/timer.hpp>
+
 #include <engine/meta/meta.hpp>
 
 #include <engine/components/player_component.hpp>
@@ -11,7 +14,6 @@
 #include <engine/components/name_component.hpp>
 #include <engine/components/instance_component.hpp>
 
-#include <engine/entity_state.hpp>
 #include <engine/resource_manager/resource_manager.hpp>
 
 #include <util/variant.hpp>
@@ -342,9 +344,7 @@ namespace engine
 						}
 						else
 						{
-							print("Changing state of: {} to \"{}\"", entity, transition.state_name);
-
-							service->queue_event<StateChangeCommand>(entity, target, transition.state_name);
+							service->timed_event<StateChangeCommand>(transition.delay, entity, target, transition.state_name);
 						}
 					},
 

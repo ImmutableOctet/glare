@@ -5,12 +5,14 @@
 
 #include "service_events.hpp"
 #include "timed_event.hpp"
+#include "timer.hpp"
 
 #include <util/small_vector.hpp>
 
 #include <utility>
 #include <functional>
 #include <type_traits>
+#include <optional>
 //#include <vector>
 
 namespace app
@@ -107,6 +109,44 @@ namespace engine
 			inline void event<TimedEvent>(TimedEvent&& event_obj)
 			{
 				queue_event<TimedEvent>(std::forward<TimedEvent>(event_obj));
+			}
+
+			template <typename EventType, typename... Args>
+			inline void timed_event(Timer timer, Args&&... args)
+			{
+				queue_event<TimedEvent>(timer, EventType { std::forward<Args>(args)... });
+			}
+
+			template <typename EventType>
+			inline void timed_event(Timer timer, EventType&& event_obj)
+			{
+				queue_event<TimedEvent>(TimedEvent(timer, std::move(event_obj)));
+			}
+
+			template <typename EventType, typename... Args>
+			inline void timed_event(std::optional<Timer> timer, Args&&... args)
+			{
+				if (!timer)
+				{
+					queue_event<EventType>(std::forward<Args>(args)...);
+
+					return;
+				}
+
+				timed_event<EventType>(std::move(*timer), std::forward<Args>(args)...);
+			}
+
+			template <typename EventType, typename... Args>
+			inline void timed_event(std::optional<Timer::Duration> timer_duration, Args&&... args)
+			{
+				if (!timer_duration)
+				{
+					queue_event<EventType>(std::forward<Args>(args)...);
+
+					return;
+				}
+
+				timed_event<EventType>(Timer(*timer_duration), std::forward<Args>(args)...);
 			}
 
 			// Unregisters all event triggers tied to a given object.

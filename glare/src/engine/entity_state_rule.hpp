@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.hpp"
+#include "timer.hpp"
 #include "meta/types.hpp"
 
 #include "event_trigger_condition.hpp"
@@ -77,6 +78,7 @@ namespace engine
 		StringHash state_name;
 
 		std::optional<EventTriggerCondition> condition = std::nullopt;
+		std::optional<Timer::Duration> delay = std::nullopt;
 
 		inline std::size_t target_index() const
 		{

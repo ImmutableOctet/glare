@@ -1,7 +1,10 @@
 #pragma once
 
+#include "types.hpp"
+
 #include <chrono>
 #include <optional>
+#include <string_view>
 
 namespace engine
 {
@@ -12,7 +15,34 @@ namespace engine
 			using Clock        = std::chrono::system_clock;
 			using TimePoint    = std::chrono::time_point<Clock>; // Clock::time_point;
 			using Duration     = Clock::duration;
+			using DurationRaw  = Duration::rep;
+
+			using Days         = std::chrono::days;
+			using Hours        = std::chrono::hours;
+			using Minutes      = std::chrono::minutes;
+			using Seconds      = std::chrono::seconds; 
 			using Milliseconds = std::chrono::milliseconds;
+			using Microseconds = std::chrono::microseconds;
+
+			using FloatSeconds = std::chrono::duration<float>;
+			using DoubleSeconds = std::chrono::duration<double>;
+
+			static Duration to_duration(FloatSeconds seconds);
+			
+			static inline Duration to_duration(float seconds)
+			{
+				return to_duration(FloatSeconds(seconds));
+			}
+
+			static Duration to_duration(DoubleSeconds seconds);
+
+			static inline Duration to_duration(double seconds)
+			{
+				return to_duration(DoubleSeconds(seconds));
+			}
+
+			static std::optional<Duration> to_duration(DurationRaw duration_rep, std::string_view time_symbol);
+			static std::optional<Duration> to_duration(DurationRaw duration_rep, StringHash time_symbol_id);
 
 			// Default initializes a timer with no specified length/duration.
 			Timer() = default;
@@ -71,6 +101,24 @@ namespace engine
 			// Sets a new length/duration for this timer.
 			bool set_duration(Duration length);
 
+			// Simple alias to default (parameterless) overload of `start`.
+			inline bool activate()
+			{
+				return start();
+			}
+
+			// Alias for `active` method.
+			inline explicit operator bool() const
+			{
+				return active();
+			}
+
+			// Equivalent to calling `activate`, or `start` with no parameters.
+			inline bool operator()()
+			{
+				return activate();
+			}
+
 			// Indicates if this timer has been started.
 			//
 			// NOTE:
@@ -101,12 +149,6 @@ namespace engine
 			inline bool stopped() const
 			{
 				return !started();
-			}
-
-			// Alias for `active` method.
-			inline explicit operator bool() const
-			{
-				return active();
 			}
 
 			// Checks whether `remaining` indicates a duration of

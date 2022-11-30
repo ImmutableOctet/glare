@@ -1,7 +1,59 @@
 #include "timer.hpp"
 
+#include "meta/meta.hpp"
+
 namespace engine
 {
+	static constexpr Timer::Duration to_duration_seconds_impl(auto seconds)
+	{
+		return std::chrono::duration_cast<Timer::Duration>(std::chrono::round<std::chrono::nanoseconds>(seconds));
+	}
+
+	Timer::Duration Timer::to_duration(FloatSeconds seconds)
+	{
+		return to_duration_seconds_impl(seconds);
+	}
+
+	Timer::Duration Timer::to_duration(DoubleSeconds seconds)
+	{
+		return to_duration_seconds_impl(seconds);
+	}
+
+	std::optional<Timer::Duration> Timer::to_duration(DurationRaw duration_rep, std::string_view time_symbol)
+	{
+		using namespace entt::literals;
+
+		const auto time_symbol_id = (time_symbol.empty())
+			? "s"_hs
+			: hash(time_symbol)
+		;
+
+		return to_duration(duration_rep, time_symbol_id);
+	}
+
+	std::optional<Timer::Duration> Timer::to_duration(DurationRaw duration_rep, StringHash time_symbol_id)
+	{
+		using namespace entt::literals;
+
+		switch (time_symbol_id)
+		{
+			case "d"_hs:
+				return Timer::Days(duration_rep);
+			case "h"_hs:
+				return Timer::Hours(duration_rep);
+			case "m"_hs:
+				return Timer::Minutes(duration_rep);
+			case "s"_hs:
+				return Timer::Seconds(duration_rep);
+			case "ms"_hs:
+				return Timer::Milliseconds(duration_rep);
+			case "us"_hs:
+				return Timer::Microseconds(duration_rep);
+		}
+
+		return std::nullopt;
+	}
+
 	Timer::Timer(Duration length, bool start_immediately)
 		: length(length)
 	{
