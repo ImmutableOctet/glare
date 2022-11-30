@@ -2,6 +2,7 @@
 #include "events.hpp"
 
 #include "components/state_component.hpp"
+#include "commands/state_change_command.hpp"
 
 #include <engine/components/instance_component.hpp>
 
@@ -36,6 +37,7 @@ namespace engine
 		registry.on_destroy<StateComponent>().connect<&StateSystem::on_state_destroyed>(*this);
 
 		service.register_event<OnServiceUpdate, &StateSystem::on_update>(*this);
+		service.register_event<StateChangeCommand, &StateSystem::on_state_change_command>(*this);
 
 		return true;
 	}
@@ -86,7 +88,12 @@ namespace engine
 
 	bool StateSystem::set_state(Entity entity, std::string_view state_name) const
 	{
-		return set_state_by_id(entity, hash(state_name));
+		return set_state(entity, hash(state_name));
+	}
+
+	bool StateSystem::set_state(Entity entity, StringHash state_id) const
+	{
+		return set_state_by_id(entity, state_id);
 	}
 
 	bool StateSystem::set_state_by_id(Entity entity, StringHash state_id) const
@@ -252,5 +259,12 @@ namespace engine
 	void StateSystem::on_state_destroyed(Registry& registry, Entity entity)
 	{
 
+	}
+
+	void StateSystem::on_state_change_command(const StateChangeCommand& state_change)
+	{
+		print("Entity {}: state changed to #{} (changed by {})", state_change.target, state_change.state_name, state_change.source);
+
+		set_state(state_change.target, state_change.state_name);
 	}
 }
