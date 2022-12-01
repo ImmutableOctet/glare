@@ -4,6 +4,7 @@
 #include "meta/meta_description.hpp"
 
 #include "entity_state_rule.hpp"
+#include "timer.hpp"
 
 // TODO: Forward declare JSON type.
 #include <util/json.hpp>
@@ -55,8 +56,27 @@ namespace engine
 
 			Rules rules;
 
+			// Delay in 'activation' portion of state initialization.
+			std::optional<Timer::Duration> activation_delay; // = Timer::Duration::zero(); // Timer::Duration
+
 			// Executes appropriate add/remove/persist functions in order to establish this state as current.
-			void update(Registry& registry, Entity entity, EntityStateIndex self_index, const EntityState* previous=nullptr, std::optional<EntityStateIndex> prev_index=std::nullopt) const;
+			void update(Registry& registry, Entity entity, EntityStateIndex self_index, const EntityState* previous=nullptr, std::optional<EntityStateIndex> prev_index=std::nullopt, bool decay_prev_state=true, bool update_state_component=true) const;
+
+			// Decays this state from `entity`, but does not perform any additional activation/initialization of the next state.
+			//
+			// NOTE: This is normally called automatically as a subroutine of `update`.
+			// For most use-cases, `update` is a more appropriate interface.
+			void decay(Registry& registry, Entity entity, EntityStateIndex self_index, const MetaDescription* next_state_persist=nullptr) const;
+
+			// Activates this state for `entity`, but does not perform
+			// any decay or cleanup operations for the previous state.
+			//
+			// NOTE: This is normally called automatically as a subroutine of `update`.
+			// For most use-cases, `update` is a more appropriate interface.
+			void activate(Registry& registry, Entity entity, EntityStateIndex self_index, std::optional<EntityStateIndex> prev_index=std::nullopt, bool update_state_component=true) const;
+
+			// Manually updates the `StateComponent` instance associated to `entity`.
+			void force_update_component(Registry& registry, Entity entity, EntityStateIndex self_index, std::optional<EntityStateIndex> prev_index=std::nullopt) const;
 
 			// Utility function for building the `components.remove` collection.
 			std::size_t build_removals(const util::json& removal_list, bool cross_reference_persist=false);
@@ -78,6 +98,12 @@ namespace engine
 			std::size_t build_type_list(const util::json& type_names, MetaIDStorage& types_out, bool cross_reference_persist);
 
 			const RuleCollection* get_rules(MetaTypeID type_id) const;
+
+			inline bool has_activation_delay() const
+			{
+				//return (activation_delay != Timer::Duration::zero());
+				return activation_delay.has_value();
+			}
 		protected:
 
 			bool add_component(Registry& registry, Entity entity, const MetaTypeDescriptor& component) const;
@@ -90,8 +116,6 @@ namespace engine
 			// Returns false if the component does not currently exist for `entity`.
 			// If `value_assignment` is false, no value-assignment actions will be performed. (Status only)
 			bool update_component_fields(Registry& registry, Entity entity, const MetaTypeDescriptor& component, bool value_assignment=true, bool direct_modify=false) const;
-
-			void decay(Registry& registry, Entity entity, EntityStateIndex self_index, const MetaDescription* next_state_persist=nullptr) const;
 
 			// Adds components to `entity` in `registry`.
 			// Added components are removed during `decay`.

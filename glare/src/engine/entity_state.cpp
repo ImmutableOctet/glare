@@ -42,22 +42,16 @@ namespace engine
 		return container;
 	}
 
-	void EntityState::update(Registry& registry, Entity entity, EntityStateIndex self_index, const EntityState* previous, std::optional<EntityStateIndex> prev_index) const
+	void EntityState::update(Registry& registry, Entity entity, EntityStateIndex self_index, const EntityState* previous, std::optional<EntityStateIndex> prev_index, bool decay_prev_state, bool update_state_component) const
 	{
-		if (previous)
+		if (previous && decay_prev_state)
 		{
 			assert(prev_index);
 
 			previous->decay(registry, entity, *prev_index, &components.persist);
 		}
 
-		freeze(registry, entity, self_index);
-		retrieve(registry, entity, self_index);
-		remove(registry, entity);
-		add(registry, entity);
-		persist(registry, entity);
-
-		registry.emplace_or_replace<StateComponent>(entity, self_index, prev_index.value_or(self_index));
+		activate(registry, entity, self_index, prev_index, update_state_component);
 	}
 
 	void EntityState::decay(Registry& registry, Entity entity, EntityStateIndex self_index, const MetaDescription* next_state_persist) const
@@ -89,6 +83,25 @@ namespace engine
 		// Ensure that persistent components are accounted for,
 		// but do not alter any existing state.
 		persist(registry, entity, false);
+	}
+
+	void EntityState::activate(Registry& registry, Entity entity, EntityStateIndex self_index, std::optional<EntityStateIndex> prev_index, bool update_state_component) const
+	{
+		freeze(registry, entity, self_index);
+		retrieve(registry, entity, self_index);
+		remove(registry, entity);
+		add(registry, entity);
+		persist(registry, entity);
+
+		if (update_state_component)
+		{
+			force_update_component(registry, entity, self_index, prev_index);
+		}
+	}
+
+	void EntityState::force_update_component(Registry& registry, Entity entity, EntityStateIndex self_index, std::optional<EntityStateIndex> prev_index) const
+	{
+		registry.emplace_or_replace<StateComponent>(entity, self_index, prev_index.value_or(self_index));
 	}
 
 	std::size_t EntityState::build_removals(const util::json& removal_list, bool cross_reference_persist)

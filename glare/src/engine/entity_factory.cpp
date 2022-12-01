@@ -175,6 +175,29 @@ namespace engine
 		return std::nullopt;
 	}
 
+	std::optional<Timer::Duration> EntityFactory::parse_time_duration(const util::json& time_data)
+	{
+		switch (time_data.type())
+		{
+			case util::json::value_t::string:
+				if (const auto timer_expr = time_data.get<std::string>(); !timer_expr.empty())
+				{
+					return parse_time_duration(timer_expr);
+				}
+
+				break;
+
+			case util::json::value_t::number_float:
+				return Timer::to_duration(time_data.get<float>()); // double
+
+			case util::json::value_t::number_integer:
+			case util::json::value_t::number_unsigned:
+				return Timer::Seconds(time_data.get<std::uint32_t>()); // std::uint64_t
+		}
+
+		return std::nullopt;
+	}
+
 	// TODO: Move to a different source file.
 	EntityStateTransitionRule::TargetType EntityFactory::process_rule_target(const util::json& target_data)
 	{
@@ -505,6 +528,11 @@ namespace engine
 			process_state_isolated_components(state, *isolated);
 		}
 
+		if (auto time_data = util::find_any(data, "timer", "wait", "delay"); time_data != data.end())
+		{
+			state.activation_delay = parse_time_duration(*time_data);
+		}
+
 		if (auto rules = util::find_any(data, "rules", "triggers"); rules != data.end())
 		{
 			process_state_rules(state, *rules);
@@ -696,33 +724,11 @@ namespace engine
 				target = process_rule_target(*target_data);
 			}
 
-			std::optional<Timer::Duration> wait_duration = std::nullopt;
+			std::optional<Timer::Duration> delay = std::nullopt;
 
-			if (auto timer_data = util::find_any(content, "timer", "wait"); timer_data != content.end())
+			if (auto time_data = util::find_any(content, "timer", "wait", "delay"); time_data != content.end())
 			{
-				switch (timer_data->type())
-				{
-					case util::json::value_t::string:
-					{
-						if (const auto timer_expr = timer_data->get<std::string>(); !timer_expr.empty())
-						{
-							wait_duration = parse_time_duration(timer_expr);
-						}
-
-						break;
-					}
-
-					case util::json::value_t::number_float:
-						wait_duration = Timer::to_duration(timer_data->get<float>()); // double
-
-						break;
-
-					case util::json::value_t::number_integer:
-					case util::json::value_t::number_unsigned:
-						wait_duration = Timer::Seconds(timer_data->get<std::uint32_t>()); // std::uint64_t
-
-						break;
-				}
+				delay = parse_time_duration(*time_data);
 			}
 
 			if (auto next_state = util::find_any(content, "state", "next_state"); next_state != content.end())
@@ -734,12 +740,13 @@ namespace engine
 
 				rules_out.emplace_back
 				(
+					std::move(condition),
+					delay,
+
 					EntityStateTransitionRule
 					{
 						.target     = std::move(target),
-						.state_name = next_state_id,
-						.condition  = std::move(condition),
-						.delay      = wait_duration
+						.state_name = next_state_id
 					}
 				);
 

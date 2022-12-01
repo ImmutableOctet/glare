@@ -18,9 +18,12 @@ namespace engine
 	class Service;
 	class ResourceManager;
 
-	struct OnServiceUpdate;
 	struct EntityDescriptor;
+
+	struct OnServiceUpdate;
+	struct OnStateChange;
 	struct StateChangeCommand;
+	struct StateActivationCommand;
 
 	class StateSystem : public BasicSystem
 	{
@@ -30,8 +33,10 @@ namespace engine
 			bool set_state(Entity entity, std::string_view state_name) const;
 			bool set_state(Entity entity, StringHash state_name) const;
 			bool set_state_by_id(Entity entity, StringHash state_id) const;
-			bool set_state_by_index(Entity entity, EntityStateIndex state_index) const;
 		protected:
+			// Used internally by `on_state_activation_command` for 'delayed activation' behavior.
+			bool activate_state(Entity entity, StringHash state_id) const;
+
 			const ResourceManager& resource_manager;
 
 			std::unordered_map<MetaTypeID, EntityRuleListener> rule_listeners;
@@ -53,7 +58,10 @@ namespace engine
 			void on_state_update(Registry& registry, Entity entity);
 			void on_state_destroyed(Registry& registry, Entity entity);
 
+			void on_state_change(const OnStateChange& state_change);
+
 			void on_state_change_command(const StateChangeCommand& state_change);
+			void on_state_activation_command(const StateActivationCommand& state_activation);
 		private:
 			void on_state_update_impl(Registry& registry, Entity entity, bool handle_existing=true);
 	};

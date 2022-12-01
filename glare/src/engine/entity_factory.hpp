@@ -127,7 +127,9 @@ namespace engine
 				bool              // is_string_content
 			> parse_single_argument_command(const std::string& command); // std::string_view
 
+			// TODO: Move to a different file/class:
 			static std::optional<Timer::Duration> parse_time_duration(const std::string& time_expr); // std::string_view
+			static std::optional<Timer::Duration> parse_time_duration(const util::json& time_data);
 
 			// TODO: Move to a different file/class.
 			static EntityStateTransitionRule::TargetType process_rule_target(const util::json& target_data);

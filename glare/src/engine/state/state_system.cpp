@@ -3,6 +3,7 @@
 
 #include "components/state_component.hpp"
 #include "commands/state_change_command.hpp"
+#include "commands/state_activation_command.hpp"
 
 #include <engine/components/instance_component.hpp>
 
@@ -32,12 +33,18 @@ namespace engine
 	{
 		auto& registry = service.get_registry();
 
+		// Registry events:
 		registry.on_construct<StateComponent>().connect<&StateSystem::on_state_init>(*this);
 		registry.on_update<StateComponent>().connect<&StateSystem::on_state_update>(*this);
 		registry.on_destroy<StateComponent>().connect<&StateSystem::on_state_destroyed>(*this);
 
+		// Standard events:
 		service.register_event<OnServiceUpdate, &StateSystem::on_update>(*this);
+		service.register_event<OnStateChange, &StateSystem::on_state_change>(*this);
+
+		// Commands:
 		service.register_event<StateChangeCommand, &StateSystem::on_state_change_command>(*this);
+		service.register_event<StateActivationCommand, &StateSystem::on_state_activation_command>(*this);
 
 		return true;
 	}
@@ -98,7 +105,6 @@ namespace engine
 
 	bool StateSystem::set_state_by_id(Entity entity, StringHash state_id) const
 	{
-		auto& registry = get_registry();
 		const auto* descriptor = get_descriptor(entity);
 
 		if (!descriptor)
@@ -106,38 +112,114 @@ namespace engine
 			return false;
 		}
 
-		auto current_state = get_state(entity);
+		const auto current_state = get_state(entity);
 
-		if (descriptor->set_state_by_id(registry, entity, current_state, state_id))
+		const auto& from_state_index = current_state;
+		
+		const EntityState* from_state = (from_state_index)
+			? descriptor->states.at(*from_state_index).get()
+			: nullptr
+		;
+
+		const std::optional<StringHash> from_state_id = (from_state)
+			? from_state->name
+			: std::nullopt
+		;
+
+		const auto& to_state_id = state_id;
+
+		const auto to_state = descriptor->get_state(to_state_id); // auto*
+
+		if (!to_state)
 		{
-			const auto& from_state_index = *current_state;
-			const auto& from_state_id = descriptor->states[from_state_index]->name;
+			return false;
+		}
 
-			const auto new_state = get_state(entity);
+		const auto to_state_index = descriptor->get_state_index(to_state_id);
 
-			assert(new_state);
+		//assert(to_state_index.has_value());
 
-			const auto& to_state_index = *new_state;
-			const auto& to_state_id = state_id;
+		if (!to_state_index)
+		{
+			return false;
+		}
 
+		auto new_state_info = EntityStateInfo { *to_state_index, to_state_id };
+
+		auto old_state_info = (from_state)
+			? EntityStateInfo { *from_state_index, from_state_id }
+			: new_state_info
+		;
+
+		auto& registry = get_registry();
+
+		if (to_state->has_activation_delay())
+		{
+			assert(from_state_index);
+
+			// Decay the previous state, if present.
+			if (from_state)
+			{
+				from_state->decay(registry, entity, *from_state_index, &to_state->components.persist);
+			}
+
+			// Force-update the state-component to reflect the new (unactivated) state.
+			to_state->force_update_component(registry, entity, *to_state_index, from_state_index);
+				
+			// Notify listeners that we've changed state, but haven't activated yet.
 			service->queue_event<OnStateChange>
 			(
 				entity,
 
-				EntityStateInfo{ from_state_index, from_state_id },
-				EntityStateInfo{ to_state_index, to_state_id }
+				std::move(old_state_info),
+				std::move(new_state_info),
+
+				false // Delayed activation.
+			);
+
+			// Generate a timed event for activation, based on the delay indicated by the state:
+			service->timed_event<StateActivationCommand>
+			(
+				*(to_state->activation_delay),
+
+				entity,
+				entity,
+
+				to_state_id
 			);
 
 			return true;
 		}
 
+		if (descriptor->set_state_by_index(registry, entity, from_state_index, *to_state_index))
+		{
+			// Notify listeners that the state of `entity` has changed.
+			service->queue_event<OnStateChange>
+			(
+				entity,
+
+				std::move(old_state_info),
+				new_state_info,
+
+				true // Immediate activation.
+			);
+
+			// Notify listeners that activation has occurred.
+			service->queue_event<OnStateActivate>
+			(
+				entity,
+
+				std::move(new_state_info)
+			);
+
+			return true;
+		}
 
 		return false;
 	}
 
-	bool StateSystem::set_state_by_index(Entity entity, EntityStateIndex state_index) const
+	bool StateSystem::activate_state(Entity entity, StringHash state_id) const
 	{
-		auto& registry = get_registry();
 		const auto* descriptor = get_descriptor(entity);
 
 		if (!descriptor)
@@ -145,28 +227,25 @@ namespace engine
 			return false;
 		}
 
-		auto current_state = get_state(entity);
+		const auto target_state_index = get_state(entity);
 
-		if (descriptor->set_state_by_index(registry, entity, current_state, state_index))
+		if (!target_state_index)
 		{
-			const auto& from_state_index = *current_state;
-			const auto& from_state_id = descriptor->states[from_state_index]->name;
-
-			const auto& to_state_index = state_index;
-			const auto& to_state_id = descriptor->states[to_state_index]->name;
-
-			service->queue_event<OnStateChange>
-			(
-				entity,
-
-				EntityStateInfo { from_state_index, from_state_id },
-				EntityStateInfo { to_state_index, to_state_id }
-			);
-
-			return true;
+			return false;
 		}
 
-		return false;
+		const auto target_state = descriptor->states.at(*target_state_index).get();
+
+		if (!target_state)
+		{
+			return false;
+		}
+
+		auto& registry = get_registry();
+
+		target_state->activate(registry, entity, *target_state_index, std::nullopt, false);
+
+		return true;
 	}
 
 	void StateSystem::on_update(const OnServiceUpdate& data)
@@ -260,11 +339,47 @@ namespace engine
 	{
 
 	}
+	
+	// Handles logging/printing for debugging purposes.
+	void StateSystem::on_state_change(const OnStateChange& state_change)
+	{
+		assert(state_change.to.id.has_value());
+
+		if (state_change.from.id)
+		{
+			print("Entity {}: state changed from #{} to #{}", state_change.entity, *state_change.from.id, *state_change.to.id);
+		}
+		else
+		{
+			print("Entity {}: state changed to #{}", state_change.entity, *state_change.to.id);
+		}
+	}
 
 	void StateSystem::on_state_change_command(const StateChangeCommand& state_change)
 	{
-		print("Entity {}: state changed to #{} (changed by {})", state_change.target, state_change.state_name, state_change.source);
-
 		set_state(state_change.target, state_change.state_name);
+	}
+
+	void StateSystem::on_state_activation_command(const StateActivationCommand& state_activation)
+	{
+		auto result = activate_state(state_activation.target, state_activation.state_name);
+
+		//assert(result);
+
+		if (result)
+		{
+			if (state_activation.source == state_activation.target)
+			{
+				print("Entity {}: state #{} activated", state_activation.target, state_activation.state_name);
+			}
+			else
+			{
+				print("Entity {}: state #{} activated by Entity {}", state_activation.target, state_activation.state_name, state_activation.source);
+			}
+		}
+		else
+		{
+			print_error("Failed to activate state #{} for Entity {} (activation by {})", state_activation.state_name, state_activation.target, state_activation.source);
+		}
 	}
 }
