@@ -522,11 +522,14 @@ namespace engine
 		// Since this is an imported state, we'll need to retrieve a new base-path.
 		const auto state_base_path = state_path.parent_path();
 
-		const auto state = process_state(states_out, state_data, state_name, state_base_path);
+		if (const auto state = process_state(states_out, state_data, state_name, state_base_path))
+		{
+			assert(state->name.has_value());
 
-		assert(state->name.has_value());
+			return state;
+		}
 
-		return state;
+		return nullptr;
 	}
 
 	const EntityState* EntityFactory::process_state
@@ -818,24 +821,50 @@ namespace engine
 				}
 			}
 
-			EntityStateTransitionRule::TargetType target = EntityStateTransitionRule::SelfTarget {};
-
-			if (auto target_data = util::find_any(content, "target", "target_entity"); target_data != content.end())
-			{
-				target = process_rule_target(*target_data);
-			}
-
+			EntityStateTransitionRule::TargetType target = EntityStateTransitionRule::SelfTarget{};
 			std::optional<Timer::Duration> delay = std::nullopt;
 
-			if (auto time_data = util::find_any(content, "timer", "wait", "delay"); time_data != content.end())
+			std::string next_state_raw;
+
+			switch (content.type())
 			{
-				delay = parse_time_duration(*time_data);
+				case util::json::value_t::string:
+				{
+					next_state_raw = content.get<std::string>();
+
+					break;
+				}
+				case util::json::value_t::object:
+				{
+					if (auto target_data = util::find_any(content, "target", "target_entity"); target_data != content.end())
+					{
+						target = process_rule_target(*target_data);
+					}
+
+					if (auto time_data = util::find_any(content, "timer", "wait", "delay"); time_data != content.end())
+					{
+						delay = parse_time_duration(*time_data);
+					}
+
+					// 
+					if (auto next_state = util::find_any(content, "state", "next", "next_state"); next_state != content.end())
+					{
+						next_state_raw = next_state->get<std::string>();
+					}
+					else if (auto command = util::find_any(content, "command", "generate"); command != content.end())
+					{
+						// TODO: Implement commands.
+						assert(false);
+
+						return false;
+					}
+
+					break;
+				}
 			}
 
-			if (auto next_state = util::find_any(content, "state", "next", "next_state"); next_state != content.end())
+			if (!next_state_raw.empty())
 			{
-				const auto next_state_raw = next_state->get<std::string>();
-
 				const auto inline_import = process_state_inline_import(opt_states_out, next_state_raw, opt_base_path);
 
 				StringHash next_state_id = (inline_import) // EntityStateHash
@@ -860,14 +889,6 @@ namespace engine
 				count++;
 
 				return true;
-			}
-
-			if (auto command = util::find_any(content, "command", "generate"); command != content.end())
-			{
-				// TODO: Implement commands.
-				assert(false);
-
-				return false;
 			}
 
 			print_warn("Unable to process rule for: {}", trigger_condition_expr);
