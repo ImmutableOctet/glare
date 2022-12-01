@@ -2,7 +2,7 @@
 
 #include <engine/transform.hpp>
 #include <engine/world/world.hpp>
-#include <engine/world/motion/motion_component.hpp>
+#include <engine/world/motion/components/velocity_component.hpp>
 
 #include <math/math.hpp>
 
@@ -70,7 +70,7 @@ namespace engine
 
 		auto movement_vector = (direction * std::min(std::min(follow_speed, distance), following_distance));
 
-		auto* motion = registry.try_get<MotionComponent>(entity);
+		auto* motion = registry.try_get<VelocityComponent>(entity);
 
 		if (distance > following_distance)
 		{

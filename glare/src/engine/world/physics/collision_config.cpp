@@ -37,6 +37,8 @@ namespace engine
 			//case EntityType::Pivot: return CollisionGroup::None;
 			//case EntityType::Regulator: return CollisionGroup::None;
 			//case EntityType::Generator: return CollisionGroup::None;
+
+			//case EntityType::Default: return CollisionGroup::None;
 		}
 
 		return CollisionGroup::None;
@@ -67,6 +69,8 @@ namespace engine
 			case EntityType::DamageZone: return CollisionGroup::None;
 
 			case EntityType::Generator: return CollisionGroup::AllGeometry; // CollisionGroup::None
+
+			//case EntityType::Default: return CollisionGroup::None;
 		}
 
 		return CollisionGroup::None;
@@ -100,9 +104,39 @@ namespace engine
 			case EntityType::DamageZone: return CollisionGroup::All;
 
 			case EntityType::Generator: return CollisionGroup::None;
+
+			//case EntityType::Default: return CollisionGroup::None;
 		}
 
 		return CollisionGroup::None;
+	}
+
+	CollisionConfig::CollisionConfig
+	(
+		CollisionGroup group,
+		CollisionGroup solid_mask,
+		CollisionGroup interaction_mask
+	) :
+		group(group),
+		solid_mask(solid_mask),
+		interaction_mask(interaction_mask)
+	{}
+
+	CollisionConfig::CollisionConfig
+	(
+		CollisionGroup group,
+		CollisionGroup solid_mask,
+		CollisionGroup interaction_mask,
+
+		bool enabled
+	) : CollisionConfig()
+	{
+		if (enabled)
+		{
+			this->group = group;
+			this->solid_mask = solid_mask;
+			this->interaction_mask = interaction_mask;
+		}
 	}
 
 	CollisionConfig::CollisionConfig(EntityType type) :
@@ -110,4 +144,19 @@ namespace engine
 		solid_mask(resolve_solid_mask(type)),
 		interaction_mask(resolve_interaction_mask(type))
 	{}
+
+	CollisionConfig::CollisionConfig(EntityType type, bool enabled)
+		: CollisionConfig((enabled) ? type : EntityType::Default)
+	{}
+
+	bool CollisionConfig::enabled() const
+	{
+		return
+		(group != CollisionGroup::None)
+		||
+		(solid_mask != CollisionGroup::None)
+		||
+		(interaction_mask != CollisionGroup::None)
+		;
+	}
 }

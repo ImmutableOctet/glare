@@ -53,7 +53,10 @@ namespace app::input
 
 				const auto analog_name = magic_enum::enum_name<GamepadAnalog>(analog);
 
-				util::retrieve_from(*deadzone_data, analog_name, *analog_out, read_analog);
+				// TODO: Optimize. (Heterogeneous lookup issue with `nlohmann::ordered_json`)
+				const auto analog_name_s = std::string { analog_name };
+
+				util::retrieve_from(*deadzone_data, analog_name_s, *analog_out, read_analog);
 			});
 		}
 

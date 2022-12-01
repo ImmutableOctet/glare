@@ -34,7 +34,7 @@ namespace app::input
 			KeyboardState(KeyboardState&&) noexcept = default;
 
 			KeyboardState& operator=(const KeyboardState&) = default;
-			KeyboardState& operator=(KeyboardState&&) = default;
+			KeyboardState& operator=(KeyboardState&&) noexcept = default;
 
 			KeyboardState& operator=(KeyDataView raw_key_data);
 

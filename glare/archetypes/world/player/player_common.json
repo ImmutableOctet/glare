@@ -1,0 +1,41 @@
+{
+	"add":
+	{
+		"NameComponent": "Common State"
+	},
+
+	"shared":
+	{
+	},
+
+	"remove":
+	[
+	],
+
+	"freeze":
+	[
+		"NameComponent"
+	],
+
+	"store":
+	[
+		"NameComponent"
+	],
+
+	"local":
+	{
+		"TypeComponent": "EntityType::Geometry"
+	},
+
+	"rules":
+	{
+		"OnButtonPressed|Button::HeavyAttack": "player_heavy_attack",
+		
+		"OnButtonPressed|Button::Jump": "player_jump",
+		
+		"OnButtonPressed.button == Button::Shield":
+		{
+			"state": "player_shield"
+		}
+	}
+}

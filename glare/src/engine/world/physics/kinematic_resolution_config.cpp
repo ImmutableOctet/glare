@@ -1,5 +1,6 @@
 #include "kinematic_resolution_config.hpp"
-#include "collision_component.hpp"
+
+#include "components/collision_component.hpp"
 
 #include <math/math.hpp>
 #include <util/variant.hpp>

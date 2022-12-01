@@ -22,13 +22,13 @@ namespace engine
 
 		CollisionData() = default;
 
-		CollisionData(CollisionData&&) = default;
+		CollisionData(CollisionData&&) noexcept = default;
 		CollisionData(const CollisionData&) = default;
 
 		CollisionData(const Shape& collision_shape);
 		CollisionData(Geometry&& geometry_storage, bool optimize = true);
 
-		CollisionData& operator=(CollisionData&&) = default;
+		CollisionData& operator=(CollisionData&&) noexcept = default;
 
 		Shape collision_shape;
 		std::optional<Geometry> geometry_storage = std::nullopt;

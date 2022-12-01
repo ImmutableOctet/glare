@@ -6,6 +6,10 @@
 #include <app/input/keyboard.hpp>
 #include <app/input/gamepad.hpp>
 
+#include <engine/meta.hpp>
+
+#include <engine/state/state_system.hpp>
+
 #include <engine/world/physics/physics.hpp>
 #include <engine/world/motion/motion.hpp>
 #include <engine/world/animation/animation.hpp>
@@ -57,6 +61,9 @@ namespace game
 			std::move(rendering_pipeline)
 		)
 	{
+		// Generate reflection data for the `engine` module.
+		engine::reflect_all();
+
 		set_input_lock(input_lock_status);
 
 		init_default_systems((!renderer));
@@ -242,8 +249,12 @@ namespace game
 
 	void Game::init_default_systems(bool init_renderer)
 	{
-		// World systems:
+		auto& resource_manager = world.get_resource_manager();
+
+		world_system<engine::StateSystem>(resource_manager);
+
 		auto& physics = world_system<engine::PhysicsSystem>();
+
 		world_system<engine::MotionSystem>(physics);
 
 		world_system<engine::AnimationSystem>();

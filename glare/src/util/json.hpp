@@ -6,6 +6,7 @@
 //#include <graphics/types.hpp>
 
 #include <nlohmann/json.hpp>
+//#include <nlohmann/fifo_map.hpp>
 
 //#include <tuple>
 //#include <string>
@@ -16,7 +17,9 @@
 
 namespace util
 {
-	using json = nlohmann::json;
+	//using json = nlohmann::json;
+	//using json = nlohmann::basic_json<nlohmann::fifo_map>;
+	using json = nlohmann::ordered_json;
 
 	json load_json(const std::filesystem::path& path);
 
@@ -147,5 +150,66 @@ namespace util
 				return get_transform(data[name]);
 			}
 		);
+	}
+
+	// This returns true if `t` is in the list of json value-types specified.
+	// If no value-types are given as input, this function returns true.
+	template<json::value_t... types>
+	bool json_type_filter(json::value_t t)
+	{
+		// Check for empty value-type list:
+		if (sizeof...(types) == 0)
+		{
+			return true;
+		}
+
+		// Compare `t` against all type-values specified.
+		return ((types == t) || ...);
+	}
+
+	// Enumerates `element` for each item that matches the JSON value-types
+	// specified, executing `callback_fn` for each item.
+	// 
+	// If no types are specified, all items are enumerated regardless of type.
+	// If `element` is a non-array type, the `callback_fn` will be executed
+	// for the single element, given the type-filter is satisfied.
+	template <json::value_t... types>
+	unsigned int json_for_each(const auto& element, auto&& callback_fn)
+	{
+		switch (element.type())
+		{
+			case json::value_t::array:
+			{
+				unsigned int i = 0;
+
+				for (const auto& proxy : element.items())
+				{
+					const auto& value = proxy.value();
+
+					if (json_type_filter<types...>(value.type()))
+					{
+						callback_fn(value);
+						i++;
+					}
+
+				}
+
+				return i;
+			}
+
+			default:
+			{
+				if (json_type_filter<types...>(element.type()))
+				{
+					callback_fn(element);
+
+					return 1;
+				}
+
+				break;
+			}
+		}
+
+		return 0;
 	}
 }

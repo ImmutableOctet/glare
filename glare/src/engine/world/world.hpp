@@ -115,8 +115,14 @@ namespace engine
 			// See `transform_and_reset_collision` for details.
 			void apply_transform_and_reset_collision(Entity entity, const math::TransformVectors& tform_data);
 
+			// Utility function that allows you to manually specify the world-space
+			// position of `entity` without needing to manage a `Transform` object.
+			// 
+			// NOTE: This is generally less efficient than simply using a `Transform` object directly.
 			Transform set_position(Entity entity, const math::Vector& position);
 
+			// Simple utility function for constructing a `Transform` object,
+			// without needing to specify each dependent component/object-reference.
 			Transform get_transform(Entity entity);
 
 			// Calls `callback` with the `Transform` of `entity` while handling updates
@@ -195,9 +201,11 @@ namespace engine
 
 			// Returns the name associated to the `entity` specified.
 			// If no `NameComponent` is associated with the entity, an empty string will be returned.
-			std::string get_name(Entity entity);
+			std::string get_name(Entity entity); // const;
 
 			void set_name(Entity entity, const std::string& name);
+
+			bool has_name(Entity entity); // const;
 
 			// Retrieves the first entity found with the `name` specified.
 			// NOTE: Multiple entities can share the same name.
@@ -209,7 +217,8 @@ namespace engine
 			// Retrieves the first child-entity found with the name specified, regardless of other attributes/components. (includes both bone & non-bone children)
 			Entity get_child_by_name(Entity entity, std::string_view child_name, bool recursive=true);
 
-			inline ResourceManager& get_resource_manager() { return resource_manager; }
+			ResourceManager& get_resource_manager() override;
+			virtual const ResourceManager& get_resource_manager() const override;
 
 			inline const Config& get_config() const { return config; }
 			

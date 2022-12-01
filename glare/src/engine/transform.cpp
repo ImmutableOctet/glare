@@ -13,12 +13,12 @@ using namespace math;
 namespace engine
 {
 	TransformViewData::TransformViewData(Registry& registry, Entity entity)
-		: TransformViewData(registry, entity, registry.get_or_emplace<Relationship>(entity)) {}
+		: TransformViewData(registry, entity, registry.get_or_emplace<RelationshipComponent>(entity)) {}
 
-	TransformViewData::TransformViewData(Registry& registry, Entity entity, const Relationship& relationship)
+	TransformViewData::TransformViewData(Registry& registry, Entity entity, const RelationshipComponent& relationship)
 		: TransformViewData(registry, entity, relationship, registry.get<TransformComponent>(entity)) {}
 
-	TransformViewData::TransformViewData(Registry& registry, Entity entity, const Relationship& relationship, TransformComponent& transform)
+	TransformViewData::TransformViewData(Registry& registry, Entity entity, const RelationshipComponent& relationship, TransformComponent& transform)
 		: registry(registry), relationship(relationship), transform(transform), entity(entity) {}
 
 	std::optional<TransformViewData> TransformViewData::get_parent_data(const TransformViewData& data)
@@ -144,9 +144,16 @@ namespace engine
 		{
 			//print("Invalidating world matrix - I am: {}", child);
 
-			auto t = Transform(registry, child, child_relationship);
+			auto* tform_component = registry.try_get<TransformComponent>(child);
 
-			t.invalidate_world();
+			if (!tform_component)
+			{
+				return true;
+			}
+
+			auto tform = Transform(registry, child, child_relationship, *tform_component);
+
+			tform.invalidate_world();
 
 			return true;
 		});
@@ -171,19 +178,25 @@ namespace engine
 		: TransformViewData(data), parent_data(TransformViewData::get_parent_data(data)) {}
 
 	Transform::Transform(Registry& registry, Entity entity)
-		: Transform(registry, entity, registry.get_or_emplace<Relationship>(entity)) {}
+		: Transform(registry, entity, registry.get_or_emplace<RelationshipComponent>(entity)) {}
 
-	Transform::Transform(Registry& registry, Entity entity, const Relationship& relationship)
+	Transform::Transform(Registry& registry, Entity entity, const RelationshipComponent& relationship)
 		: Transform(registry, entity, relationship, registry.get<TransformComponent>(entity)) {}
 
-	Transform::Transform(Registry& registry, Entity entity, const Relationship& relationship, TransformComponent& transform)
+	Transform::Transform(Registry& registry, Entity entity, const RelationshipComponent& relationship, TransformComponent& transform)
 		: Transform(TransformViewData({registry, entity, relationship, transform })) {}
+
+	Transform::Transform(Registry& registry, Entity entity, TransformComponent& transform)
+		: Transform(TransformViewData({registry, entity, registry.get<RelationshipComponent>(entity), transform })) {}
 
 	Transform::~Transform()
 	{
 		// TODO: Look into optimization.
 		// (Removing this line gives a minor performance improvement)
 		recalculate(false);
+
+		// Signal that the underlying `TransformComponent` object has been modified.
+		//registry.patch<TransformComponent>(entity, [](auto&) {});
 	}
 
 	bool Transform::collision_invalid() const
@@ -681,24 +694,5 @@ namespace engine
 	{
 		//return set_local_basis(glm::mat3_cast(basis));
 		return set_local_basis(math::to_rotation_matrix(glm::conjugate(basis))); // TODO: Review use of 'conjugate'.
-	}
-
-
-	// TransformComponent:
-	bool TransformComponent::invalid(TransformComponent::Dirty flag) const
-	{
-		return (_dirty & flag);
-	}
-
-	void TransformComponent::invalidate(TransformComponent::Dirty flag) const
-	{
-		_dirty |= flag;
-	}
-
-	TransformComponent::Dirty TransformComponent::validate(TransformComponent::Dirty flag) const
-	{
-		_dirty &= (~flag);
-
-		return _dirty;
 	}
 }

@@ -39,6 +39,11 @@ namespace engine
 
 		registry.view<TargetBehavior>().each([&](auto entity, auto& target_comp) // TransformComponent, ...
 		{
+			if (target_comp.target == null)
+			{
+				return;
+			}
+
 			auto transform = world.get_transform(entity);
 
 			target_comp.apply(world, entity, transform, delta);
@@ -92,7 +97,7 @@ namespace engine
 
 	void TargetBehavior::apply(World& world, Entity entity, Transform& transform, float delta)
 	{
-		if ((!enabled) || (target == null))
+		if ((!enabled)) // || (target == null)
 		{
 			return;
 		}

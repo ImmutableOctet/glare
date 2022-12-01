@@ -72,7 +72,7 @@ namespace engine
 				{}
 
 				//SizeType(const SizeType&) = default;
-				//SizeType(SizeType&&) = default;
+				//SizeType(SizeType&&) noexcept = default;
 
 				inline SizeType get_size() const { return (half_size * 2.0f); }
 				inline SizeType get_half_size() const { return half_size; }

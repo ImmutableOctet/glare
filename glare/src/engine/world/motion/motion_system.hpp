@@ -12,8 +12,10 @@ namespace engine
 	class PhysicsSystem;
 
 	struct Transform;
-	struct MotionComponent;
 	struct CollisionComponent;
+	struct MotionComponent;
+	struct GroundComponent;
+	struct GravityComponent;
 
 	struct OnSurfaceContact;
 	struct OnAirToGround;
@@ -25,21 +27,10 @@ namespace engine
 	class MotionSystem : public WorldSystem
 	{
 		public:
-			struct EntityData
-			{
-				Entity entity;
-				
-				Transform& transform;
-				MotionComponent& motion;
-				CollisionComponent& collision;
-
-				float delta;
-			};
-
 			// TODO: Also look at orientation when determining down vector for surface response values.
 			
 			// Ground threshold.
-			static constexpr float GROUND = 0.65f; // (Dot-product value)
+			//static constexpr float GROUND = 0.65f; // (Dot-product value)
 			
 			// Wall threshold.
 			//static constexpr float WALL = ...; // (Dot-product value)
@@ -69,12 +60,19 @@ namespace engine
 
 			std::optional<CollisionCastResult> detect_air
 			(
-				const EntityData& data,
-				const math::Vector& gravity_movement,
-				const math::Vector& projected_movement
+				Entity entity,
+
+				Transform& transform,
+				GroundComponent& ground_comp,
+				const CollisionComponent& collision_comp,
+				const GravityComponent& gravity_comp,
+
+				float delta
 			);
 
-			void update_motion(const EntityData& data);
+			void apply_velocity(float delta);
+			void update_gravity(float delta);
+			void handle_deceleration(float delta);
 
 			// Internal shorthand for `world.get_gravity()`.
 			math::Vector get_gravity() const;

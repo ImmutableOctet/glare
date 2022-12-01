@@ -1,11 +1,13 @@
 #include "debug.hpp"
 #include "events.hpp"
-#include "relationship.hpp"
+
+#include "components/relationship_component.hpp"
 
 #include "world/world.hpp"
 #include "world/world_events.hpp"
 #include "world/physics/collision_events.hpp"
-#include "world/animation/skeletal_component.hpp"
+
+#include "world/animation/components/skeletal_component.hpp"
 
 #include "input/events.hpp"
 
@@ -27,7 +29,7 @@ namespace engine
 	void print_children(World& world, Entity entity, bool recursive, bool summary_info, bool recursive_labels, const std::string& prefix)
 	{
 		auto& registry = world.get_registry();
-		auto* rel = registry.try_get<engine::Relationship>(entity);
+		auto* rel = registry.try_get<engine::RelationshipComponent>(entity);
 
 		if (!rel)
 		{
@@ -142,7 +144,7 @@ namespace engine
 		//enable<OnButtonDown>();
 		enable<OnButtonReleased>();
 		enable<OnButtonPressed>();
-		//enable<OnAnalogInput>();
+		enable<OnAnalogInput>();
 	}
 
 	void DebugListener::on_skeleton(Registry& registry, Entity entity)

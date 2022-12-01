@@ -1,3 +1,5 @@
+// TODO: Rework/deprecate.
+
 #pragma once
 
 #include "types.hpp"

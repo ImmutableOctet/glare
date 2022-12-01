@@ -23,9 +23,9 @@
 			"buttons":
 			{
 				"Jump":         "A",
-				"HeavyAttack":  "B",
-				"Interact":     "X",
-				"MediumAttack": "Y",
+				"HeavyAttack":  "X",
+				"Interact":     "L3",
+				"MediumAttack": "B",
 
 				"Pause":        "Start",
 

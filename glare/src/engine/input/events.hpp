@@ -4,6 +4,7 @@
 #include "input_event.hpp"
 #include "buttons.hpp"
 #include "analogs.hpp"
+#include "raw_input_events.hpp"
 
 // TODO: Determine if we actually want these included here.
 //#include <app/input/events.hpp> // <-- 'Raw' input events. (Directly from devices)

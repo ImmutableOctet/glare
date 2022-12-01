@@ -11,8 +11,8 @@
 
 #include <engine/config.hpp>
 #include <engine/transform.hpp>
-#include <engine/model_component.hpp>
-#include <engine/relationship.hpp>
+#include <engine/components/model_component.hpp>
+#include <engine/components/relationship_component.hpp>
 
 #include <engine/resource_manager/resource_manager.hpp>
 
@@ -29,7 +29,7 @@ namespace engine
 		Entity entity,
 		ModelComponent& model_component,
 		TransformComponent& transform,
-		const Relationship& relationship,
+		const RelationshipComponent& relationship,
 
 		WorldRenderState* render_state,
 
@@ -193,14 +193,14 @@ namespace engine
 				shader["height_map_max_layers"] = render_state->parallax.max_layers;
 			}
 
-			registry.view<ModelComponent, TransformComponent, Relationship>().each
+			registry.view<ModelComponent, TransformComponent, RelationshipComponent>().each
 			(
 				[this, draw_mode, &canvas, &shader, &world, &render_state, bind_dynamic_textures]
 				(
 					Entity entity,
 					ModelComponent& model_component,
 					TransformComponent& transform,
-					const Relationship& relationship
+					const RelationshipComponent& relationship
 				)
 				{
 					draw_model

@@ -1,14 +1,14 @@
 #include "player.hpp"
 
 #include <engine/input/types.hpp>
-#include <engine/input/input_component.hpp>
+#include <engine/input/components/input_component.hpp>
 
 #include <engine/world/world.hpp>
 #include <engine/world/entity.hpp>
 #include <engine/world/graphics_entity.hpp>
 
-#include <engine/world/motion/motion_component.hpp>
-#include <engine/world/motion/alignment_component.hpp>
+#include <engine/world/motion/components/motion_component.hpp>
+#include <engine/world/motion/components/alignment_component.hpp>
 
 #include <engine/world/physics/collision.hpp>
 
@@ -16,7 +16,9 @@
 #include <util/log.hpp>
 
 #include <engine/resource_manager/resource_manager.hpp>
-#include <engine/name_component.hpp>
+
+#include <engine/components/name_component.hpp>
+#include <engine/components/model_component.hpp>
 
 //#include <bullet/BulletCollision/CollisionShapes/btCapsuleShape.h>
 #include <bullet/btBulletCollisionCommon.h>
@@ -24,8 +26,6 @@
 #include <algorithm>
 #include <fstream>
 #include <utility>
-
-#include <engine/model_component.hpp>
 
 namespace engine
 {
@@ -51,7 +51,7 @@ namespace engine
 
 		try
 		{
-			std::ifstream player_data_stream((character_path / "character.json"));
+			std::ifstream player_data_stream((character_path / "instance.json"));
 
 			character_data = util::json::parse(player_data_stream);
 

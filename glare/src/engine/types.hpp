@@ -27,6 +27,8 @@ namespace engine
 	using EntityIDType = entt::id_type;
 	using EventHandler = entt::dispatcher;
 
+	using StringHash = entt::id_type; // entt::hashed_string;
+
 	/*
 	template <typename... delegate_params>
 	using Delegate = entt::delegate<delegate_params...>;
@@ -42,6 +44,13 @@ namespace engine
 	// NOTE: Must be equivalent to `app::input::PlayerInputID`.
 	using PlayerIndex = std::uint16_t;
 
+	// Opaque identifier used to differentiate entity states.
+	using EntityStateHash = entt::id_type;
+
+	// Identifier used to represent an index of an entity state.
+	using EntityStateIndex = std::uint16_t; // std::uint8_t;
+
+	// TODO: Rename to something less generic. (i.e. RotationAxis)
 	enum class Axis : std::uint8_t
 	{
 		Pitch = (1 << 0),
@@ -62,7 +71,7 @@ namespace engine
 
 	enum class EntityType : std::uint8_t // std::uint16_t
 	{
-		Other = 0,
+		Default = 0,
 
 		Geometry,      // Stage geometry, etc.
 		Scenery,       // Scenery, such as decorative objects - e.g. grass, etc. (No solid collision)
@@ -88,7 +97,7 @@ namespace engine
 		
 		Generator,     // An entity which generates other entities. (e.g. spawing enemies)
 
-		Default = Other
+		Other = Default
 	};
 
 	constexpr auto& null = entt::null;

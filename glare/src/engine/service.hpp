@@ -4,9 +4,16 @@
 #include "action.hpp"
 
 #include "service_events.hpp"
+#include "timed_event.hpp"
+#include "timer.hpp"
+
+#include <util/small_vector.hpp>
 
 #include <utility>
 #include <functional>
+#include <type_traits>
+#include <optional>
+//#include <vector>
 
 namespace app
 {
@@ -24,16 +31,21 @@ namespace app
 
 namespace engine
 {
+	class ResourceManager;
+
 	class Service
 	{
 		public:
-			Service(bool register_input_events=true);
-			Service(Service&&) = default;
+			Service(bool register_input_events=true, bool register_timed_event_wrapper=false);
+			Service(Service&&) noexcept = default;
 
 			virtual ~Service() {};
 
 			virtual Registry& get_registry() = 0;
 			virtual const Registry& get_registry() const = 0;
+
+			virtual ResourceManager& get_resource_manager() = 0;
+			virtual const ResourceManager& get_resource_manager() const = 0;
 
 			template <typename EventType, auto fn, typename obj_type>
 			inline void register_event(obj_type& obj)
@@ -52,7 +64,14 @@ namespace engine
 			template <typename EventType, typename... Args>
 			inline void queue_event(Args&&... args)
 			{
-				active_event_handler->enqueue<EventType>(EventType { std::forward<Args>(args)... });
+				if constexpr (std::is_same_v<EventType, std::decay_t<TimedEvent>>)
+				{
+					enqueue_timed_event(TimedEvent { std::forward<Args>(args)... });
+				}
+				else
+				{
+					active_event_handler->enqueue<EventType>(EventType{ std::forward<Args>(args)... });
+				}
 			}
 
 			template <typename EventType>
@@ -61,16 +80,80 @@ namespace engine
 				active_event_handler->enqueue(std::forward<EventType>(event_obj));
 			}
 
+			template <>
+			inline void queue_event<TimedEvent>(TimedEvent&& event_obj)
+			{
+				enqueue_timed_event(std::move(event_obj));
+			}
+
 			template <typename EventType, typename... Args>
 			inline void event(Args&&... args)
 			{
-				active_event_handler->trigger<EventType>(EventType { std::forward<Args>(args)... });
+				if constexpr (std::is_same_v<EventType, std::decay_t<TimedEvent>>)
+				{
+					queue_event<EventType, Args...>(std::forward<Args>(args)...);
+				}
+				else
+				{
+					active_event_handler->trigger<EventType>(EventType{ std::forward<Args>(args)... });
+				}
 			}
 
 			template <typename EventType>
 			inline void event(EventType&& event_obj)
 			{
 				active_event_handler->trigger(std::forward<EventType>(event_obj));
+			}
+
+			template <>
+			inline void event<TimedEvent>(TimedEvent&& event_obj)
+			{
+				queue_event<TimedEvent>(std::forward<TimedEvent>(event_obj));
+			}
+
+			template <typename EventType, typename... Args>
+			inline void timed_event(Timer timer, Args&&... args)
+			{
+				queue_event<TimedEvent>(timer, EventType { std::forward<Args>(args)... });
+			}
+
+			template <typename EventType>
+			inline void timed_event(Timer timer, EventType&& event_obj)
+			{
+				queue_event<TimedEvent>(TimedEvent(timer, std::move(event_obj)));
+			}
+
+
+			template <typename EventType, typename... Args>
+			inline void timed_event(Timer::Duration timer_duration, Args&&... args)
+			{
+				timed_event<EventType>(Timer(timer_duration), std::forward<Args>(args)...);
+			}
+
+			template <typename EventType, typename... Args>
+			inline void timed_event(std::optional<Timer> timer, Args&&... args)
+			{
+				if (!timer)
+				{
+					queue_event<EventType>(std::forward<Args>(args)...);
+
+					return;
+				}
+
+				timed_event<EventType>(std::move(*timer), std::forward<Args>(args)...);
+			}
+
+			template <typename EventType, typename... Args>
+			inline void timed_event(std::optional<Timer::Duration> timer_duration, Args&&... args)
+			{
+				if (!timer_duration)
+				{
+					queue_event<EventType>(std::forward<Args>(args)...);
+
+					return;
+				}
+
+				timed_event<EventType>(Timer(*timer_duration), std::forward<Args>(args)...);
 			}
 
 			// Unregisters all event triggers tied to a given object.
@@ -109,24 +192,8 @@ namespace engine
 				//make_action(std::forward<fn_t>(f), std::forward<arguments>(args)...);
 			}
 
-			inline void update(float delta=1.0f)
-			{
-				// Handle standard events:
-				use_forwarding_events();
-				standard_event_handler.update();
-
-				// Handle forwarding events:
-				use_standard_events();
-				forwarding_event_handler.update();
-
-				// Trigger the standard update event for this service.
-				this->event<OnServiceUpdate>(this, delta);
-			}
-
-			inline void render(app::Graphics& gfx)
-			{
-				this->event<OnServiceRender>(this, &gfx);
-			}
+			void update(float delta=1.0f);
+			void render(app::Graphics& gfx);
 
 			// NOTE: Registering to this event handler is considered unsafe due to there
 			// being 'standard' and 'forwarding' event handlers internally. Use this method with caution.
@@ -149,6 +216,15 @@ namespace engine
 			void on_mouse_input(const app::input::MouseState& mouse);
 			void on_keyboard_input(const app::input::KeyboardState& keyboard);
 
+			// Interop functionality with standard event-handler systems.
+			void enqueue_timed_event_wrapper(const TimedEvent& timed_event);
+
+			// Regular rvalue input from directly enqueued timed-event objects.
+			void enqueue_timed_event(TimedEvent&& timed_event);
+
+			// Enumerates timed events, triggering underlying event types when timers complete.
+			void update_timed_events();
+
 			// A pointer to the active event handler object.
 			// (One of the two found below)
 			EventHandler* active_event_handler;
@@ -158,5 +234,7 @@ namespace engine
 
 			// Forwarding event handler; used while processing events.
 			EventHandler forwarding_event_handler;
+
+			util::small_vector<TimedEvent, 8> pending_timed_events;
 	};
 }

@@ -1,0 +1,13 @@
+{
+	"archetypes":
+	[
+		"fundamental"
+	],
+
+	"components":
+	[
+		"RelationshipComponent",
+		"TransformComponent",
+		"TransformHistoryComponent"
+	]
+}

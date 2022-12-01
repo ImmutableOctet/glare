@@ -8,6 +8,7 @@
 
 #include <memory>
 #include <tuple>
+#include <limits>
 
 #include <math/bullet.hpp>
 
@@ -206,6 +207,87 @@ namespace engine
 		}
 
 		return nullptr;
+	}
+
+	const EntityFactoryData* ResourceManager::get_existing_factory(const std::string& path) const // std::string_view
+	{
+		auto it = entity_factories.find(path);
+
+		if (it != entity_factories.end())
+		{
+			return &it->second;
+		}
+
+		return nullptr;
+	}
+
+	const EntityDescriptor* ResourceManager::get_existing_descriptor(const std::string& path) const
+	{
+		const auto* factory_data = get_existing_factory(path);
+
+		//assert(factory_data);
+
+		if (!factory_data)
+		{
+			return nullptr;
+		}
+
+		const auto& descriptor = factory_data->factory.get_descriptor();
+
+		return &descriptor;
+	}
+
+	const EntityFactoryData* ResourceManager::get_factory(const EntityFactoryContext& context) const
+	{
+		auto path_str = context.paths.instance_path.string();
+
+		if (auto* existing_factory = get_existing_factory(path_str))
+		{
+			return existing_factory;
+		}
+
+		EntityFactoryChildren children;
+
+		auto factory = EntityFactory
+		(
+			context,
+
+			[this, &path_str, &children](const EntityFactory& parent_factory, const EntityFactoryContext& child_context)
+			{
+				// NOTE: Recursion.
+				auto child_factory_data = this->get_factory(child_context);
+
+				assert(child_factory_data);
+
+				if (!child_factory_data)
+				{
+					return;
+				}
+
+				children.push_back(child_context.paths.instance_path.string()); // c_str();
+			}
+		);
+
+		if (auto [it, result] = entity_factories.emplace(path_str, EntityFactoryData { std::move(factory), std::move(children) }); result)
+		{
+			// ...
+
+			return &it->second;
+		}
+
+		return nullptr;
+	}
+
+	Entity ResourceManager::generate_entity(const EntityFactoryContext& factory_context, const EntityConstructionContext& entity_context) const
+	{
+		auto* factory = get_factory(factory_context);
+
+		if (factory)
+		{
+			return factory->create(entity_context);
+		}
+
+		return null;
 	}
 
 	void ResourceManager::subscribe(World& world)

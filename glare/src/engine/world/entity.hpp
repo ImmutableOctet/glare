@@ -4,8 +4,16 @@
 //#include <engine/relationship.hpp>
 //#include <engine/transform.hpp>
 
+#include <filesystem>
+#include <util/json.hpp>
+
+// TODO: Change this API into something generic enough to work for multiple Services, not just `World`.
+
 namespace engine
 {
+	class World;
+	class ResourceManager;
+
 	Entity create_entity(World& world, Entity parent=null, EntityType type={});
 
 	// Initiates destruction of the specified 'entity'.

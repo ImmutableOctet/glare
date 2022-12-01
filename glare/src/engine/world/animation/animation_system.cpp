@@ -1,12 +1,12 @@
 #include "animation_system.hpp"
 #include "animation_events.hpp"
-#include "animator.hpp"
 
-#include "bone_component.hpp"
-#include "skeletal_component.hpp"
+#include "components/animation_component.hpp"
+#include "components/bone_component.hpp"
+#include "components/skeletal_component.hpp"
 
-#include <engine/relationship.hpp>
-#include <engine/forwarding_component.hpp>
+#include <engine/components/relationship_component.hpp>
+#include <engine/components/forwarding_component.hpp>
 #include <engine/world/world.hpp>
 #include <engine/resource_manager/resource_manager.hpp>
 #include <engine/events.hpp>
@@ -26,13 +26,13 @@ namespace engine
 		world.register_event<OnParentChanged, &AnimationSystem::on_parent_changed>(*this);
 	}
 
-	static std::uint16_t animate_bones(World& world, const math::Matrix& inv_root_matrix, Animator& animator, const Animation& current_animation, Relationship& relationship)
+	static std::uint16_t animate_bones(World& world, const math::Matrix& inv_root_matrix, Animator& animator, const Animation& current_animation, RelationshipComponent& relationship)
 	{
 		auto& registry = world.get_registry();
 
 		std::uint16_t bones_animated = 0;
 
-		relationship.enumerate_children(registry, [&bones_animated, &world, &inv_root_matrix, &registry, &animator, &current_animation](Entity child, Relationship& relationship, Entity next_child) -> bool
+		relationship.enumerate_children(registry, [&bones_animated, &world, &inv_root_matrix, &registry, &animator, &current_animation](Entity child, RelationshipComponent& relationship, Entity next_child) -> bool
 		{
 			auto* bone_detail = registry.try_get<BoneComponent>(child);
 
@@ -87,7 +87,7 @@ namespace engine
 			// ???
 			// PROFIT
 
-			auto* bone_rel = registry.try_get<Relationship>(child);
+			auto* bone_rel = registry.try_get<RelationshipComponent>(child);
 
 			if (bone_rel)
 			{
@@ -100,7 +100,7 @@ namespace engine
 		return bones_animated;
 	}
 
-	static std::uint16_t animate(World& world, Entity entity, Animator& animator, const Animation& current_animation, Relationship& relationship, TransformComponent& tform_comp)
+	static std::uint16_t animate(World& world, Entity entity, Animator& animator, const Animation& current_animation, RelationshipComponent& relationship, TransformComponent& tform_comp)
 	{
 		// Retrieve the inverse world-space matrix of the root entity.
 		math::Matrix inv_root_matrix;
@@ -122,7 +122,7 @@ namespace engine
 		auto& registry = world.get_registry();
 
 		// Apply motion (gravity, velocity, deceleration, etc.):
-		registry.view<Animator, Relationship, TransformComponent>().each([&](auto entity, Animator& animator, Relationship& relationship, TransformComponent& tform_comp)
+		registry.view<Animator, RelationshipComponent, TransformComponent>().each([&](auto entity, Animator& animator, RelationshipComponent& relationship, TransformComponent& tform_comp)
 		{
 			if (!animator)
 			{
@@ -251,7 +251,7 @@ namespace engine
 			}
 		}
 
-		auto* relationship = registry.try_get<Relationship>(parent_changed.entity);
+		auto* relationship = registry.try_get<RelationshipComponent>(parent_changed.entity);
 
 		if (!relationship)
 		{
@@ -259,7 +259,7 @@ namespace engine
 		}
 		
 		// Update children recursively with our newly established skeleton entity:
-		relationship->enumerate_children(registry, [&](Entity child, Relationship& relationship, Entity next_child)
+		relationship->enumerate_children(registry, [&](Entity child, RelationshipComponent& relationship, Entity next_child)
 		{
 			auto* bone = registry.try_get<BoneComponent>(child);
 

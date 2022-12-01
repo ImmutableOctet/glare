@@ -7,6 +7,7 @@ namespace engine
 	class World;
 	struct Transform;
 
+	// TODO: Rename.
 	struct TargetBehavior
 	{
 		enum class Mode : std::uint8_t
@@ -32,13 +33,21 @@ namespace engine
 
 		void apply(World& world, Entity entity, Transform& transform, float delta);
 
-		Entity target;
+		Entity target = null;
 		
 		float interpolation = 0.5f;
 
 		Mode mode = Mode::Default;
 
-		bool allow_roll = true;
-		bool enabled    = true;
+		bool allow_roll : 1 = true;
+
+		// TODO: Deprecate.
+		bool enabled    : 1 = true;
+
+		inline bool get_allow_roll() const { return allow_roll; }
+		inline void set_allow_roll(bool value) { allow_roll = value; }
+
+		inline bool get_enabled() const { return enabled; }
+		inline void set_enabled(bool value) { enabled = value; }
 	};
 }

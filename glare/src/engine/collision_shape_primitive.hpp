@@ -1,5 +1,7 @@
 #pragma once
 
+// TODO: Migrate this file into `physics` submodule.
+
 #include <string_view>
 
 namespace engine

@@ -12,7 +12,7 @@
 #include <graphics/types.hpp>
 
 #include <engine/config.hpp>
-#include <engine/input_events.hpp>
+#include <engine/input/raw_input_events.hpp>
 #include <engine/resource_manager/resource_manager.hpp>
 
 #include <engine/world/world.hpp>

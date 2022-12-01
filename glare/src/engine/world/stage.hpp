@@ -27,6 +27,7 @@ namespace graphics
 namespace engine
 {
 	class World;
+	class ResourceManager;
 
 	// A Stage, sometimes referred to as a Map is an abstract concept for
 	// a portion of the scene-graph that's been loaded from an external source.
@@ -147,6 +148,8 @@ namespace engine
 					void load_geometry();
 					void load_players();
 					void load_objects();
+
+					ResourceManager& get_resource_manager() const;
 
 					inline operator Entity() const
 					{

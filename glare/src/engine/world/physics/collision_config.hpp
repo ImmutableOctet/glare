@@ -23,16 +23,47 @@ namespace engine
 
 		//using CollisionLookupResult = std::tuple<CollisionGroup, CollisionGroup, CollisionGroup>;
 
-		CollisionConfig() = default;
-		CollisionConfig(const CollisionConfig&) = default;
-		CollisionConfig(CollisionConfig&&) = default;
+		CollisionConfig
+		(
+			CollisionGroup group=CollisionGroup::None,
+			CollisionGroup solid_mask=CollisionGroup::None,
+			CollisionGroup interaction_mask=CollisionGroup::None
+		);
 
-		CollisionConfig& operator=(CollisionConfig&&) = default;
+		// Utility overload for exact collision-group input.
+		// If `enabled` is true, groups will be initialized as expected.
+		// If `enabled` is false, no group initialization will take place. (i.e. default construction)
+		CollisionConfig
+		(
+			CollisionGroup group,
+			CollisionGroup solid_mask,
+			CollisionGroup interaction_mask,
+
+			bool enabled
+		);
 
 		CollisionConfig(EntityType type);
+
+		// Utility overload for `EntityType` input.
+		// If `enabled` is true, `type` will be forwarded as expected.
+		// If `enabled` is false, `EntityType::Default` will be passed, resulting in no collision group assignments. (i.e. default construction)
+		CollisionConfig(EntityType type, bool enabled);
+
+		CollisionConfig(const CollisionConfig&) = default;
+		CollisionConfig(CollisionConfig&&) noexcept = default;
+
+		CollisionConfig& operator=(const CollisionConfig&) = default;
+		CollisionConfig& operator=(CollisionConfig&&) noexcept = default;
+
+		bool enabled() const;
 
 		// The full mask represents the final bitmask that should be used for filtering at the outermost level.
 		// (i.e. what we can engage with in some form)
 		inline CollisionGroup get_full_mask() const { return (interaction_mask | solid_mask); }
+
+		inline explicit operator bool() const
+		{
+			return enabled();
+		}
 	};
 }

@@ -1,16 +1,5 @@
 #pragma once
 
-//#include <vector>
-#include <memory>
-#include <string>
-#include <tuple>
-
-#include <unordered_map>
-#include <map>
-
-//#include <utility>
-#include <optional>
-
 #include <types.hpp>
 //#include <engine/types.hpp>
 
@@ -26,7 +15,21 @@
 #include "collision_data.hpp"
 #include "model_data.hpp"
 
+#include "entity_factory_data.hpp"
+
 #include "loaders/loaders.hpp"
+
+//#include <vector>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <tuple>
+
+#include <unordered_map>
+#include <map>
+
+//#include <utility>
+#include <optional>
 
 namespace game
 {
@@ -47,6 +50,8 @@ namespace engine
 	class WorldRenderer;
 
 	struct RenderScene;
+
+	struct EntityDescriptor;
 
 	// TODO: Revisit weak vs. strong references for caching.
 	// Theoretically we could use weak references but return strong references upon initial request.
@@ -77,6 +82,9 @@ namespace engine
 		mutable std::map<const WeakModelRef, ref<AnimationData>, std::owner_less<>> animation_data;
 
 		//std::unordered_map<std::string, TextureData> texture_data;
+
+		// Maps file paths to factory objects able to generate entities of a given specification.
+		mutable std::unordered_map<EntityFactoryKey, EntityFactoryData> entity_factories; // , std::owner_less<> // std::map
 	};
 
 	class ResourceManager : protected Resources
@@ -137,6 +145,12 @@ namespace engine
 
 			const CollisionData* get_collision(const WeakModelRef model) const;
 			const ref<AnimationData> get_animation_data(const WeakModelRef model) const;
+
+			const EntityFactoryData* get_existing_factory(const std::string& path) const; // std::string_view
+			const EntityDescriptor* get_existing_descriptor(const std::string& path) const;
+			const EntityFactoryData* get_factory(const EntityFactoryContext& context) const;
+
+			Entity generate_entity(const EntityFactoryContext& factory_context, const EntityConstructionContext& entity_context) const;
 
 			// Links events from `world` to this resource manager instance.
 			void subscribe(World& world);

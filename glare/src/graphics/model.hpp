@@ -70,8 +70,8 @@ namespace graphics
 
 				MeshDescriptor() noexcept = default;
 
-				MeshDescriptor(const MeshDescriptor&) noexcept = delete;
-				MeshDescriptor(MeshDescriptor&&) = default;
+				MeshDescriptor(const MeshDescriptor&) = delete;
+				MeshDescriptor(MeshDescriptor&&) noexcept = default;
 
 				inline bool has_meshes() const { return (meshes.size() > 0); }
 				inline explicit operator bool() const { return has_meshes(); }

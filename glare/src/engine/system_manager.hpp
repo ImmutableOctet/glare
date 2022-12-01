@@ -5,7 +5,7 @@
 #include <util/memory.hpp>
 
 #include <engine/service.hpp>
-#include <engine/world/behaviors/meta.hpp>
+#include <engine/world/behaviors/bridge.hpp>
 
 //#include <vector>
 #include <unordered_map>

@@ -14,6 +14,7 @@ namespace engine
 
 	struct CollisionData;
 
+	// TODO: Remove. (replaced by `PlayerComponent` and co.)
 	struct PlayerState
 	{
 		using Index = PlayerIndex;

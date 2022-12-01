@@ -1,0 +1,16 @@
+{
+	"add":
+	{
+		"NameComponent": "Heavy Attack"
+	},
+
+	"freeze":
+	[
+		"NameComponent"
+	],
+
+	"store":
+	[
+		"NameComponent"
+	]
+}

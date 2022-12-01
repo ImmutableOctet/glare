@@ -16,10 +16,10 @@ namespace graphics
 				resource.on_bind(context);
 			}
 
-			BindOperation(BindOperation&&) = default;
+			BindOperation(BindOperation&&) noexcept = default;
 			BindOperation(const BindOperation&) = delete;
 
-			BindOperation& operator=(BindOperation&&) = default;
+			BindOperation& operator=(BindOperation&&) noexcept = default;
 			BindOperation& operator=(const BindOperation&) = delete;
 
 			~BindOperation()

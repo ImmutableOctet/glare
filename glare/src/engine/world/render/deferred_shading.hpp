@@ -10,7 +10,7 @@
 
 namespace engine
 {
-	struct Relationship;
+	struct RelationshipComponent;
 	struct LightComponent;
 	struct TransformComponent;
 	
@@ -39,7 +39,7 @@ namespace engine
 				Entity entity,
 				const LightComponent& light,
 				TransformComponent& transform,
-				const Relationship& relationship,
+				const RelationshipComponent& relationship,
 
 				unsigned int directional_light_idx
 			);
@@ -53,7 +53,7 @@ namespace engine
 				Entity entity,
 				const LightComponent& light,
 				TransformComponent& transform,
-				const Relationship& relationship,
+				const RelationshipComponent& relationship,
 
 				unsigned int directional_light_idx
 			);
@@ -67,7 +67,7 @@ namespace engine
 				Entity entity,
 				const LightComponent& light,
 				TransformComponent& transform,
-				const Relationship& relationship,
+				const RelationshipComponent& relationship,
 				
 				unsigned int point_light_idx
 			);

@@ -35,13 +35,13 @@ namespace game
 
 	int exec(int argc, char** argv)
 	{
-		util::log::init();
-
 		return test(argc, argv);
 	}
 }
 
 int main(int argc, char** argv)
 {
+	util::log::init();
+
 	return game::exec(argc, argv);
 }

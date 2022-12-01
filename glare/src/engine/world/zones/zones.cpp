@@ -4,7 +4,7 @@
 #include <engine/world/world.hpp>
 #include <engine/world/entity.hpp>
 #include <engine/world/physics/collision_config.hpp>
-#include <engine/world/physics/collision_component.hpp>
+#include <engine/world/physics/components/collision_component.hpp>
 
 namespace engine
 {
