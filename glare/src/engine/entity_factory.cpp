@@ -26,14 +26,17 @@ namespace engine
 {
 	std::filesystem::path EntityFactory::resolve_reference(const std::filesystem::path& path, const std::filesystem::path& base_path) const
 	{
-		auto get_surface_path = [this](const auto& path, const auto& base_path) -> std::filesystem::path
+		auto get_surface_path = [this, &base_path](const auto& path) -> std::filesystem::path
 		{
-			if (auto projected_path = (paths.instance_directory / path); std::filesystem::exists(projected_path))
+			if (!base_path.empty())
 			{
-				return projected_path;
+				if (auto projected_path = (base_path / path); std::filesystem::exists(projected_path))
+				{
+					return projected_path;
+				}
 			}
 
-			if (auto projected_path = (paths.archetype_root_path / path); std::filesystem::exists(projected_path))
+			if (auto projected_path = (paths.instance_directory / path); std::filesystem::exists(projected_path))
 			{
 				return projected_path;
 			}
@@ -46,24 +49,21 @@ namespace engine
 				}
 			}
 
-			if (!base_path.empty())
+			if (auto projected_path = (paths.archetype_root_path / path); std::filesystem::exists(projected_path))
 			{
-				if (auto projected_path = (base_path / path); std::filesystem::exists(projected_path))
-				{
-					return projected_path;
-				}
+				return projected_path;
 			}
 
 			return {};
 		};
 
-		auto module_path = get_surface_path(path, base_path);
+		auto module_path = get_surface_path(path);
 
 		if (module_path.empty())
 		{
 			auto direct_path = path; direct_path.replace_extension("json");
 
-			module_path = get_surface_path(direct_path, base_path);
+			module_path = get_surface_path(direct_path);
 
 			if (module_path.empty())
 			{
@@ -443,17 +443,22 @@ namespace engine
 		return true;
 	}
 
-	void EntityFactory::process_component_list
+	std::size_t EntityFactory::process_component_list
 	(
 		EntityDescriptor::TypeInfo& components_out,
 		const util::json& components
 	)
 	{
-		auto as_component = [this, &components_out](const auto& component_declaration, const util::json* component_content=nullptr)
+		std::size_t count = 0;
+
+		auto as_component = [this, &components_out, &count](const auto& component_declaration, const util::json* component_content=nullptr)
 		{
 			auto [component_name, allow_inplace_changes, constructor_arg_count] = parse_component_declaration(component_declaration);
 
-			process_component(components_out, component_name, component_content, allow_inplace_changes, constructor_arg_count);
+			if (process_component(components_out, component_name, component_content, allow_inplace_changes, constructor_arg_count))
+			{
+				count++;
+			}
 		};
 
 		util::json_for_each(components, [this, &as_component](const util::json& comp)
@@ -482,15 +487,63 @@ namespace engine
 				}
 			}
 		});
+
+		return count;
 	}
 
-	bool EntityFactory::process_state
+	const EntityState* EntityFactory::resolve_state
+	(
+		EntityDescriptor::StateCollection& states_out,
+		std::string_view state_path_raw, // const std::string&
+		const std::filesystem::path& base_path
+	)
+	{
+		const auto state_path = resolve_reference(std::filesystem::path(state_path_raw), base_path);
+
+		// TODO: Optimize.
+		auto state_data = util::load_json(state_path);
+
+		std::string state_name;
+
+		// Check for a top-level `name` field in the imported state:
+		if (auto name_it = state_data.find("name"); name_it != state_data.end())
+		{
+			// Use the embedded name.
+			state_name = name_it->get<std::string>();
+		}
+		else
+		{
+			auto filename = state_path.filename(); filename.replace_extension();
+
+			// An embedded name couldn't be found; use the state's filename instead.
+			state_name = filename.string();
+		}
+
+		// Since this is an imported state, we'll need to retrieve a new base-path.
+		const auto state_base_path = state_path.parent_path();
+
+		const auto state = process_state(states_out, state_data, state_name, state_base_path);
+
+		assert(state->name.has_value());
+
+		return state;
+	}
+
+	const EntityState* EntityFactory::process_state
 	(
 		EntityDescriptor::StateCollection& states_out,
 		const util::json& data,
-		std::string_view state_name
+		std::string_view state_name,
+		const std::filesystem::path& base_path
 	)
 	{
+		// Handle embedded imports of other states:
+		if (auto imports = util::find_any(data, "state", "states", "import", "imports"); imports != data.end())
+		{
+			// NOTE: Recursion.
+			process_state_list(states_out, *imports, base_path);
+		}
+
 		EntityState state;
 
 		if (!state_name.empty())
@@ -535,27 +588,64 @@ namespace engine
 
 		if (auto rules = util::find_any(data, "rules", "triggers"); rules != data.end())
 		{
-			process_state_rules(state, *rules);
+			process_state_rules(state, *rules, &states_out, &base_path);
 		}
 
 		if (state.name)
 		{
-			auto existing = descriptor.get_state(*state.name);
-
-			if (existing)
+			if (auto existing = descriptor.get_state(*state.name))
 			{
+				print_warn("Overriding definition of state: \"{}\"", state_name);
+
 				*existing = std::move(state);
 
-				return true;
+				return existing;
 			}
 		}
 
 		//descriptor.set_state(std::move(state));
 
 		//descriptor.states.emplace_back(std::move(state));
-		descriptor.states.emplace_back(std::make_unique<EntityState>(std::move(state)));
+		const auto& result = descriptor.states.emplace_back(std::make_unique<EntityState>(std::move(state)));
 
-		return true;
+		return result.get();
+	}
+
+	std::size_t EntityFactory::process_state_list(EntityDescriptor::StateCollection& states_out, const util::json& data, const std::filesystem::path& base_path)
+	{
+		std::size_t count = 0;
+
+		util::json_for_each(data, [this, &base_path, &states_out, &count](const util::json& state_entry)
+		{
+			switch (state_entry.type())
+			{
+				case util::json::value_t::object:
+				{
+					// NOTE: Embedded state definitions must have a `name` field.
+					const auto state_name = util::get_value<std::string>(state_entry, "name");
+
+					if (process_state(states_out, state_entry, state_name, base_path))
+					{
+						count++;
+					}
+
+					break;
+				}
+				case util::json::value_t::string:
+				{
+					const auto state_path_raw = state_entry.get<std::string>();
+
+					if (resolve_state(states_out, state_path_raw, base_path))
+					{
+						count++;
+					}
+
+					break;
+				}
+			}
+		});
+
+		return count;
 	}
 
 	std::size_t EntityFactory::process_state_isolated_components(EntityState& state, const util::json& isolated)
@@ -628,11 +718,21 @@ namespace engine
 		return count;
 	}
 
-	std::size_t EntityFactory::process_state_rules(EntityState& state, const util::json& rules)
+	std::size_t EntityFactory::process_state_rules
+	(
+		EntityState& state,
+		const util::json& rules,
+
+		EntityDescriptor::StateCollection* opt_states_out,
+		const std::filesystem::path* opt_base_path,
+		bool allow_inline_import
+	)
 	{
+		using namespace entt::literals;
+
 		std::size_t count = 0;
 		
-		auto process_rule = [&state, &count](const std::string& trigger_condition_expr, const util::json& content) -> bool // std::string_view // [this, ...]
+		auto process_rule = [this, &state, &count, &opt_states_out, &opt_base_path, allow_inline_import](const std::string& trigger_condition_expr, const util::json& content) -> bool // std::string_view // [this, ...]
 		{
 			auto [type_name, member_name, comparison_operator, compared_value_raw] = parse_trigger_condition(trigger_condition_expr);
 
@@ -711,6 +811,7 @@ namespace engine
 					{
 						//.event_type = type,
 						.event_type_member = member_id,
+
 						.comparison_value = std::move(compared_value),
 						.comparison_method = comparison_method
 					};
@@ -731,10 +832,16 @@ namespace engine
 				delay = parse_time_duration(*time_data);
 			}
 
-			if (auto next_state = util::find_any(content, "state", "next_state"); next_state != content.end())
+			if (auto next_state = util::find_any(content, "state", "next", "next_state"); next_state != content.end())
 			{
-				const auto next_state_name = next_state->get<std::string>();
-				const auto next_state_id = hash(next_state_name);
+				const auto next_state_raw = next_state->get<std::string>();
+
+				const auto inline_import = process_state_inline_import(opt_states_out, next_state_raw, opt_base_path);
+
+				StringHash next_state_id = (inline_import) // EntityStateHash
+					? *inline_import->name
+					: hash(next_state_raw)
+				;
 
 				auto& rules_out = state.rules[type_name_id];
 
@@ -787,14 +894,54 @@ namespace engine
 				// In-place trigger condition.
 				const auto& trigger_condition_expr = declaration;
 
-				print(declaration);
-
 				process_rule(trigger_condition_expr, content);
 			}
 		}
 
 		// See above subroutine.
 		return count;
+	}
+
+	const EntityState* EntityFactory::process_state_inline_import
+	(
+		EntityDescriptor::StateCollection* states_out,
+		const std::string& command, // std::string_view
+		const std::filesystem::path* base_path,
+		bool allow_inline_import
+	)
+	{
+		using namespace entt::literals;
+
+		if (!allow_inline_import)
+		{
+			return nullptr;
+		}
+
+		if (!states_out)
+		{
+			return nullptr;
+		}
+
+		if (!base_path)
+		{
+			return nullptr;
+		}
+
+		auto [inline_command, state_path_raw, is_string_content] = parse_single_argument_command(command);
+
+		if (state_path_raw.empty())
+		{
+			return nullptr;
+		}
+
+		switch (hash(inline_command))
+		{
+			case "import"_hs:
+				// NOTE: Recursion.
+				return resolve_state(*states_out, state_path_raw, *base_path);
+		}
+
+		return nullptr;
 	}
 
 	void EntityFactory::process_archetype(const util::json& data, const std::filesystem::path& base_path, bool resolve_external_modules)
@@ -811,43 +958,7 @@ namespace engine
 
 		if (auto states = data.find("states"); states != data.end())
 		{
-			util::json_for_each(*states, [this, &base_path](const util::json& state_entry)
-			{
-				switch (state_entry.type())
-				{
-					case util::json::value_t::object:
-					{
-						const auto state_name = util::get_value<std::string>(state_entry, "name");
-
-						process_state(descriptor.states, state_entry, state_name);
-
-						break;
-					}
-					case util::json::value_t::string:
-					{
-						const auto state_path_raw = std::filesystem::path(state_entry.get<std::string>());
-						const auto state_path = resolve_reference(state_path_raw, base_path);
-
-						// TODO: Optimize.
-						auto state_data = util::load_json(state_path);
-
-						std::string state_name;
-
-						if (auto name_it = state_data.find("name"); name_it != state_data.end())
-						{
-							state_name = name_it->get<std::string>();
-						}
-						else
-						{
-							state_name = state_path_raw.filename().string();
-						}
-
-						process_state(descriptor.states, state_data, state_name);
-
-						break;
-					}
-				}
-			});
+			process_state_list(descriptor.states, *states, base_path);
 		}
 
 		if (auto default_state = data.find("default_state"); default_state != data.end())

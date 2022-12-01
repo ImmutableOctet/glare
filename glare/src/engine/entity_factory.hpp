@@ -143,18 +143,48 @@ namespace engine
 				std::optional<SmallSize> constructor_arg_count=std::nullopt
 			);
 
-			bool process_state
+			// Resolves a state from a (raw) path.
+			// See also: `process_state`
+			const EntityState* resolve_state
+			(
+				EntityDescriptor::StateCollection& states_out,
+				std::string_view state_path_raw, // const std::string&
+				const std::filesystem::path& base_path
+			);
+
+			// Returns a pointer to the processed state (stored in `states_out`) on success.
+			const EntityState* process_state
 			(
 				EntityDescriptor::StateCollection& states_out,
 				const util::json& data,
-				std::string_view state_name
+				std::string_view state_name,
+				const std::filesystem::path& base_path
 			);
+
+			std::size_t process_state_list(EntityDescriptor::StateCollection& states_out, const util::json& data, const std::filesystem::path& base_path);
 
 			std::size_t process_state_isolated_components(EntityState& state, const util::json& isolated);
 
-			std::size_t process_state_rules(EntityState& state, const util::json& rules);
+			// NOTE: The `opt_states_out` and `opt_base_path` arguments are only used if `allow_inline_import` is enabled.
+			std::size_t process_state_rules
+			(
+				EntityState& state,
+				const util::json& rules,
 
-			void process_component_list
+				EntityDescriptor::StateCollection* opt_states_out=nullptr,
+				const std::filesystem::path* opt_base_path=nullptr,
+				bool allow_inline_import=true
+			);
+
+			const EntityState* process_state_inline_import
+			(
+				EntityDescriptor::StateCollection* states_out,
+				const std::string& command, // std::string_view
+				const std::filesystem::path* base_path,
+				bool allow_inline_import=true
+			);
+
+			std::size_t process_component_list
 			(
 				EntityDescriptor::TypeInfo& components_out,
 				const util::json& components
@@ -239,8 +269,10 @@ namespace engine
 
 						// TODO: Optimize.
 						auto archetype = util::load_json(archetype_path);
+						
+						const auto base_path = archetype_path.parent_path();
 
-						process_archetype(archetype, archetype_path.parent_path(), child_callback, resolve_external_modules, process_children);
+						process_archetype(archetype, base_path, child_callback, resolve_external_modules, process_children);
 					}
 				);
 

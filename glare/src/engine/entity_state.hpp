@@ -30,7 +30,7 @@ namespace engine
 			using Rules = std::unordered_map<MetaTypeID, RuleCollection>; // std::map<...>;
 
 			// The name of this state.
-			std::optional<StringHash> name;
+			std::optional<StringHash> name; // EntityStateHash
 
 			struct
 			{
