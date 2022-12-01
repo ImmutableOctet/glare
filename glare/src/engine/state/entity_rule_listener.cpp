@@ -223,16 +223,19 @@ namespace engine
 
 			for (const auto& rule_entry : *rules)
 			{
+				const auto& condition = rule_entry.condition;
+				const auto& delay = rule_entry.delay;
+
 				util::visit
 				(
-					rule_entry,
+					rule_entry.action,
 					
-					[this, &registry, entity, event_player_index, &event_instance](const Transition& transition)
+					[this, &registry, entity, event_player_index, &event_instance, &condition, &delay](const Transition& transition)
 					{
 						// Resolve trigger condition status:
-						if (transition.condition)
+						if (condition)
 						{
-							if (!transition.condition->condition_met(event_instance))
+							if (!condition->condition_met(event_instance))
 							{
 								// Condition has not been met; continue to next rule.
 								return;
@@ -344,7 +347,7 @@ namespace engine
 						}
 						else
 						{
-							service->timed_event<StateChangeCommand>(transition.delay, entity, target, transition.state_name);
+							service->timed_event<StateChangeCommand>(delay, entity, target, transition.state_name);
 						}
 					},
 
