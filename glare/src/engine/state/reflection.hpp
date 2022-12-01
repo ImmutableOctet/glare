@@ -9,6 +9,7 @@
 #include "components/frozen_state_component.hpp"
 
 #include "commands/state_change_command.hpp"
+#include "commands/state_activation_command.hpp"
 
 namespace engine
 {
@@ -50,7 +51,23 @@ namespace engine
 			<
 				decltype(Command::source),
 				decltype(Command::target),
+				
 				decltype(StateChangeCommand::state_name)
+			>()
+		;
+	}
+
+	template <>
+	void reflect<StateActivationCommand>()
+	{
+		engine_command_type<StateActivationCommand>()
+			.data<&StateActivationCommand::state_name>("state_name"_hs)
+			.ctor
+			<
+				decltype(Command::source),
+				decltype(Command::target),
+				
+				decltype(StateActivationCommand::state_name)
 			>()
 		;
 	}
@@ -67,5 +84,6 @@ namespace engine
 
 		// Commands:
 		reflect<StateChangeCommand>();
+		reflect<StateActivationCommand>();
 	}
 }
