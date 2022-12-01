@@ -77,9 +77,6 @@ namespace engine
 		// transition to upon activation of `condition`.
 		StringHash state_name;
 
-		std::optional<EventTriggerCondition> condition = std::nullopt;
-		std::optional<Timer::Duration> delay = std::nullopt;
-
 		inline std::size_t target_index() const
 		{
 			return target.index();
@@ -118,16 +115,24 @@ namespace engine
 
 	struct EntityStateCommandRule // : public EntityStateRuleType
 	{
-		std::optional<EventTriggerCondition> condition = std::nullopt;
-
 		//MetaTypeDescriptor command;
 	};
 
-	using EntityStateRule = std::variant
+	using EntityStateAction = std::variant
 	<
 		EntityStateTransitionRule,
 		EntityStateCommandRule
 	>;
+
+	struct EntityStateRule
+	{
+		using Action = EntityStateAction;
+
+		std::optional<EventTriggerCondition> condition;
+		std::optional<Timer::Duration> delay; // std::nullopt; // Timer::Duration::zero();
+
+		Action action;
+	};
 
 	using EntityStateRuleCollection = util::small_vector<EntityStateRule, 2>;
 }
