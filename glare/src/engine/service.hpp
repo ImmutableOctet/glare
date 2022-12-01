@@ -66,7 +66,7 @@ namespace engine
 			{
 				if constexpr (std::is_same_v<EventType, std::decay_t<TimedEvent>>)
 				{
-					enqueue_timed_event(TimedEvent{ std::forward<Args>(args)... });
+					enqueue_timed_event(TimedEvent { std::forward<Args>(args)... });
 				}
 				else
 				{
@@ -121,6 +121,13 @@ namespace engine
 			inline void timed_event(Timer timer, EventType&& event_obj)
 			{
 				queue_event<TimedEvent>(TimedEvent(timer, std::move(event_obj)));
+			}
+
+
+			template <typename EventType, typename... Args>
+			inline void timed_event(Timer::Duration timer_duration, Args&&... args)
+			{
+				timed_event<EventType>(Timer(timer_duration), std::forward<Args>(args)...);
 			}
 
 			template <typename EventType, typename... Args>
