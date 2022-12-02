@@ -541,7 +541,7 @@ namespace engine
 	)
 	{
 		// Handle embedded imports of other states:
-		if (auto imports = util::find_any(data, "state", "states", "import", "imports"); imports != data.end())
+		if (auto imports = util::find_any(data, "import", "imports"); imports != data.end())
 		{
 			// NOTE: Recursion.
 			process_state_list(states_out, *imports, base_path);
@@ -824,47 +824,13 @@ namespace engine
 			EntityStateTransitionRule::TargetType target = EntityStateTransitionRule::SelfTarget{};
 			std::optional<Timer::Duration> delay = std::nullopt;
 
-			std::string next_state_raw;
-
-			switch (content.type())
+			auto process_transition_rule = [&](const auto& next_state_raw)
 			{
-				case util::json::value_t::string:
+				if (next_state_raw.empty())
 				{
-					next_state_raw = content.get<std::string>();
-
-					break;
+					return false;
 				}
-				case util::json::value_t::object:
-				{
-					if (auto target_data = util::find_any(content, "target", "target_entity"); target_data != content.end())
-					{
-						target = process_rule_target(*target_data);
-					}
 
-					if (auto time_data = util::find_any(content, "timer", "wait", "delay"); time_data != content.end())
-					{
-						delay = parse_time_duration(*time_data);
-					}
-
-					// 
-					if (auto next_state = util::find_any(content, "state", "next", "next_state"); next_state != content.end())
-					{
-						next_state_raw = next_state->get<std::string>();
-					}
-					else if (auto command = util::find_any(content, "command", "generate"); command != content.end())
-					{
-						// TODO: Implement commands.
-						assert(false);
-
-						return false;
-					}
-
-					break;
-				}
-			}
-
-			if (!next_state_raw.empty())
-			{
 				const auto inline_import = process_state_inline_import(opt_states_out, next_state_raw, opt_base_path);
 
 				StringHash next_state_id = (inline_import) // EntityStateHash
@@ -889,6 +855,40 @@ namespace engine
 				count++;
 
 				return true;
+			};
+
+			switch (content.type())
+			{
+				case util::json::value_t::string:
+					return process_transition_rule(content.get<std::string>());
+				
+				case util::json::value_t::object:
+				{
+					if (auto target_data = util::find_any(content, "target", "target_entity"); target_data != content.end())
+					{
+						target = process_rule_target(*target_data);
+					}
+
+					if (auto time_data = util::find_any(content, "timer", "wait", "delay"); time_data != content.end())
+					{
+						delay = parse_time_duration(*time_data);
+					}
+
+					if (auto next_state = util::find_any(content, "state", "next", "next_state"); next_state != content.end())
+					{
+						return process_transition_rule(next_state->get<std::string>());
+					}
+
+					if (auto command = util::find_any(content, "command", "generate"); command != content.end())
+					{
+						// TODO: Implement commands.
+						assert(false);
+
+						//return false;
+					}
+
+					break;
+				}
 			}
 
 			print_warn("Unable to process rule for: {}", trigger_condition_expr);
