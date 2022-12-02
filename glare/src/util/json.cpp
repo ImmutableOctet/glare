@@ -17,7 +17,7 @@ namespace util
 		{
 			std::ifstream map_data_stream(path);
 
-			return util::json::parse(map_data_stream);
+			return util::json::parse(map_data_stream, nullptr, true, true);
 		}
 		catch (const std::exception& e)
 		{
