@@ -132,7 +132,7 @@ namespace engine
 			static std::optional<Timer::Duration> parse_time_duration(const util::json& time_data);
 
 			// TODO: Move to a different file/class.
-			static EntityStateTransitionRule::TargetType process_rule_target(const util::json& target_data);
+			static EntityStateTarget::TargetType process_rule_target(const util::json& target_data);
 
 			bool process_component
 			(

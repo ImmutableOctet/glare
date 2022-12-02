@@ -199,11 +199,11 @@ namespace engine
 	}
 
 	// TODO: Move to a different source file.
-	EntityStateTransitionRule::TargetType EntityFactory::process_rule_target(const util::json& target_data)
+	EntityStateTarget::TargetType EntityFactory::process_rule_target(const util::json& target_data)
 	{
 		using namespace entt::literals;
 
-		using Target = EntityStateTransitionRule;
+		using Target = EntityStateTarget;
 
 		switch (target_data.type())
 		{
@@ -291,7 +291,7 @@ namespace engine
 							}
 							else
 							{
-								return Target::ChildTarget{ hash(command_content) };
+								return Target::ChildTarget { hash(command_content) };
 							}
 						}
 
@@ -540,8 +540,10 @@ namespace engine
 		const std::filesystem::path& base_path
 	)
 	{
+		using namespace entt::literals;
+
 		// Handle embedded imports of other states:
-		if (auto imports = util::find_any(data, "import", "imports"); imports != data.end())
+		if (auto imports = util::find_any(data, "import", "imports", "state", "states"); imports != data.end())
 		{
 			// NOTE: Recursion.
 			process_state_list(states_out, *imports, base_path);
@@ -821,7 +823,7 @@ namespace engine
 				}
 			}
 
-			EntityStateTransitionRule::TargetType target = EntityStateTransitionRule::SelfTarget{};
+			EntityStateTarget::TargetType target = EntityStateTarget::SelfTarget {};
 			std::optional<Timer::Duration> delay = std::nullopt;
 
 			auto process_transition_rule = [&](const auto& next_state_raw)

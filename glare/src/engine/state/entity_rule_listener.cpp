@@ -220,6 +220,7 @@ namespace engine
 
 			using Transition = EntityStateTransitionRule;
 			using Command    = EntityStateCommandRule;
+			using Target     = EntityStateTarget;
 
 			for (const auto& rule_entry : *rules)
 			{
@@ -246,14 +247,14 @@ namespace engine
 
 						util::visit
 						(
-							transition.target,
+							transition.target_type(),
 
-							[entity, &target](const Transition::SelfTarget&)
+							[entity, &target](const Target::SelfTarget&)
 							{
 								target = entity;
 							},
 
-							[&registry, entity, &target](const Transition::ParentTarget&)
+							[&registry, entity, &target](const Target::ParentTarget&)
 							{
 								if (const RelationshipComponent* relationship = registry.try_get<RelationshipComponent>(entity))
 								{
@@ -261,12 +262,12 @@ namespace engine
 								}
 							},
 
-							[&target](const Transition::EntityTarget& exact_entity)
+							[&target](const Target::EntityTarget& exact_entity)
 							{
 								target = exact_entity.entity;
 							},
 
-							[&registry, &target](const Transition::EntityNameTarget& named_target)
+							[&registry, &target](const Target::EntityNameTarget& named_target)
 							{
 								auto named_range = registry.view<NameComponent>().each();
 
@@ -284,7 +285,7 @@ namespace engine
 								}
 							},
 
-							[&registry, entity, &target](const Transition::ChildTarget& child_target)
+							[&registry, entity, &target](const Target::ChildTarget& child_target)
 							{
 								//assert(child_target.child_name);
 
@@ -322,7 +323,7 @@ namespace engine
 								);
 							},
 							
-							[&registry, &target](const Transition::PlayerTarget& player_target)
+							[&registry, &target](const Target::PlayerTarget& player_target)
 							{
 								auto player_range = registry.view<PlayerComponent>().each();
 
