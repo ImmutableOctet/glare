@@ -1,4 +1,5 @@
 #include "state_system.hpp"
+
 #include "events.hpp"
 
 #include "components/state_component.hpp"
@@ -41,6 +42,7 @@ namespace engine
 		// Standard events:
 		service.register_event<OnServiceUpdate, &StateSystem::on_update>(*this);
 		service.register_event<OnStateChange, &StateSystem::on_state_change>(*this);
+		service.register_event<OnStateActivate, &StateSystem::on_state_activate>(*this);
 
 		// Commands:
 		service.register_event<StateChangeCommand, &StateSystem::on_state_change_command>(*this);
@@ -353,6 +355,17 @@ namespace engine
 		{
 			print("Entity {}: state changed to #{}", state_change.entity, *state_change.to.id);
 		}
+	}
+
+	// Handles logging/printing for debugging purposes.
+	void StateSystem::on_state_activate(const OnStateActivate& state_activate)
+	{
+		if (!state_activate.state.id)
+		{
+			return;
+		}
+
+		print("Entity {}: state #{} activated", state_activate.entity, *state_activate.state.id);
 	}
 
 	void StateSystem::on_state_change_command(const StateChangeCommand& state_change)

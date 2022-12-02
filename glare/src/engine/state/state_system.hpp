@@ -22,6 +22,7 @@ namespace engine
 
 	struct OnServiceUpdate;
 	struct OnStateChange;
+	struct OnStateActivate;
 	struct StateChangeCommand;
 	struct StateActivationCommand;
 
@@ -59,6 +60,7 @@ namespace engine
 			void on_state_destroyed(Registry& registry, Entity entity);
 
 			void on_state_change(const OnStateChange& state_change);
+			void on_state_activate(const OnStateActivate& state_activate);
 
 			void on_state_change_command(const StateChangeCommand& state_change);
 			void on_state_activation_command(const StateActivationCommand& state_activation);
