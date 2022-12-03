@@ -82,22 +82,15 @@ namespace engine
 					return data_entry;
 				}
 
-				if (content.is_array())
+				if (content.is_array() || content.is_string())
 				{
-					auto data_range = type.data();
-
-					auto data_it = (data_range.begin() + variable_index);
-
-					if (data_it < data_range.end()) // !=
+					if (auto data_entry = get_data_member_by_index(type, variable_index, true))
 					{
-						if (auto data_entry = data_it->second)
-						{
-							// Re-assign the variable name/hash to reflect the newly resolved entry.
-							var_name_hash = data_it->first;
+						// Re-assign the variable name/hash to reflect the newly resolved entry.
+						var_name_hash = data_entry->first;
 
-							// Return the newly resolved data entry.
-							return data_entry;
-						}
+						// Return the newly resolved data entry.
+						return data_entry->second;
 					}
 				}
 
