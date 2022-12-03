@@ -178,21 +178,50 @@ namespace engine
     template <typename T>
     entt::meta_any store_meta_component(Registry& registry, Entity entity)
     {
-        auto* instance = get_component<T>(registry, entity);
+        if constexpr (true) // (std::is_move_assignable_v<T>) // (std::is_move_constructible_v<T>)
+        {
+            auto* instance = get_component<T>(registry, entity);
 
-        if (!instance)
+            if (!instance)
+            {
+                return {};
+            }
+
+            entt::meta_any output = std::move(*instance);
+
+            registry.erase<T>(entity);
+
+            // Alternate (slower):
+            // remove_component<T>(registry, entity);
+
+            return output;
+        }
+        else
         {
             return {};
         }
+    }
 
-        entt::meta_any output = std::move(*instance);
+    // Generates a copy of component `T` from `entity` into an `entt::meta_any` instance.
+    // the original component instance remains attached to `entity`.
+    template <typename T>
+    entt::meta_any copy_meta_component(Registry& registry, Entity entity)
+    {
+        if constexpr (std::is_copy_constructible_v<T>)
+        {
+            auto* instance = get_component<T>(registry, entity);
 
-        registry.erase<T>(entity);
+            if (!instance)
+            {
+                return {};
+            }
 
-        // Alternate (slower):
-        // remove_component<T>(registry, entity);
-
-        return output;
+            return T(*instance);
+        }
+        else
+        {
+            return {};
+        }
     }
 
     template <typename T>
@@ -252,6 +281,7 @@ namespace engine
             .template func<get_component<T>>("get_component"_hs)
             .template func<&emplace_meta_component<T>, entt::as_ref_t>("emplace_meta_component"_hs)
             .template func<&store_meta_component<T>>("store_meta_component"_hs)
+            .template func<&copy_meta_component<T>>("copy_meta_component"_hs)
             .template func<&remove_component<T>>("remove_component"_hs)
             .template func<&get_or_emplace_component<T>, entt::as_ref_t>("get_or_emplace_component"_hs)
             .template func<&patch_meta_component<T>>("patch_meta_component"_hs)
