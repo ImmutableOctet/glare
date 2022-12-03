@@ -32,21 +32,23 @@ namespace engine
 		return { var_name, var_type };
 	}
 
-	MetaTypeDescriptor::MetaTypeDescriptor(MetaType type, std::optional<SmallSize> constructor_argument_count)
-		: type(type), constructor_argument_count(constructor_argument_count) {}
+	MetaTypeDescriptor::MetaTypeDescriptor(MetaType type, std::optional<SmallSize> constructor_argument_count, const MetaTypeDescriptorFlags& flags)
+		: type(type), constructor_argument_count(constructor_argument_count), flags(flags) {}
 
-	MetaTypeDescriptor::MetaTypeDescriptor(MetaTypeID type_id, std::optional<SmallSize> constructor_argument_count)
-		: type(resolve(type_id)), constructor_argument_count(constructor_argument_count) {}
+	MetaTypeDescriptor::MetaTypeDescriptor(MetaTypeID type_id, std::optional<SmallSize> constructor_argument_count, const MetaTypeDescriptorFlags& flags)
+		: type(resolve(type_id)), constructor_argument_count(constructor_argument_count), flags(flags) {}
 
 	MetaTypeDescriptor::MetaTypeDescriptor
 	(
 		MetaType type,
 		const util::json& content,
 
-		std::optional<SmallSize> constructor_argument_count
+		std::optional<SmallSize> constructor_argument_count,
+		const MetaTypeDescriptorFlags& flags
 	) :
 		type(type),
-		constructor_argument_count(constructor_argument_count)
+		constructor_argument_count(constructor_argument_count),
+		flags(flags)
 	{
 		assert(type);
 
@@ -261,7 +263,7 @@ namespace engine
 	{
 		MetaAny instance;
 
-		if (allow_forwarding_fields_to_constructor)
+		if (flags.allow_forwarding_fields_to_constructor)
 		{
 			instance = instance_exact(allow_recursion);
 		}
@@ -270,7 +272,7 @@ namespace engine
 
 		if (!instance)
 		{
-			if (allow_default_construction)
+			if (flags.allow_default_construction)
 			{
 				instance = instance_default();
 
@@ -285,7 +287,7 @@ namespace engine
 			}
 		}
 
-		if (is_default_constructed || force_field_assignment)
+		if (is_default_constructed || flags.force_field_assignment)
 		{
 			apply_fields(instance);
 		}

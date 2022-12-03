@@ -14,8 +14,16 @@
 
 namespace engine
 {
+	struct MetaTypeDescriptorFlags
+	{
+		bool allow_default_construction : 1 = true;
+		bool allow_forwarding_fields_to_constructor : 1 = true;
+		bool force_field_assignment : 1 = false;
+	};
+
 	struct MetaTypeDescriptor
 	{
+		using Flags = MetaTypeDescriptorFlags;
 		using SmallSize = std::uint8_t; // std::uint16_t; // std::size_t;
 
 		using Names = MetaSymbolStorage; // util::small_vector<MetaSymbolID, 4>; // 8
@@ -30,15 +38,16 @@ namespace engine
 		>
 		parse_variable_declaration(std::string_view var_decl, std::string_view type_specifier_symbol=":");
 
-		MetaTypeDescriptor(MetaType type, std::optional<SmallSize> constructor_argument_count=std::nullopt);
-		MetaTypeDescriptor(MetaTypeID type_id, std::optional<SmallSize> constructor_argument_count=std::nullopt);
+		MetaTypeDescriptor(MetaType type, std::optional<SmallSize> constructor_argument_count=std::nullopt, const MetaTypeDescriptorFlags& flags={});
+		MetaTypeDescriptor(MetaTypeID type_id, std::optional<SmallSize> constructor_argument_count=std::nullopt, const MetaTypeDescriptorFlags& flags={});
 
 		MetaTypeDescriptor
 		(
 			MetaType meta_type,
 			const util::json& content,
 
-			std::optional<SmallSize> constructor_argument_count=std::nullopt
+			std::optional<SmallSize> constructor_argument_count=std::nullopt,
+			const MetaTypeDescriptorFlags& flags={}
 		);
 
 		MetaTypeDescriptor(const MetaTypeDescriptor&) = default;
@@ -55,9 +64,7 @@ namespace engine
 
 		std::optional<SmallSize> constructor_argument_count = std::nullopt; // std::size_t
 
-		bool allow_default_construction : 1 = true;
-		bool allow_forwarding_fields_to_constructor : 1 = true;
-		bool force_field_assignment : 1 = false;
+		Flags flags;
 
 		std::optional<std::size_t> get_variable_index(MetaSymbolID name) const;
 
@@ -126,8 +133,8 @@ namespace engine
 		inline auto data() const { return field_values.data(); }
 		inline auto size() const { return field_values.size(); }
 
-		inline bool can_default_construct() const { return allow_default_construction; }
-		inline bool can_forward_fields_to_constructor() const { return allow_forwarding_fields_to_constructor; }
-		inline bool forces_field_assignment() const { return force_field_assignment; }
+		inline bool can_default_construct() const { return flags.allow_default_construction; }
+		inline bool can_forward_fields_to_constructor() const { return flags.allow_forwarding_fields_to_constructor; }
+		inline bool forces_field_assignment() const { return flags.force_field_assignment; }
 	};
 }
