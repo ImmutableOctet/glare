@@ -72,7 +72,7 @@ namespace engine
 
 			if (!instance)
 			{
-				print_warn("Unable to store instance of component #{} during storage operation.", component_type.id()); // component_entry
+				print_warn("Unable to store instance of component #{} during storage operation. (maybe try `persist` instead of `add`?)", component_type.id()); // component_entry
 
 				continue;
 			}
