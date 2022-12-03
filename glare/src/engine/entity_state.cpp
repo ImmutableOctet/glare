@@ -56,37 +56,46 @@ namespace engine
 
 	void EntityState::decay(Registry& registry, Entity entity, EntityStateIndex self_index, const MetaDescription* next_state_persist) const
 	{
+		// Store state-local component instances.
 		store(registry, entity, self_index);
 
-		for (const auto& component : components.add.type_definitions)
+		// Determine if we need to remove the components we added:
+		if (decay_policy.remove_added_components)
 		{
-			auto& type = component.type;
-
-			if (next_state_persist)
+			// Enumerate components added by this state, cross-referencing the 'persistent components' lists
+			// from both this state and the next state, to determine if removal is necessary:
+			for (const auto& component : components.add.type_definitions)
 			{
-				if (next_state_persist->get_definition(type))
+				auto& type = component.type;
+
+				if (next_state_persist)
+				{
+					if (next_state_persist->get_definition(type))
+					{
+						continue;
+					}
+				}
+
+				if (components.persist.get_definition(type))
 				{
 					continue;
 				}
-			}
 
-			if (components.persist.get_definition(type))
-			{
-				continue;
+				remove_component(registry, entity, type);
 			}
-
-			remove_component(registry, entity, type);
 		}
 
+		// Unfreeze components we didn't want during this state's execution.
 		unfreeze(registry, entity, self_index);
 
-		// Ensure that persistent components are accounted for,
-		// but do not alter any existing state.
+		// Ensure that persistent components are accounted for, but do not alter any existing state.
+		// (This step is necessary due to the possibility of the next state being dependent on a now-removed component)
 		persist(registry, entity, false);
 	}
 
 	void EntityState::activate(Registry& registry, Entity entity, EntityStateIndex self_index, std::optional<EntityStateIndex> prev_index, bool update_state_component) const
 	{
+		copy(registry, entity, self_index);
 		freeze(registry, entity, self_index);
 		retrieve(registry, entity, self_index);
 		remove(registry, entity);
@@ -117,6 +126,28 @@ namespace engine
 	std::size_t EntityState::build_storage(const util::json& storage_list, bool cross_reference_persist)
 	{
 		return build_type_list(storage_list, components.store, cross_reference_persist);
+	}
+
+	std::size_t EntityState::build_local_copy(const util::json& local_copy_list, bool cross_reference_persist)
+	{
+		const auto local_copy_result    = build_type_list(local_copy_list, components.local_copy, cross_reference_persist);
+		const auto freeze_append_result = build_type_list(local_copy_list, components.freeze, cross_reference_persist);
+
+		assert(local_copy_result == freeze_append_result);
+
+		return local_copy_result;
+	}
+
+	std::size_t EntityState::build_init_copy(const util::json& init_copy_list, bool cross_reference_persist)
+	{
+		const auto init_copy_result     = build_type_list(init_copy_list, components.init_copy, cross_reference_persist);
+		const auto freeze_append_result = build_type_list(init_copy_list, components.freeze, cross_reference_persist);
+		const auto store_append_result  = build_type_list(init_copy_list, components.store, cross_reference_persist);
+
+		assert(freeze_append_result == init_copy_result);
+		assert(store_append_result == init_copy_result);
+
+		return init_copy_result;
 	}
 
 	bool EntityState::process_type_list_entry(MetaIDStorage& types_out, const util::json& list_entry, bool cross_reference_persist)
@@ -411,5 +442,19 @@ namespace engine
 	StateStorageComponent& EntityState::retrieve(Registry& registry, Entity entity, EntityStateIndex self_index) const
 	{
 		return retrieve_components<StateStorageComponent>(registry, entity, self_index);
+	}
+
+	StateStorageComponent& EntityState::copy(Registry& registry, Entity entity, EntityStateIndex self_index) const
+	{
+		auto& container = registry.get_or_emplace<StateStorageComponent>(entity);
+		auto& storage = container.get_storage(self_index);
+
+		// NOTE: To implement local copies, the items in `local_copy` are also
+		// added to `freeze` during the state's generation phase prior.
+		storage.store(registry, entity, components.local_copy, true, false);
+
+		storage.store(registry, entity, components.init_copy, true, true);
+
+		return container;
 	}
 }

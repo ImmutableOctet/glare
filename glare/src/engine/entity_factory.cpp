@@ -383,8 +383,14 @@ namespace engine
 		EntityDescriptor::TypeInfo& components_out,
 		std::string_view component_name,
 		const util::json* data,
-		bool allow_inplace_changes,
-		std::optional<SmallSize> constructor_arg_count
+		
+		std::optional<SmallSize> constructor_arg_count,
+
+		const MetaTypeDescriptorFlags& component_flags,
+
+		bool allow_entry_update,
+		bool allow_new_entry,
+		bool allow_default_entries
 	)
 	{
 		//auto meta = entt::resolve();
@@ -397,20 +403,38 @@ namespace engine
 			return false;
 		}
 
-		auto make_type_descriptor = [&data, &meta_type, &constructor_arg_count]()
+		auto make_type_descriptor = [&data, &meta_type, &constructor_arg_count, &component_flags]()
 		{
 			if (data)
 			{
 				if (const auto& component_content = *data; !component_content.empty())
 				{
-					return MetaTypeDescriptor(meta_type, component_content, constructor_arg_count);
+					return MetaTypeDescriptor(meta_type, component_content, constructor_arg_count, component_flags);
 				}
 			}
 
-			return MetaTypeDescriptor(meta_type, constructor_arg_count);
+			return MetaTypeDescriptor(meta_type, constructor_arg_count, component_flags);
 		};
 
 		auto component = make_type_descriptor();
+
+		auto check_construction_type = [allow_new_entry, allow_default_entries, &data]() -> bool
+		{
+			if (!allow_new_entry)
+			{
+				return false;
+			}
+
+			if (!allow_default_entries)
+			{
+				if (!data)
+				{
+					return false;
+				}
+			}
+
+			return true;
+		};
 
 		auto& loaded_components = components_out.type_definitions;
 
@@ -426,16 +450,26 @@ namespace engine
 
 		if (it == loaded_components.end())
 		{
+			if (!check_construction_type())
+			{
+				return false;
+			}
+
 			loaded_components.emplace_back(std::move(component));
 		}
 		else
 		{
-			if (allow_inplace_changes)
+			if (allow_entry_update)
 			{
 				it->set_variables(std::move(component));
 			}
 			else
 			{
+				if (!check_construction_type())
+				{
+					return false;
+				}
+
 				*it = std::move(component);
 			}
 		}
@@ -446,16 +480,23 @@ namespace engine
 	std::size_t EntityFactory::process_component_list
 	(
 		EntityDescriptor::TypeInfo& components_out,
-		const util::json& components
+		const util::json& components,
+
+		const MetaTypeDescriptorFlags& shared_component_flags,
+
+		bool allow_new_entry,
+		bool allow_default_entries
 	)
 	{
 		std::size_t count = 0;
 
-		auto as_component = [this, &components_out, &count](const auto& component_declaration, const util::json* component_content=nullptr)
+		auto as_component = [this, &components_out, &shared_component_flags, allow_new_entry, allow_default_entries, &count](const auto& component_declaration, const util::json* component_content=nullptr)
 		{
-			auto [component_name, allow_inplace_changes, constructor_arg_count] = parse_component_declaration(component_declaration);
+			auto [component_name, allow_entry_update, constructor_arg_count] = parse_component_declaration(component_declaration);
 
-			if (process_component(components_out, component_name, component_content, allow_inplace_changes, constructor_arg_count))
+			const bool force_entry_update = ((!allow_new_entry) && (!allow_default_entries));
+
+			if (process_component(components_out, component_name, component_content, constructor_arg_count, shared_component_flags, (allow_entry_update || force_entry_update), allow_new_entry, allow_default_entries))
 			{
 				count++;
 			}
@@ -556,7 +597,7 @@ namespace engine
 			state.name = hash(state_name);
 		}
 
-		if (auto persist = util::find_any(data, "persist", "share", "shared", "mutate", "modify", "change", "="); persist != data.end())
+		if (auto persist = util::find_any(data, "persist", "share", "shared", "modify", "="); persist != data.end())
 		{
 			process_component_list(state.components.persist, *persist);
 		}
@@ -581,9 +622,19 @@ namespace engine
 			state.build_storage(*storage_list);
 		}
 
-		if (auto isolated = util::find_any(data, "isolate", "isolated", "local", "local_storage"); isolated != data.end())
+		if (auto isolated = util::find_any(data, "local", "local_storage", "isolate", "isolated"); isolated != data.end())
 		{
 			process_state_isolated_components(state, *isolated);
+		}
+
+		if (auto local_copy = util::find_any(data, "copy", "local_copy"); local_copy != data.end())
+		{
+			process_state_local_copy_components(state, *local_copy);
+		}
+
+		if (auto init_copy = util::find_any(data, "local_modify", "copy_once", "clone", "init_copy"); init_copy != data.end())
+		{
+			process_state_init_copy_components(state, *init_copy);
 		}
 
 		if (auto time_data = util::find_any(data, "timer", "wait", "delay"); time_data != data.end())
@@ -655,72 +706,75 @@ namespace engine
 
 	std::size_t EntityFactory::process_state_isolated_components(EntityState& state, const util::json& isolated)
 	{
-		process_component_list(state.components.add, isolated);
+		return process_and_inspect_component_list
+		(
+			state.components.add,
 
-		std::size_t count = 0;
+			isolated,
 
-		auto process_isolated = [&state, &count](std::string_view component_name)
-		{
-			if (!state.process_type_list_entry(state.components.freeze, component_name, true)) // false
+			[&state](std::string_view component_name)
 			{
-				print_warn("Failed to process embedded `freeze` entry from isolation data.");
-
-				return;
-			}
-
-			if (!state.process_type_list_entry(state.components.store, component_name, true)) // false
-			{
-				print_warn("Failed to process embedded `store` entry from isolation data.");
-
-				return;
-			}
-
-			count++;
-		};
-
-		const auto container_type = isolated.type();
-
-		switch (container_type)
-		{
-			case util::json::value_t::object:
-			{
-				for (const auto& proxy : isolated.items())
+				if (!state.process_type_list_entry(state.components.freeze, component_name, true)) // false
 				{
-					const auto& component_declaration = proxy.key();
+					print_warn("Failed to process embedded `freeze` entry from isolation data.");
 
-					// Since component declarations can have additional symbols,
-					// we'll need to extract only the 'name' substring.
-					// 
-					// TODO: Optimize by rolling `process_component_list` into this routine. (Parses declarations twice)
-					auto component_decl_info = parse_component_declaration(component_declaration);
-					const auto& component_name = std::get<0>(component_decl_info);
-
-					process_isolated(component_name);
+					return false;
 				}
 
-				break;
-			}
-			case util::json::value_t::array:
-			{
-				for (const auto& proxy : isolated.items())
+				if (!state.process_type_list_entry(state.components.store, component_name, true)) // false
 				{
-					const auto component_name = proxy.value().get<std::string>();
+					print_warn("Failed to process embedded `store` entry from isolation data.");
 
-					process_isolated(std::string_view(component_name));
+					return false;
 				}
 
-				break;
-			}
-			default:
+				return true;
+			},
+
+			false
+		);
+	}
+
+	std::size_t EntityFactory::process_state_local_copy_components(EntityState& state, const util::json& local_copy)
+	{
+		const auto build_result = state.build_local_copy(local_copy);
+
+		const auto components_processed = process_component_list
+		(
+			state.components.add, local_copy,
 			{
-				print_warn("Unknown type identified in place of isolation data.");
+				.allow_default_construction             = false,
+				.allow_forwarding_fields_to_constructor = false,
+				.force_field_assignment                 = true
+			},
 
-				break;
-			}
-		}
+			false, false
+		);
 
-		// See above for accumulation.
-		return count;
+		assert(components_processed == build_result);
+
+		return build_result;
+	}
+
+	std::size_t EntityFactory::process_state_init_copy_components(EntityState& state, const util::json& init_copy)
+	{
+		const auto build_result = state.build_init_copy(init_copy);
+
+		const auto components_processed = process_component_list
+		(
+			state.components.add, init_copy,
+			{
+				.allow_default_construction             = false,
+				.allow_forwarding_fields_to_constructor = false,
+				.force_field_assignment                 = true
+			},
+
+			false, false
+		);
+
+		assert(components_processed == build_result);
+
+		return build_result;
 	}
 
 	std::size_t EntityFactory::process_state_rules

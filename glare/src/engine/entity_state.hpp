@@ -52,12 +52,25 @@ namespace engine
 
 				// List of component-types to be stored while this state is inactive.
 				MetaStorageDescription store;
+
+				// List of component-types to be copied/cloned upon initial activation of this state.
+				MetaStorageDescription init_copy;
+
+				// List of component-types to be copied/cloned every time this state is activated.
+				// After initial activation, these components will persist with the entity while this state is active.
+				MetaStorageDescription local_copy;
 			} components;
 
 			Rules rules;
 
 			// Delay in 'activation' portion of state initialization.
 			std::optional<Timer::Duration> activation_delay; // = Timer::Duration::zero(); // Timer::Duration
+
+			// TODO: Add method to change this from JSON.
+			struct
+			{
+				bool remove_added_components : 1 = true;
+			} decay_policy;
 
 			// Executes appropriate add/remove/persist functions in order to establish this state as current.
 			void update(Registry& registry, Entity entity, EntityStateIndex self_index, const EntityState* previous=nullptr, std::optional<EntityStateIndex> prev_index=std::nullopt, bool decay_prev_state=true, bool update_state_component=true) const;
@@ -86,6 +99,14 @@ namespace engine
 
 			// Utility function for building the `components.store` collection.
 			std::size_t build_storage(const util::json& storage_list, bool cross_reference_persist=true);
+
+			// Utility function for building the `components.local_copy`
+			// collection, as well as appending to `components.freeze`.
+			std::size_t build_local_copy(const util::json& local_copy_list, bool cross_reference_persist=false); // true
+
+			// Utility function for building the `components.init_copy` collection,
+			// as well as appending to `components.freeze` and `components.store`.
+			std::size_t build_init_copy(const util::json& init_copy_list, bool cross_reference_persist=false); // true
 
 			// Subroutine of `build_type_list`, meant to handle individual entries, rather than JSON arrays.
 			// This method returns true if a component entry could be processed from `list_entry`.
@@ -128,5 +149,7 @@ namespace engine
 			
 			StateStorageComponent& store(Registry& registry, Entity entity, EntityStateIndex self_index) const;
 			StateStorageComponent& retrieve(Registry& registry, Entity entity, EntityStateIndex self_index) const;
+
+			StateStorageComponent& copy(Registry& registry, Entity entity, EntityStateIndex self_index) const;
 	};
 }

@@ -1,9 +1,10 @@
 #pragma once
 
 #include "types.hpp"
-#include "entity_descriptor.hpp"
-#include "entity_state_rule.hpp"
 #include "timer.hpp"
+#include "entity_descriptor.hpp"
+#include "entity_state.hpp"
+#include "entity_state_rule.hpp"
 
 #include <util/json.hpp>
 #include <util/algorithm.hpp>
@@ -134,13 +135,21 @@ namespace engine
 			// TODO: Move to a different file/class.
 			static EntityStateTarget::TargetType process_rule_target(const util::json& target_data);
 
+			// NOTE: The 'allow' arguments refer to construction of the underlying `MetaTypeDescriptor`.
+			// To affect the component itself, use the `component_flags` argument.
 			bool process_component
 			(
 				EntityDescriptor::TypeInfo& components_out,
 				std::string_view component_name,
 				const util::json* data=nullptr,
-				bool allow_inplace_changes=false,
-				std::optional<SmallSize> constructor_arg_count=std::nullopt
+
+				std::optional<SmallSize> constructor_arg_count=std::nullopt,
+				
+				const MetaTypeDescriptorFlags& component_flags={},
+
+				bool allow_entry_update=false,
+				bool allow_new_entry=true,
+				bool allow_default_entries=true
 			);
 
 			// Resolves a state from a (raw) path.
@@ -163,7 +172,102 @@ namespace engine
 
 			std::size_t process_state_list(EntityDescriptor::StateCollection& states_out, const util::json& data, const std::filesystem::path& base_path);
 
+			// TODO: Optimize to avoid multiple calls to `parse_component_declaration`.
+			template <typename Callback>
+			inline std::size_t process_and_inspect_component_list
+			(
+				MetaDescription& components_out,
+				const util::json& components,
+				Callback&& callback,
+				bool exit_on_false_value=true,
+
+				const MetaTypeDescriptorFlags& shared_component_flags={},
+				bool allow_new_entry=true,
+				bool allow_default_entries=true
+			)
+			{
+				process_component_list(components_out, components, shared_component_flags, allow_new_entry, allow_default_entries);
+
+				std::size_t count = 0;
+
+				auto inspect_component = [&count, &callback](std::string_view component_name)
+				{
+					if (callback(component_name))
+					{
+						count++;
+
+						return true;
+					}
+
+					return false;
+				};
+
+				const auto container_type = components.type();
+
+				switch (container_type)
+				{
+					case util::json::value_t::object:
+					{
+						for (const auto& proxy : components.items())
+						{
+							const auto& component_declaration = proxy.key();
+
+							// Since component declarations can have additional symbols,
+							// we'll need to extract only the 'name' substring.
+							// 
+							// TODO: Optimize by rolling `process_component_list` into this routine. (Parses declarations twice)
+							auto component_decl_info = parse_component_declaration(component_declaration);
+							const auto& component_name = std::get<0>(component_decl_info);
+
+							const auto result = inspect_component(component_name);
+
+							if (!result && exit_on_false_value)
+							{
+								break;
+							}
+						}
+
+						break;
+					}
+					case util::json::value_t::array:
+					{
+						for (const auto& proxy : components.items())
+						{
+							const auto component_name = proxy.value().get<std::string>();
+
+							const auto result = inspect_component(std::string_view(component_name));
+
+							if (!result && exit_on_false_value)
+							{
+								break;
+							}
+						}
+
+						break;
+					}
+					case util::json::value_t::string:
+					{
+						const auto component_name = components.get<std::string>();
+
+						inspect_component(std::string_view(component_name));
+
+						break;
+					}
+					default:
+					{
+						//print_warn("Unknown type identified in place of component data.");
+
+						break;
+					}
+				}
+
+				// See above for accumulation.
+				return count;
+			}
+
 			std::size_t process_state_isolated_components(EntityState& state, const util::json& isolated);
+			std::size_t process_state_local_copy_components(EntityState& state, const util::json& local_copy);
+			std::size_t process_state_init_copy_components(EntityState& state, const util::json& init_copy);
 
 			// NOTE: The `opt_states_out` and `opt_base_path` arguments are only used if `allow_inline_import` is enabled.
 			std::size_t process_state_rules
@@ -187,7 +291,12 @@ namespace engine
 			std::size_t process_component_list
 			(
 				EntityDescriptor::TypeInfo& components_out,
-				const util::json& components
+				const util::json& components,
+
+				const MetaTypeDescriptorFlags& shared_component_flags={},
+
+				bool allow_new_entry=true,
+				bool allow_default_entries=true
 			);
 
 			void process_archetype(const util::json& data, const std::filesystem::path& base_path, bool resolve_external_modules=true);
