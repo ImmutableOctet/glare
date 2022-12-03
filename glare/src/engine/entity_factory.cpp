@@ -485,18 +485,26 @@ namespace engine
 		const MetaTypeDescriptorFlags& shared_component_flags,
 
 		bool allow_new_entry,
-		bool allow_default_entries
+		bool allow_default_entries,
+		bool forward_entry_update_condition_to_flags
 	)
 	{
 		std::size_t count = 0;
 
-		auto as_component = [this, &components_out, &shared_component_flags, allow_new_entry, allow_default_entries, &count](const auto& component_declaration, const util::json* component_content=nullptr)
+		auto as_component = [this, &components_out, &shared_component_flags, allow_new_entry, allow_default_entries, forward_entry_update_condition_to_flags, &count](const auto& component_declaration, const util::json* component_content=nullptr)
 		{
 			auto [component_name, allow_entry_update, constructor_arg_count] = parse_component_declaration(component_declaration);
 
 			const bool force_entry_update = ((!allow_new_entry) && (!allow_default_entries));
 
-			if (process_component(components_out, component_name, component_content, constructor_arg_count, shared_component_flags, (allow_entry_update || force_entry_update), allow_new_entry, allow_default_entries))
+			auto flags = shared_component_flags;
+
+			if (forward_entry_update_condition_to_flags && allow_entry_update)
+			{
+				flags.force_field_assignment = true;
+			}
+
+			if (process_component(components_out, component_name, component_content, constructor_arg_count, flags, (allow_entry_update || force_entry_update), allow_new_entry, allow_default_entries))
 			{
 				count++;
 			}
@@ -599,12 +607,12 @@ namespace engine
 
 		if (auto persist = util::find_any(data, "persist", "share", "shared", "modify", "="); persist != data.end())
 		{
-			process_component_list(state.components.persist, *persist);
+			process_component_list(state.components.persist, *persist, {}, true, true, true);
 		}
 
 		if (auto add = util::find_any(data, "add", "+"); add != data.end())
 		{
-			process_component_list(state.components.add, *add);
+			process_component_list(state.components.add, *add, {}, true, true, true);
 		}
 
 		if (auto removal_list = util::find_any(data, "remove", "-", "~"); removal_list != data.end())
@@ -627,12 +635,12 @@ namespace engine
 			process_state_isolated_components(state, *isolated);
 		}
 
-		if (auto local_copy = util::find_any(data, "copy", "local_copy"); local_copy != data.end())
+		if (auto local_copy = util::find_any(data, "local_copy", "copy"); local_copy != data.end())
 		{
 			process_state_local_copy_components(state, *local_copy);
 		}
 
-		if (auto init_copy = util::find_any(data, "local_modify", "copy_once", "clone", "init_copy"); init_copy != data.end())
+		if (auto init_copy = util::find_any(data, "init_copy", "local_modify", "copy_once", "clone"); init_copy != data.end())
 		{
 			process_state_init_copy_components(state, *init_copy);
 		}
@@ -748,7 +756,7 @@ namespace engine
 				.force_field_assignment                 = true
 			},
 
-			false, false
+			true, false
 		);
 
 		assert(components_processed == build_result);
@@ -769,7 +777,7 @@ namespace engine
 				.force_field_assignment                 = true
 			},
 
-			false, false
+			true, false
 		);
 
 		assert(components_processed == build_result);
@@ -938,7 +946,7 @@ namespace engine
 					if (auto command = util::find_any(content, "command", "generate"); command != content.end())
 					{
 						// TODO: Implement commands.
-						assert(false);
+						///assert(false);
 
 						//return false;
 					}

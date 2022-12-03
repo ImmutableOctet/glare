@@ -296,7 +296,8 @@ namespace engine
 				const MetaTypeDescriptorFlags& shared_component_flags={},
 
 				bool allow_new_entry=true,
-				bool allow_default_entries=true
+				bool allow_default_entries=true,
+				bool forward_entry_update_condition_to_flags=false
 			);
 
 			void process_archetype(const util::json& data, const std::filesystem::path& base_path, bool resolve_external_modules=true);

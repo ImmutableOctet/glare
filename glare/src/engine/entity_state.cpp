@@ -60,7 +60,7 @@ namespace engine
 		store(registry, entity, self_index);
 
 		// Determine if we need to remove the components we added:
-		if (decay_policy.remove_added_components)
+		if (decay_policy.remove_add_components)
 		{
 			// Enumerate components added by this state, cross-referencing the 'persistent components' lists
 			// from both this state and the next state, to determine if removal is necessary:
@@ -77,6 +77,11 @@ namespace engine
 				}
 
 				if (components.persist.get_definition(type))
+				{
+					continue;
+				}
+
+				if (decay_policy.keep_modified_add_components && component.forces_field_assignment())
 				{
 					continue;
 				}
@@ -196,9 +201,27 @@ namespace engine
 
 		util::json_for_each(type_names, [this, &types_out, &count, cross_reference_persist](const util::json& list_entry)
 		{
-			if (process_type_list_entry(types_out, list_entry, cross_reference_persist))
+			switch (list_entry.type())
 			{
-				count++;
+				case util::json::value_t::object:
+					for (const auto& proxy : list_entry.items())
+					{
+						const auto& component_name = proxy.key();
+
+						if (process_type_list_entry(types_out, std::string_view(component_name), cross_reference_persist))
+						{
+							count++;
+						}
+					}
+
+					break;
+				default:
+					if (process_type_list_entry(types_out, list_entry, cross_reference_persist))
+					{
+						count++;
+					}
+
+					break;
 			}
 		});
 
@@ -385,7 +408,7 @@ namespace engine
 		{
 			const auto& type = component.type;
 
-			if (components.persist.get_definition(type))
+			if (component.forces_field_assignment() || components.persist.get_definition(type))
 			{
 				update_component_fields(registry, entity, component);
 			}

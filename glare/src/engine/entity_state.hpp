@@ -69,7 +69,8 @@ namespace engine
 			// TODO: Add method to change this from JSON.
 			struct
 			{
-				bool remove_added_components : 1 = true;
+				bool remove_add_components        : 1 = true;
+				bool keep_modified_add_components : 1 = false;
 			} decay_policy;
 
 			// Executes appropriate add/remove/persist functions in order to establish this state as current.
