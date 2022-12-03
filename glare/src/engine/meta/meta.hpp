@@ -94,6 +94,96 @@ namespace engine
         return util::meta_type_from_name(type_name, "engine");
     }
 
+    template <typename Callback>
+    inline bool enumerate_data_members(const entt::meta_type& type, Callback&& callback, bool recursive=true, std::size_t* count_out=nullptr)
+    {
+        if (recursive)
+        {
+            for (const auto& base_type : type.base())
+            {
+                if (!enumerate_data_members(type, callback, recursive, count_out))
+                {
+                    break;
+                }
+            }
+        }
+
+        std::size_t count = 0;
+        bool result = true;
+
+        for (auto&& entry : type.data())
+        {
+            //callback(std::forward<decltype(entry)>(entry));
+
+            const auto& data_member_id = entry.first;
+            const auto& data_member    = entry.second;
+
+            result = callback(data_member_id, data_member);
+
+            count++;
+
+            if (!result)
+            {
+                break;
+            }
+        }
+
+        if (count_out)
+        {
+            *count_out += count;
+        }
+
+        return result;
+    }
+
+    inline std::optional<std::pair<entt::id_type, entt::meta_data>> get_local_data_member_by_index(const entt::meta_type& type, std::size_t variable_index)
+    {
+        auto data_range = type.data();
+        auto data_it = (data_range.begin() + variable_index);
+
+        if (data_it < data_range.end()) // !=
+        {
+            return *data_it;
+        }
+
+        return std::nullopt;
+    }
+
+    inline std::optional<std::pair<entt::id_type, entt::meta_data>> get_data_member_by_index(const entt::meta_type& type, std::size_t variable_index, bool recursive=true)
+    {
+        if (!recursive)
+        {
+            return get_local_data_member_by_index(type, variable_index);
+        }
+
+        std::optional<std::pair<entt::id_type, entt::meta_data>> output = std::nullopt;
+        std::size_t count = 0;
+
+        enumerate_data_members
+        (
+            type,
+
+            [&output, &count, variable_index](auto&& data_member_id, auto&& data_member)
+            {
+                if (count != variable_index)
+                {
+                    count++;
+
+                    return true;
+                }
+
+                if (data_member)
+                {
+                    output = { data_member_id, data_member };
+                }
+                
+                return false;
+            }
+        );
+
+        return output;
+    }
+
     template <typename MemberID=MetaSymbolID>
     inline entt::meta_data resolve_data_member_by_id(const entt::meta_type& type, bool check_base_types, MemberID member_name_id)
     {
