@@ -12,7 +12,7 @@ namespace engine
 		// re-attached to the underlying entity.
 		MetaStorage components;
 
-		std::size_t store(Registry& registry, Entity entity, const MetaStorageDescription& component_details);
+		std::size_t store(Registry& registry, Entity entity, const MetaStorageDescription& component_details, bool store_as_copy=false, bool skip_existing=false);
 		std::size_t retrieve(Registry& registry, Entity entity);
 
 		bool empty() const;

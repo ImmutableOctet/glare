@@ -7,7 +7,7 @@
 
 namespace engine
 {
-	std::size_t ComponentStorage::store(Registry& registry, Entity entity, const MetaStorageDescription& component_details)
+	std::size_t ComponentStorage::store(Registry& registry, Entity entity, const MetaStorageDescription& component_details, bool store_as_copy, bool skip_existing)
 	{
 		using namespace entt::literals;
 
@@ -20,6 +20,26 @@ namespace engine
 
 		for (const auto& component_entry : component_details)
 		{
+			if (skip_existing)
+			{
+				bool already_exists = false;
+
+				for (const auto& existing : components)
+				{
+					if (existing.type().id() == component_entry) // (existing.type() == component_type)
+					{
+						already_exists = true;
+
+						break;
+					}
+				}
+
+				if (already_exists)
+				{
+					continue;
+				}
+			}
+
 			auto component_type = resolve(component_entry);
 
 			if (!component_type)
@@ -29,7 +49,12 @@ namespace engine
 				continue;
 			}
 
-			auto store_fn = component_type.func("store_meta_component"_hs);
+			auto store_fn = component_type.func
+			(
+				(store_as_copy)
+				? "copy_meta_component"_hs
+				: "store_meta_component"_hs
+			);
 
 			if (!store_fn)
 			{
@@ -48,6 +73,8 @@ namespace engine
 			if (!instance)
 			{
 				print_warn("Unable to store instance of component #{} during storage operation.", component_type.id()); // component_entry
+
+				continue;
 			}
 
 			components.emplace_back(std::move(instance));
