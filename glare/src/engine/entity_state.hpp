@@ -70,7 +70,7 @@ namespace engine
 			struct
 			{
 				bool remove_add_components        : 1 = true;
-				bool keep_modified_add_components : 1 = false;
+				bool keep_modified_add_components : 1 = true;
 			} decay_policy;
 
 			// Executes appropriate add/remove/persist functions in order to establish this state as current.
