@@ -3,6 +3,7 @@
 #include <engine/reflection.hpp>
 
 #include "meta_variable.hpp"
+#include "meta_data_member.hpp"
 #include "meta_type_descriptor.hpp"
 
 namespace engine
@@ -25,6 +26,17 @@ namespace engine
 			.data<&MetaVariable::value>("value"_hs)
 
 			.func<&MetaVariable::has_name>("has_name"_hs)
+		;
+	}
+
+	template <>
+	inline void reflect<MetaDataMember>()
+	{
+		engine_meta_type<MetaDataMember>()
+			.data<&MetaDataMember::type_id>("type_id"_hs)
+			.data<&MetaDataMember::data_member_id>("data_member_id"_hs)
+			.func<static_cast<MetaAny (MetaDataMember::*)(const MetaAny& instance) const>(&MetaDataMember::get)>("get_value"_hs)
+			.func<static_cast<MetaAny (MetaDataMember::*)(Registry& registry, Entity entity) const>(&MetaDataMember::get)>("get_value_from_component"_hs)
 		;
 	}
 
@@ -67,6 +79,7 @@ namespace engine
 	inline void reflect_meta()
 	{
 		reflect<MetaVariable>();
+		reflect<MetaDataMember>();
 		reflect<MetaTypeDescriptor>();
 	}
 }
