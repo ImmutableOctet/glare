@@ -1,5 +1,7 @@
 #include "event_trigger_condition.hpp"
+
 #include "meta/meta.hpp"
+#include "meta/meta_data_member.hpp"
 
 // Debugging related:
 #include <util/log.hpp>
@@ -31,25 +33,44 @@ namespace engine
 		return ComparisonMethod::Equal;
 	}
 
-	bool EventTriggerCondition::condition_met(const MetaAny& instance) const
+	bool EventTriggerCondition::condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const
 	{
-		if (!instance)
+		using namespace entt::literals;
+
+		if (!event_instance)
 		{
 			return false;
 		}
 
-		auto type = instance.type();
+		const auto comparison_value_type    = comparison_value.type();
+		const auto comparison_value_type_id = comparison_value_type.id();
 
-		auto data_member = type.data(event_type_member);
-
-		if (!data_member)
+		switch (comparison_value_type_id)
 		{
-			print_warn("Unable to resolve data member (#{}) in type: #{}", event_type_member, type.id());
+			case "MetaDataMember"_hs:
+			{
+				const auto data_member = this->comparison_value.cast<MetaDataMember>();
 
+				if (auto embedded_value = data_member.get(registry, entity))
+				{
+					return condition_met(event_instance, embedded_value);
+				}
+
+				break;
+			}
+		}
+
+		return condition_met(event_instance, comparison_value);
+	}
+
+	bool EventTriggerCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const
+	{
+		if (!event_instance)
+		{
 			return false;
 		}
 
-		auto current_value = data_member.get(instance);
+		const auto current_value = get_member_value(event_instance);
 
 		switch (comparison_method)
 		{
@@ -66,5 +87,31 @@ namespace engine
 		}
 
 		return false;
+	}
+
+	MetaAny EventTriggerCondition::get_member_value(const MetaAny& event_instance) const
+	{
+		auto type = event_instance.type();
+
+		if (!type)
+		{
+			return {};
+		}
+
+		auto data_member = type.data(event_type_member);
+
+		if (!data_member)
+		{
+			print_warn("Unable to resolve data member (#{}) in type: #{}", event_type_member, type.id());
+
+			return false;
+		}
+
+		return data_member.get(event_instance);
+	}
+
+	bool EventTriggerCondition::condition_met(const MetaAny& event_instance) const
+	{
+		return condition_met(event_instance, this->comparison_value);
 	}
 }

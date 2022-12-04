@@ -4,6 +4,7 @@
 #include "meta/types.hpp"
 
 #include <string_view>
+#include <utility>
 
 namespace engine
 {
@@ -29,20 +30,28 @@ namespace engine
 		
 		static ComparisonMethod get_comparison_method(std::string_view comparison_operator);
 
-		bool condition_met(const MetaAny& instance) const;
+		bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const;
+		bool condition_met(const MetaAny& event_instance) const;
+		bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const;
 
-		inline bool operator()(const MetaAny& instance) const
+		template <typename ...Args>
+		inline bool operator()(Args&&... args) const
 		{
-			return condition_met(instance);
+			return condition_met(std::forward<Args>(args)...);
 		}
+
+		MetaAny get_member_value(const MetaAny& event_instance) const;
+
+		inline const MetaAny& get_comparison_value() const { return comparison_value; }
 
 		// `event_type` isn't actually needed, since we initialize this trigger's listener(s)
 		// knowing the type, which is the only place where this would be used.
 		// (Currently; may change in the future)
 		// MetaType event_type;
 
-		MetaSymbolID event_type_member; // entt::meta_data
+		MetaSymbolID event_type_member;
 		MetaAny comparison_value;
+
 		ComparisonMethod comparison_method = ComparisonMethod::Equal;
 	};
 }
