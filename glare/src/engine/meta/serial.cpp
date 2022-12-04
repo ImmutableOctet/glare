@@ -93,11 +93,11 @@ namespace engine
 		return resolve_meta_any(value, entt::resolve(type_id));
 	}
 
-	entt::meta_any meta_any_from_string(const util::json& value, bool resolve_symbol, bool strip_quotes)
+	entt::meta_any meta_any_from_string(const util::json& value, bool resolve_symbol, bool strip_quotes, bool fallback_to_string)
 	{
 		auto string_value = value.get<engine::impl::StringType>();
 
-		return meta_any_from_string(std::string_view{ string_value }, resolve_symbol, strip_quotes);
+		return meta_any_from_string(std::string_view{ string_value }, resolve_symbol, strip_quotes, fallback_to_string);
 	}
 
 	entt::meta_any meta_any_from_string(const util::json& value)
@@ -117,7 +117,7 @@ namespace engine
 		return meta_any_from_string(value, true);
 	}
 
-	entt::meta_any meta_any_from_string(std::string_view value, bool resolve_symbol, bool strip_quotes)
+	entt::meta_any meta_any_from_string(std::string_view value, bool resolve_symbol, bool strip_quotes, bool fallback_to_string)
 	{
 		if (strip_quotes)
 		{
@@ -194,10 +194,63 @@ namespace engine
 			{
 				return output;
 			}
-
-			// If we aren't able to resolve a symbol, fall back to the original string.
 		}
 
-		return { std::string(value) };
+		if (fallback_to_string)
+		{
+			return { std::string(value) };
+		}
+
+		return {};
+	}
+
+	std::optional<MetaDataMember> meta_data_member_from_string(const std::string& value) // std::string_view
+	{
+		const auto [type_name, data_member_name] = parse_data_member_reference(value);
+
+		if (type_name.empty())
+		{
+			return std::nullopt;
+		}
+
+		const auto type_id = hash(type_name);
+		const auto type = resolve(type_id);
+		
+		if (!type)
+		{
+			return std::nullopt;
+		}
+
+		const auto data_member_id = hash(data_member_name);
+		const auto data_member = type.data(data_member_id);
+
+		if (!data_member)
+		{
+			return std::nullopt;
+		}
+
+		return MetaDataMember { type_id, data_member_id };
+	}
+
+	// Overload added due to limitations of `std::regex`. (Shouldn't matter for most cases, thanks to SSO)
+	std::optional<MetaDataMember> meta_data_member_from_string(std::string_view value)
+	{
+		return meta_data_member_from_string(std::string(value));
+	}
+
+	std::tuple<std::string_view, std::string_view> parse_data_member_reference(const std::string& value) // std::string_view
+	{
+		const auto data_member_rgx = std::regex("([^\\s\\:\\.\\-\\>]+)\\s*(\\:\\:|\\.|\\-\\>)?\\s*([^\\s]+)");
+
+		if (std::smatch rgx_match; std::regex_search(value.begin(), value.end(), rgx_match, data_member_rgx))
+		{
+			auto type_name        = util::match_view(value, rgx_match, 1);
+			//auto access_operator  = util::match_view(value, rgx_match, 2);
+			auto data_member_name = util::match_view(value, rgx_match, 3);
+
+			return { type_name, data_member_name };
+		}
+
+		return {};
 	}
 }
