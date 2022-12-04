@@ -205,9 +205,8 @@ namespace engine
 						return;
 					}
 				}
-
 				// Check if this entity has a `PlayerTargetComponent` attached:
-				if (const auto* player_comp = registry.try_get<PlayerTargetComponent>(entity))
+				else if (const auto* player_comp = registry.try_get<PlayerTargetComponent>(entity))
 				{
 					const auto entity_player_index = player_comp->player_index;
 
