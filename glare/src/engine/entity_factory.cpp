@@ -8,6 +8,7 @@
 
 #include "meta/meta.hpp"
 #include "meta/serial.hpp"
+#include "meta/meta_data_member.hpp"
 
 #include <util/algorithm.hpp>
 #include <util/string.hpp>
@@ -853,16 +854,27 @@ namespace engine
 				}
 				else if (resolve_native_value)
 				{
-					compared_value = meta_any_from_string(compared_value_raw, true, false);
+					compared_value = meta_any_from_string(compared_value_raw, true, false, false);
 
 					if (!compared_value)
 					{
-						print_warn("Unable to resolve comparison value for rule/trigger.");
+						if (auto data_member = meta_data_member_from_string(compared_value_raw))
+						{
+							compared_value = *data_member;
+						}
 
-						return false;
+						/*
+						if (!compared_value)
+						{
+							print_warn("Unable to resolve comparison value for rule/trigger.");
+
+							return false;
+						}
+						*/
 					}
 				}
-				else
+				
+				if (!compared_value)
 				{
 					compared_value = std::string(compared_value_raw);
 				}
