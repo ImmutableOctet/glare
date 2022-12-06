@@ -79,12 +79,32 @@ namespace engine
     }
 
     template <>
+    void reflect<EventTriggerTrueCondition>()
+    {
+        engine_meta_type<EventTriggerTrueCondition>()
+            //.base<EventTriggerConditionType>()
+            .data<nullptr, &EventTriggerTrueCondition::compound_method>("compound_method"_hs)
+        ;
+    }
+
+    template <>
+    void reflect<EventTriggerFalseCondition>()
+    {
+        engine_meta_type<EventTriggerFalseCondition>()
+            //.base<EventTriggerConditionType>()
+            .data<nullptr, &EventTriggerFalseCondition::compound_method>("compound_method"_hs)
+        ;
+    }
+
+    template <>
     void reflect<EventTriggerCondition>()
     {
         //reflect<EventTriggerConditionType>();
         reflect<EventTriggerSingleCondition>();
         reflect<EventTriggerAndCondition>();
         reflect<EventTriggerOrCondition>();
+        reflect<EventTriggerTrueCondition>();
+        reflect<EventTriggerFalseCondition>();
 
         //engine_meta_type<EventTriggerCondition>();
     }
