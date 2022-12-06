@@ -1229,6 +1229,19 @@ namespace engine
 				*/
 			} while (offset < trigger_condition_expr.size());
 
+			// If this is the first expression processed and we were unable to parse a type or condition,
+			// try using the entire expression as an event-type declaration:
+			if (is_first_expr && !active_type)
+			{
+				const auto type_name_id = hash(trigger_condition_expr);
+				active_type = resolve(type_name_id);
+
+				if (!active_type)
+				{
+					throw std::runtime_error(format("Unable to resolve trigger/event type: \"{}\" (#{})", trigger_condition_expr, type_name_id.value()));
+				}
+			}
+
 			if (!active_type)
 			{
 				return false;
@@ -1256,7 +1269,7 @@ namespace engine
 
 			if ((!collection_has_named_members) || declaration.empty())
 			{
-				if (const auto trigger_decl = util::find_any(content, "trigger", "triggers"); trigger_decl != content.end())
+				if (const auto trigger_decl = util::find_any(content, "trigger", "triggers", "condition", "conditions"); trigger_decl != content.end())
 				{
 					util::json_for_each(*trigger_decl, [&content, &process_expression](const util::json& decl)
 					{
