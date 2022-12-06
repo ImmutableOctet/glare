@@ -8,6 +8,8 @@
 
 #include "types.hpp"
 
+#include "event_trigger_condition.hpp"
+
 // TODO: Determine if these make sense as CPP files (or PCH) instead:
 #include "components/reflection.hpp"
 
@@ -32,6 +34,59 @@ namespace engine
         reflect<World>();
 
         // ...
+    }
+
+    // TODO: Migrate these reflection routines to a different module.
+    /*
+    template <>
+    void reflect<EventTriggerConditionType>()
+    {
+        engine_meta_type<EventTriggerConditionType>()
+            .data<nullptr, &EventTriggerConditionType::compound_method>("compound_method"_hs)
+        ;
+    }
+    */
+
+    template <>
+    void reflect<EventTriggerSingleCondition>()
+    {
+        engine_meta_type<EventTriggerSingleCondition>()
+            //.base<EventTriggerConditionType>()
+            .data<nullptr, &EventTriggerSingleCondition::compound_method>("compound_method"_hs)
+            .data<nullptr, &EventTriggerSingleCondition::get_event_type_member>("event_type_member"_hs)
+            .data<nullptr, &EventTriggerSingleCondition::get_comparison_value>("comparison_value"_hs)
+            .data<nullptr, &EventTriggerSingleCondition::get_comparison_method>("comparison_method"_hs)
+            .ctor<MetaSymbolID, MetaAny&&, EventTriggerComparisonMethod>()
+        ;
+    }
+
+    template <>
+    void reflect<EventTriggerAndCondition>()
+    {
+        engine_meta_type<EventTriggerAndCondition>()
+            //.base<EventTriggerConditionType>()
+            .data<nullptr, &EventTriggerAndCondition::compound_method>("compound_method"_hs)
+        ;
+    }
+
+    template <>
+    void reflect<EventTriggerOrCondition>()
+    {
+        engine_meta_type<EventTriggerOrCondition>()
+            //.base<EventTriggerConditionType>()
+            .data<nullptr, &EventTriggerOrCondition::compound_method>("compound_method"_hs)
+        ;
+    }
+
+    template <>
+    void reflect<EventTriggerCondition>()
+    {
+        //reflect<EventTriggerConditionType>();
+        reflect<EventTriggerSingleCondition>();
+        reflect<EventTriggerAndCondition>();
+        reflect<EventTriggerOrCondition>();
+
+        //engine_meta_type<EventTriggerCondition>();
     }
 
     // Reflects `math::Vector2D` with the generalized name of `Vector2D`.
@@ -100,6 +155,9 @@ namespace engine
         reflect<Command>();
         reflect_core_components();
         reflect_systems();
+
+        // TODO: Move to a different module.
+        reflect<EventTriggerCondition>();
 
         // ...
 
