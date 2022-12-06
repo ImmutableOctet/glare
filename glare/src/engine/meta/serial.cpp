@@ -182,10 +182,12 @@ namespace engine
 				}
 
 				// Last symbol:
+				/*
 				if (is_last_symbol)
 				{
 					print_warn("Unable to fully resolve symbol-string: \"{}\"", value);
 				}
+				*/
 
 				return true;
 			});
