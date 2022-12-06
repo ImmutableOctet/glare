@@ -117,9 +117,10 @@ namespace engine
 				std::string_view, // type_name
 				std::string_view, // member_name
 				std::string_view, // comparison_operator
-				std::string_view  // compared_value
+				std::string_view, // compared_value
+				std::ptrdiff_t    // updated_offset
 			>
-			parse_trigger_condition(const std::string& trigger_condition); // std::string_view
+			parse_trigger_condition(const std::string& trigger_condition, std::ptrdiff_t offset=0); // std::string_view
 
 			static std::tuple
 			<
