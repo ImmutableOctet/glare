@@ -164,6 +164,7 @@
     <ClCompile Include="src\engine\timer.cpp" />
     <ClCompile Include="src\engine\meta\meta.cpp" />
     <ClCompile Include="src\app\app_timer.cpp" />
+    <ClCompile Include="src\engine\meta\meta_data_member.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dependencies\modules\stb\deprecated\rrsprintf.h" />
@@ -503,6 +504,9 @@
     <ClInclude Include="src\engine\timer.hpp" />
     <ClInclude Include="src\engine\components\player_target_component.hpp" />
     <ClInclude Include="src\app\timer.hpp" />
+    <ClInclude Include="src\engine\state\commands\state_activation_command.hpp" />
+    <ClInclude Include="src\engine\entity_state_target.hpp" />
+    <ClInclude Include="src\engine\meta\meta_data_member.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />

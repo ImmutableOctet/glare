@@ -1,41 +1,38 @@
 {
-	"add":
+	/*
+	"imports":
+	[
+		"player_jump"
+	],
+	*/
+
+	"init_copy":
 	{
 		"NameComponent": "Common State"
 	},
 
-	"shared":
-	{
-	},
-
-	"remove":
-	[
-	],
-
-	"freeze":
-	[
-		"NameComponent"
-	],
-
-	"store":
-	[
-		"NameComponent"
-	],
-
+	/*
 	"local":
 	{
 		"TypeComponent": "EntityType::Geometry"
 	},
+	*/
 
 	"rules":
 	{
-		"OnButtonPressed|Button::HeavyAttack": "player_heavy_attack",
-		
-		"OnButtonPressed|Button::Jump": "player_jump",
-		
+		"OnButtonPressed.player_index != PlayerComponent::player_index && OnButtonPressed|Button::Jump || OnButtonPressed.player_index == PlayerComponent::player_index && OnButtonPressed.button == Button::HeavyAttack":
+		{
+			"state": "player_jump"
+		},
+
+		//"OnButtonPressed|Button::HeavyAttack": "player_heavy_attack",
+
+		//"OnButtonPressed|Button::Jump": "player_jump",
+
 		"OnButtonPressed.button == Button::Shield":
 		{
-			"state": "player_shield"
+			//"state": "player_shield"
+			"command": "ActivateCommand(child(child_name))"
 		}
 	}
 }

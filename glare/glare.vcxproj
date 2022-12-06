@@ -303,6 +303,9 @@ xcopy "$(ProjectDir)archetypes" "$(TargetDir)archetypes" /e /y /i /r /exclude:ex
     <ClInclude Include="src\engine\basic_system.hpp" />
     <ClInclude Include="src\engine\command.hpp" />
     <ClInclude Include="src\engine\components\player_target_component.hpp" />
+    <ClInclude Include="src\engine\entity_state_target.hpp" />
+    <ClInclude Include="src\engine\meta\meta_data_member.hpp" />
+    <ClInclude Include="src\engine\state\commands\state_activation_command.hpp" />
     <ClInclude Include="src\engine\state\commands\state_change_command.hpp" />
     <ClInclude Include="src\engine\components\player_component.hpp" />
     <ClInclude Include="src\engine\entity_state_rule.hpp" />
@@ -593,6 +596,7 @@ xcopy "$(ProjectDir)archetypes" "$(TargetDir)archetypes" /e /y /i /r /exclude:ex
     <ClCompile Include="src\engine\input\input_state.cpp" />
     <ClCompile Include="src\engine\input\input_system.cpp" />
     <ClCompile Include="src\engine\entity_state.cpp" />
+    <ClCompile Include="src\engine\meta\meta_data_member.cpp" />
     <ClCompile Include="src\engine\meta\meta.cpp" />
     <ClCompile Include="src\engine\meta\meta_description.cpp" />
     <ClCompile Include="src\engine\meta\meta_event_listener.cpp" />

@@ -3,26 +3,35 @@
 	[
 	],
 
-	"add":
+	"persist":
 	{
+		"+NameComponent": "Jump State"
 	},
-
-	"shared":
-	[
-	],
 
 	"exclude":
 	[
 	],
 
-	"local_storage":
-	[
-	],
+	"local":
+	{
+		// Pure local instances.
+	},
+
+
 
 	"rules":
 	[
 		{
 			"trigger": "OnAirToGround.entity == self/this",
+			"state": "player_common"
+
+			//triggers: []
+			//triggers: ["OnAirToGround.entity == self", "OnAirToGround.entity == child(model)"]
+			//triggers: [{event: "", conditions: []}]
+		},
+
+		{
+			"trigger": "OnButtonPressed|Button::Jump",
 			"state": "player_common"
 		}
 	]
