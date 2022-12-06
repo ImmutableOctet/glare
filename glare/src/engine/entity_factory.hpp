@@ -124,6 +124,13 @@ namespace engine
 
 			static std::tuple
 			<
+				std::string_view, // type_name
+				std::ptrdiff_t    // updated_offset
+			>
+			parse_event_type(const std::string& event_type, std::ptrdiff_t offset = 0); // std::string_view
+
+			static std::tuple
+			<
 				std::string_view, // command_name
 				std::string_view, // command_content
 				bool              // is_string_content
@@ -275,6 +282,46 @@ namespace engine
 			(
 				EntityState& state,
 				const util::json& rules,
+
+				EntityDescriptor::StateCollection* opt_states_out = nullptr,
+				const std::filesystem::path* opt_base_path = nullptr,
+				bool allow_inline_import = true
+			);
+
+			// NOTE: Subroutine of `process_state_rules`.
+			std::size_t process_state_rule
+			(
+				EntityState& state,
+				MetaTypeID type_name_id,
+				const util::json& content,
+				
+				std::optional<EventTriggerCondition> condition=std::nullopt,
+
+				EntityDescriptor::StateCollection* opt_states_out=nullptr,
+				const std::filesystem::path* opt_base_path=nullptr,
+				bool allow_inline_import=true
+			);
+
+			// NOTE: Subroutine of `process_state_rules`.
+			std::optional<EventTriggerSingleCondition> process_trigger_condition // std::optional<EventTriggerCondition>
+			(
+				const entt::meta_type& type,
+
+				std::string_view member_name,
+				std::string_view comparison_operator,
+				std::string_view compared_value_raw,
+
+				// Used for debugging purposes, etc.
+				std::string_view trigger_condition_expr = {}
+			);
+
+			// NOTE: Subroutine of `process_state_rules`.
+			std::size_t process_trigger_expression
+			(
+				EntityState& state,
+
+				const std::string& trigger_condition_expr, // std::string_view
+				const util::json& content,
 
 				EntityDescriptor::StateCollection* opt_states_out=nullptr,
 				const std::filesystem::path* opt_base_path=nullptr,

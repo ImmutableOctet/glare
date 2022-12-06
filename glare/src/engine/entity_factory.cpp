@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <chrono>
 #include <stdexcept>
+#include <type_traits>
 
 // TODO: Change to better regular expression library.
 #include <regex>
@@ -124,12 +125,17 @@ namespace engine
 	std::tuple<std::string_view, std::string_view, std::string_view, std::string_view, std::ptrdiff_t>
 	EntityFactory::parse_trigger_condition(const std::string& trigger_condition, std::ptrdiff_t offset) // std::string_view
 	{
-		const auto trigger_rgx = std::regex("([^\\s\\:\\.\\-\\>\\&\\|\\(\\)]+)\\s*(\\:\\:|\\.|\\-\\>)?\\s*([^\\s\\(\\)]+)?\\s*(==|===|!=|!==|\\|)\\s*([^\\s\\&\\|\\(\\)]+)");
+		const auto trigger_rgx = std::regex("([^\\s\\:\\.\\-\\>\\&\\|\\(\\)]+)\\s*(\\:\\:|\\.|\\-\\>)?\\s*([^\\s\\(\\)\\|\\&]+)?\\s*(==|===|!=|!==|\\|)\\s*([^\\s\\&\\|\\(\\)]+)");
 
 		if (std::smatch rgx_match; std::regex_search((trigger_condition.begin() + offset), trigger_condition.end(), rgx_match, trigger_rgx))
 		{
 			auto updated_offset = (rgx_match.suffix().first - trigger_condition.begin());
-			auto parsed_view = std::string_view { (trigger_condition.data() + offset), static_cast<std::size_t>(updated_offset) };
+			
+			auto parsed_view = std::string_view
+			{
+				(trigger_condition.data() + offset),
+				static_cast<std::size_t>(updated_offset)
+			};
 
 			auto type_name           = util::match_view(parsed_view, rgx_match, 1);
 			//auto access_operator   = util::match_view(parsed_view, rgx_match, 2);
@@ -138,6 +144,29 @@ namespace engine
 			auto compared_value      = util::match_view(parsed_view, rgx_match, 5);
 
 			return { type_name, member_name, comparison_operator, compared_value, updated_offset };
+		}
+
+		return {};
+	}
+
+	std::tuple<std::string_view, std::ptrdiff_t>
+	EntityFactory::parse_event_type(const std::string& event_type, std::ptrdiff_t offset) // std::string_view
+	{
+		const auto event_type_rgx = std::regex("([^\\s\\:\\.\\-\\>\\&\\|\\(\\)]+)\\s*([^\\s\\&\\|\\(\\)]+)?");
+
+		if (std::smatch rgx_match; std::regex_search((event_type.begin() + offset), event_type.end(), rgx_match, event_type_rgx))
+		{
+			auto updated_offset = (rgx_match.suffix().first - event_type.begin());
+
+			auto parsed_view = std::string_view
+			{
+				(event_type.data() + offset),
+				static_cast<std::size_t>(updated_offset)
+			};
+
+			auto type_name = util::match_view(parsed_view, rgx_match, 1);
+
+			return { type_name, updated_offset };
 		}
 
 		return {};
@@ -792,6 +821,569 @@ namespace engine
 		return build_result;
 	}
 
+	std::size_t EntityFactory::process_state_rule
+	(
+		EntityState& state,
+		MetaTypeID type_name_id,
+		const util::json& content,
+		
+		std::optional<EventTriggerCondition> condition,
+
+		EntityDescriptor::StateCollection* opt_states_out,
+		const std::filesystem::path* opt_base_path,
+		bool allow_inline_import
+	)
+	{
+		std::size_t count = 0;
+
+		EntityStateTarget::TargetType target = EntityStateTarget::SelfTarget {};
+		std::optional<Timer::Duration> delay = std::nullopt;
+
+		// NOTE: Modified below, used in `process_transition_rule` and co.
+		bool forward_condition = true;
+
+		if (condition)
+		{
+			// Handle special-case scenarios: direct usage of `EventTriggerTrueCondition` and `EventTriggerFalseCondition`.
+			switch (condition->index())
+			{
+				case util::variant_index<EventTriggerCondition, EventTriggerTrueCondition>():
+					//print("Pure 'true-condition' detected; generating rule without condition.");
+
+					// Don't bother forwarding this condition since it's guaranteed to always report true.
+					forward_condition = false;
+
+					break;
+				case util::variant_index<EventTriggerCondition, EventTriggerFalseCondition>():
+					print_warn("Pure 'false-condition' found outside of compound condition; ignoring rule generation.");
+
+					// Exit early; trigger condition will never be met.
+					return count; // 0;
+			}
+		}
+
+		auto process_transition_rule = [&](const auto& next_state_raw)
+		{
+			if (next_state_raw.empty())
+			{
+				return false;
+			}
+
+			const auto inline_import = process_state_inline_import(opt_states_out, next_state_raw, opt_base_path);
+
+			StringHash next_state_id = (inline_import) // EntityStateHash
+				? *inline_import->name
+				: hash(next_state_raw)
+			;
+
+			auto& rules_out = state.rules[type_name_id];
+
+			rules_out.emplace_back
+			(
+				(forward_condition)
+					? std::move(condition)
+					: std::optional<EventTriggerCondition>(std::nullopt),
+
+				delay,
+
+				EntityStateTransitionRule
+				{
+					.target     = std::move(target),
+					.state_name = next_state_id
+				}
+			);
+
+			count++;
+
+			return true;
+		};
+
+		switch (content.type())
+		{
+			case util::json::value_t::string:
+			{
+				return process_transition_rule(content.get<std::string>());
+			}
+				
+			case util::json::value_t::object:
+			{
+				if (auto target_data = util::find_any(content, "target", "target_entity"); target_data != content.end())
+				{
+					target = process_rule_target(*target_data);
+				}
+
+				if (auto time_data = util::find_any(content, "timer", "wait", "delay"); time_data != content.end())
+				{
+					delay = parse_time_duration(*time_data);
+				}
+
+				if (auto next_state = util::find_any(content, "state", "next", "next_state"); next_state != content.end())
+				{
+					return process_transition_rule(next_state->get<std::string>());
+				}
+
+				if (auto command = util::find_any(content, "command", "generate"); command != content.end())
+				{
+					print_warn("COMMANDS ARE CURRENTLY UNSUPPORTED");
+
+					// TODO: Implement commands.
+					///assert(false);
+
+					//return false;
+				}
+
+				break;
+			}
+		}
+
+		//print_warn("Unable to process rule for: {}", trigger_condition_expr);
+
+		return count;
+	}
+
+	std::optional<EventTriggerSingleCondition> EntityFactory::process_trigger_condition // std::optional<EventTriggerCondition>
+	(
+		const entt::meta_type& type,
+		
+		std::string_view member_name,
+		std::string_view comparison_operator,
+		std::string_view compared_value_raw,
+
+		std::string_view trigger_condition_expr
+	)
+	{
+		auto [member_id, member] = (member_name.empty())
+			? resolve_data_member(type, true, "entity", "target", "button", "self")
+			: resolve_data_member(type, true, member_name)
+		;
+
+		if (!member && (!member_name.empty()))
+		{
+			print_warn("Unable to resolve target member for rule-trigger: \"{}\"", trigger_condition_expr);
+
+			return std::nullopt;
+		}
+
+		if (!member)
+		{
+			return std::nullopt;
+		}
+
+		MetaAny compared_value;
+
+		bool resolve_native_value = true;
+
+		if (util::is_quoted(compared_value_raw, '\"', '\''))
+		{
+			resolve_native_value = false;
+
+			compared_value_raw = util::unquote(compared_value_raw);
+		}
+			
+		if (compared_value_raw.empty())
+		{
+			return std::nullopt;
+
+			//compared_value = static_cast<Entity>(null); // null;
+		}
+
+		if (resolve_native_value)
+		{
+			compared_value = meta_any_from_string(compared_value_raw, true, false, false);
+
+			if (!compared_value)
+			{
+				if (auto data_member = meta_data_member_from_string(compared_value_raw))
+				{
+					compared_value = *data_member;
+				}
+
+				/*
+				if (!compared_value)
+				{
+					print_warn("Unable to resolve comparison value for rule/trigger.");
+
+					return false;
+				}
+				*/
+			}
+		}
+				
+		if (!compared_value)
+		{
+			compared_value = std::string(compared_value_raw);
+		}
+
+		if (compared_value)
+		{
+			auto comparison_method = (comparison_operator.empty())
+				? EventTriggerComparisonMethod::Equal
+				: EventTriggerConditionType::get_comparison_method(comparison_operator)
+			;
+
+			return EventTriggerSingleCondition
+			{
+				member_id,
+				std::move(compared_value),
+				comparison_method
+			};
+		}
+
+		return std::nullopt;
+	}
+
+	//[&process_rule]
+	std::size_t EntityFactory::process_trigger_expression
+	(
+		EntityState& state,
+
+		const std::string& trigger_condition_expr, // std::string_view
+		const util::json& content,
+
+		EntityDescriptor::StateCollection* opt_states_out,
+		const std::filesystem::path* opt_base_path,
+		bool allow_inline_import
+	)
+	{
+		//using namespace entt::literals;
+		using Combinator = EventTriggerCompoundMethod;
+
+		std::size_t number_processed = 0;
+
+		// Shorthand for `process_state_rule` + updating `number_processed`.
+		auto process_rule = [this, &state, opt_states_out, opt_base_path, allow_inline_import, &number_processed]
+		(
+			MetaTypeID type_name_id,
+			const util::json& content,
+			std::optional<EventTriggerCondition> condition = std::nullopt
+		)
+		{
+			const auto result = this->process_state_rule(state, type_name_id, content, condition, opt_states_out, opt_base_path, allow_inline_import);
+
+			number_processed += result;
+
+			return result;
+		};
+
+		std::size_t offset = 0; // std::ptrdiff_t
+
+		std::optional<EventTriggerCondition> condition_out;
+		std::optional<MetaType> active_type;
+		Combinator active_combinator = Combinator::None;
+
+		bool is_first_expr = true;
+
+		// NOTE: Nesting (i.e. parentheses) is not currently supported.
+		// Therefore, a 'store' operation simply processes a rule immediately, consuming the condition object.
+		auto store_condition = [this, &content, &active_type, &condition_out, &process_rule]()
+		{
+			if (!condition_out.has_value())
+			{
+				return;
+			}
+
+			if (!active_type)
+			{
+				return;
+			}
+
+			process_rule(active_type->id(), content, std::move(*condition_out));
+
+			// Ensure `std::nullopt` status.
+			// (As opposed to 'moved-from' status)
+			condition_out = std::nullopt;
+		};
+
+		do
+		{
+			auto [type_name, member_name, comparison_operator, compared_value_raw, updated_offset] = parse_trigger_condition(trigger_condition_expr, static_cast<std::ptrdiff_t>(offset));
+
+			bool is_standalone_event_trigger = false;
+
+			if (type_name.empty())
+			{
+				auto standalone_event_result = parse_event_type(trigger_condition_expr, static_cast<std::ptrdiff_t>(offset));
+
+				type_name = std::get<0>(standalone_event_result);
+
+				if (type_name.empty())
+				{
+					// Exit the loop, nothing else can be processed.
+					break;
+				}
+				else
+				{
+					updated_offset = std::get<1>(standalone_event_result);
+
+					is_standalone_event_trigger = true;
+				}
+			}
+
+			auto expr_start_idx = static_cast<std::size_t>(type_name.data() - trigger_condition_expr.data());
+			//auto processed_length = (static_cast<std::size_t>(updated_offset) - offset);
+
+			auto parsed_expr = std::string_view { trigger_condition_expr.data()+expr_start_idx, static_cast<std::size_t>(updated_offset-expr_start_idx) };
+
+			if (!is_first_expr)
+			{
+				// Space between the old `offset` (i.e. end of previous expression) and the start of current expression.
+				auto expr_gap = std::string_view { (trigger_condition_expr.data() + offset), (expr_start_idx - offset) };
+
+				auto local_combinator_symbol_idx = std::string_view::npos;
+
+				// Perform view-local lookup:
+				if (local_combinator_symbol_idx = expr_gap.find("&&"); local_combinator_symbol_idx != std::string_view::npos)
+				{
+					active_combinator = Combinator::And;
+				}
+				else if (local_combinator_symbol_idx = expr_gap.find("||"); local_combinator_symbol_idx != std::string_view::npos)
+				{
+					active_combinator = Combinator::Or;
+				}
+					
+				if (local_combinator_symbol_idx == std::string_view::npos)
+				{
+					print_warn("Missing combinator symbol in state-rule trigger expression; using last known combinator as fallback.");
+				}
+				/*
+				else
+				{
+					// Convert from view-local index to global index.
+					const auto combinator_symbol_idx = static_cast<std::size_t>((expr_gap.data() + local_combinator_symbol_idx) - trigger_condition_expr.data());
+
+					constexpr std::size_t combinator_symbol_size = 2;
+					if (trigger_condition_expr.find("(", (combinator_symbol_idx + combinator_symbol_size)) != std::string_view::npos)
+					{
+						// ...
+					}
+				}
+				*/
+			}
+				
+			// Update the processing offset to the latest location reported by our parsing step.
+			offset = static_cast<std::size_t>(updated_offset);
+
+			// Attempt to resolve `type_name`:
+			auto type_name_id = hash(type_name).value();
+
+			bool active_type_changed = false;
+
+			if (!active_type.has_value())
+			{
+				active_type = resolve(type_name_id);
+
+				if (!active_type)
+				{
+					throw std::runtime_error(format("Unable to resolve trigger/event type: \"{}\" (#{})", type_name, type_name_id));
+				}
+			}
+			else if (active_type->id() != type_name_id)
+			{
+				if (active_combinator == Combinator::And)
+				{
+					throw std::runtime_error(format("Unsupported operation: Unable to build 'AND' compound condition with multiple event types. ({})", parsed_expr));
+				}
+
+				// Since combining event types in trigger-clauses is not supported,
+				// we need to process the condition we've already built.
+				store_condition();
+
+				// With the previous condition handled, we can switch to the new event-type:
+				active_type = resolve(type_name_id);
+
+				if (!active_type)
+				{
+					throw std::runtime_error(format("Unable to resolve trigger/event type in compound condition: \"{}\" (#{})", type_name, type_name_id));
+				}
+
+				active_type_changed = true;
+			}
+
+			assert(active_type);
+
+			auto on_condition = [&store_condition](EventTriggerCondition& condition_out, auto&& generated_condition, Combinator combinator)
+			{
+				// Covers the first time visiting a condition. (Fragment only; no AND/OR container generated)
+				// 'Basic condition' scenarios: `EventTriggerSingleCondition`, `EventTriggerTrueCondition`, `EventTriggerFalseCondition` (see below)
+				auto basic_condition = [combinator, &store_condition, &condition_out, &generated_condition](auto& condition)
+				{
+					switch (combinator)
+					{
+						case Combinator::And:
+						{
+							// Generate an AND container:
+							EventTriggerAndCondition and_condition;
+
+							and_condition.add_condition(std::move(condition));
+							and_condition.add_condition(std::move(generated_condition));
+
+							// Store the newly generated container in place of the old condition-fragment.
+							condition_out = std::move(and_condition);
+
+							break;
+						}
+						case Combinator::Or:
+						{
+							// Generate an OR container:
+							EventTriggerOrCondition or_condition;
+
+							if constexpr (std::is_same_v<std::decay_t<decltype(condition)>, EventTriggerTrueCondition>)
+							{
+								print_warn("Attempting to add 'always-true' condition(s) to 'OR' compound condition.");
+							}
+
+							or_condition.add_condition(std::move(condition));
+							or_condition.add_condition(std::move(generated_condition));
+
+							// Store the newly generated container in place of the old condition-fragment.
+							condition_out = std::move(or_condition);
+
+							break;
+						}
+
+						default:
+							// In the event that there is no conbinator, process the existing
+							// condition/fragment and swap in the newly generated one:
+							store_condition();
+
+							condition_out = std::move(generated_condition);
+
+							break;
+					}
+				};
+
+				util::visit
+				(
+					condition_out,
+
+					[&basic_condition](EventTriggerSingleCondition& single_condition) { basic_condition(single_condition); },
+					[&basic_condition](EventTriggerTrueCondition& single_condition)   { basic_condition(single_condition); },
+					[&basic_condition](EventTriggerFalseCondition& single_condition)  { basic_condition(single_condition); },
+
+					// Existing AND container:
+					[combinator, &store_condition, &condition_out, &generated_condition](EventTriggerAndCondition& and_condition)
+					{
+						switch (combinator)
+						{
+							case Combinator::And:
+								// Add to this container as usual.
+								and_condition.add_condition(std::move(generated_condition));
+
+								break;
+							case Combinator::Or:
+								// The user has indicated a switch to an OR clause.
+								// Process this AND container as-is, then swap in the
+								// new condition fragment for further operation.
+								store_condition();
+
+								condition_out = std::move(generated_condition);
+
+								break;
+
+							default:
+								// Unsupported conbinator; ignore this fragment.
+
+								break;
+						}
+					},
+
+					// Existing OR container:
+					[combinator, &store_condition, &condition_out, &generated_condition](EventTriggerOrCondition& or_condition)
+					{
+						switch (combinator)
+						{
+							case Combinator::And:
+								// The user has indicated a switch to an AND clause.
+								// Process this OR container as-is, then swap in the
+								// new condition fragment for further operation.
+								store_condition();
+
+								condition_out = std::move(generated_condition);
+
+								break;
+							case Combinator::Or:
+								// Add to this container as usual.
+								or_condition.add_condition(std::move(generated_condition));
+
+								break;
+
+							default:
+								// Unsupported conbinator; ignore this fragment.
+
+								break;
+						}
+					}
+				);
+			};
+
+			// Workaround for compound AND/OR on 'standalone' (no-condition) of same event type.
+			// Without this workaround, an extra rule would be generated.
+			// 
+			// NOTE: This does not cover duplication through multiple triggers, only duplication within the same trigger expression.
+			// TODO: Look into implications of duplicated triggers.
+			if ((is_standalone_event_trigger) && (!is_first_expr) && (!active_type_changed))
+			{
+				//print_warn("Detected conditionless event-trigger of same type as previous conditioned trigger -- generating dummy 'always-true' condition to avoid anomalies.");
+				//on_condition(*condition_out, EventTriggerTrueCondition {}, active_combinator);
+
+				print_warn("Detected conditionless event-trigger of same type as previous conditioned trigger -- ignoring to avoid anomalies.");
+			}
+			else
+			{
+				// Attempt to resolve a single condition (i.e. fragment) from the expression we parsed.
+				if (auto generated_condition = process_trigger_condition(*active_type, member_name, comparison_operator, compared_value_raw, parsed_expr))
+				{
+					if (condition_out.has_value())
+					{
+						on_condition(*condition_out, *generated_condition, active_combinator);
+					}
+					else
+					{
+						condition_out = std::move(*generated_condition);
+					}
+				}
+				else
+				{
+					if (condition_out.has_value())
+					{
+						on_condition(*condition_out, EventTriggerTrueCondition {}, active_combinator);
+					}
+					else
+					{
+						condition_out = EventTriggerTrueCondition {};
+					}
+				}
+			}
+
+			is_first_expr = false;
+
+			// Debugging related:
+			/*
+			auto remaining_length = (trigger_condition_expr.size() - static_cast<std::size_t>(updated_offset));
+			auto remaining = std::string_view{ (trigger_condition_expr.data() + updated_offset), remaining_length };
+
+			print(remaining);
+			*/
+		} while (offset < trigger_condition_expr.size());
+
+		if (!active_type)
+		{
+			return number_processed;
+		}
+
+		// Process the rule using whatever's left.
+		if (condition_out)
+		{
+			process_rule(active_type->id(), content, std::move(*condition_out));
+		}
+		else
+		{
+			process_rule(active_type->id(), content);
+		}
+
+		return number_processed;
+	}
+
 	std::size_t EntityFactory::process_state_rules
 	(
 		EntityState& state,
@@ -802,463 +1394,7 @@ namespace engine
 		bool allow_inline_import
 	)
 	{
-		using namespace entt::literals;
-
 		std::size_t count = 0;
-
-		auto process_condition = []
-		(
-			const entt::meta_type& type,
-			std::string_view member_name,
-			std::string_view comparison_operator,
-			std::string_view compared_value_raw,
-
-			// Used for debugging purposes, etc.
-			std::string_view trigger_condition_expr = {}
-		) -> std::optional<EventTriggerSingleCondition> // std::optional<EventTriggerCondition>
-		{
-			auto [member_id, member] = (member_name.empty())
-				? resolve_data_member(type, true, "entity", "target", "button", "self")
-				: resolve_data_member(type, true, member_name)
-			;
-
-			if (!member && (!member_name.empty()))
-			{
-				print_warn("Unable to resolve target member for rule-trigger: \"{}\"", trigger_condition_expr);
-
-				return std::nullopt;
-			}
-
-			if (!member)
-			{
-				return std::nullopt;
-			}
-
-			MetaAny compared_value;
-
-			bool resolve_native_value = true;
-
-			if (util::is_quoted(compared_value_raw, '\"', '\''))
-			{
-				resolve_native_value = false;
-
-				compared_value_raw = util::unquote(compared_value_raw);
-			}
-			
-			if (compared_value_raw.empty())
-			{
-				compared_value = static_cast<Entity>(null); // null;
-			}
-			else if (resolve_native_value)
-			{
-				compared_value = meta_any_from_string(compared_value_raw, true, false, false);
-
-				if (!compared_value)
-				{
-					if (auto data_member = meta_data_member_from_string(compared_value_raw))
-					{
-						compared_value = *data_member;
-					}
-
-					/*
-					if (!compared_value)
-					{
-						print_warn("Unable to resolve comparison value for rule/trigger.");
-
-						return false;
-					}
-					*/
-				}
-			}
-				
-			if (!compared_value)
-			{
-				compared_value = std::string(compared_value_raw);
-			}
-
-			if (compared_value)
-			{
-				auto comparison_method = (comparison_operator.empty())
-					? EventTriggerComparisonMethod::Equal
-					: EventTriggerConditionType::get_comparison_method(comparison_operator)
-				;
-
-				return EventTriggerSingleCondition
-				{
-					member_id,
-					std::move(compared_value),
-					comparison_method
-				};
-			}
-
-			return std::nullopt;
-		};
-
-		auto process_rule = [this, &state, &count, &opt_states_out, &opt_base_path, allow_inline_import, &process_condition]
-		(
-			MetaTypeID type_name_id,
-			const util::json& content,
-			std::optional<EventTriggerCondition> condition=std::nullopt
-		) -> bool
-		{
-			EntityStateTarget::TargetType target = EntityStateTarget::SelfTarget {};
-			std::optional<Timer::Duration> delay = std::nullopt;
-
-			auto process_transition_rule = [&](const auto& next_state_raw)
-			{
-				if (next_state_raw.empty())
-				{
-					return false;
-				}
-
-				const auto inline_import = process_state_inline_import(opt_states_out, next_state_raw, opt_base_path);
-
-				StringHash next_state_id = (inline_import) // EntityStateHash
-					? *inline_import->name
-					: hash(next_state_raw)
-				;
-
-				auto& rules_out = state.rules[type_name_id];
-
-				rules_out.emplace_back
-				(
-					std::move(condition),
-					delay,
-
-					EntityStateTransitionRule
-					{
-						.target     = std::move(target),
-						.state_name = next_state_id
-					}
-				);
-
-				count++;
-
-				return true;
-			};
-
-			switch (content.type())
-			{
-				case util::json::value_t::string:
-				{
-					return process_transition_rule(content.get<std::string>());
-				}
-				
-				case util::json::value_t::object:
-				{
-					if (auto target_data = util::find_any(content, "target", "target_entity"); target_data != content.end())
-					{
-						target = process_rule_target(*target_data);
-					}
-
-					if (auto time_data = util::find_any(content, "timer", "wait", "delay"); time_data != content.end())
-					{
-						delay = parse_time_duration(*time_data);
-					}
-
-					if (auto next_state = util::find_any(content, "state", "next", "next_state"); next_state != content.end())
-					{
-						return process_transition_rule(next_state->get<std::string>());
-					}
-
-					if (auto command = util::find_any(content, "command", "generate"); command != content.end())
-					{
-						print_warn("COMMANDS ARE CURRENTLY UNSUPPORTED");
-
-						// TODO: Implement commands.
-						///assert(false);
-
-						//return false;
-					}
-
-					break;
-				}
-			}
-
-			//print_warn("Unable to process rule for: {}", trigger_condition_expr);
-
-			return false;
-		};
-
-		// TODO: Refactor this subroutine into several internal functions.
-		auto process_expression = [&process_condition, &process_rule](const std::string& trigger_condition_expr, const util::json& content) -> bool // std::string_view // [this, ...]
-		{
-			using Combinator = EventTriggerCompoundMethod;
-
-			std::size_t offset = 0; // std::ptrdiff_t
-
-			std::optional<EventTriggerCondition> condition_out;
-
-			std::optional<MetaType> active_type;
-
-			Combinator active_combinator = Combinator::None;
-
-			bool is_first_expr = true;
-
-			// NOTE: Nesting (i.e. parentheses) is not currently supported.
-			// Therefore, a 'store' operation simply processes a rule immediately, consuming the condition object.
-			auto store_condition = [&process_rule, &content, &active_type, &condition_out]()
-			{
-				if (!condition_out.has_value())
-				{
-					return;
-				}
-
-				if (!active_type)
-				{
-					return;
-				}
-
-				process_rule(active_type->id(), content, std::move(*condition_out));
-
-				// Ensure `std::nullopt` status.
-				// (As opposed to 'moved-from' status)
-				condition_out = std::nullopt;
-			};
-
-			do
-			{
-				auto [type_name, member_name, comparison_operator, compared_value_raw, updated_offset] = parse_trigger_condition(trigger_condition_expr, static_cast<std::ptrdiff_t>(offset));
-
-				if (type_name.empty())
-				{
-					break;
-				}
-
-				auto expr_start_idx = static_cast<std::size_t>(type_name.data() - trigger_condition_expr.data());
-				//auto processed_length = (static_cast<std::size_t>(updated_offset) - offset);
-
-				auto parsed_expr = std::string_view { trigger_condition_expr.data()+expr_start_idx, static_cast<std::size_t>(updated_offset-expr_start_idx) };
-
-				if (!is_first_expr)
-				{
-					// Space between the old `offset` (i.e. end of previous expression) and the start of current expression.
-					auto expr_gap = std::string_view { (trigger_condition_expr.data() + offset), (expr_start_idx - offset) };
-
-					auto local_combinator_symbol_idx = std::string_view::npos;
-
-					// Perform view-local lookup:
-					if (local_combinator_symbol_idx = expr_gap.find("&&"); local_combinator_symbol_idx != std::string_view::npos)
-					{
-						active_combinator = Combinator::And;
-					}
-					else if (local_combinator_symbol_idx = expr_gap.find("||"); local_combinator_symbol_idx != std::string_view::npos)
-					{
-						active_combinator = Combinator::Or;
-					}
-					
-					if (local_combinator_symbol_idx == std::string_view::npos)
-					{
-						print_warn("Missing combinator symbol in state-rule trigger expression; using last known combinator as fallback.");
-					}
-					/*
-					else
-					{
-						// Convert from view-local index to global index.
-						const auto combinator_symbol_idx = static_cast<std::size_t>((expr_gap.data() + local_combinator_symbol_idx) - trigger_condition_expr.data());
-
-						constexpr std::size_t combinator_symbol_size = 2;
-						if (trigger_condition_expr.find("(", (combinator_symbol_idx + combinator_symbol_size)) != std::string_view::npos)
-						{
-							// ...
-						}
-					}
-					*/
-				}
-				
-				// Update the processing offset to the latest location reported by our parsing step.
-				offset = static_cast<std::size_t>(updated_offset);
-
-				// Attempt to resolve `type_name`:
-				auto type_name_id = hash(type_name).value();
-
-				if (!active_type.has_value())
-				{
-					active_type = resolve(type_name_id);
-
-					if (!active_type)
-					{
-						throw std::runtime_error(format("Unable to resolve trigger/event type: \"{}\" (#{})", type_name, type_name_id));
-					}
-				}
-				else if (active_type->id() != type_name_id)
-				{
-					if (active_combinator == Combinator::And)
-					{
-						throw std::runtime_error(format("Unsupported operation: Unable to build 'AND' compound condition with multiple event types. ({})", parsed_expr));
-					}
-
-					// Since combining event types in trigger-clauses is not supported,
-					// we need to process the condition we've already built.
-					store_condition();
-
-					// With the previous condition handled, we can switch to the new event-type:
-					active_type = resolve(type_name_id);
-
-					if (!active_type)
-					{
-						throw std::runtime_error(format("Unable to resolve trigger/event type in compound condition: \"{}\" (#{})", type_name, type_name_id));
-					}
-				}
-
-				assert(active_type);
-
-				// Attempt to resolve a single condition (i.e. fragment) from the expression we parsed.
-				if (auto generated_condition = process_condition(*active_type, member_name, comparison_operator, compared_value_raw, parsed_expr))
-				{
-					// Check if we currently have an established condition:
-					if (condition_out.has_value())
-					{
-						util::visit
-						(
-							*condition_out,
-
-							// First time visiting this condition. (Fragment only; no AND/OR container generated)
-							[active_combinator, &store_condition, &condition_out, &generated_condition](EventTriggerSingleCondition& single_condition)
-							{
-								switch (active_combinator)
-								{
-									case Combinator::And:
-									{
-										// Generate an AND container:
-										EventTriggerAndCondition and_condition;
-
-										and_condition.add_condition(std::move(single_condition));
-										and_condition.add_condition(std::move(*generated_condition));
-
-										// Store the newly generated container in place of the old condition-fragment.
-										condition_out = std::move(and_condition);
-
-										break;
-									}
-									case Combinator::Or:
-									{
-										// Generate an OR container:
-										EventTriggerOrCondition or_condition;
-
-										or_condition.add_condition(std::move(single_condition));
-										or_condition.add_condition(std::move(*generated_condition));
-
-										// Store the newly generated container in place of the old condition-fragment.
-										condition_out = std::move(or_condition);
-
-										break;
-									}
-
-									default:
-										// In the event that there is no conbinator, process the existing
-										// condition/fragment and swap in the newly generated one:
-										store_condition();
-
-										condition_out = std::move(generated_condition);
-
-										break;
-								}
-							},
-
-							// Existing AND container:
-							[active_combinator, &store_condition, &condition_out, &generated_condition](EventTriggerAndCondition& and_condition)
-							{
-								switch (active_combinator)
-								{
-									case Combinator::And:
-										// Add to this container as usual.
-										and_condition.add_condition(std::move(*generated_condition));
-
-										break;
-									case Combinator::Or:
-										// The user has indicated a switch to an OR clause.
-										// Process this AND container as-is, then swap in the
-										// new condition fragment for further operation.
-										store_condition();
-
-										condition_out = std::move(*generated_condition);
-
-										break;
-
-									default:
-										// Unsupported conbinator; ignore this fragment.
-
-										break;
-								}
-							},
-
-							// Existing OR container:
-							[active_combinator, &store_condition, &condition_out, &generated_condition](EventTriggerOrCondition& or_condition)
-							{
-								switch (active_combinator)
-								{
-									case Combinator::And:
-										// The user has indicated a switch to an AND clause.
-										// Process this OR container as-is, then swap in the
-										// new condition fragment for further operation.
-										store_condition();
-
-										condition_out = std::move(*generated_condition);
-
-										break;
-									case Combinator::Or:
-										// Add to this container as usual.
-										or_condition.add_condition(std::move(*generated_condition));
-
-										break;
-
-									default:
-										// Unsupported conbinator; ignore this fragment.
-
-										break;
-								}
-							}
-						);
-					}
-					else
-					{
-						// No condition found; store the generated condition/fragment into `condition_out`.
-						condition_out = std::move(generated_condition);
-					}
-				}
-
-				is_first_expr = false;
-
-				// Debugging related:
-				/*
-				auto remaining_length = (trigger_condition_expr.size() - static_cast<std::size_t>(updated_offset));
-				auto remaining = std::string_view{ (trigger_condition_expr.data() + updated_offset), remaining_length };
-
-				print(remaining);
-				*/
-			} while (offset < trigger_condition_expr.size());
-
-			// If this is the first expression processed and we were unable to parse a type or condition,
-			// try using the entire expression as an event-type declaration:
-			if (is_first_expr && !active_type)
-			{
-				const auto type_name_id = hash(trigger_condition_expr);
-				active_type = resolve(type_name_id);
-
-				if (!active_type)
-				{
-					throw std::runtime_error(format("Unable to resolve trigger/event type: \"{}\" (#{})", trigger_condition_expr, type_name_id.value()));
-				}
-			}
-
-			if (!active_type)
-			{
-				return false;
-			}
-
-			// Process the rule using whatever's left.
-			if (condition_out)
-			{
-				process_rule(active_type->id(), content, std::move(*condition_out));
-			}
-			else
-			{
-				process_rule(active_type->id(), content);
-			}
-
-			return true;
-		};
 
 		const auto collection_has_named_members = (rules.is_object());
 
@@ -1271,12 +1407,16 @@ namespace engine
 			{
 				if (const auto trigger_decl = util::find_any(content, "trigger", "triggers", "condition", "conditions"); trigger_decl != content.end())
 				{
-					util::json_for_each(*trigger_decl, [&content, &process_expression](const util::json& decl)
+					util::json_for_each(*trigger_decl, [&](const util::json& decl)
 					{
 						// Embedded (i.e. regular) trigger condition.
 						const auto trigger_condition_expr = decl.get<std::string>();
 
-						process_expression(trigger_condition_expr, content);
+						count += process_trigger_expression
+						(
+							state, trigger_condition_expr, content,
+							opt_states_out, opt_base_path, allow_inline_import
+						);
 					});
 				}
 			}
@@ -1285,11 +1425,14 @@ namespace engine
 				// In-place trigger condition.
 				const auto& trigger_condition_expr = declaration;
 
-				process_expression(trigger_condition_expr, content);
+				count += process_trigger_expression
+				(
+					state, trigger_condition_expr, content,
+					opt_states_out, opt_base_path, allow_inline_import
+				);
 			}
 		}
 
-		// See above subroutine.
 		return count;
 	}
 
