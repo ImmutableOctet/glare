@@ -40,6 +40,8 @@ namespace engine
 	class EventTriggerSingleCondition;
 	class EventTriggerAndCondition;
 	class EventTriggerOrCondition;
+	class EventTriggerTrueCondition;
+	class EventTriggerFalseCondition;
 
 	// Abstract base-class for event-trigger conditions.
 	class EventTriggerConditionType
@@ -73,6 +75,16 @@ namespace engine
 					[&out](const EventTriggerOrCondition& or_condition)
 					{
 						out = &or_condition;
+					},
+
+					[&out](const EventTriggerTrueCondition& true_condition)
+					{
+						out = &true_condition;
+					},
+
+					[&out](const EventTriggerTrueCondition& false_condition)
+					{
+						out = &false_condition;
 					}
 				);
 
@@ -110,6 +122,18 @@ namespace engine
 					[&check_condition, &result](const EventTriggerOrCondition& or_condition)
 					{
 						result = check_condition(or_condition);
+					},
+
+					[](const EventTriggerTrueCondition& true_condition)
+					{
+						//result = check_condition(true_condition);
+						result = true;
+					},
+
+					[](const EventTriggerFalseCondition& false_condition)
+					{
+						//result = check_condition(false_condition);
+						result = false;
 					}
 				);
 
@@ -185,7 +209,7 @@ namespace engine
 				(
 					condition,
 
-					[&out](const EventTriggerSingleCondition& single_condition) {},
+					[](const EventTriggerSingleCondition& single_condition) {},
 
 					[&out](const EventTriggerAndCondition& and_condition)
 					{
@@ -195,7 +219,10 @@ namespace engine
 					[&out](const EventTriggerOrCondition& or_condition)
 					{
 						out = &or_condition;
-					}
+					},
+
+					[](const EventTriggerTrueCondition& true_condition) {},
+					[](const EventTriggerFalseCondition& false_condition) {}
 				);
 
 				return out;
@@ -204,6 +231,8 @@ namespace engine
 			std::size_t add_condition(EventTriggerSingleCondition&& condition_in);
 			std::size_t add_condition(EventTriggerAndCondition&& condition_in);
 			std::size_t add_condition(EventTriggerOrCondition&& condition_in);
+			std::size_t add_condition(EventTriggerTrueCondition&& condition_in);
+			std::size_t add_condition(EventTriggerFalseCondition&& condition_in);
 
 			template <typename ConditionVariant>
 			std::size_t add_condition(ConditionVariant&& condition_in)
@@ -227,6 +256,16 @@ namespace engine
 					[this, &result](EventTriggerOrCondition&& or_condition)
 					{
 						result = this->add_condition(std::move(or_condition));
+					},
+
+					[this, &result](EventTriggerTrueCondition&& true_condition)
+					{
+						result = this->add_condition(std::move(true_condition));
+					},
+
+					[this, &result](EventTriggerFalseCondition&& false_condition)
+					{
+						result = this->add_condition(std::move(false_condition));
 					}
 				);
 
@@ -266,12 +305,34 @@ namespace engine
 			EventTriggerCompoundMethod compound_method() const override;
 	};
 
+	class EventTriggerTrueCondition : public EventTriggerConditionType
+	{
+		public:
+			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const override;
+			bool condition_met(const MetaAny& event_instance) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const override;
+
+			EventTriggerCompoundMethod compound_method() const override;
+	};
+
+	class EventTriggerFalseCondition : public EventTriggerConditionType
+	{
+		public:
+			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const override;
+			bool condition_met(const MetaAny& event_instance) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const override;
+
+			EventTriggerCompoundMethod compound_method() const override;
+	};
+
 	// Variant type used to represent an event-trigger condition held by an external type. (e.g. `EntityStateRule`)
 	// TODO: Look into adding `std::monostate` option here. (Currently using `std::optional` to wrap 'no condition' scenario)
 	using EventTriggerCondition = std::variant
 	<
 		EventTriggerSingleCondition,
 		EventTriggerAndCondition,
-		EventTriggerOrCondition
+		EventTriggerOrCondition,
+		EventTriggerTrueCondition,
+		EventTriggerFalseCondition
 	>;
 }

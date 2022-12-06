@@ -180,6 +180,20 @@ namespace engine
 		return 1;
 	}
 
+	std::size_t EventTriggerCompoundCondition::add_condition(EventTriggerTrueCondition&& condition_in)
+	{
+		conditions.emplace_back(std::move(condition_in));
+
+		return 1;
+	}
+
+	std::size_t EventTriggerCompoundCondition::add_condition(EventTriggerFalseCondition&& condition_in)
+	{
+		conditions.emplace_back(std::move(condition_in));
+
+		return 1;
+	}
+
 	// EventTriggerAndCondition:
 	template <typename ...Args>
 	static bool EventTriggerAndCondition_condition_met_impl(const EventTriggerCompoundCondition::ConditionContainer& conditions, Args&&... args)
@@ -267,4 +281,16 @@ namespace engine
 	{
 		return EventTriggerCompoundMethod::Or;
 	}
+
+	// EventTriggerTrueCondition:
+	bool EventTriggerTrueCondition::condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const { return true; }
+	bool EventTriggerTrueCondition::condition_met(const MetaAny& event_instance) const { return true; }
+	bool EventTriggerTrueCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const { return true; }
+	EventTriggerCompoundMethod EventTriggerTrueCondition::compound_method() const { return EventTriggerCompoundMethod::None; }
+
+	// EventTriggerFalseCondition:
+	bool EventTriggerFalseCondition::condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const { return false; }
+	bool EventTriggerFalseCondition::condition_met(const MetaAny& event_instance) const { return false; }
+	bool EventTriggerFalseCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const { return false; }
+	EventTriggerCompoundMethod EventTriggerFalseCondition::compound_method() const { return EventTriggerCompoundMethod::None; }
 }
