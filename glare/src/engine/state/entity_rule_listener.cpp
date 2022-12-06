@@ -235,7 +235,7 @@ namespace engine
 						// Resolve trigger condition status:
 						if (condition)
 						{
-							if (!condition->condition_met(event_instance, registry, entity))
+							if (!EventTriggerConditionType::get_condition_status(*condition, event_instance, registry, entity))
 							{
 								// Condition has not been met; continue to next rule.
 								return;
