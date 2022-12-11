@@ -261,7 +261,7 @@ namespace engine
         }
         else
         {
-            throw std::exception("Invalid value specified; unable to trigger event.");
+            //throw std::exception("Invalid value specified; unable to trigger event.");
         }
     }
 
