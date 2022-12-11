@@ -24,8 +24,17 @@ namespace engine
 	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(PlayerTargetComponent, player_index);
 	//GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(NameComponent, name);
 
-	// TODO: Reflect portions of the public API.
-	GENERATE_EMPTY_TYPE_REFLECTION(RelationshipComponent);
+	// TODO: Reflect the rest of the public API.
+	template <>
+	void reflect<RelationshipComponent>()
+	{
+		engine_meta_type<RelationshipComponent>()
+			.data<nullptr, &RelationshipComponent::children>("children"_hs) // child_count
+			.data<nullptr, &RelationshipComponent::has_children>("has_children"_hs)
+			.data<nullptr, &RelationshipComponent::get_parent>("parent"_hs)
+			.ctor<Entity>()
+		;
+	}
 
 	template <>
 	void reflect<NameComponent>()
@@ -97,13 +106,13 @@ namespace engine
 
 	inline void reflect_core_components()
 	{
+		reflect<RelationshipComponent>();
 		reflect<NameComponent>();
 		reflect<TypeComponent>();
 		reflect<InstanceComponent>();
 		reflect<ForwardingComponent>();
 		reflect<PlayerComponent>();
 		reflect<PlayerTargetComponent>();
-		reflect<RelationshipComponent>();
 		reflect<TransformHistoryComponent>();
 
 		// TODO: Implement reflection for `Transform` type as well.
