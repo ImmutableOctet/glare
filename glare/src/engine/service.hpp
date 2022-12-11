@@ -7,6 +7,8 @@
 #include "timed_event.hpp"
 #include "timer.hpp"
 
+#include "meta/types.hpp"
+
 #include <util/small_vector.hpp>
 
 #include <utility>
@@ -14,6 +16,9 @@
 #include <type_traits>
 #include <optional>
 //#include <vector>
+
+// Debugging related:
+//#include <util/log.hpp>
 
 namespace app
 {
@@ -111,6 +116,12 @@ namespace engine
 				queue_event<TimedEvent>(std::forward<TimedEvent>(event_obj));
 			}
 
+			template <>
+			inline void event<MetaAny>(MetaAny&& event_obj)
+			{
+				trigger_opaque_event(std::move(event_obj));
+			}
+
 			template <typename EventType, typename... Args>
 			inline void timed_event(Timer timer, Args&&... args)
 			{
@@ -154,6 +165,26 @@ namespace engine
 				}
 
 				timed_event<EventType>(Timer(*timer_duration), std::forward<Args>(args)...);
+			}
+
+			template <typename TimeType>
+			inline void timed_event(std::optional<TimeType> timer_duration, MetaAny&& event_instance)
+			{
+				if (timer_duration)
+				{
+					queue_event<TimedEvent>
+					(
+						TimedEvent
+						{
+							std::move(*timer_duration),
+							std::move(event_instance)
+						}
+					);
+				}
+				else
+				{
+					trigger_opaque_event(std::move(event_instance));
+				}
 			}
 
 			// Unregisters all event triggers tied to a given object.
@@ -224,6 +255,10 @@ namespace engine
 
 			// Enumerates timed events, triggering underlying event types when timers complete.
 			void update_timed_events();
+
+			// Triggers the the event method for the underlying object in `event_instance`.
+			// The return-value of this method indicates success.
+			bool trigger_opaque_event(MetaAny&& event_instance);
 
 			// A pointer to the active event handler object.
 			// (One of the two found below)

@@ -140,35 +140,7 @@ namespace engine
 
 					if (timed_event.completed())
 					{
-						auto type = timed_event.type();
-
-						// Timed events must represent a reflected type, due to type-erasure.
-						assert(type);
-
-						if (!type)
-						{
-							print_error("Unable to resolve underlying timed event type.");
-
-							return true;
-						}
-
-						auto trigger_fn = type.func("trigger_event_from_meta_any"_hs);
-
-						assert(trigger_fn);
-
-						if (!trigger_fn)
-						{
-							print_error("Unable to resolve event-trigger function for underlying timed event type.");
-
-							return true;
-						}
-
-						trigger_fn.invoke
-						(
-							{},
-							entt::forward_as_meta(*this),
-							entt::forward_as_meta(std::move(timed_event.event_instance))
-						);
+						trigger_opaque_event(std::move(timed_event.event_instance));
 
 						return true;
 					}
@@ -179,5 +151,44 @@ namespace engine
 
 			pending_timed_events.end()
 		);
+	}
+
+	bool Service::trigger_opaque_event(MetaAny&& event_instance)
+	{
+		using namespace entt::literals;
+
+		auto type = event_instance.type();
+
+		if (!type)
+		{
+			print_warn("Unable to resolve type of generated command.");
+
+			return false;
+		}
+
+		auto trigger_fn = type.func("trigger_event_from_meta_any"_hs);
+
+		if (!trigger_fn)
+		{
+			print_warn("Unable to resolve trigger-function from type: #{}", type.id());
+
+			return false;
+		}
+
+		auto result = trigger_fn.invoke
+		(
+			{},
+			entt::forward_as_meta(*this),
+			entt::forward_as_meta(std::move(event_instance))
+		);
+
+		if (!result)
+		{
+			print_warn("Failed to trigger event type: #{}", type.id());
+
+			return false;
+		}
+
+		return true;
 	}
 }
