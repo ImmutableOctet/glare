@@ -1,7 +1,12 @@
 #include "event_trigger_condition.hpp"
 
+#include "entity_target.hpp"
+
 #include "meta/meta.hpp"
 #include "meta/meta_data_member.hpp"
+#include "meta/indirect_meta_data_member.hpp"
+
+#include <optional>
 
 // Debugging related:
 #include <util/log.hpp>
@@ -73,6 +78,11 @@ namespace engine
 
 	bool EventTriggerSingleCondition::condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const
 	{
+		return condition_met(event_instance, this->comparison_value, registry, entity);
+	}
+
+	bool EventTriggerSingleCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const
+	{
 		using namespace entt::literals;
 
 		if (!event_instance)
@@ -80,22 +90,54 @@ namespace engine
 			return false;
 		}
 
-		const auto comparison_value_type    = comparison_value.type();
+		/*
+		// TODO: Determine if we want this check.
+		if (!comparison_value)
+		{
+			return false;
+		}
+		*/
+
+		const auto comparison_value_type = comparison_value.type();
 		const auto comparison_value_type_id = comparison_value_type.id();
+
+		auto handle_data_member = [this, &event_instance, &registry, entity](auto&& data_member, auto&& false_value) -> std::optional<bool>
+		{
+			if (auto embedded_value = data_member.get(registry, entity); (embedded_value != false_value))
+			{
+				//return condition_met(event_instance, embedded_value);
+
+				// NOTE: Recursion.
+				return condition_met(event_instance, embedded_value, registry, entity);
+			}
+
+			return std::nullopt;
+		};
 
 		switch (comparison_value_type_id)
 		{
 			case "MetaDataMember"_hs:
-			{
-				const auto data_member = this->comparison_value.cast<MetaDataMember>();
-
-				if (auto embedded_value = data_member.get(registry, entity))
+				if (auto result = handle_data_member(comparison_value.cast<MetaDataMember>(), false))
 				{
-					return condition_met(event_instance, embedded_value);
+					return *result;
 				}
 
 				break;
-			}
+
+			case "IndirectMetaDataMember"_hs:
+				if (auto result = handle_data_member(comparison_value.cast<IndirectMetaDataMember>(), false))
+				{
+					return *result;
+				}
+
+				break;
+			case "EntityTarget"_hs:
+				if (auto result = handle_data_member(comparison_value.cast<EntityTarget>(), null))
+				{
+					return *result;
+				}
+
+				break;
 		}
 
 		return condition_met(event_instance, comparison_value);
@@ -223,14 +265,19 @@ namespace engine
 		return EventTriggerAndCondition_condition_met_impl(conditions, event_instance, registry, entity);
 	}
 
-	bool EventTriggerAndCondition::condition_met(const MetaAny& event_instance) const
+	bool EventTriggerAndCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const
 	{
-		return EventTriggerAndCondition_condition_met_impl(conditions, event_instance);
+		return EventTriggerAndCondition_condition_met_impl(conditions, event_instance, comparison_value, registry, entity);
 	}
 
 	bool EventTriggerAndCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const
 	{
 		return EventTriggerAndCondition_condition_met_impl(conditions, event_instance, comparison_value);
+	}
+
+	bool EventTriggerAndCondition::condition_met(const MetaAny& event_instance) const
+	{
+		return EventTriggerAndCondition_condition_met_impl(conditions, event_instance);
 	}
 
 	EventTriggerCompoundMethod EventTriggerAndCondition::compound_method() const
@@ -267,14 +314,19 @@ namespace engine
 		return EventTriggerOrCondition_condition_met_impl(conditions, event_instance, registry, entity);
 	}
 
-	bool EventTriggerOrCondition::condition_met(const MetaAny& event_instance) const
+	bool EventTriggerOrCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const
 	{
-		return EventTriggerOrCondition_condition_met_impl(conditions, event_instance);
+		return EventTriggerOrCondition_condition_met_impl(conditions, event_instance, comparison_value, registry, entity);
 	}
 
 	bool EventTriggerOrCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const
 	{
 		return EventTriggerOrCondition_condition_met_impl(conditions, event_instance, comparison_value);
+	}
+
+	bool EventTriggerOrCondition::condition_met(const MetaAny& event_instance) const
+	{
+		return EventTriggerOrCondition_condition_met_impl(conditions, event_instance);
 	}
 
 	EventTriggerCompoundMethod EventTriggerOrCondition::compound_method() const
@@ -284,13 +336,15 @@ namespace engine
 
 	// EventTriggerTrueCondition:
 	bool EventTriggerTrueCondition::condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const { return true; }
-	bool EventTriggerTrueCondition::condition_met(const MetaAny& event_instance) const { return true; }
+	bool EventTriggerTrueCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const { return true; }
 	bool EventTriggerTrueCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const { return true; }
+	bool EventTriggerTrueCondition::condition_met(const MetaAny& event_instance) const { return true; }
 	EventTriggerCompoundMethod EventTriggerTrueCondition::compound_method() const { return EventTriggerCompoundMethod::None; }
 
 	// EventTriggerFalseCondition:
 	bool EventTriggerFalseCondition::condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const { return false; }
-	bool EventTriggerFalseCondition::condition_met(const MetaAny& event_instance) const { return false; }
+	bool EventTriggerFalseCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const { return false; }
 	bool EventTriggerFalseCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const { return false; }
+	bool EventTriggerFalseCondition::condition_met(const MetaAny& event_instance) const { return false; }
 	EventTriggerCompoundMethod EventTriggerFalseCondition::compound_method() const { return EventTriggerCompoundMethod::None; }
 }

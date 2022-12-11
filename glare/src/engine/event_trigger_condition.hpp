@@ -124,13 +124,13 @@ namespace engine
 						result = check_condition(or_condition);
 					},
 
-					[](const EventTriggerTrueCondition& true_condition)
+					[&result](const EventTriggerTrueCondition& true_condition)
 					{
 						//result = check_condition(true_condition);
 						result = true;
 					},
 
-					[](const EventTriggerFalseCondition& false_condition)
+					[&result](const EventTriggerFalseCondition& false_condition)
 					{
 						//result = check_condition(false_condition);
 						result = false;
@@ -143,8 +143,9 @@ namespace engine
 			virtual ~EventTriggerConditionType();
 
 			virtual bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const = 0;
-			virtual bool condition_met(const MetaAny& event_instance) const = 0;
+			virtual bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const = 0;
 			virtual bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const = 0;
+			virtual bool condition_met(const MetaAny& event_instance) const = 0;
 
 			virtual EventTriggerCompoundMethod compound_method() const = 0;
 
@@ -161,8 +162,9 @@ namespace engine
 			EventTriggerSingleCondition(MetaSymbolID event_type_member, MetaAny&& comparison_value, ComparisonMethod comparison_method=ComparisonMethod::Equal);
 
 			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const override;
-			bool condition_met(const MetaAny& event_instance) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const override;
+			bool condition_met(const MetaAny& event_instance) const override;
 
 			EventTriggerCompoundMethod compound_method() const override;
 
@@ -289,8 +291,9 @@ namespace engine
 	{
 		public:
 			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const override;
-			bool condition_met(const MetaAny& event_instance) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const override;
+			bool condition_met(const MetaAny& event_instance) const override;
 
 			EventTriggerCompoundMethod compound_method() const override;
 	};
@@ -299,8 +302,9 @@ namespace engine
 	{
 		public:
 			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const override;
-			bool condition_met(const MetaAny& event_instance) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const override;
+			bool condition_met(const MetaAny& event_instance) const override;
 
 			EventTriggerCompoundMethod compound_method() const override;
 	};
@@ -309,8 +313,9 @@ namespace engine
 	{
 		public:
 			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const override;
-			bool condition_met(const MetaAny& event_instance) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const override;
+			bool condition_met(const MetaAny& event_instance) const override;
 
 			EventTriggerCompoundMethod compound_method() const override;
 	};
@@ -319,8 +324,9 @@ namespace engine
 	{
 		public:
 			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const override;
-			bool condition_met(const MetaAny& event_instance) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const override;
+			bool condition_met(const MetaAny& event_instance) const override;
 
 			EventTriggerCompoundMethod compound_method() const override;
 	};
