@@ -29,6 +29,6 @@ namespace engine
 	using MetaRemovalDescription = MetaIDStorage; // <MetaType>
 	using MetaStorageDescription = MetaIDStorage; // <MetaType>
 
-	using MetaStorage = util::small_vector<MetaAny, 4>; // 8
-	using MetaSymbolStorage = util::small_vector<MetaSymbolID, 4>; // 8
+	using MetaStorage = util::small_vector<MetaAny, 6>; // 4 // 8
+	using MetaSymbolStorage = util::small_vector<MetaSymbolID, 6>; // 4 // 8
 }
