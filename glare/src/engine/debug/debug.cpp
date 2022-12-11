@@ -1,15 +1,18 @@
 #include "debug.hpp"
-#include "events.hpp"
 
-#include "components/relationship_component.hpp"
+#include "commands/print_command.hpp"
 
-#include "world/world.hpp"
-#include "world/world_events.hpp"
-#include "world/physics/collision_events.hpp"
+#include <engine/events.hpp>
 
-#include "world/animation/components/skeletal_component.hpp"
+#include <engine/components/relationship_component.hpp>
 
-#include "input/events.hpp"
+#include <engine/world/world.hpp>
+#include <engine/world/world_events.hpp>
+#include <engine/world/physics/collision_events.hpp>
+
+#include <engine/world/animation/components/skeletal_component.hpp>
+
+#include <engine/input/events.hpp>
 
 #include <app/input/events.hpp>
 
@@ -17,6 +20,7 @@
 
 #include <util/format.hpp>
 #include <util/log.hpp>
+
 #include <magic_enum/magic_enum_format.hpp>
 
 // Debugging related:
@@ -145,6 +149,8 @@ namespace engine
 		enable<OnButtonReleased>();
 		enable<OnButtonPressed>();
 		//enable<OnAnalogInput>();
+
+		enable<PrintCommand>();
 	}
 
 	void DebugListener::on_skeleton(Registry& registry, Entity entity)
@@ -299,5 +305,10 @@ namespace engine
 	void DebugListener::operator()(const OnAnalogInput& data)
 	{
 		print("Analog input [Player {}] - {}: {} ({})", data.state_index, std::format("{}", data.analog), data.value, math::degrees(data.angle));
+	}
+
+	void DebugListener::operator()(const PrintCommand& data)
+	{
+		print(data.message);
 	}
 }

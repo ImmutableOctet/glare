@@ -1,8 +1,8 @@
 #pragma once
 
-#include "types.hpp"
-//#include "world/world.hpp"
-#include "world/world_system.hpp"
+#include <engine/types.hpp>
+//#include <engine/world/world.hpp>
+#include <engine/world/world_system.hpp>
 
 #include <string>
 #include <string_view>
@@ -30,6 +30,7 @@ namespace app::input
 
 namespace engine
 {
+	// Events:
 	struct OnStageLoaded;
 	struct OnEntityCreated;
 	struct OnParentChanged;
@@ -45,6 +46,9 @@ namespace engine
 	struct OnButtonReleased;
 	struct OnButtonPressed;
 	struct OnAnalogInput;
+
+	// Commands:
+	struct PrintCommand;
 
 	void print_children(World& registry, Entity entity, bool recursive=true, bool summary_info=true, bool recursive_labels=false, const std::string& prefix="->");
 	void position_in_titlebar(game::Game& game, Entity entity, std::optional<std::string_view> prefix=std::nullopt);
@@ -86,6 +90,7 @@ namespace engine
 			void operator()(const OnButtonPressed& data);
 			void operator()(const OnAnalogInput& data);
 
+			void operator()(const PrintCommand& data);
 		private:
 			template <typename EventType>
 			void enable();
