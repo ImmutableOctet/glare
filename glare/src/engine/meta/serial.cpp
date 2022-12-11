@@ -240,6 +240,64 @@ namespace engine
 		return meta_data_member_from_string(std::string(value));
 	}
 
+	std::optional<IndirectMetaDataMember> indirect_meta_data_member_from_string(const std::string& value, EntityTarget target)
+	{
+		const auto [type_name, data_member_name] = parse_data_member_reference(value);
+
+		if (type_name.empty())
+		{
+			return std::nullopt;
+		}
+
+		if ((type_name == "self") || (type_name == "this"))
+		{
+			auto as_self = meta_data_member_from_string(value);
+
+			if (!as_self)
+			{
+				return std::nullopt;
+			}
+
+			return IndirectMetaDataMember
+			{
+				std::move(target), // EntityTarget { EntityTarget::SelfTarget{} },
+
+				std::move(*as_self)
+			};
+		}
+
+		//auto data_member_reference = parse_data_member_reference();
+
+		std::size_t target_parse_offset = 0;
+
+		//EntityTarget::TargetType target = EntityTarget::SelfTarget{};
+
+		if (auto target_parse_result = EntityTarget::parse_type(value))
+		{
+			target = { std::move(std::get<0>(*target_parse_result)) };
+			target_parse_offset = std::get<1>(*target_parse_result);
+		}
+
+		auto member_reference_data = std::string_view { (value.data() + target_parse_offset), (value.size() - target_parse_offset) };
+
+		if (auto as_target = meta_data_member_from_string(member_reference_data))
+		{
+			return IndirectMetaDataMember
+			{
+				std::move(target),
+				std::move(*as_target)
+			};
+		}
+
+		return std::nullopt;
+	}
+
+	// Overload added due to limitations of `std::regex`. (Shouldn't matter for most cases, thanks to SSO)
+	std::optional<IndirectMetaDataMember> indirect_meta_data_member_from_string(std::string_view value, EntityTarget target)
+	{
+		return indirect_meta_data_member_from_string(std::string(value), std::move(target));
+	}
+
 	std::tuple<std::string_view, std::string_view> parse_data_member_reference(const std::string& value) // std::string_view
 	{
 		const auto data_member_rgx = std::regex("([^\\s\\:\\.\\-\\>]+)\\s*(\\:\\:|\\.|\\-\\>)?\\s*([^\\s]+)");
@@ -247,12 +305,48 @@ namespace engine
 		if (std::smatch rgx_match; std::regex_search(value.begin(), value.end(), rgx_match, data_member_rgx))
 		{
 			auto type_name        = util::match_view(value, rgx_match, 1);
-			//auto access_operator  = util::match_view(value, rgx_match, 2);
+			auto access_operator  = util::match_view(value, rgx_match, 2);
 			auto data_member_name = util::match_view(value, rgx_match, 3);
+
+			// Edge-case due to limitation in regular expression used. -- Handles scenarios
+			// where single-words are split into the full-string minus the last character.
+			// e.g. "self" being split into: <"sel", {}, "f">
+			if (!type_name.empty() && !data_member_name.empty() && access_operator.empty())
+			{
+				return {};
+			}
 
 			return { type_name, data_member_name };
 		}
 
 		return {};
+	}
+
+	EntityTarget::TargetType parse_target_type(const util::json& target_data)
+	{
+		using namespace entt::literals;
+
+		using Target = EntityTarget;
+
+		switch (target_data.type())
+		{
+			case util::json::value_t::string:
+			{
+				auto raw_value = target_data.get<std::string>();
+				
+				if (auto result = EntityTarget::parse_type(raw_value))
+				{
+					return std::get<0>(*result);
+				}
+				
+				break;
+			}
+
+			case util::json::value_t::number_integer:
+			case util::json::value_t::number_unsigned:
+				return Target::ExactEntityTarget { static_cast<Entity>(target_data.get<entt::id_type>()) };
+		}
+
+		return Target::SelfTarget {};
 	}
 }
