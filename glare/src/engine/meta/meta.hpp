@@ -99,9 +99,11 @@ namespace engine
     {
         if (recursive)
         {
-            for (const auto& base_type : type.base())
+            for (const auto& base_type_entry : type.base())
             {
-                if (!enumerate_data_members(type, callback, recursive, count_out))
+                const auto& base_type = std::get<1>(base_type_entry);
+
+                if (!enumerate_data_members(base_type, callback, recursive, count_out))
                 {
                     break;
                 }
@@ -242,6 +244,34 @@ namespace engine
         }
 
         return resolve_data_member(type, check_base_types, std::forward<MemberNames>(member_names)...);
+    }
+
+    template <typename ...MemberNames> // std::string_view
+    inline entt::meta_data resolve_data_member(const entt::meta_type& type, std::string_view member_name, MemberNames&&... member_names)
+    {
+        auto result = resolve_data_member(type, true, member_name, std::forward<MemberNames>(member_names)...);
+
+        return std::get<1>(result);
+    }
+
+    template <typename T>
+    inline bool set_data_member(entt::meta_any& instance, std::string_view member_name, T&& member_value)
+    {
+        auto type = instance.type();
+
+        if (!type)
+        {
+            return false;
+        }
+
+        if (auto member = resolve_data_member(type, member_name))
+        {
+            return member.set(instance, member_value);
+
+            //return true;
+        }
+
+        return false;
     }
 
     // Attempts to retrieve a `PlayerIndex` value from `instance`, if applicable.
