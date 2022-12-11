@@ -1,5 +1,8 @@
 #include "meta_type_descriptor.hpp"
 #include "meta.hpp"
+#include "serial.hpp"
+
+#include <util/string.hpp>
 
 // Debugging related:
 #include <util/log.hpp>
@@ -41,6 +44,26 @@ namespace engine
 	MetaTypeDescriptor::MetaTypeDescriptor
 	(
 		MetaType type,
+		std::string_view content,
+		std::string_view arg_separator,
+		bool resolve_values,
+		std::size_t argument_offset,
+
+		std::optional<SmallSize> constructor_argument_count,
+		const MetaTypeDescriptorFlags& flags
+	) :
+		type(type),
+		constructor_argument_count(constructor_argument_count),
+		flags(flags)
+	{
+		assert(type);
+
+		set_variables(content, arg_separator, resolve_values, argument_offset);
+	}
+
+	MetaTypeDescriptor::MetaTypeDescriptor
+	(
+		MetaType type,
 		const util::json& content,
 
 		std::optional<SmallSize> constructor_argument_count,
@@ -52,7 +75,94 @@ namespace engine
 	{
 		assert(type);
 
-		std::size_t variable_index = 0;
+		set_variables(content);
+	}
+
+	std::optional<std::size_t> MetaTypeDescriptor::get_variable_index(MetaSymbolID name) const
+	{
+		for (std::size_t i = 0; i < field_names.size(); i++)
+		{
+			if (field_names[i] == name)
+			{
+				assert(field_values.size() > i);
+
+				return i;
+			}
+		}
+
+		return std::nullopt;
+	}
+
+	const MetaAny* MetaTypeDescriptor::get_variable(MetaSymbolID name) const
+	{
+		if (auto index = get_variable_index(name))
+		{
+			return &(field_values[*index]);
+		}
+
+		return nullptr;
+	}
+
+	MetaAny* MetaTypeDescriptor::get_variable(MetaSymbolID name)
+	{
+		return const_cast<MetaAny*>
+		(
+			const_cast<const MetaTypeDescriptor*>(this)->get_variable(name)
+		);
+	}
+
+	MetaAny* MetaTypeDescriptor::set_variable(MetaVariable&& variable, bool safe)
+	{
+		auto existing = get_variable(variable.name);
+
+		if (existing)
+		{
+			if (!safe || variable.value)
+			{
+				*existing = std::move(variable.value);
+
+				return existing;
+			}
+
+			return nullptr;
+		}
+
+		if (!safe || variable.value)
+		{
+			field_names.emplace_back(variable.name);
+
+			auto& value_out = field_values.emplace_back(std::move(variable.value));
+
+			return &value_out;
+		}
+
+		return nullptr;
+	}
+
+	void MetaTypeDescriptor::set_variables(MetaTypeDescriptor&& variables, bool override_constructor_input_size)
+	{
+		for (std::size_t i = 0; i < variables.size(); i++)
+		{
+			const auto& field_name = variables.field_names[i];
+			auto& field_value = variables.field_values[i];
+
+			// TODO: Implement overload of `set_variable` that directly takes in field values.
+			set_variable(MetaVariable(field_name, std::move(field_value)));
+		}
+
+		if (override_constructor_input_size)
+		{
+			if (variables.constructor_argument_count)
+			{
+				constructor_argument_count = variables.constructor_argument_count;
+			}
+		}
+	}
+
+	std::size_t MetaTypeDescriptor::set_variables(const util::json& content, std::size_t argument_offset)
+	{
+		std::size_t count = 0;
+		std::size_t variable_index = argument_offset;
 
 		for (const auto& var_proxy : content.items())
 		{
@@ -65,7 +175,7 @@ namespace engine
 			MetaSymbolID var_name_hash = hash(var_name);
 			//process_value(var_name, var_value);
 
-			auto resolve_data_entry = [&type, &content, &variable_index, &var_value, &var_name_hash]() mutable -> entt::meta_data
+			auto resolve_data_entry = [this, &content, &variable_index, &var_value, &var_name_hash]() mutable -> entt::meta_data
 			{
 				/*
 				// TODO: Determine if there's any benefit to keeping this check:
@@ -128,90 +238,56 @@ namespace engine
 
 			if (auto meta_var = resolve_meta_variable(); meta_var.value)
 			{
-				set_variable(std::move(meta_var));
+				if (set_variable(std::move(meta_var)))
+				{
+					count++;
+				}
 			}
 
 			variable_index++;
 		}
+
+		return count;
 	}
 
-	std::optional<std::size_t> MetaTypeDescriptor::get_variable_index(MetaSymbolID name) const
+	std::size_t MetaTypeDescriptor::set_variables
+	(
+		std::string_view content,
+
+		std::string_view arg_separator,
+		bool resolve_values,
+		std::size_t argument_offset,
+
+		bool safe
+	)
 	{
-		for (std::size_t i = 0; i < field_names.size(); i++)
-		{
-			if (field_names[i] == name)
-			{
-				assert(field_values.size() > i);
+		std::size_t count = 0;
+		std::size_t variable_index = argument_offset;
 
-				return i;
-			}
-		}
-
-		return std::nullopt;
-	}
-
-	const MetaAny* MetaTypeDescriptor::get_variable(MetaSymbolID name) const
-	{
-		if (auto index = get_variable_index(name))
-		{
-			return &(field_values[*index]);
-		}
-
-		return nullptr;
-	}
-
-	MetaAny* MetaTypeDescriptor::get_variable(MetaSymbolID name)
-	{
-		return const_cast<MetaAny*>
+		util::split
 		(
-			const_cast<const MetaTypeDescriptor*>(this)->get_variable(name)
+			content,
+			arg_separator,
+
+			[this, resolve_values, safe, &variable_index, &count](std::string_view argument, bool is_last_argument=false)
+			{
+				if (auto data_entry = get_data_member_by_index(type, variable_index, true))
+				{
+					const auto var_name_hash = data_entry->first;
+
+					if (set_variable(MetaVariable(var_name_hash, meta_any_from_string(argument, resolve_values)), safe))
+					{
+						count++;
+					}
+				}
+
+				variable_index++;
+			}
 		);
+
+		return count;
 	}
 
-	MetaAny* MetaTypeDescriptor::set_variable(MetaVariable&& variable, bool safe)
-	{
-		auto existing = get_variable(variable.name);
-
-		if (existing)
-		{
-			if (!safe || variable.value)
-			{
-				*existing = std::move(variable.value);
-
-				return existing;
-			}
-
-			return nullptr;
-		}
-
-		if (!safe || variable.value)
-		{
-			field_names.emplace_back(variable.name);
-			field_values.emplace_back(std::move(variable.value));
-		}
-
-		return nullptr;
-	}
-
-	void MetaTypeDescriptor::set_variables(MetaTypeDescriptor&& variables, bool override_constructor_input_size)
-	{
-		for (std::size_t i = 0; i < variables.size(); i++)
-		{
-			const auto& field_name = variables.field_names[i];
-			auto& field_value = variables.field_values[i];
-
-			// TODO: Implement overload of `set_variable` that directly takes in field values.
-			set_variable(MetaVariable(field_name, std::move(field_value)));
-		}
-
-		if (override_constructor_input_size)
-		{
-			if (variables.constructor_argument_count)
-			{
-				constructor_argument_count = variables.constructor_argument_count;
-			}
-		}
-	}
 
 	bool MetaTypeDescriptor::has_nested_descriptor(std::size_t n_values) const
 	{
