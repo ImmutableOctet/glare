@@ -1,5 +1,8 @@
 #pragma once
 
+#include "type_traits.hpp"
+
+#include <type_traits>
 #include <algorithm>
 #include <array>
 #include <tuple>
@@ -202,5 +205,68 @@ namespace util
 		}
 
 		return find_any(input, std::forward<Keys>(keys)...);
+	}
+
+	// Compares `key` to each value in `compare`, returning true if a match is found.
+	template <typename ValueType, typename ...ComparisonValues>
+	bool compare_values(ValueType&& key, ComparisonValues&&... compare)
+	{
+		if (sizeof...(compare) == 0)
+		{
+			return false;
+		}
+
+		return ((key == compare) || ...);
+	}
+
+	template <typename TransformFn, typename ValueType, typename ...ComparisonValues>
+	bool compare_values_transformed(TransformFn&& transform_fn, ValueType&& key, ComparisonValues&&... compare)
+	{
+		if (sizeof...(compare) == 0)
+		{
+			return false;
+		}
+
+		return ((transform_fn(key) == transform_fn(compare)) || ...);
+	}
+
+	template <typename MapType, typename KeyTransformFn, typename Callback, typename ...Ignore>
+	std::size_t enumerate_map_filtered_ex(MapType&& container, KeyTransformFn&& key_transform_fn, Callback&& callback, Ignore&&... ignore)
+	{
+		std::size_t count = 0;
+
+		for (auto&& [first, second] : container)
+		{
+			if (compare_values_transformed(key_transform_fn, first, std::forward<Ignore>(ignore)...))
+			{
+				continue;
+			}
+
+			count++;
+
+			using first_t  = decltype(first);
+			using second_t = decltype(second);
+
+			if constexpr (is_return_value<bool, Callback, first_t, second_t>)
+			{
+				if (!callback(std::forward<first_t>(first), std::forward<second_t>(second)))
+				{
+					break;
+				}
+			}
+			else
+			{
+				callback(std::forward<first_t>(first), std::forward<second_t>(second));
+			}
+		}
+
+		return count;
+	}
+
+	// Enumerates `container`, executing `callback` for each pair where the key does not match any of the items in `ignore`.
+	template <typename MapType, typename Callback, typename ...Ignore>
+	std::size_t enumerate_map_filtered(MapType&& container, Callback&& callback, Ignore&&... ignore)
+	{
+		return enumerate_map_filtered_ex(container, [](auto&& value) { return value; }, callback, std::forward<Ignore>(ignore)...);
 	}
 }
