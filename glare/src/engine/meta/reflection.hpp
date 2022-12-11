@@ -4,6 +4,7 @@
 
 #include "meta_variable.hpp"
 #include "meta_data_member.hpp"
+#include "indirect_meta_data_member.hpp"
 #include "meta_type_descriptor.hpp"
 
 namespace engine
@@ -37,6 +38,17 @@ namespace engine
 			.data<&MetaDataMember::data_member_id>("data_member_id"_hs)
 			.func<static_cast<MetaAny (MetaDataMember::*)(const MetaAny& instance) const>(&MetaDataMember::get)>("get_value"_hs)
 			.func<static_cast<MetaAny (MetaDataMember::*)(Registry& registry, Entity entity) const>(&MetaDataMember::get)>("get_value_from_component"_hs)
+		;
+	}
+
+	template <>
+	inline void reflect<IndirectMetaDataMember>()
+	{
+		engine_meta_type<IndirectMetaDataMember>()
+			.data<&IndirectMetaDataMember::target>("target"_hs)
+			.data<&IndirectMetaDataMember::data_member>("data_member"_hs)
+			.func<static_cast<MetaAny (IndirectMetaDataMember::*)(const MetaAny& instance) const>(&IndirectMetaDataMember::get)>("get_value"_hs)
+			.func<static_cast<MetaAny (IndirectMetaDataMember::*)(Registry& registry, Entity entity, bool) const>(&IndirectMetaDataMember::get)>("get_value_from_component"_hs)
 		;
 	}
 
@@ -80,6 +92,7 @@ namespace engine
 	{
 		reflect<MetaVariable>();
 		reflect<MetaDataMember>();
+		reflect<IndirectMetaDataMember>();
 		reflect<MetaTypeDescriptor>();
 	}
 }
