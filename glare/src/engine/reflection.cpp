@@ -9,14 +9,16 @@
 #include "types.hpp"
 
 #include "event_trigger_condition.hpp"
+#include "entity_target.hpp"
 
 // TODO: Determine if these make sense as CPP files (or PCH) instead:
 #include "components/reflection.hpp"
 
 #include "meta/reflection.hpp"
+#include "debug/reflection.hpp"
+#include "state/reflection.hpp"
 #include "input/reflection.hpp"
 #include "world/reflection.hpp"
-#include "state/reflection.hpp"
 
 #include <math/reflection.hpp>
 
@@ -29,6 +31,7 @@ namespace engine
 {
     static void reflect_systems()
     {
+        reflect<DebugListener>();
         reflect<StateSystem>();
         reflect<InputSystem>();
         reflect<World>();
@@ -109,6 +112,42 @@ namespace engine
         //engine_meta_type<EventTriggerCondition>();
     }
 
+    template <>
+    void reflect<EntityTarget>()
+    {
+        engine_meta_type<EntityTarget>()
+            .data<nullptr, &EntityTarget::target_index>("target_index"_hs)
+
+            .data<nullptr, &EntityTarget::is_self_targeted>("is_self_targeted"_hs)
+            .data<nullptr, &EntityTarget::is_parent_target>("is_parent_target"_hs)
+            .data<nullptr, &EntityTarget::is_exact_entity_target>("is_exact_entity_target"_hs)
+            .data<nullptr, &EntityTarget::is_entity_name_target>("is_entity_name_target"_hs)
+            .data<nullptr, &EntityTarget::is_child_target>("is_child_target"_hs)
+            .data<nullptr, &EntityTarget::is_player_target>("is_player_target"_hs)
+            .data<nullptr, &EntityTarget::is_null_target>("is_null_target"_hs)
+            
+            .func<&EntityTarget::get>("resolve"_hs)
+
+            // NOTE: Alias to `resolve`.
+            .func<&EntityTarget::get>("get"_hs)
+
+            //.func<&EntityTarget::parse_type>("parse_type"_hs)
+        ;
+    }
+
+    /*
+    template <>
+    void reflect<std::string>()
+    {
+        engine_meta_type<std::string>();
+    }
+
+    static void reflect_stl()
+    {
+        reflect<std::string>();
+    }
+    */
+
     // Reflects `math::Vector2D` with the generalized name of `Vector2D`.
     // 
     // TODO: Look into migrating this to another file/header.
@@ -138,6 +177,7 @@ namespace engine
 
     static void reflect_dependencies()
     {
+        //reflect_stl();
         reflect_math();
     }
 
@@ -145,6 +185,7 @@ namespace engine
     {
         reflect<EntityType>();
         reflect<LightType>();
+        reflect<EntityTarget>();
 
         //reflect<LightProperties>();
         //reflect<Axis>(); // RotationAxis
