@@ -55,9 +55,6 @@ namespace engine
 			
 			app::DeltaTime delta_time;
 
-			// TODO: Allow the user to specify a registry, rather than owning it outright.
-			mutable Registry registry;
-
 			// Scene root-node; parent to all world-bound entities.
 			Entity root   = null;
 
@@ -88,9 +85,6 @@ namespace engine
 
 				return *this;
 			}
-
-			Registry& get_registry() override;
-			const Registry& get_registry() const override;
 
 			Entity load(const filesystem::path& root_path, const std::string& json_file="map.json", Entity parent=null);
 

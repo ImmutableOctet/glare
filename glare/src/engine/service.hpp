@@ -47,14 +47,28 @@ namespace engine
 	class Service
 	{
 		public:
-			Service(bool register_input_events=true, bool register_timed_event_wrapper=false, bool register_core_commands=true);
+			Service
+			(
+				bool register_input_events=true,
+				bool register_timed_event_wrapper=false,
+				bool register_core_commands=true
+			);
+
 			Service(Service&&) noexcept = default;
 
 			virtual ~Service() {};
 
-			virtual Registry& get_registry() = 0;
-			virtual const Registry& get_registry() const = 0;
+			inline Registry& get_registry()
+			{
+				return registry;
+			}
 
+			inline const Registry& get_registry() const
+			{
+				return registry;
+			}
+
+			// TODO: Determine if it makes more sense to store the `ResourceManager` inside this class instead.
 			virtual ResourceManager& get_resource_manager() = 0;
 			virtual const ResourceManager& get_resource_manager() const = 0;
 
@@ -325,6 +339,9 @@ namespace engine
 			void on_component_replace(ComponentReplaceCommand& component_replace);
 
 		protected:
+			// TODO: Allow the user to specify a registry, rather than owning it outright.
+			mutable Registry registry;
+
 			EventHandler* swap_event_handlers();
 			EventHandler* use_standard_events();
 			EventHandler* use_forwarding_events();

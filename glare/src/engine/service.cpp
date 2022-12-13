@@ -18,7 +18,12 @@
 
 namespace engine
 {
-	Service::Service(bool register_input_events, bool register_timed_event_wrapper, bool register_core_commands)
+	Service::Service
+	(
+		bool register_input_events,
+		bool register_timed_event_wrapper,
+		bool register_core_commands
+	)
 		: active_event_handler(&standard_event_handler)
 	{
 		if (register_input_events)

@@ -81,16 +81,6 @@ namespace engine
 		// unsubscribe(...);
 	}
 
-	Registry& World::get_registry()
-	{
-		return registry;
-	}
-
-	const Registry& World::get_registry() const
-	{
-		return registry;
-	}
-
 	Entity World::load(const filesystem::path& root_path, const std::string& json_file, Entity parent)
 	{
 		auto map_data_path = (root_path / json_file);
