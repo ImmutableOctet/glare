@@ -104,7 +104,7 @@ namespace engine
 		;
 	}
 
-	inline void reflect_core_components()
+	void reflect_core_components()
 	{
 		reflect<RelationshipComponent>();
 		reflect<NameComponent>();
