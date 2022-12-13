@@ -63,7 +63,25 @@ namespace engine
 			.ctor<MetaTypeID, std::optional<MetaTypeDescriptor::SmallSize>>()
 
 			.ctor<MetaType, const util::json&>()
-			.ctor<MetaType, const util::json&, std::optional<MetaTypeDescriptor::SmallSize>>()
+			
+			.ctor
+			<
+				MetaType, std::string_view,
+				const MetaAnyParseInstructions&,
+				std::string_view,
+				std::size_t,
+				std::optional<MetaTypeDescriptor::SmallSize>,
+				const MetaTypeDescriptorFlags&
+			>()
+
+			.ctor
+			<
+				MetaType, const util::json&,
+				const MetaAnyParseInstructions&,
+				//std::size_t,
+				std::optional<MetaTypeDescriptor::SmallSize>,
+				const MetaTypeDescriptorFlags&
+			>()
 
 			.data<&MetaTypeDescriptor::type>("type"_hs)
 			.data<&MetaTypeDescriptor::field_names>("field_names"_hs)
