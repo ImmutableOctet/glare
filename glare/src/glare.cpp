@@ -18,7 +18,8 @@
 #include <util/variant.hpp>
 #include <util/log.hpp>
 
-#include <engine/debug.hpp>
+#include <engine/debug/debug.hpp>
+
 #include <engine/world/meta/meta.hpp>
 #include <engine/world/debug/debug.hpp>
 
