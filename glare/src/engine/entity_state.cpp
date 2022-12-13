@@ -311,7 +311,7 @@ namespace engine
 			return false;
 		}
 
-		auto instance = component.instance();
+		auto instance = component.instance(true, registry, entity);
 
 		if (!instance)
 		{
