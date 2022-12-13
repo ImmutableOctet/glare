@@ -13,6 +13,7 @@
 
 // TODO: Determine if these make sense as CPP files (or PCH) instead:
 #include "components/reflection.hpp"
+#include "commands/reflection.hpp"
 
 #include "meta/reflection.hpp"
 #include "debug/reflection.hpp"
@@ -186,6 +187,7 @@ namespace engine
         reflect<EntityType>();
         reflect<LightType>();
         reflect<EntityTarget>();
+        reflect<Command>();
 
         //reflect<LightProperties>();
         //reflect<Axis>(); // RotationAxis
@@ -213,8 +215,8 @@ namespace engine
             reflect_primitives();
         }
 
-        reflect<Command>();
         reflect_core_components();
+        reflect_core_commands();
         reflect_systems();
 
         // TODO: Move to a different module.
