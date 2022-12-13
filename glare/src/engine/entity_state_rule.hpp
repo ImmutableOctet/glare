@@ -5,6 +5,7 @@
 
 #include "meta/types.hpp"
 #include "meta/meta_type_descriptor.hpp"
+#include "meta/meta_description.hpp"
 
 #include "event_trigger_condition.hpp"
 #include "entity_target.hpp"
@@ -31,10 +32,18 @@ namespace engine
 		CommandContent command;
 	};
 
+	struct EntityStateUpdateRule
+	{
+		using Components = MetaDescription;
+
+		Components updated_components;
+	};
+
 	using EntityStateAction = std::variant
 	<
 		EntityStateTransitionRule,
-		EntityStateCommandRule
+		EntityStateCommandRule,
+		EntityStateUpdateRule
 	>;
 
 	struct EntityStateRule

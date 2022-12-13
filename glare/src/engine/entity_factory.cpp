@@ -893,8 +893,21 @@ namespace engine
 				if (auto next_state = util::find_any(content, "state", "next", "next_state"); next_state != content.end())
 				{
 					process_transition_rule(next_state->get<std::string>());
+				}
 
-					break;
+				if (auto update = util::find_any(content, "update", "updates", "components", "change"); update != content.end())
+				{
+					EntityStateUpdateRule::Components updated_components;
+
+					process_component_list(updated_components, *update, {}, true, true, true); // { .force_field_assignment = true }
+
+					process_rule
+					(
+						EntityStateUpdateRule
+						{
+							std::move(updated_components)
+						}
+					);
 				}
 
 				if (auto command = util::find_any(content, "command", "commands", "generate"); command != content.end())
@@ -990,6 +1003,7 @@ namespace engine
 						"target",
 						"timer", "wait", "delay",
 						"state", "next", "next_state",
+						"update", "updates", "components", "change",
 						"command", "commands", "generate"
 					);
 				}

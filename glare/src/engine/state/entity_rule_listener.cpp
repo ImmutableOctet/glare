@@ -8,6 +8,9 @@
 
 #include <engine/meta/meta.hpp>
 
+#include <engine/commands/component_patch_command.hpp>
+#include <engine/commands/component_replace_command.hpp>
+
 #include <engine/components/player_component.hpp>
 #include <engine/components/player_target_component.hpp>
 #include <engine/components/instance_component.hpp>
@@ -216,9 +219,10 @@ namespace engine
 				}
 			}
 
-			using Target     = EntityTarget;
-			using Transition = EntityStateTransitionRule;
-			using Command    = EntityStateCommandRule;
+			using Target      = EntityTarget;
+			using Transition  = EntityStateTransitionRule;
+			using Command     = EntityStateCommandRule;
+			using StateUpdate = EntityStateUpdateRule;
 
 			for (const auto& rule_entry : *rules)
 			{
@@ -264,6 +268,35 @@ namespace engine
 						//const auto* cmd = reinterpret_cast<const engine::Command*>(command_instance.data());
 
 						service->timed_event(delay, std::move(command_instance));
+					},
+
+					[this, &registry, entity, target, &delay](const StateUpdate& state_update)
+					{
+						for (const auto& component : state_update.updated_components.type_definitions)
+						{
+							if (!component.forces_field_assignment())
+							{
+								auto instance = component.instance(true, registry, entity);
+
+								if (instance)
+								{
+									// Replace/reconstruct the component according to the desired specifications.
+									service->timed_event<ComponentReplaceCommand>(delay, entity, target, std::move(instance));
+
+									continue;
+								}
+								else
+								{
+									//print_warn("Failed to instantiate component #{} during update procedure.", component.type.id());
+
+									// Continue to the 'patch' control-path instead.
+								}
+							}
+
+							// Attempt to patch the component in-place, rather than reconstructing it.
+							// NOTE: Raw pointer type. (May replace with `std::shared_ptr` later)
+							service->timed_event<ComponentPatchCommand>(delay, entity, target, &component);
+						}
 					}
 				);
 			}
