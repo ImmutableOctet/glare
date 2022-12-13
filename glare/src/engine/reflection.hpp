@@ -26,17 +26,20 @@
 #include <util/log.hpp>
 
 // Declares a meta-type for a component with a single field.
-#define REFLECT_SINGLE_FIELD_COMPONENT(component_name, field_name)           \
-    engine::engine_meta_type<component_name>()                               \
-		.data<&component_name::field_name>(entt::hashed_string(#field_name)) \
-		.ctor<decltype(component_name::field_name)>();
+#define REFLECT_SINGLE_FIELD_TYPE(type_name, field_name)                \
+    engine::engine_meta_type<type_name>()                               \
+		.data<&type_name::field_name>(entt::hashed_string(#field_name)) \
+		.ctor<decltype(type_name::field_name)>();
 
-#define GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(component_name, field_name) \
-    template <>                                                                \
-    inline void reflect<component_name>()                                      \
-    {                                                                          \
-        REFLECT_SINGLE_FIELD_COMPONENT(component_name, field_name);            \
+#define GENERATE_SINGLE_FIELD_TYPE_REFLECTION(type_name, field_name) \
+    template <>                                                      \
+    inline void reflect<type_name>()                                 \
+    {                                                                \
+        REFLECT_SINGLE_FIELD_COMPONENT(type_name, field_name);       \
     }
+
+#define GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION GENERATE_SINGLE_FIELD_TYPE_REFLECTION
+#define REFLECT_SINGLE_FIELD_COMPONENT REFLECT_SINGLE_FIELD_TYPE
 
 // Generates an empty `reflect` function for the specified `engine` type.
 #define GENERATE_EMPTY_TYPE_REFLECTION(type) \
