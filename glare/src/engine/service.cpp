@@ -2,6 +2,10 @@
 #include "input/raw_input_events.hpp"
 
 #include "meta/meta.hpp"
+#include "meta/meta_type_descriptor.hpp"
+
+#include "commands/component_patch_command.hpp"
+#include "commands/component_replace_command.hpp"
 
 #include <app/input/mouse_state.hpp>
 #include <app/input/keyboard_state.hpp>
@@ -14,7 +18,7 @@
 
 namespace engine
 {
-	Service::Service(bool register_input_events, bool register_timed_event_wrapper)
+	Service::Service(bool register_input_events, bool register_timed_event_wrapper, bool register_core_commands)
 		: active_event_handler(&standard_event_handler)
 	{
 		if (register_input_events)
@@ -29,6 +33,99 @@ namespace engine
 		if (register_timed_event_wrapper)
 		{
 			register_event<TimedEvent, &Service::enqueue_timed_event_wrapper>(*this);
+		}
+
+		if (register_core_commands)
+		{
+			register_event<ComponentPatchCommand,   &Service::on_component_patch>(*this);
+			register_event<ComponentReplaceCommand, &Service::on_component_replace>(*this);
+		}
+	}
+
+	void Service::on_component_patch(const ComponentPatchCommand& component_patch)
+	{
+		using namespace entt::literals;
+
+		if (!component_patch.component)
+		{
+			print_warn("Failed to patch component: Missing component descriptor.");
+
+			return;
+		}
+
+		const auto& component = *component_patch.component;
+		const auto& entity = component_patch.target;
+
+		const auto& type = component.type;
+
+		auto patch_fn = type.func("patch_meta_component"_hs);
+
+		if (!patch_fn)
+		{
+			print_warn("Unable to resolve patch function for type: #{}", type.id());
+
+			return;
+		}
+
+		auto& registry = get_registry();
+
+		auto result = patch_fn.invoke
+		(
+			{},
+
+			entt::forward_as_meta(registry),
+			entt::forward_as_meta(entity),
+			entt::forward_as_meta(component),
+			entt::forward_as_meta(component.size()),
+			entt::forward_as_meta(0)
+		);
+
+		if (!result)
+		{
+			print_warn("Entity #{}: Failed to patch component type: {}", entity, type.id());
+		}
+	}
+
+	void Service::on_component_replace(ComponentReplaceCommand& component_replace)
+	{
+		using namespace entt::literals;
+
+		auto& component = component_replace.component;
+
+		if (!component)
+		{
+			print_warn("Failed to replace component: Missing component instance.");
+
+			return;
+		}
+
+		const auto& entity = component_replace.target;
+
+		const auto type = component.type();
+
+		auto replace_fn = type.func("emplace_meta_component"_hs);
+
+		if (!replace_fn)
+		{
+			print_warn("Unable to resolve replacement function for type: #{}", type.id());
+
+			return;
+		}
+
+		auto& registry = get_registry();
+
+		auto result = replace_fn.invoke
+		(
+			{},
+
+			entt::forward_as_meta(registry),
+			entt::forward_as_meta(entity),
+			entt::forward_as_meta(std::move(component))
+		);
+
+		if (!result)
+		{
+			print_warn("Entity #{}: Failed to replace component type: {}", entity, type.id());
 		}
 	}
 

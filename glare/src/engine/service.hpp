@@ -6,6 +6,9 @@
 #include "service_events.hpp"
 #include "timed_event.hpp"
 #include "timer.hpp"
+#include "command.hpp"
+
+#include "commands/events.hpp"
 
 #include "meta/types.hpp"
 
@@ -38,10 +41,13 @@ namespace engine
 {
 	class ResourceManager;
 
+	struct ComponentPatchCommand;
+	struct ComponentReplaceCommand;
+
 	class Service
 	{
 		public:
-			Service(bool register_input_events=true, bool register_timed_event_wrapper=false);
+			Service(bool register_input_events=true, bool register_timed_event_wrapper=false, bool register_core_commands=true);
 			Service(Service&&) noexcept = default;
 
 			virtual ~Service() {};
@@ -75,6 +81,8 @@ namespace engine
 				}
 				else
 				{
+					on_queue<EventType>(args...);
+
 					active_event_handler->enqueue<EventType>(EventType{ std::forward<Args>(args)... });
 				}
 			}
@@ -82,6 +90,8 @@ namespace engine
 			template <typename EventType>
 			inline void queue_event(EventType&& event_obj)
 			{
+				on_queue<EventType>(event_obj);
+
 				active_event_handler->enqueue(std::forward<EventType>(event_obj));
 			}
 
@@ -100,6 +110,8 @@ namespace engine
 				}
 				else
 				{
+					on_trigger<EventType>(args...);
+
 					active_event_handler->trigger<EventType>(EventType{ std::forward<Args>(args)... });
 				}
 			}
@@ -107,6 +119,8 @@ namespace engine
 			template <typename EventType>
 			inline void event(EventType&& event_obj)
 			{
+				on_trigger<EventType>(event_obj);
+
 				active_event_handler->trigger(std::forward<EventType>(event_obj));
 			}
 
@@ -235,6 +249,80 @@ namespace engine
 
 			// See `get_active_event_handler` for notes on using service-owned event handlers directly.
 			EventHandler& get_forwarding_event_handler();
+
+		private:
+			// Generates a generic `Command` base-type from a derived type.
+			template <typename CommandType, typename ...Args>
+			Command generalize_command(Entity source, Entity target, const Args&... other_args)
+			{
+				return Command(source, target);
+			}
+
+			// Generates a generic `Command` base-type from a derived type.
+			template <typename CommandType, typename ...Args>
+			Command generalize_command(const Command& command_instance, const Args&... other_args) // const CommandType&
+			{
+				return Command(command_instance);
+			}
+
+			template <typename EventType, typename Callback, typename ...Args>
+			void on_event(Callback&& callback, const Args&... args)
+			{
+				if constexpr (std::is_base_of_v<Command, EventType>)
+				{
+					std::optional<MetaTypeID> command_id = std::nullopt;
+
+					if (auto type = entt::resolve<EventType>())
+					{
+						command_id = type.id();
+					}
+
+					callback
+					(
+						OnCommandExecution
+						{
+							generalize_command<EventType>(args...),
+							command_id
+						}
+					);
+				}
+			}
+
+			template <typename EventType, typename ...Args>
+			void on_queue(const Args&... args)
+			{
+				on_event<EventType>
+				(
+					[this](auto&& instance)
+					{
+						queue_event(std::move(instance));
+					},
+
+					args...
+				);
+			}
+
+			template <typename EventType, typename ...Args>
+			void on_trigger(const Args&... args)
+			{
+				on_event<EventType>
+				(
+					[this](auto&& instance)
+					{
+						event(std::move(instance));
+					},
+
+					args...
+				);
+			}
+
+			void on_component_patch(const ComponentPatchCommand& component_patch);
+
+			// NOTE: This does not take the event as const-reference since we would normally
+			// move from the enclosed `ComponentReplaceCommand::component` object.
+			// 
+			// This in turn means that said object is in a moved-from state after this method executes.
+			void on_component_replace(ComponentReplaceCommand& component_replace);
 
 		protected:
 			EventHandler* swap_event_handlers();
