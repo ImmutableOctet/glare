@@ -54,18 +54,16 @@
 		{
 			"trigger": "PrintCommand::message == Hello world && PrintCommand::source == child(player_model)::RelationshipComponent::parent",
 
-			//"command": "PrintCommand(NameComponent::name)",
+			"command": "PrintCommand(NameComponent::name)",
 
 			//"command": "PrintCommand(\"NameComponent::name\")",
 
 			//"commands": ["PrintCommand(\"NameComponent::name\")", "PrintCommand(NameComponent::name)"],
 
-			/*
 			"update":
 			{
 				"NameComponent": "Jump State 2.0"
 			},
-			*/
 
 			"delay": 3
 		}

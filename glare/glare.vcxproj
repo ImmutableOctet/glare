@@ -302,7 +302,10 @@ xcopy "$(ProjectDir)archetypes" "$(TargetDir)archetypes" /e /y /i /r /exclude:ex
     <ClInclude Include="src\engine\action.hpp" />
     <ClInclude Include="src\engine\basic_system.hpp" />
     <ClInclude Include="src\engine\command.hpp" />
-    <ClInclude Include="src\engine\debug\commands\print_command.hpp" />
+    <ClInclude Include="src\engine\commands\component_replace_command.hpp" />
+    <ClInclude Include="src\engine\commands\events.hpp" />
+    <ClInclude Include="src\engine\commands\reflection.hpp" />
+    <ClInclude Include="src\engine\commands\print_command.hpp" />
     <ClInclude Include="src\engine\debug\reflection.hpp" />
     <ClInclude Include="src\engine\components\player_target_component.hpp" />
     <ClInclude Include="src\engine\entity_target.hpp" />
@@ -316,6 +319,7 @@ xcopy "$(ProjectDir)archetypes" "$(TargetDir)archetypes" /e /y /i /r /exclude:ex
     <ClInclude Include="src\engine\input\reflection.hpp" />
     <ClInclude Include="src\engine\meta\meta_event_listener.hpp" />
     <ClInclude Include="src\engine\resource_manager\entity_factory_data.hpp" />
+    <ClInclude Include="src\engine\commands\component_patch_command.hpp" />
     <ClInclude Include="src\engine\state\components\frozen_state_component.hpp" />
     <ClInclude Include="src\engine\components\instance_component.hpp" />
     <ClInclude Include="src\engine\components\reflection.hpp" />

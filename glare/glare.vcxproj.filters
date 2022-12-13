@@ -511,10 +511,14 @@
     <ClInclude Include="src\engine\entity_target.hpp" />
     <ClInclude Include="src\engine\meta\meta_data_member.hpp" />
     <ClInclude Include="src\util\type_traits.hpp" />
-    <ClInclude Include="src\engine\debug\commands\print_command.hpp" />
+    <ClInclude Include="src\engine\commands\print_command.hpp" />
     <ClInclude Include="src\engine\debug\reflection.hpp" />
     <ClInclude Include="src\engine\meta\indirect_meta_data_member.hpp" />
     <ClInclude Include="src\util\parse.hpp" />
+    <ClInclude Include="src\engine\commands\component_patch_command.hpp" />
+    <ClInclude Include="src\engine\commands\reflection.hpp" />
+    <ClInclude Include="src\engine\commands\component_replace_command.hpp" />
+    <ClInclude Include="src\engine\commands\events.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />
