@@ -19,29 +19,25 @@
 
 namespace engine
 {
+	// JSON-shorthand overload for string-to-any resolution function.
+	entt::meta_any meta_any_from_string(const util::json& value, const MetaAnyParseInstructions& instructions={});
+
+	// Attempts to resolve a native value from a raw string value, using reflection.
+	entt::meta_any meta_any_from_string(std::string_view value, const MetaAnyParseInstructions& instructions={});
+
+	entt::meta_any resolve_meta_any(const util::json& value, MetaTypeID type_id, const MetaAnyParseInstructions& instructions={});
+	entt::meta_any resolve_meta_any(const util::json& value, MetaType type, const MetaAnyParseInstructions& instructions={});
+
 	// NOTE: This overload cannot handle non-primitive values.
 	// (see overload taking a native-type identifier)
-	entt::meta_any resolve_meta_any(const util::json& value);
-
-	entt::meta_any resolve_meta_any(const util::json& value, MetaType type);
-	entt::meta_any resolve_meta_any(const util::json& value, MetaTypeID type_id);
-
-	// JSON-shorthand overload for string-to-any resolution function.
-	entt::meta_any meta_any_from_string(const util::json& value, bool resolve_symbol, bool strip_quotes=true, bool fallback_to_string=true);
-
-	// JSON-shorthand overload for string-to-any resolution function.
-	entt::meta_any meta_any_from_string(const util::json& value);
-
-	// Attempts to resolve a native value from a raw string value, using reflection.
-	entt::meta_any meta_any_from_string(std::string_view value, bool resolve_symbol, bool strip_quotes=true, bool fallback_to_string=true);
-
-	// Attempts to resolve a native value from a raw string value, using reflection.
-	entt::meta_any meta_any_from_string(std::string_view value);
+	entt::meta_any resolve_meta_any(const util::json& value, const MetaAnyParseInstructions& instructions={});
 
 	// Attempts to resolve a `MetaDataMember` from `value`.
+	// NOTE: Does not support indirection. (i.e. other entities from the initial source)
 	std::optional<MetaDataMember> meta_data_member_from_string(const std::string& value);
 
 	// Attempts to resolve a `MetaDataMember` from `value`.
+	// NOTE: Does not support indirection. (i.e. other entities from the initial source)
 	std::optional<MetaDataMember> meta_data_member_from_string(std::string_view value);
 
 	// Attempts to resolve an `IndirectMetaDataMember` from `value`.

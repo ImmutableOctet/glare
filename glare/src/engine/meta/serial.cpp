@@ -22,7 +22,7 @@ namespace engine
 		using StringType = util::json::string_t; // std::string;
 		
 		// Resolves primitive types from an array input.
-		static entt::meta_any resolve_array(const util::json& value)
+		static entt::meta_any resolve_array(const util::json& value, const MetaAnyParseInstructions& instructions={})
 		{
 			ArrayType output;
 
@@ -30,98 +30,32 @@ namespace engine
 
 			for (const auto& element : value)
 			{
-				output.emplace_back(resolve_meta_any(element));
+				output.emplace_back(resolve_meta_any(element, instructions));
 			}
 
 			return { std::move(output) }; // output;
 		}
 	};
 
-	entt::meta_any resolve_meta_any(const util::json& value)
+	entt::meta_any meta_any_from_string(const util::json& value, const MetaAnyParseInstructions& instructions)
 	{
-		using jtype = util::json::value_t;
+		auto string_value = value.get<engine::impl::StringType>();
 
-		switch (value.type())
+		return meta_any_from_string(std::string_view { string_value }, instructions);
+	}
+
+	entt::meta_any meta_any_from_string(std::string_view value, const MetaAnyParseInstructions& instructions)
+	{
+		bool resolve_symbol = instructions.resolve_symbol;
+
+		if (instructions.strip_quotes)
 		{
-			case jtype::object:
+			if (util::is_quoted(value))
 			{
-				// Completely opaque object detected.
-				assert(false);
+				value = util::unquote(value);
 
-				// TODO: Maybe handle as array instead...?
-				return {};
+				resolve_symbol = false;
 			}
-			case jtype::array:
-				return impl::resolve_array(value);
-			case jtype::string:
-				return meta_any_from_string(value);
-			case jtype::boolean:
-				return value.get<bool>();
-			case jtype::number_integer:
-				return value.get<std::int32_t>(); // TODO: Handle larger integers, etc.
-			case jtype::number_unsigned:
-				return value.get<std::uint32_t>(); // TODO: Handle larger integers, etc.
-			case jtype::number_float:
-				return value.get<float>(); // 32-bit floats are standard for this engine.
-			case jtype::binary:
-				return {}; // Currently unsupported.
-		}
-
-		return {};
-	}
-
-	entt::meta_any resolve_meta_any(const util::json& value, MetaType type_id)
-	{
-		using jtype = util::json::value_t;
-
-		switch (value.type())
-		{
-			// Objects and arrays of a known type can
-			// be immediately nested as a `MetaTypeDescriptor`:
-			case jtype::array:
-			case jtype::object:
-				// NOTE: Nesting `MetaTypeDescriptor` objects within the any-chain
-				// implies recursion during object construction later on.
-				return MetaTypeDescriptor(type_id, value);
-		}
-
-		return resolve_meta_any(value);
-	}
-
-	entt::meta_any resolve_meta_any(const util::json& value, MetaTypeID type_id)
-	{
-		return resolve_meta_any(value, entt::resolve(type_id));
-	}
-
-	entt::meta_any meta_any_from_string(const util::json& value, bool resolve_symbol, bool strip_quotes, bool fallback_to_string)
-	{
-		auto string_value = value.get<engine::impl::StringType>();
-
-		return meta_any_from_string(std::string_view{ string_value }, resolve_symbol, strip_quotes, fallback_to_string);
-	}
-
-	entt::meta_any meta_any_from_string(const util::json& value)
-	{
-		auto string_value = value.get<engine::impl::StringType>();
-
-		return meta_any_from_string(std::string_view{ string_value });
-	}
-
-	entt::meta_any meta_any_from_string(std::string_view value)
-	{
-		if (util::is_quoted(value))
-		{
-			return meta_any_from_string(util::unquote(value), false, false);
-		}
-
-		return meta_any_from_string(value, true);
-	}
-
-	entt::meta_any meta_any_from_string(std::string_view value, bool resolve_symbol, bool strip_quotes, bool fallback_to_string)
-	{
-		if (strip_quotes)
-		{
-			value = util::unquote_safe(value);
 		}
 
 		if (resolve_symbol)
@@ -196,11 +130,75 @@ namespace engine
 			{
 				return output;
 			}
+
+			if (instructions.resolve_component_member_references)
+			{
+				if (auto result = indirect_meta_data_member_from_string(value))
+				{
+					return *result;
+				}
+			}
 		}
 
-		if (fallback_to_string)
+		if (instructions.fallback_to_string)
 		{
 			return { std::string(value) };
+		}
+
+		return {};
+	}
+
+	entt::meta_any resolve_meta_any(const util::json& value, MetaTypeID type_id, const MetaAnyParseInstructions& instructions)
+	{
+		return resolve_meta_any(value, entt::resolve(type_id), instructions);
+	}
+
+	entt::meta_any resolve_meta_any(const util::json& value, MetaType type, const MetaAnyParseInstructions& instructions)
+	{
+		using jtype = util::json::value_t;
+
+		switch (value.type())
+		{
+			// Objects and arrays of a known type can
+			// be immediately nested as a `MetaTypeDescriptor`:
+			case jtype::array:
+			case jtype::object:
+				// NOTE: Nesting `MetaTypeDescriptor` objects within the any-chain
+				// implies recursion during object construction later on.
+				return MetaTypeDescriptor(type, value, instructions);
+		}
+
+		return resolve_meta_any(value, instructions);
+	}
+
+	entt::meta_any resolve_meta_any(const util::json& value, const MetaAnyParseInstructions& instructions)
+	{
+		using jtype = util::json::value_t;
+
+		switch (value.type())
+		{
+			case jtype::object:
+			{
+				// Completely opaque object detected.
+				assert(false);
+
+				// TODO: Maybe handle as array instead...?
+				return {};
+			}
+			case jtype::array:
+				return impl::resolve_array(value, instructions);
+			case jtype::string:
+				return meta_any_from_string(value, instructions);
+			case jtype::boolean:
+				return value.get<bool>();
+			case jtype::number_integer:
+				return value.get<std::int32_t>(); // TODO: Handle larger integers, etc.
+			case jtype::number_unsigned:
+				return value.get<std::uint32_t>(); // TODO: Handle larger integers, etc.
+			case jtype::number_float:
+				return value.get<float>(); // 32-bit floats are standard for this engine.
+			case jtype::binary:
+				return {}; // Currently unsupported.
 		}
 
 		return {};
