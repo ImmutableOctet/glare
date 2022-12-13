@@ -1,8 +1,9 @@
 #include "debug.hpp"
 
-#include "commands/print_command.hpp"
-
 #include <engine/events.hpp>
+
+#include <engine/commands/events.hpp>
+#include <engine/commands/print_command.hpp>
 
 #include <engine/components/relationship_component.hpp>
 
@@ -130,6 +131,8 @@ namespace engine
 		enable<OnEntityCreated>();
 		enable<OnParentChanged>();
 
+		//enable<OnCommandExecution>();
+
 		// Disabled for now.
 		//enable<OnAABBOverlap>();
 		
@@ -205,6 +208,21 @@ namespace engine
 			label(data.from_parent),
 			label(data.to_parent)
 		);
+	}
+
+	void DebugListener::operator()(const OnCommandExecution& data)
+	{
+		const auto& command = data.command;
+		const auto& command_id = data.command_id;
+
+		if (command.source == command.target)
+		{
+			print("Command #{} executed by: #{}", command_id.value_or(0), command.target);
+		}
+		else
+		{
+			print("Command #{} executed on #{} by #{}", command_id.value_or(0), command.target, command.source);
+		}
 	}
 
 	void DebugListener::operator()(const OnGravityChanged& data)

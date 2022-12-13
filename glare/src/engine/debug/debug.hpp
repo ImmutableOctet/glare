@@ -36,6 +36,7 @@ namespace engine
 	struct OnParentChanged;
 	struct OnGravityChanged;
 	struct OnTransformChanged;
+	struct OnCommandExecution;
 	
 	struct OnAABBOverlap;
 	struct OnCollision;
@@ -70,6 +71,7 @@ namespace engine
 			void operator()(const OnParentChanged& data);
 			void operator()(const OnGravityChanged& data);
 			void operator()(const OnTransformChanged& data);
+			void operator()(const OnCommandExecution& data);
 
 			// Collision/physics debugging:
 			void operator()(const OnAABBOverlap& data);
@@ -90,6 +92,7 @@ namespace engine
 			void operator()(const OnButtonPressed& data);
 			void operator()(const OnAnalogInput& data);
 
+			// Commands:
 			void operator()(const PrintCommand& data);
 		private:
 			template <typename EventType>
