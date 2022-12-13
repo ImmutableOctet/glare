@@ -19,7 +19,7 @@ namespace engine
 	{
 		auto symbol_position = var_decl.find(type_specifier_symbol);
 
-		if (symbol_position == std::string_view::npos)
+		if ((symbol_position == std::string_view::npos) || (symbol_position == (var_decl.length()-type_specifier_symbol.length())))
 		{
 			return { var_decl, {} };
 		}
@@ -44,9 +44,11 @@ namespace engine
 	MetaTypeDescriptor::MetaTypeDescriptor
 	(
 		MetaType type,
+
 		std::string_view content,
+		const MetaAnyParseInstructions& instructions,
+
 		std::string_view arg_separator,
-		bool resolve_values,
 		std::size_t argument_offset,
 
 		std::optional<SmallSize> constructor_argument_count,
@@ -58,13 +60,15 @@ namespace engine
 	{
 		assert(type);
 
-		set_variables(content, arg_separator, resolve_values, argument_offset);
+		set_variables(content, instructions, arg_separator, argument_offset);
 	}
 
 	MetaTypeDescriptor::MetaTypeDescriptor
 	(
 		MetaType type,
+
 		const util::json& content,
+		const MetaAnyParseInstructions& instructions,
 
 		std::optional<SmallSize> constructor_argument_count,
 		const MetaTypeDescriptorFlags& flags
@@ -75,7 +79,7 @@ namespace engine
 	{
 		assert(type);
 
-		set_variables(content);
+		set_variables(content, instructions);
 	}
 
 	std::optional<std::size_t> MetaTypeDescriptor::get_variable_index(MetaSymbolID name) const
@@ -159,7 +163,12 @@ namespace engine
 		}
 	}
 
-	std::size_t MetaTypeDescriptor::set_variables(const util::json& content, std::size_t argument_offset)
+	std::size_t MetaTypeDescriptor::set_variables
+	(
+		const util::json& content,
+		const MetaAnyParseInstructions& instructions,
+		std::size_t argument_offset
+	)
 	{
 		std::size_t count = 0;
 		std::size_t variable_index = argument_offset;
@@ -175,7 +184,7 @@ namespace engine
 			MetaSymbolID var_name_hash = hash(var_name);
 			//process_value(var_name, var_value);
 
-			auto resolve_data_entry = [this, &content, &variable_index, &var_value, &var_name_hash]() mutable -> entt::meta_data
+			auto resolve_data_entry = [this, &content, &variable_index, &var_name_hash]() mutable -> entt::meta_data
 			{
 				/*
 				// TODO: Determine if there's any benefit to keeping this check:
@@ -226,14 +235,14 @@ namespace engine
 
 			// NOTE: In the case of `resolve_meta_any` and related functions,
 			// this is where recursion may take place; caused by use of nested objects. (see `MetaVariable`)
-			auto resolve_meta_variable = [&resolve_variable_type, &var_name_hash, &var_value]()
+			auto resolve_meta_variable = [&instructions, &resolve_variable_type, &var_name_hash, &var_value]()
 			{
 				if (auto variable_type = resolve_variable_type())
 				{
-					return MetaVariable(var_name_hash, var_value, variable_type);
+					return MetaVariable(var_name_hash, var_value, variable_type, instructions);
 				}
 
-				return MetaVariable(var_name_hash, var_value);
+				return MetaVariable(var_name_hash, var_value, instructions);
 			};
 
 			if (auto meta_var = resolve_meta_variable(); meta_var.value)
@@ -253,9 +262,9 @@ namespace engine
 	std::size_t MetaTypeDescriptor::set_variables
 	(
 		std::string_view content,
+		const MetaAnyParseInstructions& instructions,
 
 		std::string_view arg_separator,
-		bool resolve_values,
 		std::size_t argument_offset,
 
 		bool safe
@@ -269,13 +278,13 @@ namespace engine
 			content,
 			arg_separator,
 
-			[this, resolve_values, safe, &variable_index, &count](std::string_view argument, bool is_last_argument=false)
+			[this, &instructions, safe, &variable_index, &count](std::string_view argument, bool is_last_argument=false)
 			{
 				if (auto data_entry = get_data_member_by_index(type, variable_index, true))
 				{
 					const auto var_name_hash = data_entry->first;
 
-					if (set_variable(MetaVariable(var_name_hash, meta_any_from_string(argument, resolve_values)), safe))
+					if (set_variable(MetaVariable(var_name_hash, meta_any_from_string(argument, instructions)), safe))
 					{
 						count++;
 					}
@@ -287,7 +296,6 @@ namespace engine
 
 		return count;
 	}
-
 
 	bool MetaTypeDescriptor::has_nested_descriptor(std::size_t n_values) const
 	{
@@ -328,116 +336,47 @@ namespace engine
 		return false;
 	}
 
-	MetaAny MetaTypeDescriptor::instance(bool allow_recursion) const
+	bool MetaTypeDescriptor::has_nested_member_reference(std::size_t n_values) const
 	{
-		MetaAny instance;
+		using namespace entt::literals;
 
-		if (flags.allow_forwarding_fields_to_constructor)
+		std::size_t idx = 0;
+
+		for (const auto& entry : field_values)
 		{
-			instance = instance_exact(allow_recursion);
-		}
-
-		bool is_default_constructed = false;
-
-		if (!instance)
-		{
-			if (flags.allow_default_construction)
+			if (idx >= n_values)
 			{
-				instance = instance_default();
-
-				is_default_constructed = true;
+				break;
 			}
 
-			if (!instance)
+			const auto type_id = entry.type().id();
+
+			if ((type_id == "MetaDataMember"_hs) || (type_id == "IndirectMetaDataMember"_hs))
 			{
-				print_warn("Unable to resolve constructor for component: \"#{}\"", type.id());
-
-				return {};
+				return true;
 			}
+
+			idx++;
 		}
 
-		if (is_default_constructed || flags.force_field_assignment)
-		{
-			apply_fields(instance);
-		}
-
-		return instance;
+		return false;
 	}
 
-	MetaAny MetaTypeDescriptor::instance_exact(bool allow_recursion) const
+	bool MetaTypeDescriptor::has_nested_member_reference() const
 	{
-		auto constructor_args_count = field_values.size();
+		using namespace entt::literals;
 
-		if (constructor_argument_count)
+		for (const auto& entry : field_values)
 		{
-			constructor_args_count = std::min
-			(
-				constructor_args_count,
-				static_cast<std::size_t>(*constructor_argument_count)
-			);
-		}
+			const auto type_id = entry.type().id();
 
-		if (constructor_args_count == 0) // <=
-		{
-			return {};
-		}
-
-		if (allow_recursion)
-		{
-			// NOTE: In the event of a nested descriptor without `allow_recursion`, we assume it is
-			// correct to pass the nested `MetaTypeDescriptor` object to the underlying type's constructor.
-			if (has_nested_descriptor(constructor_args_count))
+			if ((type_id == "MetaDataMember"_hs) || (type_id == "IndirectMetaDataMember"_hs))
 			{
-				// TODO: Look into whether there's any room to optimize via
-				// use of 'handles' rather than full `entt::meta_any` instances.
-				MetaTypeDescriptor::Values rebuilt_constructor_values;
-
-				rebuilt_constructor_values.reserve(constructor_args_count);
-
-				//rebuilt_constructor_values = field_values;
-
-				auto self_type = get_self_type();
-
-				//for (auto& entry : field_values) // const auto&
-				for (std::size_t i = 0; i < constructor_args_count; i++)
-				{
-					auto& entry = field_values[i]; // const auto&
-
-					if (entry.type() == self_type)
-					{
-						auto instance_fn = entry.type().func(hash("instance"));
-
-						assert(instance_fn);
-
-						// NOTE: Recursion.
-						auto nested_instance = instance_fn.invoke(entry);
-
-						assert(nested_instance);
-
-						rebuilt_constructor_values.emplace_back(std::move(nested_instance));
-					}
-					else
-					{
-						// NOTE: Cannot perform a move operation here due to possible side effects.
-						// TODO: Look into real-world performance implications of this limitation.
-						rebuilt_constructor_values.emplace_back(entry);
-					}
-				}
-
-				auto constructor_args = rebuilt_constructor_values.data();
-				//auto constructor_args_count = rebuilt_constructor_values.size();
-
-				return type.construct(constructor_args, constructor_args_count);
+				return true;
 			}
 		}
 
-		// NOTE: We const-cast here due to possible side effects being part of entt's interface.
-		// 
-		// TODO: Look into whether side effects (e.g. moves, lvalue-refs, etc.)
-		// are something we should be concerned with in practice.
-		auto constructor_args = const_cast<MetaAny*>(field_values.data());
-
-		return type.construct(constructor_args, constructor_args_count);
+		return false;
 	}
 
 	MetaAny MetaTypeDescriptor::instance_default() const
@@ -445,51 +384,61 @@ namespace engine
 		return type.construct();
 	}
 
-	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance, std::size_t field_count, std::size_t offset) const
+	MetaAny MetaTypeDescriptor::resolve_indirect_value(const MetaAny& entry)
 	{
-		std::size_t fields_applied = 0;
+		using namespace entt::literals;
 
-		for (std::size_t i = offset; i < (offset+field_count); i++)
+		switch (entry.type().id())
 		{
-			const auto& field_name = field_names[i];
-			const auto& field_value = field_values[i];
-
-			if (!field_value)
+			case "MetaTypeDescriptor"_hs: // self_type.id():
 			{
-				print_warn("Unable to resolve field \"#{}\", at index #{}, in component: \"{}\"", field_name, i, type.id());
+				auto instance_fn = entry.type().func("instance"_hs);
 
-				continue;
-			}
+				assert(instance_fn);
 
-			auto set_field = [&]() -> bool
-			{
-				auto meta_field = type.data(field_name);
+				// NOTE: Recursion.
+				auto nested_instance = instance_fn.invoke(entry);
 
-				if (!meta_field)
-				{
-					return false;
-				}
+				//assert(nested_instance);
 
-				auto result = meta_field.set(instance, field_value);
-
-				return static_cast<bool>(result);
-			};
-
-			if (set_field())
-			{
-				fields_applied++;
-			}
-			else
-			{
-				print_warn("Failed to assign field: \"#{}\", in component: \"#{}\"", field_name, type.id());
+				return nested_instance;
 			}
 		}
 
-		return fields_applied;
+		return {};
 	}
 
-	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance) const
+	MetaAny MetaTypeDescriptor::resolve_indirect_value(const MetaAny& entry, Registry& registry, Entity entity)
 	{
-		return apply_fields(instance, size(), 0);
+		using namespace entt::literals;
+
+		if (auto result = resolve_indirect_value(entry))
+		{
+			return result;
+		}
+
+		switch (entry.type().id())
+		{
+			case "MetaDataMember"_hs:
+			{
+				if (const auto* data_member = entry.try_cast<MetaDataMember>())
+				{
+					return data_member->get(registry, entity);
+				}
+
+				break;
+			}
+			case "IndirectMetaDataMember"_hs:
+			{
+				if (const auto* data_member = entry.try_cast<IndirectMetaDataMember>())
+				{
+					return data_member->get(registry, entity);
+				}
+
+				break;
+			}
+		}
+
+		return {};
 	}
 }
