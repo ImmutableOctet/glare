@@ -302,8 +302,11 @@ xcopy "$(ProjectDir)archetypes" "$(TargetDir)archetypes" /e /y /i /r /exclude:ex
     <ClInclude Include="src\engine\action.hpp" />
     <ClInclude Include="src\engine\basic_system.hpp" />
     <ClInclude Include="src\engine\command.hpp" />
+    <ClInclude Include="src\engine\debug\commands\print_command.hpp" />
+    <ClInclude Include="src\engine\debug\reflection.hpp" />
     <ClInclude Include="src\engine\components\player_target_component.hpp" />
-    <ClInclude Include="src\engine\entity_state_target.hpp" />
+    <ClInclude Include="src\engine\entity_target.hpp" />
+    <ClInclude Include="src\engine\meta\indirect_meta_data_member.hpp" />
     <ClInclude Include="src\engine\meta\meta_data_member.hpp" />
     <ClInclude Include="src\engine\state\commands\state_activation_command.hpp" />
     <ClInclude Include="src\engine\state\commands\state_change_command.hpp" />
@@ -325,6 +328,7 @@ xcopy "$(ProjectDir)archetypes" "$(TargetDir)archetypes" /e /y /i /r /exclude:ex
     <ClInclude Include="src\engine\input\buttons.hpp" />
     <ClCompile Include="src\app\app_timer.cpp" />
     <ClCompile Include="src\engine\components\name_component.cpp" />
+    <ClCompile Include="src\engine\entity_target.cpp" />
     <ClCompile Include="src\engine\event_trigger_condition.cpp" />
     <ClCompile Include="src\engine\input\reflection_impl_input.cpp" />
     <ClInclude Include="src\engine\input\events.hpp" />
@@ -405,7 +409,7 @@ xcopy "$(ProjectDir)archetypes" "$(TargetDir)archetypes" /e /y /i /r /exclude:ex
     <ClInclude Include="src\engine\world\physics\collision_body_type.hpp" />
     <ClInclude Include="src\engine\world\physics\components\collision_component.hpp" />
     <ClInclude Include="src\engine\config.hpp" />
-    <ClInclude Include="src\engine\debug.hpp" />
+    <ClInclude Include="src\engine\debug\debug.hpp" />
     <ClInclude Include="src\engine\engine.hpp" />
     <ClInclude Include="src\engine\service_events.hpp" />
     <ClInclude Include="src\engine\events.hpp" />
@@ -528,12 +532,14 @@ xcopy "$(ProjectDir)archetypes" "$(TargetDir)archetypes" /e /y /i /r /exclude:ex
     <ClInclude Include="src\util\map.hpp" />
     <ClInclude Include="src\util\memory.hpp" />
     <ClInclude Include="src\util\optional.hpp" />
+    <ClInclude Include="src\util\parse.hpp" />
     <ClInclude Include="src\util\pipeline.hpp" />
     <ClInclude Include="src\util\reflection.hpp" />
     <ClInclude Include="src\util\shorthand.hpp" />
     <ClInclude Include="src\util\member_traits.hpp" />
     <ClInclude Include="src\util\small_vector.hpp" />
     <ClInclude Include="src\util\string.hpp" />
+    <ClInclude Include="src\util\type_traits.hpp" />
     <ClInclude Include="src\util\util.hpp" />
     <ClInclude Include="src\util\variant.hpp" />
   </ItemGroup>
@@ -596,6 +602,7 @@ xcopy "$(ProjectDir)archetypes" "$(TargetDir)archetypes" /e /y /i /r /exclude:ex
     <ClCompile Include="src\engine\input\input_state.cpp" />
     <ClCompile Include="src\engine\input\input_system.cpp" />
     <ClCompile Include="src\engine\entity_state.cpp" />
+    <ClCompile Include="src\engine\meta\indirect_meta_data_member.cpp" />
     <ClCompile Include="src\engine\meta\meta_data_member.cpp" />
     <ClCompile Include="src\engine\meta\meta.cpp" />
     <ClCompile Include="src\engine\meta\meta_description.cpp" />
@@ -621,7 +628,7 @@ xcopy "$(ProjectDir)archetypes" "$(TargetDir)archetypes" /e /y /i /r /exclude:ex
     <ClCompile Include="src\engine\world\motion\motion_system.cpp" />
     <ClCompile Include="src\engine\world\physics\components\collision_component.cpp" />
     <ClCompile Include="src\engine\config.cpp" />
-    <ClCompile Include="src\engine\debug.cpp" />
+    <ClCompile Include="src\engine\debug\debug.cpp" />
     <ClCompile Include="src\engine\world\behaviors\free_look_behavior.cpp" />
     <ClCompile Include="src\engine\components\model_component.cpp" />
     <ClCompile Include="src\engine\components\relationship_component.cpp" />
@@ -700,6 +707,7 @@ xcopy "$(ProjectDir)archetypes" "$(TargetDir)archetypes" /e /y /i /r /exclude:ex
     <ClCompile Include="src\util\io.cpp" />
     <ClCompile Include="src\util\json.cpp" />
     <ClCompile Include="src\util\lib.cpp" />
+    <ClCompile Include="src\util\parse.cpp" />
     <ClCompile Include="src\util\string.cpp" />
   </ItemGroup>
   <ItemGroup>

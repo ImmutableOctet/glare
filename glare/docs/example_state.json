@@ -1,0 +1,84 @@
+{
+	"imports":
+	[
+		// Both relative and absolute paths work for state imports.
+		"path/to/state",
+
+		// You can also embed states within other states by using the `imports` section.
+		{
+			// Insert embedded state here.
+		}
+	],
+
+	// Automatic component operations:
+
+	"":
+	{
+
+	},
+
+	// Manual state operations:
+
+	// The `remove` section allows you to explicitly remove components upon entering a state.
+	//
+	// NOTE:
+	// This can have cascading effects to the entity, including changing states' behavior.
+	// `remove` is meant to have a kind of weight behind it, for a more-encapsulated
+	// (i.e. temporary) approach to removing components, see `freeze`.
+	"remove":
+	[
+		"RemovedComponent",
+		"SomeOtherComponent"
+	],
+
+	// The `add` section allows you to add or modify an entity's components upon state activation.
+	// Components in the `add` section are automatically removed upon leaving a state, unless otherwise referenced in `persist`. (see below)
+	"add":
+	{
+		// This is a normal add operation for a component named `SomeComponent`.
+		//
+		// By default, the `SomeComponent` type will be constructed using the specified arguments, in order of appearance.
+		// This can be done as an object, as seen here (i.e. named fields), but it can also be done with [] array syntax.
+		//
+		// If a `SomeComponent` object can't be constructed in this way, the engine will attempt to default-construct instead,
+		// then apply each of the fields specified (assuming object syntax).
+		"SomeComponent":
+		{
+			"name": "Test",
+			"other_field": 10.0
+		},
+
+		// The inline `+` operator attempts to change `ModifiedComponent` by assigning its fields as described in the object body.
+		// This differs from normal `add` entries, which will first attempt formal object construction if possible. (see above)
+		// This also behaves differently from archetypes, which use the `+` syntax to allow continuation of a component description in a different file.
+		"+ModifiedComponent":
+		{
+			"field_name": "value"
+		}
+	},
+
+	// The `persist` section allows you to specify a list of component types that will
+	// continue to be attached to this entity, even after the end of this state's lifetime.
+	"persist":
+	{
+		"AnotherComponent": { "name": "Something" },
+
+		"+ExistingComponent": { "some_field": 20.0 }
+	},
+
+	// Conditional operations and triggers:
+
+
+	"rules":
+	[
+		{
+			"trigger": "OnAirToGround.entity == self/this",
+			"state": "player_common"
+		},
+
+		{
+			"trigger": "OnButtonPressed|Button::Jump",
+			"state": "player_common"
+		}
+	]
+}

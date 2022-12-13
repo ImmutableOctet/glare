@@ -21,7 +21,7 @@
     <ClCompile Include="src\engine\world\motion\motion_system.cpp" />
     <ClCompile Include="src\engine\world\physics\components\collision_component.cpp" />
     <ClCompile Include="src\engine\config.cpp" />
-    <ClCompile Include="src\engine\debug.cpp" />
+    <ClCompile Include="src\engine\debug\debug.cpp" />
     <ClCompile Include="src\engine\world\behaviors\free_look_behavior.cpp" />
     <ClCompile Include="src\engine\components\model_component.cpp" />
     <ClCompile Include="src\engine\components\relationship_component.cpp" />
@@ -165,6 +165,9 @@
     <ClCompile Include="src\engine\meta\meta.cpp" />
     <ClCompile Include="src\app\app_timer.cpp" />
     <ClCompile Include="src\engine\meta\meta_data_member.cpp" />
+    <ClCompile Include="src\engine\entity_target.cpp" />
+    <ClCompile Include="src\engine\meta\indirect_meta_data_member.cpp" />
+    <ClCompile Include="src\util\parse.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dependencies\modules\stb\deprecated\rrsprintf.h" />
@@ -230,7 +233,7 @@
     <ClInclude Include="src\engine\world\physics\collision_body_type.hpp" />
     <ClInclude Include="src\engine\world\physics\components\collision_component.hpp" />
     <ClInclude Include="src\engine\config.hpp" />
-    <ClInclude Include="src\engine\debug.hpp" />
+    <ClInclude Include="src\engine\debug\debug.hpp" />
     <ClInclude Include="src\engine\engine.hpp" />
     <ClInclude Include="src\engine\service_events.hpp" />
     <ClInclude Include="src\engine\events.hpp" />
@@ -505,8 +508,13 @@
     <ClInclude Include="src\engine\components\player_target_component.hpp" />
     <ClInclude Include="src\app\timer.hpp" />
     <ClInclude Include="src\engine\state\commands\state_activation_command.hpp" />
-    <ClInclude Include="src\engine\entity_state_target.hpp" />
+    <ClInclude Include="src\engine\entity_target.hpp" />
     <ClInclude Include="src\engine\meta\meta_data_member.hpp" />
+    <ClInclude Include="src\util\type_traits.hpp" />
+    <ClInclude Include="src\engine\debug\commands\print_command.hpp" />
+    <ClInclude Include="src\engine\debug\reflection.hpp" />
+    <ClInclude Include="src\engine\meta\indirect_meta_data_member.hpp" />
+    <ClInclude Include="src\util\parse.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />

@@ -21,6 +21,7 @@
 
 	"rules":
 	[
+		/*
 		{
 			"trigger": "OnAirToGround.entity == self/this",
 			"state": "player_common"
@@ -29,10 +30,58 @@
 			//triggers: ["OnAirToGround.entity == self", "OnAirToGround.entity == child(model)"]
 			//triggers: [{event: "", conditions: []}]
 		},
+		*/
 
 		{
-			"trigger": "OnButtonPressed|Button::Jump",
+			"trigger": "OnButtonPressed",
+
+			//"trigger": "OnStateActivate.entity == self",
+			//"command": "PrintCommand(\"Hello world\")"
+			//"command": "StateChangeCommand(self, hash(\"player_common\"))",
+
+			/*
+			"StateChangeCommand":
+			{
+
+			},
+			*/
+
+			//"delay": 2,
+
+			"PrintCommand": "Hello world"
+		},
+
+		{
+			"trigger": "PrintCommand::message == Hello world && PrintCommand::source == child(player_model)::RelationshipComponent::parent",
+
+			//"command": "PrintCommand(NameComponent::name)",
+
+			//"command": "PrintCommand(\"NameComponent::name\")",
+
+			//"commands": ["PrintCommand(\"NameComponent::name\")", "PrintCommand(NameComponent::name)"],
+
+			/*
+			"update":
+			{
+				"NameComponent": "Jump State 2.0"
+			},
+			*/
+
+			"delay": 3
+		}
+
+		/*
+		{
+			"triggers":
+			[
+				//"OnButtonPressed|Button::Jump",
+				//"OnButtonPressed"
+				//"OnButtonPressed|Button::HeavyAttack && OnButtonPressed.player_index == self"
+				"OnButtonPressed|Button::HeavyAttack"
+			],
+
 			"state": "player_common"
 		}
+		*/
 	]
 }

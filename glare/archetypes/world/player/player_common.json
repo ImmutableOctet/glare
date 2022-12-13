@@ -20,7 +20,8 @@
 
 	"rules":
 	{
-		"OnButtonPressed.player_index != PlayerComponent::player_index && OnButtonPressed|Button::Jump || OnButtonPressed.player_index == PlayerComponent::player_index && OnButtonPressed.button == Button::HeavyAttack":
+		//"OnButtonPressed|Button::Jump":
+		"OnButtonPressed|Button::HeavyAttack":
 		{
 			"state": "player_jump"
 		},
@@ -32,7 +33,7 @@
 		"OnButtonPressed.button == Button::Shield":
 		{
 			//"state": "player_shield"
-			"command": "ActivateCommand(child(child_name))"
+			//"command": "ActivateCommand(child(child_name))"
 		}
 	}
 }
