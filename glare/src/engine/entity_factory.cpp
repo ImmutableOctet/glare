@@ -3,6 +3,7 @@
 
 #include "components/relationship_component.hpp"
 #include "components/instance_component.hpp"
+#include "components/name_component.hpp"
 
 #include "state/components/state_component.hpp"
 
@@ -12,12 +13,14 @@
 
 #include <util/algorithm.hpp>
 #include <util/string.hpp>
+#include <util/parse.hpp>
 #include <util/variant.hpp>
 
 #include <algorithm>
 #include <chrono>
 #include <stdexcept>
 #include <type_traits>
+#include <tuple>
 
 // TODO: Change to better regular expression library.
 #include <regex>
@@ -125,7 +128,7 @@ namespace engine
 	std::tuple<std::string_view, std::string_view, std::string_view, std::string_view, std::ptrdiff_t>
 	EntityFactory::parse_trigger_condition(const std::string& trigger_condition, std::ptrdiff_t offset) // std::string_view
 	{
-		const auto trigger_rgx = std::regex("([^\\s\\:\\.\\-\\>\\&\\|\\(\\)]+)\\s*(\\:\\:|\\.|\\-\\>)?\\s*([^\\s\\(\\)\\|\\&]+)?\\s*(==|===|!=|!==|\\|)\\s*([^\\s\\&\\|\\(\\)]+)");
+		const auto trigger_rgx = std::regex("([^\\s\\:\\.\\-\\>\\&\\|\\(\\)]+)\\s*(\\:\\:|\\.|\\-\\>)?\\s*([^\\s\\(\\)\\|\\&]+)?\\s*(==|===|!=|!==|\\|)\\s*([^\\&\\|]+)"); // \\s* // \\(\\)
 
 		if (std::smatch rgx_match; std::regex_search((trigger_condition.begin() + offset), trigger_condition.end(), rgx_match, trigger_rgx))
 		{
@@ -172,24 +175,6 @@ namespace engine
 		return {};
 	}
 
-	std::tuple<std::string_view, std::string_view, bool>
-	EntityFactory::parse_single_argument_command(const std::string& command) // std::string_view
-	{
-		const auto command_rgx = std::regex("([^\\s\\(]+)\\(\\s*(\\\")?([^\\\"]*)(\\\")?\\s*\\)\\s*");
-
-		if (std::smatch rgx_match; std::regex_search(command.begin(), command.end(), rgx_match, command_rgx))
-		{
-			auto command_name    = util::match_view(command, rgx_match, 1);
-			auto command_content = util::match_view(command, rgx_match, 3);
-
-			bool is_string_content = (rgx_match[2].matched && rgx_match[4].matched);
-
-			return { command_name, command_content, is_string_content };
-		}
-
-		return { {}, {}, false };
-	}
-
 	std::optional<Timer::Duration> EntityFactory::parse_time_duration(const std::string& time_expr) // std::string_view
 	{
 		using namespace entt::literals;
@@ -234,132 +219,6 @@ namespace engine
 		return std::nullopt;
 	}
 
-	// TODO: Move to a different source file.
-	EntityStateTarget::TargetType EntityFactory::process_rule_target(const util::json& target_data)
-	{
-		using namespace entt::literals;
-
-		using Target = EntityStateTarget;
-
-		switch (target_data.type())
-		{
-			case util::json::value_t::string:
-			{
-				auto raw_value = target_data.get<std::string>();
-
-				if ((raw_value == "self") || (raw_value == "this"))
-				{
-					return Target::SelfTarget {};
-				}
-
-				if (raw_value == "parent")
-				{
-					return Target::ParentTarget {};
-				}
-
-				if (auto [command_name, command_content, is_string_content] = parse_single_argument_command(raw_value); !command_name.empty())
-				{
-					switch (hash(command_name))
-					{
-						case "entity"_hs:
-							if (!is_string_content)
-							{
-								if (auto entity_id_raw = util::from_string<entt::id_type>(raw_value))
-								{
-									return Target::EntityTarget { static_cast<Entity>(*entity_id_raw) };
-								}
-							}
-
-							break;
-
-						case "child"_hs:
-						{
-							if (command_content.contains(','))
-							{
-								auto parameter_idx = 0;
-
-								std::string_view child_name;
-								bool recursive = true;
-
-								util::split(command_content, ",", [&parameter_idx, &child_name, &recursive](std::string_view argument, bool is_last_argument=false) -> bool
-								{
-									argument = util::trim(argument);
-
-									switch (parameter_idx++)
-									{
-										// First argument: `child_name`
-										case 0:
-											child_name = argument;
-
-											break;
-
-										// Second argument: `recursive`
-										case 1:
-										{
-											switch (hash(argument))
-											{
-												// Recursion is enabled by default; no
-												// need to check for positive values:
-												/*
-												case "true"_hs:
-												case "1"_hs:
-													recursive = true;
-
-													break;
-												*/
-
-												//case "f"_hs:
-												case "0"_hs:
-												case "false"_hs:
-													recursive = false;
-
-													break;
-											}
-
-											return false;
-										}
-									}
-
-									return true;
-								});
-
-								return Target::ChildTarget { hash(child_name), recursive };
-							}
-							else
-							{
-								return Target::ChildTarget { hash(command_content) };
-							}
-						}
-
-						case "player"_hs:
-							if (auto player_index = util::from_string<PlayerIndex>(command_content))
-							{
-								return Target::PlayerTarget { *player_index };
-							}
-
-							break;
-
-						case "parent"_hs:
-							return Target::ParentTarget {};
-
-						case "self"_hs:
-							return Target::SelfTarget {};
-					}
-
-					return Target::EntityNameTarget { hash(command_content) };
-				}
-
-				break;
-			}
-
-			case util::json::value_t::number_integer:
-			case util::json::value_t::number_unsigned:
-				return Target::EntityTarget { static_cast<Entity>(target_data.get<entt::id_type>()) };
-		}
-
-		return Target::SelfTarget {};
-	}
-
 	Entity EntityFactory::create(const EntityConstructionContext& context) const
 	{
 		using namespace entt::literals;
@@ -373,7 +232,7 @@ namespace engine
 
 		for (const auto& component : descriptor.components.type_definitions)
 		{
-			auto instance = component.instance();
+			auto instance = component.instance(true, context.registry, entity);
 
 			MetaAny result;
 
@@ -400,6 +259,13 @@ namespace engine
 		}
 
 		context.registry.emplace_or_replace<InstanceComponent>(entity, paths.instance_path.string());
+
+		if (!context.registry.try_get<NameComponent>(entity))
+		{
+			auto instance_filename = paths.instance_path.filename(); instance_filename.replace_extension();
+
+			context.registry.emplace<NameComponent>(entity, instance_filename.string());
+		}
 
 		if (default_state_index)
 		{
@@ -445,7 +311,12 @@ namespace engine
 			{
 				if (const auto& component_content = *data; !component_content.empty())
 				{
-					return MetaTypeDescriptor(meta_type, component_content, constructor_arg_count, component_flags);
+					return MetaTypeDescriptor
+					(
+						meta_type, component_content,
+						{ .resolve_component_member_references=true },
+						constructor_arg_count, component_flags
+					);
 				}
 			}
 
@@ -836,7 +707,7 @@ namespace engine
 	{
 		std::size_t count = 0;
 
-		EntityStateTarget::TargetType target = EntityStateTarget::SelfTarget {};
+		EntityTarget::TargetType target = EntityTarget::SelfTarget {};
 		std::optional<Timer::Duration> delay = std::nullopt;
 
 		// NOTE: Modified below, used in `process_transition_rule` and co.
@@ -862,13 +733,35 @@ namespace engine
 			}
 		}
 
-		auto process_transition_rule = [&](const auto& next_state_raw)
+		auto& rules_out = state.rules[type_name_id];
+
+		auto process_rule = [&count, &rules_out, forward_condition, &condition, &delay, &target](auto&& action)
+		{
+			auto& rule = rules_out.emplace_back
+			(
+				(forward_condition)
+				? condition // std::move(condition)
+				: std::optional<EventTriggerCondition>(std::nullopt),
+
+				delay, // std::move(delay),
+				EntityTarget(target), // std::move(target)
+
+				EntityStateAction(std::move(action))
+			);
+
+			count++;
+
+			return &rule;
+		};
+
+		auto process_transition_rule = [&](const auto& next_state_raw) -> EntityStateRule*
 		{
 			if (next_state_raw.empty())
 			{
-				return false;
+				return nullptr;
 			}
 
+			// TODO: Look into tracking imports/inline-imports.
 			const auto inline_import = process_state_inline_import(opt_states_out, next_state_raw, opt_base_path);
 
 			StringHash next_state_id = (inline_import) // EntityStateHash
@@ -876,40 +769,120 @@ namespace engine
 				: hash(next_state_raw)
 			;
 
-			auto& rules_out = state.rules[type_name_id];
-
-			rules_out.emplace_back
+			return process_rule
 			(
-				(forward_condition)
-					? std::move(condition)
-					: std::optional<EventTriggerCondition>(std::nullopt),
-
-				delay,
-
 				EntityStateTransitionRule
 				{
-					.target     = std::move(target),
 					.state_name = next_state_id
 				}
 			);
+		};
 
-			count++;
+		auto process_command = [&process_rule](CommandContent&& content)
+		{
+			return process_rule
+			(
+				EntityStateCommandRule
+				{
+					std::move(content)
+				}
+			);
+		};
 
-			return true;
+		constexpr std::size_t command_arg_offset = 2;
+
+		auto init_empty_command = [](std::string_view command_name) -> std::optional<CommandContent>
+		{
+			if (command_name.empty())
+			{
+				return std::nullopt;
+			}
+
+			using namespace entt::literals;
+
+			const auto command_name_id = hash(command_name);
+			const auto command_type = resolve(command_name_id);
+
+			if (!command_type)
+			{
+				print_warn("Unable to resolve command name: {} (#{})", command_name, command_name_id);
+
+				return std::nullopt;
+			}
+
+			auto command_content = CommandContent(command_type);
+
+			command_content.set_variable(MetaVariable("source"_hs, Entity(null)));
+			command_content.set_variable(MetaVariable("target"_hs, Entity(null)));
+
+			return command_content;
+		};
+
+		auto process_command_rule_from_csv = [&init_empty_command, &process_command](std::string_view command_name, std::string_view args, bool resolve_values=true) -> EntityStateRule*
+		{
+			if (args.empty())
+			{
+				return {};
+			}
+
+			if (auto command_content = init_empty_command(command_name))
+			{
+				command_content->set_variables
+				(
+					args,
+					
+					{
+						.resolve_symbol=resolve_values,
+						.resolve_component_member_references=resolve_values
+					},
+					
+					",", command_arg_offset
+				);
+
+				return process_command(std::move(*command_content));
+			}
+
+			return {};
+		};
+
+		auto process_command_rule_from_expr = [&process_command_rule_from_csv](const auto& command_expr) -> EntityStateRule*
+		{
+			auto [command_name, command_content, is_string_content] = util::parse_single_argument_command(command_expr);
+
+			return process_command_rule_from_csv(command_name, command_content, !is_string_content);
+		};
+
+		auto process_command_rule_from_object = [&init_empty_command, &process_command](std::string_view command_name, const util::json& command_data) -> EntityStateRule*
+		{
+			if (auto command_content = init_empty_command(command_name))
+			{
+				command_content->set_variables
+				(
+					command_data,
+					{ .resolve_component_member_references = true },
+					command_arg_offset
+				);
+
+				return process_command(std::move(*command_content));
+			}
+
+			return {};
 		};
 
 		switch (content.type())
 		{
 			case util::json::value_t::string:
 			{
-				return process_transition_rule(content.get<std::string>());
+				process_transition_rule(content.get<std::string>());
+
+				break;
 			}
 				
 			case util::json::value_t::object:
 			{
-				if (auto target_data = util::find_any(content, "target", "target_entity"); target_data != content.end())
+				if (auto target_data = util::find_any(content, "target"); target_data != content.end())
 				{
-					target = process_rule_target(*target_data);
+					target = parse_target_type(*target_data);
 				}
 
 				if (auto time_data = util::find_any(content, "timer", "wait", "delay"); time_data != content.end())
@@ -919,24 +892,111 @@ namespace engine
 
 				if (auto next_state = util::find_any(content, "state", "next", "next_state"); next_state != content.end())
 				{
-					return process_transition_rule(next_state->get<std::string>());
+					process_transition_rule(next_state->get<std::string>());
+
+					break;
 				}
 
-				if (auto command = util::find_any(content, "command", "generate"); command != content.end())
+				if (auto command = util::find_any(content, "command", "commands", "generate"); command != content.end())
 				{
-					print_warn("COMMANDS ARE CURRENTLY UNSUPPORTED");
+					util::json_for_each<util::json::value_t::string, util::json::value_t::object>
+					(
+						*command,
 
-					// TODO: Implement commands.
-					///assert(false);
+						[&process_command_rule_from_object, &process_command_rule_from_expr, &process_command_rule_from_csv](const util::json& command_content)
+						{
+							switch (command_content.type())
+							{
+								case util::json::value_t::object:
+								{
+									if (auto command_name_it = util::find_any(command_content, "command", "name", "type"); command_name_it != command_content.end())
+									{
+										const auto command_name = command_name_it->get<std::string>();
 
-					//return false;
+										process_command_rule_from_object(command_name, command_content);
+									}
+									else
+									{
+										// TODO: Refactor to share code with `enumerate_map_filtered_ex` section.
+										for (const auto& [command_name, embedded_content] : command_content.items())
+										{
+											switch (embedded_content.type())
+											{
+												case util::json::value_t::object:
+												{
+													process_command_rule_from_object(command_name, embedded_content);
+
+													break;
+												}
+
+												case util::json::value_t::string:
+												{
+													auto string_data = embedded_content.get<std::string>();
+
+													process_command_rule_from_csv(command_name, string_data);
+
+													break;
+												}
+											}
+										}
+									}
+
+									break;
+								}
+
+								case util::json::value_t::string:
+									process_command_rule_from_expr(command_content.get<std::string>());
+
+									break;
+							}
+						}
+					);
+
+					break;
+				}
+				else
+				{
+					util::enumerate_map_filtered_ex
+					(
+						content.items(),
+						hash,
+
+						[&process_command_rule_from_object, &process_command_rule_from_csv](const auto& command_name, const auto& content)
+						{
+							switch (content.type())
+							{
+								case util::json::value_t::array:
+								case util::json::value_t::object:
+								{
+									process_command_rule_from_object(command_name, content);
+
+									break;
+								}
+
+								case util::json::value_t::string:
+								{
+									auto string_data = content.get<std::string>();
+
+									process_command_rule_from_csv(command_name, string_data);
+
+									break;
+								}
+							}
+						},
+
+						// Ignore these keys (see above):
+						"trigger", "triggers", "condition", "conditions",
+
+						"target",
+						"timer", "wait", "delay",
+						"state", "next", "next_state",
+						"command", "commands", "generate"
+					);
 				}
 
 				break;
 			}
 		}
-
-		//print_warn("Unable to process rule for: {}", trigger_condition_expr);
 
 		return count;
 	}
@@ -984,28 +1044,39 @@ namespace engine
 		{
 			return std::nullopt;
 
+			// TODO: Look into idea of resolving `null` as source-entity.
 			//compared_value = static_cast<Entity>(null); // null;
 		}
 
 		if (resolve_native_value)
 		{
-			compared_value = meta_any_from_string(compared_value_raw, true, false, false);
+			compared_value = meta_any_from_string
+			(
+				compared_value_raw,
+				
+				{
+					.resolve_symbol     = true,
+					.strip_quotes       = false,
+					.fallback_to_string = false
+				}
+			);
 
 			if (!compared_value)
 			{
-				if (auto data_member = meta_data_member_from_string(compared_value_raw))
+				// TODO: Add support for multiple levels of indirection. (e.g. "child(name)::RelationshipComponent::child(name)")
+				// Look for (optionally entity-qualified) reference to data member of component:
+				if (auto data_member = indirect_meta_data_member_from_string(compared_value_raw))
 				{
 					compared_value = *data_member;
 				}
-
-				/*
-				if (!compared_value)
+				else
 				{
-					print_warn("Unable to resolve comparison value for rule/trigger.");
-
-					return false;
+					// Look for reference to entity target:
+					if (auto parse_result = EntityTarget::parse_type(compared_value_raw))
+					{
+						compared_value = EntityTarget { std::move(std::get<0>(*parse_result)) };
+					}
 				}
-				*/
 			}
 		}
 				
@@ -1032,7 +1103,6 @@ namespace engine
 		return std::nullopt;
 	}
 
-	//[&process_rule]
 	std::size_t EntityFactory::process_trigger_expression
 	(
 		EntityState& state,
@@ -1381,6 +1451,7 @@ namespace engine
 			process_rule(active_type->id(), content);
 		}
 
+		// NOTE: Updated automatically in `process_rule` subroutine.
 		return number_processed;
 	}
 
@@ -1461,7 +1532,7 @@ namespace engine
 			return nullptr;
 		}
 
-		auto [inline_command, state_path_raw, is_string_content] = parse_single_argument_command(command);
+		auto [inline_command, state_path_raw, is_string_content] = util::parse_single_argument_command(command);
 
 		if (state_path_raw.empty())
 		{

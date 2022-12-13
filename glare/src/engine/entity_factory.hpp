@@ -57,6 +57,7 @@ namespace engine
 	{
 		public:
 			using FactoryKey = std::string;
+			using CommandContent = MetaTypeDescriptor;
 			using SmallSize = MetaTypeDescriptor::SmallSize;
 
 			//using json = util::json;
@@ -129,19 +130,9 @@ namespace engine
 			>
 			parse_event_type(const std::string& event_type, std::ptrdiff_t offset = 0); // std::string_view
 
-			static std::tuple
-			<
-				std::string_view, // command_name
-				std::string_view, // command_content
-				bool              // is_string_content
-			> parse_single_argument_command(const std::string& command); // std::string_view
-
 			// TODO: Move to a different file/class:
 			static std::optional<Timer::Duration> parse_time_duration(const std::string& time_expr); // std::string_view
 			static std::optional<Timer::Duration> parse_time_duration(const util::json& time_data);
-
-			// TODO: Move to a different file/class.
-			static EntityStateTarget::TargetType process_rule_target(const util::json& target_data);
 
 			// NOTE: The 'allow' arguments refer to construction of the underlying `MetaTypeDescriptor`.
 			// To affect the component itself, use the `component_flags` argument.

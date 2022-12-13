@@ -10,8 +10,6 @@
 
 #include <engine/components/player_component.hpp>
 #include <engine/components/player_target_component.hpp>
-#include <engine/components/relationship_component.hpp>
-#include <engine/components/name_component.hpp>
 #include <engine/components/instance_component.hpp>
 
 #include <engine/resource_manager/resource_manager.hpp>
@@ -20,6 +18,7 @@
 
 // Debugging related:
 #include <util/log.hpp>
+//#include <engine/command.hpp>
 
 namespace engine
 {
@@ -217,143 +216,54 @@ namespace engine
 				}
 			}
 
+			using Target     = EntityTarget;
 			using Transition = EntityStateTransitionRule;
 			using Command    = EntityStateCommandRule;
-			using Target     = EntityStateTarget;
 
 			for (const auto& rule_entry : *rules)
 			{
 				const auto& condition = rule_entry.condition;
 				const auto& delay = rule_entry.delay;
 
+				// Resolve trigger condition status:
+				if (condition)
+				{
+					if (!EventTriggerConditionType::get_condition_status(*condition, event_instance, registry, entity))
+					{
+						// Condition has not been met; continue to next rule.
+						return;
+					}
+				}
+
+				const auto target = rule_entry.resolve_target(registry, entity);
+
+				if (target == null)
+				{
+					print_warn("Failed to resolve target entity.");
+
+					continue;
+				}
+
 				util::visit
 				(
 					rule_entry.action,
 					
-					[this, &registry, entity, event_player_index, &event_instance, &condition, &delay](const Transition& transition)
+					[this, entity, target, &delay](const Transition& transition)
 					{
-						// Resolve trigger condition status:
-						if (condition)
-						{
-							if (!EventTriggerConditionType::get_condition_status(*condition, event_instance, registry, entity))
-							{
-								// Condition has not been met; continue to next rule.
-								return;
-							}
-						}
-
-						Entity target = null;
-
-						util::visit
-						(
-							transition.target_type(),
-
-							[entity, &target](const Target::SelfTarget&)
-							{
-								target = entity;
-							},
-
-							[&registry, entity, &target](const Target::ParentTarget&)
-							{
-								if (const RelationshipComponent* relationship = registry.try_get<RelationshipComponent>(entity))
-								{
-									target = relationship->get_parent();
-								}
-							},
-
-							[&target](const Target::EntityTarget& exact_entity)
-							{
-								target = exact_entity.entity;
-							},
-
-							[&registry, &target](const Target::EntityNameTarget& named_target)
-							{
-								auto named_range = registry.view<NameComponent>().each();
-
-								for (auto it = named_range.begin(); it != named_range.end(); it++)
-								{
-									const auto& [e_out, name] = *it;
-
-									// First available match.
-									if (name.hash() == named_target.entity_name)
-									{
-										target = e_out;
-
-										return;
-									}
-								}
-							},
-
-							[&registry, entity, &target](const Target::ChildTarget& child_target)
-							{
-								//assert(child_target.child_name);
-
-								const RelationshipComponent* relationship = registry.try_get<RelationshipComponent>(entity);
-
-								if (!relationship)
-								{
-									return;
-								}
-
-								relationship->enumerate_children
-								(
-									registry,
-									
-									[&registry, &child_target, &target](Entity child, const RelationshipComponent& child_relationship, Entity next_child) -> bool
-									{
-										const auto* child_name_comp = registry.try_get<NameComponent>(child);
-
-										if (!child_name_comp)
-										{
-											return true;
-										}
-
-										if (child_name_comp->hash() == child_target.child_name)
-										{
-											target = child;
-
-											return false;
-										}
-										
-										return true;
-									},
-
-									child_target.recursive
-								);
-							},
-							
-							[&registry, &target](const Target::PlayerTarget& player_target)
-							{
-								auto player_range = registry.view<PlayerComponent>().each();
-
-								for (auto it = player_range.begin(); it != player_range.end(); it++)
-								{
-									const auto& [e_out, player_comp] = *it;
-
-									// First available match.
-									if (player_comp.player_index == player_target.player_index)
-									{
-										target = e_out;
-
-										return;
-									}
-								}
-							}
-						);
-
-						if (target == null)
-						{
-							print_warn("Failed to resolve state transition.");
-						}
-						else
-						{
-							service->timed_event<StateChangeCommand>(delay, entity, target, transition.state_name);
-						}
+						service->timed_event<StateChangeCommand>(delay, entity, target, transition.state_name);
 					},
 
-					[&event_instance](const Command& command)
+					[this, &registry, entity, target, &delay](const Command& command)
 					{
-						// TODO: Implement command generation.
+						auto command_instance = command.command.instance(true, registry, entity);
+
+						set_data_member(command_instance, "source", entity);
+						set_data_member(command_instance, "target", target);
+
+						// Debugging related:
+						//const auto* cmd = reinterpret_cast<const engine::Command*>(command_instance.data());
+
+						service->timed_event(delay, std::move(command_instance));
 					}
 				);
 			}
