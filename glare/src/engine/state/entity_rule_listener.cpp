@@ -220,9 +220,9 @@ namespace engine
 			}
 
 			using Target      = EntityTarget;
-			using Transition  = EntityStateTransitionRule;
-			using Command     = EntityStateCommandRule;
-			using StateUpdate = EntityStateUpdateRule;
+			using Transition  = EntityStateTransitionAction;
+			using Command     = EntityStateCommandAction;
+			using StateUpdate = EntityStateUpdateAction;
 
 			for (const auto& rule_entry : *rules)
 			{

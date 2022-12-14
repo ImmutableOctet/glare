@@ -771,7 +771,7 @@ namespace engine
 
 			return process_rule
 			(
-				EntityStateTransitionRule
+				EntityStateTransitionAction
 				{
 					.state_name = next_state_id
 				}
@@ -782,7 +782,7 @@ namespace engine
 		{
 			return process_rule
 			(
-				EntityStateCommandRule
+				EntityStateCommandAction
 				{
 					std::move(content)
 				}
@@ -897,13 +897,13 @@ namespace engine
 
 				if (auto update = util::find_any(content, "update", "updates", "components", "change"); update != content.end())
 				{
-					EntityStateUpdateRule::Components updated_components;
+					EntityStateUpdateAction::Components updated_components;
 
 					process_component_list(updated_components, *update, {}, true, true, true); // { .force_field_assignment = true }
 
 					process_rule
 					(
-						EntityStateUpdateRule
+						EntityStateUpdateAction
 						{
 							std::move(updated_components)
 						}

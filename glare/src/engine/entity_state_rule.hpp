@@ -18,21 +18,21 @@
 
 namespace engine
 {
-	struct EntityStateTransitionRule
+	struct EntityStateTransitionAction
 	{
 		// The name of the state this `entity` will
 		// transition to upon activation of `condition`.
 		StringHash state_name;
 	};
 
-	struct EntityStateCommandRule
+	struct EntityStateCommandAction
 	{
 		using CommandContent = MetaTypeDescriptor;
 
 		CommandContent command;
 	};
 
-	struct EntityStateUpdateRule
+	struct EntityStateUpdateAction
 	{
 		using Components = MetaDescription;
 
@@ -41,9 +41,9 @@ namespace engine
 
 	using EntityStateAction = std::variant
 	<
-		EntityStateTransitionRule,
-		EntityStateCommandRule,
-		EntityStateUpdateRule
+		EntityStateTransitionAction,
+		EntityStateCommandAction,
+		EntityStateUpdateAction
 	>;
 
 	struct EntityStateRule
