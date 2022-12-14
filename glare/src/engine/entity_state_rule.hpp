@@ -2,50 +2,18 @@
 
 #include "types.hpp"
 #include "timer.hpp"
-
-#include "meta/types.hpp"
-#include "meta/meta_type_descriptor.hpp"
-#include "meta/meta_description.hpp"
-
-#include "event_trigger_condition.hpp"
 #include "entity_target.hpp"
+#include "entity_state_action.hpp"
+#include "event_trigger_condition.hpp"
 
-#include <util/variant.hpp>
 #include <util/small_vector.hpp>
+//#include <util/variant.hpp>
 
-#include <variant>
+//#include <variant>
 #include <optional>
 
 namespace engine
 {
-	struct EntityStateTransitionAction
-	{
-		// The name of the state this `entity` will
-		// transition to upon activation of `condition`.
-		StringHash state_name;
-	};
-
-	struct EntityStateCommandAction
-	{
-		using CommandContent = MetaTypeDescriptor;
-
-		CommandContent command;
-	};
-
-	struct EntityStateUpdateAction
-	{
-		using Components = MetaDescription;
-
-		Components updated_components;
-	};
-
-	using EntityStateAction = std::variant
-	<
-		EntityStateTransitionAction,
-		EntityStateCommandAction,
-		EntityStateUpdateAction
-	>;
-
 	struct EntityStateRule
 	{
 		using Action = EntityStateAction;
