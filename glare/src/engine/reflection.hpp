@@ -290,6 +290,8 @@ namespace engine
             .template func<&patch_meta_component<T>>("patch_meta_component"_hs)
             .template func<&MetaEventListener::connect<T>>("connect_meta_event"_hs)
             .template func<&MetaEventListener::disconnect<T>>("disconnect_meta_event"_hs)
+			.template func<&MetaEventListener::connect_component_listeners<T>>("connect_component_meta_events"_hs)
+            .template func<&MetaEventListener::disconnect_component_listeners<T>>("disconnect_component_meta_events"_hs)
             .template func<&trigger_event_from_meta_any<T>>("trigger_event_from_meta_any"_hs);
         ;
 

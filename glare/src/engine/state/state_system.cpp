@@ -16,6 +16,8 @@
 
 #include <engine/resource_manager/resource_manager.hpp>
 
+#include <optional>
+
 // Debugging related:
 #include <util/log.hpp>
 
@@ -325,7 +327,17 @@ namespace engine
 
 				auto& listener_ref = reinterpret_cast<MetaEventListener&>(listener);
 
-				auto result = connect_fn.invoke({}, entt::forward_as_meta(listener_ref), entt::forward_as_meta(this->service));
+				auto result = connect_fn.invoke
+				(
+					{},
+
+					entt::forward_as_meta(listener_ref),
+					entt::forward_as_meta(this->service),
+
+					// NOTE: We need to manually specify a type-qualified `std::nullopt`
+					// to handle the (normally defaulted) `flags` parameter.
+					entt::forward_as_meta(std::optional<MetaEventListenerFlags>(std::nullopt))
+				);
 
 				if (!result)
 				{
