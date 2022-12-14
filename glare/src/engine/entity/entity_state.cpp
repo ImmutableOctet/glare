@@ -1,10 +1,10 @@
 #include "entity_state.hpp"
 
-#include "meta/meta.hpp"
+#include <engine/meta/meta.hpp>
 
-#include "state/components/state_component.hpp"
-#include "state/components/state_storage_component.hpp"
-#include "state/components/frozen_state_component.hpp"
+#include <engine/state/components/state_component.hpp>
+#include <engine/state/components/state_storage_component.hpp>
+#include <engine/state/components/frozen_state_component.hpp>
 
 // Debugging related:
 #include <util/log.hpp>

@@ -2,9 +2,9 @@
 
 #include "entity_target.hpp"
 
-#include "meta/meta.hpp"
-#include "meta/meta_data_member.hpp"
-#include "meta/indirect_meta_data_member.hpp"
+#include <engine/meta/meta.hpp>
+#include <engine/meta/meta_data_member.hpp>
+#include <engine/meta/indirect_meta_data_member.hpp>
 
 #include <optional>
 

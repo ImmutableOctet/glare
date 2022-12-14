@@ -9,7 +9,7 @@
 #include "graphics_entity.hpp"
 
 #include <engine/resource_manager/resource_manager.hpp>
-#include <engine/entity_factory.hpp>
+#include <engine/entity/entity_factory.hpp>
 
 #include "physics/components/collision_component.hpp"
 
@@ -35,7 +35,7 @@
 #include <regex>
 
 // Debugging related:
-#include <engine/entity_descriptor.hpp>
+#include <engine/entity/entity_descriptor.hpp>
 #include "behaviors/rave_behavior.hpp"
 
 // Not sure if this is actually going to be a standard include or not.

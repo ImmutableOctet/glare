@@ -2,7 +2,7 @@
 
 #include "meta_data_member.hpp"
 
-#include <engine/entity_target.hpp>
+#include <engine/entity/entity_target.hpp>
 
 namespace engine
 {

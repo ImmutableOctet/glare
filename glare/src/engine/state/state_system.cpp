@@ -11,8 +11,8 @@
 #include <engine/service.hpp>
 #include <engine/service_events.hpp>
 #include <engine/meta/meta.hpp>
-#include <engine/entity_descriptor.hpp>
-#include <engine/entity_state.hpp>
+#include <engine/entity/entity_descriptor.hpp>
+#include <engine/entity/entity_state.hpp>
 
 #include <engine/resource_manager/resource_manager.hpp>
 

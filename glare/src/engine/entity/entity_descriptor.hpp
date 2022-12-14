@@ -1,7 +1,8 @@
 #pragma once
 
 #include "entity_state.hpp"
-#include "meta/meta_description.hpp"
+
+#include <engine/meta/meta_description.hpp>
 
 #include <optional>
 #include <memory>

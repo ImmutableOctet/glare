@@ -1,10 +1,12 @@
 #pragma once
 
 #include "types.hpp"
-#include "timer.hpp"
+
 #include "entity_descriptor.hpp"
 #include "entity_state.hpp"
 #include "entity_state_rule.hpp"
+
+#include <engine/timer.hpp>
 
 #include <util/json.hpp>
 #include <util/algorithm.hpp>

@@ -3,7 +3,7 @@
 #include "components/state_component.hpp"
 #include "commands/state_change_command.hpp"
 
-#include <engine/entity_state.hpp>
+#include <engine/entity/entity_state.hpp>
 #include <engine/timer.hpp>
 
 #include <engine/meta/meta.hpp>

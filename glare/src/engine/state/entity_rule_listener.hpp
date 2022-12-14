@@ -1,8 +1,7 @@
 #pragma once
 
 #include <engine/types.hpp>
-#include <engine/entity_state_rule.hpp>
-
+#include <engine/entity/entity_state_rule.hpp>
 #include <engine/meta/meta_event_listener.hpp>
 
 #include <util/small_vector.hpp>

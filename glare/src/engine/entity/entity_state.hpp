@@ -1,10 +1,10 @@
 #pragma once
 
-#include "meta/types.hpp"
-#include "meta/meta_description.hpp"
-
 #include "entity_state_rule.hpp"
-#include "timer.hpp"
+
+#include <engine/meta/types.hpp>
+#include <engine/meta/meta_description.hpp>
+#include <engine/timer.hpp>
 
 // TODO: Forward declare JSON type.
 #include <util/json.hpp>

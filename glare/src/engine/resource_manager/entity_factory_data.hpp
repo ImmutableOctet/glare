@@ -1,7 +1,7 @@
 #pragma once
 
 #include <engine/types.hpp>
-#include <engine/entity_factory.hpp>
+#include <engine/entity/entity_factory.hpp>
 
 #include <util/small_vector.hpp>
 //#include <string>

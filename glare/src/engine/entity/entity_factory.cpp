@@ -1,15 +1,15 @@
 #include "entity_factory.hpp"
 #include "event_trigger_condition.hpp"
 
-#include "components/relationship_component.hpp"
-#include "components/instance_component.hpp"
-#include "components/name_component.hpp"
+#include <engine/components/relationship_component.hpp>
+#include <engine/components/instance_component.hpp>
+#include <engine/components/name_component.hpp>
 
-#include "state/components/state_component.hpp"
+#include <engine/state/components/state_component.hpp>
 
-#include "meta/meta.hpp"
-#include "meta/serial.hpp"
-#include "meta/meta_data_member.hpp"
+#include <engine/meta/meta.hpp>
+#include <engine/meta/serial.hpp>
+#include <engine/meta/meta_data_member.hpp>
 
 #include <util/algorithm.hpp>
 #include <util/string.hpp>
@@ -1267,20 +1267,22 @@ namespace engine
 				{
 					throw std::runtime_error(format("Unsupported operation: Unable to build 'AND' compound condition with multiple event types. ({})", parsed_expr));
 				}
-
-				// Since combining event types in trigger-clauses is not supported,
-				// we need to process the condition we've already built.
-				store_condition();
-
-				// With the previous condition handled, we can switch to the new event-type:
-				active_type = resolve(type_name_id);
-
-				if (!active_type)
+				else
 				{
-					throw std::runtime_error(format("Unable to resolve trigger/event type in compound condition: \"{}\" (#{})", type_name, type_name_id));
-				}
+					// Since combining event types in trigger-clauses is not supported,
+					// we need to process the condition we've already built.
+					store_condition();
 
-				active_type_changed = true;
+					// With the previous condition handled, we can switch to the new event-type:
+					active_type = resolve(type_name_id);
+
+					if (!active_type)
+					{
+						throw std::runtime_error(format("Unable to resolve trigger/event type in compound condition: \"{}\" (#{})", type_name, type_name_id));
+					}
+
+					active_type_changed = true;
+				}
 			}
 
 			assert(active_type);

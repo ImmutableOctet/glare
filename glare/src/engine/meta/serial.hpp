@@ -4,7 +4,7 @@
 #include "meta_data_member.hpp"
 #include "indirect_meta_data_member.hpp"
 
-#include <engine/entity_target.hpp>
+#include <engine/entity/entity_target.hpp>
 
 // TODO: Forward declare `util::json`, etc.
 #include <util/json.hpp>

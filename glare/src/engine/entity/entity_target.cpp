@@ -1,10 +1,10 @@
 #include "entity_target.hpp"
 
-#include "meta/meta.hpp"
+#include <engine/meta/meta.hpp>
 
-#include "components/relationship_component.hpp"
-#include "components/name_component.hpp"
-#include "components/player_component.hpp"
+#include <engine/components/relationship_component.hpp>
+#include <engine/components/name_component.hpp>
+#include <engine/components/player_component.hpp>
 
 #include <util/string.hpp>
 #include <util/parse.hpp>

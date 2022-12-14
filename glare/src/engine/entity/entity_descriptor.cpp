@@ -1,5 +1,6 @@
 #include "entity_descriptor.hpp"
-#include "meta/meta.hpp"
+
+#include <engine/meta/meta.hpp>
 
 namespace engine
 {
