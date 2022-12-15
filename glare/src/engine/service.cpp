@@ -178,6 +178,25 @@ namespace engine
 
 		// Trigger the standard update event for this service.
 		this->event<OnServiceUpdate>(this, delta);
+
+		service_event_handler.update();
+
+		handle_deferred_operations();
+	}
+
+	void Service::handle_deferred_operations()
+	{
+		if (deferred_operations.empty())
+		{
+			return;
+		}
+
+		for (const auto& fn : deferred_operations)
+		{
+			fn();
+		}
+
+		deferred_operations.clear();
 	}
 
 	void Service::render(app::Graphics& gfx)

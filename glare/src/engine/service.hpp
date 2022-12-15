@@ -47,6 +47,8 @@ namespace engine
 	class Service
 	{
 		public:
+			using OpaqueFunction = std::function<void()>;
+
 			Service
 			(
 				bool register_input_events=true,
@@ -72,82 +74,162 @@ namespace engine
 			virtual ResourceManager& get_resource_manager() = 0;
 			virtual const ResourceManager& get_resource_manager() const = 0;
 
+			inline bool has_event_queued() const
+			{
+				return (standard_event_handler.size()) || (forwarding_event_handler.size());
+			}
+
 			template <typename EventType, auto fn, typename obj_type>
 			inline void register_event(obj_type& obj)
 			{
-				standard_event_handler.sink<EventType>().connect<fn>(obj);
-				forwarding_event_handler.sink<EventType>().connect<fn>(obj);
+				register_event<EventType, fn>(obj, has_event_queued());
+			}
+
+			template <typename EventType, auto fn, typename obj_type>
+			inline void register_event(obj_type& obj, bool defer_operation)
+			{
+				if constexpr (std::is_base_of_v<ServiceOriginatedEvent, std::decay_t<EventType>>)
+				{
+					service_event_handler.sink<EventType>().connect<fn>(obj);
+				}
+				else
+				{
+					if (defer_operation)
+					{
+						later
+						(
+							[this, &obj]()
+							{
+								register_event<EventType, fn>(obj, false);
+							}
+						);
+
+						return;
+					}
+
+					standard_event_handler.sink<EventType>().connect<fn>(obj);
+					forwarding_event_handler.sink<EventType>().connect<fn>(obj);
+				}
 			}
 
 			template <typename EventType, auto fn, typename obj_type>
 			inline void unregister_event(obj_type& obj)
 			{
-				standard_event_handler.sink<EventType>().disconnect<fn>(obj);
-				forwarding_event_handler.sink<EventType>().disconnect<fn>(obj);
+				unregister_event<EventType, fn>(obj, has_event_queued());
+			}
+
+			template <typename EventType, auto fn, typename obj_type>
+			inline void unregister_event(obj_type& obj, bool defer_operation)
+			{
+				if constexpr (std::is_base_of_v<ServiceOriginatedEvent, std::decay_t<EventType>>)
+				{
+					service_event_handler.sink<EventType>().disconnect<fn>(obj);
+				}
+				else
+				{
+					if (defer_operation)
+					{
+						later
+						(
+							[this, &obj]()
+							{
+								unregister_event<EventType, fn>(obj, false);
+							}
+						);
+
+						return;
+					}
+
+					standard_event_handler.sink<EventType>().disconnect<fn>(obj);
+					forwarding_event_handler.sink<EventType>().disconnect<fn>(obj);
+				}
 			}
 
 			template <typename EventType, typename... Args>
 			inline void queue_event(Args&&... args)
 			{
-				if constexpr (std::is_same_v<EventType, std::decay_t<TimedEvent>>)
+				if constexpr (std::is_same_v<std::decay_t<EventType>, TimedEvent>)
 				{
 					enqueue_timed_event(TimedEvent { std::forward<Args>(args)... });
+				}
+				else if constexpr (std::is_base_of_v<ServiceOriginatedEvent, std::decay_t<EventType>>)
+				{
+					service_event_handler.enqueue<EventType>(std::forward<Args>(args)...);
 				}
 				else
 				{
 					on_queue<EventType>(args...);
 
-					active_event_handler->enqueue<EventType>(EventType{ std::forward<Args>(args)... });
+					active_event_handler->enqueue<EventType>(std::forward<Args>(args)...); // EventType { ... }
 				}
 			}
 
 			template <typename EventType>
 			inline void queue_event(EventType&& event_obj)
 			{
-				on_queue<EventType>(event_obj);
+				if constexpr (std::is_same_v<std::decay_t<EventType>, TimedEvent>)
+				{
+					enqueue_timed_event(std::forward<EventType>(event_obj));
+				}
+				// NOTE: This condition is specific to the forwarding-reference overload of `queue_event`.
+				else if constexpr (std::is_same_v<std::decay_t<EventType>, MetaAny>)
+				{
+					event<EventType>(std::forward<EventType>(event_obj));
+				}
+				else if constexpr (std::is_base_of_v<ServiceOriginatedEvent, std::decay_t<EventType>>)
+				{
+					service_event_handler.enqueue(std::forward<EventType>(event_obj));
+				}
+				else
+				{
+					on_queue<EventType>(event_obj);
 
-				active_event_handler->enqueue(std::forward<EventType>(event_obj));
-			}
-
-			template <>
-			inline void queue_event<TimedEvent>(TimedEvent&& event_obj)
-			{
-				enqueue_timed_event(std::move(event_obj));
+					active_event_handler->enqueue(std::forward<EventType>(event_obj));
+				}
 			}
 
 			template <typename EventType, typename... Args>
 			inline void event(Args&&... args)
 			{
-				if constexpr (std::is_same_v<EventType, std::decay_t<TimedEvent>>)
+				if constexpr (std::is_same_v<std::decay_t<EventType>, TimedEvent>)
 				{
 					queue_event<EventType, Args...>(std::forward<Args>(args)...);
+				}
+				else if constexpr (std::is_base_of_v<ServiceOriginatedEvent, std::decay_t<EventType>>)
+				{
+					service_event_handler.trigger<EventType>(EventType { std::forward<Args>(args)... });
 				}
 				else
 				{
 					on_trigger<EventType>(args...);
 
-					active_event_handler->trigger<EventType>(EventType{ std::forward<Args>(args)... });
+					active_event_handler->trigger<EventType>(EventType { std::forward<Args>(args)... });
 				}
 			}
 
 			template <typename EventType>
 			inline void event(EventType&& event_obj)
 			{
-				on_trigger<EventType>(event_obj);
+				if constexpr (std::is_same_v<std::decay_t<EventType>, TimedEvent>)
+				{
+					//enqueue_timed_event(std::forward<TimedEvent>(event_obj));
+					queue_event<TimedEvent>(std::forward<TimedEvent>(event_obj));
+				}
+				// NOTE: This condition is specific to the forwarding-reference overload of `event`.
+				else if constexpr (std::is_same_v<std::decay_t<EventType>, MetaAny>)
+				{
+					trigger_opaque_event(std::move(event_obj));
+				}
+				else if constexpr (std::is_base_of_v<ServiceOriginatedEvent, std::decay_t<EventType>>)
+				{
+					service_event_handler.trigger<EventType>(std::forward<EventType>(event_obj));
+				}
+				else
+				{
+					on_trigger<EventType>(event_obj);
 
-				active_event_handler->trigger(std::forward<EventType>(event_obj));
-			}
-
-			template <>
-			inline void event<TimedEvent>(TimedEvent&& event_obj)
-			{
-				queue_event<TimedEvent>(std::forward<TimedEvent>(event_obj));
-			}
-
-			template <>
-			inline void event<MetaAny>(MetaAny&& event_obj)
-			{
-				trigger_opaque_event(std::move(event_obj));
+					active_event_handler->trigger(std::forward<EventType>(event_obj));
+				}
 			}
 
 			template <typename EventType, typename... Args>
@@ -237,6 +319,8 @@ namespace engine
 				forwarding_event_handler.sink<EventType>().disconnect<fn>();
 			}
 
+			// TODO: Deprecate.
+			// 
 			// Queues `fn` to be executed with `args` on the next call to `update`.
 			// Deferred calls (`Actions`) are executed in-order for the function-type specified.
 			// This means that lambdas can be used to uniquely queue a particular action in FIFO order.
@@ -245,10 +329,19 @@ namespace engine
 			template <typename fn_t, typename... arguments>
 			inline void defer(fn_t&& f, arguments&&... args)
 			{
-				queue_event(make_action(std::forward<fn_t>(f), std::forward<arguments>(args)...));
+				service_event_handler.enqueue(make_action(std::forward<fn_t>(f), std::forward<arguments>(args)...)); // queue_event(...)
 
 				// Debugging related:
 				//make_action(std::forward<fn_t>(f), std::forward<arguments>(args)...);
+			}
+
+			// New API.
+			// 
+			// TODO: Remove/replace `defer`.
+			template <typename Callback>
+			void later(Callback&& callback)
+			{
+				deferred_operations.emplace_back(callback);
 			}
 
 			void update(float delta=1.0f);
@@ -339,6 +432,8 @@ namespace engine
 			void on_component_replace(ComponentReplaceCommand& component_replace);
 
 		protected:
+			void handle_deferred_operations();
+
 			// TODO: Allow the user to specify a registry, rather than owning it outright.
 			mutable Registry registry;
 
@@ -375,6 +470,11 @@ namespace engine
 			// Forwarding event handler; used while processing events.
 			EventHandler forwarding_event_handler;
 
+			// Used for service-originated events and deferred operations.
+			// (Prevents conflicts during service operations)
+			EventHandler service_event_handler;
+
 			util::small_vector<TimedEvent, 8> pending_timed_events;
+			util::small_vector<OpaqueFunction, 8> deferred_operations;
 	};
 }
