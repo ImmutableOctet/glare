@@ -7,6 +7,8 @@
 #include "indirect_meta_data_member.hpp"
 #include "meta_type_descriptor.hpp"
 
+#include "events.hpp"
+
 namespace engine
 {
 	template <>
@@ -106,11 +108,31 @@ namespace engine
 		;
 	}
 
-	inline void reflect_meta()
+	GENERATE_EMPTY_DERIVED_TYPE_REFLECTION(OnComponentCreate,  ComponentEvent);
+	GENERATE_EMPTY_DERIVED_TYPE_REFLECTION(OnComponentUpdate,  ComponentEvent);
+	GENERATE_EMPTY_DERIVED_TYPE_REFLECTION(OnComponentDestroy, ComponentEvent);
+
+	template <>
+	void reflect<ComponentEvent>()
+	{
+		engine_meta_type<ComponentEvent>()
+			.data<&ComponentEvent::entity>("entity"_hs)
+			.data<&ComponentEvent::component>("component"_hs)
+			.data<nullptr, &ComponentEvent::type>("type"_hs)
+		;
+
+		reflect<OnComponentCreate>();
+		reflect<OnComponentUpdate>();
+		reflect<OnComponentDestroy>();
+	}
+
+	void reflect_meta()
 	{
 		reflect<MetaVariable>();
 		reflect<MetaDataMember>();
 		reflect<IndirectMetaDataMember>();
 		reflect<MetaTypeDescriptor>();
+
+		reflect<ComponentEvent>();
 	}
 }
