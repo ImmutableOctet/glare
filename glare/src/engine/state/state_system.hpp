@@ -23,6 +23,11 @@ namespace engine
 	struct OnServiceUpdate;
 	struct OnStateChange;
 	struct OnStateActivate;
+
+	struct OnComponentCreate;
+	struct OnComponentUpdate;
+	struct OnComponentDestroy;
+
 	struct StateChangeCommand;
 	struct StateActivationCommand;
 
@@ -64,7 +69,13 @@ namespace engine
 
 			void on_state_change_command(const StateChangeCommand& state_change);
 			void on_state_activation_command(const StateActivationCommand& state_activation);
+
+			void on_component_create(const OnComponentCreate& component_details);
+			void on_component_update(const OnComponentUpdate& component_details);
+			void on_component_destroy(const OnComponentDestroy& component_details);
 		private:
+			EntityListener* listen(MetaTypeID event_type_id);
+
 			void on_state_update_impl(Registry& registry, Entity entity, bool handle_existing=true);
 	};
 }

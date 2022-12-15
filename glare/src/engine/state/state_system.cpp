@@ -3,6 +3,7 @@
 #include "events.hpp"
 
 #include "components/state_component.hpp"
+
 #include "commands/state_change_command.hpp"
 #include "commands/state_activation_command.hpp"
 
@@ -11,6 +12,7 @@
 #include <engine/service.hpp>
 #include <engine/service_events.hpp>
 #include <engine/meta/meta.hpp>
+#include <engine/meta/events.hpp>
 #include <engine/entity/entity_descriptor.hpp>
 #include <engine/entity/entity_state.hpp>
 
@@ -42,12 +44,15 @@ namespace engine
 		registry.on_destroy<StateComponent>().connect<&StateSystem::on_state_destroyed>(*this);
 
 		// Standard events:
-		service.register_event<OnServiceUpdate, &StateSystem::on_update>(*this);
-		service.register_event<OnStateChange, &StateSystem::on_state_change>(*this);
-		service.register_event<OnStateActivate, &StateSystem::on_state_activate>(*this);
+		service.register_event<OnServiceUpdate,    &StateSystem::on_update>(*this);
+		service.register_event<OnStateChange,      &StateSystem::on_state_change>(*this);
+		service.register_event<OnStateActivate,    &StateSystem::on_state_activate>(*this);
+		service.register_event<OnComponentCreate,  &StateSystem::on_component_create>(*this);
+		service.register_event<OnComponentUpdate,  &StateSystem::on_component_update>(*this);
+		service.register_event<OnComponentDestroy, &StateSystem::on_component_destroy>(*this);
 
 		// Commands:
-		service.register_event<StateChangeCommand, &StateSystem::on_state_change_command>(*this);
+		service.register_event<StateChangeCommand,     &StateSystem::on_state_change_command>(*this);
 		service.register_event<StateActivationCommand, &StateSystem::on_state_activation_command>(*this);
 
 		return true;
@@ -257,11 +262,13 @@ namespace engine
 		// ...
 	}
 
+	// TODO: Review event-handling issue.
 	void StateSystem::on_state_init(Registry& registry, Entity entity)
 	{
 		on_state_update_impl(registry, entity, false);
 	}
 
+	// TODO: Review event-handling issue.
 	void StateSystem::on_state_update(Registry& registry, Entity entity)
 	{
 		on_state_update_impl(registry, entity);
@@ -283,6 +290,8 @@ namespace engine
 				return;
 			}
 
+			// NOTE: Does not currelty destruct/disconnect existing listeners.
+			// TODO: Determine if reference counting makes sense for this use-case.
 			for (auto& listener_entry : listeners)
 			{
 				auto& listener = listener_entry.second;
@@ -296,62 +305,40 @@ namespace engine
 
 		const auto state_index = state_component.state_index;
 
-		const auto& state = *descriptor->states[state_index];
+		const auto& state = *(descriptor->states[state_index]);
 
+		// NOTE: For component-member based triggers, this will look
+		// for the component type in the form of an event.
+		// 
+		// These triggers are satisfied via the `OnComponentCreate`/`OnComponentUpdate`
+		// handlers in this system, which forward a reference to the underlying component.
 		for (const auto& rule_entries : state.rules)
 		{
 			const auto& event_type_id = rule_entries.first;
-			const auto& state_rules   = rule_entries.second;
+			//const auto& state_rules   = rule_entries.second;
 
-			auto& listener = listeners[event_type_id];
+			auto* listener = listen(event_type_id);
 
-			if (!listener.is_active())
+			if (!listener)
 			{
-				auto event_type = resolve(event_type_id);
-
-				if (!event_type)
-				{
-					print_warn("Unable to resolve meta-type for event: #{}", event_type_id);
-
-					continue;
-				}
-
-				auto connect_fn = event_type.func(hash("connect_meta_event"));
-
-				if (!connect_fn)
-				{
-					print_warn("Unable to resolve connection function for meta event-listener -- type: #{}", event_type_id);
-
-					continue;
-				}
-
-				auto& listener_ref = reinterpret_cast<MetaEventListener&>(listener);
-
-				auto result = connect_fn.invoke
-				(
-					{},
-
-					entt::forward_as_meta(listener_ref),
-					entt::forward_as_meta(this->service),
-
-					// NOTE: We need to manually specify a type-qualified `std::nullopt`
-					// to handle the (normally defaulted) `flags` parameter.
-					entt::forward_as_meta(std::optional<MetaEventListenerFlags>(std::nullopt))
-				);
-
-				if (!result)
-				{
-					print_warn("Failed to invoke meta event-listener connection routine. -- type: #{}", event_type_id);
-				}
+				continue;
 			}
 
-			listener.add_rules(state); // , event_type_id
+			listener->add_rules(state); // , event_type_id
 		}
+
+		/*
+		for (const auto& thread : state.threads)
+		{
+			// TODO: Handle listening for entity thread triggers.
+			listen(...)
+		}
+		*/
 	}
 
 	void StateSystem::on_state_destroyed(Registry& registry, Entity entity)
 	{
-
+		// TODO: Implement state cleanup.
 	}
 	
 	// Handles logging/printing for debugging purposes.
@@ -369,7 +356,6 @@ namespace engine
 		}
 	}
 
-	// Handles logging/printing for debugging purposes.
 	void StateSystem::on_state_activate(const OnStateActivate& state_activate)
 	{
 		if (!state_activate.state.id)
@@ -406,5 +392,81 @@ namespace engine
 		{
 			print_error("Failed to activate state #{} for Entity {} (activation by {})", state_activation.state_name, state_activation.target, state_activation.source);
 		}
+	}
+
+	void StateSystem::on_component_create(const OnComponentCreate& component_details)
+	{
+		on_component_update({ component_details.entity, component_details.component.as_ref() });
+	}
+
+	void StateSystem::on_component_update(const OnComponentUpdate& component_details)
+	{
+		assert(component_details.entity != null);
+		assert(component_details.component);
+
+		const auto event_type = component_details.component.type();
+		const auto event_type_id = event_type.id();
+
+		auto& listener = listeners[event_type_id];
+
+		assert(listener.is_active());
+
+		listener.on_event(event_type, component_details.component.as_ref());
+	}
+
+	void StateSystem::on_component_destroy(const OnComponentDestroy& component_details)
+	{
+		// Nothing so far.
+	}
+
+	EntityListener* StateSystem::listen(MetaTypeID event_type_id)
+	{
+		auto& listener = listeners[event_type_id];
+
+		if (listener.is_active())
+		{
+			return &listener;
+		}
+
+		auto event_type = resolve(event_type_id);
+
+		if (!event_type)
+		{
+			print_warn("Unable to resolve meta-type for event: #{}", event_type_id);
+
+			return nullptr;
+		}
+
+		auto connect_fn = event_type.func(hash("connect_meta_event"));
+
+		if (!connect_fn)
+		{
+			print_warn("Unable to resolve connection function for meta event-listener -- type: #{}", event_type_id);
+
+			return nullptr;
+		}
+
+		auto& listener_ref = reinterpret_cast<MetaEventListener&>(listener);
+
+		auto result = connect_fn.invoke
+		(
+			{},
+
+			entt::forward_as_meta(listener_ref),
+			entt::forward_as_meta(this->service),
+
+			// NOTE: We need to manually specify a type-qualified `std::nullopt`
+			// to handle the (normally defaulted) `flags` parameter.
+			entt::forward_as_meta(std::optional<MetaEventListenerFlags>(std::nullopt))
+		);
+
+		if (!result)
+		{
+			print_warn("Failed to invoke meta event-listener connection routine. -- type: #{}", event_type_id);
+
+			//return nullptr;
+		}
+
+		return &listener;
 	}
 }

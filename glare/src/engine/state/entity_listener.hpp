@@ -35,6 +35,8 @@ namespace engine
 
 			// Checks if `state` is currently being referenced by this listener.
 			bool contains(const EntityState& state) const;
+
+			void on_event(const entt::meta_type& type, entt::meta_any event_instance) override;
 		protected:
 			struct Reference
 			{
@@ -49,7 +51,9 @@ namespace engine
 			util::small_vector<Reference, 8> active_rules;
 
 			bool on_disconnect(Service* service, const entt::meta_type& type) override;
-
-			void on_event(const entt::meta_type& type, entt::meta_any event_instance) override;
+			
+			void on_component_create(Registry& registry, Entity entity, const entt::meta_any& component) override;
+			void on_component_update(Registry& registry, Entity entity, const entt::meta_any& component) override;
+			void on_component_destroy(Registry& registry, Entity entity, const entt::meta_any& component) override;
 	};
 }

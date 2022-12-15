@@ -7,6 +7,7 @@
 #include <engine/timer.hpp>
 
 #include <engine/meta/meta.hpp>
+#include <engine/meta/events.hpp>
 
 #include <engine/commands/component_patch_command.hpp>
 #include <engine/commands/component_replace_command.hpp>
@@ -235,7 +236,7 @@ namespace engine
 					if (!EventTriggerConditionType::get_condition_status(*condition, event_instance, registry, entity))
 					{
 						// Condition has not been met; continue to next rule.
-						return;
+						continue;
 					}
 				}
 
@@ -301,5 +302,20 @@ namespace engine
 				);
 			}
 		});
+	}
+
+	void EntityListener::on_component_create(Registry& registry, Entity entity, const entt::meta_any& component)
+	{
+		service->event<OnComponentCreate>(entity, component.as_ref()); // component // entt::forward_as_meta(component)
+	}
+
+	void EntityListener::on_component_update(Registry& registry, Entity entity, const entt::meta_any& component)
+	{
+		service->event<OnComponentUpdate>(entity, component.as_ref());
+	}
+
+	void EntityListener::on_component_destroy(Registry& registry, Entity entity, const entt::meta_any& component)
+	{
+		service->event<OnComponentDestroy>(entity, component.as_ref());
 	}
 }
