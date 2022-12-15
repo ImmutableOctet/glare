@@ -1,6 +1,6 @@
 #pragma once
 
-#include "entity_rule_listener.hpp"
+#include "entity_listener.hpp"
 
 #include <engine/types.hpp>
 #include <engine/basic_system.hpp>
@@ -40,7 +40,7 @@ namespace engine
 
 			const ResourceManager& resource_manager;
 
-			std::unordered_map<MetaTypeID, EntityRuleListener> rule_listeners;
+			std::unordered_map<MetaTypeID, EntityListener> listeners;
 
 			Registry& get_registry() const;
 

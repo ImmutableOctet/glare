@@ -1,4 +1,4 @@
-#include "entity_rule_listener.hpp"
+#include "entity_listener.hpp"
 
 #include "components/state_component.hpp"
 #include "commands/state_change_command.hpp"
@@ -25,10 +25,10 @@
 
 namespace engine
 {
-	EntityRuleListener::EntityRuleListener(Service* service)
+	EntityListener::EntityListener(Service* service)
 		: MetaEventListener(service) {}
 
-	std::size_t EntityRuleListener::count_active_rules() const
+	std::size_t EntityListener::count_active_rules() const
 	{
 		std::size_t count = 0;
 
@@ -43,7 +43,7 @@ namespace engine
 		return count;
 	}
 
-	bool EntityRuleListener::has_active_rule() const
+	bool EntityListener::has_active_rule() const
 	{
 		for (const auto& entry : active_rules)
 		{
@@ -56,7 +56,7 @@ namespace engine
 		return false;
 	}
 
-	bool EntityRuleListener::add_rules(const EntityState& state)
+	bool EntityListener::add_rules(const EntityState& state)
 	{
 		for (auto& entry : active_rules)
 		{
@@ -73,7 +73,7 @@ namespace engine
 		return true;
 	}
 
-	bool EntityRuleListener::add_rules(const EntityState& state, MetaTypeID event_type_id)
+	bool EntityListener::add_rules(const EntityState& state, MetaTypeID event_type_id)
 	{
 		if (!state.get_rules(event_type_id))
 		{
@@ -83,7 +83,7 @@ namespace engine
 		return add_rules(state);
 	}
 
-	bool EntityRuleListener::remove_rules(const EntityState& state)
+	bool EntityListener::remove_rules(const EntityState& state)
 	{
 		std::size_t idx = 0;
 
@@ -107,7 +107,7 @@ namespace engine
 		return true;
 	}
 
-	bool EntityRuleListener::contains(const EntityState* state) const
+	bool EntityListener::contains(const EntityState* state) const
 	{
 		if (!state)
 		{
@@ -125,12 +125,12 @@ namespace engine
 		return false;
 	}
 
-	bool EntityRuleListener::contains(const EntityState& state) const
+	bool EntityListener::contains(const EntityState& state) const
 	{
 		return contains(&state);
 	}
 
-	bool EntityRuleListener::on_disconnect(Service* service, const entt::meta_type& type)
+	bool EntityListener::on_disconnect(Service* service, const entt::meta_type& type)
 	{
 		if (!is_active())
 		{
@@ -145,7 +145,7 @@ namespace engine
 		return false; // (this->service != service);
 	}
 
-	void EntityRuleListener::on_event(const entt::meta_type& type, entt::meta_any event_instance)
+	void EntityListener::on_event(const entt::meta_type& type, entt::meta_any event_instance)
 	{
 		assert(service);
 

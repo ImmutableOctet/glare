@@ -11,12 +11,12 @@ namespace engine
 	class Service;
 	class EntityState;
 
-	class EntityRuleListener : public MetaEventListener
+	class EntityListener : public MetaEventListener
 	{
 		public:
 			using RuleCollection = EntityStateRuleCollection;
 
-			EntityRuleListener(Service* service=nullptr);
+			EntityListener(Service* service=nullptr);
 
 			std::size_t count_active_rules() const;
 			bool has_active_rule() const;

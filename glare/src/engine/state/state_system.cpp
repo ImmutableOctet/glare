@@ -283,7 +283,7 @@ namespace engine
 				return;
 			}
 
-			for (auto& listener_entry : rule_listeners)
+			for (auto& listener_entry : listeners)
 			{
 				auto& listener = listener_entry.second;
 
@@ -303,7 +303,7 @@ namespace engine
 			const auto& event_type_id = rule_entries.first;
 			const auto& state_rules   = rule_entries.second;
 
-			auto& listener = rule_listeners[event_type_id];
+			auto& listener = listeners[event_type_id];
 
 			if (!listener.is_active())
 			{
