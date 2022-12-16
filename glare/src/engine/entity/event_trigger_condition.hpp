@@ -160,12 +160,25 @@ namespace engine
 	class EventTriggerSingleCondition : public EventTriggerConditionType
 	{
 		public:
-			EventTriggerSingleCondition(MetaSymbolID event_type_member, MetaAny&& comparison_value, ComparisonMethod comparison_method=ComparisonMethod::Equal);
+			EventTriggerSingleCondition
+			(
+				MetaSymbolID event_type_member,
+				MetaAny&& comparison_value,
+				ComparisonMethod comparison_method=ComparisonMethod::Equal,
+
+				// Explicit event-type specification.
+				// (Leave default to support any type with `event_type_member`)
+				MetaType event_type={}
+			);
 
 			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const override;
 			bool condition_met(const MetaAny& event_instance) const override;
+
+			bool condition_met_as_component(const MetaType& component_type, const MetaAny& comparison_value, Registry& registry, Entity entity) const;
+
+			MetaAny resolve_value(Registry& registry, Entity entity, const MetaAny& data, bool fallback_to_input_value=true) const;
 
 			EventTriggerCompoundMethod compound_method() const override;
 
@@ -186,15 +199,17 @@ namespace engine
 				return comparison_method;
 			}
 		protected:
-			// `event_type` isn't actually needed, since we initialize this trigger's listener(s)
-			// knowing the type, which is the only place where this would be used.
-			// (Currently; may change in the future)
-			// MetaType event_type;
+			bool condition_met_impl(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const;
+			bool condition_met_impl(const MetaAny& event_instance, const MetaAny& comparison_value) const;
 
 			MetaSymbolID event_type_member;
 			MetaAny comparison_value;
 
+			// NOTE: Optional; uses type of event instance if not specified.
+			MetaType event_type;
+
 			ComparisonMethod comparison_method;
+			bool fallback_to_component : 1 = true;
 	};
 
 	// Abstract base-class for compound condition types.

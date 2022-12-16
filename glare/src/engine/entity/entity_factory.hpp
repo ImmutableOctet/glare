@@ -305,7 +305,9 @@ namespace engine
 				std::string_view compared_value_raw,
 
 				// Used for debugging purposes, etc.
-				std::string_view trigger_condition_expr = {}
+				std::string_view trigger_condition_expr = {},
+
+				bool embed_type_in_condition=false
 			);
 
 			// NOTE: Subroutine of `process_state_rules`.

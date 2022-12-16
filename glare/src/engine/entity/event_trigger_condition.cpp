@@ -70,10 +70,18 @@ namespace engine
 	EventTriggerConditionType::~EventTriggerConditionType() {}
 
 	// EventTriggerSingleCondition:
-	EventTriggerSingleCondition::EventTriggerSingleCondition(MetaSymbolID event_type_member, MetaAny&& comparison_value, ComparisonMethod comparison_method) :
+	EventTriggerSingleCondition::EventTriggerSingleCondition
+	(
+		MetaSymbolID event_type_member,
+		MetaAny&& comparison_value,
+		ComparisonMethod comparison_method,
+
+		MetaType event_type
+	) :
 		event_type_member(event_type_member),
 		comparison_value(std::move(comparison_value)),
-		comparison_method(comparison_method)
+		comparison_method(comparison_method),
+		event_type(event_type)
 	{}
 
 	bool EventTriggerSingleCondition::condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const
@@ -83,20 +91,105 @@ namespace engine
 
 	bool EventTriggerSingleCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const
 	{
-		using namespace entt::literals;
-
 		if (!event_instance)
 		{
 			return false;
 		}
 
-		/*
-		// TODO: Determine if we want this check.
-		if (!comparison_value)
+		// First check against the incoming event instance:
+		if ((!this->event_type) || (this->event_type == event_instance.type()))
+		{
+			if (condition_met_impl(event_instance, comparison_value, registry, entity))
+			{
+				return true;
+			}
+		}
+
+		if ((fallback_to_component) && (this->event_type))
+		{
+			if (condition_met_as_component(this->event_type, comparison_value, registry, entity))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	bool EventTriggerSingleCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const
+	{
+		return condition_met_impl(event_instance, comparison_value);
+	}
+
+	bool EventTriggerSingleCondition::condition_met(const MetaAny& event_instance) const
+	{
+		return condition_met(event_instance, this->comparison_value); // condition_met_impl
+	}
+
+	bool EventTriggerSingleCondition::condition_met_as_component(const MetaType& component_type, const MetaAny& comparison_value, Registry& registry, Entity entity) const
+	{
+		using namespace entt::literals;
+
+		const auto& type = component_type;
+
+		if (!type)
 		{
 			return false;
 		}
-		*/
+
+		auto get_fn = type.func("get_component"_hs);
+
+		if (!get_fn)
+		{
+			return false;
+		}
+
+		auto component_ptr = get_fn.invoke
+		(
+			{},
+
+			entt::forward_as_meta(registry),
+			entt::forward_as_meta(entity)
+		);
+
+		if (component_ptr)
+		{
+			if (const auto component = *component_ptr)
+			{
+				return condition_met_impl(component, comparison_value, registry, entity);
+			}
+		}
+
+		return false;
+	}
+
+	MetaAny EventTriggerSingleCondition::resolve_value(Registry& registry, Entity entity, const MetaAny& data, bool fallback_to_input_value) const
+	{
+		using namespace entt::literals;
+
+		switch (data.type().id())
+		{
+			case "MetaDataMember"_hs:
+				return data.cast<MetaDataMember>().get(registry, entity);
+
+			case "IndirectMetaDataMember"_hs:
+				return data.cast<IndirectMetaDataMember>().get(registry, entity);
+
+			case "EntityTarget"_hs:
+				return data.cast<EntityTarget>().get(registry, entity);
+		}
+
+		if (fallback_to_input_value)
+		{
+			return data.as_ref();
+		}
+
+		return {};
+	}
+
+	bool EventTriggerSingleCondition::condition_met_impl(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const
+	{
+		using namespace entt::literals;
 
 		const auto comparison_value_type = comparison_value.type();
 		const auto comparison_value_type_id = comparison_value_type.id();
@@ -105,15 +198,16 @@ namespace engine
 		{
 			if (auto embedded_value = data_member.get(registry, entity); (embedded_value != false_value))
 			{
-				//return condition_met(event_instance, embedded_value);
+				//return condition_met_impl(event_instance, embedded_value);
 
 				// NOTE: Recursion.
-				return condition_met(event_instance, embedded_value, registry, entity);
+				return condition_met_impl(event_instance, embedded_value, registry, entity);
 			}
 
 			return std::nullopt;
 		};
 
+		// See also: `resolve_value`.
 		switch (comparison_value_type_id)
 		{
 			case "MetaDataMember"_hs:
@@ -140,15 +234,25 @@ namespace engine
 				break;
 		}
 
-		return condition_met(event_instance, comparison_value);
+		return condition_met_impl(event_instance, comparison_value);
 	}
 
-	bool EventTriggerSingleCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const
+	bool EventTriggerSingleCondition::condition_met_impl(const MetaAny& event_instance, const MetaAny& comparison_value) const
 	{
 		if (!event_instance)
 		{
 			return false;
 		}
+
+		/*
+		if (this->event_type)
+		{
+			if (this->event_type != event_instance.type())
+			{
+				return false;
+			}
+		}
+		*/
 
 		const auto current_value = get_member_value(event_instance);
 
@@ -193,11 +297,6 @@ namespace engine
 		}
 
 		return data_member.get(event_instance);
-	}
-
-	bool EventTriggerSingleCondition::condition_met(const MetaAny& event_instance) const
-	{
-		return condition_met(event_instance, this->comparison_value);
 	}
 
 	// EventTriggerCompoundCondition:

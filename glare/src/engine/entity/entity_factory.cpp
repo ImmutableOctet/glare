@@ -1023,7 +1023,9 @@ namespace engine
 		std::string_view comparison_operator,
 		std::string_view compared_value_raw,
 
-		std::string_view trigger_condition_expr
+		std::string_view trigger_condition_expr,
+
+		bool embed_type_in_condition
 	)
 	{
 		auto [member_id, member] = (member_name.empty())
@@ -1110,7 +1112,9 @@ namespace engine
 			{
 				member_id,
 				std::move(compared_value),
-				comparison_method
+				comparison_method,
+
+				((embed_type_in_condition) ? type : MetaType {})
 			};
 		}
 
@@ -1261,11 +1265,20 @@ namespace engine
 					throw std::runtime_error(format("Unable to resolve trigger/event type: \"{}\" (#{})", type_name, type_name_id));
 				}
 			}
-			else if (active_type->id() != type_name_id)
+
+			MetaType expr_type = *active_type;
+
+			if (active_type->id() != type_name_id)
 			{
 				if (active_combinator == Combinator::And)
 				{
-					throw std::runtime_error(format("Unsupported operation: Unable to build 'AND' compound condition with multiple event types. ({})", parsed_expr));
+					//throw std::runtime_error(format("Unsupported operation: Unable to build 'AND' compound condition with multiple event types. ({})", parsed_expr));
+					//print("NOTE: Use of type other than initial event type will result in component-only qualification.");
+
+					if (auto type = resolve(type_name_id))
+					{
+						expr_type = type;
+					}
 				}
 				else
 				{
@@ -1417,7 +1430,7 @@ namespace engine
 			else
 			{
 				// Attempt to resolve a single condition (i.e. fragment) from the expression we parsed.
-				if (auto generated_condition = process_trigger_condition(*active_type, member_name, comparison_operator, compared_value_raw, parsed_expr))
+				if (auto generated_condition = process_trigger_condition(expr_type, member_name, comparison_operator, compared_value_raw, parsed_expr, (expr_type != *active_type))) // *active_type
 				{
 					if (condition_out.has_value())
 					{
