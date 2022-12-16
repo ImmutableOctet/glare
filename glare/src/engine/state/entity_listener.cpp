@@ -240,7 +240,7 @@ namespace engine
 					}
 				}
 
-				const auto target = rule_entry.resolve_target(registry, entity);
+				auto target = rule_entry.resolve_target(registry, entity);
 
 				if (target == null)
 				{
@@ -271,8 +271,13 @@ namespace engine
 						service->timed_event(delay, std::move(command_instance));
 					},
 
-					[this, &registry, entity, target, &delay](const StateUpdate& state_update)
+					[this, &registry, entity, &target, &delay](const StateUpdate& state_update)
 					{
+						if (auto redirected_target = state_update.target_entity.get(registry, target); redirected_target != null)
+						{
+							target = redirected_target;
+						}
+
 						for (const auto& component : state_update.updated_components.type_definitions)
 						{
 							if (!component.forces_field_assignment())

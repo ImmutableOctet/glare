@@ -145,27 +145,27 @@
     <ClCompile Include="src\engine\world\components\light_component.cpp" />
     <ClCompile Include="src\engine\components\transform_component.cpp" />
     <ClCompile Include="src\engine\components\transform_history_component.cpp" />
-    <ClCompile Include="src\engine\entity_factory.cpp" />
+    <ClCompile Include="src\engine\entity\entity_factory.cpp" />
     <ClCompile Include="src\engine\meta\serial.cpp" />
     <ClCompile Include="src\engine\meta\meta_type_descriptor.cpp" />
     <ClCompile Include="src\engine\meta\meta_variable.cpp" />
-    <ClCompile Include="src\engine\entity_state.cpp" />
-    <ClCompile Include="src\engine\entity_descriptor.cpp" />
+    <ClCompile Include="src\engine\entity\entity_state.cpp" />
+    <ClCompile Include="src\engine\entity\entity_descriptor.cpp" />
     <ClCompile Include="src\engine\meta\meta_description.cpp" />
     <ClCompile Include="src\engine\state\state_system.cpp" />
     <ClCompile Include="src\engine\meta\component_storage.cpp" />
     <ClCompile Include="src\engine\state\state_storage_manager.cpp" />
     <ClCompile Include="src\engine\input\reflection_impl_input.cpp" />
     <ClCompile Include="src\engine\resource_manager\entity_factory_data.cpp" />
-    <ClCompile Include="src\engine\event_trigger_condition.cpp" />
+    <ClCompile Include="src\engine\entity\event_trigger_condition.cpp" />
     <ClCompile Include="src\engine\meta\meta_event_listener.cpp" />
-    <ClCompile Include="src\engine\state\entity_rule_listener.cpp" />
+    <ClCompile Include="src\engine\state\entity_listener.cpp" />
     <ClCompile Include="src\engine\components\name_component.cpp" />
     <ClCompile Include="src\engine\timer.cpp" />
     <ClCompile Include="src\engine\meta\meta.cpp" />
     <ClCompile Include="src\app\app_timer.cpp" />
     <ClCompile Include="src\engine\meta\meta_data_member.cpp" />
-    <ClCompile Include="src\engine\entity_target.cpp" />
+    <ClCompile Include="src\engine\entity\entity_target.cpp" />
     <ClCompile Include="src\engine\meta\indirect_meta_data_member.cpp" />
     <ClCompile Include="src\util\parse.cpp" />
   </ItemGroup>
@@ -475,14 +475,14 @@
     <ClInclude Include="src\engine\meta\traits.hpp" />
     <ClInclude Include="src\engine\meta\enum.hpp" />
     <ClInclude Include="src\util\filesystem.hpp" />
-    <ClInclude Include="src\engine\entity_factory.hpp" />
+    <ClInclude Include="src\engine\entity\entity_factory.hpp" />
     <ClInclude Include="src\engine\meta\serial.hpp" />
     <ClInclude Include="src\engine\meta\types.hpp" />
     <ClInclude Include="src\engine\meta\meta_type_descriptor.hpp" />
     <ClInclude Include="src\engine\meta\meta_variable.hpp" />
     <ClInclude Include="src\engine\meta\reflection.hpp" />
-    <ClInclude Include="src\engine\entity_state.hpp" />
-    <ClInclude Include="src\engine\entity_descriptor.hpp" />
+    <ClInclude Include="src\engine\entity\entity_state.hpp" />
+    <ClInclude Include="src\engine\entity\entity_descriptor.hpp" />
     <ClInclude Include="src\engine\meta\meta_description.hpp" />
     <ClInclude Include="src\engine\components\instance_component.hpp" />
     <ClInclude Include="src\engine\state\components\state_component.hpp" />
@@ -495,11 +495,11 @@
     <ClInclude Include="src\engine\meta\component_storage.hpp" />
     <ClInclude Include="src\engine\state\state_storage_manager.hpp" />
     <ClInclude Include="src\engine\input\reflection.hpp" />
-    <ClInclude Include="src\engine\entity_state_rule.hpp" />
+    <ClInclude Include="src\engine\entity\entity_state_rule.hpp" />
     <ClInclude Include="src\engine\resource_manager\entity_factory_data.hpp" />
-    <ClInclude Include="src\engine\event_trigger_condition.hpp" />
+    <ClInclude Include="src\engine\entity\event_trigger_condition.hpp" />
     <ClInclude Include="src\engine\meta\meta_event_listener.hpp" />
-    <ClInclude Include="src\engine\state\entity_rule_listener.hpp" />
+    <ClInclude Include="src\engine\state\entity_listener.hpp" />
     <ClInclude Include="src\engine\state\commands\state_change_command.hpp" />
     <ClInclude Include="src\engine\command.hpp" />
     <ClInclude Include="src\engine\components\player_component.hpp" />
@@ -508,7 +508,7 @@
     <ClInclude Include="src\engine\components\player_target_component.hpp" />
     <ClInclude Include="src\app\timer.hpp" />
     <ClInclude Include="src\engine\state\commands\state_activation_command.hpp" />
-    <ClInclude Include="src\engine\entity_target.hpp" />
+    <ClInclude Include="src\engine\entity\entity_target.hpp" />
     <ClInclude Include="src\engine\meta\meta_data_member.hpp" />
     <ClInclude Include="src\util\type_traits.hpp" />
     <ClInclude Include="src\engine\commands\print_command.hpp" />
@@ -519,6 +519,11 @@
     <ClInclude Include="src\engine\commands\reflection.hpp" />
     <ClInclude Include="src\engine\commands\component_replace_command.hpp" />
     <ClInclude Include="src\engine\commands\events.hpp" />
+    <ClInclude Include="src\engine\entity\entity_state_action.hpp" />
+    <ClInclude Include="src\engine\entity\entity_thread_description.hpp" />
+    <ClInclude Include="src\engine\entity\types.hpp" />
+    <ClInclude Include="src\engine\entity\reflection.hpp" />
+    <ClInclude Include="src\engine\meta\events.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="glare.rc" />
