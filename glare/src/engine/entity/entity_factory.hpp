@@ -117,6 +117,7 @@ namespace engine
 
 			static std::tuple
 			<
+				std::string_view, // entity_ref (optional)
 				std::string_view, // type_name
 				std::string_view, // member_name
 				std::string_view, // comparison_operator
@@ -296,7 +297,7 @@ namespace engine
 			);
 
 			// NOTE: Subroutine of `process_state_rules`.
-			std::optional<EventTriggerSingleCondition> process_trigger_condition // std::optional<EventTriggerCondition>
+			std::optional<EventTriggerSingleCondition> process_standard_trigger_condition // std::optional<EventTriggerCondition>
 			(
 				const entt::meta_type& type,
 
@@ -309,6 +310,23 @@ namespace engine
 
 				bool embed_type_in_condition=false
 			);
+
+			std::optional<EventTriggerMemberCondition> process_member_trigger_condition
+			(
+				const entt::meta_type& type,
+
+				std::string_view entity_ref,
+
+				std::string_view member_name,
+				std::string_view comparison_operator,
+				std::string_view compared_value_raw,
+				
+				// Used for debugging purposes, etc.
+				std::string_view trigger_condition_expr = {}
+			);
+
+			// NOTE: Subroutine of `process_trigger_condition` and `process_state_rules`.
+			MetaAny process_trigger_condition_value(std::string_view compared_value_raw);
 
 			// NOTE: Subroutine of `process_state_rules`.
 			std::size_t process_trigger_expression

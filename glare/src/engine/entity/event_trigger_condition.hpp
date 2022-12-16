@@ -3,6 +3,7 @@
 #include "types.hpp"
 
 #include <engine/meta/types.hpp>
+#include <engine/meta/indirect_meta_data_member.hpp>
 
 #include <util/small_vector.hpp>
 #include <util/variant.hpp>
@@ -39,6 +40,7 @@ namespace engine
 	};
 
 	class EventTriggerSingleCondition;
+	class EventTriggerMemberCondition;
 	class EventTriggerAndCondition;
 	class EventTriggerOrCondition;
 	class EventTriggerTrueCondition;
@@ -51,6 +53,10 @@ namespace engine
 			using ComparisonMethod = EventTriggerComparisonMethod;
 
 			static ComparisonMethod get_comparison_method(std::string_view comparison_operator);
+			static MetaAny resolve_value(Registry& registry, Entity entity, const MetaAny& data, bool fallback_to_input_value=true, bool recursive=true);
+			static MetaAny get_component(const MetaType& component_type, Registry& registry, Entity entity);
+
+			static bool compare(const MetaAny& current_value, const MetaAny& comparison_value, ComparisonMethod comparison_method);
 
 			// Retrieves a reference to the shared `EventTriggerConditionType` interface from an `EventTriggerCondition` variant.
 			// TODO: Look into adding `std::monostate` behavior. (Would require changing to pointer return-type)
@@ -66,6 +72,11 @@ namespace engine
 					[&out](const EventTriggerSingleCondition& single_condition)
 					{
 						out = &single_condition;
+					},
+
+					[&out](const EventTriggerMemberCondition& member_condition)
+					{
+						out = &member_condition;
 					},
 
 					[&out](const EventTriggerAndCondition& and_condition)
@@ -115,6 +126,11 @@ namespace engine
 						result = check_condition(single_condition);
 					},
 
+					[&check_condition, &result](const EventTriggerMemberCondition& member_condition)
+					{
+						result = check_condition(member_condition);
+					},
+
 					[&check_condition, &result](const EventTriggerAndCondition& and_condition)
 					{
 						result = check_condition(and_condition);
@@ -155,6 +171,12 @@ namespace engine
 			{
 				return condition_met(std::forward<Args>(args)...);
 			}
+		protected:
+			// Default implementation of most explicit form of `condition_met`.
+			// (Primarily responsible for resolving indirection from `comparison_value`)
+			// 
+			// Calls virtual `condition_met(event_instance, comparison_value)` method internally.
+			bool condition_met_impl(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const;
 	};
 
 	class EventTriggerSingleCondition : public EventTriggerConditionType
@@ -178,8 +200,6 @@ namespace engine
 
 			bool condition_met_as_component(const MetaType& component_type, const MetaAny& comparison_value, Registry& registry, Entity entity) const;
 
-			MetaAny resolve_value(Registry& registry, Entity entity, const MetaAny& data, bool fallback_to_input_value=true) const;
-
 			EventTriggerCompoundMethod compound_method() const override;
 
 			MetaAny get_member_value(const MetaAny& event_instance) const;
@@ -199,9 +219,6 @@ namespace engine
 				return comparison_method;
 			}
 		protected:
-			bool condition_met_impl(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const;
-			bool condition_met_impl(const MetaAny& event_instance, const MetaAny& comparison_value) const;
-
 			MetaSymbolID event_type_member;
 			MetaAny comparison_value;
 
@@ -210,6 +227,48 @@ namespace engine
 
 			ComparisonMethod comparison_method;
 			bool fallback_to_component : 1 = true;
+	};
+
+	class EventTriggerMemberCondition : public EventTriggerConditionType
+	{
+		public:
+			EventTriggerMemberCondition
+			(
+				IndirectMetaDataMember&& component_member,
+				MetaAny&& comparison_value,
+				ComparisonMethod comparison_method=ComparisonMethod::Equal
+			);
+
+			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const override;
+			bool condition_met(const MetaAny& event_instance) const override;
+
+			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const override;
+
+			EventTriggerCompoundMethod compound_method() const override;
+
+			inline const MetaAny& get_comparison_value() const
+			{
+				return comparison_value;
+			}
+
+			inline ComparisonMethod get_comparison_method() const
+			{
+				return comparison_method;
+			}
+
+			inline MetaSymbolID get_event_type_member() const
+			{
+				return component_member.data_member.data_member_id;
+			}
+
+		protected:
+			// This field effectively acts as a path and 'accessor'
+			// to the component data member we're referencing.
+			IndirectMetaDataMember component_member;
+
+			MetaAny comparison_value;
+			ComparisonMethod comparison_method;
 	};
 
 	// Abstract base-class for compound condition types.
@@ -228,6 +287,7 @@ namespace engine
 					condition,
 
 					[](const EventTriggerSingleCondition& single_condition) {},
+					[](const EventTriggerMemberCondition& member_condition) {},
 
 					[&out](const EventTriggerAndCondition& and_condition)
 					{
@@ -247,6 +307,7 @@ namespace engine
 			}
 
 			std::size_t add_condition(EventTriggerSingleCondition&& condition_in);
+			std::size_t add_condition(EventTriggerMemberCondition&& condition_in);
 			std::size_t add_condition(EventTriggerAndCondition&& condition_in);
 			std::size_t add_condition(EventTriggerOrCondition&& condition_in);
 			std::size_t add_condition(EventTriggerTrueCondition&& condition_in);
@@ -264,6 +325,11 @@ namespace engine
 					[this, &result](EventTriggerSingleCondition&& single_condition)
 					{
 						result = this->add_condition(std::move(single_condition));
+					},
+
+					[this, &result](EventTriggerMemberCondition&& member_condition)
+					{
+						result = this->add_condition(std::move(member_condition));
 					},
 
 					[this, &result](EventTriggerAndCondition&& and_condition)
@@ -352,6 +418,7 @@ namespace engine
 	using EventTriggerCondition = std::variant
 	<
 		EventTriggerSingleCondition,
+		EventTriggerMemberCondition,
 		EventTriggerAndCondition,
 		EventTriggerOrCondition,
 		EventTriggerTrueCondition,

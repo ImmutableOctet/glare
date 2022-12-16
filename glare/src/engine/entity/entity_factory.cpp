@@ -1,4 +1,5 @@
 #include "entity_factory.hpp"
+#include "entity_target.hpp"
 #include "event_trigger_condition.hpp"
 
 #include <engine/components/relationship_component.hpp>
@@ -10,6 +11,7 @@
 #include <engine/meta/meta.hpp>
 #include <engine/meta/serial.hpp>
 #include <engine/meta/meta_data_member.hpp>
+#include <engine/meta/indirect_meta_data_member.hpp>
 
 #include <util/algorithm.hpp>
 #include <util/string.hpp>
@@ -125,10 +127,11 @@ namespace engine
 		return { name_view, inplace_changes, constructor_arg_count };
 	}
 
-	std::tuple<std::string_view, std::string_view, std::string_view, std::string_view, std::ptrdiff_t>
+	std::tuple<std::string_view, std::string_view, std::string_view, std::string_view, std::string_view, std::ptrdiff_t>
 	EntityFactory::parse_trigger_condition(const std::string& trigger_condition, std::ptrdiff_t offset) // std::string_view
 	{
-		const auto trigger_rgx = std::regex("([^\\s\\:\\.\\-\\>\\&\\|\\(\\)]+)\\s*(\\:\\:|\\.|\\-\\>)?\\s*([^\\s\\(\\)\\|\\&]+)?\\s*(==|===|!=|!==|\\|)\\s*([^\\&\\|]+)"); // \\s* // \\(\\)
+		//const auto trigger_rgx = std::regex("([^\\s\\:\\.\\-\\>\\&\\|\\(\\)]+)\\s*(\\:\\:|\\.|\\-\\>)?\\s*([^\\s\\(\\)\\|\\&]+)?\\s*(==|===|!=|!==|\\|)\\s*([^\\&\\|]+)"); // \\s* // \\(\\)
+		const auto trigger_rgx = std::regex("([^\\s\\:\\.\\-\\>\\&\\|\\(\\)]+\\([^\\)]+\\)|self|this)?(\\:\\:|\\.|\\-\\>)?([^\\s\\:\\.\\-\\>\\&\\|\\(\\)]+)\\s*(\\:\\:|\\.|\\-\\>)?\\s*([^\\s\\(\\)\\|\\&]+)?\\s*(==|===|!=|!==|\\|)\\s*([^\\&\\|]+)"); // \\s* // \\(\\)
 
 		if (std::smatch rgx_match; std::regex_search((trigger_condition.begin() + offset), trigger_condition.end(), rgx_match, trigger_rgx))
 		{
@@ -140,13 +143,15 @@ namespace engine
 				static_cast<std::size_t>(updated_offset)
 			};
 
-			auto type_name           = util::match_view(parsed_view, rgx_match, 1);
-			//auto access_operator   = util::match_view(parsed_view, rgx_match, 2);
-			auto member_name         = util::match_view(parsed_view, rgx_match, 3);
-			auto comparison_operator = util::match_view(parsed_view, rgx_match, 4);
-			auto compared_value      = util::match_view(parsed_view, rgx_match, 5);
+			auto entity_ref               = util::match_view(parsed_view, rgx_match, 1);
+			//auto entity_access_operator = util::match_view(parsed_view, rgx_match, 2);
+			auto type_name                = util::match_view(parsed_view, rgx_match, 3);
+			//auto access_operator        = util::match_view(parsed_view, rgx_match, 4);
+			auto member_name              = util::match_view(parsed_view, rgx_match, 5);
+			auto comparison_operator      = util::match_view(parsed_view, rgx_match, 6);
+			auto compared_value           = util::match_view(parsed_view, rgx_match, 7);
 
-			return { type_name, member_name, comparison_operator, compared_value, updated_offset };
+			return { entity_ref, type_name, member_name, comparison_operator, compared_value, updated_offset };
 		}
 
 		return {};
@@ -1015,36 +1020,8 @@ namespace engine
 		return count;
 	}
 
-	std::optional<EventTriggerSingleCondition> EntityFactory::process_trigger_condition // std::optional<EventTriggerCondition>
-	(
-		const entt::meta_type& type,
-		
-		std::string_view member_name,
-		std::string_view comparison_operator,
-		std::string_view compared_value_raw,
-
-		std::string_view trigger_condition_expr,
-
-		bool embed_type_in_condition
-	)
+	MetaAny EntityFactory::process_trigger_condition_value(std::string_view compared_value_raw)
 	{
-		auto [member_id, member] = (member_name.empty())
-			? resolve_data_member(type, true, "entity", "target", "button", "self")
-			: resolve_data_member(type, true, member_name)
-		;
-
-		if (!member && (!member_name.empty()))
-		{
-			print_warn("Unable to resolve target member for rule-trigger: \"{}\"", trigger_condition_expr);
-
-			return std::nullopt;
-		}
-
-		if (!member)
-		{
-			return std::nullopt;
-		}
-
 		MetaAny compared_value;
 
 		bool resolve_native_value = true;
@@ -1058,10 +1035,7 @@ namespace engine
 			
 		if (compared_value_raw.empty())
 		{
-			return std::nullopt;
-
-			// TODO: Look into idea of resolving `null` as source-entity.
-			//compared_value = static_cast<Entity>(null); // null;
+			return {};
 		}
 
 		if (resolve_native_value)
@@ -1101,24 +1075,123 @@ namespace engine
 			compared_value = std::string(compared_value_raw);
 		}
 
-		if (compared_value)
+		return compared_value;
+	}
+
+	std::optional<EventTriggerSingleCondition> EntityFactory::process_standard_trigger_condition // std::optional<EventTriggerCondition>
+	(
+		const entt::meta_type& type,
+
+		std::string_view member_name,
+		std::string_view comparison_operator,
+		std::string_view compared_value_raw,
+
+		std::string_view trigger_condition_expr,
+
+		bool embed_type_in_condition
+	)
+	{
+		auto [member_id, member] = (member_name.empty())
+			? resolve_data_member(type, true, "entity", "target", "button", "self")
+			: resolve_data_member(type, true, member_name)
+		;
+
+		if (!member && (!member_name.empty()))
 		{
-			auto comparison_method = (comparison_operator.empty())
-				? EventTriggerComparisonMethod::Equal
-				: EventTriggerConditionType::get_comparison_method(comparison_operator)
-			;
+			print_warn("Unable to resolve target member for rule-trigger: \"{}\"", trigger_condition_expr);
 
-			return EventTriggerSingleCondition
-			{
-				member_id,
-				std::move(compared_value),
-				comparison_method,
-
-				((embed_type_in_condition) ? type : MetaType {})
-			};
+			return std::nullopt;
 		}
 
-		return std::nullopt;
+		if (!member)
+		{
+			return std::nullopt;
+		}
+			
+		if (compared_value_raw.empty())
+		{
+			return std::nullopt;
+
+			// TODO: Look into idea of resolving `null` as source-entity.
+			//compared_value = static_cast<Entity>(null); // null;
+		}
+
+		auto compared_value = process_trigger_condition_value(compared_value_raw);
+
+		if (!compared_value)
+		{
+			return std::nullopt;
+		}
+
+		auto comparison_method = EventTriggerConditionType::get_comparison_method(comparison_operator);
+
+		return EventTriggerSingleCondition
+		{
+			member_id,
+			std::move(compared_value),
+			comparison_method,
+
+			((embed_type_in_condition) ? type : MetaType {})
+		};
+	}
+
+	std::optional<EventTriggerMemberCondition> EntityFactory::process_member_trigger_condition
+	(
+		const entt::meta_type& type,
+
+		std::string_view entity_ref,
+
+		std::string_view member_name,
+		std::string_view comparison_operator,
+		std::string_view compared_value_raw,
+
+		std::string_view trigger_condition_expr
+	)
+	{
+		auto [member_id, member] = resolve_data_member(type, true, member_name);
+
+		if (!member && (!member_name.empty()))
+		{
+			print_warn("Unable to resolve target member for rule-trigger: \"{}\"", trigger_condition_expr);
+
+			return std::nullopt;
+		}
+
+		auto comparison_value = process_trigger_condition_value(compared_value_raw);
+
+		if (!comparison_value)
+		{
+			return std::nullopt;
+		}
+
+		auto target = EntityTarget::parse(entity_ref);
+
+		if (!target)
+		{
+			//target = { EntityTarget::SelfTarget {} };
+
+			return std::nullopt;
+		}
+
+		auto comparison_method = EventTriggerConditionType::get_comparison_method(comparison_operator);
+
+		return EventTriggerMemberCondition
+		{
+			IndirectMetaDataMember
+			{
+				std::move(*target),
+
+				MetaDataMember
+				{
+					type.id(),
+					member_id,
+				}
+			},
+
+			std::move(comparison_value),
+
+			comparison_method
+		};
 	}
 
 	std::size_t EntityFactory::process_trigger_expression
@@ -1184,7 +1257,7 @@ namespace engine
 
 		do
 		{
-			auto [type_name, member_name, comparison_operator, compared_value_raw, updated_offset] = parse_trigger_condition(trigger_condition_expr, static_cast<std::ptrdiff_t>(offset));
+			auto [entity_ref, type_name, member_name, comparison_operator, compared_value_raw, updated_offset] = parse_trigger_condition(trigger_condition_expr, static_cast<std::ptrdiff_t>(offset));
 
 			bool is_standalone_event_trigger = false;
 
@@ -1207,7 +1280,7 @@ namespace engine
 				}
 			}
 
-			auto expr_start_idx = static_cast<std::size_t>(type_name.data() - trigger_condition_expr.data());
+			auto expr_start_idx = static_cast<std::size_t>(((entity_ref.empty()) ? type_name.data() : entity_ref.data()) - trigger_condition_expr.data());
 			//auto processed_length = (static_cast<std::size_t>(updated_offset) - offset);
 
 			auto parsed_expr = std::string_view { trigger_condition_expr.data()+expr_start_idx, static_cast<std::size_t>(updated_offset-expr_start_idx) };
@@ -1356,8 +1429,9 @@ namespace engine
 					condition_out,
 
 					[&basic_condition](EventTriggerSingleCondition& single_condition) { basic_condition(single_condition); },
-					[&basic_condition](EventTriggerTrueCondition& single_condition)   { basic_condition(single_condition); },
-					[&basic_condition](EventTriggerFalseCondition& single_condition)  { basic_condition(single_condition); },
+					[&basic_condition](EventTriggerMemberCondition& member_condition) { basic_condition(member_condition); },
+					[&basic_condition](EventTriggerTrueCondition& true_condition)     { basic_condition(true_condition); },
+					[&basic_condition](EventTriggerFalseCondition& false_condition)   { basic_condition(false_condition); },
 
 					// Existing AND container:
 					[combinator, &store_condition, &condition_out, &generated_condition](EventTriggerAndCondition& and_condition)
@@ -1429,28 +1503,60 @@ namespace engine
 			}
 			else
 			{
-				// Attempt to resolve a single condition (i.e. fragment) from the expression we parsed.
-				if (auto generated_condition = process_trigger_condition(expr_type, member_name, comparison_operator, compared_value_raw, parsed_expr, (expr_type != *active_type))) // *active_type
+				auto handle_condition = [&on_condition, &active_combinator, &condition_out](auto&& generated_condition)
 				{
-					if (condition_out.has_value())
+					// Attempt to resolve a single condition (i.e. fragment) from the expression we parsed.
+					if (generated_condition) // *active_type
 					{
-						on_condition(*condition_out, *generated_condition, active_combinator);
+						if (condition_out.has_value())
+						{
+							on_condition(*condition_out, *generated_condition, active_combinator);
+						}
+						else
+						{
+							condition_out = std::move(*generated_condition);
+						}
 					}
 					else
 					{
-						condition_out = std::move(*generated_condition);
+						if (condition_out.has_value())
+						{
+							on_condition(*condition_out, EventTriggerTrueCondition {}, active_combinator);
+						}
+						else
+						{
+							condition_out = EventTriggerTrueCondition {};
+						}
 					}
+				};
+
+				if (entity_ref.empty())
+				{
+					// Standard event triggers:
+					handle_condition
+					(
+						process_standard_trigger_condition
+						(
+							expr_type, member_name,
+							comparison_operator, compared_value_raw,
+							parsed_expr,
+
+							(expr_type != *active_type)
+						)
+					);
 				}
 				else
 				{
-					if (condition_out.has_value())
-					{
-						on_condition(*condition_out, EventTriggerTrueCondition {}, active_combinator);
-					}
-					else
-					{
-						condition_out = EventTriggerTrueCondition {};
-					}
+					// Fully qualified component-member event triggers:
+					handle_condition
+					(
+						process_member_trigger_condition
+						(
+							expr_type, entity_ref, member_name,
+							comparison_operator, compared_value_raw,
+							parsed_expr
+						)
+					);
 				}
 			}
 
