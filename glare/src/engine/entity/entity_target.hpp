@@ -8,6 +8,7 @@
 #include <string_view>
 #include <string>
 #include <optional>
+#include <utility>
 #include <tuple>
 
 namespace engine
@@ -76,7 +77,20 @@ namespace engine
 		static std::optional<ParseResult> parse_type(std::string_view raw_value);
 		static std::optional<ParseResult> parse_type(const std::string& raw_value);
 
-		TargetType type;
+		template <typename StringType>
+		static std::optional<EntityTarget> parse(StringType&& raw_value)
+		{
+			auto result = parse_type(std::forward<StringType>(raw_value));
+
+			if (!result)
+			{
+				return std::nullopt;
+			}
+
+			return EntityTarget { std::move(std::get<0>(*result)) };
+		}
+
+		TargetType type = SelfTarget {};
 
 		inline operator TargetType() const
 		{
