@@ -151,7 +151,9 @@ namespace engine
 
 				bool allow_entry_update=false,
 				bool allow_new_entry=true,
-				bool allow_default_entries=true
+				bool allow_default_entries=true,
+
+				bool ignore_special_symbols=true
 			);
 
 			// Resolves a state from a (raw) path.
@@ -358,7 +360,9 @@ namespace engine
 
 				bool allow_new_entry=true,
 				bool allow_default_entries=true,
-				bool forward_entry_update_condition_to_flags=false
+				bool forward_entry_update_condition_to_flags=false,
+
+				bool ignore_special_symbols=true
 			);
 
 			void process_archetype(const util::json& data, const std::filesystem::path& base_path, bool resolve_external_modules=true);

@@ -148,7 +148,7 @@ namespace engine
 		
 		if (raw_value.starts_with("null"))
 		{
-			return ParseResult{ NullTarget {}, (sizeof("null")-1), true };
+			return ParseResult { NullTarget {}, (sizeof("null")-1), true };
 		}
 
 		if (auto [command_name, command_content, is_string_content] = util::parse_single_argument_command(raw_value); !command_name.empty())

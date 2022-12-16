@@ -297,9 +297,21 @@ namespace engine
 
 		bool allow_entry_update,
 		bool allow_new_entry,
-		bool allow_default_entries
+		bool allow_default_entries,
+
+		bool ignore_special_symbols
 	)
 	{
+		// Ignore special entry names/symbols:
+		if (!ignore_special_symbols)
+		{
+			// Used by states for `update` actions.
+			if (component_name == "target")
+			{
+				return false;
+			}
+		}
+
 		//auto meta = entt::resolve();
 		auto meta_type = meta_type_from_name(component_name);
 
@@ -398,12 +410,20 @@ namespace engine
 
 		bool allow_new_entry,
 		bool allow_default_entries,
-		bool forward_entry_update_condition_to_flags
+		bool forward_entry_update_condition_to_flags,
+
+		bool ignore_special_symbols
 	)
 	{
 		std::size_t count = 0;
 
-		auto as_component = [this, &components_out, &shared_component_flags, allow_new_entry, allow_default_entries, forward_entry_update_condition_to_flags, &count](const auto& component_declaration, const util::json* component_content=nullptr)
+		auto as_component =
+		[
+			this, &components_out, &shared_component_flags,
+			allow_new_entry, allow_default_entries, forward_entry_update_condition_to_flags, ignore_special_symbols,
+			&count
+		]
+		(const auto& component_declaration, const util::json* component_content=nullptr)
 		{
 			auto [component_name, allow_entry_update, constructor_arg_count] = parse_component_declaration(component_declaration);
 
@@ -416,7 +436,16 @@ namespace engine
 				flags.force_field_assignment = true;
 			}
 
-			if (process_component(components_out, component_name, component_content, constructor_arg_count, flags, (allow_entry_update || force_entry_update), allow_new_entry, allow_default_entries))
+			auto result = process_component
+			(
+				components_out,
+				component_name, component_content, constructor_arg_count,
+				flags, (allow_entry_update || force_entry_update),
+				allow_new_entry, allow_default_entries,
+				ignore_special_symbols
+			);
+
+			if (result)
 			{
 				count++;
 			}
@@ -902,15 +931,46 @@ namespace engine
 
 				if (auto update = util::find_any(content, "update", "updates", "components", "change"); update != content.end())
 				{
-					EntityStateUpdateAction::Components updated_components;
-
-					process_component_list(updated_components, *update, {}, true, true, true); // { .force_field_assignment = true }
-
-					process_rule
+					util::json_for_each
 					(
-						EntityStateUpdateAction
+						*update,
+
+						[this, &process_rule, &target](const util::json& update_entry)
 						{
-							std::move(updated_components)
+							EntityStateUpdateAction::Components updated_components;
+
+							process_component_list
+							(
+								updated_components,
+								update_entry, {}, // { .force_field_assignment = true },
+								true, true, true,
+								false
+							);
+
+							EntityTarget update_target = { target };
+
+							if (auto manual_target_entry = util::find_any(update_entry, "target"); manual_target_entry != update_entry.end())
+							{
+								const auto manual_target_raw = manual_target_entry->get<std::string>();
+
+								if (auto result = EntityTarget::parse(manual_target_raw))
+								{
+									update_target = *result;
+								}
+								else
+								{
+									print_warn("Failed to resolve target while constructing entity update action: \"{}\" -- Using default target instead.", manual_target_raw);
+								}
+							}
+
+							process_rule
+							(
+								EntityStateUpdateAction
+								{
+									std::move(updated_components),
+									std::move(update_target)
+								}
+							);
 						}
 					);
 				}
