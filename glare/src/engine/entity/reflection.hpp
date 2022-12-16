@@ -54,6 +54,19 @@ namespace engine
     }
 
     template <>
+    void reflect<EventTriggerMemberCondition>()
+    {
+        engine_meta_type<EventTriggerMemberCondition>()
+            //.base<EventTriggerConditionType>()
+            .data<nullptr, &EventTriggerMemberCondition::compound_method>("compound_method"_hs)
+            .data<nullptr, &EventTriggerMemberCondition::get_event_type_member>("event_type_member"_hs)
+            .data<nullptr, &EventTriggerMemberCondition::get_comparison_value>("comparison_value"_hs)
+            .data<nullptr, &EventTriggerMemberCondition::get_comparison_method>("comparison_method"_hs)
+            .ctor<IndirectMetaDataMember&&, MetaAny&&, EventTriggerComparisonMethod>()
+        ;
+    }
+
+    template <>
     void reflect<EventTriggerAndCondition>()
     {
         engine_meta_type<EventTriggerAndCondition>()
@@ -94,6 +107,7 @@ namespace engine
     {
         //reflect<EventTriggerConditionType>();
         reflect<EventTriggerSingleCondition>();
+        reflect<EventTriggerMemberCondition>();
         reflect<EventTriggerAndCondition>();
         reflect<EventTriggerOrCondition>();
         reflect<EventTriggerTrueCondition>();
