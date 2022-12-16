@@ -208,6 +208,11 @@ namespace engine
 	{
 		const auto [type_name, data_member_name] = parse_data_member_reference(value);
 
+		return process_meta_data_member(type_name, data_member_name);
+	}
+
+	std::optional<MetaDataMember> process_meta_data_member(std::string_view type_name, std::string_view data_member_name)
+	{
 		if (type_name.empty())
 		{
 			return std::nullopt;
@@ -222,7 +227,7 @@ namespace engine
 		}
 
 		const auto data_member_id = hash(data_member_name);
-		const auto data_member = type.data(data_member_id);
+		const auto data_member = resolve_data_member_by_id(type, true, data_member_id); // type.data(data_member_id);
 
 		if (!data_member)
 		{
@@ -259,7 +264,6 @@ namespace engine
 			return IndirectMetaDataMember
 			{
 				std::move(target), // EntityTarget { EntityTarget::SelfTarget{} },
-
 				std::move(*as_self)
 			};
 		}

@@ -40,6 +40,10 @@ namespace engine
 	// NOTE: Does not support indirection. (i.e. other entities from the initial source)
 	std::optional<MetaDataMember> meta_data_member_from_string(std::string_view value);
 
+	// Attempts to resolve `type_name` and `data_member_name`, then returns a
+	// `MetaDataMember` instance using the corresponding reflection data.
+	std::optional<MetaDataMember> process_meta_data_member(std::string_view type_name, std::string_view data_member_name);
+
 	// Attempts to resolve an `IndirectMetaDataMember` from `value`.
 	std::optional<IndirectMetaDataMember> indirect_meta_data_member_from_string(std::string_view value, EntityTarget target = { EntityTarget::SelfTarget{} });
 
