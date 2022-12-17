@@ -156,16 +156,39 @@ namespace engine
 				bool ignore_special_symbols=true
 			);
 
-			// Resolves a state from a (raw) path.
-			// See also: `process_state`
-			const EntityState* resolve_state
+			// Utility function for loading JSON data.
+			std::tuple
+			<
+				std::filesystem::path, // state_base_path
+				std::filesystem::path, // state_path
+				util::json             // state_data
+			>
+			load_state_data(std::string_view state_path_raw, const std::filesystem::path& base_path);
+
+			std::string get_embedded_name(const util::json& data);
+
+			std::string default_state_name_from_path(const std::filesystem::path& state_path);
+			std::string resolve_state_name(const util::json& state_data, const std::filesystem::path& state_path);
+
+			// This overload resolves and processes a state from a raw path.
+			// 
+			// If successful, the value returned by this function
+			// is a non-owning pointer to the processed state. (Stored in `states_out`)
+			const EntityState* process_state
 			(
 				EntityDescriptor::StateCollection& states_out,
 				std::string_view state_path_raw, // const std::string&
 				const std::filesystem::path& base_path
 			);
 
-			// Returns a pointer to the processed state (stored in `states_out`) on success.
+			// This overload acts as a utility function that automatically handles
+			// allocation and storage of an `EntityState` object. To process using an
+			// existing instance, please see the overload taking in an `EntityState` object.
+			// 
+			// This function returns a non-owning pointer to the processed state on success.
+			// (Lifetime is owned by `states_out`)
+			//
+			// NOTE: This overload automatically handles name assignment. (Based on `state_name`)
 			const EntityState* process_state
 			(
 				EntityDescriptor::StateCollection& states_out,
@@ -174,7 +197,44 @@ namespace engine
 				const std::filesystem::path& base_path
 			);
 
-			std::size_t process_state_list(EntityDescriptor::StateCollection& states_out, const util::json& data, const std::filesystem::path& base_path);
+			// The `states_out` argument is used only for import resolution.
+			// Please use the `state` argument for specifying an existing `EntityState` instance.
+			// 
+			// The return value of this function indicates if processing was successful.
+			//
+			// NOTE: This overload does not handle name resolution and assignment. (see `resolve_state_name`)
+			bool process_state
+			(
+				EntityDescriptor::StateCollection& states_out,
+				EntityState& state,
+				const util::json& data,
+				const std::filesystem::path& base_path
+			);
+
+			std::size_t process_state_list
+			(
+				EntityDescriptor::StateCollection& states_out,
+				const util::json& data,
+				const std::filesystem::path& base_path
+			);
+
+			// Merges one or more states defined in `data` with `state`.
+			// 
+			// NOTE: `states_out` is to be provided by the caller to handle
+			// any imports encountered while processing `state`.
+			// 
+			// Further ownership of `state` is the caller's responsibility.
+			//
+			// The return value of this function indicates
+			// how many states were successfully merged.
+			std::size_t merge_state_list
+			(
+				EntityDescriptor::StateCollection& states_out,
+				EntityState& state,
+
+				const util::json& data,
+				const std::filesystem::path& base_path
+			);
 
 			// TODO: Optimize to avoid multiple calls to `parse_component_declaration`.
 			template <typename Callback>
@@ -295,6 +355,7 @@ namespace engine
 
 				EntityDescriptor::StateCollection* opt_states_out=nullptr,
 				const std::filesystem::path* opt_base_path=nullptr,
+
 				bool allow_inline_import=true
 			);
 
@@ -351,6 +412,7 @@ namespace engine
 				EntityDescriptor::StateCollection* states_out,
 				const std::string& command, // std::string_view
 				const std::filesystem::path* base_path,
+
 				bool allow_inline_import=true
 			);
 

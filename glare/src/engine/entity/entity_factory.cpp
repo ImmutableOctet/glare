@@ -23,6 +23,7 @@
 #include <stdexcept>
 #include <type_traits>
 #include <tuple>
+#include <array>
 
 // TODO: Change to better regular expression library.
 #include <regex>
@@ -481,36 +482,58 @@ namespace engine
 		return count;
 	}
 
-	const EntityState* EntityFactory::resolve_state
+	std::tuple<std::filesystem::path, std::filesystem::path, util::json>
+	EntityFactory::load_state_data(std::string_view state_path_raw, const std::filesystem::path& base_path)
+	{
+		auto state_path = resolve_reference(std::filesystem::path(state_path_raw), base_path);
+		auto state_base_path = state_path.parent_path();
+
+		// TODO: Optimize.
+		auto state_data = util::load_json(state_path);
+
+		return { std::move(state_base_path), std::move(state_path), std::move(state_data) };
+	}
+
+	std::string EntityFactory::get_embedded_name(const util::json& data)
+	{
+		if (auto name_it = data.find("name"); name_it != data.end())
+		{
+			return name_it->get<std::string>();
+		}
+
+		return {};
+	}
+
+	std::string EntityFactory::default_state_name_from_path(const std::filesystem::path& state_path)
+	{
+		auto filename = state_path.filename(); filename.replace_extension();
+
+		// An embedded name couldn't be found; use the state's filename instead.
+		return filename.string();
+	}
+
+	std::string EntityFactory::resolve_state_name(const util::json& state_data, const std::filesystem::path& state_path)
+	{
+		// Check for a top-level `name` field in the imported state:
+		if (auto name = get_embedded_name(state_data); !name.empty())
+		{
+			// Use the embedded name.
+			return name;
+		}
+
+		return default_state_name_from_path(state_path);
+	}
+
+	const EntityState* EntityFactory::process_state
 	(
 		EntityDescriptor::StateCollection& states_out,
 		std::string_view state_path_raw, // const std::string&
 		const std::filesystem::path& base_path
 	)
 	{
-		const auto state_path = resolve_reference(std::filesystem::path(state_path_raw), base_path);
+		auto [state_base_path, state_path, state_data] = load_state_data(state_path_raw, base_path);
 
-		// TODO: Optimize.
-		auto state_data = util::load_json(state_path);
-
-		std::string state_name;
-
-		// Check for a top-level `name` field in the imported state:
-		if (auto name_it = state_data.find("name"); name_it != state_data.end())
-		{
-			// Use the embedded name.
-			state_name = name_it->get<std::string>();
-		}
-		else
-		{
-			auto filename = state_path.filename(); filename.replace_extension();
-
-			// An embedded name couldn't be found; use the state's filename instead.
-			state_name = filename.string();
-		}
-
-		// Since this is an imported state, we'll need to retrieve a new base-path.
-		const auto state_base_path = state_path.parent_path();
+		auto state_name = resolve_state_name(state_data, state_path);
 
 		if (const auto state = process_state(states_out, state_data, state_name, state_base_path))
 		{
@@ -522,6 +545,63 @@ namespace engine
 		return nullptr;
 	}
 
+	std::size_t EntityFactory::merge_state_list
+	(
+		EntityDescriptor::StateCollection& states_out,
+		EntityState& state,
+
+		const util::json& data,
+		const std::filesystem::path& base_path
+	)
+	{
+		std::size_t count = 0;
+
+		util::json_for_each
+		(
+			data,
+
+			[this, &states_out, &state, &base_path, &count](const util::json& content)
+			{
+				switch (content.type())
+				{
+					case util::json::value_t::string:
+					{
+						const auto state_path_raw = content.get<std::string>();
+
+						auto [state_base_path, state_path, state_data] = load_state_data(state_path_raw, base_path);
+
+						if (!state_data.empty())
+						{
+							if (!state.name)
+							{
+								const auto default_state_name = default_state_name_from_path(state_path);
+
+								state.name = hash(default_state_name);
+							}
+
+							if (process_state(states_out, state, state_data, state_base_path))
+							{
+								count++;
+							}
+						}
+
+						break;
+					}
+
+					default:
+						if (process_state(states_out, state, content, base_path))
+						{
+							count++;
+						}
+
+						break;
+				}
+			}
+		);
+
+		return count;
+	}
+
 	const EntityState* EntityFactory::process_state
 	(
 		EntityDescriptor::StateCollection& states_out,
@@ -530,20 +610,124 @@ namespace engine
 		const std::filesystem::path& base_path
 	)
 	{
-		using namespace entt::literals;
-
-		// Handle embedded imports of other states:
-		if (auto imports = util::find_any(data, "import", "imports", "state", "states"); imports != data.end())
-		{
-			// NOTE: Recursion.
-			process_state_list(states_out, *imports, base_path);
-		}
-
-		EntityState state;
+		std::optional<EntityStateID> state_id = std::nullopt;
 
 		if (!state_name.empty())
 		{
-			state.name = hash(state_name);
+			state_id = hash(state_name);
+
+			if (auto existing = descriptor.get_state(*state_id))
+			{
+				print_warn("Overriding existing definition of state: \"{}\"", state_name);
+
+				// Initialize `existing` back to its default state.
+				*existing = {};
+
+				// Re-assign the name/ID of this state.
+				existing->name = state_id;
+
+				// Execute the main processing routine.
+				auto result = process_state(states_out, *existing, data, base_path);
+
+				assert(result);
+
+				return existing;
+			}
+		}
+
+		// NOTE: State objects are currently heap allocated to ensure a consistent memory location.
+		// Likewise, storing multiple `EntityState` objects within a scope may be too bloated for stack usage.
+		auto state = std::make_unique<EntityState>();
+
+		// Assign the state's name to the ID we resolved.
+		state->name = state_id;
+
+		if (!process_state(states_out, *state, data, base_path))
+		{
+			return {};
+		}
+
+		// Check if `state`'s name has been changed from `state_id`.
+		// 
+		// NOTE: Control paths from the path-based overload of `process_state`
+		// should always provide the state's name ahead of time, so that shouldn't trigger this.
+		if (state->name != state_id)
+		{
+			if (auto existing = descriptor.get_state(state_id))
+			{
+				// If this additional check for an existing state is triggered, it means a
+				// `merge` operation caused the name of a state to be defined,
+				// rather than during the initial declaration.
+				print_warn("Existing state named \"{}\" (#{}) detected after initial safety checks. -- Perhaps you merged an unnamed state with a named one? (Continuing anyway; replacing existing)", state_name, *state_id);
+
+				*existing = std::move(*state);
+
+				return existing;
+			}
+			else
+			{
+				// This path is only reached if the state's name has changed,
+				// but there's no existing state with the new name. (No conflict)
+
+				if (state->name && state_id)
+				{
+					print_warn("State name (#{}) differs from initially resolved value (#{}: \"{}\") -- Maybe caused by a merge operation? (Continuing anyway; no known name conflicts detected.)", *state->name, *state_id, state_name);
+				}
+				else
+				{
+					print_warn("State name inherited from initial merge operation. (#{}) (Continuing anyway; no known name conflicts detected)", *state->name);
+				}
+			}
+		}
+
+		//descriptor.set_state(std::move(state));
+		//descriptor.states.emplace_back(std::move(state));
+
+		// Store `state` inside of `states_out`.
+		const auto& result = states_out.emplace_back(std::move(state));
+
+		// From the stored smart pointer, retrieve a non-owning pointer.
+		return result.get();
+	}
+
+	bool EntityFactory::process_state
+	(
+		EntityDescriptor::StateCollection& states_out,
+		EntityState& state,
+		const util::json& data,
+		const std::filesystem::path& base_path
+	)
+	{
+		using namespace entt::literals;
+
+		if (!state.name)
+		{
+			if (auto state_name = get_embedded_name(data); !state_name.empty())
+			{
+				state.name = hash(state_name);
+			}
+			else
+			{
+				// NOTE: Because merge operations can take place, we'll refrain
+				// from spamming the user, but this warning is still valid.
+				//print_warn("Missing name detected while processing state. Nameless states may cause conflicts.");
+			}
+		}
+
+		// Handle merge operations first.
+		// (Allows the contents of `data` to take priority over merged-in definitions):
+		if (auto merge = util::find_any(data, "merge", "merge_state", "merge_states", "using"); merge != data.end())
+		{
+			// NOTE: Recursion by proxy.
+			merge_state_list(states_out, state, *merge, base_path);
+		}
+
+		// Handle embedded imports of other states before any further operations.
+		// (Allows imports in this scope to take priority over imports-within-imports):
+		if (auto imports = util::find_any(data, "import", "imports", "state", "states"); imports != data.end())
+		{
+			// NOTE: Recursion by proxy.
+			process_state_list(states_out, *imports, base_path);
 		}
 
 		if (auto persist = util::find_any(data, "persist", "share", "shared", "modify", "="); persist != data.end())
@@ -591,29 +775,17 @@ namespace engine
 			state.activation_delay = parse_time_duration(*time_data);
 		}
 
-		if (auto rules = util::find_any(data, "rules", "triggers"); rules != data.end())
+		if (auto rules = util::find_any(data, "rule", "rules", "trigger", "triggers"); rules != data.end())
 		{
 			process_state_rules(state, *rules, &states_out, &base_path);
 		}
 
-		if (state.name)
+		if (auto threads = util::find_any(data, "do", "threads", "execute"); threads != data.end())
 		{
-			if (auto existing = descriptor.get_state(*state.name))
-			{
-				print_warn("Overriding definition of state: \"{}\"", state_name);
-
-				*existing = std::move(state);
-
-				return existing;
-			}
+			// ...
 		}
 
-		//descriptor.set_state(std::move(state));
-
-		//descriptor.states.emplace_back(std::move(state));
-		const auto& result = descriptor.states.emplace_back(std::make_unique<EntityState>(std::move(state)));
-
-		return result.get();
+		return true;
 	}
 
 	std::size_t EntityFactory::process_state_list(EntityDescriptor::StateCollection& states_out, const util::json& data, const std::filesystem::path& base_path)
@@ -640,7 +812,7 @@ namespace engine
 				{
 					const auto state_path_raw = state_entry.get<std::string>();
 
-					if (resolve_state(states_out, state_path_raw, base_path))
+					if (process_state(states_out, state_path_raw, base_path))
 					{
 						count++;
 					}
@@ -903,6 +1075,62 @@ namespace engine
 			return {};
 		};
 
+		auto for_each_command = [&process_command_rule_from_object, &process_command_rule_from_expr, &process_command_rule_from_csv](const util::json& command)
+		{
+			util::json_for_each<util::json::value_t::string, util::json::value_t::object>
+			(
+				command,
+
+				[&process_command_rule_from_object, &process_command_rule_from_expr, &process_command_rule_from_csv](const util::json& command_content)
+				{
+					switch (command_content.type())
+					{
+						case util::json::value_t::object:
+						{
+							if (auto command_name_it = util::find_any(command_content, "command", "name", "type"); command_name_it != command_content.end())
+							{
+								const auto command_name = command_name_it->get<std::string>();
+
+								process_command_rule_from_object(command_name, command_content);
+							}
+							else
+							{
+								// TODO: Refactor to share code with `enumerate_map_filtered_ex` section.
+								for (const auto& [command_name, embedded_content] : command_content.items())
+								{
+									switch (embedded_content.type())
+									{
+										case util::json::value_t::object:
+										{
+											process_command_rule_from_object(command_name, embedded_content);
+
+											break;
+										}
+
+										case util::json::value_t::string:
+										{
+											auto string_data = embedded_content.get<std::string>();
+
+											process_command_rule_from_csv(command_name, string_data);
+
+											break;
+										}
+									}
+								}
+							}
+
+							break;
+						}
+
+						case util::json::value_t::string:
+							process_command_rule_from_expr(command_content.get<std::string>());
+
+							break;
+					}
+				}
+			);
+		};
+
 		switch (content.type())
 		{
 			case util::json::value_t::string:
@@ -911,7 +1139,14 @@ namespace engine
 
 				break;
 			}
-				
+
+			case util::json::value_t::array:
+			{
+				for_each_command(content);
+
+				break;
+			}
+
 			case util::json::value_t::object:
 			{
 				if (auto target_data = util::find_any(content, "target"); target_data != content.end())
@@ -977,58 +1212,7 @@ namespace engine
 
 				if (auto command = util::find_any(content, "command", "commands", "generate"); command != content.end())
 				{
-					util::json_for_each<util::json::value_t::string, util::json::value_t::object>
-					(
-						*command,
-
-						[&process_command_rule_from_object, &process_command_rule_from_expr, &process_command_rule_from_csv](const util::json& command_content)
-						{
-							switch (command_content.type())
-							{
-								case util::json::value_t::object:
-								{
-									if (auto command_name_it = util::find_any(command_content, "command", "name", "type"); command_name_it != command_content.end())
-									{
-										const auto command_name = command_name_it->get<std::string>();
-
-										process_command_rule_from_object(command_name, command_content);
-									}
-									else
-									{
-										// TODO: Refactor to share code with `enumerate_map_filtered_ex` section.
-										for (const auto& [command_name, embedded_content] : command_content.items())
-										{
-											switch (embedded_content.type())
-											{
-												case util::json::value_t::object:
-												{
-													process_command_rule_from_object(command_name, embedded_content);
-
-													break;
-												}
-
-												case util::json::value_t::string:
-												{
-													auto string_data = embedded_content.get<std::string>();
-
-													process_command_rule_from_csv(command_name, string_data);
-
-													break;
-												}
-											}
-										}
-									}
-
-									break;
-								}
-
-								case util::json::value_t::string:
-									process_command_rule_from_expr(command_content.get<std::string>());
-
-									break;
-							}
-						}
-					);
+					for_each_command(*command);
 
 					break;
 				}
@@ -1672,38 +1856,150 @@ namespace engine
 
 		const auto collection_has_named_members = (rules.is_object());
 
-		for (const auto& proxy : rules.items())
-		{
-			const auto& declaration = proxy.key();
-			const auto& content = proxy.value();
+		constexpr auto trigger_symbols = std::array { "trigger", "triggers", "condition", "conditions" };
 
+		auto get_trigger_object = [&](const util::json& content)
+		{
+			return std::apply
+			(
+				[&](auto&&... values)
+				{
+					return util::find_any(content, std::forward<decltype(values)>(values)...);
+				},
+
+				trigger_symbols
+			);
+		};
+
+		// Handles the "rules": [{}, {}, {}] (object array) syntax.
+		auto from_json_object = [&](const util::json& content)
+		{
+			if (const auto trigger_decl = get_trigger_object(content); trigger_decl != content.end())
+			{
+				util::json_for_each(*trigger_decl, [&](const util::json& decl)
+				{
+					// Embedded (i.e. regular) trigger condition.
+					const auto trigger_condition_expr = decl.get<std::string>();
+
+					count += process_trigger_expression
+					(
+						state, trigger_condition_expr, content,
+						opt_states_out, opt_base_path, allow_inline_import
+					);
+				});
+			}
+		};
+
+		// Handles the '"TriggerCondition": { actions }' syntax.
+		auto from_simplified = [&](const auto& trigger_condition_expr, const util::json& content)
+		{
+			count += process_trigger_expression
+			(
+				state, trigger_condition_expr, content,
+				opt_states_out, opt_base_path, allow_inline_import
+			);
+		};
+
+		auto from_data = [&](const auto& declaration, const auto& content)
+		{
 			if ((!collection_has_named_members) || declaration.empty())
 			{
-				if (const auto trigger_decl = util::find_any(content, "trigger", "triggers", "condition", "conditions"); trigger_decl != content.end())
-				{
-					util::json_for_each(*trigger_decl, [&](const util::json& decl)
-					{
-						// Embedded (i.e. regular) trigger condition.
-						const auto trigger_condition_expr = decl.get<std::string>();
-
-						count += process_trigger_expression
-						(
-							state, trigger_condition_expr, content,
-							opt_states_out, opt_base_path, allow_inline_import
-						);
-					});
-				}
+				from_json_object(content);
 			}
 			else
 			{
 				// In-place trigger condition.
 				const auto& trigger_condition_expr = declaration;
 
-				count += process_trigger_expression
-				(
-					state, trigger_condition_expr, content,
-					opt_states_out, opt_base_path, allow_inline_import
-				);
+				from_simplified(trigger_condition_expr, content);
+			}
+		};
+
+		auto for_each = [&](const util::json& rule_container)
+		{
+			for (const auto& proxy : rule_container.items())
+			{
+				const auto& declaration = proxy.key();
+				const auto& content = proxy.value();
+
+				from_data(declaration, content);
+			}
+		};
+
+		// Same as `for_each`, but ignores the `trigger` field.
+		auto for_each_ignore_trigger = [&](const util::json& rule_container)
+		{
+			return std::apply
+			(
+				[&](auto&&... values)
+				{
+					util::enumerate_map_filtered(rule_container.items(), from_data, std::forward<decltype(values)>(values)...);
+				},
+
+				trigger_symbols
+			);
+		};
+
+		switch (rules.type())
+		{
+			case util::json::value_t::object:
+			{
+				// Check if a trigger was specified.
+				if (auto trigger = get_trigger_object(rules); trigger != rules.end())
+				{
+					switch (trigger->type())
+					{
+						case util::json::value_t::string:
+						{
+							// Because we have a `trigger` field in the top-level definition,
+							// and that trigger is a conditional expression, we can assume
+							// that the user wanted a single rule, rather than multiple.
+							const auto trigger_condition_expr = rules.get<std::string>();
+
+							// Assume the content for this trigger is stored in `rules`.
+							from_simplified(trigger_condition_expr, rules);
+
+							break;
+						}
+						default:
+						{
+							// Similar to the above, we have a top-level `trigger` field.
+							// Unlike that path, however, we do have explicitly defined content available.
+							if (auto embedded_trigger = get_trigger_object(*trigger); embedded_trigger != trigger->end())
+							{
+								switch (embedded_trigger->type())
+								{
+									case util::json::value_t::string:
+										from_simplified(embedded_trigger->get<std::string>(), *trigger);
+
+										break;
+									default:
+										for_each(*embedded_trigger);
+
+										break;
+								}
+							}
+
+							// Since we're looking at an encapsulated `trigger` object, the rest of
+							// the top-level entries (if any) should be fair game.
+							for_each_ignore_trigger(rules);
+
+							break;
+						}
+					}
+				}
+				else
+				{
+					for_each(rules);
+				}
+
+				break;
+			}
+			default:
+			{
+				for_each(rules);
+
+				break;
 			}
 		}
 
@@ -1746,7 +2042,7 @@ namespace engine
 		{
 			case "import"_hs:
 				// NOTE: Recursion.
-				return resolve_state(*states_out, state_path_raw, *base_path);
+				return process_state(*states_out, state_path_raw, *base_path);
 		}
 
 		return nullptr;
@@ -1759,12 +2055,12 @@ namespace engine
 			resolve_archetypes(data, base_path);
 		}
 
-		if (auto components = data.find("components"); components != data.end())
+		if (auto components = util::find_any(data, "component", "components"); components != data.end())
 		{
 			process_component_list(descriptor.components, *components);
 		}
 
-		if (auto states = data.find("states"); states != data.end())
+		if (auto states = util::find_any(data, "state", "states"); states != data.end())
 		{
 			process_state_list(descriptor.states, *states, base_path);
 		}
