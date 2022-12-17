@@ -1138,6 +1138,17 @@ namespace engine
 		return compared_value;
 	}
 
+	std::tuple<MetaTypeID, entt::meta_data>
+	EntityFactory::resolve_member(const entt::meta_type& type, std::string_view member_name)
+	{
+		if (member_name.empty())
+		{
+			return resolve_data_member(type, true, "entity", "target", "button", "self", "value", "name");
+		}
+		
+		return resolve_data_member(type, true, member_name);
+	}
+
 	std::optional<EventTriggerSingleCondition> EntityFactory::process_standard_trigger_condition // std::optional<EventTriggerCondition>
 	(
 		const entt::meta_type& type,
@@ -1151,10 +1162,7 @@ namespace engine
 		bool embed_type_in_condition
 	)
 	{
-		auto [member_id, member] = (member_name.empty())
-			? resolve_data_member(type, true, "entity", "target", "button", "self")
-			: resolve_data_member(type, true, member_name)
-		;
+		auto [member_id, member] = resolve_member(type, member_name);
 
 		if (!member && (!member_name.empty()))
 		{
@@ -1208,7 +1216,7 @@ namespace engine
 		std::string_view trigger_condition_expr
 	)
 	{
-		auto [member_id, member] = resolve_data_member(type, true, member_name);
+		auto [member_id, member] = resolve_member(type, member_name);
 
 		if (!member && (!member_name.empty()))
 		{

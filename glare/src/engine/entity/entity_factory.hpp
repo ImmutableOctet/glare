@@ -327,6 +327,9 @@ namespace engine
 				std::string_view trigger_condition_expr = {}
 			);
 
+			std::tuple<MetaTypeID, entt::meta_data>
+			resolve_member(const entt::meta_type& type, std::string_view member_name);
+
 			// NOTE: Subroutine of `process_trigger_condition` and `process_state_rules`.
 			MetaAny process_trigger_condition_value(std::string_view compared_value_raw);
 
