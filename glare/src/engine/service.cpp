@@ -61,7 +61,7 @@ namespace engine
 		const auto& component = *component_patch.component;
 		const auto& entity = component_patch.target;
 
-		const auto& type = component.type;
+		const auto type = component.get_type();
 
 		auto patch_fn = type.func("patch_meta_component"_hs);
 
@@ -163,6 +163,7 @@ namespace engine
 	}
 
 	// TODO: Implement thread-safe locking/synchronization event-handler interface.
+	// TODO: Determine if some (or all) events should be handled in the fixed update function, rather than the continuous function.
 	void Service::update(float delta)
 	{
 		// Handle standard events:

@@ -181,7 +181,8 @@ namespace engine
 				// NOTE: This condition is specific to the forwarding-reference overload of `queue_event`.
 				else if constexpr (std::is_same_v<std::decay_t<EventType>, MetaAny>)
 				{
-					event<EventType>(std::forward<EventType>(event_obj));
+					// TODO: Look into implementing 'queue' equivalent for opaque events.
+					event<EventType>(std::forward<EventType>(event_obj)); // trigger_opaque_event(std::move(event_obj));
 				}
 				else if constexpr (std::is_base_of_v<ServiceOriginatedEvent, std::decay_t<EventType>>)
 				{
@@ -300,6 +301,7 @@ namespace engine
 				}
 				else
 				{
+					// TODO: Look into implementing 'queue' equivalent for opaque events.
 					trigger_opaque_event(std::move(event_instance));
 				}
 			}
