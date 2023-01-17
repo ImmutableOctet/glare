@@ -89,6 +89,19 @@ namespace engine
         return hash(short_name<T>());
     }
 
+    template <typename EnumType>
+    EnumType string_to_enum_value(std::string_view enum_short_str)
+    {
+        auto result = magic_enum::enum_cast<EnumType>(enum_short_str);
+
+        if (!result)
+        {
+            throw std::invalid_argument("Invalid enum value specified.");
+        }
+
+        return *result;
+    }
+
 	// Retrieves the runtime (property-based) value associated to `id` in `meta_type_inst`.
     // If no value is associated, this will fail via assertion.
     template <typename EnumType>
