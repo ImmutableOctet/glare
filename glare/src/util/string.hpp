@@ -94,17 +94,64 @@ namespace util
 	}
 
 	template <typename T>
-	inline bool from_string(std::string_view str, T& out)
+	inline bool from_string(std::string_view str, T& out, bool exact_numeric_format=true)
 	{
+		if (str.empty())
+		{
+			return false;
+		}
+
+		// Disallow decimal points for integral types when using `exact_numeric_format`:
+		if constexpr (std::is_integral_v<T>)
+		{
+			if (exact_numeric_format)
+			{
+				if (str.contains('.'))
+				{
+					return false;
+				}
+			}
+		}
+
 		auto result = std::from_chars(str.data(), (str.data() + str.size()), out);
 
 		return (result.ec == std::errc());
 	}
 
-	template <typename T>
-	inline std::optional<T> from_string(std::string_view str)
+	template <>
+	inline bool from_string(std::string_view str, bool& out, bool exact_numeric_format)
 	{
-		if (T out; from_string(str, out)) // auto out = T{};
+		if (str.empty())
+		{
+			return false;
+		}
+
+		const auto initial_char = str[0];
+
+		switch (initial_char)
+		{
+			case 't':
+			case 'T':
+			case '1':
+			case 'y':
+			case 'Y':
+				out = true;
+
+				break;
+
+			default:
+				out = false;
+
+				break;
+		}
+
+		return true;
+	}
+
+	template <typename T>
+	inline std::optional<T> from_string(std::string_view str, bool exact_numeric_format=true)
+	{
+		if (T out; from_string(str, out, exact_numeric_format)) // auto out = T{};
 		{
 			return out;
 		}
