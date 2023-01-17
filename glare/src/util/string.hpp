@@ -88,7 +88,7 @@ namespace util
 
 	inline std::string quote(std::string_view str)
 	{
-		//return fmt::format("\"{}\"", str);
+		//return format("\"{}\"", str);
 
 		return "\"" + std::string(str) + "\"";
 	}
@@ -280,6 +280,11 @@ namespace util
 	template <typename Callback>
 	bool split(std::string_view str, std::string_view separator, Callback callback, std::string_view trim_values=" \n")
 	{
+		if (str.empty())
+		{
+			return false;
+		}
+
 		std::size_t find_result = 0;
 
 		bool result = false;
@@ -296,15 +301,11 @@ namespace util
 
 				substr = trim(substr, trim_values);
 
-				if constexpr (std::is_same_v<std::invoke_result_t<Callback, std::string_view, bool>, bool>)
+				if constexpr (std::is_invocable_v<Callback, std::string_view, bool>)
 				{
 					callback(substr, true);
 				}
-				else if constexpr (std::is_same_v<std::invoke_result_t<Callback, std::string_view>, bool>)
-				{
-					callback(substr, true);
-				}
-				else
+				else if constexpr (std::is_invocable_v<Callback, std::string_view>)
 				{
 					callback(substr);
 				}
@@ -319,21 +320,25 @@ namespace util
 
 				substr = trim(substr, trim_values);
 
-				if constexpr (std::is_same_v<std::invoke_result_t<Callback, std::string_view, bool>, bool>)
+				if constexpr (std::is_invocable_r_v<bool, Callback, std::string_view, bool>)
 				{
 					if (!callback(substr, false))
 					{
 						break;
 					}
 				}
-				else if constexpr (std::is_same_v<std::invoke_result_t<Callback, std::string_view>, bool>)
+				else if constexpr (std::is_invocable_r_v<void, Callback, std::string_view, bool>)
+				{
+					callback(substr, false);
+				}
+				else if constexpr (std::is_invocable_r_v<bool, Callback, std::string_view>)
 				{
 					if (!callback(substr))
 					{
 						break;
 					}
 				}
-				else
+				else if constexpr (std::is_invocable_r_v<void, Callback, std::string_view>)
 				{
 					callback(substr);
 				}
