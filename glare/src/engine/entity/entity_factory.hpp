@@ -2,11 +2,9 @@
 
 #include "types.hpp"
 
+#include "entity_factory_context.hpp"
 #include "entity_descriptor.hpp"
-#include "entity_state.hpp"
-#include "entity_state_rule.hpp"
-
-#include <engine/timer.hpp>
+#include "serial.hpp"
 
 #include <util/json.hpp>
 #include <util/algorithm.hpp>
@@ -21,6 +19,12 @@ namespace engine
 {
 	//class World;
 	class ResourceManager;
+
+	class EntityState;
+
+	struct EntityStateRule;
+	struct EntityThreadDescription;
+	struct CommandParsingContext;
 
 	//template <typename ServiceType>
 	struct EntityConstructionContext
@@ -44,7 +48,7 @@ namespace engine
 	{
 		public:
 			using FactoryKey = std::string;
-			using CommandContent = MetaTypeDescriptor;
+			using CommandContent = MetaTypeDescriptor; // EntityStateCommandAction::CommandContent;
 			using SmallSize = MetaTypeDescriptor::SmallSize;
 
 			//using json = util::json;
@@ -53,25 +57,34 @@ namespace engine
 
 			std::optional<EntityStateIndex> default_state_index = std::nullopt;
 		public:
-			std::filesystem::path resolve_reference(const std::filesystem::path& path, const std::filesystem::path& base_path) const;
-
 			template <typename ChildFactoryCallback>
-			inline EntityFactory(const EntityFactoryContext& factory_context, ChildFactoryCallback&& child_callback, bool resolve_external_modules=true, bool process_children=true)
+			inline EntityFactory
+			(
+				const EntityFactoryContext& factory_context,
+				ChildFactoryCallback&& child_callback,
+				const CommandParsingContext* opt_command_context=nullptr,
+				bool resolve_external_modules=true, bool process_children=true
+			)
 				: EntityFactoryContext(factory_context)
 			{
 				// TODO: Optimize.
 				auto instance = util::load_json(paths.instance_path);
 
-				process_archetype(instance, paths.instance_directory, child_callback, resolve_external_modules, process_children);
+				process_archetype(instance, paths.instance_directory, child_callback, opt_command_context, resolve_external_modules, process_children);
 			}
 
-			inline EntityFactory(const EntityFactoryContext& factory_context, bool resolve_external_modules=true)
+			inline EntityFactory
+			(
+				const EntityFactoryContext& factory_context,
+				const CommandParsingContext* opt_command_context=nullptr,
+				bool resolve_external_modules=true
+			)
 				: EntityFactoryContext(factory_context)
 			{
 				// TODO: Optimize.
 				auto instance = util::load_json(paths.instance_path);
 
-				process_archetype(instance, paths.instance_directory, resolve_external_modules);
+				process_archetype(instance, paths.instance_directory, opt_command_context, resolve_external_modules);
 			}
 
 			EntityFactory(const EntityFactory&) = default;
@@ -97,49 +110,7 @@ namespace engine
 				return paths.instance_path;
 			}
 		protected:
-			static std::tuple<std::string_view, bool, std::optional<SmallSize>>
-			parse_component_declaration(const std::string& component_declaration); // std::string_view
-
-			static std::tuple
-			<
-				std::string_view, // entity_ref (optional)
-				std::string_view, // type_name
-				std::string_view, // member_name
-				std::string_view, // comparison_operator
-				std::string_view, // compared_value
-				std::ptrdiff_t    // updated_offset
-			>
-			parse_trigger_condition(const std::string& trigger_condition, std::ptrdiff_t offset=0); // std::string_view
-
-			static std::tuple
-			<
-				std::string_view, // type_name
-				std::ptrdiff_t    // updated_offset
-			>
-			parse_event_type(const std::string& event_type, std::ptrdiff_t offset = 0); // std::string_view
-
-			// TODO: Move to a different file/class:
-			static std::optional<Timer::Duration> parse_time_duration(const std::string& time_expr); // std::string_view
-			static std::optional<Timer::Duration> parse_time_duration(const util::json& time_data);
-
-			// NOTE: The 'allow' arguments refer to construction of the underlying `MetaTypeDescriptor`.
-			// To affect the component itself, use the `component_flags` argument.
-			bool process_component
-			(
-				EntityDescriptor::TypeInfo& components_out,
-				std::string_view component_name,
-				const util::json* data=nullptr,
-
-				std::optional<SmallSize> constructor_arg_count=std::nullopt,
-				
-				const MetaTypeDescriptorFlags& component_flags={},
-
-				bool allow_entry_update=false,
-				bool allow_new_entry=true,
-				bool allow_default_entries=true,
-
-				bool ignore_special_symbols=true
-			);
+			CommandContent& generate_empty_command(const MetaType& command_type, Entity source=null, Entity target=null);
 
 			// Utility function for loading JSON data.
 			std::tuple
@@ -150,10 +121,9 @@ namespace engine
 			>
 			load_state_data(std::string_view state_path_raw, const std::filesystem::path& base_path);
 
-			std::string get_embedded_name(const util::json& data);
-
-			std::string default_state_name_from_path(const std::filesystem::path& state_path);
-			std::string resolve_state_name(const util::json& state_data, const std::filesystem::path& state_path);
+			static std::string get_embedded_name(const util::json& data);
+			static std::string default_state_name_from_path(const std::filesystem::path& state_path);
+			static std::string resolve_state_name(const util::json& state_data, const std::filesystem::path& state_path);
 
 			// This overload resolves and processes a state from a raw path.
 			// 
@@ -163,7 +133,8 @@ namespace engine
 			(
 				EntityDescriptor::StateCollection& states_out,
 				std::string_view state_path_raw, // const std::string&
-				const std::filesystem::path& base_path
+				const std::filesystem::path& base_path,
+				const CommandParsingContext* opt_command_context=nullptr
 			);
 
 			// This overload acts as a utility function that automatically handles
@@ -179,7 +150,8 @@ namespace engine
 				EntityDescriptor::StateCollection& states_out,
 				const util::json& data,
 				std::string_view state_name,
-				const std::filesystem::path& base_path
+				const std::filesystem::path& base_path,
+				const CommandParsingContext* opt_command_context=nullptr
 			);
 
 			// The `states_out` argument is used only for import resolution.
@@ -193,14 +165,16 @@ namespace engine
 				EntityDescriptor::StateCollection& states_out,
 				EntityState& state,
 				const util::json& data,
-				const std::filesystem::path& base_path
+				const std::filesystem::path& base_path,
+				const CommandParsingContext* opt_command_context=nullptr
 			);
 
 			std::size_t process_state_list
 			(
 				EntityDescriptor::StateCollection& states_out,
 				const util::json& data,
-				const std::filesystem::path& base_path
+				const std::filesystem::path& base_path,
+				const CommandParsingContext* opt_command_context=nullptr
 			);
 
 			// Merges one or more states defined in `data` with `state`.
@@ -218,7 +192,8 @@ namespace engine
 				EntityState& state,
 
 				const util::json& data,
-				const std::filesystem::path& base_path
+				const std::filesystem::path& base_path,
+				const CommandParsingContext* opt_command_context=nullptr
 			);
 
 			// TODO: Optimize to avoid multiple calls to `parse_component_declaration`.
@@ -319,17 +294,18 @@ namespace engine
 			std::size_t process_state_init_copy_components(EntityState& state, const util::json& init_copy);
 
 			// NOTE: The `opt_states_out` and `opt_base_path` arguments are only used if `allow_inline_import` is enabled.
-			std::size_t process_state_rules
+			std::size_t process_state_rule_list
 			(
 				EntityState& state,
 				const util::json& rules,
 
 				EntityDescriptor::StateCollection* opt_states_out = nullptr,
 				const std::filesystem::path* opt_base_path = nullptr,
+				const CommandParsingContext* opt_command_context=nullptr,
 				bool allow_inline_import = true
 			);
 
-			// NOTE: Subroutine of `process_state_rules`.
+			// NOTE: Subroutine of `process_state_rule_list`.
 			std::size_t process_state_rule
 			(
 				EntityState& state,
@@ -340,46 +316,12 @@ namespace engine
 
 				EntityDescriptor::StateCollection* opt_states_out=nullptr,
 				const std::filesystem::path* opt_base_path=nullptr,
+				const CommandParsingContext* opt_command_context=nullptr,
 
 				bool allow_inline_import=true
 			);
 
-			// NOTE: Subroutine of `process_state_rules`.
-			std::optional<EventTriggerSingleCondition> process_standard_trigger_condition // std::optional<EventTriggerCondition>
-			(
-				const entt::meta_type& type,
-
-				std::string_view member_name,
-				std::string_view comparison_operator,
-				std::string_view compared_value_raw,
-
-				// Used for debugging purposes, etc.
-				std::string_view trigger_condition_expr = {},
-
-				bool embed_type_in_condition=false
-			);
-
-			std::optional<EventTriggerMemberCondition> process_member_trigger_condition
-			(
-				const entt::meta_type& type,
-
-				std::string_view entity_ref,
-
-				std::string_view member_name,
-				std::string_view comparison_operator,
-				std::string_view compared_value_raw,
-				
-				// Used for debugging purposes, etc.
-				std::string_view trigger_condition_expr = {}
-			);
-
-			std::tuple<MetaTypeID, entt::meta_data>
-			resolve_member(const entt::meta_type& type, std::string_view member_name);
-
-			// NOTE: Subroutine of `process_trigger_condition` and `process_state_rules`.
-			MetaAny process_trigger_condition_value(std::string_view compared_value_raw);
-
-			// NOTE: Subroutine of `process_state_rules`.
+			// NOTE: Subroutine of `process_state_rule_list`.
 			std::size_t process_trigger_expression
 			(
 				EntityState& state,
@@ -389,7 +331,39 @@ namespace engine
 
 				EntityDescriptor::StateCollection* opt_states_out=nullptr,
 				const std::filesystem::path* opt_base_path=nullptr,
+				const CommandParsingContext* opt_command_context=nullptr,
 				bool allow_inline_import=true
+			);
+
+			//std::size_t
+			std::tuple
+			<
+				EntityThreadIndex, // initial_thread_index
+				EntityThreadCount  // processed_count
+			>
+			process_thread_list
+			(
+				const util::json& content,
+				const std::filesystem::path* opt_base_path=nullptr,
+				const CommandParsingContext* opt_command_context=nullptr
+			);
+
+			std::optional<std::tuple<EntityThreadIndex, const EntityThreadDescription*>>
+			process_thread
+			(
+				const util::json& content,
+				std::string_view opt_thread_name={},
+				const std::filesystem::path* opt_base_path=nullptr,
+				const CommandParsingContext* opt_command_context=nullptr
+			);
+
+			std::size_t process_thread
+			(
+				EntityThreadDescription& thread,
+				const util::json& content,
+				std::string_view opt_thread_name={},
+				const std::filesystem::path* opt_base_path=nullptr,
+				const CommandParsingContext* opt_command_context=nullptr
 			);
 
 			const EntityState* process_state_inline_import
@@ -397,37 +371,37 @@ namespace engine
 				EntityDescriptor::StateCollection* states_out,
 				const std::string& command, // std::string_view
 				const std::filesystem::path* base_path,
-
+				const CommandParsingContext* opt_command_context=nullptr,
 				bool allow_inline_import=true
 			);
 
-			std::size_t process_component_list
+			void process_archetype
 			(
-				EntityDescriptor::TypeInfo& components_out,
-				const util::json& components,
-
-				const MetaTypeDescriptorFlags& shared_component_flags={},
-
-				bool allow_new_entry=true,
-				bool allow_default_entries=true,
-				bool forward_entry_update_condition_to_flags=false,
-
-				bool ignore_special_symbols=true
+				const util::json& data,
+				const std::filesystem::path& base_path,
+				const CommandParsingContext* opt_command_context=nullptr,
+				bool resolve_external_modules=true
 			);
 
-			void process_archetype(const util::json& data, const std::filesystem::path& base_path, bool resolve_external_modules=true);
-
 			template <typename ChildFactoryCallback>
-			inline void process_archetype(const util::json& data, const std::filesystem::path& base_path, ChildFactoryCallback&& child_callback, bool resolve_external_modules=true, bool process_children=true)
+			inline void process_archetype
+			(
+				const util::json& data,
+				const std::filesystem::path& base_path,
+				ChildFactoryCallback&& child_callback,
+				const CommandParsingContext* opt_command_context=nullptr,
+				bool resolve_external_modules=true,
+				bool process_children=true
+			)
 			{
 				// Override external module resolution.
 				if (resolve_external_modules)
 				{
-					resolve_archetypes(data, base_path, child_callback, true, process_children);
+					resolve_archetypes(data, base_path, child_callback, opt_command_context, true, process_children);
 				}
 
 				// Execute main overload without external modules.
-				process_archetype(data, base_path, false);
+				process_archetype(data, base_path, opt_command_context, false);
 
 				if (process_children)
 				{
@@ -469,7 +443,14 @@ namespace engine
 			// 
 			// See also: `process_archetype`.
 			template <typename ChildFactoryCallback>
-			inline bool resolve_archetypes(const util::json& instance, const std::filesystem::path& base_path, ChildFactoryCallback&& child_callback, bool resolve_external_modules=true, bool process_children=true)
+			inline bool resolve_archetypes
+			(
+				const util::json& instance,
+				const std::filesystem::path& base_path,
+				ChildFactoryCallback&& child_callback,
+				const CommandParsingContext* opt_command_context=nullptr,
+				bool resolve_external_modules=true, bool process_children=true
+			)
 			{
 				auto archetypes = util::find_any(instance, "archetypes", "import", "modules"); // instance.find("archetypes");
 
@@ -482,7 +463,7 @@ namespace engine
 				(
 					*archetypes,
 
-					[this, &base_path, &child_callback, resolve_external_modules, process_children](const auto& value)
+					[this, &base_path, &child_callback, opt_command_context, resolve_external_modules, process_children](const auto& value)
 					{
 						const auto archetype_path_raw = std::filesystem::path(value.get<std::string>());
 						const auto archetype_path = resolve_reference(archetype_path_raw, base_path);
@@ -497,19 +478,26 @@ namespace engine
 						
 						const auto base_path = archetype_path.parent_path();
 
-						process_archetype(archetype, base_path, child_callback, resolve_external_modules, process_children);
+						process_archetype(archetype, base_path, child_callback, opt_command_context, resolve_external_modules, process_children);
 					}
 				);
 
 				return (elements_processed > 0);
 			}
 
-			inline bool resolve_archetypes(const util::json& instance, const std::filesystem::path& base_path, bool resolve_external_modules=true)
+			inline bool resolve_archetypes
+			(
+				const util::json& instance,
+				const std::filesystem::path& base_path,
+				const CommandParsingContext* opt_command_context=nullptr,
+				bool resolve_external_modules=true
+			)
 			{
 				return resolve_archetypes
 				(
 					instance, base_path,
 					[](const auto& parent_factory, const auto& child_ctx) {},
+					opt_command_context,
 					resolve_external_modules,
 					false
 				);
