@@ -1,4 +1,4 @@
-#include "glare.hpp"
+#include "game.hpp"
 
 // TODO: Reduce unnecessary includes.
 #include <iostream>
@@ -8,7 +8,7 @@
 #include <cstdlib>
 #include <optional>
 #include <cassert>
-#include <format>
+#include <util/format.hpp>
 
 #include <app/events.hpp>
 #include <app/input/keycodes.hpp>
@@ -44,13 +44,13 @@
 #include <sdl2/SDL_video.h>
 #include <sdl2/SDL_events.h>
 
-#include <imgui/imgui.h>
+#include <imgui.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include <format>
+#include <util/format.hpp>
 
 // Debugging related:
 #include <math/bullet.hpp>
@@ -387,7 +387,7 @@ namespace glare
 		print("Camera direction: {}", direction);
 		*/
 
-		engine::position_in_titlebar(*this, world.get_camera(), std::format("FPS: {} | ", graphics.framerate));
+		engine::position_in_titlebar(*this, world.get_camera(), util::format("FPS: {} | ", graphics.framerate));
 	}
 
 	void Glare::on_render(RenderState& render_state)
@@ -485,7 +485,7 @@ namespace glare
 				auto cube_t = world.get_transform(cube);
 				auto root_t = world.get_transform(root);
 
-				auto camera_matrix = camera_t.get_matrix();
+				const auto& camera_matrix = camera_t.get_matrix();
 				auto cube_matrix = cube_t.get_matrix();
 				auto root_matrix = root_t.get_matrix();
 
@@ -578,4 +578,14 @@ namespace glare
 		}
 		*/
 	}
+}
+
+int main(int argc, char** argv)
+{
+	util::log::init();
+	
+	auto application = glare::Glare();
+	application.execute();
+
+	return 0;
 }
