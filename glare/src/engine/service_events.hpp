@@ -15,12 +15,18 @@ namespace engine
 
 	//struct ServiceOriginatedEvent;
 
-	// This event is triggered immediately by a `Service`, once per update tick.
+	// This event is triggered immediately by a `Service`, once per continuous update.
 	struct OnServiceUpdate : public ServiceOriginatedEvent
 	{
 		// A normalized rate of execution. This represents the amount
 		// of time that has passed since the last `OnServiceUpdate` trigger.
-		float delta;
+		float delta = 1.0f;
+	};
+
+	// This event is triggered immediately by a `Service`, once per fixed update tick.
+	struct OnServiceFixedUpdate : public ServiceOriginatedEvent
+	{
+		float delta = 1.0f;
 	};
 
 	// This event is triggered immediately by a `Service`, once per frame/render, if applicable.
