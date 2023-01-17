@@ -28,52 +28,29 @@ namespace engine
 		{
 			case "!="_hs:
 			case "!=="_hs:
+			case "<>"_hs:
 				return ComparisonMethod::NotEqual;
 
-			/*
 			case "<"_hs:
-				return ComparisonMethod::LessThan
+				return ComparisonMethod::LessThan;
+
 			case "<="_hs:
 				return ComparisonMethod::LessThanOrEqualTo;
+
 			case ">"_hs:
-				return ComparisonMethod::GreaterThan
+				return ComparisonMethod::GreaterThan;
+
 			case ">="_hs:
 				return ComparisonMethod::GreaterThanOrEqualTo;
+
+			/*
+			case "="_hs:
+			case "|"_hs:
+				return ComparisonMethod::Equal;
 			*/
 		}
 
 		return ComparisonMethod::Equal;
-	}
-
-	const EventTriggerConditionType* EventTriggerConditionType::get_condition_interface(const MetaAny& condition)
-	{
-		using namespace entt::literals;
-
-		if (!condition)
-		{
-			return {};
-		}
-
-		const auto type = condition.type();
-
-		if (!type)
-		{
-			return {};
-		}
-
-		switch (type.id())
-		{
-			case "EventTriggerSingleCondition"_hs:
-			case "EventTriggerMemberCondition"_hs:
-			case "EventTriggerAndCondition"_hs:
-			case "EventTriggerOrCondition"_hs:
-			case "EventTriggerTrueCondition"_hs:
-			case "EventTriggerFalseCondition"_hs:
-				return reinterpret_cast<const EventTriggerConditionType*>(condition.data());
-			//case "EventTriggerCondition"_hs:
-		}
-
-		return {};
 	}
 
 	EventTriggerConditionType::~EventTriggerConditionType() {}
@@ -152,13 +129,37 @@ namespace engine
 		switch (comparison_method)
 		{
 			case ComparisonMethod::Equal:
-				return (current_value == comparison_value);
+			{
+				if (current_value == comparison_value)
+				{
+					return true;
+				}
+
+				return meta_any_string_compare(current_value, comparison_value);
+			}
 
 			case ComparisonMethod::NotEqual:
-				return (current_value != comparison_value);
+				if (current_value != comparison_value)
+				{
+					return !meta_any_string_compare(current_value, comparison_value);
+				}
+
+				return false;
+
+
+			/*
+			case ComparisonMethod::LessThan:
+				return (current_value < comparison_value);
+			case ComparisonMethod::LessThanOrEqualTo:
+				return (current_value <= comparison_value);
+			case ComparisonMethod::GreaterThan:
+				return (current_value > comparison_value);
+			case ComparisonMethod::GreaterThanOrEqualTo:
+				return (current_value >= comparison_value);
+			*/
 
 			default:
-				print_warn("Unsupported comparison method detected.");
+				print_error("Unsupported comparison method detected: {}", static_cast<std::uint32_t>(comparison_method));
 
 				break; // return false;
 		}
@@ -223,12 +224,27 @@ namespace engine
 		MetaAny&& comparison_value,
 		ComparisonMethod comparison_method,
 
-		MetaType event_type
+		MetaTypeID event_type_id
 	) :
 		event_type_member(event_type_member),
 		comparison_value(std::move(comparison_value)),
 		comparison_method(comparison_method),
-		event_type(event_type)
+		event_type_id(event_type_id)
+	{}
+
+	EventTriggerSingleCondition::EventTriggerSingleCondition
+	(
+		MetaSymbolID event_type_member,
+		MetaAny&& comparison_value,
+		ComparisonMethod comparison_method,
+		MetaType event_type
+	) : EventTriggerSingleCondition
+	(
+		event_type_member,
+		std::move(comparison_value),
+		comparison_method,
+		event_type.id()
+	)
 	{}
 
 	bool EventTriggerSingleCondition::condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const
@@ -246,7 +262,7 @@ namespace engine
 		/*
 		if (this->event_type)
 		{
-			if (this->event_type != event_instance.type())
+			if (this->event_type_id != event_instance.type().id())
 			{
 				return false;
 			}
@@ -265,26 +281,41 @@ namespace engine
 
 	bool EventTriggerSingleCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const
 	{
-		if (!event_instance)
+		// Check against the incoming event instance, if present:
+		if (event_instance)
 		{
-			return false;
-		}
-
-		// First check against the incoming event instance:
-		if ((!this->event_type) || (this->event_type == event_instance.type()))
-		{
-			if (condition_met_impl(event_instance, comparison_value, registry, entity))
+			if ((!this->event_type_id) || (this->event_type_id == event_instance.type().id()))
 			{
-				return true;
+				if (condition_met_impl(event_instance, comparison_value, registry, entity))
+				{
+					return true;
+				}
 			}
 		}
 
-		if ((fallback_to_component) && (this->event_type))
+		// Fallback to checking against a component of `entity`:
+		if (fallback_to_component)
 		{
-			// NOTE: Calls `condition_met_impl` internally.
-			if (condition_met_as_component(this->event_type, comparison_value, registry, entity))
+			// Initially check if we can use an encoded type ID:
+			auto component_type_id = this->event_type_id;
+
+			if ((!component_type_id) && event_instance)
 			{
-				return true;
+				// Try to fallback to the `event_instance` object's type ID.
+				component_type_id = event_instance.type().id();
+			}
+
+			// Check if we could resolve which type to look for as a component:
+			if (component_type_id)
+			{
+				if (auto component_type = resolve(component_type_id))
+				{
+					// NOTE: This calls `condition_met_impl` internally.
+					if (condition_met_as_component(component_type, comparison_value, registry, entity))
+					{
+						return true;
+					}
+				}	
 			}
 		}
 
@@ -325,6 +356,11 @@ namespace engine
 		}
 
 		return data_member.get(event_instance);
+	}
+
+	MetaType EventTriggerSingleCondition::get_type() const
+	{
+		return resolve(event_type_id);
 	}
 
 	// EventTriggerMemberCondition:
@@ -428,6 +464,13 @@ namespace engine
 	}
 
 	std::size_t EventTriggerCompoundCondition::add_condition(EventTriggerFalseCondition&& condition_in)
+	{
+		conditions.emplace_back(std::move(condition_in));
+
+		return 1;
+	}
+
+	std::size_t EventTriggerCompoundCondition::add_condition(EventTriggerInverseCondition&& condition_in)
 	{
 		conditions.emplace_back(std::move(condition_in));
 
@@ -545,4 +588,42 @@ namespace engine
 	bool EventTriggerFalseCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const { return false; }
 	bool EventTriggerFalseCondition::condition_met(const MetaAny& event_instance) const { return false; }
 	EventTriggerCompoundMethod EventTriggerFalseCondition::compound_method() const { return EventTriggerCompoundMethod::None; }
+
+	// EventTriggerInverseCondition:
+	EventTriggerInverseCondition::EventTriggerInverseCondition(MetaAny&& inv_condition)
+		: inv_condition(std::move(inv_condition)) {}
+
+	bool EventTriggerInverseCondition::condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const
+	{
+		return !get_inverse().condition_met(event_instance, registry, entity);
+	}
+
+	bool EventTriggerInverseCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const
+	{
+		return !get_inverse().condition_met(event_instance, comparison_value, registry, entity);
+	}
+
+	bool EventTriggerInverseCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const
+	{
+		return !get_inverse().condition_met(event_instance, comparison_value);
+	}
+
+	bool EventTriggerInverseCondition::condition_met(const MetaAny& event_instance) const
+	{
+		return !get_inverse().condition_met(event_instance);
+	}
+	
+	EventTriggerCompoundMethod EventTriggerInverseCondition::compound_method() const
+	{
+		return EventTriggerCompoundMethod::None;
+	}
+
+	const EventTriggerConditionType& EventTriggerInverseCondition::get_inverse() const
+	{
+		const auto result = get_condition_interface(inv_condition);
+
+		assert(result);
+
+		return *result;
+	}
 }
