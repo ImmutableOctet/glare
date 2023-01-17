@@ -26,6 +26,11 @@ namespace util
 	// Reconstructs `old_view` using `new_basis` for storage.
 	inline std::string_view remap_string_view(std::string_view old_basis, std::string_view new_basis, std::string_view old_view)
 	{
+		if (old_view.empty())
+		{
+			return {};
+		}
+
 		const auto offset = (old_view.data() - old_basis.data());
 		const auto length = old_view.size(); // length();
 
