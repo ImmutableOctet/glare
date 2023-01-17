@@ -181,7 +181,7 @@ namespace engine
     inline std::optional<std::pair<entt::id_type, entt::meta_data>> get_local_data_member_by_index(const entt::meta_type& type, std::size_t variable_index)
     {
         auto data_range = type.data();
-        auto data_it = (data_range.begin() + variable_index);
+        auto data_it = (data_range.begin() + static_cast<std::ptrdiff_t>(variable_index));
 
         if (data_it < data_range.end()) // !=
         {
@@ -316,6 +316,68 @@ namespace engine
 
     // Attempts to retrieve a `PlayerIndex` value from `instance`, if applicable.
     std::optional<PlayerIndex> resolve_player_index(const MetaAny& instance);
+
+    bool meta_any_is_string(const entt::meta_any& value);
+
+	// Attempts to compute a string hash for `value`.
+	std::optional<StringHash> meta_any_to_string_hash(const entt::meta_any& value);
+
+	// Compares `left` and `right` to see if they both have the same string hash.
+	bool meta_any_string_compare(const entt::meta_any& left, const entt::meta_any& right);
+
+	// Attempts to retrieve an instance of `Type` from `value`, passing it to `callback` if successful.
+	template <typename Type, typename Callback>
+	inline bool try_value(const entt::meta_any& value, Callback&& callback)
+	{
+		if (!value)
+		{
+			return false;
+		}
+
+		auto type = value.type();
+
+		if (!type)
+		{
+			return false;
+		}
+
+		const auto type_id = type.id();
+
+		//if (type_id == entt::type_id<Type>().hash())
+		if ((type_id == entt::type_id<Type>().hash()) || (type_id == resolve<Type>().id()))
+		{
+			auto* value_raw = value.try_cast<Type>(); // const
+
+			//assert(value_raw);
+
+			if (!value_raw)
+			{
+				return false;
+			}
+
+			callback(*value_raw);
+
+			return true;
+		}
+
+		return false;
+	}
+
+	template <typename Callback>
+	inline bool try_string_value(const entt::meta_any& value, Callback&& callback)
+	{
+		if (try_value<std::string>(value, callback))
+		{
+			return true;
+		}
+
+		if (try_value<std::string_view>(value, callback))
+		{
+			return true;
+		}
+
+		return false;
+	}
 
 	/*
 		Generates reflection meta-data for the `engine` module.

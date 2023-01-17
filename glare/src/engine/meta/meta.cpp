@@ -32,4 +32,103 @@ namespace engine
 
 		return std::nullopt;
 	}
+
+	bool meta_any_is_string(const entt::meta_any& value)
+	{
+		if (!value)
+		{
+			return false;
+		}
+
+		auto type = value.type();
+
+		if (!type)
+		{
+			return false;
+		}
+
+		const auto type_id = type.id();
+
+		return
+		(
+			(type_id == entt::type_id<std::string>().hash())
+			||
+			(type_id == entt::type_id<std::string_view>().hash())
+		);
+	}
+
+	std::optional<StringHash> meta_any_to_string_hash(const entt::meta_any& value)
+	{
+		if (!value)
+		{
+			return std::nullopt;
+		}
+
+		std::optional<StringHash> hash_out = std::nullopt;
+
+		if
+		(
+			try_string_value
+			(
+				value, [&hash_out](const auto& str_value)
+				{
+					hash_out = hash(str_value);
+				}
+			)
+		)
+		{
+			return hash_out;
+		}
+
+		if
+		(
+			try_value<StringHash>
+			(
+				value,
+				[&hash_out](const auto& hash)
+				{
+					hash_out = hash;
+				}
+			)
+		)
+		{
+			return hash_out;
+		}
+
+		if
+		(
+			try_value<std::optional<StringHash>>
+			(
+				value,
+				[&hash_out](const auto& opt_hash)
+				{
+					hash_out = opt_hash;
+				}
+			)
+		)
+		{
+			return hash_out;
+		}
+
+		return hash_out; // std::nullopt;
+	}
+
+	bool meta_any_string_compare(const entt::meta_any& left, const entt::meta_any& right)
+	{
+		auto left_hash = meta_any_to_string_hash(left);
+
+		if (!left_hash)
+		{
+			return false;
+		}
+
+		auto right_hash = meta_any_to_string_hash(right);
+
+		if (!right_hash)
+		{
+			return false;
+		}
+
+		return (left_hash == right_hash);
+	}
 }
