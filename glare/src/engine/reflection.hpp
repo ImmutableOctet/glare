@@ -403,16 +403,6 @@ namespace engine
         ;
     }
 
-    template <>
-    inline void reflect<Command>()
-    {
-        engine_meta_type<Command>()
-            .data<&Command::source>("source"_hs)
-            .data<&Command::target>("target"_hs)
-            //.ctor<decltype(Command::source), decltype(Command::target)>()
-        ;
-    }
-
     template <typename EnumType>
     EnumType string_to_enum_value(std::string_view enum_short_str)
     {
