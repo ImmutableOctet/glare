@@ -33,7 +33,7 @@
 
 #define GENERATE_SINGLE_FIELD_TYPE_REFLECTION(type_name, field_name) \
     template <>                                                      \
-    inline void reflect<type_name>()                                 \
+    void reflect<type_name>()                                        \
     {                                                                \
         REFLECT_SINGLE_FIELD_COMPONENT(type_name, field_name);       \
     }
@@ -44,7 +44,7 @@
 // Generates an empty `reflect` function for the specified `engine` type.
 #define GENERATE_EMPTY_TYPE_REFLECTION(type) \
     template <>                              \
-    inline void reflect<type>()              \
+    void reflect<type>()                     \
     {                                        \
         engine::engine_meta_type<type>();    \
     }
@@ -53,7 +53,7 @@
 // where `type` is derived from `base_type`.
 #define GENERATE_EMPTY_DERIVED_TYPE_REFLECTION(type, base_type) \
     template <>                                                 \
-    inline void reflect<type>()                                 \
+    void reflect<type>()                                        \
     {                                                           \
         engine::engine_meta_type<type>()                        \
             .base<base_type>()                                  \
