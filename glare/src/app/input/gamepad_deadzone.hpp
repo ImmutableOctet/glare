@@ -138,7 +138,9 @@ namespace app::input
             return const_cast<Analog*>(const_cast<const GamepadDeadZone*>(this)->get_analog(analog));
         }
 
+        /*
         inline GamepadDeadZone(const Analog& left_analog={}, const Analog& right_analog={}, const Analog& triggers={}) :
             left_analog(left_analog), right_analog(right_analog), triggers(triggers) {}
+        */
     };
 }
