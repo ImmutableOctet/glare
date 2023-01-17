@@ -8,6 +8,7 @@
 
 #include <util/string.hpp>
 #include <util/parse.hpp>
+#include <util/variant.hpp>
 
 namespace engine
 {
@@ -124,12 +125,22 @@ namespace engine
 	// TODO: Remove. (Workaround for `std::regex`)
 	std::optional<EntityTarget::ParseResult> EntityTarget::parse_type(std::string_view raw_value)
 	{
+		if (raw_value.empty())
+		{
+			return std::nullopt;
+		}
+
 		return parse_type(std::string(raw_value));
 	}
 
 	std::optional<EntityTarget::ParseResult> EntityTarget::parse_type(const std::string& raw_value)
 	{
 		using namespace entt::literals;
+
+		if (raw_value.empty())
+		{
+			return std::nullopt;
+		}
 
 		if (raw_value.starts_with("self") || raw_value.starts_with("this"))
 		{
@@ -151,7 +162,7 @@ namespace engine
 			return ParseResult { NullTarget {}, (sizeof("null")-1), true };
 		}
 
-		if (auto [command_name, command_content, is_string_content] = util::parse_single_argument_command(raw_value); !command_name.empty())
+		if (auto [command_name, command_content, trailing_expr, is_string_content] = util::parse_single_argument_command(raw_value); !command_name.empty())
 		{
 			// NOTE: Workaround to avoid additional temporary string allocation. (`std::regex` limitation)
 			const auto parse_offset = static_cast<std::size_t>((command_content.data() + command_content.size() + (sizeof(")")-1)) - raw_value.data());

@@ -17,11 +17,18 @@ namespace engine
 	{
 		using SelfTarget = std::monostate;
 
-		struct ParentTarget {};
+		struct ParentTarget
+		{
+			inline bool operator==(const ParentTarget&) const noexcept { return true;  } // = default;
+			inline bool operator!=(const ParentTarget&) const noexcept { return false; } // = default;
+		};
 
 		struct ExactEntityTarget
 		{
 			Entity entity;
+
+			bool operator==(const ExactEntityTarget&) const noexcept = default;
+			bool operator!=(const ExactEntityTarget&) const noexcept = default;
 		};
 
 		struct ChildTarget
@@ -29,19 +36,33 @@ namespace engine
 			StringHash child_name;
 
 			bool recursive = true;
+
+			// TODO: Determine if it makes sense to ignore `recursive`. (Probably doesn't)
+			bool operator==(const ChildTarget&) const noexcept = default;
+			bool operator!=(const ChildTarget&) const noexcept = default;
 		};
 
 		struct EntityNameTarget
 		{
 			StringHash entity_name;
+
+			bool operator==(const EntityNameTarget&) const noexcept = default;
+			bool operator!=(const EntityNameTarget&) const noexcept = default;
 		};
 
 		struct PlayerTarget
 		{
 			PlayerIndex player_index;
+
+			bool operator==(const PlayerTarget&) const noexcept = default;
+			bool operator!=(const PlayerTarget&) const noexcept = default;
 		};
 
-		struct NullTarget {};
+		struct NullTarget
+		{
+			inline bool operator==(const NullTarget&) const noexcept { return true;  } // = default;
+			inline bool operator!=(const NullTarget&) const noexcept { return false; } // = default;
+		};
 
 		using TargetType = std::variant
 		<
@@ -109,6 +130,9 @@ namespace engine
 		{
 			return resolve(registry, source);
 		}
+
+		bool operator==(const EntityTarget&) const noexcept = default;
+		bool operator!=(const EntityTarget&) const noexcept = default;
 
 		inline std::size_t target_index() const
 		{
