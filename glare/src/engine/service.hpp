@@ -60,12 +60,19 @@ namespace engine
 
 			virtual ~Service() {};
 
+			/*
 			inline Registry& get_registry()
 			{
 				return registry;
 			}
 
 			inline const Registry& get_registry() const
+			{
+				return registry;
+			}
+			*/
+
+			inline Registry& get_registry() const
 			{
 				return registry;
 			}
