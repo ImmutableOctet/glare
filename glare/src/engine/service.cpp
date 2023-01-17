@@ -184,6 +184,12 @@ namespace engine
 		handle_deferred_operations();
 	}
 
+	void Service::fixed_update(float delta)
+	{
+		// Trigger the fixed update event for this service.
+		this->event<OnServiceFixedUpdate>(this, delta);
+	}
+
 	void Service::handle_deferred_operations()
 	{
 		if (deferred_operations.empty())

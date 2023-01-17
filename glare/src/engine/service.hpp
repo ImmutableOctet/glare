@@ -345,6 +345,8 @@ namespace engine
 			}
 
 			void update(float delta=1.0f);
+			void fixed_update(float delta=1.0f);
+
 			void render(app::Graphics& gfx);
 
 			// NOTE: Registering to this event handler is considered unsafe due to there
