@@ -156,6 +156,12 @@ namespace engine
 		//enable<OnAnalogInput>();
 
 		enable<PrintCommand>();
+
+		enable<OnThreadSpawn>();
+		enable<OnThreadComplete>();
+		enable<OnThreadTerminated>();
+		enable<OnThreadPaused>();
+		enable<OnThreadResumed>();
 	}
 
 	void DebugListener::on_skeleton(Registry& registry, Entity entity)
@@ -324,11 +330,71 @@ namespace engine
 
 	void DebugListener::operator()(const OnAnalogInput& data)
 	{
-		print("Analog input [Player {}] - {}: {} ({})", data.state_index, std::format("{}", data.analog), data.value, math::degrees(data.angle));
+		print("Analog input [Player {}] - {}: {} ({})", data.state_index, util::format("{}", data.analog), data.value, math::degrees(data.angle));
 	}
 
 	void DebugListener::operator()(const PrintCommand& data)
 	{
 		print(data.message);
+	}
+
+	void DebugListener::operator()(const OnThreadSpawn& thread_details)
+	{
+		if (thread_details.thread_id)
+		{
+			print("Entity #{}: Thread #{} Spawned (ID: #{})", thread_details.entity, thread_details.thread_index, *thread_details.thread_id);
+		}
+		else
+		{
+			print("Entity #{}: Thread #{} Spawned", thread_details.entity, thread_details.thread_index);
+		}
+	}
+
+	void DebugListener::operator()(const OnThreadComplete& thread_details)
+	{
+		if (thread_details.thread_id)
+		{
+			print("Entity #{}: Thread #{} Execution completed (ID: #{})", thread_details.entity, thread_details.thread_index, *thread_details.thread_id);
+		}
+		else
+		{
+			print("Entity #{}: Thread #{} Execution completed", thread_details.entity, thread_details.thread_index);
+		}
+	}
+
+	void DebugListener::operator()(const OnThreadTerminated& thread_details)
+	{
+		if (thread_details.thread_id)
+		{
+			print("Entity #{}: Thread #{} Execution terminated (ID: #{})", thread_details.entity, thread_details.thread_index, *thread_details.thread_id);
+		}
+		else
+		{
+			print("Entity #{}: Thread #{} Execution terminated", thread_details.entity, thread_details.thread_index);
+		}
+	}
+
+	void DebugListener::operator()(const OnThreadPaused& thread_details)
+	{
+		if (thread_details.thread_id)
+		{
+			print("Entity #{}: Thread #{} Execution paused (ID: #{})", thread_details.entity, thread_details.thread_index, *thread_details.thread_id);
+		}
+		else
+		{
+			print("Entity #{}: Thread #{} Execution paused", thread_details.entity, thread_details.thread_index);
+		}
+	}
+
+	void DebugListener::operator()(const OnThreadResumed& thread_details)
+	{
+		if (thread_details.thread_id)
+		{
+			print("Entity #{}: Thread #{} Execution resumed (ID: #{})", thread_details.entity, thread_details.thread_index, *thread_details.thread_id);
+		}
+		else
+		{
+			print("Entity #{}: Thread #{} Execution resumed", thread_details.entity, thread_details.thread_index);
+		}
 	}
 }

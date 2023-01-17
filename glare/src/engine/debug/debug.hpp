@@ -48,6 +48,12 @@ namespace engine
 	struct OnButtonPressed;
 	struct OnAnalogInput;
 
+	struct OnThreadSpawn;
+	struct OnThreadComplete;
+	struct OnThreadTerminated;
+	struct OnThreadPaused;
+	struct OnThreadResumed;
+
 	// Commands:
 	struct PrintCommand;
 
@@ -91,6 +97,13 @@ namespace engine
 			void operator()(const OnButtonReleased& data);
 			void operator()(const OnButtonPressed& data);
 			void operator()(const OnAnalogInput& data);
+
+			// Entity threads:
+			void operator()(const OnThreadSpawn& thread_details);
+			void operator()(const OnThreadComplete& thread_details);
+			void operator()(const OnThreadTerminated& thread_details);
+			void operator()(const OnThreadPaused& thread_details);
+			void operator()(const OnThreadResumed& thread_details);
 
 			// Commands:
 			void operator()(const PrintCommand& data);
