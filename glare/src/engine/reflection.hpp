@@ -1,8 +1,8 @@
 #pragma once
 
-// Internal header for `engine` module.
+// This is an internal header for `engine` module and should only be used by reflection implementation files.
 // 
-// This header defines general-purpose reflection facilities for systems, components, etc. using `entt`'s meta-type system.
+// This header defines general-purpose reflection facilities for systems, components, etc. using EnTT's meta-type system.
 // For consuming or instantiating reflection data, it is recommended that you directly use the `meta` header instead.
 
 #include "types.hpp"
