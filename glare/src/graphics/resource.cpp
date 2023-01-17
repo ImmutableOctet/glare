@@ -8,6 +8,8 @@ namespace graphics
 	Resource::Resource(weak_ref<Context> context, ContextHandle&& handle)
 		: context(context), handle(handle) {}
 
+	Resource::~Resource() {}
+
 	bool Resource::operator==(const Resource& rhs) const
 	{
 		if (rhs.get_handle() != get_handle())
