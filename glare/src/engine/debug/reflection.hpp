@@ -4,11 +4,7 @@
 
 namespace engine
 {
-    class DebugListener;
+	class DebugListener;
 
-    template <>
-    void reflect<DebugListener>()
-    {
-        // Nothing so far.
-    }
+	extern template void reflect<DebugListener>();
 }
