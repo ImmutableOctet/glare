@@ -2,60 +2,181 @@
 
 #include "types.hpp"
 
+#include "actions/actions.hpp"
+
+#include <engine/timer.hpp>
+
 //#include <engine/meta/types.hpp>
-#include <engine/meta/meta_type_descriptor.hpp>
-#include <engine/meta/meta_description.hpp>
 
 #include <variant>
+#include <optional>
 
 namespace engine
 {
-	// Indicates a state for the targeted entity.
-	struct EntityStateTransitionAction
-	{
-		// The name of the state this `entity` will
-		// transition to upon activation of `condition`.
-		StringHash state_name;
-	};
-
-	// Stores values to be forwarded to a triggered `Command` type.
-	struct EntityStateCommandAction
-	{
-		using CommandContent = MetaTypeDescriptor;
-
-		CommandContent command;
-	};
-
-	// Describes an 'update' operation for an entity,
-	// modifying and/or reinitializing its components accordingly.
-	struct EntityStateUpdateAction
-	{
-		using Components = MetaDescription;
-
-		Components updated_components;
-
-		/*
-			NOTES:
-			
-			* The entity referenced by this target is
-			relative to the active target for the rule.
-			
-			i.e. `self` would only resolve to the rule's affected entity
-			if the state's target also happens to be the same entity.
-
-			* This works in conjunction with `EntityStateRule::target` to
-			allow for modification of multiple target entities.
-
-			* During the processing step, the `target` key is currently
-			reserved as a 'special symbol' for this feature.
-		*/
-		EntityTarget target_entity;
-	};
+	class Service;
+	class EntityDescriptor;
 
 	using EntityStateAction = std::variant
 	<
 		EntityStateTransitionAction,
 		EntityStateCommandAction,
-		EntityStateUpdateAction
+		EntityStateUpdateAction,
+		EntityThreadSpawnAction,
+		EntityThreadStopAction,
+		EntityThreadPauseAction,
+		EntityThreadResumeAction,
+		EntityThreadAttachAction,
+		EntityThreadDetachAction,
+		EntityThreadUnlinkAction,
+		EntityThreadSkipAction,
+		EntityThreadRewindAction
 	>;
+
+	void execute_action
+	(
+		Registry& registry,
+		Service& service,
+		const EntityDescriptor& descriptor,
+		const EntityStateTransitionAction& transition,
+		Entity source, Entity target,
+		std::optional<engine::Timer::Duration> delay=std::nullopt
+	);
+
+	void execute_action
+	(
+		Registry& registry,
+		Service& service,
+		const EntityDescriptor& descriptor,
+		const EntityStateCommandAction& command,
+		Entity source, Entity target,
+		std::optional<engine::Timer::Duration> delay=std::nullopt
+	);
+
+	void execute_action
+	(
+		Registry& registry,
+		Service& service,
+		const EntityDescriptor& descriptor,
+		const EntityStateUpdateAction& update,
+		Entity source, Entity target,
+		std::optional<engine::Timer::Duration> delay=std::nullopt
+	);
+
+	void execute_action
+	(
+		Registry& registry,
+		Service& service,
+		const EntityDescriptor& descriptor,
+		const EntityThreadSpawnAction& thread_spawn,
+		Entity source, Entity target,
+		std::optional<engine::Timer::Duration> delay=std::nullopt
+	);
+
+	void execute_action
+	(
+		Registry& registry,
+		Service& service,
+		const EntityDescriptor& descriptor,
+		const EntityThreadStopAction& thread_stop,
+		Entity source, Entity target,
+		std::optional<engine::Timer::Duration> delay=std::nullopt
+	);
+
+	void execute_action
+	(
+		Registry& registry,
+		Service& service,
+		const EntityDescriptor& descriptor,
+		const EntityThreadPauseAction& thread_pause,
+		Entity source, Entity target,
+		std::optional<engine::Timer::Duration> delay=std::nullopt
+	);
+
+	void execute_action
+	(
+		Registry& registry,
+		Service& service,
+		const EntityDescriptor& descriptor,
+		const EntityThreadResumeAction& thread_resume,
+		Entity source, Entity target,
+		std::optional<engine::Timer::Duration> delay=std::nullopt
+	);
+
+	void execute_action
+	(
+		Registry& registry,
+		Service& service,
+		const EntityDescriptor& descriptor,
+		const EntityThreadAttachAction& thread_attach,
+		Entity source, Entity target,
+		std::optional<engine::Timer::Duration> delay=std::nullopt
+	);
+
+	void execute_action
+	(
+		Registry& registry,
+		Service& service,
+		const EntityDescriptor& descriptor,
+		const EntityThreadDetachAction& thread_detach,
+		Entity source, Entity target,
+		std::optional<engine::Timer::Duration> delay=std::nullopt
+	);
+
+	void execute_action
+	(
+		Registry& registry,
+		Service& service,
+		const EntityDescriptor& descriptor,
+		const EntityThreadUnlinkAction& thread_unlink,
+		Entity source, Entity target,
+		std::optional<engine::Timer::Duration> delay=std::nullopt
+	);
+
+	void execute_action
+	(
+		Registry& registry,
+		Service& service,
+		const EntityDescriptor& descriptor,
+		const EntityThreadSkipAction& thread_skip,
+		Entity source, Entity target,
+		std::optional<engine::Timer::Duration> delay=std::nullopt
+	);
+
+	void execute_action
+	(
+		Registry& registry,
+		Service& service,
+		const EntityDescriptor& descriptor,
+		const EntityThreadRewindAction& thread_rewind,
+		Entity source, Entity target,
+		std::optional<engine::Timer::Duration> delay=std::nullopt
+	);
+
+	void execute_action
+	(
+		Registry& registry,
+		Service& service,
+		const EntityDescriptor& descriptor,
+		const EntityStateAction& action,
+		Entity source, Entity target,
+		std::optional<engine::Timer::Duration> delay=std::nullopt
+	);
+
+	void execute_action
+	(
+		Registry& registry,
+		Service& service,
+		const EntityDescriptor& descriptor,
+		const EntityStateAction& action,
+		Entity source_entity, const EntityTarget& target,
+		std::optional<engine::Timer::Duration> delay=std::nullopt
+	);
+
+	void execute_action
+	(
+		Service& service,
+		const EntityStateAction& action,
+		Entity source_entity, const EntityTarget& target,
+		std::optional<engine::Timer::Duration> delay = std::nullopt
+	);
 }
