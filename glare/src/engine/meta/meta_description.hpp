@@ -5,6 +5,8 @@
 
 #include <util/small_vector.hpp>
 
+#include <utility>
+
 namespace engine
 {
 	struct MetaDescription
@@ -15,5 +17,17 @@ namespace engine
 
 		const MetaTypeDescriptor* get_definition(MetaType type) const;
 		const MetaTypeDescriptor* get_definition(MetaTypeID type_id) const;
+
+		// Non-const forwarding overload.
+		inline MetaTypeDescriptor* get_definition(auto&& type_info)
+		{
+			return const_cast<MetaTypeDescriptor*>
+			(
+				const_cast<const MetaDescription*>(this)->get_definition
+				(
+					std::forward<decltype(type_info)>(type_info)
+				)
+			);
+		}
 	};
 }
