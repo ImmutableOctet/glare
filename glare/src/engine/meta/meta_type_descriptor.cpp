@@ -2,6 +2,9 @@
 #include "meta.hpp"
 #include "serial.hpp"
 
+#include <string_view>
+#include <string>
+
 #include <util/string.hpp>
 
 // Debugging related:
@@ -36,10 +39,10 @@ namespace engine
 	}
 
 	MetaTypeDescriptor::MetaTypeDescriptor(MetaType type, std::optional<SmallSize> constructor_argument_count, const MetaTypeDescriptorFlags& flags)
-		: type(type), constructor_argument_count(constructor_argument_count), flags(flags) {}
+		: type_id(type.id()), constructor_argument_count(constructor_argument_count), flags(flags) {}
 
 	MetaTypeDescriptor::MetaTypeDescriptor(MetaTypeID type_id, std::optional<SmallSize> constructor_argument_count, const MetaTypeDescriptorFlags& flags)
-		: type(resolve(type_id)), constructor_argument_count(constructor_argument_count), flags(flags) {}
+		: type_id(type_id), constructor_argument_count(constructor_argument_count), flags(flags) {}
 
 	MetaTypeDescriptor::MetaTypeDescriptor
 	(
@@ -54,7 +57,7 @@ namespace engine
 		std::optional<SmallSize> constructor_argument_count,
 		const MetaTypeDescriptorFlags& flags
 	) :
-		type(type),
+		type_id(type.id()),
 		constructor_argument_count(constructor_argument_count),
 		flags(flags)
 	{
@@ -73,13 +76,18 @@ namespace engine
 		std::optional<SmallSize> constructor_argument_count,
 		const MetaTypeDescriptorFlags& flags
 	) :
-		type(type),
+		type_id(type.id()),
 		constructor_argument_count(constructor_argument_count),
 		flags(flags)
 	{
 		assert(type);
 
 		set_variables(content, instructions);
+	}
+
+	MetaType MetaTypeDescriptor::get_type() const
+	{
+		return resolve(type_id);
 	}
 
 	std::optional<std::size_t> MetaTypeDescriptor::get_variable_index(MetaSymbolID name) const
@@ -170,6 +178,17 @@ namespace engine
 		std::size_t argument_offset
 	)
 	{
+		return set_variables(get_type(), content, instructions, argument_offset);
+	}
+
+	std::size_t MetaTypeDescriptor::set_variables
+	(
+		const MetaType& type,
+		const util::json& content,
+		const MetaAnyParseInstructions& instructions,
+		std::size_t argument_offset
+	)
+	{
 		std::size_t count = 0;
 		std::size_t variable_index = argument_offset;
 
@@ -184,7 +203,7 @@ namespace engine
 			MetaSymbolID var_name_hash = hash(var_name);
 			//process_value(var_name, var_value);
 
-			auto resolve_data_entry = [this, &content, &variable_index, &var_name_hash]() mutable -> entt::meta_data
+			auto resolve_data_entry = [this, &type, &content, &variable_index, &var_name_hash]() mutable -> entt::meta_data
 			{
 				/*
 				// TODO: Determine if there's any benefit to keeping this check:
@@ -270,29 +289,59 @@ namespace engine
 		bool safe
 	)
 	{
+		return set_variables
+		(
+			get_type(),
+			content, instructions,
+			arg_separator, argument_offset,
+			safe
+		);
+	}
+
+	std::size_t MetaTypeDescriptor::set_variables
+	(
+		const MetaType& type,
+		std::string_view content,
+		const MetaAnyParseInstructions& instructions,
+
+		std::string_view arg_separator,
+		std::size_t argument_offset,
+
+		bool safe
+	)
+	{
 		std::size_t count = 0;
 		std::size_t variable_index = argument_offset;
 
-		util::split
-		(
-			content,
-			arg_separator,
-
-			[this, &instructions, safe, &variable_index, &count](std::string_view argument, bool is_last_argument=false)
+		auto on_argument = [this, &type, &instructions, safe, &variable_index, &count](std::string_view argument, bool is_last_argument=false)
+		{
+			if (auto data_entry = get_data_member_by_index(type, variable_index, true))
 			{
-				if (auto data_entry = get_data_member_by_index(type, variable_index, true))
+				const auto var_name_hash = data_entry->first;
+
+				if (set_variable(MetaVariable(var_name_hash, meta_any_from_string(argument, instructions)), safe))
 				{
-					const auto var_name_hash = data_entry->first;
-
-					if (set_variable(MetaVariable(var_name_hash, meta_any_from_string(argument, instructions)), safe))
-					{
-						count++;
-					}
+					count++;
 				}
-
-				variable_index++;
 			}
-		);
+
+			variable_index++;
+		};
+
+		if (arg_separator.empty())
+		{
+			on_argument(content, true);
+		}
+		else
+		{
+			util::split
+			(
+				content,
+				arg_separator,
+
+				on_argument
+			);
+		}
 
 		return count;
 	}
@@ -381,7 +430,167 @@ namespace engine
 
 	MetaAny MetaTypeDescriptor::instance_default() const
 	{
+		const auto type = get_type();
+
+		if (!type)
+		{
+			return {};
+		}
+
 		return type.construct();
+	}
+
+	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance, std::size_t field_count, std::size_t offset) const
+	{
+		return apply_fields_impl(instance, field_count, offset);
+	}
+
+	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance) const
+	{
+		return apply_fields(instance, size());
+	}
+
+	// Updates each field of `instance`, defined by this descriptor.
+	// 
+	// This overload uses `registry` and `entity` to resolve source-indirection
+	// from the `field_values` container. (e.g. References to component member)
+	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance, std::size_t field_count, Registry& registry, Entity entity, std::size_t offset) const
+	{
+		return apply_fields_impl(instance, field_count, offset, registry, entity);
+	}
+
+	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance, Registry& registry, Entity entity) const
+	{
+		return apply_fields_impl(instance, size(), 0, registry, entity);
+	}
+
+	template <typename ...Args>
+	std::size_t MetaTypeDescriptor::apply_fields_impl(MetaAny& instance, std::size_t field_count, std::size_t offset, Args&&... args) const
+	{
+		std::size_t fields_applied = 0;
+
+		const auto check_indirection = has_indirection(); // has_indirection(field_count, offset);
+
+		const auto type = get_type();
+
+		for (std::size_t i = offset; i < (offset+field_count); i++)
+		{
+			const auto& field_name = field_names[i];
+			const auto& field_value = field_values[i];
+
+			if (!field_value)
+			{
+				print_warn("Unable to resolve field \"#{}\", at index #{}, in component: \"{}\"", field_name, i, type.id());
+
+				continue;
+			}
+
+			auto set_field = [&]() -> bool // [this, &instance, check_indirection, &field_name, &field_value]
+			{
+				auto meta_field = type.data(field_name);
+
+				if (!meta_field)
+				{
+					return false;
+				}
+
+				auto set = [&type, &instance, &meta_field](const MetaAny& value) -> bool
+				{
+					if (auto result = meta_field.set(instance, value))
+					{
+						return result;
+					}
+
+					/*
+					if (auto casted = value.allow_cast(meta_field.type()))
+					{
+						return meta_field.set(instance, casted);
+					}
+					*/
+
+					if (auto construct_from = meta_field.type().construct(value))
+					{
+						return meta_field.set(instance, std::move(construct_from));
+					}
+
+					// Fallbacks for string-to-hash conversion scenarios:
+					if (const auto as_str_view = value.try_cast<std::string_view>())
+					{
+						return meta_field.set(instance, hash(*as_str_view).value());
+					}
+
+					if (const auto as_str = value.try_cast<std::string>())
+					{
+						return meta_field.set(instance, hash(*as_str).value());
+					}
+
+					return false;
+				};
+
+				if (check_indirection)
+				{
+					if (auto result = resolve_indirect_value(field_value, std::forward<Args>(args)...))
+					{
+						return set(result);
+					}
+				}
+
+				return set(field_value);
+			};
+
+			if (set_field())
+			{
+				fields_applied++;
+			}
+			else
+			{
+				print_warn("Failed to assign field: \"#{}\", in component: \"#{}\"", field_name, type.id());
+			}
+		}
+
+		return fields_applied;
+	}
+
+	std::size_t MetaTypeDescriptor::resolve_values(Values& values_out, std::size_t constructor_args_count, std::size_t offset) const
+	{
+		return resolve_values_impl(values_out, constructor_args_count, offset);
+	}
+
+	std::size_t MetaTypeDescriptor::resolve_values(Values& values_out, std::size_t constructor_args_count, Registry& registry, Entity entity, std::size_t offset) const
+	{
+		return resolve_values_impl(values_out, constructor_args_count, offset, registry, entity);
+	}
+
+	template <typename ...Args>
+	std::size_t MetaTypeDescriptor::resolve_values_impl(Values& values_out, std::size_t constructor_args_count, std::size_t offset, Args&&... args) const
+	{
+		std::size_t count = 0;
+
+		const auto check_indirection = has_indirection(); // has_indirection(constructor_args_count, offset);
+
+		//for (auto& entry : field_values) // const auto&
+		for (std::size_t i = offset; i < (offset + constructor_args_count); i++)
+		{
+			auto& entry = field_values[i]; // const auto&
+
+			count++;
+
+			if (check_indirection)
+			{
+				if (auto indirect_value = resolve_indirect_value(entry, std::forward<Args>(args)...))
+				{
+					values_out.emplace_back(std::move(indirect_value));
+
+					continue;
+				}
+			}
+
+			// NOTE: Cannot perform a move operation here due to possible side effects.
+			// TODO: Look into real-world performance implications of this limitation.
+			values_out.emplace_back(entry);
+		}
+
+		return count;
 	}
 
 	MetaAny MetaTypeDescriptor::resolve_indirect_value(const MetaAny& entry)

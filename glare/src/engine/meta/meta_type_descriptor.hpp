@@ -2,6 +2,7 @@
 
 #include "types.hpp"
 #include "meta_variable.hpp"
+#include "meta_type_descriptor_flags.hpp"
 
 #include <util/small_vector.hpp>
 
@@ -14,17 +15,10 @@
 #include <tuple>
 
 // Debugging related:
-//#include <util/log.hpp>
+#include <util/log.hpp>
 
 namespace engine
 {
-	struct MetaTypeDescriptorFlags
-	{
-		bool allow_default_construction : 1 = true;
-		bool allow_forwarding_fields_to_constructor : 1 = true;
-		bool force_field_assignment : 1 = false;
-	};
-
 	struct MetaTypeDescriptor
 	{
 		protected:
@@ -82,7 +76,7 @@ namespace engine
 			MetaTypeDescriptor& operator=(MetaTypeDescriptor&&) noexcept = default;
 
 			// The type this descriptor is wrapping.
-			MetaType type;
+			MetaTypeID type_id;
 
 			Names field_names;
 			Values field_values;
@@ -97,6 +91,8 @@ namespace engine
 			inline bool can_default_construct() const { return flags.allow_default_construction; }
 			inline bool can_forward_fields_to_constructor() const { return flags.allow_forwarding_fields_to_constructor; }
 			inline bool forces_field_assignment() const { return flags.force_field_assignment; }
+
+			MetaType get_type() const;
 
 			std::optional<std::size_t> get_variable_index(MetaSymbolID name) const;
 
@@ -196,7 +192,7 @@ namespace engine
 
 					if (!instance)
 					{
-						//print_warn("Unable to resolve constructor for component: \"#{}\"", type.id());
+						print_warn("Unable to resolve constructor for component: \"#{}\"", type_id);
 
 						return {};
 					}
@@ -237,6 +233,8 @@ namespace engine
 				{
 					return {};
 				}
+
+				const auto type = get_type();
 
 				if (allow_indirection)
 				{
@@ -288,130 +286,55 @@ namespace engine
 				If a field is not found within `type` matching
 				the field in question, it will be ignored.
 			*/
-			inline std::size_t apply_fields(MetaAny& instance, std::size_t field_count, std::size_t offset=0) const
-			{
-				return apply_fields_impl(instance, field_count, offset);
-			}
+			std::size_t apply_fields(MetaAny& instance, std::size_t field_count, std::size_t offset=0) const;
 
-			inline std::size_t apply_fields(MetaAny& instance) const
-			{
-				return apply_fields(instance, size());
-			}
+			std::size_t apply_fields(MetaAny& instance) const;
 
 			// Updates each field of `instance`, defined by this descriptor.
 			// 
 			// This overload uses `registry` and `entity` to resolve source-indirection
 			// from the `field_values` container. (e.g. References to component member)
-			inline std::size_t apply_fields(MetaAny& instance, std::size_t field_count, Registry& registry, Entity entity, std::size_t offset=0) const
-			{
-				return apply_fields_impl(instance, field_count, offset, registry, entity);
-			}
+			std::size_t apply_fields(MetaAny& instance, std::size_t field_count, Registry& registry, Entity entity, std::size_t offset=0) const;
 
-			inline std::size_t apply_fields(MetaAny& instance, Registry& registry, Entity entity) const
-			{
-				return apply_fields_impl(instance, size(), 0, registry, entity);
-			}
+			std::size_t apply_fields(MetaAny& instance, Registry& registry, Entity entity) const;
 
-			inline std::size_t resolve_values(Values& values_out, std::size_t constructor_args_count, std::size_t offset=0) const
-			{
-				return resolve_values_impl(values_out, constructor_args_count, offset);
-			}
-
-			inline std::size_t resolve_values(Values& values_out, std::size_t constructor_args_count, Registry& registry, Entity entity, std::size_t offset=0) const
-			{
-				return resolve_values_impl(values_out, constructor_args_count, offset, registry, entity);
-			}
+			std::size_t resolve_values(Values& values_out, std::size_t constructor_args_count, std::size_t offset=0) const;
+			std::size_t resolve_values(Values& values_out, std::size_t constructor_args_count, Registry& registry, Entity entity, std::size_t offset=0) const;
 
 			inline MetaAny operator()() const
 			{
 				return instance(true);
 			}
 		private:
+			std::size_t set_variables
+			(
+				const MetaType& type,
+				const util::json& content,
+				const MetaAnyParseInstructions& instructions = {},
+				std::size_t argument_offset = 0
+			);
+
+			std::size_t set_variables
+			(
+				const MetaType& type,
+				std::string_view content,
+				const MetaAnyParseInstructions& instructions = {},
+
+				std::string_view arg_separator = ",",
+				std::size_t argument_offset = 0,
+
+				bool safe = true
+			);
+
 			static MetaAny resolve_indirect_value(const MetaAny& entry);
 			static MetaAny resolve_indirect_value(const MetaAny& entry, Registry& registry, Entity entity);
 
+			// Defined and only used in source file.
 			template <typename ...Args>
-			inline std::size_t apply_fields_impl(MetaAny& instance, std::size_t field_count, std::size_t offset, Args&&... args) const
-			{
-				std::size_t fields_applied = 0;
+			std::size_t apply_fields_impl(MetaAny& instance, std::size_t field_count, std::size_t offset, Args&&... args) const;
 
-				const auto check_indirection = has_indirection(); // has_indirection(field_count, offset);
-
-				for (std::size_t i = offset; i < (offset+field_count); i++)
-				{
-					const auto& field_name = field_names[i];
-					const auto& field_value = field_values[i];
-
-					if (!field_value)
-					{
-						//print_warn("Unable to resolve field \"#{}\", at index #{}, in component: \"{}\"", field_name, i, type.id());
-
-						continue;
-					}
-
-					auto set_field = [&]() -> bool // [this, &instance, check_indirection, &field_name, &field_value]
-					{
-						auto meta_field = type.data(field_name);
-
-						if (!meta_field)
-						{
-							return false;
-						}
-
-						if (check_indirection)
-						{
-							if (auto result = resolve_indirect_value(field_value, std::forward<Args>(args)...))
-							{
-								return meta_field.set(instance, result);
-							}
-						}
-
-						return meta_field.set(instance, field_value);
-					};
-
-					if (set_field())
-					{
-						fields_applied++;
-					}
-					else
-					{
-						//print_warn("Failed to assign field: \"#{}\", in component: \"#{}\"", field_name, type.id());
-					}
-				}
-
-				return fields_applied;
-			}
-
+			// Defined and only used in source file.
 			template <typename ...Args>
-			inline std::size_t resolve_values_impl(Values& values_out, std::size_t constructor_args_count, std::size_t offset, Args&&... args) const
-			{
-				std::size_t count = 0;
-
-				const auto check_indirection = has_indirection(); // has_indirection(constructor_args_count, offset);
-
-				//for (auto& entry : field_values) // const auto&
-				for (std::size_t i = offset; i < (offset + constructor_args_count); i++)
-				{
-					auto& entry = field_values[i]; // const auto&
-
-					count++;
-
-					if (check_indirection)
-					{
-						if (auto indirect_value = resolve_indirect_value(entry, std::forward<Args>(args)...))
-						{
-							values_out.emplace_back(std::move(indirect_value));
-
-							continue;
-						}
-					}
-
-					// NOTE: Cannot perform a move operation here due to possible side effects.
-					// TODO: Look into real-world performance implications of this limitation.
-					values_out.emplace_back(entry);
-				}
-
-				return count;
-			}
+			std::size_t resolve_values_impl(Values& values_out, std::size_t constructor_args_count, std::size_t offset, Args&&... args) const;
 	};
 }
