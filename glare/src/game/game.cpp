@@ -8,7 +8,7 @@
 
 #include <engine/meta.hpp>
 
-#include <engine/state/state_system.hpp>
+#include <engine/entity/entity_system.hpp>
 
 #include <engine/world/physics/physics.hpp>
 #include <engine/world/motion/motion.hpp>
@@ -126,6 +126,13 @@ namespace game
 		on_update(world.get_delta_time());
 	}
 
+	void Game::fixed_update(app::Milliseconds time)
+	{
+		world.fixed_update(time);
+
+		on_fixed_update(world.get_fixed_delta_time());
+	}
+
 	void Game::render()
 	{
 		using namespace graphics;
@@ -159,6 +166,10 @@ namespace game
 
 		on_render(render_state);
 	}
+
+	void Game::on_fixed_update(float delta) {}
+	void Game::on_render(RenderState& render_state) {}
+	void Game::on_resize(int width, int height) {}
 
 	void Game::on_window_resize(app::Window& window, int width, int height)
 	{
@@ -251,7 +262,7 @@ namespace game
 	{
 		auto& resource_manager = world.get_resource_manager();
 
-		world_system<engine::StateSystem>(resource_manager);
+		world_system<engine::EntitySystem>(resource_manager);
 
 		auto& physics = world_system<engine::PhysicsSystem>();
 

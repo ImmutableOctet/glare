@@ -104,6 +104,7 @@ namespace game
 			bool is_input_locked() const;
 
 			void update(app::Milliseconds time) override;
+			void fixed_update(app::Milliseconds time) override;
 			void render() override;
 
 			entt::dispatcher* get_event_handler() override;
@@ -111,9 +112,10 @@ namespace game
 			void init_default_systems(bool init_renderer=true);
 
 			// Implement Game-specific logic using these:
-			virtual void on_update(float delta) abstract;
-			virtual void on_render(RenderState& render_state) {}
-			virtual void on_resize(int width, int height) {}
+			virtual void on_update(float delta) = 0;
+			virtual void on_fixed_update(float delta);
+			virtual void on_render(RenderState& render_state);
+			virtual void on_resize(int width, int height);
 
 			virtual void on_build_input_system(engine::InputSystem& input_system, app::input::EngineButtonMap& buttons_out) {}
 
