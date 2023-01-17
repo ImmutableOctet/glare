@@ -2,7 +2,9 @@
 
 //#include "meta.hpp"
 
-#include <engine/types.hpp>
+#include "types.hpp"
+//#include <engine/types.hpp>
+
 #include <engine/service.hpp>
 
 #include <util/small_vector.hpp>
@@ -24,7 +26,7 @@ namespace engine
 		bool component_destruction : 1 = true;
 	};
 
-	// Abstract base-type used to build opaque event listeners via `entt::meta_any`.
+	// Abstract base-type used to build opaque event listeners via `MetaAny`.
 	class MetaEventListener
 	{
 		public:
@@ -102,6 +104,11 @@ namespace engine
 							listener.service = service;
 						}
 
+						if (!listener.type_id)
+						{
+							listener.type_id = type.id();
+						}
+
 						if (!flags)
 						{
 							flags = listener.flags;
@@ -159,10 +166,7 @@ namespace engine
 							listener.service = nullptr;
 						}
 
-						if (!listener.type)
-						{
-							listener.type = type;
-						}
+						listener.type_id = {};
 					}
 				}
 			}
@@ -186,10 +190,13 @@ namespace engine
 			}
 		protected:
 			Service* service = nullptr;
-			MetaType type;
+			MetaTypeID type_id = {};
 			Flags flags;
 
-			MetaEventListener(Service* service=nullptr, Flags flags={}, MetaType type={});
+			MetaEventListener(Service* service, Flags flags, MetaType type);
+			MetaEventListener(Service* service=nullptr, Flags flags={}, MetaTypeID type_id={});
+
+			MetaType type() const;
 
 			template <typename EventType>
 			void event_callback(const EventType& event_instance)
@@ -224,7 +231,7 @@ namespace engine
 				(
 					registry, entity,
 
-					[this](Registry& registry, Entity entity, const entt::meta_any& component)
+					[this](Registry& registry, Entity entity, const MetaAny& component)
 					{
 						on_component_create(registry, entity, component);
 					}
@@ -238,7 +245,7 @@ namespace engine
 				(
 					registry, entity,
 
-					[this](Registry& registry, Entity entity, const entt::meta_any& component)
+					[this](Registry& registry, Entity entity, const MetaAny& component)
 					{
 						on_component_destroy(registry, entity, component);
 					}
@@ -252,21 +259,21 @@ namespace engine
 				(
 					registry, entity,
 
-					[this](Registry& registry, Entity entity, const entt::meta_any& component)
+					[this](Registry& registry, Entity entity, const MetaAny& component)
 					{
 						on_component_update(registry, entity, component);
 					}
 				);
 			}
 
-			virtual bool on_connect(Service* service, const entt::meta_type& type);
-			virtual bool on_disconnect(Service* service, const entt::meta_type& type);
+			virtual bool on_connect(Service* service, const MetaType& type);
+			virtual bool on_disconnect(Service* service, const MetaType& type);
 
-			virtual void on_event(const entt::meta_type& type, entt::meta_any event_instance);
+			virtual void on_event(const MetaType& type, MetaAny event_instance);
 
-			virtual void on_component_create(Registry& registry, Entity entity, const entt::meta_any& component);
-			virtual void on_component_update(Registry& registry, Entity entity, const entt::meta_any& component);
-			virtual void on_component_destroy(Registry& registry, Entity entity, const entt::meta_any& component);
+			virtual void on_component_create(Registry& registry, Entity entity, const MetaAny& component);
+			virtual void on_component_update(Registry& registry, Entity entity, const MetaAny& component);
+			virtual void on_component_destroy(Registry& registry, Entity entity, const MetaAny& component);
 		private:
 			bool unregister();
 	};
