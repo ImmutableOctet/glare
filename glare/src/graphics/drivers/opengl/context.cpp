@@ -2,12 +2,8 @@
 	OpenGL graphics context implementation.
 */
 
-#include <app/window.hpp>
-#include <util/lib.hpp>
-#include <util/string.hpp>
-
-#include <graphics/context_state.hpp>
 #include <graphics/context.hpp>
+#include <graphics/context_state.hpp>
 
 #include <graphics/vertex.hpp>
 #include <graphics/canvas.hpp>
@@ -19,6 +15,10 @@
 
 #include <graphics/native/opengl.hpp>
 
+#include <lib.hpp>
+#include <app/window.hpp>
+#include <util/string.hpp>
+
 //#include "gl_driver.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
@@ -26,8 +26,8 @@
 #include <sdl2/SDL_video.h>
 
 // imgui:
-#include <imgui/imgui_impl_sdl.h>
-#include <imgui/imgui_impl_opengl3.h>
+#include <imgui_impl_sdl.h>
+#include <imgui_impl_opengl3.h>
 
 #include <utility>
 #include <variant>
@@ -37,7 +37,7 @@
 #include <type_traits>
 #include <optional>
 #include <tuple>
-#include <format>
+#include <util/format.hpp>
 
 // Debugging related:
 //#include <iostream>
@@ -78,7 +78,7 @@ namespace graphics
 
 			using Handle = Context::Handle;
 			using Flags = Context::Flags;
-			using GLVersion = util::lib::OpenGLVersion;
+			using GLVersion = glare::lib::OpenGLVersion;
 
 			static constexpr Handle NoHandle = Context::NoHandle;
 
@@ -132,12 +132,12 @@ namespace graphics
 			// Use `gl_get_shader_version_header` for general usage.
 			static std::string gl_get_shader_version_raw(const GLVersion& version)
 			{
-				return std::format("#version {}{}0 core", version.major, version.minor); // "#version {}{}0"
+				return util::format("#version {}{}0 core", version.major, version.minor); // "#version {}{}0"
 			}
 
 			static std::string gl_get_shader_version_header(const GLVersion& version)
 			{
-				return std::format("\n{}\n", gl_get_shader_version_raw(version)); // "\n{} core\n"
+				return util::format("\n{}\n", gl_get_shader_version_raw(version)); // "\n{} core\n"
 			}
 
 			static GLbitfield gl_get_buffer_flags(BufferType buffer_type, bool default_to_color_buffer=false, bool allow_depth=true)
@@ -904,7 +904,7 @@ namespace graphics
 		protected:
 			void init_imgui(SDL_GLContext gl_context, SDL_Window* window_handle, const GLVersion& gl_version, std::string_view glsl_version)
 			{
-				auto imgui = util::lib::init_imgui();
+				auto imgui = glare::lib::init_imgui();
 				assert(imgui);
 				
 				//ImGuiIO& io = ImGui::GetIO(); (void)io;
@@ -923,7 +923,7 @@ namespace graphics
 				ImGui_ImplOpenGL3_Shutdown();
 				ImGui_ImplSDL2_Shutdown();
 
-				util::lib::deinit_imgui();
+				glare::lib::deinit_imgui();
 			}
 
 			Driver
@@ -1143,14 +1143,17 @@ namespace graphics
 		switch (backend)
 		{
 			case Backend::OpenGL:
-				auto gl_version = util::lib::establish_gl();
+			{
+
+				auto gl_version = glare::lib::establish_gl();
 				native_context = new Driver(wnd.get_handle(), gl_version, extensions);
 
 				break;
-			default:
-				assert(false); // Unsupported graphics backend.
-
-				break;
+			}
+			//default:
+			//	assert(false); // Unsupported graphics backend.
+			//
+			//	break;
 		}
 
 		// Initial configuration:

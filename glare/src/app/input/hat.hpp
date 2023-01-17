@@ -79,7 +79,7 @@ namespace app::input
 
 			if (!binding)
 			{
-				throw std::runtime_error(format("Unable to resolve binding for Hat button: \"{}\"", button_name));
+				throw std::runtime_error(util::format("Unable to resolve binding for Hat button: \"{}\"", button_name));
 			}
 
 			button = *binding; // binding;

@@ -2,6 +2,10 @@
 #include "input/raw_input_events.hpp"
 
 #include "meta/meta.hpp"
+#include "meta/meta_type_descriptor.hpp"
+
+#include "commands/component_patch_command.hpp"
+#include "commands/component_replace_command.hpp"
 
 #include <app/input/mouse_state.hpp>
 #include <app/input/keyboard_state.hpp>
@@ -14,7 +18,12 @@
 
 namespace engine
 {
-	Service::Service(bool register_input_events, bool register_timed_event_wrapper)
+	Service::Service
+	(
+		bool register_input_events,
+		bool register_timed_event_wrapper,
+		bool register_core_commands
+	)
 		: active_event_handler(&standard_event_handler)
 	{
 		if (register_input_events)
@@ -29,6 +38,99 @@ namespace engine
 		if (register_timed_event_wrapper)
 		{
 			register_event<TimedEvent, &Service::enqueue_timed_event_wrapper>(*this);
+		}
+
+		if (register_core_commands)
+		{
+			register_event<ComponentPatchCommand,   &Service::on_component_patch>(*this);
+			register_event<ComponentReplaceCommand, &Service::on_component_replace>(*this);
+		}
+	}
+
+	void Service::on_component_patch(const ComponentPatchCommand& component_patch)
+	{
+		using namespace entt::literals;
+
+		if (!component_patch.component)
+		{
+			print_warn("Failed to patch component: Missing component descriptor.");
+
+			return;
+		}
+
+		const auto& component = *component_patch.component;
+		const auto& entity = component_patch.target;
+
+		const auto type = component.get_type();
+
+		auto patch_fn = type.func("patch_meta_component"_hs);
+
+		if (!patch_fn)
+		{
+			print_warn("Unable to resolve patch function for type: #{}", type.id());
+
+			return;
+		}
+
+		auto& registry = get_registry();
+
+		auto result = patch_fn.invoke
+		(
+			{},
+
+			entt::forward_as_meta(registry),
+			entt::forward_as_meta(entity),
+			entt::forward_as_meta(component),
+			entt::forward_as_meta(component.size()),
+			entt::forward_as_meta(0)
+		);
+
+		if (!result)
+		{
+			print_warn("Entity #{}: Failed to patch component type: {}", entity, type.id());
+		}
+	}
+
+	void Service::on_component_replace(ComponentReplaceCommand& component_replace)
+	{
+		using namespace entt::literals;
+
+		auto& component = component_replace.component;
+
+		if (!component)
+		{
+			print_warn("Failed to replace component: Missing component instance.");
+
+			return;
+		}
+
+		const auto& entity = component_replace.target;
+
+		const auto type = component.type();
+
+		auto replace_fn = type.func("emplace_meta_component"_hs);
+
+		if (!replace_fn)
+		{
+			print_warn("Unable to resolve replacement function for type: #{}", type.id());
+
+			return;
+		}
+
+		auto& registry = get_registry();
+
+		auto result = replace_fn.invoke
+		(
+			{},
+
+			entt::forward_as_meta(registry),
+			entt::forward_as_meta(entity),
+			entt::forward_as_meta(std::move(component))
+		);
+
+		if (!result)
+		{
+			print_warn("Entity #{}: Failed to replace component type: {}", entity, type.id());
 		}
 	}
 
@@ -61,6 +163,7 @@ namespace engine
 	}
 
 	// TODO: Implement thread-safe locking/synchronization event-handler interface.
+	// TODO: Determine if some (or all) events should be handled in the fixed update function, rather than the continuous function.
 	void Service::update(float delta)
 	{
 		// Handle standard events:
@@ -76,6 +179,31 @@ namespace engine
 
 		// Trigger the standard update event for this service.
 		this->event<OnServiceUpdate>(this, delta);
+
+		service_event_handler.update();
+
+		handle_deferred_operations();
+	}
+
+	void Service::fixed_update(float delta)
+	{
+		// Trigger the fixed update event for this service.
+		this->event<OnServiceFixedUpdate>(this, delta);
+	}
+
+	void Service::handle_deferred_operations()
+	{
+		if (deferred_operations.empty())
+		{
+			return;
+		}
+
+		for (const auto& fn : deferred_operations)
+		{
+			fn();
+		}
+
+		deferred_operations.clear();
 	}
 
 	void Service::render(app::Graphics& gfx)
@@ -140,35 +268,7 @@ namespace engine
 
 					if (timed_event.completed())
 					{
-						auto type = timed_event.type();
-
-						// Timed events must represent a reflected type, due to type-erasure.
-						assert(type);
-
-						if (!type)
-						{
-							print_error("Unable to resolve underlying timed event type.");
-
-							return true;
-						}
-
-						auto trigger_fn = type.func("trigger_event_from_meta_any"_hs);
-
-						assert(trigger_fn);
-
-						if (!trigger_fn)
-						{
-							print_error("Unable to resolve event-trigger function for underlying timed event type.");
-
-							return true;
-						}
-
-						trigger_fn.invoke
-						(
-							{},
-							entt::forward_as_meta(*this),
-							entt::forward_as_meta(std::move(timed_event.event_instance))
-						);
+						trigger_opaque_event(std::move(timed_event.event_instance));
 
 						return true;
 					}
@@ -179,5 +279,44 @@ namespace engine
 
 			pending_timed_events.end()
 		);
+	}
+
+	bool Service::trigger_opaque_event(MetaAny&& event_instance)
+	{
+		using namespace entt::literals;
+
+		auto type = event_instance.type();
+
+		if (!type)
+		{
+			print_warn("Unable to resolve type of generated command.");
+
+			return false;
+		}
+
+		auto trigger_fn = type.func("trigger_event_from_meta_any"_hs);
+
+		if (!trigger_fn)
+		{
+			print_warn("Unable to resolve trigger-function from type: #{}", type.id());
+
+			return false;
+		}
+
+		auto result = trigger_fn.invoke
+		(
+			{},
+			entt::forward_as_meta(*this),
+			entt::forward_as_meta(std::move(event_instance))
+		);
+
+		if (!result)
+		{
+			print_warn("Failed to trigger event type: #{}", type.id());
+
+			return false;
+		}
+
+		return true;
 	}
 }

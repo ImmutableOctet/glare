@@ -45,7 +45,7 @@
 namespace engine
 {
 	World::World(Config& config, ResourceManager& resource_manager, UpdateRate update_rate)
-		: config(config), resource_manager(resource_manager), delta_time(update_rate)
+		: config(config), resource_manager(resource_manager), delta_time(update_rate), fixed_delta_time(update_rate)
 	{
 		register_event<OnTransformChanged, &World::on_transform_change>(*this);
 		register_event<OnEntityDestroyed, &World::on_entity_destroyed>(*this);
@@ -79,16 +79,6 @@ namespace engine
 	World::~World()
 	{
 		// unsubscribe(...);
-	}
-
-	Registry& World::get_registry()
-	{
-		return registry;
-	}
-
-	const Registry& World::get_registry() const
-	{
-		return registry;
 	}
 
 	Entity World::load(const filesystem::path& root_path, const std::string& json_file, Entity parent)
@@ -133,6 +123,15 @@ namespace engine
 		// TODO: Look into workarounds for collision objects updating a frame behind.
 		// Handle changes in entity transforms.
 		handle_transform_events(delta_time);
+	}
+
+	void World::fixed_update(app::Milliseconds time)
+	{
+		// Update the fixed delta-timer.
+		fixed_delta_time << time;
+
+		// Update systems:
+		Service::fixed_update(fixed_delta_time);
 	}
 
 	void World::handle_transform_events(float delta)
@@ -283,7 +282,7 @@ namespace engine
 
 		if (name_comp)
 		{
-			return std::format("\"{}\" ({})", name_comp->get_name(), entity_raw);
+			return util::format("\"{}\" ({})", name_comp->get_name(), entity_raw);
 		}
 
 		return std::to_string(entity_raw);

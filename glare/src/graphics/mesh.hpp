@@ -66,7 +66,7 @@ namespace graphics
 	// TODO: Review separation of 'MeshComposition' and 'Mesh'.
 	// Context-controlled 'MeshComposition' objects would allow proper
 	// re-use of buffer objects, and help unify the rendering model.
-	class Mesh
+	class Mesh // final
 	{
 		public:
 			template <typename resource_t, typename bind_fn>
@@ -181,7 +181,7 @@ namespace graphics
 
 			inline Mesh(Mesh&& mesh) noexcept : Mesh() { swap(*this, mesh); }
 			
-			~Mesh();
+			virtual ~Mesh();
 
 			// Updates the contents of this mesh, reusing allocated storage if possible.
 			template <typename VertexType>

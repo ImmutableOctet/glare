@@ -19,6 +19,8 @@
 
 #include "loaders/loaders.hpp"
 
+#include <engine/meta/command_parsing_context.hpp>
+
 //#include <vector>
 #include <memory>
 #include <string>
@@ -51,7 +53,7 @@ namespace engine
 
 	struct RenderScene;
 
-	struct EntityDescriptor;
+	class EntityDescriptor;
 
 	// TODO: Revisit weak vs. strong references for caching.
 	// Theoretically we could use weak references but return strong references upon initial request.
@@ -152,6 +154,9 @@ namespace engine
 
 			Entity generate_entity(const EntityFactoryContext& factory_context, const EntityConstructionContext& entity_context) const;
 
+			CommandParsingContext& set_command_parsing_context(CommandParsingContext&& context);
+			const CommandParsingContext& get_command_parsing_context() const;
+
 			// Links events from `world` to this resource manager instance.
 			void subscribe(World& world);
 		protected:
@@ -163,5 +168,7 @@ namespace engine
 
 			mutable ref<graphics::Shader> default_shader;
 			mutable ref<graphics::Shader> default_animated_shader;
+
+			mutable std::optional<CommandParsingContext> command_parsing_context = std::nullopt;
 	};
 }

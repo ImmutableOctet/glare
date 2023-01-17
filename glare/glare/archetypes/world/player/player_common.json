@@ -1,0 +1,31 @@
+{
+	"imports":
+	[
+		{
+			"merge": "player_jump"
+		}
+	],
+
+	"merge": "player_common_test",
+
+	"rules":
+	{
+		"OnButtonPressed|Button::Jump":
+		{
+			"state": "player_jump",
+			"command": "print(Jumping...)"
+		},
+
+		//"OnButtonPressed|Button::HeavyAttack": "player_heavy_attack",
+
+		//"OnButtonPressed|Button::Jump": "player_jump",
+
+		"OnButtonPressed.button == Button::Shield":
+		{
+			//"state": "player_shield"
+			//"command": "ActivateCommand(child(child_name))"
+			"print": ["SHIELD"],
+			"delay": 1
+		}
+	}
+}

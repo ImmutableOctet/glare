@@ -2,8 +2,6 @@
 #include "mesh.hpp"
 #include "material.hpp"
 
-#include <engine/resource_manager/resource_manager.hpp>
-
 #include <algorithm>
 #include <iostream>
 #include <filesystem>

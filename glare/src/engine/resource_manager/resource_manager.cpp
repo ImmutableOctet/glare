@@ -246,15 +246,20 @@ namespace engine
 			return existing_factory;
 		}
 
+		// List of factory paths representing children of this entity.
+		// (Used during entity instantiation)
 		EntityFactoryChildren children;
+
+		const auto& command_context = get_command_parsing_context();
 
 		auto factory = EntityFactory
 		(
 			context,
 
+			// NOTE: Recursion.
 			[this, &path_str, &children](const EntityFactory& parent_factory, const EntityFactoryContext& child_context)
 			{
-				// NOTE: Recursion.
+				// Call back into this function recursively for each child.
 				auto child_factory_data = this->get_factory(child_context);
 
 				assert(child_factory_data);
@@ -264,14 +269,20 @@ namespace engine
 					return;
 				}
 
+				// Store the path of this child so that we can instantiate from `child_factory_data`
+				// via lookup when `EntityFactoryData::create` is later called.
+				// 
+				// See also: `generate_entity`
 				children.push_back(child_context.paths.instance_path.string()); // c_str();
-			}
+			},
+
+			&command_context
 		);
 
-		if (auto [it, result] = entity_factories.emplace(path_str, EntityFactoryData { std::move(factory), std::move(children) }); result)
+		// NOTE: In the case of child factories, the parent factory is initialized last.
+		// This applies recursively to each level of the hierarchy.
+		if (auto [it, result] = entity_factories.try_emplace(path_str, std::move(factory), std::move(children)); result)
 		{
-			// ...
-
 			return &it->second;
 		}
 
@@ -344,5 +355,22 @@ namespace engine
 		}
 
 		return {};
+	}
+
+	CommandParsingContext& ResourceManager::set_command_parsing_context(CommandParsingContext&& context)
+	{
+		command_parsing_context = std::move(context);
+
+		return *command_parsing_context;
+	}
+
+	const CommandParsingContext& ResourceManager::get_command_parsing_context() const
+	{
+		if (!command_parsing_context.has_value())
+		{
+			command_parsing_context = CommandParsingContext::generate();
+		}
+
+		return *command_parsing_context;
 	}
 }

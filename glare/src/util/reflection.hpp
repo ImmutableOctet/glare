@@ -1,5 +1,7 @@
 #pragma once
 
+// General-purpose utilities for working with reflection.
+
 #include "format.hpp"
 
 //#include <entt/meta/meta.hpp>
@@ -10,6 +12,9 @@
 //#include <type_traits>
 
 #include <regex>
+#include <array>
+#include <tuple>
+#include <utility>
 
 namespace util
 {
@@ -22,14 +27,16 @@ namespace util
     template <typename T>
     inline std::string_view resolve_short_name() // std::string
     {
-        std::string_view name_view = entt::type_name<T>::value();
+        // NOTE: The value retrieved from entt should be NULL-terminated. (see below usage)
+        auto name_view = entt::type_name<T>::value();
 
         const auto name_decl_rgx = std::regex("(struct|class|enum|union) ([\\w]+\\:\\:)(\\w+)");
         constexpr std::size_t type_name_index = 3;
 
         std::smatch rgx_match;
 
-        if (!std::regex_search(name_view.begin(), name_view.end(), rgx_match, name_decl_rgx))
+        // TODO: Look into `std::regex` limitations with `std::string_view`.
+        if (!std::regex_search(name_view.data(), rgx_match, name_decl_rgx)) // name_view.begin(), name_view.end()
         {
             assert(false);
 
@@ -46,56 +53,53 @@ namespace util
             return raw_string;
         }
 
-        auto try_processed = [&type_name, &namespace_symbol](const auto type_symbol) -> entt::meta_type
+        entt::meta_type type_out;
+
+        auto try_processed = [&type_name, &namespace_symbol, &type_out](const auto type_symbol)
         {
-            const auto processed_string = format("{} {}::{}", type_symbol, namespace_symbol, type_name);
+            const auto processed_string = util::format("{} {}::{}", type_symbol, namespace_symbol, type_name);
             const auto hashed = entt::hashed_string(processed_string.data(), processed_string.size());
 
             if (auto processed = entt::resolve(hashed))
             {
-                return processed;
+                type_out = processed;
+
+                return true;
             }
 
-            return {};
+            return false;
         };
 
-        if (auto struct_test = try_processed("struct"))
+        static constexpr std::array type_symbols =
         {
-            return struct_test;
-        }
+            "struct",
+            "class",
+            "enum",
+            "union"
+        };
 
-        if (auto class_test = try_processed("class"))
-        {
-            return class_test;
-        }
+        if
+        (
+            std::apply
+            (
+                [&try_processed](auto&&... symbols)
+                {
+                    return (try_processed(symbols) || ...);
+                },
 
-        if (auto enum_test = try_processed("enum"))
+                type_symbols
+            )
+        )
         {
-            return enum_test;
-        }
-
-        if (auto union_test = try_processed("union"))
-        {
-            return union_test;
+            return type_out;
         }
 
         return {};
     }
 
-    // Helper function for shortening the generated type-name string from `entt`.
-    // 
-    // TODO: Make this into a variadic template.
-	template <typename T>
-    constexpr std::string_view resolve_short_name
-    (
-        auto struct_prefix,
-        auto class_prefix,
-        auto enum_prefix,
-        auto union_prefix
-    )
+    template <typename ...Prefix>
+    constexpr std::string_view as_short_name(std::string_view name_view, Prefix&&... prefix)
     {
-        std::string_view name_view = entt::type_name<T>::value();
-
         auto clean_name = [&name_view](std::string_view prefix) -> bool
         {
             if (name_view.starts_with(prefix))
@@ -110,26 +114,20 @@ namespace util
             return false;
         };
 
-        if (clean_name(struct_prefix))
-        {
-            return name_view;
-        }
-        
-        if (clean_name(class_prefix))
-        {
-            return name_view;
-        }
-
-        if (clean_name(enum_prefix))
-        {
-            return name_view;
-        }
-
-        if (clean_name(union_prefix))
+        if ((clean_name(prefix) || ...))
         {
             return name_view;
         }
 
         return name_view;
+    }
+
+    // Helper function for shortening the generated type-name string from `entt`.
+    // 
+    // TODO: Make this into a variadic template.
+	template <typename T, typename ...Prefix>
+    constexpr std::string_view resolve_short_name(Prefix&&... prefix)
+    {
+        return as_short_name(entt::type_name<T>::value(), std::forward<Prefix>(prefix)...);
     }
 }

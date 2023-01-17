@@ -22,6 +22,8 @@ namespace engine
 	// TODO: Look into removing this from the main 'types' header.
 	struct AnimationData;
 
+	using SharedStorageIndex = std::uint16_t; // std::uint32_t; // std::size_t; // util::DefaultSharedStorageIndex;
+
 	using Registry     = entt::registry;
 	using Entity       = entt::entity;
 	using EntityIDType = entt::id_type;
@@ -43,12 +45,6 @@ namespace engine
 
 	// NOTE: Must be equivalent to `app::input::PlayerInputID`.
 	using PlayerIndex = std::uint16_t;
-
-	// Opaque identifier used to differentiate entity states.
-	using EntityStateHash = entt::id_type;
-
-	// Identifier used to represent an index of an entity state.
-	using EntityStateIndex = std::uint16_t; // std::uint8_t;
 
 	// TODO: Rename to something less generic. (i.e. RotationAxis)
 	enum class Axis : std::uint8_t

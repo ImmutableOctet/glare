@@ -4,6 +4,7 @@
 #include <graphics/canvas.hpp>
 #include <graphics/context.hpp>
 #include <graphics/gbuffer.hpp>
+#include <graphics/shader.hpp>
 
 namespace engine
 {
@@ -17,8 +18,8 @@ namespace engine
 			(
 				ctx,
 
-				"assets/shaders/geometry_pass.vert",
-				"assets/shaders/geometry_pass.frag",
+				"engine/shaders/geometry_pass.vert",
+				"engine/shaders/geometry_pass.frag",
 				std::string {},
 
 				shader_preprocessor
@@ -28,8 +29,8 @@ namespace engine
 			(
 				ctx,
 
-				"assets/shaders/geometry_pass.vert",
-				"assets/shaders/geometry_pass.frag",
+				"engine/shaders/geometry_pass.vert",
+				"engine/shaders/geometry_pass.frag",
 				std::string {},
 
 				(std::string(shader_preprocessor) + "\n#define ANIMATION_ENABLED 1\n")

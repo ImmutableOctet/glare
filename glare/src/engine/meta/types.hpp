@@ -1,6 +1,7 @@
 #pragma once
 
 #include <engine/types.hpp>
+
 #include <util/small_vector.hpp>
 
 #include <entt/entt.hpp>
@@ -29,6 +30,15 @@ namespace engine
 	using MetaRemovalDescription = MetaIDStorage; // <MetaType>
 	using MetaStorageDescription = MetaIDStorage; // <MetaType>
 
-	using MetaStorage = util::small_vector<MetaAny, 4>; // 8
-	using MetaSymbolStorage = util::small_vector<MetaSymbolID, 4>; // 8
+	using MetaStorage = util::small_vector<MetaAny, 3>; // 4
+	using MetaSymbolStorage = util::small_vector<MetaSymbolID, 3>; // 4
+
+	struct MetaAnyParseInstructions
+	{
+		bool resolve_symbol                      : 1 = true;
+		bool strip_quotes                        : 1 = true;
+		bool fallback_to_string                  : 1 = true;
+		bool resolve_component_member_references : 1 = false;
+		//bool allow_value_resolution_commands     : 1 = true;
+	};
 }

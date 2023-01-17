@@ -32,13 +32,15 @@ namespace graphics
 
 			bool operator==(const Resource& rhs) const;
 			inline bool operator!=(const Resource& rhs) const { return !operator==(rhs); }
+
+			virtual ~Resource();
 		protected:
 			friend void swap(Resource& x, Resource& y);
 
 			Resource(weak_ref<Context> context={}, ContextHandle&& handle={});
 			Resource(const Resource&) = delete;
 
-			inline Resource(Resource&& resource) : Resource() { swap(*this, resource); }
+			inline Resource(Resource&& resource) noexcept : Resource() { swap(*this, resource); }
 
 			inline Resource& operator=(Resource resource)
 			{

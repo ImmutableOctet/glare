@@ -1,5 +1,7 @@
 #pragma once
 
+// TODO: Move to a more appropriate submodule. (i.e. anywhere else but `graphics`)
+
 // Helper class; draws the world as seen by Bullet.
 // This is very handy to see it Bullet's world matches yours
 // How to use this class :

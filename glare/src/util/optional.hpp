@@ -74,4 +74,15 @@ namespace util
 
 		return false_value;
 	}
+
+	template <typename T>
+	constexpr std::optional<T> optional_or(const std::optional<T>& a, const std::optional<T>& b)
+	{
+		if (a)
+		{
+			return a;
+		}
+
+		return b;
+	}
 }

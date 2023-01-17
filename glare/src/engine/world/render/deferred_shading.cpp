@@ -7,6 +7,7 @@
 #include <graphics/canvas.hpp>
 #include <graphics/context.hpp>
 #include <graphics/gbuffer.hpp>
+#include <graphics/shader.hpp>
 
 #include <engine/components/relationship_component.hpp>
 #include <engine/transform.hpp>
@@ -29,8 +30,8 @@ namespace engine
 			(
 				ctx,
 
-				"assets/shaders/deferred_shading.vert",
-				"assets/shaders/deferred_shading.frag",
+				"engine/shaders/deferred_shading.vert",
+				"engine/shaders/deferred_shading.frag",
 				std::string {},
 
 				shader_preprocessor

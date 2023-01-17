@@ -54,7 +54,7 @@ namespace graphics
 				bool _loose_internal_format=true
 			);
 			
-			Texture(Texture&& texture) : Texture() { swap(*this, texture); }
+			Texture(Texture&& texture) noexcept : Texture() { swap(*this, texture); }
 
 			inline Texture() : Texture({}, {}, 0, 0, TextureFormat::Unknown, ElementType::Unknown, TextureFlags::None, TextureType::Default) {}
 

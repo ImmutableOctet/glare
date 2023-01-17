@@ -1,8 +1,8 @@
 #pragma once
 
-// Internal header for `engine` module.
+// This is an internal header for `engine` module and should only be used by reflection implementation files.
 // 
-// This header defines general-purpose reflection facilities for systems, components, etc. using `entt`'s meta-type system.
+// This header defines general-purpose reflection facilities for systems, components, etc. using EnTT's meta-type system.
 // For consuming or instantiating reflection data, it is recommended that you directly use the `meta` header instead.
 
 #include "types.hpp"
@@ -26,22 +26,25 @@
 #include <util/log.hpp>
 
 // Declares a meta-type for a component with a single field.
-#define REFLECT_SINGLE_FIELD_COMPONENT(component_name, field_name)           \
-    engine::engine_meta_type<component_name>()                               \
-		.data<&component_name::field_name>(entt::hashed_string(#field_name)) \
-		.ctor<decltype(component_name::field_name)>();
+#define REFLECT_SINGLE_FIELD_TYPE(type_name, field_name)                \
+    engine::engine_meta_type<type_name>()                               \
+		.data<&type_name::field_name>(entt::hashed_string(#field_name)) \
+		.ctor<decltype(type_name::field_name)>();
 
-#define GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(component_name, field_name) \
-    template <>                                                                \
-    inline void reflect<component_name>()                                      \
-    {                                                                          \
-        REFLECT_SINGLE_FIELD_COMPONENT(component_name, field_name);            \
+#define GENERATE_SINGLE_FIELD_TYPE_REFLECTION(type_name, field_name) \
+    template <>                                                      \
+    void reflect<type_name>()                                        \
+    {                                                                \
+        REFLECT_SINGLE_FIELD_COMPONENT(type_name, field_name);       \
     }
+
+#define GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION GENERATE_SINGLE_FIELD_TYPE_REFLECTION
+#define REFLECT_SINGLE_FIELD_COMPONENT REFLECT_SINGLE_FIELD_TYPE
 
 // Generates an empty `reflect` function for the specified `engine` type.
 #define GENERATE_EMPTY_TYPE_REFLECTION(type) \
     template <>                              \
-    inline void reflect<type>()              \
+    void reflect<type>()                     \
     {                                        \
         engine::engine_meta_type<type>();    \
     }
@@ -50,7 +53,7 @@
 // where `type` is derived from `base_type`.
 #define GENERATE_EMPTY_DERIVED_TYPE_REFLECTION(type, base_type) \
     template <>                                                 \
-    inline void reflect<type>()                                 \
+    void reflect<type>()                                        \
     {                                                           \
         engine::engine_meta_type<type>()                        \
             .base<base_type>()                                  \
@@ -66,7 +69,7 @@ namespace engine
     // NOTE: In the default case of `T=void`, the overridden version of this template is used.
     // TODO: Look into best way to handle multiple calls to reflect. (This is currently only managed in `reflect_all`)
     template <typename T=void>
-    inline void reflect()
+    void reflect()
     {
         if constexpr (std::is_enum_v<T>)
         {
@@ -178,21 +181,50 @@ namespace engine
     template <typename T>
     entt::meta_any store_meta_component(Registry& registry, Entity entity)
     {
-        auto* instance = get_component<T>(registry, entity);
+        if constexpr (true) // (std::is_move_assignable_v<T>) // (std::is_move_constructible_v<T>)
+        {
+            auto* instance = get_component<T>(registry, entity);
 
-        if (!instance)
+            if (!instance)
+            {
+                return {};
+            }
+
+            entt::meta_any output = std::move(*instance);
+
+            registry.erase<T>(entity);
+
+            // Alternate (slower):
+            // remove_component<T>(registry, entity);
+
+            return output;
+        }
+        else
         {
             return {};
         }
+    }
 
-        entt::meta_any output = std::move(*instance);
+    // Generates a copy of component `T` from `entity` into an `entt::meta_any` instance.
+    // the original component instance remains attached to `entity`.
+    template <typename T>
+    entt::meta_any copy_meta_component(Registry& registry, Entity entity)
+    {
+        if constexpr (std::is_copy_constructible_v<T>)
+        {
+            auto* instance = get_component<T>(registry, entity);
 
-        registry.erase<T>(entity);
+            if (!instance)
+            {
+                return {};
+            }
 
-        // Alternate (slower):
-        // remove_component<T>(registry, entity);
-
-        return output;
+            return T(*instance);
+        }
+        else
+        {
+            return {};
+        }
     }
 
     template <typename T>
@@ -200,9 +232,9 @@ namespace engine
     {
         assert
         (
-            (descriptor.type.id() == short_name_hash<T>().value())
+            (descriptor.type_id == short_name_hash<T>().value())
             ||
-            (descriptor.type.id() == entt::type_hash<T>::value())
+            (descriptor.type_id == entt::type_hash<T>::value())
         );
 
         // Ensure `T` is currently a component of `entity`.
@@ -232,8 +264,37 @@ namespace engine
         }
         else
         {
-            throw std::exception("Invalid value specified; unable to trigger event.");
+            //throw std::exception("Invalid value specified; unable to trigger event.");
         }
+    }
+
+    // Retrieves a handle to the shared entt meta-context.
+    entt::locator<entt::meta_ctx>::node_type get_shared_reflection_handle();
+    
+    // NOTE: This implementation is inline so that it is local to this module.
+    // In contrast, the `get_shared_reflection_handle` function is unique between
+    // modules (i.e. DLLs) since it's explicitly defined in a translation unit.
+    inline void set_local_reflection_handle(const entt::locator<entt::meta_ctx>::node_type& handle)
+    {
+        entt::locator<entt::meta_ctx>::reset(handle);
+    }
+
+    // Synchronizes the reflection context across boundaries. (used for DLL interop)
+    inline bool sync_reflection_context()
+    {
+        static bool is_synchronized = false;
+
+        if (is_synchronized)
+        {
+            return true;
+        }
+
+        const auto& handle = get_shared_reflection_handle();
+        set_local_reflection_handle(handle);
+
+        is_synchronized = true;
+
+        return is_synchronized;
     }
 
     // Associates a stripped version of the type's name to its reflection metadata.
@@ -242,8 +303,11 @@ namespace engine
     // By default, `entt` uses a fully qualified name, along with a "struct" or "class" prefix, etc.
     // This allows you to simply refer to the type by its namespace-local name.
     template <typename T>
-    auto engine_meta_type()
+    auto engine_meta_type(bool capture_standard_data_members=true)
     {
+        // Ensure that we're using the correct context.
+        sync_reflection_context();
+
         auto type = entt::meta<T>()
             .type(short_name_hash<T>())
 
@@ -252,13 +316,21 @@ namespace engine
             .template func<get_component<T>>("get_component"_hs)
             .template func<&emplace_meta_component<T>, entt::as_ref_t>("emplace_meta_component"_hs)
             .template func<&store_meta_component<T>>("store_meta_component"_hs)
+            .template func<&copy_meta_component<T>>("copy_meta_component"_hs)
             .template func<&remove_component<T>>("remove_component"_hs)
             .template func<&get_or_emplace_component<T>, entt::as_ref_t>("get_or_emplace_component"_hs)
             .template func<&patch_meta_component<T>>("patch_meta_component"_hs)
             .template func<&MetaEventListener::connect<T>>("connect_meta_event"_hs)
             .template func<&MetaEventListener::disconnect<T>>("disconnect_meta_event"_hs)
+			.template func<&MetaEventListener::connect_component_listeners<T>>("connect_component_meta_events"_hs)
+            .template func<&MetaEventListener::disconnect_component_listeners<T>>("disconnect_component_meta_events"_hs)
             .template func<&trigger_event_from_meta_any<T>>("trigger_event_from_meta_any"_hs);
         ;
+
+        if (!capture_standard_data_members)
+        {
+            return type;
+        }
 
         // `entity` data member:
         if constexpr (has_method_entity<T, Entity()>::value) // std::decay_t<T>
@@ -329,34 +401,11 @@ namespace engine
     }
 
     template <typename T>
-    auto engine_command_type()
+    auto engine_command_type(bool capture_standard_data_members=false) // true
     {
-        return engine_meta_type<T>()
+        return engine_meta_type<T>(capture_standard_data_members)
             .base<Command>()
         ;
-    }
-
-    template <>
-    inline void reflect<Command>()
-    {
-        engine_meta_type<Command>()
-            .data<&Command::source>("source"_hs)
-            .data<&Command::target>("target"_hs)
-            //.ctor<decltype(Command::source), decltype(Command::target)>()
-        ;
-    }
-
-    template <typename EnumType>
-    EnumType string_to_enum_value(std::string_view enum_short_str)
-    {
-        auto result = magic_enum::enum_cast<EnumType>(enum_short_str);
-
-        if (!result)
-        {
-            throw std::invalid_argument("Invalid enum value specified.");
-        }
-
-        return *result;
     }
 
     // NOTE: This is called automatically via `reflect` when `T` is an enumeration type.

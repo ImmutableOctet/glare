@@ -27,9 +27,10 @@ namespace graphics
 				bind(prev_resource);
 			}
 		private:
+			bind_fn bind;
+
 			//resource_t& prev_resource;
 			std::invoke_result_t<bind_fn, resource_t&> prev_resource;
-			bind_fn bind;
 	};
 
 	template <typename resource_t, typename bind_fn>

@@ -1,5 +1,7 @@
 #pragma once
 
+// TODO: Deprecate.
+
 #include <tuple>
 #include <functional>
 #include <utility>

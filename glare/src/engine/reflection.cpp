@@ -4,17 +4,15 @@
 // TODO: Rework this source file into some form of automated 'reflection generation' procedure in the build process.
 
 #include "reflection.hpp"
-#include "meta.hpp"
-
-#include "types.hpp"
-
-// TODO: Determine if these make sense as CPP files (or PCH) instead:
 #include "components/reflection.hpp"
+#include "commands/reflection.hpp"
+#include "meta/meta.hpp"
 
 #include "meta/reflection.hpp"
+#include "entity/reflection.hpp"
+#include "debug/reflection.hpp"
 #include "input/reflection.hpp"
 #include "world/reflection.hpp"
-#include "state/reflection.hpp"
 
 #include <math/reflection.hpp>
 
@@ -25,14 +23,33 @@
 
 namespace engine
 {
-    static void reflect_systems()
+    entt::locator<entt::meta_ctx>::node_type get_shared_reflection_handle()
     {
-        reflect<StateSystem>();
+        return entt::locator<entt::meta_ctx>::handle();
+    }
+
+    void reflect_systems()
+    {
+        reflect<DebugListener>();
+        reflect<EntitySystem>();
         reflect<InputSystem>();
         reflect<World>();
 
         // ...
     }
+
+    /*
+    template <>
+    void reflect<std::string>()
+    {
+        engine_meta_type<std::string>();
+    }
+
+    static void reflect_stl()
+    {
+        reflect<std::string>();
+    }
+    */
 
     // Reflects `math::Vector2D` with the generalized name of `Vector2D`.
     // 
@@ -53,7 +70,7 @@ namespace engine
     }
 
     // TODO: Implement reflection for matrix types.
-    static void reflect_math()
+    void reflect_math()
     {
         reflect<math::Vector2D>();
         reflect<math::Vector3D>();
@@ -61,15 +78,17 @@ namespace engine
         // ...
     }
 
-    static void reflect_dependencies()
+    void reflect_dependencies()
     {
+        //reflect_stl();
         reflect_math();
     }
 
-    static void reflect_primitives()
+    void reflect_primitives()
     {
         reflect<EntityType>();
         reflect<LightType>();
+        reflect<Command>();
 
         //reflect<LightProperties>();
         //reflect<Axis>(); // RotationAxis
@@ -97,8 +116,8 @@ namespace engine
             reflect_primitives();
         }
 
-        reflect<Command>();
         reflect_core_components();
+        reflect_core_commands();
         reflect_systems();
 
         // ...

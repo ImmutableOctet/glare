@@ -14,6 +14,7 @@
 
 #include <optional>
 #include <filesystem>
+#include <type_traits>
 
 namespace util
 {
@@ -176,19 +177,32 @@ namespace util
 	template <json::value_t... types>
 	unsigned int json_for_each(const auto& element, auto&& callback_fn)
 	{
+		using CallbackType = std::decay_t<decltype(callback_fn)>;
+
 		switch (element.type())
 		{
 			case json::value_t::array:
 			{
 				unsigned int i = 0;
-
+				
 				for (const auto& proxy : element.items())
 				{
 					const auto& value = proxy.value();
 
 					if (json_type_filter<types...>(value.type()))
 					{
-						callback_fn(value);
+						if constexpr (std::is_invocable_r_v<bool, CallbackType, decltype(value)>)
+						{
+							if (!callback_fn(value))
+							{
+								break;
+							}
+						}
+						else
+						{
+							callback_fn(value);
+						}
+
 						i++;
 					}
 

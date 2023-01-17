@@ -258,29 +258,24 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
-/glare/dependencies
-/glare/assets/unit_tests/shader_test/texture1.png
-/glare/assets/unit_tests/shader_test/texture2.jpg
 
-*.i
-/glare/assets/unit_tests/model_test/Stage.b3d
-/glare/assets/unit_tests/deferred_test/nanosuit
-/glare/assets/unit_tests/model_test/Checkpoint
-/glare/assets/unit_tests/model_test/Bianco
-/glare/assets/unit_tests/model_test/SeasideShortcut
-/glare/assets/unit_tests/model_test/Young Samus
-/glare/assets/unit_tests/model_test/Sonic.mtl
-/glare/assets/unit_tests/model_test/custom_sonic.b3d
-/glare/assets/unit_tests/model_test/Stage.mtl
-/glare/assets/unit_tests/model_test/Sonic
-/glare/assets/unit_tests/model_test/That sounds interesting.jpg
-/glare/assets/*
-/glare/Notes and Resources/*
-/glare/notes
-/glare/test_assets
-/glare/imgui.ini
-/glare/Debug
-/Debug
-/_.vs/glare/v17
-/glare/old
-/glare/tools
+# cmake-init
+.idea/
+.vscode/
+build/
+cmake/open-cpp-coverage.cmake
+cmake-build-*/
+prefix/
+CMakeLists.txt.user
+CMakeUserPresets.json
+
+
+# General
+todo/
+dependencies/
+third-party/
+assets/
+
+# ImGui window layout
+imgui.ini
+/glare/glare/assets

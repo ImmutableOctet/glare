@@ -1,14 +1,16 @@
 #pragma once
 
+#include "small_vector.hpp"
+//#include "format.hpp"
+
 #include <string>
 #include <string_view>
+#include <array>
 #include <regex>
 #include <utility>
 #include <optional>
 #include <type_traits>
 #include <charconv>
-
-//#include <fmt/core.h>
 
 struct aiString;
 
@@ -23,7 +25,41 @@ namespace util
 	std::smatch get_regex_groups(const std::string& s, const std::regex& re);
 	std::smatch parse_regex(const std::string& str, const std::string& regex_str);
 
-	inline std::string_view match_view(std::string_view str, const std::smatch& matches, std::size_t index)
+	// Reconstructs `old_view` using `new_basis` for storage.
+	inline std::string_view remap_string_view(std::string_view old_basis, std::string_view new_basis, std::string_view old_view)
+	{
+		if (old_view.empty())
+		{
+			return {};
+		}
+
+		const auto offset = (old_view.data() - old_basis.data());
+		const auto length = old_view.size(); // length();
+
+		//assert(new_basis.size() >= (length + offset));
+
+		if (new_basis.size() < (length + offset))
+		{
+			return {};
+		}
+
+		return { (new_basis.data() + offset), length };
+	}
+
+	inline std::string_view trim(std::string_view str, std::string_view trim_values=" \n")
+	{
+		if (trim_values.empty())
+		{
+			return str;
+		}
+
+		str.remove_prefix(str.find_first_not_of(trim_values));
+		str.remove_suffix((str.length() - str.find_last_not_of(trim_values) - 1));
+
+		return str;
+	}
+
+	inline std::string_view match_view(std::string_view str, const std::smatch& matches, std::size_t index, std::string_view trim_values=" \n")
 	{
 		if (index >= matches.size())
 		{
@@ -40,32 +76,84 @@ namespace util
 			return {};
 		}
 
-		return
-		{
-			(str.data() + matches.position(index)),
-			static_cast<std::size_t>(matches.length(index))
-		};
+		return trim
+		(
+			std::string_view
+			{
+				(str.data() + matches.position(index)),
+				static_cast<std::size_t>(matches.length(index))
+			},
+
+			trim_values
+		);
 	}
 
 	inline std::string quote(std::string_view str)
 	{
-		//return fmt::format("\"{}\"", str);
+		//return format("\"{}\"", str);
 
 		return "\"" + std::string(str) + "\"";
 	}
 
 	template <typename T>
-	inline bool from_string(std::string_view str, T& out)
+	inline bool from_string(std::string_view str, T& out, bool exact_numeric_format=true)
 	{
+		if (str.empty())
+		{
+			return false;
+		}
+
+		// Disallow decimal points for integral types when using `exact_numeric_format`:
+		if constexpr (std::is_integral_v<T>)
+		{
+			if (exact_numeric_format)
+			{
+				if (str.contains('.'))
+				{
+					return false;
+				}
+			}
+		}
+
 		auto result = std::from_chars(str.data(), (str.data() + str.size()), out);
 
 		return (result.ec == std::errc());
 	}
 
-	template <typename T>
-	inline std::optional<T> from_string(std::string_view str)
+	template <>
+	inline bool from_string(std::string_view str, bool& out, bool exact_numeric_format)
 	{
-		if (T out; from_string(str, out)) // auto out = T{};
+		if (str.empty())
+		{
+			return false;
+		}
+
+		const auto initial_char = str[0];
+
+		switch (initial_char)
+		{
+			case 't':
+			case 'T':
+			case '1':
+			case 'y':
+			case 'Y':
+				out = true;
+
+				break;
+
+			default:
+				out = false;
+
+				break;
+		}
+
+		return true;
+	}
+
+	template <typename T>
+	inline std::optional<T> from_string(std::string_view str, bool exact_numeric_format=true)
+	{
+		if (T out; from_string(str, out, exact_numeric_format)) // auto out = T{};
 		{
 			return out;
 		}
@@ -192,8 +280,13 @@ namespace util
 	// 
 	// This function returns true if `str` contains `separator`.
 	template <typename Callback>
-	bool split(std::string_view str, std::string_view separator, Callback callback)
+	bool split(std::string_view str, std::string_view separator, Callback callback, std::string_view trim_values=" \n")
 	{
+		if (str.empty())
+		{
+			return false;
+		}
+
 		std::size_t find_result = 0;
 
 		bool result = false;
@@ -206,17 +299,17 @@ namespace util
 
 			if (find_result == std::string_view::npos)
 			{
-				if constexpr (std::is_same_v<std::invoke_result_t<Callback, std::string_view, bool>, bool>)
+				auto substr = std::string_view{ begin, str.end() };
+
+				substr = trim(substr, trim_values);
+
+				if constexpr (std::is_invocable_v<Callback, std::string_view, bool>)
 				{
-					callback(std::string_view{ begin, str.end() }, true);
+					callback(substr, true);
 				}
-				else if constexpr (std::is_same_v<std::invoke_result_t<Callback, std::string_view>, bool>)
+				else if constexpr (std::is_invocable_v<Callback, std::string_view>)
 				{
-					callback(std::string_view{ begin, str.end() }, true);
-				}
-				else
-				{
-					callback(std::string_view{ begin, str.end() });
+					callback(substr);
 				}
 
 				break;
@@ -227,21 +320,27 @@ namespace util
 
 				auto substr = std::string_view { begin, (str.begin() + find_result) };
 
-				if constexpr (std::is_same_v<std::invoke_result_t<Callback, std::string_view, bool>, bool>)
+				substr = trim(substr, trim_values);
+
+				if constexpr (std::is_invocable_r_v<bool, Callback, std::string_view, bool>)
 				{
 					if (!callback(substr, false))
 					{
 						break;
 					}
 				}
-				else if constexpr (std::is_same_v<std::invoke_result_t<Callback, std::string_view>, bool>)
+				else if constexpr (std::is_invocable_r_v<void, Callback, std::string_view, bool>)
+				{
+					callback(substr, false);
+				}
+				else if constexpr (std::is_invocable_r_v<bool, Callback, std::string_view>)
 				{
 					if (!callback(substr))
 					{
 						break;
 					}
 				}
-				else
+				else if constexpr (std::is_invocable_r_v<void, Callback, std::string_view>)
 				{
 					callback(substr);
 				}
@@ -253,14 +352,38 @@ namespace util
 		return result;
 	}
 
-	inline std::string_view trim(std::string_view str, std::string_view trim_values=" \n")
+	template <std::size_t expected_count, typename ArrayType=std::array<std::string_view, expected_count>>
+	std::optional<ArrayType> split_from(std::string_view str, std::string_view separator, std::size_t min_allowed=expected_count, std::string_view trim_values=" \n")
 	{
-		str.remove_prefix(str.find_first_not_of(trim_values));
-		str.remove_suffix((str.length() - str.find_last_not_of(trim_values) - 1));
+		ArrayType out = {};
 
-		return str;
+		std::size_t index = 0;
+
+		split
+		(
+			str, separator,
+			
+			[&out, &index](std::string_view substr)
+			{
+				out[index++] = substr;
+			},
+
+			trim_values
+		);
+
+		if (index < min_allowed)
+		{
+			return std::nullopt;
+		}
+
+		return out;
 	}
 
 	// TODO: Move this to a different source file.
 	std::string_view to_string_view(const aiString& str);
+
+	std::string camel_to_snake_case(std::string_view camel_case);
+	std::string snake_to_camel_case(std::string_view snake_case, bool leading_uppercase=true);
+
+	std::string reverse_from_separator(std::string_view str, std::string_view separator, std::string_view trim_values={});
 }

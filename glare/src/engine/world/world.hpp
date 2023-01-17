@@ -54,9 +54,7 @@ namespace engine
 			ResourceManager& resource_manager;
 			
 			app::DeltaTime delta_time;
-
-			// TODO: Allow the user to specify a registry, rather than owning it outright.
-			mutable Registry registry;
+			app::DeltaTime fixed_delta_time;
 
 			// Scene root-node; parent to all world-bound entities.
 			Entity root   = null;
@@ -89,12 +87,10 @@ namespace engine
 				return *this;
 			}
 
-			Registry& get_registry() override;
-			const Registry& get_registry() const override;
-
 			Entity load(const filesystem::path& root_path, const std::string& json_file="map.json", Entity parent=null);
 
 			void update(app::Milliseconds time);
+			void fixed_update(app::Milliseconds time);
 
 			void handle_transform_events(float delta);
 
@@ -230,6 +226,7 @@ namespace engine
 			void set_camera(Entity camera);
 
 			inline const app::DeltaTime& get_delta_time() const { return delta_time; }
+			inline const app::DeltaTime& get_fixed_delta_time() const { return fixed_delta_time; }
 
 			Entity get_player(PlayerIndex player=engine::PRIMARY_LOCAL_PLAYER) const;
 

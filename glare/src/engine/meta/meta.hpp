@@ -9,17 +9,29 @@
 
 #include <engine/types.hpp>
 
+#include <util/magic_enum.hpp>
 #include <util/reflection.hpp>
+#include <util/string.hpp>
 
+#include <string>
 #include <string_view>
 #include <type_traits>
 #include <optional>
 #include <utility>
+#include <array>
 #include <tuple>
 
 namespace engine
 {
     using entt::resolve;
+
+    constexpr std::array short_name_prefixes =
+    {
+        "struct engine::",
+         "class engine::",
+          "enum engine::",
+         "union engine::"
+    };
 
 	// Shortens the name of `T` if `T` belongs to the `engine` namespace.
     // 
@@ -27,12 +39,27 @@ namespace engine
 	template <typename T>
     constexpr std::string_view short_name()
     {
-        return util::resolve_short_name<T>
+        return std::apply
         (
-            "struct engine::",
-             "class engine::",
-              "enum engine::",
-             "union engine::"
+            [](auto&&... prefixes)
+            {
+                return util::resolve_short_name<T>(std::forward<decltype(prefixes)>(prefixes)...);
+            },
+
+            short_name_prefixes
+        );
+    }
+
+    constexpr std::string_view as_short_name(std::string_view name_view)
+    {
+        return std::apply
+        (
+            [&name_view](auto&&... names)
+            {
+                return util::as_short_name(name_view, std::forward<decltype(names)>(names)...);
+            },
+
+            short_name_prefixes
         );
     }
 
@@ -60,6 +87,19 @@ namespace engine
         //return entt::type_hash<T>();
 
         return hash(short_name<T>());
+    }
+
+    template <typename EnumType>
+    EnumType string_to_enum_value(std::string_view enum_short_str)
+    {
+        auto result = magic_enum::enum_cast<EnumType>(enum_short_str);
+
+        if (!result)
+        {
+            throw std::invalid_argument("Invalid enum value specified.");
+        }
+
+        return *result;
     }
 
 	// Retrieves the runtime (property-based) value associated to `id` in `meta_type_inst`.
@@ -92,6 +132,98 @@ namespace engine
     inline entt::meta_type meta_type_from_name(std::string_view type_name)
     {
         return util::meta_type_from_name(type_name, "engine");
+    }
+
+    template <typename Callback>
+    inline bool enumerate_data_members(const entt::meta_type& type, Callback&& callback, bool recursive=true, std::size_t* count_out=nullptr)
+    {
+        if (recursive)
+        {
+            for (const auto& base_type_entry : type.base())
+            {
+                const auto& base_type = std::get<1>(base_type_entry);
+
+                if (!enumerate_data_members(base_type, callback, recursive, count_out))
+                {
+                    break;
+                }
+            }
+        }
+
+        std::size_t count = 0;
+        bool result = true;
+
+        for (auto&& entry : type.data())
+        {
+            //callback(std::forward<decltype(entry)>(entry));
+
+            const auto& data_member_id = entry.first;
+            const auto& data_member    = entry.second;
+
+            result = callback(data_member_id, data_member);
+
+            count++;
+
+            if (!result)
+            {
+                break;
+            }
+        }
+
+        if (count_out)
+        {
+            *count_out += count;
+        }
+
+        return result;
+    }
+
+    inline std::optional<std::pair<entt::id_type, entt::meta_data>> get_local_data_member_by_index(const entt::meta_type& type, std::size_t variable_index)
+    {
+        auto data_range = type.data();
+        auto data_it = (data_range.begin() + static_cast<std::ptrdiff_t>(variable_index));
+
+        if (data_it < data_range.end()) // !=
+        {
+            return *data_it;
+        }
+
+        return std::nullopt;
+    }
+
+    inline std::optional<std::pair<entt::id_type, entt::meta_data>> get_data_member_by_index(const entt::meta_type& type, std::size_t variable_index, bool recursive=true)
+    {
+        if (!recursive)
+        {
+            return get_local_data_member_by_index(type, variable_index);
+        }
+
+        std::optional<std::pair<entt::id_type, entt::meta_data>> output = std::nullopt;
+        std::size_t count = 0;
+
+        enumerate_data_members
+        (
+            type,
+
+            [&output, &count, variable_index](auto&& data_member_id, auto&& data_member)
+            {
+                if (count != variable_index)
+                {
+                    count++;
+
+                    return true;
+                }
+
+                if (data_member)
+                {
+                    output = { data_member_id, data_member };
+                }
+                
+                return false;
+            }
+        );
+
+        return output;
     }
 
     template <typename MemberID=MetaSymbolID>
@@ -154,8 +286,98 @@ namespace engine
         return resolve_data_member(type, check_base_types, std::forward<MemberNames>(member_names)...);
     }
 
+    template <typename ...MemberNames> // std::string_view
+    inline entt::meta_data resolve_data_member(const entt::meta_type& type, std::string_view member_name, MemberNames&&... member_names)
+    {
+        auto result = resolve_data_member(type, true, member_name, std::forward<MemberNames>(member_names)...);
+
+        return std::get<1>(result);
+    }
+
+    template <typename T>
+    inline bool set_data_member(entt::meta_any& instance, std::string_view member_name, T&& member_value)
+    {
+        auto type = instance.type();
+
+        if (!type)
+        {
+            return false;
+        }
+
+        if (auto member = resolve_data_member(type, member_name))
+        {
+            return member.set(instance, member_value);
+
+            //return true;
+        }
+
+        return false;
+    }
+
     // Attempts to retrieve a `PlayerIndex` value from `instance`, if applicable.
     std::optional<PlayerIndex> resolve_player_index(const MetaAny& instance);
+
+    bool meta_any_is_string(const entt::meta_any& value);
+
+	// Attempts to compute a string hash for `value`.
+	std::optional<StringHash> meta_any_to_string_hash(const entt::meta_any& value);
+
+	// Compares `left` and `right` to see if they both have the same string hash.
+	bool meta_any_string_compare(const entt::meta_any& left, const entt::meta_any& right);
+
+	// Attempts to retrieve an instance of `Type` from `value`, passing it to `callback` if successful.
+	template <typename Type, typename Callback>
+	inline bool try_value(const entt::meta_any& value, Callback&& callback)
+	{
+		if (!value)
+		{
+			return false;
+		}
+
+		auto type = value.type();
+
+		if (!type)
+		{
+			return false;
+		}
+
+		const auto type_id = type.id();
+
+		//if (type_id == entt::type_id<Type>().hash())
+		if ((type_id == entt::type_id<Type>().hash()) || (type_id == resolve<Type>().id()))
+		{
+			auto* value_raw = value.try_cast<Type>(); // const
+
+			//assert(value_raw);
+
+			if (!value_raw)
+			{
+				return false;
+			}
+
+			callback(*value_raw);
+
+			return true;
+		}
+
+		return false;
+	}
+
+	template <typename Callback>
+	inline bool try_string_value(const entt::meta_any& value, Callback&& callback)
+	{
+		if (try_value<std::string>(value, callback))
+		{
+			return true;
+		}
+
+		if (try_value<std::string_view>(value, callback))
+		{
+			return true;
+		}
+
+		return false;
+	}
 
 	/*
 		Generates reflection meta-data for the `engine` module.

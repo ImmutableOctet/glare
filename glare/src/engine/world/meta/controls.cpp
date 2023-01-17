@@ -14,7 +14,7 @@
 
 #include <math/math.hpp>
 
-#include <imgui/imgui.h>
+#include <imgui.h>
 
 #include <tuple>
 #include <optional>
@@ -26,7 +26,7 @@ namespace ImGui
 	template <typename ...Args>
 	void FormatText(fmt::format_string<Args...> fmt, Args&&... args)
 	{
-		Text(format(fmt, std::forward<Args>(args)...).c_str());
+		Text(util::format(fmt, std::forward<Args>(args)...).c_str());
 	}
 }
 
@@ -38,7 +38,7 @@ namespace engine::meta
 		{
 			auto entity_name = world.get_name(entity);
 
-			return format("{} ({})", entity_name, entity);
+			return util::format("{} ({})", entity_name, entity);
 		}
 
 		void vectors(const math::Vector& pos, const math::Vector& rot, const math::Vector& scale)
@@ -305,7 +305,7 @@ namespace engine::meta
 
 			if (!subtitle.empty())
 			{
-				wnd_name = format("{} - {}", name, subtitle);
+				wnd_name = util::format("{} - {}", name, subtitle);
 			}
 			else
 			{

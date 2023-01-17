@@ -4,6 +4,7 @@
 #include "render_parameters.hpp"
 
 #include <graphics/canvas.hpp>
+#include <graphics/shader.hpp>
 
 #include <engine/world/world.hpp>
 #include <engine/world/camera.hpp>

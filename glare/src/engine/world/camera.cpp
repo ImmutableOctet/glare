@@ -39,7 +39,7 @@ namespace engine
 
 			attach_collision(world, entity, collision_data.collision_shape, collision_config, mass);
 		}
-
+		
 		if ((world.get_camera() == null) || make_active)
 		{
 			world.set_camera(entity);

@@ -1,11 +1,11 @@
 #pragma once
 
+#include <lib.hpp>
+
 #include "types.hpp"
 #include "delta_time.hpp"
 #include "input/input.hpp"
 #include "timer.hpp"
-
-#include <util/lib.hpp>
 
 #include <entt/signal/dispatcher.hpp>
 
@@ -37,7 +37,7 @@ namespace app
 			{
 				Libraries()
 				{
-					ASSERT(util::lib::init_sdl());
+					ASSERT(glare::lib::init_sdl());
 				}
 
 				~Libraries() {}
@@ -79,7 +79,7 @@ namespace app
 
 			virtual void on_execute();
 
-			virtual void fixed_update();
+			virtual void fixed_update(Milliseconds time);
 
 			virtual void update(Milliseconds time) abstract; // const DeltaTime& delta_time
 

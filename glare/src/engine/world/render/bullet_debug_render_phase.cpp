@@ -5,6 +5,7 @@
 
 #include <graphics/canvas.hpp>
 #include <graphics/context.hpp>
+#include <graphics/shader.hpp>
 
 #include <engine/world/world.hpp>
 #include <engine/world/camera.hpp>
@@ -25,8 +26,8 @@ namespace engine
 			(
 				ctx,
 
-				"assets/shaders/debug_lines.vert",
-				"assets/shaders/debug_lines.frag",
+				"engine/shaders/debug_lines.vert",
+				"engine/shaders/debug_lines.frag",
 				std::string {},
 
 				shader_preprocessor

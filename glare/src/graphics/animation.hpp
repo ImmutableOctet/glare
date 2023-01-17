@@ -85,11 +85,11 @@ namespace graphics
 			template <typename Collection>
 			index_t get_index(float timestamp, const Collection& data) const
 			{
-				for (index_t index = 0; index < (data.size()-1); ++index)
+				for (std::size_t index = 0; index < (data.size()-1); ++index)
 				{
 					if (timestamp < (data[index+1].timestamp))
 					{
-						return index;
+						return static_cast<index_t>(index);
 					}
 				}
 
