@@ -4,6 +4,20 @@
 
 namespace engine
 {
+	// EntityDescriptor:
+	MetaTypeDescriptor& EntityDescriptor::generate_empty_command(const MetaType& command_type, Entity source, Entity target)
+	{
+		using namespace entt::literals;
+
+		//auto command_content = CommandContent(command_type);
+		auto& command_content = shared_storage.allocate<MetaTypeDescriptor>(command_type);
+
+		command_content.set_variable(MetaVariable("source"_hs, Entity(null)));
+		command_content.set_variable(MetaVariable("target"_hs, Entity(null)));
+
+		return command_content;
+	}
+
 	const EntityState* EntityDescriptor::get_state(StringHash name) const
 	{
 		for (const auto& state : states)
@@ -28,7 +42,27 @@ namespace engine
 		return const_cast<EntityState*>(const_cast<const EntityDescriptor*>(this)->get_state(name));
 	}
 
-	std::optional<EntityStateIndex> EntityDescriptor::get_state_index(StringHash name) const // std::size_t
+	const EntityState* EntityDescriptor::get_state(std::optional<StringHash> name) const
+	{
+		if (!name)
+		{
+			return {};
+		}
+
+		return get_state(*name);
+	}
+
+	EntityState* EntityDescriptor::get_state(std::optional<StringHash> name)
+	{
+		if (!name)
+		{
+			return {};
+		}
+
+		return get_state(*name);
+	}
+
+	std::optional<EntityStateIndex> EntityDescriptor::get_state_index(EntityStateID name) const // std::size_t
 	{
 		for (EntityStateIndex i = 0; i < states.size(); i++)
 		{
@@ -46,6 +80,23 @@ namespace engine
 		}
 
 		return std::nullopt;
+	}
+
+	const EntityState* EntityDescriptor::get_state_by_index(EntityStateIndex state_index) const
+	{
+		const auto state_index_promoted = static_cast<std::size_t>(state_index);
+
+		assert(state_index_promoted < states.size());
+
+		if (const auto& state = states[state_index_promoted])
+		{
+			if (state)
+			{
+				return state.get();
+			}
+		}
+
+		return {};
 	}
 
 	bool EntityDescriptor::set_state(Registry& registry, Entity entity, std::optional<EntityStateIndex> previous_state, std::string_view state_name) const
@@ -86,8 +137,41 @@ namespace engine
 
 		const auto& to = states[state_index];
 
-		to->update(registry, entity, state_index, from, previous_state);
+		to->update(*this, registry, entity, state_index, from, previous_state);
 
 		return true;
+	}
+
+	const EntityThreadDescription& EntityDescriptor::get_thread(EntityThreadIndex thread_index) const
+	{
+		const auto& threads = get_threads();
+
+		return threads[thread_index]; // .at(thread_index);
+	}
+
+	// TODO: Optimize via map lookup, etc.
+	std::optional<EntityThreadIndex> EntityDescriptor::get_thread_index(EntityThreadID thread_id) const
+	{
+		const auto& threads = get_threads();
+
+		//for (const auto& thread : threads)
+		for (std::size_t i = 0; i < threads.size(); i++)
+		{
+			const auto& thread = threads[i];
+
+			if (thread.thread_id == thread_id)
+			{
+				return static_cast<EntityThreadIndex>(i);
+			}
+		}
+
+		return std::nullopt;
+	}
+
+	std::optional<EntityThreadID> EntityDescriptor::get_thread_id(EntityThreadIndex thread_index) const
+	{
+		const auto& thread = get_thread(thread_index);
+
+		return thread.thread_id;
 	}
 }
