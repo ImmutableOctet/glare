@@ -38,17 +38,15 @@ namespace app::input
 
 	GamepadState::ButtonBit GamepadState::get_dpad_button(DPad_Direction direction) const
 	{
-		using enum DPad_Direction;
-
 		switch (direction)
 		{
-			case Up:
+			case DPad_Direction::Up:
 				return ButtonBit::UP;
-			case Right:
+			case DPad_Direction::Right:
 				return ButtonBit::RIGHT;
-			case Down:
+			case DPad_Direction::Down:
 				return ButtonBit::DOWN;
-			case Left:
+			case DPad_Direction::Left:
 				return ButtonBit::LEFT;
 		}
 
