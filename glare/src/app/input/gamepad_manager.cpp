@@ -68,7 +68,7 @@ namespace app::input
 
 				if (!result)
 				{
-					throw std::runtime_error(format("Unable to find gamepad profile: \"{}\"", profile_name));
+					throw std::runtime_error(util::format("Unable to find gamepad profile: \"{}\"", profile_name));
 				}
 			}
 		}
