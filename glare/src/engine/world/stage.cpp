@@ -348,7 +348,7 @@ namespace engine
 		}
 		else if ((target_pool.empty()) || (target_pool == "object"))
 		{
-			auto ref_type = results[2];
+			const auto& ref_type = results[2];
 
 			if (ref_type == "#")
 			{
@@ -511,6 +511,7 @@ namespace engine
 			print("Loading geometry from \"{}\"...\n", model_path);
 
 			auto type = EntityType::Geometry;
+			
 			auto model = load_model(world, model_path, stage, type, true, CollisionConfig(type, collision_enabled));
 
 			print("Applying transformation to stage geometry...");
