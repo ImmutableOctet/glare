@@ -6,7 +6,6 @@
 #include "player_component.hpp"
 #include "player_target_component.hpp"
 #include "type_component.hpp"
-#include "instance_component.hpp"
 #include "forwarding_component.hpp"
 #include "relationship_component.hpp"
 #include "transform_component.hpp"
@@ -18,7 +17,6 @@
 namespace engine
 {
 	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(TypeComponent, type);
-	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(InstanceComponent, instance);
 	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(ForwardingComponent, root_entity);
 	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(PlayerComponent, player_index);
 	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(PlayerTargetComponent, player_index);
@@ -109,7 +107,6 @@ namespace engine
 		reflect<RelationshipComponent>();
 		reflect<NameComponent>();
 		reflect<TypeComponent>();
-		reflect<InstanceComponent>();
 		reflect<ForwardingComponent>();
 		reflect<PlayerComponent>();
 		reflect<PlayerTargetComponent>();
