@@ -1,14 +1,16 @@
 #pragma once
 
+#include "small_vector.hpp"
+//#include "format.hpp"
+
 #include <string>
 #include <string_view>
+#include <array>
 #include <regex>
 #include <utility>
 #include <optional>
 #include <type_traits>
 #include <charconv>
-
-//#include <fmt/core.h>
 
 struct aiString;
 
@@ -379,4 +381,9 @@ namespace util
 
 	// TODO: Move this to a different source file.
 	std::string_view to_string_view(const aiString& str);
+
+	std::string camel_to_snake_case(std::string_view camel_case);
+	std::string snake_to_camel_case(std::string_view snake_case, bool leading_uppercase=true);
+
+	std::string reverse_from_separator(std::string_view str, std::string_view separator, std::string_view trim_values={});
 }
