@@ -29,4 +29,6 @@ namespace engine
 	// Allows for types to (optionally) define their own `reflect` static member-functions.
 	// See also: `engine::reflect` free-function. (found in `reflection`)
 	GENERATE_HAS_FUNCTION_TRAIT(reflect); // `has_function_reflect`
+
+	GENERATE_HAS_FIELD_TRAIT(check_linked); // `has_field_check_linked`
 }
