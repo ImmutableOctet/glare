@@ -1,10 +1,12 @@
 #include "entity_state.hpp"
+#include "entity_descriptor.hpp"
 
 #include <engine/meta/meta.hpp>
 
-#include <engine/state/components/state_component.hpp>
-#include <engine/state/components/state_storage_component.hpp>
-#include <engine/state/components/frozen_state_component.hpp>
+#include "components/state_component.hpp"
+#include "components/state_storage_component.hpp"
+#include "components/frozen_state_component.hpp"
+#include "components/entity_thread_component.hpp"
 
 // Debugging related:
 #include <util/log.hpp>
@@ -42,20 +44,22 @@ namespace engine
 		return container;
 	}
 
-	void EntityState::update(Registry& registry, Entity entity, EntityStateIndex self_index, const EntityState* previous, std::optional<EntityStateIndex> prev_index, bool decay_prev_state, bool update_state_component) const
+	void EntityState::update(const EntityDescriptor& descriptor, Registry& registry, Entity entity, EntityStateIndex self_index, const EntityState* previous, std::optional<EntityStateIndex> prev_index, bool decay_prev_state, bool update_state_component) const
 	{
 		if (previous && decay_prev_state)
 		{
 			assert(prev_index);
 
-			previous->decay(registry, entity, *prev_index, &components.persist);
+			previous->decay(descriptor, registry, entity, *prev_index, &components.persist);
 		}
 
-		activate(registry, entity, self_index, prev_index, update_state_component);
+		activate(descriptor, registry, entity, self_index, prev_index, update_state_component);
 	}
 
-	void EntityState::decay(Registry& registry, Entity entity, EntityStateIndex self_index, const MetaDescription* next_state_persist) const
+	void EntityState::decay(const EntityDescriptor& descriptor, Registry& registry, Entity entity, EntityStateIndex self_index, const MetaDescription* next_state_persist) const
 	{
+		decay_threads(descriptor, registry, entity, self_index);
+
 		// Store state-local component instances.
 		store(registry, entity, self_index);
 
@@ -66,7 +70,7 @@ namespace engine
 			// from both this state and the next state, to determine if removal is necessary:
 			for (const auto& component : components.add.type_definitions)
 			{
-				auto& type = component.type;
+				const auto type = component.get_type();
 
 				if (next_state_persist)
 				{
@@ -98,7 +102,7 @@ namespace engine
 		persist(registry, entity, false);
 	}
 
-	void EntityState::activate(Registry& registry, Entity entity, EntityStateIndex self_index, std::optional<EntityStateIndex> prev_index, bool update_state_component) const
+	void EntityState::activate(const EntityDescriptor& descriptor, Registry& registry, Entity entity, EntityStateIndex self_index, std::optional<EntityStateIndex> prev_index, bool update_state_component) const
 	{
 		copy(registry, entity, self_index);
 		freeze(registry, entity, self_index);
@@ -111,6 +115,8 @@ namespace engine
 		{
 			force_update_component(registry, entity, self_index, prev_index);
 		}
+
+		activate_threads(descriptor, registry, entity, self_index);
 	}
 
 	void EntityState::force_update_component(Registry& registry, Entity entity, EntityStateIndex self_index, std::optional<EntityStateIndex> prev_index) const
@@ -273,7 +279,7 @@ namespace engine
 
 	bool EntityState::remove_component(Registry& registry, Entity entity, const MetaTypeDescriptor& component) const
 	{
-		return remove_component(registry, entity, component.type);
+		return remove_component(registry, entity, component.get_type());
 	}
 
 	bool EntityState::has_component(Registry& registry, Entity entity, const MetaType& type) const
@@ -300,9 +306,9 @@ namespace engine
 	{
 		using namespace entt::literals;
 
-		auto& type = component.type;
+		const auto type = component.get_type();
 
-		auto emplace_fn = type.func("emplace_meta_component"_hs);
+		const auto emplace_fn = type.func("emplace_meta_component"_hs);
 
 		if (!emplace_fn)
 		{
@@ -336,7 +342,7 @@ namespace engine
 	{
 		using namespace entt::literals;
 
-		auto& type = component.type;
+		auto type = component.get_type();
 
 		auto patch_fn = type.func("patch_meta_component"_hs);
 
@@ -406,9 +412,9 @@ namespace engine
 	{
 		for (const auto& component : components.add.type_definitions)
 		{
-			const auto& type = component.type;
+			const auto& type_id = component.type_id;
 
-			if (component.forces_field_assignment() || components.persist.get_definition(type))
+			if (component.forces_field_assignment() || components.persist.get_definition(type_id))
 			{
 				update_component_fields(registry, entity, component);
 			}
@@ -445,6 +451,31 @@ namespace engine
 				add_component(registry, entity, component);
 			}
 		}
+	}
+
+	void EntityState::activate_threads(const EntityDescriptor& descriptor, Registry& registry, Entity entity, EntityStateIndex self_index) const
+	{
+		if (immediate_threads.empty())
+		{
+			return;
+		}
+
+		auto& thread_component = registry.get_or_emplace<EntityThreadComponent>(entity);
+
+		// TODO: Change to use of `EntityThreadSpawnCommand` instead of direct call.
+		thread_component.start_threads(*this, self_index);
+	}
+
+	void EntityState::decay_threads(const EntityDescriptor& descriptor, Registry& registry, Entity entity, EntityStateIndex self_index) const
+	{
+		auto* thread_component = registry.try_get<EntityThreadComponent>(entity);
+
+		if (!thread_component)
+		{
+			return;
+		}
+
+		thread_component->stop_threads(*this, self_index); // descriptor
 	}
 
 	FrozenStateComponent& EntityState::freeze(Registry& registry, Entity entity, EntityStateIndex self_index) const

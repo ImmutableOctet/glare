@@ -1,6 +1,9 @@
 #pragma once
 
+#include "types.hpp"
+
 #include "entity_state_rule.hpp"
+#include "entity_thread_range.hpp"
 
 #include <engine/meta/types.hpp>
 #include <engine/meta/meta_description.hpp>
@@ -12,6 +15,7 @@
 #include <util/small_vector.hpp>
 
 #include <optional>
+#include <tuple>
 #include <string_view>
 #include <unordered_map>
 //#include <map>
@@ -21,6 +25,8 @@ namespace engine
 	struct FrozenStateComponent;
 	struct StateStorageComponent;
 
+	class EntityDescriptor;
+
 	class EntityState
 	{
 		public:
@@ -28,6 +34,8 @@ namespace engine
 
 			// TODO: Review whether it makes sense to pair keys and values in a `small_vector` of tuples, rather than a map.
 			using Rules = std::unordered_map<MetaTypeID, RuleCollection>; // std::map<...>;
+
+			using ImmediateThreadDetails = EntityThreadRange;
 
 			// The name of this state.
 			std::optional<StringHash> name; // EntityStateHash
@@ -73,21 +81,23 @@ namespace engine
 				bool keep_modified_add_components : 1 = true;
 			} decay_policy;
 
+			util::small_vector<ImmediateThreadDetails, 1> immediate_threads; // 2
+
 			// Executes appropriate add/remove/persist functions in order to establish this state as current.
-			void update(Registry& registry, Entity entity, EntityStateIndex self_index, const EntityState* previous=nullptr, std::optional<EntityStateIndex> prev_index=std::nullopt, bool decay_prev_state=true, bool update_state_component=true) const;
+			void update(const EntityDescriptor& descriptor, Registry& registry, Entity entity, EntityStateIndex self_index, const EntityState* previous=nullptr, std::optional<EntityStateIndex> prev_index=std::nullopt, bool decay_prev_state=true, bool update_state_component=true) const;
 
 			// Decays this state from `entity`, but does not perform any additional activation/initialization of the next state.
 			//
 			// NOTE: This is normally called automatically as a subroutine of `update`.
 			// For most use-cases, `update` is a more appropriate interface.
-			void decay(Registry& registry, Entity entity, EntityStateIndex self_index, const MetaDescription* next_state_persist=nullptr) const;
+			void decay(const EntityDescriptor& descriptor, Registry& registry, Entity entity, EntityStateIndex self_index, const MetaDescription* next_state_persist=nullptr) const;
 
 			// Activates this state for `entity`, but does not perform
 			// any decay or cleanup operations for the previous state.
 			//
 			// NOTE: This is normally called automatically as a subroutine of `update`.
 			// For most use-cases, `update` is a more appropriate interface.
-			void activate(Registry& registry, Entity entity, EntityStateIndex self_index, std::optional<EntityStateIndex> prev_index=std::nullopt, bool update_state_component=true) const;
+			void activate(const EntityDescriptor& descriptor, Registry& registry, Entity entity, EntityStateIndex self_index, std::optional<EntityStateIndex> prev_index=std::nullopt, bool update_state_component=true) const;
 
 			// Manually updates the `StateComponent` instance associated to `entity`.
 			void force_update_component(Registry& registry, Entity entity, EntityStateIndex self_index, std::optional<EntityStateIndex> prev_index=std::nullopt) const;
@@ -144,6 +154,9 @@ namespace engine
 			void add(Registry& registry, Entity entity) const;
 			void remove(Registry& registry, Entity entity) const;
 			void persist(Registry& registry, Entity entity, bool value_assignment=true) const;
+
+			void activate_threads(const EntityDescriptor& descriptor, Registry& registry, Entity entity, EntityStateIndex self_index) const;
+			void decay_threads(const EntityDescriptor& descriptor, Registry& registry, Entity entity, EntityStateIndex self_index) const;
 
 			FrozenStateComponent& freeze(Registry& registry, Entity entity, EntityStateIndex self_index) const;
 			FrozenStateComponent& unfreeze(Registry& registry, Entity entity, EntityStateIndex self_index) const;
