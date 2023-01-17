@@ -29,7 +29,7 @@ namespace graphics
 		public:
 			RenderBuffer();
 			RenderBuffer(pass_ref<Context> ctx, Type type, int width, int height);
-			RenderBuffer(RenderBuffer&& buffer) : RenderBuffer() { swap(*this, buffer); }
+			RenderBuffer(RenderBuffer&& buffer) noexcept : RenderBuffer() { swap(*this, buffer); }
 
 			~RenderBuffer();
 
