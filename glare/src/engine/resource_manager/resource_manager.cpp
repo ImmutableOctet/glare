@@ -250,6 +250,8 @@ namespace engine
 		// (Used during entity instantiation)
 		EntityFactoryChildren children;
 
+		const auto& command_context = get_command_parsing_context();
+
 		auto factory = EntityFactory
 		(
 			context,
@@ -272,12 +274,14 @@ namespace engine
 				// 
 				// See also: `generate_entity`
 				children.push_back(child_context.paths.instance_path.string()); // c_str();
-			}
+			},
+
+			&command_context
 		);
 
 		// NOTE: In the case of child factories, the parent factory is initialized last.
 		// This applies recursively to each level of the hierarchy.
-		if (auto [it, result] = entity_factories.emplace(path_str, EntityFactoryData { std::move(factory), std::move(children) }); result)
+		if (auto [it, result] = entity_factories.try_emplace(path_str, std::move(factory), std::move(children)); result)
 		{
 			return &it->second;
 		}
@@ -351,5 +355,22 @@ namespace engine
 		}
 
 		return {};
+	}
+
+	CommandParsingContext& ResourceManager::set_command_parsing_context(CommandParsingContext&& context)
+	{
+		command_parsing_context = std::move(context);
+
+		return *command_parsing_context;
+	}
+
+	const CommandParsingContext& ResourceManager::get_command_parsing_context() const
+	{
+		if (!command_parsing_context.has_value())
+		{
+			command_parsing_context = CommandParsingContext::generate();
+		}
+
+		return *command_parsing_context;
 	}
 }
