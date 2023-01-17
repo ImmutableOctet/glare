@@ -69,7 +69,7 @@ namespace engine
     // NOTE: In the default case of `T=void`, the overridden version of this template is used.
     // TODO: Look into best way to handle multiple calls to reflect. (This is currently only managed in `reflect_all`)
     template <typename T=void>
-    inline void reflect()
+    void reflect()
     {
         if constexpr (std::is_enum_v<T>)
         {
