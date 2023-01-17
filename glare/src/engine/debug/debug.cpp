@@ -7,6 +7,8 @@
 
 #include <engine/components/relationship_component.hpp>
 
+#include <engine/entity/events.hpp>
+
 #include <engine/world/world.hpp>
 #include <engine/world/world_events.hpp>
 #include <engine/world/physics/collision_events.hpp>
@@ -22,7 +24,7 @@
 #include <util/format.hpp>
 #include <util/log.hpp>
 
-#include <magic_enum/magic_enum_format.hpp>
+//#include <magic_enum_format.hpp>
 
 // Debugging related:
 #include <math/math.hpp>
@@ -99,7 +101,7 @@ namespace engine
 			auto t = world.get_transform(entity);
 			auto position = t.get_position();
 
-			game.set_title(std::format("{}{}: {},{},{}", prefix.value_or(""), world.get_name(entity), position.x, position.y, position.z));
+			game.set_title(util::format("{}{}: {},{},{}", prefix.value_or(""), world.get_name(entity), position.x, position.y, position.z));
 		}
 	}
 
@@ -301,7 +303,7 @@ namespace engine
 		const auto& player_id = data.state_index;
 		const auto& button    = data.button;
 
-		print("Player: {} - Button Held: {}", player_id, std::format("{}", button));
+		print("Player: {} - Button Held: {}", player_id, util::format("{}", button));
 	}
 
 	void DebugListener::operator()(const OnButtonReleased& data)
@@ -309,7 +311,7 @@ namespace engine
 		const auto& player_id = data.state_index;
 		const auto& button = data.button;
 
-		print("Player: {} - Button Released: {}", player_id, std::format("{}", button));
+		print("Player: {} - Button Released: {}", player_id, util::format("{}", button));
 	}
 	
 	void DebugListener::operator()(const OnButtonPressed& data)
@@ -317,7 +319,7 @@ namespace engine
 		const auto& player_id = data.state_index;
 		const auto& button = data.button;
 
-		print("Player: {} - Button Pressed: {}", player_id, std::format("{}", button));
+		print("Player: {} - Button Pressed: {}", player_id, util::format("{}", button));
 	}
 
 	void DebugListener::operator()(const OnAnalogInput& data)
