@@ -1,7 +1,5 @@
 #pragma once
 
-#include <engine/reflection.hpp>
-
 #include "reflection.hpp"
 
 #include "components/input_component.hpp"
@@ -10,9 +8,6 @@
 #include "events.hpp"
 
 #include <app/input/devices.hpp>
-
-// Debugging related:
-#include <util/log.hpp>
 
 namespace engine
 {
@@ -106,7 +101,7 @@ namespace engine
 		// Components:
 		reflect<InputComponent>();
 		// ...
-
+		
 		// Events:
 		reflect<InputEvent>();
 		reflect<OnInput>();
