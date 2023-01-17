@@ -1,7 +1,7 @@
 #include "pixelmap.hpp"
 
 //#include <algorithm>
-#include <stb/stb_image.h>
+#include <stb_image.h> // <stb/stb_image.h>
 
 namespace graphics
 {
