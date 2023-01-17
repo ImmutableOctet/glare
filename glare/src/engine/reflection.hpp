@@ -303,7 +303,7 @@ namespace engine
     // By default, `entt` uses a fully qualified name, along with a "struct" or "class" prefix, etc.
     // This allows you to simply refer to the type by its namespace-local name.
     template <typename T>
-    auto engine_meta_type()
+    auto engine_meta_type(bool capture_standard_data_members=true)
     {
         // Ensure that we're using the correct context.
         sync_reflection_context();
@@ -326,6 +326,11 @@ namespace engine
             .template func<&MetaEventListener::disconnect_component_listeners<T>>("disconnect_component_meta_events"_hs)
             .template func<&trigger_event_from_meta_any<T>>("trigger_event_from_meta_any"_hs);
         ;
+
+        if (!capture_standard_data_members)
+        {
+            return type;
+        }
 
         // `entity` data member:
         if constexpr (has_method_entity<T, Entity()>::value) // std::decay_t<T>
@@ -396,9 +401,9 @@ namespace engine
     }
 
     template <typename T>
-    auto engine_command_type()
+    auto engine_command_type(bool capture_standard_data_members=false) // true
     {
-        return engine_meta_type<T>()
+        return engine_meta_type<T>(capture_standard_data_members)
             .base<Command>()
         ;
     }
