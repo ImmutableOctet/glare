@@ -3,9 +3,9 @@
 #include "lib.hpp"
 
 #include <sdl2/SDL.h>
-#include <imgui/imgui.h>
+#include <imgui.h> // <imgui/imgui.h>
 
-namespace util
+namespace glare
 {
 	namespace lib
 	{

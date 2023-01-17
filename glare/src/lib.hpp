@@ -7,7 +7,7 @@
 
 struct SDL_Window;
 
-namespace util
+namespace glare
 {
 	namespace lib
 	{
