@@ -114,12 +114,18 @@ namespace engine
 				// Dynamic scenario (any input shape):
 				else
 				{
-					if (auto convex_ptr = std::dynamic_pointer_cast<ConvexShapeRaw>(shape); convex_ptr)
+					// NOTE: Dynamic casts disabled due to RTTI-related issue with Bullet package.
+					
+					//if (auto convex_ptr = std::dynamic_pointer_cast<ConvexShapeRaw>(shape); convex_ptr)
+					if (shape->isConvex())
 					{
+						auto convex_ptr = std::static_pointer_cast<ConvexShapeRaw>(shape);
 						this->shape = std::move(convex_ptr);
 					}
-					else if (auto concave_ptr = std::dynamic_pointer_cast<ConcaveShapeRaw>(shape); concave_ptr)
+					//else if (auto concave_ptr = std::dynamic_pointer_cast<ConcaveShapeRaw>(shape); concave_ptr)
+					else if (shape->isConcave())
 					{
+						auto concave_ptr = std::static_pointer_cast<ConcaveShapeRaw>(shape);
 						this->shape = std::move(concave_ptr);
 					}
 					else
