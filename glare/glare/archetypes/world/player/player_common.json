@@ -1,29 +1,19 @@
 {
-	/*
 	"imports":
 	[
-		"player_jump"
+		{
+			"merge": "player_jump"
+		}
 	],
-	*/
 
-	"init_copy":
-	{
-		"NameComponent": "Common State"
-	},
-
-	/*
-	"local":
-	{
-		"TypeComponent": "EntityType::Geometry"
-	},
-	*/
+	"merge": "player_common_test",
 
 	"rules":
 	{
-		//"OnButtonPressed|Button::Jump":
-		"OnButtonPressed|Button::HeavyAttack":
+		"OnButtonPressed|Button::Jump":
 		{
-			"state": "player_jump"
+			"state": "player_jump",
+			"command": "print(Jumping...)"
 		},
 
 		//"OnButtonPressed|Button::HeavyAttack": "player_heavy_attack",
@@ -34,6 +24,8 @@
 		{
 			//"state": "player_shield"
 			//"command": "ActivateCommand(child(child_name))"
+			"print": ["SHIELD"],
+			"delay": 1
 		}
 	}
 }
