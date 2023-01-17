@@ -4,18 +4,13 @@
 // TODO: Rework this source file into some form of automated 'reflection generation' procedure in the build process.
 
 #include "reflection.hpp"
-#include "meta.hpp"
-
-#include "types.hpp"
-
-// TODO: Determine if these make sense as CPP files (or PCH) instead:
 #include "components/reflection.hpp"
 #include "commands/reflection.hpp"
+#include "meta/meta.hpp"
+
 #include "meta/reflection.hpp"
 #include "entity/reflection.hpp"
-
 #include "debug/reflection.hpp"
-#include "state/reflection.hpp"
 #include "input/reflection.hpp"
 #include "world/reflection.hpp"
 
@@ -36,7 +31,7 @@ namespace engine
     void reflect_systems()
     {
         reflect<DebugListener>();
-        reflect<StateSystem>();
+        reflect<EntitySystem>();
         reflect<InputSystem>();
         reflect<World>();
 
@@ -123,7 +118,6 @@ namespace engine
 
         reflect_core_components();
         reflect_core_commands();
-        reflect_entity_systems();
         reflect_systems();
 
         // ...
