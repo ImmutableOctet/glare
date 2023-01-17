@@ -21,8 +21,8 @@ namespace game
 			(
 				ctx,
 
-				"assets/shaders/display_texture.vert",
-				"assets/shaders/display_texture.frag"
+				"engine/shaders/display_texture.vert",
+				"engine/shaders/display_texture.frag"
 			);
 		}
 	}
