@@ -9,3 +9,7 @@
 #include "entity_thread_unlink_action.hpp"
 #include "entity_thread_skip_action.hpp"
 #include "entity_thread_rewind_action.hpp"
+
+#include "entity_state_transition_action.hpp"
+#include "entity_state_command_action.hpp"
+#include "entity_state_update_action.hpp"
