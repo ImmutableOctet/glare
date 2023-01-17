@@ -1,6 +1,7 @@
 #pragma once
 
 #include <lib.hpp>
+
 #include "types.hpp"
 #include "delta_time.hpp"
 #include "input/input.hpp"
@@ -78,7 +79,7 @@ namespace app
 
 			virtual void on_execute();
 
-			virtual void fixed_update();
+			virtual void fixed_update(Milliseconds time);
 
 			virtual void update(Milliseconds time) abstract; // const DeltaTime& delta_time
 

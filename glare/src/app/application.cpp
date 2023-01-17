@@ -14,11 +14,11 @@ namespace app
 		//delta_time(update_rate),
 		fixed_update_rate(update_rate)
 	{
-		auto time = milliseconds();
-
-		*this << Timer::make_continuous(fixed_update_duration(), time, [this](Timer& timer, Duration time_elapsed)
+		*this << Timer::make_continuous(fixed_update_duration(), milliseconds(), [this](Timer& timer, Duration time_elapsed)
 		{
-			fixed_update();
+			auto time = milliseconds();
+
+			fixed_update(time);
 
 			return fixed_update_duration();
 		});
@@ -199,7 +199,7 @@ namespace app
 		// Empty implementation.
 	}
 
-	void Application::fixed_update()
+	void Application::fixed_update(Milliseconds time)
 	{
 		// Empty implementation.
 	}
