@@ -2,7 +2,7 @@
 
 #include <engine/command.hpp>
 #include <engine/entity/types.hpp>
-#include <engine/entity/entity_thread_unlink_action.hpp>
+#include <engine/entity/actions/entity_thread_unlink_action.hpp>
 
 #include <optional>
 

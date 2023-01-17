@@ -1,9 +1,6 @@
 #pragma once
 
-#include "types.hpp"
-
-//#include "entity_thread_range.hpp"
-#include "entity_thread_target.hpp"
+#include <engine/entity/entity_thread_target.hpp>
 
 #include <optional>
 

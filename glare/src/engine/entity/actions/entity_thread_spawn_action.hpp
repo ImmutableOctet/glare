@@ -1,6 +1,6 @@
 #pragma once
 
-#include "entity_thread_target.hpp"
+#include <engine/entity/entity_thread_target.hpp>
 
 namespace engine
 {

@@ -6,6 +6,6 @@ namespace engine
 {
 	struct EntityThreadSkipAction : EntityThreadControlFlowAction
 	{
-		EntityInstructionCount instructions_skipped;
+		EntityInstructionCount instructions_skipped = 0;
 	};
 }
