@@ -25,6 +25,62 @@ namespace engine
 	// Attempts to resolve a native value from a raw string value, using reflection.
 	entt::meta_any meta_any_from_string(std::string_view value, const MetaAnyParseInstructions& instructions={});
 
+	// Attempts to resolve the value indicated by `string_reference` as a string.
+	// 
+	// If the value is a string, `string_callback` will be executed.
+	// If the value is not a string, `non_string_callback` will be called instead.
+	// 
+	// NOTE: Although the return value of `string_callback` is ignored, the return-value of
+	// `non_string_callback` is used to determine if the `entt::meta_any` instance
+	// retrieved should be returned back to the initial caller.
+	template <typename StringCallback, typename NonStringCallback>
+	inline entt::meta_any peek_string_value(std::string_view string_reference, StringCallback&& string_callback, NonStringCallback&& non_string_callback, const MetaAnyParseInstructions& instructions={}) // { .fallback_to_string=true }
+	{
+		const auto resolved_value = meta_any_from_string(string_reference, instructions);
+
+		if (!resolved_value)
+		{
+			return {};
+		}
+
+		if (try_string_value(resolved_value, string_callback))
+		{
+			if constexpr (std::is_invocable_r_v<bool, NonStringCallback, decltype(resolved_value)>)
+			{
+				if (!non_string_callback(resolved_value))
+				{
+					return {};
+				}
+			}
+			else
+			{
+				non_string_callback(resolved_value);
+			}
+		}
+
+		return resolved_value;
+	}
+
+	// Convenience overload for `peek_string_value` without the need to specify a non-string callback.
+	template <typename Callback>
+	inline bool peek_string_value(std::string_view string_reference, Callback&& callback, const MetaAnyParseInstructions& instructions={}) // { .fallback_to_string=true }
+	{
+		auto result = peek_string_value
+		(
+			string_reference,
+			std::forward<Callback>(callback),
+			
+			[](const entt::meta_any& non_string_value)
+			{
+				return false;
+			},
+
+			instructions
+		);
+
+		return static_cast<bool>(result);
+	}
+
 	entt::meta_any resolve_meta_any(const util::json& value, MetaTypeID type_id, const MetaAnyParseInstructions& instructions={});
 	entt::meta_any resolve_meta_any(const util::json& value, MetaType type, const MetaAnyParseInstructions& instructions={});
 
