@@ -1,9 +1,8 @@
 #pragma once
 
-// FMT:
-#define FMT_HEADER_ONLY
+#include <string_view>
 
-#include <fmt/core.h>
+//#define FMT_HEADER_ONLY
 #include <fmt/format.h>
 
 #include "magic_enum.hpp"
@@ -30,4 +29,8 @@ struct fmt::formatter<E, std::enable_if_t<std::is_enum_v<E>&& magic_enum::custom
 };
 
 //namespace engine { using fmt::format; }
-using fmt::format;
+
+namespace util
+{
+	using fmt::format;
+}
