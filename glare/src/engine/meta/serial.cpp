@@ -3,7 +3,11 @@
 #include "meta_type_descriptor.hpp"
 
 #include <engine/types.hpp>
+
+#include <engine/entity/entity_thread_target.hpp>
+
 #include <util/string.hpp>
+#include <util/parse.hpp>
 
 #include <vector>
 
@@ -44,26 +48,26 @@ namespace engine
 		return meta_any_from_string(std::string_view { string_value }, instructions);
 	}
 
-	entt::meta_any meta_any_from_string(std::string_view value, const MetaAnyParseInstructions& instructions)
+	static entt::meta_any meta_any_from_string_resolve_impl(std::string_view value, const MetaAnyParseInstructions& instructions)
 	{
-		bool resolve_symbol = instructions.resolve_symbol;
-
-		if (instructions.strip_quotes)
+		if (auto as_integer = util::from_string<std::int32_t>(value)) // std::int64_t
 		{
-			if (util::is_quoted(value))
-			{
-				value = util::unquote(value);
-
-				resolve_symbol = false;
-			}
+			return as_integer;
+		}
+		
+		if (auto as_float = util::from_string<float>(value)) // double
+		{
+			return as_float;
 		}
 
-		if (resolve_symbol)
-		{
-			entt::meta_any output;
-			entt::meta_type type;
+		entt::meta_any output;
+		entt::meta_type type;
 
-			auto has_scope_resolution = util::split(value, "::", [&value, &output, &type](std::string_view symbol, bool is_last_symbol)
+		auto has_scope_resolution = util::split
+		(
+			value, "::",
+
+			[&value, &output, &type](std::string_view symbol, bool is_last_symbol)
 			{
 				auto symbol_id = hash(symbol);
 
@@ -124,18 +128,138 @@ namespace engine
 				*/
 
 				return true;
-			});
-
-			if (output && has_scope_resolution)
-			{
-				return output;
 			}
+		);
 
-			if (instructions.resolve_component_member_references)
+		if (output && has_scope_resolution)
+		{
+			return output;
+		}
+
+		if (instructions.resolve_component_member_references)
+		{
+			if (auto result = indirect_meta_data_member_from_string(value))
 			{
-				if (auto result = indirect_meta_data_member_from_string(value))
+				return *result;
+			}
+		}
+
+		return {};
+	}
+
+	entt::meta_any meta_any_from_string(std::string_view value, const MetaAnyParseInstructions& instructions)
+	{
+		using namespace entt::literals;
+
+		bool resolve_symbol = instructions.resolve_symbol;
+
+		if (instructions.strip_quotes)
+		{
+			if (util::is_quoted(value))
+			{
+				value = util::unquote(value);
+
+				resolve_symbol = false;
+			}
+		}
+
+		if (resolve_symbol)
+		{
+			auto execute_string_command = [](const auto command_id, const auto& content) -> entt::meta_any
+			{
+				switch (command_id)
 				{
-					return *result;
+					case "id"_hs:
+					case "Id"_hs:
+					case "ID"_hs:
+					case "name"_hs:
+					case "hash"_hs:
+						return hash(content).value();
+
+					case "thread"_hs:
+						return EntityThreadTarget(content);
+				}
+
+				return {};
+			};
+
+			auto execute_any_command = [&execute_string_command](const auto command_id, const entt::meta_any& content) -> entt::meta_any
+			{
+				//switch (command_id)
+				{
+					//case "..."_hs:
+					// break;
+
+					//default:
+					{
+						if (const auto* as_str_view = content.try_cast<std::string_view>())
+						{
+							return execute_string_command(command_id, *as_str_view);
+						}
+						else if (const auto* as_str = content.try_cast<std::string>())
+						{
+							return execute_string_command(command_id, *as_str);
+						}
+
+						//break;
+					}
+				}
+
+				return {};
+			};
+
+			// Check for `hash` shorthand.
+			if (value.starts_with('$') || value.starts_with('#'))
+			{
+				// Remove symbol prefix.
+				value = value.substr(1);
+
+				if (auto result = execute_string_command("hash"_hs, value))
+				{
+					return result;
+				}
+			}
+			else
+			{
+				auto
+				[
+					command_name, command_content,
+					command_trailing_expr, command_content_is_string
+				] = util::parse_single_argument_command(value, true); // false
+
+				if (!command_name.empty() && !command_content.empty())
+				{
+					const auto command_id = hash(command_name).value();
+
+					if (!command_content_is_string)
+					{
+						if (auto resolved = meta_any_from_string_resolve_impl(command_content, instructions))
+						{
+							if (auto result = execute_any_command(command_id, resolved))
+							{
+								return result;
+							}
+
+							// Fallback to resolved value.
+							return resolved;
+						}
+					}
+
+					if (auto result = execute_string_command(command_id, command_content))
+					{
+						return result;
+					}
+
+					// If nothing else, forward the inner content
+					// of the command as the intended value.
+					value = command_content;
+				}
+				else
+				{
+					if (auto resolved = meta_any_from_string_resolve_impl(value, instructions))
+					{
+						return resolved;
+					}
 				}
 			}
 		}
@@ -206,7 +330,7 @@ namespace engine
 
 	std::optional<MetaDataMember> meta_data_member_from_string(const std::string& value) // std::string_view
 	{
-		const auto [type_name, data_member_name] = parse_data_member_reference(value);
+		const auto [type_name, data_member_name] = util::parse_data_member_reference(value);
 
 		return process_meta_data_member(type_name, data_member_name);
 	}
@@ -245,7 +369,7 @@ namespace engine
 
 	std::optional<IndirectMetaDataMember> indirect_meta_data_member_from_string(const std::string& value, EntityTarget target)
 	{
-		const auto [type_name, data_member_name] = parse_data_member_reference(value);
+		const auto [type_name, data_member_name] = util::parse_data_member_reference(value);
 
 		if (type_name.empty())
 		{
@@ -268,7 +392,7 @@ namespace engine
 			};
 		}
 
-		//auto data_member_reference = parse_data_member_reference();
+		//auto data_member_reference = util::parse_data_member_reference(...);
 
 		std::size_t target_parse_offset = 0;
 
@@ -300,30 +424,6 @@ namespace engine
 		return indirect_meta_data_member_from_string(std::string(value), std::move(target));
 	}
 
-	std::tuple<std::string_view, std::string_view> parse_data_member_reference(const std::string& value) // std::string_view
-	{
-		const auto data_member_rgx = std::regex("([^\\s\\:\\.\\-\\>]+)\\s*(\\:\\:|\\.|\\-\\>)?\\s*([^\\s]+)");
-
-		if (std::smatch rgx_match; std::regex_search(value.begin(), value.end(), rgx_match, data_member_rgx))
-		{
-			auto type_name        = util::match_view(value, rgx_match, 1);
-			auto access_operator  = util::match_view(value, rgx_match, 2);
-			auto data_member_name = util::match_view(value, rgx_match, 3);
-
-			// Edge-case due to limitation in regular expression used. -- Handles scenarios
-			// where single-words are split into the full-string minus the last character.
-			// e.g. "self" being split into: <"sel", {}, "f">
-			if (!type_name.empty() && !data_member_name.empty() && access_operator.empty())
-			{
-				return {};
-			}
-
-			return { type_name, data_member_name };
-		}
-
-		return {};
-	}
-
 	EntityTarget::TargetType parse_target_type(const util::json& target_data)
 	{
 		using namespace entt::literals;
@@ -350,5 +450,36 @@ namespace engine
 		}
 
 		return Target::SelfTarget {};
+	}
+
+	void read_command_parsing_context(CommandParsingContext& context, const util::json& data)
+	{
+		if (auto aliases = data.find("aliases"); aliases != data.end())
+		{
+			for (const auto& proxy : aliases->items())
+			{
+				const auto& raw_value = proxy.value();
+
+				if (!raw_value.is_string())
+				{
+					continue;
+				}
+
+				const auto& alias = proxy.key();
+
+				auto command_name = raw_value.get<std::string>();
+
+				const auto command_id = hash(command_name);
+
+				auto command_type = resolve(command_id);
+
+				if (!command_type)
+				{
+					continue;
+				}
+
+				context.command_aliases[alias] = command_type.info().name(); // std::string(...);
+			}
+		}
 	}
 }

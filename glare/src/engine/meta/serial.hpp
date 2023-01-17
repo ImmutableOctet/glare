@@ -3,6 +3,7 @@
 #include "types.hpp"
 #include "meta_data_member.hpp"
 #include "indirect_meta_data_member.hpp"
+#include "command_parsing_context.hpp"
 
 #include <engine/entity/entity_target.hpp>
 
@@ -15,6 +16,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <tuple>
 
 namespace engine
@@ -106,7 +108,7 @@ namespace engine
 	// Attempts to resolve an `IndirectMetaDataMember` from `value`.
 	std::optional<IndirectMetaDataMember> indirect_meta_data_member_from_string(const std::string& value, EntityTarget target = { EntityTarget::SelfTarget{} });
 
-	std::tuple<std::string_view, std::string_view> parse_data_member_reference(const std::string& value); // std::string_view
-
 	EntityTarget::TargetType parse_target_type(const util::json& target_data);
+
+	void read_command_parsing_context(CommandParsingContext& context, const util::json& data);
 }
