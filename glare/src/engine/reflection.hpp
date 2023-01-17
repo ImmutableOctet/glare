@@ -408,19 +408,6 @@ namespace engine
         ;
     }
 
-    template <typename EnumType>
-    EnumType string_to_enum_value(std::string_view enum_short_str)
-    {
-        auto result = magic_enum::enum_cast<EnumType>(enum_short_str);
-
-        if (!result)
-        {
-            throw std::invalid_argument("Invalid enum value specified.");
-        }
-
-        return *result;
-    }
-
     // NOTE: This is called automatically via `reflect` when `T` is an enumeration type.
     //
     // TODO: Look into this implementation again.
