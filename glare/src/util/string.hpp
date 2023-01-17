@@ -345,6 +345,33 @@ namespace util
 		return result;
 	}
 
+	template <std::size_t expected_count, typename ArrayType=std::array<std::string_view, expected_count>>
+	std::optional<ArrayType> split_from(std::string_view str, std::string_view separator, std::size_t min_allowed=expected_count, std::string_view trim_values=" \n")
+	{
+		ArrayType out = {};
+
+		std::size_t index = 0;
+
+		split
+		(
+			str, separator,
+			
+			[&out, &index](std::string_view substr)
+			{
+				out[index++] = substr;
+			},
+
+			trim_values
+		);
+
+		if (index < min_allowed)
+		{
+			return std::nullopt;
+		}
+
+		return out;
+	}
+
 	// TODO: Move this to a different source file.
 	std::string_view to_string_view(const aiString& str);
 }
