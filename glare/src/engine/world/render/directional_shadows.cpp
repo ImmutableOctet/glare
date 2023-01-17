@@ -5,6 +5,7 @@
 
 #include <graphics/canvas.hpp>
 #include <graphics/context.hpp>
+#include <graphics/shader.hpp>
 
 #include <engine/world/world.hpp>
 #include <engine/world/light.hpp>
@@ -23,8 +24,8 @@ namespace engine
 			(
 				ctx,
 
-				"assets/shaders/shadow_mapping/directional_shadows_depth.vert",
-				"assets/shaders/shadow_mapping/directional_shadows_depth.frag",
+				"engine/shaders/shadow_mapping/directional_shadows_depth.vert",
+				"engine/shaders/shadow_mapping/directional_shadows_depth.frag",
 				std::string {},
 
 				shader_preprocessor

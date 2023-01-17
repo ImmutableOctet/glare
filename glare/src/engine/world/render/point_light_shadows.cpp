@@ -7,6 +7,7 @@
 
 #include <graphics/canvas.hpp>
 #include <graphics/context.hpp>
+#include <graphics/shader.hpp>
 
 #include <engine/world/world.hpp>
 #include <engine/world/light.hpp>
@@ -23,9 +24,9 @@ namespace engine
 			(
 				ctx,
 
-				"assets/shaders/shadow_mapping/point_shadows_depth.vert",
-				"assets/shaders/shadow_mapping/point_shadows_depth.frag",
-				"assets/shaders/shadow_mapping/point_shadows_depth.geom",
+				"engine/shaders/shadow_mapping/point_shadows_depth.vert",
+				"engine/shaders/shadow_mapping/point_shadows_depth.frag",
+				"engine/shaders/shadow_mapping/point_shadows_depth.geom",
 
 				shader_preprocessor
 			)
