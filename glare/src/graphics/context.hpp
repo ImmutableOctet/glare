@@ -15,7 +15,7 @@
 
 #include "types.hpp"
 #include "bind.hpp"
-#include "shader.hpp"
+//#include "shader.hpp"
 #include "texture.hpp"
 #include "framebuffer.hpp"
 

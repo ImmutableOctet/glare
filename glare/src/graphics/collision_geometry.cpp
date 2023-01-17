@@ -1,3 +1,5 @@
+// TODO: Move to a more appropriate submodule. (i.e. anywhere else but `graphics`)
+
 #include "collision_geometry.hpp"
 
 /*
