@@ -21,8 +21,8 @@
 
 // Debugging related:
 #include <util/log.hpp>
-#include <format>
-#include <magic_enum/magic_enum_format.hpp>
+#include <util/format.hpp>
+//#include <magic_enum_format.hpp>
 
 namespace engine
 {
