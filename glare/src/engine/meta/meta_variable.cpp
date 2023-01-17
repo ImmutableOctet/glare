@@ -7,6 +7,9 @@ namespace engine
 	MetaVariable::MetaVariable(MetaSymbolID name, entt::meta_any&& value)
 		: name(name), value(std::move(value)) {}
 
+	MetaVariable::MetaVariable(std::string_view name, entt::meta_any&& value)
+		: name(hash(name)), value(std::move(value)) {}
+
 	MetaVariable::MetaVariable(MetaSymbolID name, const util::json& value, const Instructions& instructions)
 		: MetaVariable(name, resolve_meta_any(value, instructions))
 	{}

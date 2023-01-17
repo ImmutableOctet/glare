@@ -15,6 +15,7 @@ namespace engine
 		using Instructions = MetaAnyParseInstructions;
 
 		MetaVariable(MetaSymbolID name, entt::meta_any&& value);
+		MetaVariable(std::string_view name, entt::meta_any&& value);
 		
 		// NOTE: This overload does not allow for non-primitive type resolution.
 		// (see overload taking `type_id`)
