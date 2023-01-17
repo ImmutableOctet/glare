@@ -1,0 +1,81 @@
+{
+  "name": "glare",
+  "version-semver": "0.0.5",
+  "dependencies": [
+    {
+      "name": "entt",
+      "version>=": "3.11.0"
+    },
+
+    {
+      "name": "fmt",
+      "version>=": "9.1.0"
+    },
+
+    {
+      "name": "nlohmann-json",
+      "version>=": "3.11.2"
+    },
+
+    {
+      "name": "magic-enum",
+      "version>=": "0.8.2"
+    },
+
+    {
+      "name": "glm",
+      "version>=": "0.9.9.8#1"
+    },
+
+    {
+      "name": "spdlog",
+      "version>=": "1.11.0"
+    },
+
+    {
+      "name": "folly",
+      "version>=": "2022.10.31.00#3"
+    },
+
+    {
+      "name": "bullet3",
+      "version>=": "3.22#2"
+    },
+
+    {
+      "name": "assimp",
+      "version>=": "5.2.5"
+    },
+
+    {
+      "name": "glew",
+      "version>=": "2.2.0"
+    },
+
+    {
+      "name": "sdl2",
+      "version>=": "2.26.1#2"
+    },
+
+    {
+      "name": "imgui",
+      "version>=": "1.89.1"
+    }
+  ],
+
+  "default-features": [],
+
+  "features": {
+    "test": {
+      "description": "Dependencies for testing",
+      "dependencies": [
+        {
+          "name": "catch2",
+          "version>=": "3.1.1#1"
+        }
+      ]
+    }
+  },
+
+  "builtin-baseline": "62d01b70df227850b728f5050418b917ad6d2b32"
+}
