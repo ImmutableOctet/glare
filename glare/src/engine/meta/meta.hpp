@@ -9,17 +9,29 @@
 
 #include <engine/types.hpp>
 
+#include <util/magic_enum.hpp>
 #include <util/reflection.hpp>
+#include <util/string.hpp>
 
+#include <string>
 #include <string_view>
 #include <type_traits>
 #include <optional>
 #include <utility>
+#include <array>
 #include <tuple>
 
 namespace engine
 {
     using entt::resolve;
+
+    constexpr std::array short_name_prefixes =
+    {
+        "struct engine::",
+         "class engine::",
+          "enum engine::",
+         "union engine::"
+    };
 
 	// Shortens the name of `T` if `T` belongs to the `engine` namespace.
     // 
@@ -27,12 +39,27 @@ namespace engine
 	template <typename T>
     constexpr std::string_view short_name()
     {
-        return util::resolve_short_name<T>
+        return std::apply
         (
-            "struct engine::",
-             "class engine::",
-              "enum engine::",
-             "union engine::"
+            [](auto&&... prefixes)
+            {
+                return util::resolve_short_name<T>(std::forward<decltype(prefixes)>(prefixes)...);
+            },
+
+            short_name_prefixes
+        );
+    }
+
+    constexpr std::string_view as_short_name(std::string_view name_view)
+    {
+        return std::apply
+        (
+            [&name_view](auto&&... names)
+            {
+                return util::as_short_name(name_view, std::forward<decltype(names)>(names)...);
+            },
+
+            short_name_prefixes
         );
     }
 
