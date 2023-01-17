@@ -232,9 +232,9 @@ namespace engine
     {
         assert
         (
-            (descriptor.type.id() == short_name_hash<T>().value())
+            (descriptor.type_id == short_name_hash<T>().value())
             ||
-            (descriptor.type.id() == entt::type_hash<T>::value())
+            (descriptor.type_id == entt::type_hash<T>::value())
         );
 
         // Ensure `T` is currently a component of `entity`.
