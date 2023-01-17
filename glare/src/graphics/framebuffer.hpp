@@ -33,7 +33,7 @@ namespace graphics
 			FrameBuffer(pass_ref<Context> ctx);
 			FrameBuffer(const FrameBuffer&)=delete;
 
-			FrameBuffer(FrameBuffer&& buffer) : FrameBuffer() { swap(*this, buffer); }
+			FrameBuffer(FrameBuffer&& buffer) noexcept : FrameBuffer() { swap(*this, buffer); }
 
 			~FrameBuffer();
 
