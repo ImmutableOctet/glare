@@ -1,25 +1,29 @@
+// TODO: Move to a different location or remove.
+
 #include "collision_shape_primitive.hpp"
 
 #include <entt/core/hashed_string.hpp>
 #include <util/string.hpp>
 
+#include "meta/meta.hpp"
+
 namespace engine
 {
 	CollisionShapePrimitive collision_shape_primitive(std::string_view shape_name)
 	{
-		using namespace entt;
+		using namespace entt::literals;
 
 		using enum CollisionShapePrimitive;
 
 		auto shape_name_processed = util::lowercase(shape_name);
 
-		switch (hashed_string(shape_name_processed.c_str()))
+		switch (hash(shape_name_processed.c_str()))
 		{
-			case hashed_string("capsule"):
+			case "capsule"_hs:
 				return Capsule;
-			case hashed_string("cube"):
+			case "cube"_hs:
 				return Cube;
-			case hashed_string("sphere"):
+			case "sphere"_hs:
 				return Sphere;
 		}
 
