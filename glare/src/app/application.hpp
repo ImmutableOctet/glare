@@ -1,11 +1,10 @@
 #pragma once
 
+#include <lib.hpp>
 #include "types.hpp"
 #include "delta_time.hpp"
 #include "input/input.hpp"
 #include "timer.hpp"
-
-#include <util/lib.hpp>
 
 #include <entt/signal/dispatcher.hpp>
 
@@ -37,7 +36,7 @@ namespace app
 			{
 				Libraries()
 				{
-					ASSERT(util::lib::init_sdl());
+					ASSERT(glare::lib::init_sdl());
 				}
 
 				~Libraries() {}
