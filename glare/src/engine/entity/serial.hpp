@@ -26,6 +26,8 @@ namespace engine
 
 	class EntityDescriptor;
 
+	struct ParsingContext;
+
 	// Offset used to account for the `source` and `target` arguments of a `Command` type.
 	inline constexpr std::size_t command_arg_offset = 2;
 
@@ -76,7 +78,8 @@ namespace engine
 	std::size_t process_update_action
 	(
 		EntityStateUpdateAction& action_out,
-		const util::json& update_entry
+		const util::json& update_entry,
+		const ParsingContext* opt_parsing_context=nullptr
 	);
 
 	std::size_t process_component_list
@@ -85,6 +88,7 @@ namespace engine
 		const util::json& components,
 
 		const MetaTypeDescriptorFlags& shared_component_flags={},
+		const ParsingContext* opt_parsing_context=nullptr,
 
 		bool allow_new_entry=true,
 		bool allow_default_entries=true,
@@ -104,6 +108,7 @@ namespace engine
 		std::optional<std::uint8_t> constructor_arg_count=std::nullopt, // SmallSize
 				
 		const MetaTypeDescriptorFlags& component_flags={},
+		const ParsingContext* opt_parsing_context=nullptr,
 
 		bool allow_entry_update=false,
 		bool allow_new_entry=true,

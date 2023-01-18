@@ -25,6 +25,8 @@ namespace engine
 	struct FrozenStateComponent;
 	struct StateStorageComponent;
 
+	struct ParsingContext;
+
 	class EntityDescriptor;
 
 	class EntityState
@@ -103,31 +105,31 @@ namespace engine
 			void force_update_component(Registry& registry, Entity entity, EntityStateIndex self_index, std::optional<EntityStateIndex> prev_index=std::nullopt) const;
 
 			// Utility function for building the `components.remove` collection.
-			std::size_t build_removals(const util::json& removal_list, bool cross_reference_persist=false);
+			std::size_t build_removals(const util::json& removal_list, const ParsingContext* opt_parsing_context=nullptr, bool cross_reference_persist=false);
 
 			// Utility function for building the `components.freeze` collection.
-			std::size_t build_frozen(const util::json& frozen_list, bool cross_reference_persist=true);
+			std::size_t build_frozen(const util::json& frozen_list, const ParsingContext* opt_parsing_context=nullptr, bool cross_reference_persist=true);
 
 			// Utility function for building the `components.store` collection.
-			std::size_t build_storage(const util::json& storage_list, bool cross_reference_persist=true);
+			std::size_t build_storage(const util::json& storage_list, const ParsingContext* opt_parsing_context=nullptr, bool cross_reference_persist=true);
 
 			// Utility function for building the `components.local_copy`
 			// collection, as well as appending to `components.freeze`.
-			std::size_t build_local_copy(const util::json& local_copy_list, bool cross_reference_persist=false); // true
+			std::size_t build_local_copy(const util::json& local_copy_list, const ParsingContext* opt_parsing_context=nullptr, bool cross_reference_persist=false); // true
 
 			// Utility function for building the `components.init_copy` collection,
 			// as well as appending to `components.freeze` and `components.store`.
-			std::size_t build_init_copy(const util::json& init_copy_list, bool cross_reference_persist=false); // true
+			std::size_t build_init_copy(const util::json& init_copy_list, const ParsingContext* opt_parsing_context=nullptr, bool cross_reference_persist=false); // true
 
 			// Subroutine of `build_type_list`, meant to handle individual entries, rather than JSON arrays.
 			// This method returns true if a component entry could be processed from `list_entry`.
-			bool process_type_list_entry(MetaIDStorage& types_out, const util::json& list_entry, bool cross_reference_persist);
+			bool process_type_list_entry(MetaIDStorage& types_out, const util::json& list_entry, bool cross_reference_persist, const ParsingContext* opt_parsing_context=nullptr);
 
 			// Convenience overload that bypasses JSON-to-string conversion.
-			bool process_type_list_entry(MetaIDStorage& types_out, std::string_view list_entry, bool cross_reference_persist);
+			bool process_type_list_entry(MetaIDStorage& types_out, std::string_view list_entry, bool cross_reference_persist, const ParsingContext* opt_parsing_context=nullptr);
 
 			// Shared processing routine for resolving `MetaIDStorage` objects from a JSON array.
-			std::size_t build_type_list(const util::json& type_names, MetaIDStorage& types_out, bool cross_reference_persist);
+			std::size_t build_type_list(const util::json& type_names, MetaIDStorage& types_out, bool cross_reference_persist, const ParsingContext* opt_parsing_context=nullptr);
 
 			const RuleCollection* get_rules(MetaTypeID type_id) const;
 

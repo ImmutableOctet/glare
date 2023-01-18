@@ -18,7 +18,14 @@ namespace engine
 		using AliasContainer = util::hash_map<std::string_view>; // std::string
 
 		static ParsingContext generate(bool standard_mapping=true, bool reverse_mapping=true);
-		static std::size_t generate_aliases(AliasContainer& container_out, std::string_view suffix, bool standard_mapping=true, bool reverse_mapping=true, std::string_view opt_snake_prefix={});
+		
+		static std::size_t generate_aliases
+		(
+			AliasContainer& container_out,
+			std::string_view suffix,
+			bool standard_mapping=true, bool reverse_mapping=true,
+			std::string_view opt_snake_prefix={}
+		);
 
 		// Attempts to resolve the `alias` specified using `container`.
 		// If the input is not an alias, this will return an empty `std::string_view` instance.

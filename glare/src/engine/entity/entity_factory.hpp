@@ -110,8 +110,6 @@ namespace engine
 				return paths.instance_path;
 			}
 		protected:
-			CommandContent& generate_empty_command(const MetaType& command_type, Entity source=null, Entity target=null);
-
 			// Utility function for loading JSON data.
 			std::tuple
 			<
@@ -206,11 +204,12 @@ namespace engine
 				bool exit_on_false_value=true,
 
 				const MetaTypeDescriptorFlags& shared_component_flags={},
+				const ParsingContext* opt_parsing_context=nullptr,
 				bool allow_new_entry=true,
 				bool allow_default_entries=true
 			)
 			{
-				process_component_list(components_out, components, shared_component_flags, allow_new_entry, allow_default_entries);
+				process_component_list(components_out, components, shared_component_flags, opt_parsing_context, allow_new_entry, allow_default_entries);
 
 				std::size_t count = 0;
 
@@ -289,9 +288,9 @@ namespace engine
 				return count;
 			}
 
-			std::size_t process_state_isolated_components(EntityState& state, const util::json& isolated);
-			std::size_t process_state_local_copy_components(EntityState& state, const util::json& local_copy);
-			std::size_t process_state_init_copy_components(EntityState& state, const util::json& init_copy);
+			std::size_t process_state_isolated_components(EntityState& state, const util::json& isolated, const ParsingContext* opt_parsing_context=nullptr);
+			std::size_t process_state_local_copy_components(EntityState& state, const util::json& local_copy, const ParsingContext* opt_parsing_context=nullptr);
+			std::size_t process_state_init_copy_components(EntityState& state, const util::json& init_copy, const ParsingContext* opt_parsing_context=nullptr);
 
 			// NOTE: The `opt_states_out` and `opt_base_path` arguments are only used if `allow_inline_import` is enabled.
 			std::size_t process_state_rule_list

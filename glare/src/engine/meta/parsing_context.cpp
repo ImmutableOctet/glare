@@ -91,7 +91,13 @@ namespace engine
 		return context;
 	}
 
-	std::size_t ParsingContext::generate_aliases(AliasContainer& container_out, std::string_view suffix, bool standard_mapping, bool reverse_mapping, std::string_view opt_snake_prefix)
+	std::size_t ParsingContext::generate_aliases
+	(
+		AliasContainer& container_out,
+		std::string_view suffix,
+		bool standard_mapping, bool reverse_mapping,
+		std::string_view opt_snake_prefix
+	)
 	{
 		std::size_t count = 0;
 

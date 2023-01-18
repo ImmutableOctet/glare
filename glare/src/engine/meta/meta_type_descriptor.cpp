@@ -202,7 +202,7 @@ namespace engine
 			// TODO: Change to `std::optional<MetaSymbolID>`, where `std::nullopt` in case of `content.is_array()`.
 			MetaSymbolID var_name_hash = hash(var_name);
 			//process_value(var_name, var_value);
-
+			
 			auto resolve_data_entry = [this, &type, &content, &variable_index, &var_name_hash]() mutable -> entt::meta_data
 			{
 				/*

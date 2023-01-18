@@ -362,42 +362,42 @@ namespace engine
 
 		if (auto persist = util::find_any(data, "persist", "share", "shared", "modify", "="); persist != data.end())
 		{
-			process_component_list(state.components.persist, *persist, {}, true, true, true);
+			process_component_list(state.components.persist, *persist, {}, opt_parsing_context, true, true, true);
 		}
 
 		if (auto add = util::find_any(data, "add", "+"); add != data.end())
 		{
-			process_component_list(state.components.add, *add, {}, true, true, true);
+			process_component_list(state.components.add, *add, {}, opt_parsing_context, true, true, true);
 		}
 
 		if (auto removal_list = util::find_any(data, "remove", "-", "~"); removal_list != data.end())
 		{
-			state.build_removals(*removal_list);
+			state.build_removals(*removal_list, opt_parsing_context);
 		}
 		
 		if (auto frozen_list = util::find_any(data, "frozen", "freeze", "exclude", "%", "^"); frozen_list != data.end())
 		{
-			state.build_frozen(*frozen_list);
+			state.build_frozen(*frozen_list, opt_parsing_context);
 		}
 
 		if (auto storage_list = util::find_any(data, "store", "storage", "include", "temp", "temporary", "#"); storage_list != data.end())
 		{
-			state.build_storage(*storage_list);
+			state.build_storage(*storage_list, opt_parsing_context);
 		}
 
 		if (auto isolated = util::find_any(data, "local", "local_storage", "isolate", "isolated"); isolated != data.end())
 		{
-			process_state_isolated_components(state, *isolated);
+			process_state_isolated_components(state, *isolated, opt_parsing_context);
 		}
 
 		if (auto local_copy = util::find_any(data, "local_copy", "copy"); local_copy != data.end())
 		{
-			process_state_local_copy_components(state, *local_copy);
+			process_state_local_copy_components(state, *local_copy, opt_parsing_context);
 		}
 
 		if (auto init_copy = util::find_any(data, "init_copy", "local_modify", "copy_once", "clone"); init_copy != data.end())
 		{
-			process_state_init_copy_components(state, *init_copy);
+			process_state_init_copy_components(state, *init_copy, opt_parsing_context);
 		}
 
 		if (auto time_data = util::find_any(data, "timer", "wait", "delay"); time_data != data.end())
@@ -464,7 +464,7 @@ namespace engine
 		return count;
 	}
 
-	std::size_t EntityFactory::process_state_isolated_components(EntityState& state, const util::json& isolated)
+	std::size_t EntityFactory::process_state_isolated_components(EntityState& state, const util::json& isolated, const ParsingContext* opt_parsing_context)
 	{
 		return process_and_inspect_component_list
 		(
@@ -472,16 +472,16 @@ namespace engine
 
 			isolated,
 
-			[&state](std::string_view component_name)
+			[&state, &opt_parsing_context](std::string_view component_name)
 			{
-				if (!state.process_type_list_entry(state.components.freeze, component_name, true)) // false
+				if (!state.process_type_list_entry(state.components.freeze, component_name, true, opt_parsing_context)) // false
 				{
 					print_warn("Failed to process embedded `freeze` entry from isolation data.");
 
 					return false;
 				}
 
-				if (!state.process_type_list_entry(state.components.store, component_name, true)) // false
+				if (!state.process_type_list_entry(state.components.store, component_name, true, opt_parsing_context)) // false
 				{
 					print_warn("Failed to process embedded `store` entry from isolation data.");
 
@@ -491,13 +491,15 @@ namespace engine
 				return true;
 			},
 
-			false
+			false,
+			{},
+			opt_parsing_context
 		);
 	}
 
-	std::size_t EntityFactory::process_state_local_copy_components(EntityState& state, const util::json& local_copy)
+	std::size_t EntityFactory::process_state_local_copy_components(EntityState& state, const util::json& local_copy, const ParsingContext* opt_parsing_context)
 	{
-		const auto build_result = state.build_local_copy(local_copy);
+		const auto build_result = state.build_local_copy(local_copy, opt_parsing_context);
 
 		const auto components_processed = process_component_list
 		(
@@ -508,6 +510,8 @@ namespace engine
 				.force_field_assignment                 = true
 			},
 
+			opt_parsing_context,
+
 			true, false
 		);
 
@@ -516,9 +520,9 @@ namespace engine
 		return build_result;
 	}
 
-	std::size_t EntityFactory::process_state_init_copy_components(EntityState& state, const util::json& init_copy)
+	std::size_t EntityFactory::process_state_init_copy_components(EntityState& state, const util::json& init_copy, const ParsingContext* opt_parsing_context)
 	{
-		const auto build_result = state.build_init_copy(init_copy);
+		const auto build_result = state.build_init_copy(init_copy, opt_parsing_context);
 
 		const auto components_processed = process_component_list
 		(
@@ -528,6 +532,8 @@ namespace engine
 				.allow_forwarding_fields_to_constructor = false,
 				.force_field_assignment                 = true
 			},
+
+			opt_parsing_context,
 
 			true, false
 		);
@@ -812,7 +818,7 @@ namespace engine
 					(
 						*update,
 
-						[this, &process_rule, &target](const util::json& update_entry)
+						[this, &opt_parsing_context, &process_rule, &target](const util::json& update_entry)
 						{
 							auto action = EntityStateUpdateAction
 							{
@@ -820,7 +826,7 @@ namespace engine
 								target
 							};
 
-							process_update_action(action, update_entry);
+							process_update_action(action, update_entry, opt_parsing_context);
 
 							process_rule(std::move(action));
 						}
@@ -1171,7 +1177,7 @@ namespace engine
 
 		if (auto components = util::find_any(data, "component", "components"); components != data.end())
 		{
-			process_component_list(descriptor.components, *components);
+			process_component_list(descriptor.components, *components, {}, opt_parsing_context);
 		}
 
 		if (auto states = util::find_any(data, "state", "states"); states != data.end())

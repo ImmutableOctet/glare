@@ -260,7 +260,7 @@ namespace engine
 
 		auto& update_instruction = get_update_instruction();
 
-		return (process_update_action(update_instruction, update_entry) > 0);
+		return (process_update_action(update_instruction, update_entry, opt_parsing_context) > 0);
 	}
 
 	bool EntityThreadBuilder::on_instruction_change(InstructionID instruction_id, InstructionID prev_instruction_id)

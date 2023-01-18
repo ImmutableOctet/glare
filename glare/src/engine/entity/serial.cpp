@@ -6,6 +6,7 @@
 #include <engine/meta/meta_description.hpp>
 #include <engine/meta/meta_type_descriptor.hpp>
 #include <engine/meta/meta_type_descriptor_flags.hpp>
+#include <engine/meta/parsing_context.hpp>
 
 #include <util/algorithm.hpp>
 #include <util/string.hpp>
@@ -153,13 +154,15 @@ namespace engine
 	std::size_t process_update_action
 	(
 		EntityStateUpdateAction& action_out,
-		const util::json& update_entry
+		const util::json& update_entry,
+		const ParsingContext* opt_parsing_context
 	)
 	{
 		const auto result = process_component_list
 		(
 			*action_out.updated_components,
 			update_entry, {}, // { .force_field_assignment = true },
+			opt_parsing_context,
 			true, true, true,
 			false
 		);
@@ -178,6 +181,7 @@ namespace engine
 		const util::json& components,
 
 		const MetaTypeDescriptorFlags& shared_component_flags,
+		const ParsingContext* opt_parsing_context,
 
 		bool allow_new_entry,
 		bool allow_default_entries,
@@ -190,7 +194,7 @@ namespace engine
 
 		auto as_component =
 		[
-			&components_out, &shared_component_flags,
+			&components_out, &shared_component_flags, &opt_parsing_context,
 			allow_new_entry, allow_default_entries, forward_entry_update_condition_to_flags, ignore_special_symbols,
 			&count
 		]
@@ -211,7 +215,10 @@ namespace engine
 			(
 				components_out,
 				component_name, component_content, constructor_arg_count,
-				flags, (allow_entry_update || force_entry_update),
+				flags,
+				opt_parsing_context,
+
+				(allow_entry_update || force_entry_update),
 				allow_new_entry, allow_default_entries,
 				ignore_special_symbols
 			);
@@ -261,6 +268,7 @@ namespace engine
 		std::optional<std::uint8_t> constructor_arg_count, // SmallSize
 
 		const MetaTypeDescriptorFlags& component_flags,
+		const ParsingContext* opt_parsing_context,
 
 		bool allow_entry_update,
 		bool allow_new_entry,
@@ -280,16 +288,27 @@ namespace engine
 		}
 
 		//auto meta = entt::resolve();
-		auto meta_type = meta_type_from_name(component_name);
+		//auto component_type = meta_type_from_name(component_name);
 
-		if (!meta_type)
+		MetaType component_type;
+
+		if (opt_parsing_context)
+		{
+			component_type = opt_parsing_context->get_component_type(component_name);
+		}
+		else
+		{
+			component_type = meta_type_from_name(component_name); // resolve(...);
+		}
+
+		if (!component_type)
 		{
 			print("Failed to resolve reflection for symbol: \"{}\"", component_name);
 
 			return false;
 		}
 
-		auto make_type_descriptor = [&data, &meta_type, &constructor_arg_count, &component_flags]()
+		auto make_type_descriptor = [&data, &component_type, &constructor_arg_count, &component_flags]()
 		{
 			if (data)
 			{
@@ -297,14 +316,14 @@ namespace engine
 				{
 					return MetaTypeDescriptor
 					(
-						meta_type, component_content,
+						component_type, component_content,
 						{ .resolve_component_member_references=true },
 						constructor_arg_count, component_flags
 					);
 				}
 			}
 
-			return MetaTypeDescriptor(meta_type, constructor_arg_count, component_flags);
+			return MetaTypeDescriptor(component_type, constructor_arg_count, component_flags);
 		};
 
 		auto component = make_type_descriptor();
