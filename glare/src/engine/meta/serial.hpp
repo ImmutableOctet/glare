@@ -3,7 +3,7 @@
 #include "types.hpp"
 #include "meta_data_member.hpp"
 #include "indirect_meta_data_member.hpp"
-#include "command_parsing_context.hpp"
+#include "parsing_context.hpp"
 
 #include <engine/entity/entity_target.hpp>
 
@@ -110,5 +110,5 @@ namespace engine
 
 	EntityTarget::TargetType parse_target_type(const util::json& target_data);
 
-	void read_command_parsing_context(CommandParsingContext& context, const util::json& data);
+	void read_parsing_context(ParsingContext& context, const util::json& data);
 }

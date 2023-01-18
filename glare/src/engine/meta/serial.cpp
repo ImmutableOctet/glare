@@ -452,11 +452,11 @@ namespace engine
 		return Target::SelfTarget {};
 	}
 
-	void read_command_parsing_context(CommandParsingContext& context, const util::json& data)
+	void read_parsing_context(ParsingContext& context, const util::json& data)
 	{
-		if (auto aliases = data.find("aliases"); aliases != data.end())
+		auto read_aliases = [](const util::json& aliases, auto& alias_container_out)
 		{
-			for (const auto& proxy : aliases->items())
+			for (const auto& proxy : aliases.items())
 			{
 				const auto& raw_value = proxy.value();
 
@@ -467,19 +467,29 @@ namespace engine
 
 				const auto& alias = proxy.key();
 
-				auto command_name = raw_value.get<std::string>();
+				auto type_name = raw_value.get<std::string>();
 
-				const auto command_id = hash(command_name);
+				const auto type_id = hash(type_name);
 
-				auto command_type = resolve(command_id);
+				const auto type = resolve(type_id);
 
-				if (!command_type)
+				if (!type)
 				{
 					continue;
 				}
 
-				context.command_aliases[alias] = command_type.info().name(); // std::string(...);
+				alias_container_out[alias] = type.info().name(); // std::string(...);
 			}
+		};
+
+		if (auto aliases = data.find("command_aliases"); aliases != data.end())
+		{
+			read_aliases(*aliases, context.command_aliases);
+		}
+
+		if (auto aliases = data.find("component_aliases"); aliases != data.end())
+		{
+			read_aliases(*aliases, context.component_aliases);
 		}
 	}
 }

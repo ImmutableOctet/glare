@@ -24,7 +24,7 @@ namespace engine
 
 	struct EntityStateRule;
 	struct EntityThreadDescription;
-	struct CommandParsingContext;
+	struct ParsingContext;
 
 	//template <typename ServiceType>
 	struct EntityConstructionContext
@@ -62,7 +62,7 @@ namespace engine
 			(
 				const EntityFactoryContext& factory_context,
 				ChildFactoryCallback&& child_callback,
-				const CommandParsingContext* opt_command_context=nullptr,
+				const ParsingContext* opt_parsing_context=nullptr,
 				bool resolve_external_modules=true, bool process_children=true
 			)
 				: EntityFactoryContext(factory_context)
@@ -70,13 +70,13 @@ namespace engine
 				// TODO: Optimize.
 				auto instance = util::load_json(paths.instance_path);
 
-				process_archetype(instance, paths.instance_directory, child_callback, opt_command_context, resolve_external_modules, process_children);
+				process_archetype(instance, paths.instance_directory, child_callback, opt_parsing_context, resolve_external_modules, process_children);
 			}
 
 			inline EntityFactory
 			(
 				const EntityFactoryContext& factory_context,
-				const CommandParsingContext* opt_command_context=nullptr,
+				const ParsingContext* opt_parsing_context=nullptr,
 				bool resolve_external_modules=true
 			)
 				: EntityFactoryContext(factory_context)
@@ -84,7 +84,7 @@ namespace engine
 				// TODO: Optimize.
 				auto instance = util::load_json(paths.instance_path);
 
-				process_archetype(instance, paths.instance_directory, opt_command_context, resolve_external_modules);
+				process_archetype(instance, paths.instance_directory, opt_parsing_context, resolve_external_modules);
 			}
 
 			EntityFactory(const EntityFactory&) = default;
@@ -134,7 +134,7 @@ namespace engine
 				EntityDescriptor::StateCollection& states_out,
 				std::string_view state_path_raw, // const std::string&
 				const std::filesystem::path& base_path,
-				const CommandParsingContext* opt_command_context=nullptr
+				const ParsingContext* opt_parsing_context=nullptr
 			);
 
 			// This overload acts as a utility function that automatically handles
@@ -151,7 +151,7 @@ namespace engine
 				const util::json& data,
 				std::string_view state_name,
 				const std::filesystem::path& base_path,
-				const CommandParsingContext* opt_command_context=nullptr
+				const ParsingContext* opt_parsing_context=nullptr
 			);
 
 			// The `states_out` argument is used only for import resolution.
@@ -166,7 +166,7 @@ namespace engine
 				EntityState& state,
 				const util::json& data,
 				const std::filesystem::path& base_path,
-				const CommandParsingContext* opt_command_context=nullptr
+				const ParsingContext* opt_parsing_context=nullptr
 			);
 
 			std::size_t process_state_list
@@ -174,7 +174,7 @@ namespace engine
 				EntityDescriptor::StateCollection& states_out,
 				const util::json& data,
 				const std::filesystem::path& base_path,
-				const CommandParsingContext* opt_command_context=nullptr
+				const ParsingContext* opt_parsing_context=nullptr
 			);
 
 			// Merges one or more states defined in `data` with `state`.
@@ -193,7 +193,7 @@ namespace engine
 
 				const util::json& data,
 				const std::filesystem::path& base_path,
-				const CommandParsingContext* opt_command_context=nullptr
+				const ParsingContext* opt_parsing_context=nullptr
 			);
 
 			// TODO: Optimize to avoid multiple calls to `parse_component_declaration`.
@@ -301,7 +301,7 @@ namespace engine
 
 				EntityDescriptor::StateCollection* opt_states_out = nullptr,
 				const std::filesystem::path* opt_base_path = nullptr,
-				const CommandParsingContext* opt_command_context=nullptr,
+				const ParsingContext* opt_parsing_context=nullptr,
 				bool allow_inline_import = true
 			);
 
@@ -316,7 +316,7 @@ namespace engine
 
 				EntityDescriptor::StateCollection* opt_states_out=nullptr,
 				const std::filesystem::path* opt_base_path=nullptr,
-				const CommandParsingContext* opt_command_context=nullptr,
+				const ParsingContext* opt_parsing_context=nullptr,
 
 				bool allow_inline_import=true
 			);
@@ -331,7 +331,7 @@ namespace engine
 
 				EntityDescriptor::StateCollection* opt_states_out=nullptr,
 				const std::filesystem::path* opt_base_path=nullptr,
-				const CommandParsingContext* opt_command_context=nullptr,
+				const ParsingContext* opt_parsing_context=nullptr,
 				bool allow_inline_import=true
 			);
 
@@ -345,7 +345,7 @@ namespace engine
 			(
 				const util::json& content,
 				const std::filesystem::path* opt_base_path=nullptr,
-				const CommandParsingContext* opt_command_context=nullptr
+				const ParsingContext* opt_parsing_context=nullptr
 			);
 
 			std::optional<std::tuple<EntityThreadIndex, const EntityThreadDescription*>>
@@ -354,7 +354,7 @@ namespace engine
 				const util::json& content,
 				std::string_view opt_thread_name={},
 				const std::filesystem::path* opt_base_path=nullptr,
-				const CommandParsingContext* opt_command_context=nullptr
+				const ParsingContext* opt_parsing_context=nullptr
 			);
 
 			std::size_t process_thread
@@ -363,7 +363,7 @@ namespace engine
 				const util::json& content,
 				std::string_view opt_thread_name={},
 				const std::filesystem::path* opt_base_path=nullptr,
-				const CommandParsingContext* opt_command_context=nullptr
+				const ParsingContext* opt_parsing_context=nullptr
 			);
 
 			const EntityState* process_state_inline_import
@@ -371,7 +371,7 @@ namespace engine
 				EntityDescriptor::StateCollection* states_out,
 				const std::string& command, // std::string_view
 				const std::filesystem::path* base_path,
-				const CommandParsingContext* opt_command_context=nullptr,
+				const ParsingContext* opt_parsing_context=nullptr,
 				bool allow_inline_import=true
 			);
 
@@ -379,7 +379,7 @@ namespace engine
 			(
 				const util::json& data,
 				const std::filesystem::path& base_path,
-				const CommandParsingContext* opt_command_context=nullptr,
+				const ParsingContext* opt_parsing_context=nullptr,
 				bool resolve_external_modules=true
 			);
 
@@ -389,7 +389,7 @@ namespace engine
 				const util::json& data,
 				const std::filesystem::path& base_path,
 				ChildFactoryCallback&& child_callback,
-				const CommandParsingContext* opt_command_context=nullptr,
+				const ParsingContext* opt_parsing_context=nullptr,
 				bool resolve_external_modules=true,
 				bool process_children=true
 			)
@@ -397,11 +397,11 @@ namespace engine
 				// Override external module resolution.
 				if (resolve_external_modules)
 				{
-					resolve_archetypes(data, base_path, child_callback, opt_command_context, true, process_children);
+					resolve_archetypes(data, base_path, child_callback, opt_parsing_context, true, process_children);
 				}
 
 				// Execute main overload without external modules.
-				process_archetype(data, base_path, opt_command_context, false);
+				process_archetype(data, base_path, opt_parsing_context, false);
 
 				if (process_children)
 				{
@@ -448,7 +448,7 @@ namespace engine
 				const util::json& instance,
 				const std::filesystem::path& base_path,
 				ChildFactoryCallback&& child_callback,
-				const CommandParsingContext* opt_command_context=nullptr,
+				const ParsingContext* opt_parsing_context=nullptr,
 				bool resolve_external_modules=true, bool process_children=true
 			)
 			{
@@ -463,7 +463,7 @@ namespace engine
 				(
 					*archetypes,
 
-					[this, &base_path, &child_callback, opt_command_context, resolve_external_modules, process_children](const auto& value)
+					[this, &base_path, &child_callback, opt_parsing_context, resolve_external_modules, process_children](const auto& value)
 					{
 						const auto archetype_path_raw = std::filesystem::path(value.get<std::string>());
 						const auto archetype_path = resolve_reference(archetype_path_raw, base_path);
@@ -478,7 +478,7 @@ namespace engine
 						
 						const auto base_path = archetype_path.parent_path();
 
-						process_archetype(archetype, base_path, child_callback, opt_command_context, resolve_external_modules, process_children);
+						process_archetype(archetype, base_path, child_callback, opt_parsing_context, resolve_external_modules, process_children);
 					}
 				);
 
@@ -489,7 +489,7 @@ namespace engine
 			(
 				const util::json& instance,
 				const std::filesystem::path& base_path,
-				const CommandParsingContext* opt_command_context=nullptr,
+				const ParsingContext* opt_parsing_context=nullptr,
 				bool resolve_external_modules=true
 			)
 			{
@@ -497,7 +497,7 @@ namespace engine
 				(
 					instance, base_path,
 					[](const auto& parent_factory, const auto& child_ctx) {},
-					opt_command_context,
+					opt_parsing_context,
 					resolve_external_modules,
 					false
 				);

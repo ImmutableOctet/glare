@@ -19,7 +19,7 @@
 #include <engine/meta/meta_variable.hpp>
 #include <engine/meta/meta_data_member.hpp>
 #include <engine/meta/indirect_meta_data_member.hpp>
-#include <engine/meta/command_parsing_context.hpp>
+#include <engine/meta/parsing_context.hpp>
 
 #include <util/algorithm.hpp>
 #include <util/string.hpp>
@@ -155,14 +155,14 @@ namespace engine
 		EntityDescriptor::StateCollection& states_out,
 		std::string_view state_path_raw, // const std::string&
 		const std::filesystem::path& base_path,
-		const CommandParsingContext* opt_command_context
+		const ParsingContext* opt_parsing_context
 	)
 	{
 		auto [state_base_path, state_path, state_data] = load_state_data(state_path_raw, base_path);
 
 		auto state_name = resolve_state_name(state_data, state_path);
 
-		if (const auto state = process_state(states_out, state_data, state_name, state_base_path, opt_command_context))
+		if (const auto state = process_state(states_out, state_data, state_name, state_base_path, opt_parsing_context))
 		{
 			assert(state->name.has_value());
 
@@ -179,7 +179,7 @@ namespace engine
 
 		const util::json& data,
 		const std::filesystem::path& base_path,
-		const CommandParsingContext* opt_command_context
+		const ParsingContext* opt_parsing_context
 	)
 	{
 		std::size_t count = 0;
@@ -188,7 +188,7 @@ namespace engine
 		(
 			data,
 
-			[this, &states_out, &state, &base_path, opt_command_context, &count](const util::json& content)
+			[this, &states_out, &state, &base_path, opt_parsing_context, &count](const util::json& content)
 			{
 				switch (content.type())
 				{
@@ -207,7 +207,7 @@ namespace engine
 								state.name = hash(default_state_name);
 							}
 
-							if (process_state(states_out, state, state_data, state_base_path, opt_command_context))
+							if (process_state(states_out, state, state_data, state_base_path, opt_parsing_context))
 							{
 								count++;
 							}
@@ -217,7 +217,7 @@ namespace engine
 					}
 
 					default:
-						if (process_state(states_out, state, content, base_path, opt_command_context))
+						if (process_state(states_out, state, content, base_path, opt_parsing_context))
 						{
 							count++;
 						}
@@ -236,7 +236,7 @@ namespace engine
 		const util::json& data,
 		std::string_view state_name,
 		const std::filesystem::path& base_path,
-		const CommandParsingContext* opt_command_context
+		const ParsingContext* opt_parsing_context
 	)
 	{
 		std::optional<EntityStateID> state_id = std::nullopt;
@@ -256,7 +256,7 @@ namespace engine
 				existing->name = state_id;
 
 				// Execute the main processing routine.
-				auto result = process_state(states_out, *existing, data, base_path, opt_command_context);
+				auto result = process_state(states_out, *existing, data, base_path, opt_parsing_context);
 
 				assert(result);
 
@@ -271,7 +271,7 @@ namespace engine
 		// Assign the state's name to the ID we resolved.
 		state->name = state_id;
 
-		if (!process_state(states_out, *state, data, base_path, opt_command_context))
+		if (!process_state(states_out, *state, data, base_path, opt_parsing_context))
 		{
 			return {};
 		}
@@ -325,7 +325,7 @@ namespace engine
 		EntityState& state,
 		const util::json& data,
 		const std::filesystem::path& base_path,
-		const CommandParsingContext* opt_command_context
+		const ParsingContext* opt_parsing_context
 	)
 	{
 		using namespace entt::literals;
@@ -349,7 +349,7 @@ namespace engine
 		if (auto merge = util::find_any(data, "merge", "merge_state", "merge_states", "using"); merge != data.end())
 		{
 			// NOTE: Recursion by proxy.
-			merge_state_list(states_out, state, *merge, base_path, opt_command_context);
+			merge_state_list(states_out, state, *merge, base_path, opt_parsing_context);
 		}
 
 		// Handle embedded imports of other states before any further operations.
@@ -357,7 +357,7 @@ namespace engine
 		if (auto imports = util::find_any(data, "import", "imports", "state", "states"); imports != data.end())
 		{
 			// NOTE: Recursion by proxy.
-			process_state_list(states_out, *imports, base_path, opt_command_context);
+			process_state_list(states_out, *imports, base_path, opt_parsing_context);
 		}
 
 		if (auto persist = util::find_any(data, "persist", "share", "shared", "modify", "="); persist != data.end())
@@ -407,7 +407,7 @@ namespace engine
 
 		if (auto threads = util::find_any(data, "do", "threads", "execute"); threads != data.end())
 		{
-			if (auto [initial_thread_index, thread_count] = process_thread_list(*threads, &base_path, opt_command_context); (thread_count > 0))
+			if (auto [initial_thread_index, thread_count] = process_thread_list(*threads, &base_path, opt_parsing_context); (thread_count > 0))
 			{
 				state.immediate_threads.emplace_back(initial_thread_index, thread_count);
 			}
@@ -415,7 +415,7 @@ namespace engine
 
 		if (auto rules = util::find_any(data, "rule", "rules", "trigger", "triggers"); rules != data.end())
 		{
-			process_state_rule_list(state, *rules, &states_out, &base_path, opt_command_context);
+			process_state_rule_list(state, *rules, &states_out, &base_path, opt_parsing_context);
 		}
 
 		return true;
@@ -426,12 +426,12 @@ namespace engine
 		EntityDescriptor::StateCollection& states_out,
 		const util::json& data,
 		const std::filesystem::path& base_path,
-		const CommandParsingContext* opt_command_context
+		const ParsingContext* opt_parsing_context
 	)
 	{
 		std::size_t count = 0;
 
-		util::json_for_each(data, [this, &base_path, &states_out, &opt_command_context, &count](const util::json& state_entry)
+		util::json_for_each(data, [this, &base_path, &states_out, &opt_parsing_context, &count](const util::json& state_entry)
 		{
 			switch (state_entry.type())
 			{
@@ -440,7 +440,7 @@ namespace engine
 					// NOTE: Embedded state definitions must have a `name` field.
 					const auto state_name = util::get_value<std::string>(state_entry, "name");
 
-					if (process_state(states_out, state_entry, state_name, base_path, opt_command_context))
+					if (process_state(states_out, state_entry, state_name, base_path, opt_parsing_context))
 					{
 						count++;
 					}
@@ -451,7 +451,7 @@ namespace engine
 				{
 					const auto state_path_raw = state_entry.get<std::string>();
 
-					if (process_state(states_out, state_path_raw, base_path, opt_command_context))
+					if (process_state(states_out, state_path_raw, base_path, opt_parsing_context))
 					{
 						count++;
 					}
@@ -547,7 +547,7 @@ namespace engine
 
 		EntityDescriptor::StateCollection* opt_states_out,
 		const std::filesystem::path* opt_base_path,
-		const CommandParsingContext* opt_command_context,
+		const ParsingContext* opt_parsing_context,
 
 		bool allow_inline_import
 	)
@@ -609,7 +609,7 @@ namespace engine
 			}
 
 			// TODO: Look into tracking imports/inline-imports.
-			const auto inline_import = process_state_inline_import(opt_states_out, next_state_raw, opt_base_path, opt_command_context);
+			const auto inline_import = process_state_inline_import(opt_states_out, next_state_raw, opt_base_path, opt_parsing_context);
 
 			StringHash next_state_id = (inline_import) // EntityStateHash
 				? *inline_import->name
@@ -636,7 +636,7 @@ namespace engine
 			);
 		};
 
-		auto init_empty_command = [this, opt_command_context](std::string_view command_name) -> CommandContent*
+		auto init_empty_command = [this, opt_parsing_context](std::string_view command_name) -> CommandContent*
 		{
 			if (command_name.empty())
 			{
@@ -652,9 +652,9 @@ namespace engine
 			}
 			else
 			{
-				if (opt_command_context)
+				if (opt_parsing_context)
 				{
-					if (auto resolved_command_type = opt_command_context->get_command_type_from_alias(command_name))
+					if (auto resolved_command_type = opt_parsing_context->get_command_type_from_alias(command_name))
 					{
 						return &(descriptor.generate_empty_command(resolved_command_type));
 					}
@@ -829,7 +829,7 @@ namespace engine
 
 				if (auto threads = util::find_any(content, "do", "threads", "execute"); threads != content.end())
 				{
-					auto [initial_thread_index, thread_count] = process_thread_list(*threads, opt_base_path, opt_command_context);
+					auto [initial_thread_index, thread_count] = process_thread_list(*threads, opt_base_path, opt_parsing_context);
 
 					process_rule
 					(
@@ -912,7 +912,7 @@ namespace engine
 
 		EntityDescriptor::StateCollection* opt_states_out,
 		const std::filesystem::path* opt_base_path,
-		const CommandParsingContext* opt_command_context,
+		const ParsingContext* opt_parsing_context,
 		bool allow_inline_import
 	)
 	{
@@ -922,7 +922,7 @@ namespace engine
 		(
 			trigger_condition_expr,
 
-			[this, &state, &content, opt_states_out, opt_base_path, opt_command_context, allow_inline_import, &number_processed]
+			[this, &state, &content, opt_states_out, opt_base_path, opt_parsing_context, allow_inline_import, &number_processed]
 			(
 				MetaTypeID type_name_id,
 				std::optional<EventTriggerCondition> condition
@@ -932,7 +932,7 @@ namespace engine
 				(
 					state,
 					type_name_id, content, condition,
-					opt_states_out, opt_base_path, opt_command_context,
+					opt_states_out, opt_base_path, opt_parsing_context,
 					allow_inline_import
 				);
 				
@@ -953,7 +953,7 @@ namespace engine
 
 		EntityDescriptor::StateCollection* opt_states_out,
 		const std::filesystem::path* opt_base_path,
-		const CommandParsingContext* opt_command_context,
+		const ParsingContext* opt_parsing_context,
 		bool allow_inline_import
 	)
 	{
@@ -989,7 +989,7 @@ namespace engine
 					count += process_trigger_expression
 					(
 						state, trigger_condition_expr, content,
-						opt_states_out, opt_base_path, opt_command_context,
+						opt_states_out, opt_base_path, opt_parsing_context,
 						allow_inline_import
 					);
 				});
@@ -1002,7 +1002,7 @@ namespace engine
 			count += process_trigger_expression
 			(
 				state, trigger_condition_expr, content,
-				opt_states_out, opt_base_path, opt_command_context,
+				opt_states_out, opt_base_path, opt_parsing_context,
 				allow_inline_import
 			);
 		};
@@ -1118,7 +1118,7 @@ namespace engine
 		EntityDescriptor::StateCollection* states_out,
 		const std::string& command, // std::string_view
 		const std::filesystem::path* base_path,
-		const CommandParsingContext* opt_command_context,
+		const ParsingContext* opt_parsing_context,
 		bool allow_inline_import
 	)
 	{
@@ -1150,7 +1150,7 @@ namespace engine
 		{
 			case "import"_hs:
 				// NOTE: Recursion.
-				return process_state(*states_out, state_path_raw, *base_path, opt_command_context);
+				return process_state(*states_out, state_path_raw, *base_path, opt_parsing_context);
 		}
 
 		return nullptr;
@@ -1160,13 +1160,13 @@ namespace engine
 	(
 		const util::json& data,
 		const std::filesystem::path& base_path,
-		const CommandParsingContext* opt_command_context,
+		const ParsingContext* opt_parsing_context,
 		bool resolve_external_modules
 	)
 	{
 		if (resolve_external_modules)
 		{
-			resolve_archetypes(data, base_path, opt_command_context);
+			resolve_archetypes(data, base_path, opt_parsing_context);
 		}
 
 		if (auto components = util::find_any(data, "component", "components"); components != data.end())
@@ -1176,7 +1176,7 @@ namespace engine
 
 		if (auto states = util::find_any(data, "state", "states"); states != data.end())
 		{
-			process_state_list(descriptor.states, *states, base_path, opt_command_context);
+			process_state_list(descriptor.states, *states, base_path, opt_parsing_context);
 		}
 
 		if (auto default_state = data.find("default_state"); default_state != data.end())
@@ -1218,12 +1218,12 @@ namespace engine
 	(
 		const util::json& content,
 		const std::filesystem::path* opt_base_path,
-		const CommandParsingContext* opt_command_context
+		const ParsingContext* opt_parsing_context
 	)
 	{
 		const auto initial_thread_index = descriptor.get_next_thread_index();
 
-		auto process_thread = [this, opt_base_path, opt_command_context]
+		auto process_thread = [this, opt_base_path, opt_parsing_context]
 		(
 			const util::json& content,
 			std::string_view opt_thread_name
@@ -1237,7 +1237,7 @@ namespace engine
 
 				this,
 				opt_base_path,
-				opt_command_context
+				opt_parsing_context
 			};
 
 			thread_builder << content;

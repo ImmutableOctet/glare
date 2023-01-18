@@ -10,7 +10,7 @@
 
 #include <engine/meta/meta.hpp>
 #include <engine/meta/serial.hpp>
-#include <engine/meta/command_parsing_context.hpp>
+#include <engine/meta/parsing_context.hpp>
 #include <engine/meta/meta_type_descriptor.hpp>
 
 #include <tuple>
@@ -32,13 +32,13 @@ namespace engine
 		EntityThreadDescription& thread,
 		const EntityFactoryContext* opt_factory_context,
 		const std::filesystem::path* opt_base_path,
-		const CommandParsingContext* opt_command_context
+		const ParsingContext* opt_parsing_context
 	) :
 		descriptor(descriptor),
 		thread(thread),
 		opt_factory_context(opt_factory_context),
 		opt_base_path(opt_base_path),
-		opt_command_context(opt_command_context)
+		opt_parsing_context(opt_parsing_context)
 	{}
 
 	EntityThreadIndex EntityThreadBuilderContext::thread_index() const
@@ -64,7 +64,7 @@ namespace engine
 		std::string_view opt_thread_name,
 		const EntityFactoryContext* opt_factory_context,
 		const std::filesystem::path* opt_base_path,
-		const CommandParsingContext* opt_command_context
+		const ParsingContext* opt_parsing_context
 	)
 		: EntityThreadBuilder
 		(
@@ -74,7 +74,7 @@ namespace engine
 				thread,
 				opt_factory_context,
 				opt_base_path,
-				opt_command_context
+				opt_parsing_context
 			),
 
 			opt_thread_name
@@ -87,7 +87,7 @@ namespace engine
 		std::string_view opt_thread_name,
 		const EntityFactoryContext* opt_factory_context,
 		const std::filesystem::path* opt_base_path,
-		const CommandParsingContext* opt_command_context
+		const ParsingContext* opt_parsing_context
 	)
 		: EntityThreadBuilder
 		(
@@ -96,7 +96,7 @@ namespace engine
 			opt_thread_name,
 			opt_factory_context,
 			opt_base_path,
-			opt_command_context
+			opt_parsing_context
 		)
 	{}
 
@@ -370,9 +370,9 @@ namespace engine
 
 		if (!command_type)
 		{
-			if (opt_command_context)
+			if (opt_parsing_context)
 			{
-				command_type = opt_command_context->get_command_type_from_alias(instruction_name);
+				command_type = opt_parsing_context->get_command_type_from_alias(instruction_name);
 
 				if (!command_type)
 				{
@@ -500,7 +500,7 @@ namespace engine
 			target_sub_thread,
 			opt_factory_context,
 			opt_base_path,
-			opt_command_context
+			opt_parsing_context
 		};
 	}
 

@@ -250,7 +250,7 @@ namespace engine
 		// (Used during entity instantiation)
 		EntityFactoryChildren children;
 
-		const auto& command_context = get_command_parsing_context();
+		const auto& command_context = get_parsing_context();
 
 		auto factory = EntityFactory
 		(
@@ -357,20 +357,20 @@ namespace engine
 		return {};
 	}
 
-	CommandParsingContext& ResourceManager::set_command_parsing_context(CommandParsingContext&& context)
+	ParsingContext& ResourceManager::set_parsing_context(ParsingContext&& context)
 	{
-		command_parsing_context = std::move(context);
+		parsing_context = std::move(context);
 
-		return *command_parsing_context;
+		return *parsing_context;
 	}
 
-	const CommandParsingContext& ResourceManager::get_command_parsing_context() const
+	const ParsingContext& ResourceManager::get_parsing_context() const
 	{
-		if (!command_parsing_context.has_value())
+		if (!parsing_context.has_value())
 		{
-			command_parsing_context = CommandParsingContext::generate();
+			parsing_context = ParsingContext::generate();
 		}
 
-		return *command_parsing_context;
+		return *parsing_context;
 	}
 }

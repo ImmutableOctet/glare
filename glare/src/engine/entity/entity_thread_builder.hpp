@@ -21,7 +21,7 @@ namespace engine
 {
 	class EntityDescriptor;
 
-	struct CommandParsingContext;
+	struct ParsingContext;
 	struct EntityThreadDescription;
 	struct MetaTypeDescriptor;
 	struct EntityFactoryContext;
@@ -35,7 +35,7 @@ namespace engine
 				EntityThreadDescription& thread,
 				const EntityFactoryContext* opt_factory_context = nullptr,
 				const std::filesystem::path* opt_base_path = nullptr,
-				const CommandParsingContext* opt_command_context = nullptr
+				const ParsingContext* opt_parsing_context = nullptr
 			);
 
 			EntityThreadIndex thread_index() const;
@@ -65,7 +65,7 @@ namespace engine
 
 			const EntityFactoryContext* opt_factory_context = nullptr;
 			const std::filesystem::path* opt_base_path = nullptr;
-			const CommandParsingContext* opt_command_context = nullptr;
+			const ParsingContext* opt_parsing_context = nullptr;
 	};
 
 	// Handles processing steps for one or more `EntityThreadDescription` objects.
@@ -95,7 +95,7 @@ namespace engine
 				std::string_view opt_thread_name={},
 				const EntityFactoryContext* opt_factory_context=nullptr,
 				const std::filesystem::path* opt_base_path=nullptr,
-				const CommandParsingContext* opt_command_context=nullptr
+				const ParsingContext* opt_parsing_context=nullptr
 			);
 
 			EntityThreadBuilder
@@ -104,7 +104,7 @@ namespace engine
 				std::string_view opt_thread_name={},
 				const EntityFactoryContext* opt_factory_context=nullptr,
 				const std::filesystem::path* opt_base_path=nullptr,
-				const CommandParsingContext* opt_command_context=nullptr
+				const ParsingContext* opt_parsing_context=nullptr
 			);
 
 			virtual ~EntityThreadBuilder();

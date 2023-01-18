@@ -19,7 +19,7 @@
 
 #include "loaders/loaders.hpp"
 
-#include <engine/meta/command_parsing_context.hpp>
+#include <engine/meta/parsing_context.hpp>
 
 //#include <vector>
 #include <memory>
@@ -154,8 +154,8 @@ namespace engine
 
 			Entity generate_entity(const EntityFactoryContext& factory_context, const EntityConstructionContext& entity_context) const;
 
-			CommandParsingContext& set_command_parsing_context(CommandParsingContext&& context);
-			const CommandParsingContext& get_command_parsing_context() const;
+			ParsingContext& set_parsing_context(ParsingContext&& context);
+			const ParsingContext& get_parsing_context() const;
 
 			// Links events from `world` to this resource manager instance.
 			void subscribe(World& world);
@@ -169,6 +169,6 @@ namespace engine
 			mutable ref<graphics::Shader> default_shader;
 			mutable ref<graphics::Shader> default_animated_shader;
 
-			mutable std::optional<CommandParsingContext> command_parsing_context = std::nullopt;
+			mutable std::optional<ParsingContext> parsing_context = std::nullopt;
 	};
 }
