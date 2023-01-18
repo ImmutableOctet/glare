@@ -279,3 +279,5 @@ assets/
 # ImGui window layout
 imgui.ini
 /glare/glare/assets
+/docs
+/.github/workflows
