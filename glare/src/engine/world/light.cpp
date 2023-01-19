@@ -117,18 +117,18 @@ namespace engine
 			}
 		);
 
-		CameraParameters perspective_cfg;
+		CameraComponent perspective_cfg;
 		
 		switch (light_type)
 		{
 			case LightType::Point:
-				perspective_cfg = CameraParameters(90.0f, 1.0f, shadow_range, 0.0, CameraProjection::Perspective);
+				perspective_cfg = CameraComponent(90.0f, 1.0f, shadow_range, 0.0, CameraProjection::Perspective);
 
 				break;
 
 			case LightType::Directional:
-				perspective_cfg = CameraParameters(90.0f, 0.0f, shadow_range, 1.0f, CameraProjection::Orthographic); // 1.0f
-				//perspective_cfg = CameraParameters(45.0f, 1.0f, shadow_range, 1.0, CameraProjection::Perspective);
+				perspective_cfg = CameraComponent(90.0f, 0.0f, shadow_range, 1.0f, CameraProjection::Orthographic); // 1.0f
+				//perspective_cfg = CameraComponent(45.0f, 1.0f, shadow_range, 1.0, CameraProjection::Perspective);
 
 				break;
 		}
@@ -159,7 +159,7 @@ namespace engine
 	}
 
 	template <LightType light_type, typename ShadowType, typename TFormData>
-	static bool attach_shadows_impl(World& world, Entity light, const math::Vector& light_position, std::optional<math::vec2i> resolution, std::optional<CameraParameters> perspective_cfg, bool update_aspect_ratio)
+	static bool attach_shadows_impl(World& world, Entity light, const math::Vector& light_position, std::optional<math::vec2i> resolution, std::optional<CameraComponent> perspective_cfg, bool update_aspect_ratio)
 	{
 		auto& registry = world.get_registry();
 
@@ -179,7 +179,7 @@ namespace engine
 
 		if ((update_aspect_ratio) && (resolution.has_value()))
 		{
-			pcfg.aspect_ratio = CameraParameters::calculate_aspect_ratio(*resolution);
+			pcfg.aspect_ratio = CameraComponent::calculate_aspect_ratio(*resolution);
 		}
 
 		math::Matrix4x4 light_projection;
@@ -249,7 +249,7 @@ namespace engine
 		return true;
 	}
 	
-	bool attach_shadows(World& world, Entity light, LightType light_type, std::optional<math::vec2i> resolution, std::optional<CameraParameters> perspective_cfg, bool update_aspect_ratio, bool conform_to_light_type)
+	bool attach_shadows(World& world, Entity light, LightType light_type, std::optional<math::vec2i> resolution, std::optional<CameraComponent> perspective_cfg, bool update_aspect_ratio, bool conform_to_light_type)
 	{
 		auto& registry = world.get_registry();
 

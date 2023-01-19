@@ -10,14 +10,14 @@
 
 namespace engine
 {
-	Entity create_camera(World& world, CameraParameters params, Entity parent, bool make_active, bool collision_enabled)
+	Entity create_camera(World& world, CameraComponent params, Entity parent, bool make_active, bool collision_enabled)
 	{
 		auto& registry = world.get_registry();
 		
 		constexpr auto entity_type = EntityType::Camera;
 		auto entity = create_entity(world, parent, entity_type);
 
-		registry.emplace<CameraParameters>(entity, params);
+		registry.emplace<CameraComponent>(entity, params);
 
 		// Assign a default name for this camera.
 		world.set_name(entity, "Camera");

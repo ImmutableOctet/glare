@@ -156,7 +156,7 @@ namespace game
 
 		if ((std::get<0>(w_size) != 0) && (std::get<1>(w_size) != 0))
 		{
-			auto& camera_params = world.get_registry().get<engine::CameraParameters>(camera);
+			auto& camera_params = world.get_registry().get<engine::CameraComponent>(camera);
 
 			camera_params.update_aspect_ratio(viewport.get_width(), viewport.get_height());
 		}

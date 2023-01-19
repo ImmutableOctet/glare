@@ -18,5 +18,5 @@ namespace engine
 	// 
 	// The `collision_enabled` parameter allows you to generate a simple collision primitive for this entity.
 	// (TODO: Remove first-class collision support from this interface)
-	Entity create_camera(World& world, CameraParameters params={}, Entity parent=null, bool make_active=false, bool collision_enabled=false);
+	Entity create_camera(World& world, CameraComponent params={}, Entity parent=null, bool make_active=false, bool collision_enabled=false);
 }

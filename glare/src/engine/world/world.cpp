@@ -162,7 +162,7 @@ namespace engine
 
 	void World::update_camera_parameters(int width, int height)
 	{
-		registry.view<CameraParameters>().each([&](auto entity, auto& camera_component)
+		registry.view<CameraComponent>().each([&](auto entity, auto& camera_component)
 		{
 			// TODO: Need to look into designating viewports to cameras at the component level.
 			// This would make this routine unnecessary for anything but the active camera/main viewport.
@@ -321,7 +321,7 @@ namespace engine
 		{
 			Entity entity = *it;
 
-			auto name_comp = registry.get<NameComponent>(entity);
+			const auto& name_comp = registry.get<NameComponent>(entity);
 
 			if (name_comp.get_name() == name)
 			{
@@ -458,7 +458,7 @@ namespace engine
 	void World::set_gravity(const math::Vector& gravity)
 	{
 		// Temporarily store the old gravity vector.
-		auto old_gravity = properties.gravity;
+		const auto old_gravity = properties.gravity;
 		
 		// Assign the newly provided gravity vector.
 		properties.gravity = gravity;
@@ -488,7 +488,7 @@ namespace engine
 
 	void World::set_camera(Entity camera)
 	{
-		assert(registry.try_get<CameraParameters>(camera));
+		assert(registry.try_get<CameraComponent>(camera));
 
 		this->camera = camera;
 	}

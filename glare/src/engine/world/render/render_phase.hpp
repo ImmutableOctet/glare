@@ -26,7 +26,7 @@ namespace engine
 	struct ModelComponent;
 	struct TransformComponent;
 	struct RelationshipComponent;
-	struct CameraParameters;
+	struct CameraComponent;
 
 	class RenderPhase;
 
@@ -112,7 +112,7 @@ namespace engine
 			(
 				World& world,
 				const graphics::Viewport& viewport,
-				Entity camera, const engine::CameraParameters& camera_params,
+				Entity camera, const engine::CameraComponent& camera_params,
 
 				math::Matrix& projection, math::Matrix& view
 			);

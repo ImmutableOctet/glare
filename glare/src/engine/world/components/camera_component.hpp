@@ -9,8 +9,7 @@
 
 namespace engine
 {
-	// TODO: Rename to `CameraComponent` or similar.
-	struct CameraParameters // Component type.
+	struct CameraComponent
 	{
 		using Projection = CameraProjection;
 
@@ -49,9 +48,9 @@ namespace engine
 		bool free_rotation        : 1;
 		bool dynamic_aspect_ratio : 1;
 
-		CameraParameters(const util::json& camera_cfg);
+		CameraComponent(const util::json& camera_cfg);
 
-		CameraParameters
+		CameraComponent
 		(
 			float v_fov_deg=DEFAULT_FOV,
 			float near_plane=NEAR_PLANE,
@@ -80,8 +79,4 @@ namespace engine
 		inline bool get_dynamic_aspect_ratio() const { return dynamic_aspect_ratio; }
 		inline void set_dynamic_aspect_ratio(bool value) { dynamic_aspect_ratio = value; }
 	};
-
-	// TODO: Rename underlying type.
-	using CameraComponent = CameraParameters;
-	//using CameraParameters = CameraComponent;
 }

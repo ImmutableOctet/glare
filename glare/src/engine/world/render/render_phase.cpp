@@ -293,7 +293,7 @@ namespace engine
 		auto& world = scene.world;
 		auto& registry = world.get_registry();
 
-		auto& camera_params = registry.get<engine::CameraParameters>(camera);
+		auto& camera_params = registry.get<engine::CameraComponent>(camera);
 
 		// TODO: Move this aspect-ratio update to an event triggered on window-resize.
 		///camera_params.aspect_ratio = window->horizontal_aspect_ratio();
@@ -359,7 +359,7 @@ namespace engine
 		return true;
 	}
 
-	Transform RenderPhase::get_camera_matrices(World& world, const graphics::Viewport& viewport, Entity camera, const engine::CameraParameters& camera_params, math::Matrix& projection, math::Matrix& view)
+	Transform RenderPhase::get_camera_matrices(World& world, const graphics::Viewport& viewport, Entity camera, const engine::CameraComponent& camera_params, math::Matrix& projection, math::Matrix& view)
 	{
 		//auto& camera_transform = registry.get<engine::TransformComponent>(camera);
 		//auto inverse_world = camera_transform.inverse_world;
@@ -407,7 +407,7 @@ namespace engine
 	{
 		auto& registry = world.get_registry();
 
-		auto& camera_params = registry.get<engine::CameraParameters>(camera);
+		auto& camera_params = registry.get<engine::CameraComponent>(camera);
 
 		return get_camera_matrices(world, viewport, camera, camera_params, projection, view);
 	}

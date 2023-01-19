@@ -114,14 +114,14 @@ namespace engine
 
 		static constexpr graphics::TextureType MapType = TextureRep;
 
-		inline LightShadows(pass_ref<graphics::Context> context, const CameraParameters& shadow_perspective, const TFormData& transforms, const math::vec2i& resolution)
+		inline LightShadows(pass_ref<graphics::Context> context, const CameraComponent& shadow_perspective, const TFormData& transforms, const math::vec2i& resolution)
 			: shadow_perspective(shadow_perspective), transforms(transforms), shadow_map(context, resolution.x, resolution.y, MapType) {}
 
 		LightShadows(LightShadows&&) noexcept = default;
 
 		LightShadows& operator=(LightShadows&&) noexcept = default;
 
-		CameraParameters shadow_perspective;
+		CameraComponent shadow_perspective;
 		TFormData transforms;
 
 		ShadowMap shadow_map;
