@@ -45,10 +45,42 @@
 
 namespace engine
 {
-	Entity EntityFactory::create(const EntityConstructionContext& context) const
+	MetaAny EntityFactory::emplace_component
+	(
+		Registry& registry, Entity entity,
+		const MetaTypeDescriptor& component
+	)
 	{
 		using namespace entt::literals;
 
+		auto instance = component.instance(true, registry, entity);
+
+		MetaAny result;
+
+		const auto type = component.get_type();
+
+		if (auto emplace_fn = type.func("emplace_meta_component"_hs))
+		{
+			result = emplace_fn.invoke
+			(
+				{},
+
+				entt::forward_as_meta(registry),
+				entt::forward_as_meta(entity),
+				entt::forward_as_meta(std::move(instance))
+			);
+		}
+
+		if (!result)
+		{
+			print_warn("Failed to instantiate component: \"#{}\"", type.id()); // component.type_id
+		}
+
+		return result;
+	}
+
+	Entity EntityFactory::create(const EntityConstructionContext& context) const
+	{
 		auto entity = context.opt_entity_out;
 
 		if (entity == null)
@@ -58,27 +90,7 @@ namespace engine
 
 		for (const auto& component : descriptor.components.type_definitions)
 		{
-			auto instance = component.instance(true, context.registry, entity);
-
-			MetaAny result;
-
-			const auto type = component.get_type();
-
-			if (auto emplace_fn = type.func("emplace_meta_component"_hs))
-			{
-				result = emplace_fn.invoke
-				(
-					{},
-					entt::forward_as_meta(context.registry),
-					entt::forward_as_meta(entity),
-					entt::forward_as_meta(std::move(instance))
-				);
-			}
-
-			if (!result)
-			{
-				print_warn("Failed to instantiate component: \"#{}\"", type.id()); // component.type_id
-			}
+			emplace_component(context.registry, entity, component);
 		}
 
 		if (context.parent != null)

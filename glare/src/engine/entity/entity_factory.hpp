@@ -57,6 +57,12 @@ namespace engine
 
 			std::optional<EntityStateIndex> default_state_index = std::nullopt;
 		public:
+			static MetaAny emplace_component
+			(
+				Registry& registry, Entity entity,
+				const MetaTypeDescriptor& component
+			);
+
 			template <typename ChildFactoryCallback>
 			inline EntityFactory
 			(
