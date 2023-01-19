@@ -97,23 +97,25 @@ namespace engine
 		bool ignore_special_symbols=true
 	);
 
+	// Same as the `MetaType` overload, but handles resolution of `component_name`.
+	std::optional<MetaTypeDescriptor> process_component
+	(
+		std::string_view component_name,
+		const util::json* data,
+
+		std::optional<std::uint8_t> constructor_arg_count=std::nullopt, // SmallSize
+		const MetaTypeDescriptorFlags& component_flags={},
+		const ParsingContext* opt_parsing_context=nullptr
+	);
+
 	// NOTE: The 'allow' arguments refer to construction of the underlying `MetaTypeDescriptor`.
 	// To affect the component itself, use the `component_flags` argument.
-	bool process_component
+	MetaTypeDescriptor process_component
 	(
-		MetaDescription& components_out, // EntityDescriptor::TypeInfo
-		std::string_view component_name,
+		MetaType component_type,
 		const util::json* data=nullptr,
 
 		std::optional<std::uint8_t> constructor_arg_count=std::nullopt, // SmallSize
-				
-		const MetaTypeDescriptorFlags& component_flags={},
-		const ParsingContext* opt_parsing_context=nullptr,
-
-		bool allow_entry_update=false,
-		bool allow_new_entry=true,
-		bool allow_default_entries=true,
-
-		bool ignore_special_symbols=true
+		const MetaTypeDescriptorFlags& component_flags={}
 	);
 }

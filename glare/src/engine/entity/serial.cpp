@@ -190,46 +190,103 @@ namespace engine
 		bool ignore_special_symbols
 	)
 	{
-		std::size_t count = 0;
-
 		auto as_component =
 		[
 			&components_out, &shared_component_flags, &opt_parsing_context,
-			allow_new_entry, allow_default_entries, forward_entry_update_condition_to_flags, ignore_special_symbols,
-			&count
+			allow_new_entry, allow_default_entries, forward_entry_update_condition_to_flags,
+			ignore_special_symbols
 		]
-		(const auto& component_declaration, const util::json* component_content=nullptr)
+		(const auto& component_declaration, const util::json* component_content=nullptr) -> bool
 		{
 			auto [component_name, allow_entry_update, constructor_arg_count] = parse_component_declaration(component_declaration);
 
+			if (!ignore_special_symbols)
+			{
+				// Used by states for `update` actions.
+				if (component_name == "target")
+				{
+					return false;
+				}
+			}
+
 			const bool force_entry_update = ((!allow_new_entry) && (!allow_default_entries));
 
-			auto flags = shared_component_flags;
+			auto component_type = (opt_parsing_context)
+				? opt_parsing_context->get_component_type(component_name)
+				: meta_type_from_name(component_name)
+			;
 
-			if (forward_entry_update_condition_to_flags && allow_entry_update)
+			if (!component_type)
 			{
-				flags.force_field_assignment = true;
+				print("Failed to resolve reflection for symbol: \"{}\"", component_name);
+
+				return false;
 			}
 
-			auto result = process_component
-			(
-				components_out,
-				component_name, component_content, constructor_arg_count,
-				flags,
-				opt_parsing_context,
+			auto make_component = [&]()
+			{
+				auto flags = shared_component_flags;
 
-				(allow_entry_update || force_entry_update),
-				allow_new_entry, allow_default_entries,
-				ignore_special_symbols
+				if (forward_entry_update_condition_to_flags && allow_entry_update)
+				{
+					flags.force_field_assignment = true;
+				}
+
+				return process_component
+				(
+					component_type, component_content,
+					constructor_arg_count,
+					flags
+				);
+			};
+
+			auto& loaded_components = components_out.type_definitions;
+
+			// Check for an existing instance of this type ID:
+			auto it = std::find_if
+			(
+				loaded_components.begin(), loaded_components.end(),
+				[&component_type](const MetaTypeDescriptor& entry) -> bool
+				{
+					if (entry.type_id == component_type.id())
+					{
+						return true;
+					}
+
+					return false;
+				}
 			);
 
-			if (result)
+			if (it == loaded_components.end())
 			{
-				count++;
+				if ((!allow_new_entry) || (!allow_default_entries && !component_content))
+				{
+					return false;
+				}
+
+				// There's no existing instance, and we're allowed 
+				loaded_components.emplace_back(make_component());
 			}
+			else if (allow_entry_update || force_entry_update)
+			{
+				it->set_variables(make_component());
+			}
+			else
+			{
+				if ((!allow_new_entry) || (!allow_default_entries && !component_content))
+				{
+					return false;
+				}
+
+				*it = make_component();
+			}
+
+			return true;
 		};
 
-		util::json_for_each(components, [&as_component](const util::json& comp)
+		std::size_t count = 0;
+
+		util::json_for_each(components, [&as_component, &count](const util::json& comp)
 		{
 			switch (comp.type())
 			{
@@ -240,7 +297,10 @@ namespace engine
 						const auto& component_declaration = proxy.key();
 						const auto& component_content = proxy.value();
 
-						as_component(component_declaration, &component_content);
+						if (as_component(component_declaration, &component_content))
+						{
+							count++;
+						}
 					}
 
 					break;
@@ -249,7 +309,10 @@ namespace engine
 				{
 					const auto component_declaration = comp.get<std::string>();
 
-					as_component(component_declaration);
+					if (as_component(component_declaration))
+					{
+						count++;
+					}
 
 					break;
 				}
@@ -259,132 +322,63 @@ namespace engine
 		return count;
 	}
 
-	bool process_component
+	std::optional<MetaTypeDescriptor> process_component
 	(
-		MetaDescription& components_out, // EntityDescriptor::TypeInfo
 		std::string_view component_name,
 		const util::json* data,
-		
+
 		std::optional<std::uint8_t> constructor_arg_count, // SmallSize
 
 		const MetaTypeDescriptorFlags& component_flags,
-		const ParsingContext* opt_parsing_context,
-
-		bool allow_entry_update,
-		bool allow_new_entry,
-		bool allow_default_entries,
-
-		bool ignore_special_symbols
+		const ParsingContext* opt_parsing_context
 	)
 	{
-		// Ignore special entry names/symbols:
-		if (!ignore_special_symbols)
-		{
-			// Used by states for `update` actions.
-			if (component_name == "target")
-			{
-				return false;
-			}
-		}
-
-		//auto meta = entt::resolve();
-		//auto component_type = meta_type_from_name(component_name);
-
-		MetaType component_type;
-
-		if (opt_parsing_context)
-		{
-			component_type = opt_parsing_context->get_component_type(component_name);
-		}
-		else
-		{
-			component_type = meta_type_from_name(component_name); // resolve(...);
-		}
+		auto component_type = (opt_parsing_context)
+			? opt_parsing_context->get_component_type(component_name)
+			: meta_type_from_name(component_name)
+		;
 
 		if (!component_type)
 		{
-			print("Failed to resolve reflection for symbol: \"{}\"", component_name);
+			//print("Failed to resolve reflection for symbol: \"{}\"", component_name);
 
-			return false;
+			return std::nullopt;
 		}
 
-		auto make_type_descriptor = [&data, &component_type, &constructor_arg_count, &component_flags]()
+		return process_component
+		(
+			component_type,
+			data,
+			constructor_arg_count,
+			component_flags
+		);
+	}
+
+	MetaTypeDescriptor process_component
+	(
+		MetaType component_type,
+		const util::json* data,
+		
+		std::optional<std::uint8_t> constructor_arg_count, // SmallSize
+		const MetaTypeDescriptorFlags& component_flags
+	)
+	{
+		assert(component_type);
+
+		if (data)
 		{
-			if (data)
+			if (const auto& component_content = *data; !component_content.empty())
 			{
-				if (const auto& component_content = *data; !component_content.empty())
-				{
-					return MetaTypeDescriptor
-					(
-						component_type, component_content,
-						{ .resolve_component_member_references=true },
-						constructor_arg_count, component_flags
-					);
-				}
-			}
-
-			return MetaTypeDescriptor(component_type, constructor_arg_count, component_flags);
-		};
-
-		auto component = make_type_descriptor();
-
-		auto check_construction_type = [allow_new_entry, allow_default_entries, &data]() -> bool
-		{
-			if (!allow_new_entry)
-			{
-				return false;
-			}
-
-			if (!allow_default_entries)
-			{
-				if (!data)
-				{
-					return false;
-				}
-			}
-
-			return true;
-		};
-
-		auto& loaded_components = components_out.type_definitions;
-
-		auto it = std::find_if(loaded_components.begin(), loaded_components.end(), [&component](const MetaTypeDescriptor& entry) -> bool
-		{
-			if (entry.type_id == component.type_id)
-			{
-				return true;
-			}
-
-			return false;
-		});
-
-		if (it == loaded_components.end())
-		{
-			if (!check_construction_type())
-			{
-				return false;
-			}
-
-			loaded_components.emplace_back(std::move(component));
-		}
-		else
-		{
-			if (allow_entry_update)
-			{
-				it->set_variables(std::move(component));
-			}
-			else
-			{
-				if (!check_construction_type())
-				{
-					return false;
-				}
-
-				*it = std::move(component);
+				return MetaTypeDescriptor
+				(
+					component_type, component_content,
+					{ .resolve_component_member_references=true },
+					constructor_arg_count, component_flags
+				);
 			}
 		}
 
-		return true;
+		return MetaTypeDescriptor(component_type, constructor_arg_count, component_flags);
 	}
 
 	// NOTE: Used internally by trigger-condition routines.
