@@ -10,10 +10,7 @@ target_sources(
     "reflection.cpp"
     "world_system.cpp"
     "entity.cpp"
-    "camera.cpp"
-
-    # TODO: Remove/rework.
-    "debug/debug_camera.cpp"
+    
 
     # TODO: Remove/rework.
     "player/player.cpp"
