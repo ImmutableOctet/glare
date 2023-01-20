@@ -1,5 +1,6 @@
 #include "entity_state.hpp"
 #include "entity_descriptor.hpp"
+#include "entity_factory.hpp"
 
 #include <engine/meta/meta.hpp>
 #include <engine/meta/parsing_context.hpp>
@@ -317,112 +318,6 @@ namespace engine
 		return (*result).cast<bool>();
 	}
 
-	bool EntityState::add_component(Registry& registry, Entity entity, const MetaTypeDescriptor& component) const
-	{
-		using namespace entt::literals;
-
-		const auto type = component.get_type();
-
-		const auto emplace_fn = type.func("emplace_meta_component"_hs);
-
-		if (!emplace_fn)
-		{
-			print_warn("Unable to resolve component-addition function for: #{}", type.id());
-
-			return false;
-		}
-
-		auto instance = component.instance(true, registry, entity);
-
-		if (!instance)
-		{
-			print_warn("Failed to create instance of component type: #{}", type.id());
-
-			return false;
-		}
-
-		emplace_fn.invoke
-		(
-			{},
-
-			entt::forward_as_meta(registry),
-			entt::forward_as_meta(entity),
-			entt::forward_as_meta(std::move(instance))
-		);
-
-		return true;
-	}
-
-	bool EntityState::update_component_fields(Registry& registry, Entity entity, const MetaTypeDescriptor& component, bool value_assignment, bool direct_modify) const
-	{
-		using namespace entt::literals;
-
-		auto type = component.get_type();
-
-		auto patch_fn = type.func("patch_meta_component"_hs);
-
-		if (!patch_fn)
-		{
-			print_warn("Unable to resolve patch function for: #{}", type.id());
-
-			return false;
-		}
-
-		if (value_assignment && (!direct_modify))
-		{
-			if (component.size() > 0)
-			{
-				auto result = patch_fn.invoke
-				(
-					{},
-					entt::forward_as_meta(registry),
-					entt::forward_as_meta(entity),
-					entt::forward_as_meta(component),
-					entt::forward_as_meta(component.size()),
-					entt::forward_as_meta(0)
-				);
-
-				if (result)
-				{
-					return (result.cast<std::size_t>() > 0);
-				}
-			}
-		}
-		else
-		{
-			auto get_fn = type.func("get_component"_hs);
-
-			if (!get_fn)
-			{
-				print_warn("Unable to resolve component-get function from: #{}", type.id());
-
-				return false;
-			}
-
-			auto result = get_fn.invoke
-			(
-				{},
-				entt::forward_as_meta(registry),
-				entt::forward_as_meta(entity)
-			);
-
-			if (auto instance = *result) // ; (*result).cast<bool>()
-			{
-				if (value_assignment) // (&& direct_modify) <-- Already implied due to prior clause.
-				{
-					if (component.size() > 0)
-					{
-						return (component.apply_fields(instance) > 0);
-					}
-				}
-
-				return true;
-			}
-		}
-
-		return false;
-	}
-
 	void EntityState::add(Registry& registry, Entity entity) const
 	{
 		for (const auto& component : components.add.type_definitions)
@@ -431,11 +326,11 @@ namespace engine
 
 			if (component.forces_field_assignment() || components.persist.get_definition(type_id))
 			{
-				update_component_fields(registry, entity, component);
+				EntityFactory::update_component_fields(registry, entity, component);
 			}
 			else
 			{
-				add_component(registry, entity, component);
+				EntityFactory::emplace_component(registry, entity, component);
 			}
 		}
 	}
@@ -461,9 +356,9 @@ namespace engine
 	{
 		for (const auto& component : components.persist.type_definitions)
 		{
-			if (!update_component_fields(registry, entity, component, value_assignment))
+			if (!EntityFactory::update_component_fields(registry, entity, component, value_assignment))
 			{
-				add_component(registry, entity, component);
+				EntityFactory::emplace_component(registry, entity, component);
 			}
 		}
 	}

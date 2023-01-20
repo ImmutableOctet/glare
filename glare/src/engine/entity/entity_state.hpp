@@ -147,10 +147,6 @@ namespace engine
 
 			bool has_component(Registry& registry, Entity entity, const MetaType& type) const;
 
-			// Returns false if the component does not currently exist for `entity`.
-			// If `value_assignment` is false, no value-assignment actions will be performed. (Status only)
-			bool update_component_fields(Registry& registry, Entity entity, const MetaTypeDescriptor& component, bool value_assignment=true, bool direct_modify=false) const;
-
 			// Adds components to `entity` in `registry`.
 			// Added components are removed during `decay`.
 			void add(Registry& registry, Entity entity) const;
