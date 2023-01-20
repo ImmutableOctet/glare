@@ -8,8 +8,7 @@
 #include <graphics/shader.hpp>
 
 #include <engine/world/world.hpp>
-#include <engine/world/camera.hpp>
-
+#include <engine/world/components/camera_component.hpp>
 
 #include <graphics/gbuffer.hpp>
 
