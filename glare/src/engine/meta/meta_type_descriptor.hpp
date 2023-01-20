@@ -19,6 +19,8 @@
 
 namespace engine
 {
+	struct ParsingContext;
+
 	struct MetaTypeDescriptor
 	{
 		protected:
@@ -66,7 +68,8 @@ namespace engine
 				//std::size_t argument_offset = 0,
 
 				std::optional<SmallSize> constructor_argument_count=std::nullopt,
-				const MetaTypeDescriptorFlags& flags={}
+				const MetaTypeDescriptorFlags& flags={},
+				const ParsingContext* opt_parsing_context=nullptr
 			);
 
 			MetaTypeDescriptor(const MetaTypeDescriptor&) = default;
@@ -93,6 +96,7 @@ namespace engine
 			inline bool forces_field_assignment() const { return flags.force_field_assignment; }
 
 			MetaType get_type() const;
+			inline MetaTypeID get_type_id() const { return type_id; }
 
 			std::optional<std::size_t> get_variable_index(MetaSymbolID name) const;
 
@@ -108,14 +112,19 @@ namespace engine
 			// NOTE:
 			// The values held by `variables` will be left in a moved-from state.
 			// Variable names/identifiers will be left intact.
-			void set_variables(MetaTypeDescriptor&& variables, bool override_constructor_input_size=true);
+			void set_variables
+			(
+				MetaTypeDescriptor&& variables,
+				bool override_constructor_input_size=true
+			);
 
 			// Reads each element from `content` as a field of this meta-type descriptor.
 			std::size_t set_variables
 			(
 				const util::json& content,
 				const MetaAnyParseInstructions& instructions={},
-				std::size_t argument_offset=0
+				std::size_t argument_offset=0,
+				const ParsingContext* opt_parsing_context=nullptr
 			);
 
 			// Attempts to convert from a symbol-separated string into a series of indexed variables.
@@ -310,20 +319,21 @@ namespace engine
 			(
 				const MetaType& type,
 				const util::json& content,
-				const MetaAnyParseInstructions& instructions = {},
-				std::size_t argument_offset = 0
+				const MetaAnyParseInstructions& instructions={},
+				std::size_t argument_offset=0,
+				const ParsingContext* opt_parsing_context=nullptr
 			);
 
 			std::size_t set_variables
 			(
 				const MetaType& type,
 				std::string_view content,
-				const MetaAnyParseInstructions& instructions = {},
+				const MetaAnyParseInstructions& instructions={},
 
-				std::string_view arg_separator = ",",
-				std::size_t argument_offset = 0,
+				std::string_view arg_separator=",",
+				std::size_t argument_offset=0,
 
-				bool safe = true
+				bool safe=true
 			);
 
 			static MetaAny resolve_indirect_value(const MetaAny& entry);

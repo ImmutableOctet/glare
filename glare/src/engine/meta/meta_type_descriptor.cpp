@@ -1,6 +1,7 @@
 #include "meta_type_descriptor.hpp"
 #include "meta.hpp"
 #include "serial.hpp"
+#include "parsing_context.hpp"
 
 #include <string_view>
 #include <string>
@@ -35,6 +36,9 @@ namespace engine
 			(var_decl.length() - symbol_position)
 		);
 
+		var_name = util::trim(var_name);
+		var_type = util::trim(var_type);
+
 		return { var_name, var_type };
 	}
 
@@ -63,7 +67,7 @@ namespace engine
 	{
 		assert(type);
 
-		set_variables(content, instructions, arg_separator, argument_offset);
+		set_variables(content, instructions, arg_separator, argument_offset, true); // false
 	}
 
 	MetaTypeDescriptor::MetaTypeDescriptor
@@ -74,7 +78,8 @@ namespace engine
 		const MetaAnyParseInstructions& instructions,
 
 		std::optional<SmallSize> constructor_argument_count,
-		const MetaTypeDescriptorFlags& flags
+		const MetaTypeDescriptorFlags& flags,
+		const ParsingContext* opt_parsing_context
 	) :
 		type_id(type.id()),
 		constructor_argument_count(constructor_argument_count),
@@ -82,7 +87,7 @@ namespace engine
 	{
 		assert(type);
 
-		set_variables(content, instructions);
+		set_variables(content, instructions, 0, opt_parsing_context);
 	}
 
 	MetaType MetaTypeDescriptor::get_type() const
@@ -175,10 +180,18 @@ namespace engine
 	(
 		const util::json& content,
 		const MetaAnyParseInstructions& instructions,
-		std::size_t argument_offset
+		std::size_t argument_offset,
+		const ParsingContext* opt_parsing_context
 	)
 	{
-		return set_variables(get_type(), content, instructions, argument_offset);
+		return set_variables
+		(
+			get_type(),
+			content,
+			instructions,
+			argument_offset,
+			opt_parsing_context
+		);
 	}
 
 	std::size_t MetaTypeDescriptor::set_variables
@@ -186,7 +199,8 @@ namespace engine
 		const MetaType& type,
 		const util::json& content,
 		const MetaAnyParseInstructions& instructions,
-		std::size_t argument_offset
+		std::size_t argument_offset,
+		const ParsingContext* opt_parsing_context
 	)
 	{
 		std::size_t count = 0;
@@ -235,7 +249,7 @@ namespace engine
 				return {};
 			};
 
-			auto resolve_variable_type = [&var_type_spec, &resolve_data_entry]() -> MetaType
+			auto resolve_variable_type = [&opt_parsing_context, &var_type_spec, &resolve_data_entry]() -> MetaType
 			{
 				if (var_type_spec.empty())
 				{
@@ -246,6 +260,14 @@ namespace engine
 				}
 				else
 				{
+					if (opt_parsing_context)
+					{
+						if (auto type = opt_parsing_context->get_type(var_type_spec))
+						{
+							return type;
+						}
+					}
+
 					return resolve(hash(var_type_spec));
 				}
 
@@ -254,14 +276,14 @@ namespace engine
 
 			// NOTE: In the case of `resolve_meta_any` and related functions,
 			// this is where recursion may take place; caused by use of nested objects. (see `MetaVariable`)
-			auto resolve_meta_variable = [&instructions, &resolve_variable_type, &var_name_hash, &var_value]()
+			auto resolve_meta_variable = [&instructions, &opt_parsing_context, &resolve_variable_type, &var_name_hash, &var_value]()
 			{
 				if (auto variable_type = resolve_variable_type())
 				{
-					return MetaVariable(var_name_hash, var_value, variable_type, instructions);
+					return MetaVariable(var_name_hash, var_value, variable_type, instructions, opt_parsing_context);
 				}
 
-				return MetaVariable(var_name_hash, var_value, instructions);
+				return MetaVariable(var_name_hash, var_value, instructions, opt_parsing_context);
 			};
 
 			if (auto meta_var = resolve_meta_variable(); meta_var.value)
