@@ -81,10 +81,13 @@ namespace engine
 			return get_type_from_alias(component_aliases, component_alias);
 		}
 
-		// Map of command aliases to their underlying type name.
-		AliasContainer command_aliases;
+		MetaType get_type(std::string_view name) const;
+		MetaTypeID get_type_id(std::string_view name) const;
 
 		// Map of component aliases to their underlying type name.
 		AliasContainer component_aliases;
+
+		// Map of command aliases to their underlying type name.
+		AliasContainer command_aliases;
 	};
 }

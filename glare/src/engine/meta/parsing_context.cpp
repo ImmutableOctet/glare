@@ -4,6 +4,13 @@
 
 namespace engine
 {
+	static MetaType get_type_raw(std::string_view name)
+	{
+		const auto name_id = hash(name);
+
+		return resolve(name_id);
+	}
+
 	// TODO: Move to a different location.
 	template <typename Callback>
     inline void generate_simplified_type_names(Callback callback, std::string_view suffix, std::string_view opt_snake_prefix={})
@@ -156,9 +163,7 @@ namespace engine
 	{
 		if (!is_known_alias)
 		{
-			const auto name_id = hash(name);
-
-			if (const auto type = resolve(name_id))
+			if (auto type = get_type_raw(name))
 			{
 				return type;
 			}
@@ -180,5 +185,25 @@ namespace engine
 		}
 
 		return {};
+	}
+
+	MetaType ParsingContext::get_type(std::string_view name) const
+	{
+		if (auto as_component = get_component_type(name, true))
+		{
+			return as_component;
+		}
+
+		if (auto as_command = get_command_type(name, true))
+		{
+			return as_command;
+		}
+
+		return get_type_raw(name);
+	}
+
+	MetaTypeID ParsingContext::get_type_id(std::string_view name) const
+	{
+		return get_type(name).id();
 	}
 }
