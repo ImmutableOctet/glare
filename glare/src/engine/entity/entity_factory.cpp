@@ -10,6 +10,7 @@
 
 #include "components/instance_component.hpp"
 #include "components/state_component.hpp"
+#include "components/entity_thread_component.hpp"
 
 #include <engine/components/relationship_component.hpp>
 #include <engine/components/name_component.hpp>
@@ -41,7 +42,9 @@
 // Debugging related:
 #include <util/format.hpp>
 #include <util/log.hpp>
+
 #include <engine/components/type_component.hpp>
+#include <engine/world/physics/components/collision_component.hpp>
 
 namespace engine
 {
@@ -55,28 +58,113 @@ namespace engine
 
 		auto instance = component.instance(true, registry, entity);
 
+		//assert(instance);
+
 		MetaAny result;
 
-		const auto type = component.get_type();
-
-		if (auto emplace_fn = type.func("emplace_meta_component"_hs))
+		if (instance)
 		{
-			result = emplace_fn.invoke
-			(
-				{},
+			const auto type = component.get_type();
 
-				entt::forward_as_meta(registry),
-				entt::forward_as_meta(entity),
-				entt::forward_as_meta(std::move(instance))
-			);
+			if (auto emplace_fn = type.func("emplace_meta_component"_hs))
+			{
+				result = emplace_fn.invoke
+				(
+					{},
+
+					entt::forward_as_meta(registry),
+					entt::forward_as_meta(entity),
+					entt::forward_as_meta(std::move(instance)) // entt::forward_as_meta(instance)
+				);
+			}
+
+			if (!result)
+			{
+				print_warn("Failed to attach component: #{} to Entity #{}", component.get_type_id(), entity);
+			}
 		}
-
-		if (!result)
+		else
 		{
-			print_warn("Failed to instantiate component: \"#{}\"", type.id()); // component.type_id
+			print_warn("Failed to instantiate component: #{} for Entity #{}", component.get_type_id(), entity);
 		}
 
 		return result;
+	}
+
+	bool EntityFactory::update_component_fields
+	(
+		Registry& registry, Entity entity,
+		const MetaTypeDescriptor& component,
+		
+		bool value_assignment, bool direct_modify
+	)
+	{
+		using namespace entt::literals;
+
+		auto type = component.get_type();
+
+		auto patch_fn = type.func("patch_meta_component"_hs);
+
+		if (!patch_fn)
+		{
+			print_warn("Unable to resolve patch function for: #{}", type.id());
+
+			return false;
+		}
+
+		if (value_assignment && (!direct_modify))
+		{
+			if (component.size() > 0)
+			{
+				auto result = patch_fn.invoke
+				(
+					{},
+					entt::forward_as_meta(registry),
+					entt::forward_as_meta(entity),
+					entt::forward_as_meta(component),
+					entt::forward_as_meta(component.size()),
+					entt::forward_as_meta(0)
+				);
+
+				if (result)
+				{
+					return (result.cast<std::size_t>() > 0);
+				}
+			}
+		}
+		else
+		{
+			auto get_fn = type.func("get_component"_hs);
+
+			if (!get_fn)
+			{
+				print_warn("Unable to resolve component-get function from: #{}", type.id());
+
+				return false;
+			}
+
+			auto result = get_fn.invoke
+			(
+				{},
+				entt::forward_as_meta(registry),
+				entt::forward_as_meta(entity)
+			);
+
+			if (auto instance = *result) // ; (*result).cast<bool>()
+			{
+				if (value_assignment) // (&& direct_modify) <-- Already implied due to prior clause.
+				{
+					if (component.size() > 0)
+					{
+						return (component.apply_fields(instance) > 0);
+					}
+				}
+
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	Entity EntityFactory::create(const EntityConstructionContext& context) const
@@ -115,6 +203,19 @@ namespace engine
 			{
 				print_warn("Unable to assign default state: Index #{}", *default_state_index);
 			}
+		}
+
+		if (!descriptor.immediate_threads.empty())
+		{
+			auto& thread_component = context.registry.get_or_emplace<EntityThreadComponent>(entity);
+
+			for (const auto& thread_range : descriptor.immediate_threads)
+			{
+				thread_component.start_threads(thread_range);
+			}
+
+			// Trigger listeners looking for `EntityThreadComponent` patches.
+			context.registry.patch<EntityThreadComponent>(entity);
 		}
 
 		return entity;
@@ -718,7 +819,7 @@ namespace engine
 			return process_command_rule_from_csv(command_name, command_content, !is_string_content);
 		};
 
-		auto process_command_rule_from_object = [&init_empty_command, &process_command](std::string_view command_name, const util::json& command_data) -> EntityStateRule*
+		auto process_command_rule_from_object = [&opt_parsing_context, &init_empty_command, &process_command](std::string_view command_name, const util::json& command_data) -> EntityStateRule*
 		{
 			if (auto command_content = init_empty_command(command_name))
 			{
@@ -726,7 +827,8 @@ namespace engine
 				(
 					command_data,
 					{ .resolve_component_member_references = true },
-					command_arg_offset
+					command_arg_offset,
+					opt_parsing_context
 				);
 
 				return process_command(*command_content); // std::move(*command_content)
@@ -957,7 +1059,10 @@ namespace engine
 				number_processed += result;
 
 				return result;
-			}
+			},
+
+			false, // true,
+			opt_parsing_context
 		);
 
 		// NOTE: Updated automatically in `process_rule` subroutine.
@@ -1195,6 +1300,14 @@ namespace engine
 		if (auto states = util::find_any(data, "state", "states"); states != data.end())
 		{
 			process_state_list(descriptor.states, *states, base_path, opt_parsing_context);
+		}
+
+		if (auto threads = util::find_any(data, "do", "threads", "execute"); threads != data.end())
+		{
+			if (auto [initial_thread_index, thread_count] = process_thread_list(*threads, &base_path, opt_parsing_context); (thread_count > 0))
+			{
+				descriptor.immediate_threads.emplace_back(initial_thread_index, thread_count);
+			}
 		}
 
 		if (auto default_state = data.find("default_state"); default_state != data.end())

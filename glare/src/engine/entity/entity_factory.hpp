@@ -63,6 +63,16 @@ namespace engine
 				const MetaTypeDescriptor& component
 			);
 
+			// Returns false if the component does not currently exist for `entity`.
+			// If `value_assignment` is false, no value-assignment actions will be performed. (Status only)
+			static bool update_component_fields
+			(
+				Registry& registry, Entity entity,
+				const MetaTypeDescriptor& component,
+
+				bool value_assignment=true, bool direct_modify=false
+			);
+
 			template <typename ChildFactoryCallback>
 			inline EntityFactory
 			(
@@ -426,7 +436,6 @@ namespace engine
 
 									EntityFactoryContext
 									{
-										.paths =
 										{
 											.instance_path = child_path,
 											.instance_directory = child_path.parent_path(),
@@ -457,7 +466,7 @@ namespace engine
 				bool resolve_external_modules=true, bool process_children=true
 			)
 			{
-				auto archetypes = util::find_any(instance, "archetypes", "import", "modules"); // instance.find("archetypes");
+				auto archetypes = util::find_any(instance, "archetypes", "import", "imports", "modules"); // instance.find("archetypes");
 
 				if (archetypes == instance.end())
 				{

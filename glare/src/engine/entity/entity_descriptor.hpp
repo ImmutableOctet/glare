@@ -3,6 +3,7 @@
 #include "types.hpp"
 #include "entity_state.hpp"
 #include "entity_thread_description.hpp"
+#include "entity_thread_range.hpp"
 
 #include <engine/meta/meta_description.hpp>
 #include <engine/meta/meta_type_descriptor.hpp>
@@ -27,12 +28,15 @@ namespace engine
 			using StateCollection = util::small_vector<std::unique_ptr<EntityState>, 16>; // util::small_vector<EntityState, 4>; // std::shared_ptr<...>;
 
 			using ThreadCount = EntityThreadCount; // std::uint16_t; // std::uint8_t
+			using ImmediateThreadDetails = EntityThreadRange;
 
 			// Statically assigned components.
 			MetaDescription components;
 
 			// Dynamic component permutations, applied as state changes.
 			StateCollection states;
+
+			util::small_vector<ImmediateThreadDetails, 1> immediate_threads; // 2
 
 			using SharedStorage = util::SharedStorage
 			<
