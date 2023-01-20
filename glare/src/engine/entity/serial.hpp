@@ -116,6 +116,7 @@ namespace engine
 		const util::json* data=nullptr,
 
 		std::optional<std::uint8_t> constructor_arg_count=std::nullopt, // SmallSize
-		const MetaTypeDescriptorFlags& component_flags={}
+		const MetaTypeDescriptorFlags& component_flags={},
+		const ParsingContext* opt_parsing_context=nullptr
 	);
 }

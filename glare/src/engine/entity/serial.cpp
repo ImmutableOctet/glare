@@ -236,7 +236,8 @@ namespace engine
 				(
 					component_type, component_content,
 					constructor_arg_count,
-					flags
+					flags,
+					opt_parsing_context
 				);
 			};
 
@@ -350,7 +351,8 @@ namespace engine
 			component_type,
 			data,
 			constructor_arg_count,
-			component_flags
+			component_flags,
+			opt_parsing_context
 		);
 	}
 
@@ -360,7 +362,8 @@ namespace engine
 		const util::json* data,
 		
 		std::optional<std::uint8_t> constructor_arg_count, // SmallSize
-		const MetaTypeDescriptorFlags& component_flags
+		const MetaTypeDescriptorFlags& component_flags,
+		const ParsingContext* opt_parsing_context
 	)
 	{
 		assert(component_type);
@@ -373,12 +376,18 @@ namespace engine
 				(
 					component_type, component_content,
 					{ .resolve_component_member_references=true },
-					constructor_arg_count, component_flags
+					constructor_arg_count, component_flags,
+					opt_parsing_context
 				);
 			}
 		}
 
-		return MetaTypeDescriptor(component_type, constructor_arg_count, component_flags);
+		return MetaTypeDescriptor
+		(
+			component_type,
+			constructor_arg_count,
+			component_flags
+		);
 	}
 
 	// NOTE: Used internally by trigger-condition routines.
@@ -478,23 +487,41 @@ namespace engine
 		{
 			return std::nullopt;
 		}
-			
+		
+		MetaAny compared_value = {};
+
+		auto comparison_method = EventTriggerComparisonMethod::Equal;
+
 		if (compared_value_raw.empty())
 		{
-			return std::nullopt;
+			// If we don't need to embed type information into the trigger-condition, return here.
+			if (!embed_type_in_condition)
+			{
+				// Because type information isn't needed, the caller can interpret
+				// the `std::nullopt` return value as an always-true condition.
+				// (Usually via `EventTriggerTrueCondition`)
+				// 
+				// If type information must be preserved, then we have no choice but to create
+				// a 'dummy-condition' object to store the type information.
+				// (i.e. We fallthrough here, using am empty `MetaAny` object to compare against)
+				return std::nullopt;
+			}
 
-			// TODO: Look into idea of resolving `null` as source-entity.
-			//compared_value = static_cast<Entity>(null); // null;
+			// See above notes for details.
+			// (Intentionally comparing not-equal against an empty `MetaAny` value)
+			comparison_method = EventTriggerComparisonMethod::NotEqual;
 		}
-
-		auto compared_value = process_trigger_condition_value(compared_value_raw);
-
-		if (!compared_value)
+		else
 		{
-			return std::nullopt;
-		}
+			compared_value = process_trigger_condition_value(compared_value_raw);
 
-		auto comparison_method = EventTriggerConditionType::get_comparison_method(comparison_operator);
+			if (!compared_value)
+			{
+				return std::nullopt;
+			}
+
+			comparison_method = EventTriggerConditionType::get_comparison_method(comparison_operator);
+		}
 
 		return EventTriggerSingleCondition
 		{
