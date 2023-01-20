@@ -9,6 +9,7 @@
 
 #include "collision_group.hpp"
 #include "collision_body_type.hpp"
+#include "collision_shape_primitive.hpp"
 
 //#include <bullet/btBulletCollisionCommon.h>
 //#include <bullet/btBulletDynamicsCommon.h>

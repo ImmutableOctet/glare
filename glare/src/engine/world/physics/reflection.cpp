@@ -1,6 +1,9 @@
 #pragma once
 
 #include "reflection.hpp"
+#include "types.hpp"
+#include "collision_shape_description.hpp"
+#include "kinematic_resolution_config.hpp"
 
 #include "components/collision_component.hpp"
 
@@ -73,13 +76,190 @@ namespace engine
 			.data<nullptr, &CollisionComponent::get_bounding_radius>("bounding_radius"_hs)
 			.data<nullptr, &CollisionComponent::get_inner_radius>("inner_radius"_hs)
 			.data<nullptr, &CollisionComponent::get_inner_diameter>("inner_diameter"_hs)
+
+			.ctor
+			<
+				const CollisionShapeDescription&,
+				const CollisionConfig&,
+				const KinematicResolutionConfig&,
+				CollisionBodyType,
+				float
+			>()
+
+			.ctor
+			<
+				const CollisionShapeDescription&,
+				const CollisionConfig&,
+				const KinematicResolutionConfig&,
+				CollisionBodyType
+			>()
+
+			.ctor
+			<
+				const CollisionShapeDescription&,
+				const CollisionConfig&,
+				const KinematicResolutionConfig&
+			>()
+
+			.ctor
+			<
+				const CollisionShapeDescription&,
+				const CollisionConfig&
+			>()
+
+			.ctor
+			<
+				const CollisionShapeDescription&,
+				EntityType
+			>()
+
+			.ctor
+			<
+				const CollisionShapeDescription&,
+				EntityType,
+				const KinematicResolutionConfig&
+			>()
 		;
+	}
+
+	template <>
+	void reflect<CollisionShapeDescription>()
+	{
+		engine_meta_type<CollisionShapeDescription>()
+			.data<&CollisionShapeDescription::primitive>("primitive"_hs)
+			.data<&CollisionShapeDescription::size>("size"_hs)
+
+			.data<&CollisionShapeDescription::set_radius,  &CollisionShapeDescription::get_radius>("radius"_hs)
+			.data<&CollisionShapeDescription::set_height,  &CollisionShapeDescription::get_height>("height"_hs)
+			.data<&CollisionShapeDescription::set_xz_size, &CollisionShapeDescription::get_xz_size>("xz_size"_hs)
+		;
+	}
+
+	template <>
+	void reflect<KinematicResolutionConfig>()
+	{
+		engine_empty_meta_type<KinematicResolutionConfig::SizeConfig>();
+
+		// Automatic size types:
+		engine_empty_meta_type<KinematicResolutionConfig::AABBType>();
+		engine_empty_meta_type<KinematicResolutionConfig::AABBVectorType>();
+		engine_empty_meta_type<KinematicResolutionConfig::OrientedAABBVectorType>();
+		engine_empty_meta_type<KinematicResolutionConfig::SphereType>();
+		engine_empty_meta_type<KinematicResolutionConfig::InnerSphereType>();
+
+		// Manual size types:
+		auto manual_size_type = []<typename SizeType>()
+		{
+			engine_meta_type<SizeType>()
+				.data<&SizeType::set_size, &SizeType::get_size>("size"_hs)
+				.data<&SizeType::set_half_size, &SizeType::get_half_size>("half_size"_hs)
+				.ctor<typename SizeType::ValueType>();
+			;
+		};
+
+		manual_size_type.operator()<KinematicResolutionConfig::SizeType>();
+		manual_size_type.operator()<KinematicResolutionConfig::VectorSizeType>();
+		manual_size_type.operator()<KinematicResolutionConfig::OrientedVectorSizeType>();
+
+		// KinematicResolutionConfig:
+		auto kinematic_resolution_type = engine_meta_type<KinematicResolutionConfig>()
+			.data<&KinematicResolutionConfig::cast_method>("cast_method"_hs)
+			.data<&KinematicResolutionConfig::size>("size"_hs)
+
+			.data<&KinematicResolutionConfig::set_is_influencer, &KinematicResolutionConfig::get_is_influencer>("is_influencer"_hs)
+			.data<&KinematicResolutionConfig::set_accepts_influence, &KinematicResolutionConfig::get_accepts_influence>("accepts_influence"_hs)
+			.data<&KinematicResolutionConfig::set_resolve_intersections, &KinematicResolutionConfig::get_resolve_intersections>("resolve_intersections"_hs)
+			.data<&KinematicResolutionConfig::set_can_influence_children, &KinematicResolutionConfig::get_can_influence_children>("can_influence_children"_hs)
+			.data<&KinematicResolutionConfig::set_can_be_influenced_by_children, &KinematicResolutionConfig::get_can_be_influenced_by_children>("can_be_influenced_by_children"_hs)
+
+			.func<&KinematicResolutionConfig::get_size>("get_size"_hs)
+			.func<&KinematicResolutionConfig::get_half_size>("get_half_size"_hs)
+			.func<&KinematicResolutionConfig::get_size_vector>("get_size_vector"_hs)
+			.func<&KinematicResolutionConfig::get_half_size_vector>("get_half_size_vector"_hs)
+
+			.ctor<decltype(KinematicResolutionConfig::cast_method)>()
+		;
+
+		// Constructor generator:
+		auto size_type = [&kinematic_resolution_type]<typename SizeType>()
+		{
+			kinematic_resolution_type = kinematic_resolution_type
+			.ctor
+			<
+				decltype(KinematicResolutionConfig::cast_method),
+				SizeType,
+
+				decltype(KinematicResolutionConfig::is_influencer),
+				decltype(KinematicResolutionConfig::accepts_influence),
+				decltype(KinematicResolutionConfig::resolve_intersections),
+				decltype(KinematicResolutionConfig::can_influence_children),
+				decltype(KinematicResolutionConfig::can_be_influenced_by_children)
+			>()
+			.ctor
+			<
+				decltype(KinematicResolutionConfig::cast_method),
+				SizeType,
+
+				decltype(KinematicResolutionConfig::is_influencer),
+				decltype(KinematicResolutionConfig::accepts_influence),
+				decltype(KinematicResolutionConfig::resolve_intersections),
+				decltype(KinematicResolutionConfig::can_influence_children)
+			>()
+			.ctor
+			<
+				decltype(KinematicResolutionConfig::cast_method),
+				SizeType,
+
+				decltype(KinematicResolutionConfig::is_influencer),
+				decltype(KinematicResolutionConfig::accepts_influence),
+				decltype(KinematicResolutionConfig::resolve_intersections)
+			>()
+			.ctor
+			<
+				decltype(KinematicResolutionConfig::cast_method),
+				SizeType,
+
+				decltype(KinematicResolutionConfig::is_influencer),
+				decltype(KinematicResolutionConfig::accepts_influence)
+			>()
+			.ctor
+			<
+				decltype(KinematicResolutionConfig::cast_method),
+				SizeType,
+
+				decltype(KinematicResolutionConfig::is_influencer)
+			>()
+			.ctor
+			<
+				decltype(KinematicResolutionConfig::cast_method),
+				SizeType
+			>()
+			;
+		};
+
+		// Automatic size types:
+		size_type.operator()<KinematicResolutionConfig::AABBType>();
+		size_type.operator()<KinematicResolutionConfig::AABBVectorType>();
+		size_type.operator()<KinematicResolutionConfig::OrientedAABBVectorType>();
+		size_type.operator()<KinematicResolutionConfig::SphereType>();
+		size_type.operator()<KinematicResolutionConfig::InnerSphereType>();
+
+		// Manual size types:
+		size_type.operator()<KinematicResolutionConfig::SizeType>();
+		size_type.operator()<KinematicResolutionConfig::VectorSizeType>();
+		size_type.operator()<KinematicResolutionConfig::OrientedVectorSizeType>();
 	}
 
 	// TODO: Implement a formal reflected interface for `PhysicsSystem`.
 	template <>
 	void reflect<PhysicsSystem>()
 	{
+		reflect<CollisionShapePrimitive>();
+		reflect<CollisionCastMethod>();
+
+		reflect<CollisionShapeDescription>();
+		reflect<KinematicResolutionConfig>();
+
 		//reflect<CollisionSurface>();
 		reflect<Ground>();
 		reflect<CollisionComponent>();
