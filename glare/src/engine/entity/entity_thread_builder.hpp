@@ -383,6 +383,12 @@ namespace engine
 				EntityInstructionCount content_index
 			);
 
+			EntityInstructionCount generate_repeat_block
+			(
+				const ContentSource& content_source,
+				EntityInstructionCount content_index
+			);
+
 			EntityInstructionCount generate_when_block
 			(
 				EventTriggerCondition&& condition,

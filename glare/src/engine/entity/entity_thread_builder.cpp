@@ -463,6 +463,10 @@ namespace engine
 				// See also: `multi` command.
 				return generate_multi_block(content_source, content_index);
 
+			//case "forever"_hs:
+			case "repeat"_hs:
+				return generate_repeat_block(content_source, content_index);
+
 			case "stop"_hs:
 			case "terminate"_hs:
 				return instruct_thread<Stop>(thread_details);
@@ -653,6 +657,21 @@ namespace engine
 
 				return scope_result;
 			}
+		);
+	}
+
+	EntityInstructionCount EntityThreadBuilder::generate_repeat_block
+	(
+		const ContentSource& content_source,
+		EntityInstructionCount content_index
+	)
+	{
+		return generate_while_block
+		(
+			EventTriggerTrueCondition {},
+
+			content_source,
+			content_index
 		);
 	}
 
@@ -859,7 +878,10 @@ namespace engine
 									content_index
 								)
 							);
-						}
+						},
+
+						false, // true,
+						opt_parsing_context
 					);
 
 					if (instructions_processed)
@@ -878,7 +900,7 @@ namespace engine
 				case "when_any"_hs:
 				case "when"_hs:
 				{
-					auto condition = process_unified_condition_block(instruction_content);
+					auto condition = process_unified_condition_block(instruction_content, opt_parsing_context);
 
 					if (condition)
 					{
@@ -894,7 +916,7 @@ namespace engine
 
 				case "if"_hs:
 				{
-					auto condition = process_unified_condition_block(instruction_content);
+					auto condition = process_unified_condition_block(instruction_content, opt_parsing_context);
 
 					if (condition)
 					{
@@ -910,7 +932,7 @@ namespace engine
 
 				case "while"_hs:
 				{
-					auto condition = process_unified_condition_block(instruction_content);
+					auto condition = process_unified_condition_block(instruction_content, opt_parsing_context);
 
 					if (condition)
 					{
@@ -923,6 +945,10 @@ namespace engine
 
 					break;
 				}
+
+				//case "forever"_hs:
+				case "repeat"_hs:
+					return generate_repeat_block(content_source, content_index);
 
 				// Executes multiple instructions in one fixed update-step.
 				// 
@@ -1027,7 +1053,7 @@ namespace engine
 						{
 							return instruct_thread<Sleep>(thread_details, std::move(*sleep_duration));
 						}
-						else if (auto condition = process_unified_condition_block(instruction_content))
+						else if (auto condition = process_unified_condition_block(instruction_content, opt_parsing_context))
 						{
 							auto condition_ref = descriptor.allocate<EventTriggerCondition>(std::move(*condition));
 
