@@ -3,8 +3,6 @@
 #include <types.hpp>
 //#include <engine/types.hpp>
 
-#include <engine/collision_shape_primitive.hpp>
-
 #include <graphics/model.hpp>
 
 #include <util/json.hpp>
@@ -50,10 +48,10 @@ namespace engine
 {
 	class World;
 	class WorldRenderer;
+	class EntityDescriptor;
 
 	struct RenderScene;
-
-	class EntityDescriptor;
+	struct CollisionShapeDescription;
 
 	// TODO: Revisit weak vs. strong references for caching.
 	// Theoretically we could use weak references but return strong references upon initial request.
@@ -137,13 +135,6 @@ namespace engine
 			
 			// Optionally returns a pointer to a 'CollisionData' object for the 'model' specified.
 			//const CollisionData* get_collision(WeakModelRef model);
-
-			CollisionData generate_capsule_collision(float radius, float height);
-			CollisionData generate_sphere_collision(float radius);
-			CollisionData generate_cube_collision(float radius);
-			CollisionData generate_cube_collision(const math::Vector& size);
-
-			CollisionData generate_shape(const util::json& collision_data);
 
 			const CollisionData* get_collision(const WeakModelRef model) const;
 			const ref<AnimationData> get_animation_data(const WeakModelRef model) const;

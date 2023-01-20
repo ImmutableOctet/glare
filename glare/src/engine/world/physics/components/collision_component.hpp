@@ -29,6 +29,8 @@ namespace engine
 	class World;
 	class PhysicsSystem;
 
+	struct CollisionShapeDescription;
+
 	//class CollisionMotionState;
 
 	// `set_entity_for_collision_object` is considered an internal implementation detail and is therefore inaccessible.
@@ -160,23 +162,37 @@ namespace engine
 			// This calls the free-function of the same name.
 			static Entity get_entity_from_collision_object(const btCollisionObject& c_obj);
 
+			CollisionComponent
+			(
+				const CollisionShapeDescription& shape_details,
+				const CollisionConfig& config,
+				std::optional<KinematicResolutionConfig> kinematic_resolution=std::nullopt,
+				std::optional<CollisionBodyType> body_type=std::nullopt,
+				float mass = 0.0f,
+				std::unique_ptr<CollisionMotionState>&& motion_state_in={},
+				bool activate_immediately=true
+			);
+
 			template <typename ShapeRefType> // Shape, ConvexShape, ConcaveShape
-			inline CollisionComponent
+			CollisionComponent
 			(
 				const ShapeRefType& shape,
 				const CollisionConfig& config,
-				float mass,
-				std::optional<CollisionBodyType> body_type_in=std::nullopt,
-				std::unique_ptr<CollisionMotionState>&& motion_state_in={},
 				std::optional<KinematicResolutionConfig> kinematic_resolution=std::nullopt,
+				std::optional<CollisionBodyType> body_type=std::nullopt,
+				float mass=0.0f,
+				std::unique_ptr<CollisionMotionState>&& motion_state_in={},
 				bool activate_immediately=true
 			):
 				CollisionComponent(config, std::move(motion_state_in))
 			{
-				auto body_type = body_type_in.value_or(CollisionBodyType::Basic);
+				if (!body_type)
+				{
+					body_type = get_collision_body_type(config.group);
+				}
 
 				// Check for all other body types:
-				switch (body_type)
+				switch (*body_type)
 				{
 					case CollisionBodyType::Basic:
 						build_basic_collision_object(config);
@@ -393,10 +409,12 @@ namespace engine
 		return attach_collision_impl
 		(
 			world, entity,
+
 			CollisionComponent
 			(
-				collision_shape_data, config, mass, body_type,
-				std::move(motion_state), resolution_method
+				collision_shape_data, config,
+				resolution_method, body_type,
+				mass, std::move(motion_state)
 			)
 		);
 	}

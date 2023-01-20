@@ -2,6 +2,8 @@
 #include "collision_component.hpp"
 
 #include <engine/world/physics/collision_motion_state.hpp>
+#include <engine/world/physics/collision_shape_description.hpp>
+#include <engine/resource_manager/collision_data.hpp>
 
 #include <engine/world/world.hpp>
 
@@ -12,6 +14,9 @@
 #include <bullet/btBulletDynamicsCommon.h>
 
 //#include <bullet/BulletDynamics/Dynamics/btRigidBody.h>
+
+// Debugging related:
+#include <util/log.hpp>
 
 namespace engine
 {
@@ -58,7 +63,29 @@ namespace engine
 		motion_state(std::move(motion_state)),
 		collision_object(std::monostate())
 	{}
-	
+
+	CollisionComponent::CollisionComponent
+	(
+		const CollisionShapeDescription& shape_details,
+		const CollisionConfig& config,
+		std::optional<KinematicResolutionConfig> kinematic_resolution,
+		std::optional<CollisionBodyType> body_type,
+		float mass,
+		std::unique_ptr<CollisionMotionState>&& motion_state_in,
+		bool activate_immediately
+	)
+		: CollisionComponent
+		(
+			CollisionData::build_basic_shape(shape_details),
+			config,
+			kinematic_resolution,
+			body_type,
+			mass,
+			std::move(motion_state_in),
+			activate_immediately
+		)
+	{}
+
 	bool CollisionComponent::apply_collision_flags(btCollisionObject& c_obj, const CollisionConfig& config, bool keep_existing_flags, bool allow_kinematic)
 	{
 		using native_flags = btCollisionObject::CollisionFlags;
@@ -644,7 +671,6 @@ namespace engine
 	Entity attach_collision_impl(World& world, Entity entity, CollisionComponent&& col)
 	{
 		auto& registry = world.get_registry();
-
 		auto& component = registry.emplace<CollisionComponent>(entity, std::move(col));
 
 		auto* c_obj = component.get_collision_object();

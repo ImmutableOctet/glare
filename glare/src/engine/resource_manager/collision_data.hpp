@@ -9,6 +9,8 @@
 
 namespace engine
 {
+	struct CollisionShapeDescription;
+
 	// Internal storage mechanism for 'collision shapes' and associated mesh-data (if any).
 	// This is different from a 'collision object' instance (sometimes referred to as a 'collider'), which can be attached to an `Entity` in a Game World.
 	// Such 'colliders' are created by attaching a `CollisionComponent` object to an `Entity`, using these `CollisionData` objects as their underlying storage. (see constructors for `CollisionComponent`)
@@ -19,6 +21,7 @@ namespace engine
 		using Geometry = CollisionGeometry; // graphics::Model::CollisionGeometry;
 
 		static CollisionShape build_mesh_shape(const Geometry& geometry_storage, bool optimize=true);
+		static CollisionShape build_basic_shape(const CollisionShapeDescription& shape_details);
 
 		CollisionData() = default;
 
@@ -26,7 +29,9 @@ namespace engine
 		CollisionData(const CollisionData&) = default;
 
 		CollisionData(const Shape& collision_shape);
-		CollisionData(Geometry&& geometry_storage, bool optimize = true);
+		CollisionData(Geometry&& geometry_storage, bool optimize=true);
+
+		CollisionData(const CollisionShapeDescription& shape_details);
 
 		CollisionData& operator=(CollisionData&&) noexcept = default;
 
