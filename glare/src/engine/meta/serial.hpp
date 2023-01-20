@@ -3,7 +3,6 @@
 #include "types.hpp"
 #include "meta_data_member.hpp"
 #include "indirect_meta_data_member.hpp"
-#include "parsing_context.hpp"
 
 #include <engine/entity/entity_target.hpp>
 
@@ -21,6 +20,8 @@
 
 namespace engine
 {
+	struct ParsingContext;
+
 	// JSON-shorthand overload for string-to-any resolution function.
 	entt::meta_any meta_any_from_string(const util::json& value, const MetaAnyParseInstructions& instructions={});
 
@@ -83,12 +84,30 @@ namespace engine
 		return static_cast<bool>(result);
 	}
 
-	entt::meta_any resolve_meta_any(const util::json& value, MetaTypeID type_id, const MetaAnyParseInstructions& instructions={});
-	entt::meta_any resolve_meta_any(const util::json& value, MetaType type, const MetaAnyParseInstructions& instructions={});
+	entt::meta_any resolve_meta_any
+	(
+		const util::json& value,
+		MetaTypeID type_id,
+		const MetaAnyParseInstructions& instructions={},
+		const ParsingContext* opt_parsing_context=nullptr
+	);
+
+	entt::meta_any resolve_meta_any
+	(
+		const util::json& value,
+		MetaType type,
+		const MetaAnyParseInstructions& instructions={},
+		const ParsingContext* opt_parsing_context=nullptr
+	);
 
 	// NOTE: This overload cannot handle non-primitive values.
 	// (see overload taking a native-type identifier)
-	entt::meta_any resolve_meta_any(const util::json& value, const MetaAnyParseInstructions& instructions={});
+	entt::meta_any resolve_meta_any
+	(
+		const util::json& value,
+		const MetaAnyParseInstructions& instructions={},
+		const ParsingContext* opt_parsing_context=nullptr
+	);
 
 	// Attempts to resolve a `MetaDataMember` from `value`.
 	// NOTE: Does not support indirection. (i.e. other entities from the initial source)

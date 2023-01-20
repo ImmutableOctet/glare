@@ -1,6 +1,7 @@
 #include "serial.hpp"
 #include "meta.hpp"
 #include "meta_type_descriptor.hpp"
+#include "parsing_context.hpp"
 
 #include <engine/types.hpp>
 
@@ -26,7 +27,7 @@ namespace engine
 		using StringType = util::json::string_t; // std::string;
 		
 		// Resolves primitive types from an array input.
-		static entt::meta_any resolve_array(const util::json& value, const MetaAnyParseInstructions& instructions={})
+		static entt::meta_any resolve_array(const util::json& value, const MetaAnyParseInstructions& instructions={}, const ParsingContext* opt_parsing_context=nullptr)
 		{
 			ArrayType output;
 
@@ -34,7 +35,7 @@ namespace engine
 
 			for (const auto& element : value)
 			{
-				output.emplace_back(resolve_meta_any(element, instructions));
+				output.emplace_back(resolve_meta_any(element, instructions, opt_parsing_context));
 			}
 
 			return { std::move(output) }; // output;
@@ -272,12 +273,24 @@ namespace engine
 		return {};
 	}
 
-	entt::meta_any resolve_meta_any(const util::json& value, MetaTypeID type_id, const MetaAnyParseInstructions& instructions)
+	entt::meta_any resolve_meta_any
+	(
+		const util::json& value,
+		MetaTypeID type_id,
+		const MetaAnyParseInstructions& instructions,
+		const ParsingContext* opt_parsing_context
+	)
 	{
-		return resolve_meta_any(value, entt::resolve(type_id), instructions);
+		return resolve_meta_any(value, entt::resolve(type_id), instructions, opt_parsing_context);
 	}
 
-	entt::meta_any resolve_meta_any(const util::json& value, MetaType type, const MetaAnyParseInstructions& instructions)
+	entt::meta_any resolve_meta_any
+	(
+		const util::json& value,
+		MetaType type,
+		const MetaAnyParseInstructions& instructions,
+		const ParsingContext* opt_parsing_context
+	)
 	{
 		using jtype = util::json::value_t;
 
@@ -289,13 +302,25 @@ namespace engine
 			case jtype::object:
 				// NOTE: Nesting `MetaTypeDescriptor` objects within the any-chain
 				// implies recursion during object construction later on.
-				return MetaTypeDescriptor(type, value, instructions);
+				return MetaTypeDescriptor
+				(
+					type, value,
+					instructions,
+					std::nullopt,
+					{},
+					opt_parsing_context
+				);
 		}
 
-		return resolve_meta_any(value, instructions);
+		return resolve_meta_any(value, instructions, opt_parsing_context);
 	}
 
-	entt::meta_any resolve_meta_any(const util::json& value, const MetaAnyParseInstructions& instructions)
+	entt::meta_any resolve_meta_any
+	(
+		const util::json& value,
+		const MetaAnyParseInstructions& instructions,
+		const ParsingContext* opt_parsing_context
+	)
 	{
 		using jtype = util::json::value_t;
 
@@ -310,7 +335,7 @@ namespace engine
 				return {};
 			}
 			case jtype::array:
-				return impl::resolve_array(value, instructions);
+				return impl::resolve_array(value, instructions, opt_parsing_context);
 			case jtype::string:
 				return meta_any_from_string(value, instructions);
 			case jtype::boolean:
