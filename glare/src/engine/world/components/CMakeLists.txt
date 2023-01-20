@@ -3,6 +3,6 @@ target_sources(
     
     PRIVATE
 
-    "camera_component.cpp"
+    
     "light_component.cpp"
 )

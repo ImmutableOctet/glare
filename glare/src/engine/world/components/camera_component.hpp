@@ -2,10 +2,7 @@
 
 #include <engine/world/types.hpp>
 
-//#include <math/math.hpp>
-
-// Forward declaration not used due to templates.
-#include <util/json.hpp>
+#include <math/math.hpp>
 
 namespace engine
 {
@@ -23,20 +20,10 @@ namespace engine
 			return calculate_aspect_ratio(size.x, size.y);
 		}
 
-		static Projection resolve_projection_mode(const std::string& mode);
-
-		static constexpr float NEAR_PLANE = 0.1f;
-		static constexpr float FAR_PLANE  = 4000.0f;
-		static constexpr float ASPECT = (16.0f / 9.0f); // calculate_aspect_ratio(16, 9); // 16:9
-
-		static constexpr float DEFAULT_FOV = 75.0f;
-
-		static constexpr bool DEFAULT_FREE_ROTATION = true; // false;
-		static constexpr bool DEFAULT_DYNAMIC_ASPECT_RATIO = true; // false;
-
 		// Vertical FOV. (In radians)
 		float fov;
 
+		// Display aspect ratio. (Width / height)
 		float aspect_ratio;
 
 		float near_plane;
@@ -48,20 +35,26 @@ namespace engine
 		bool free_rotation        : 1;
 		bool dynamic_aspect_ratio : 1;
 
-		CameraComponent(const util::json& camera_cfg);
-
-		CameraComponent
+		inline CameraComponent
 		(
-			float v_fov_deg=DEFAULT_FOV,
-			float near_plane=NEAR_PLANE,
-			float far_plane=FAR_PLANE,
-			float aspect_ratio=ASPECT,
+			float v_fov_deg=75.0f,
+			float near_plane=0.1f,
+			float far_plane=4000.0f,
+			float aspect_ratio=(16.0f / 9.0f), // calculate_aspect_ratio(16, 9), // 16:9
 			
-			Projection projection_mode=Projection::Default,
+			Projection projection_mode=Projection::Default, // Projection::Perspective
 			
-			bool free_rotation=DEFAULT_FREE_ROTATION,
-			bool dynamic_aspect_ratio=DEFAULT_DYNAMIC_ASPECT_RATIO
-		);
+			bool free_rotation=true,
+			bool dynamic_aspect_ratio=true
+		) :
+			fov(glm::radians(v_fov_deg)),
+			near_plane(near_plane),
+			far_plane(far_plane),
+			aspect_ratio(aspect_ratio),
+			projection_mode(projection_mode),
+			free_rotation(free_rotation),
+			dynamic_aspect_ratio(dynamic_aspect_ratio)
+		{}
 
 		inline auto update_aspect_ratio(int width, int height)
 		{
@@ -72,7 +65,6 @@ namespace engine
 			return ratio;
 		}
 
-		// Getters/setters:
 		inline bool get_free_rotation() const { return free_rotation; }
 		inline void set_free_rotation(bool value) { free_rotation = value; }
 
