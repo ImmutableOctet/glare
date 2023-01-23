@@ -255,6 +255,13 @@ namespace engine
         return count;
     }
 
+    // Notifies listeners that a component of type `T` has been patched.
+    template <typename T>
+    void mark_component_as_patched(Registry& registry, Entity entity)
+    {
+        registry.patch<T>(entity);
+    }
+
     template <typename EventType>
     void trigger_event_from_meta_any(Service& service, entt::meta_any event_instance)
     {
@@ -320,6 +327,7 @@ namespace engine
             .template func<&remove_component<T>>("remove_component"_hs)
             .template func<&get_or_emplace_component<T>, entt::as_ref_t>("get_or_emplace_component"_hs)
             .template func<&patch_meta_component<T>>("patch_meta_component"_hs)
+            .template func<&mark_component_as_patched<T>>("mark_component_as_patched"_hs)
             .template func<&MetaEventListener::connect<T>>("connect_meta_event"_hs)
             .template func<&MetaEventListener::disconnect<T>>("disconnect_meta_event"_hs)
 			.template func<&MetaEventListener::connect_component_listeners<T>>("connect_component_meta_events"_hs)
