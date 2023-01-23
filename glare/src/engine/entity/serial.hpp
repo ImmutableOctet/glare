@@ -42,8 +42,13 @@ namespace engine
 	>
 	parse_event_type(const std::string& event_type, std::ptrdiff_t offset = 0); // std::string_view
 
-	std::tuple<std::string_view, bool, std::optional<std::uint8_t>> // MetaTypeDescriptor::SmallSize
-	parse_component_declaration(const std::string& component_declaration); // std::string_view
+	std::tuple
+	<
+		std::string_view,           // component_name
+		bool,                       // allow_entry_update (In-place changes)
+		std::optional<std::uint8_t> // std::optional<MetaTypeDescriptor::SmallSize>
+	>
+	parse_component_declaration(const std::string& component_declaration, bool default_allow_entry_update=false); // std::string_view
 
 	std::tuple
 	<

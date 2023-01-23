@@ -94,14 +94,14 @@ namespace engine
 	}
 
 	std::tuple<std::string_view, bool, std::optional<std::uint8_t>> // EntityFactory::SmallSize
-	parse_component_declaration(const std::string& component_declaration) // std::string_view
+	parse_component_declaration(const std::string& component_declaration, bool default_allow_entry_update) // std::string_view
 	{
 		using SmallSize = std::uint8_t;
 		
 		const auto component_rgx = std::regex("(\\+)?([^\\|]+)(\\|(\\d+))?");
 
 		std::string_view name_view = {};
-		bool inplace_changes = false;
+		bool inplace_changes = default_allow_entry_update;
 		std::optional<SmallSize> constructor_arg_count = std::nullopt;
 
 		if (std::smatch rgx_match; std::regex_search(component_declaration.begin(), component_declaration.end(), rgx_match, component_rgx))
