@@ -89,7 +89,7 @@ namespace engine
 			template <typename EventType, auto fn, typename obj_type>
 			inline void register_event(obj_type& obj)
 			{
-				register_event<EventType, fn>(obj, has_event_queued());
+				register_event<EventType, fn>(obj, false); // has_event_queued()
 			}
 
 			template <typename EventType, auto fn, typename obj_type>
@@ -122,7 +122,7 @@ namespace engine
 			template <typename EventType, auto fn, typename obj_type>
 			inline void unregister_event(obj_type& obj)
 			{
-				unregister_event<EventType, fn>(obj, has_event_queued());
+				unregister_event<EventType, fn>(obj, false); // has_event_queued()
 			}
 
 			template <typename EventType, auto fn, typename obj_type>
