@@ -1,0 +1,13 @@
+{
+	"import": ["light"],
+
+	"SpotLightComponent":
+	{
+		"constant": 1.0,
+		"linear": 0.09,
+		"quadratic": 0.032,
+
+		"cutoff": 0.9762959977, // cos(radians(12.5))
+		"outer_cutoff": 0.95371695649 // cos(radians(17.5))
+	}
+}

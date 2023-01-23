@@ -1,0 +1,11 @@
+{
+	"import": ["light"],
+
+	"PointLightComponent":
+	{
+		"constant": 1.0,
+		"linear": 0.001, // 0.1,
+		"quadratic": 0.00005
+
+	}
+}

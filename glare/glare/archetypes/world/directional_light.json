@@ -1,0 +1,9 @@
+{
+	"import": ["light"],
+
+
+	"DirectionalLightComponent":
+	{
+		"use_position": false
+	}
+}
