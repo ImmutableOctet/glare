@@ -87,14 +87,6 @@ namespace engine
 		return player_model;
 	}
 
-	void generate_player_collision(World& world, Entity player, const util::json& collision_data)
-	{
-		auto& resource_manager = world.get_resource_manager();
-		auto shape_data = resource_manager.generate_shape(collision_data);
-
-		attach_collision(world, player, shape_data.collision_shape, EntityType::Player);
-	}
-
     Entity create_player
 	(
 		World& world,
@@ -125,7 +117,7 @@ namespace engine
 		// Set the alignment entity to `player_model`, since it's meant to be floor-aligned.
 		registry.emplace<AlignmentComponent>(player, player_model);
 
-		generate_player_collision(world, player, character["collision"]);
+		//generate_player_collision(world, player, character["collision"]);
 
 		registry.emplace<InputComponent>(player, static_cast<InputStateIndex>(index));
 		//registry.emplace<PlayerControlComponent>(player);

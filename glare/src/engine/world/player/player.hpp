@@ -19,7 +19,8 @@ namespace engine
 	{
 		using Index = PlayerIndex;
 
-		static constexpr Index NoPlayer = 0;
+		static constexpr Index NoPlayer  = 0;
+		static constexpr Index AnyPlayer = 0;
 
 		enum class Action
 		{
@@ -68,8 +69,6 @@ namespace engine
 		const util::json& model_data,
 		const std::filesystem::path& base_path
 	);
-
-	void generate_player_collision(World& world, Entity player, const util::json& collision_data);
 
 	Entity create_player
 	(
