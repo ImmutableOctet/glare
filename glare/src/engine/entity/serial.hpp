@@ -102,6 +102,34 @@ namespace engine
 		bool ignore_special_symbols=true
 	);
 
+	// Attempts to process the `component_declaration` and `component_content` specified,
+	// adding or modifying an entry in `components_out` if successful.
+	// 
+	// NOTE: This overload is used internally by `process_component_list`.
+	// 
+	// Calling this directly can be useful when wanting to process and insert
+	// individual component entries that are not necessarily stored in an encompassing JSON container.
+	// 
+	// e.g. top-level component entries in archetypes, which have non-component
+	// names that shouldn't be enumerated by a call to `process_component_list`.
+	bool process_component
+	(
+		MetaDescription& components_out, // EntityDescriptor::TypeInfo&
+
+		const std::string& component_declaration, // std::string_view
+		const util::json* component_content=nullptr,
+
+		const MetaTypeDescriptorFlags& component_flags={},
+
+		const ParsingContext* opt_parsing_context=nullptr,
+
+		bool allow_new_entry=true,
+		bool allow_default_entries=true,
+		bool forward_entry_update_condition_to_flags=false,
+
+		bool ignore_special_symbols=true
+	);
+
 	// Same as the `MetaType` overload, but handles resolution of `component_name`.
 	std::optional<MetaTypeDescriptor> process_component
 	(
