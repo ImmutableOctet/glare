@@ -12,6 +12,7 @@ namespace engine
 		graphics::ColorRGB ambient_light = { 0.8f, 0.8f, 0.8f };
 		math::Vector gravity = { 0.0f, -1.0f, 0.0f };
 
+		// TODO: Remove.
 		inline static WorldProperties from_json(const util::json& data)
 		{
 			WorldProperties properties;

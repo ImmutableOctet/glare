@@ -21,18 +21,16 @@
 #include <engine/debug/debug.hpp>
 
 #include <engine/world/meta/meta.hpp>
-#include <engine/world/debug/debug.hpp>
 
 #include <graphics/context.hpp>
 #include <graphics/native/opengl.hpp>
 #include <engine/world/render/world_render_state.hpp>
+#include <engine/world/physics/collision_shape_description.hpp>
 
 #include <engine/events.hpp>
 
 #include <engine/components/type_component.hpp>
 #include <engine/components/model_component.hpp>
-
-#include <engine/world/light.hpp>
 
 #include <engine/world/world_events.hpp>
 #include <engine/world/graphics_entity.hpp>
@@ -108,7 +106,20 @@ namespace glare
 
 		world.set_name(cube, "Cube");
 
-		attach_collision(world, cube, resource_manager.generate_sphere_collision(20.0f).collision_shape, engine::EntityType::Object);
+		attach_collision
+		(
+			world, cube,
+			engine::CollisionData::build_basic_shape
+			(
+				engine::CollisionShapeDescription
+				{
+					engine::CollisionShapePrimitive::Sphere,
+					{ 20.0f, 20.0f, 20.0f }
+				}
+			),
+			engine::EntityType::Object
+		);
+
 		auto& cube_c = registry.get<engine::CollisionComponent>(cube);
 		cube_c.set_mass(0.5f);
 
@@ -142,7 +153,21 @@ namespace glare
 
 		world.set_name(cube2, "Cube2");
 
-		attach_collision(world, cube2, resource_manager.generate_sphere_collision(4.0f).collision_shape, engine::EntityType::Object);
+		attach_collision
+		(
+			world, cube2,
+
+			engine::CollisionData::build_basic_shape
+			(
+				engine::CollisionShapeDescription
+				{
+					engine::CollisionShapePrimitive::Sphere,
+					{ 4.0f, 4.0f, 4.0f }
+				}
+			),
+
+			engine::EntityType::Object
+		);
 		auto& cube2_c = registry.get<engine::CollisionComponent>(cube2);
 		cube2_c.set_mass(2.0f);
 		
@@ -552,7 +577,7 @@ namespace glare
 			auto& registry = world.get_registry();
 
 			auto light = world.get_by_name("shadow_test");
-			//auto& shadows = registry.get<engine::PointLightShadows>(light);
+			//auto& shadows = registry.get<engine::PointLightShadowComponent>(light);
 
 			auto lt = world.get_transform(light);
 			auto ct = world.get_transform(world.get_camera());
