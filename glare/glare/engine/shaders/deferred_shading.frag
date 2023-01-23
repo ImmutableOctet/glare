@@ -79,41 +79,47 @@ uniform sampler2D directional_shadow_map[MAX_DIR_SHADOWS];
 
 uniform mat4 directional_shadow_light_space_matrix[MAX_DIR_SHADOWS];
 
-float directional_shadow_calculation(sampler2D shadow_map, vec4 fragPosLightSpace, vec3 lightPos, vec3 fragPos, vec3 fragNormal)
+float directional_shadow_calculation(sampler2D shadow_map, vec4 fragment_position_light_space, vec3 light_position, vec3 fragment_position, vec3 fragNormal)
 {
-    // perform perspective divide
-    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-    // transform to [0,1] range
-    projCoords = projCoords * 0.5 + 0.5;
+    // Perform perspective divide.
+    vec3 projected_coordinates = (fragment_position_light_space.xyz / fragment_position_light_space.w);
+    
+    // Convert from (-1.0 to 1.0) range into (0.0 to 1.0) range.
+    projected_coordinates = projected_coordinates * 0.5 + 0.5;
+
     // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
-    float closestDepth = texture(shadow_map, projCoords.xy).r; 
-    // get depth of current fragment from light's perspective
-    float currentDepth = projCoords.z;
-    // calculate bias (based on depth map resolution and slope)
+    float closest_depth = texture(shadow_map, projected_coordinates.xy).r; 
+    
+    // Get the depth of the current fragment from the light's perspective.
+    float currentDepth = projected_coordinates.z;
+    
+    // Calculate bias based on depth-map resolution and slope:
     vec3 normal = normalize(fragNormal);
-    vec3 lightDir = normalize(lightPos - fragPos);
-    float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
-    // check whether current frag pos is in shadow
-    // float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
-    // PCF
+    vec3 light_direction = normalize(light_position - fragment_position);
+    
+    float bias = max(0.05 * (1.0 - dot(normal, light_direction)), 0.005);
+    
     float shadow = 0.0;
-    vec2 texelSize = 1.0 / textureSize(shadow_map, 0);
+
+    vec2 texel_size = (1.0 / textureSize(shadow_map, 0));
 
     for (int x = -1; x <= 1; ++x)
     {
         for (int y = -1; y <= 1; ++y)
         {
-            float pcfDepth = texture(shadow_map, projCoords.xy + vec2(x, y) * texelSize).r;
+            float pcf_depth = texture(shadow_map, projected_coordinates.xy + vec2(x, y) * texel_size).r;
 
-            shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;        
+            shadow += (((currentDepth - bias) > pcf_depth) ? 1.0 : 0.0);
         }    
     }
 
     shadow /= 9.0;
     
-    // keep the shadow at 0.0 when outside the far_plane region of the light's frustum.
-    if (projCoords.z > 1.0)
+    // Fragments at a depth greater than 1.0 (outside of the light frustum's far-plane) should be completely in shadow.
+    if (projected_coordinates.z > 1.0)
+    {
         shadow = 0.0;
+    }
         
     return shadow;
 }
@@ -124,12 +130,12 @@ const int MAX_POINT_SHADOWS = 2;
 
 uniform int point_shadows_count;
 
-uniform vec3 point_shadow_light_position[MAX_POINT_SHADOWS]; // lightPos;
+uniform vec3 point_shadow_light_position[MAX_POINT_SHADOWS]; // light_position;
 uniform float point_shadow_far_plane[MAX_POINT_SHADOWS]; // far_plane;
 
 uniform samplerCube point_shadow_cubemap[MAX_POINT_SHADOWS];
 
-// array of offset direction for sampling
+// Array of offset directions for sampling
 vec3 gridSamplingDisk[20] = vec3[]
 (
    vec3(1, 1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1, 1,  1), 
@@ -139,64 +145,42 @@ vec3 gridSamplingDisk[20] = vec3[]
    vec3(0, 1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0, 1, -1)
 );
 
-float point_shadow_calculation(samplerCube shadow_map, vec3 fragPos, vec3 lightPos, vec3 viewPos, float far_plane, vec3 normal) // out vec3 dbg_color
+float point_shadow_calculation(samplerCube shadow_map, vec3 fragment_position, vec3 light_position, vec3 view_position, float far_plane, vec3 normal) // out vec3 dbg_color
 {
-    // get vector between fragment position and light position
-    vec3 fragToLight = (fragPos - lightPos);
-    // use the fragment to light vector to sample from the depth map    
-    // float closestDepth = texture(shadow_map, fragToLight).r;
-    // it is currently in linear range between [0,1], let's re-transform it back to original depth value
-    // closestDepth *= far_plane;
-    // now get current linear depth as the length between the fragment and light position
-    float currentDepth = length(fragToLight);
-    // test for shadows
-    // float bias = 0.05; // we use a much larger bias since depth is now in [near_plane, far_plane] range
-    // float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;
-    // PCF
-    // float shadow = 0.0;
-    // float bias = 0.05; 
-    // float samples = 4.0;
-    // float offset = 0.1;
-    // for(float x = -offset; x < offset; x += offset / (samples * 0.5))
-    // {
-        // for(float y = -offset; y < offset; y += offset / (samples * 0.5))
-        // {
-            // for(float z = -offset; z < offset; z += offset / (samples * 0.5))
-            // {
-                // float closestDepth = texture(shadow_map, fragToLight + vec3(x, y, z)).r; // use lightdir to lookup cubemap
-                // closestDepth *= far_plane;   // Undo mapping [0;1]
-                // if(currentDepth - bias > closestDepth)
-                    // shadow += 1.0;
-            // }
-        // }
-    // }
-    // shadow /= (samples * samples * samples);
+    vec3 fragment_to_light = (fragment_position - light_position);
+    float currentDepth = length(fragment_to_light);
     float shadow = 0.0;
 
-    vec3 lightDir = normalize(fragToLight);
+    vec3 light_direction = normalize(fragment_to_light);
     
     ////float bias = 0.15;
 
-    float bias = max(0.01 * (0.2 - dot(normal, lightDir)), (length(fragToLight) / far_plane));
-    //float bias = (length(fragToLight) / far_plane);
+    float bias = max(0.01 * (0.2 - dot(normal, light_direction)), (length(fragment_to_light) / far_plane));
+    //float bias = (length(fragment_to_light) / far_plane);
 
-    //float bias = max(0.15 * (1.0 - dot(normal, lightDir)), 0.01);
-    //float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
+    //float bias = max(0.15 * (1.0 - dot(normal, light_direction)), 0.01);
+    //float bias = max(0.05 * (1.0 - dot(normal, light_direction)), 0.005);
 
     int samples = 20;
-    float viewDistance = length(viewPos - fragPos);
-    float diskRadius = (1.0 + (viewDistance / far_plane)) / 1000.0;
+    
+    float view_distance = length(view_position - fragment_position);
+    float disk_radius = (1.0 + (view_distance / far_plane)) / 1000.0;
+    
     for(int i = 0; i < samples; ++i)
     {
-        float closestDepth = texture(shadow_map, fragToLight + gridSamplingDisk[i] * diskRadius).r;
-        closestDepth *= far_plane;   // undo mapping [0;1]
-        if(currentDepth - bias > closestDepth)
+        float closest_depth = texture(shadow_map, fragment_to_light + gridSamplingDisk[i] * disk_radius).r;
+        closest_depth *= far_plane;   // undo mapping [0;1]
+
+        if(currentDepth - bias > closest_depth)
+        {
             shadow += 1.0;
+        }
     }
+
     shadow /= float(samples);
         
-    // display closestDepth as debug (to visualize depth cubemap)
-    //dbg_color = vec3(closestDepth / far_plane);
+    // display closest_depth as debug (to visualize depth cubemap)
+    //dbg_color = vec3(closest_depth / far_plane);
         
     return shadow;
 }
@@ -234,8 +218,10 @@ struct PointLight
     vec3 diffuse;
     //vec3 specular;
     
+    float constant;
     float linear;
     float quadratic;
+
     float radius;
 };
 
@@ -259,21 +245,23 @@ vec3 compute_point_lights(in vec3 world_position, in vec3 normal, in vec3 diffus
 
         if ((!limit_to_radius) || (distance < point_lights[i].radius))
         {
-            // diffuse
-            vec3 lightDir = normalize(point_lights[i].position - world_position);
-            vec3 diffuse = max(dot(normal, lightDir), 0.0) * diffuse * point_lights[i].diffuse;
+            // Diffuse:
+            vec3 light_direction = normalize(point_lights[i].position - world_position);
+            vec3 diffuse = max(dot(normal, light_direction), 0.0) * diffuse * point_lights[i].diffuse;
 
-            // specular
-            vec3 halfwayDir = normalize(lightDir + view_direction);  
-            float spec = pow(max(dot(normal, halfwayDir), 0.0), specular_intensity);
-            vec3 specular = point_lights[i].diffuse * spec * specular_in;
+            // Specular:
+            vec3 mid_point = normalize(light_direction + view_direction);
+
+            float specular_factor = pow(max(dot(normal, mid_point), 0.0), specular_intensity);
+            vec3 specular = (point_lights[i].diffuse * specular_factor * specular_in);
             
-            // attenuation
-            float attenuation = 1.0 / (1.0 + point_lights[i].linear * distance + point_lights[i].quadratic * distance * distance);
+            // Attenuation:
+            float attenuation = (1.0 / (point_lights[i].constant + (point_lights[i].linear * distance) + (point_lights[i].quadratic * (distance * distance))));
 
             diffuse *= attenuation;
             specular *= attenuation;
-            lighting += diffuse + specular;
+
+            lighting += (diffuse + specular);
         }
     }
 
@@ -284,25 +272,27 @@ vec3 calculate_directional_light(in vec3 world_position, in vec3 normal, in vec3
 {
     vec3 light_direction = ((light.use_position) ? normalize(light.position - world_position) : normalize(-light.direction));
 
-    // Diffuse shading:
-    float diff = max(dot(light_direction, normal), 0.0);
+    // Diffuse:
+    float diffuse_factor = max(dot(light_direction, normal), 0.0);
     
-    vec3 diffuse = diff * light.diffuse;
-    //vec3 diffuse = (light.diffuse * diff * diffuse_in);
+    vec3 diffuse = diffuse_factor * light.diffuse;
+    //vec3 diffuse = (light.diffuse * diffuse_factor * diffuse_in);
 
-    // Specular shading:
     vec3 reflect_direction = reflect(-light_direction, normal);
 
-    vec3 halfway_dir = normalize(light_direction + view_direction);
-    float spec = pow(max(dot(normal, halfway_dir), 0.0), 64.0);
-    //float spec = pow(max(dot(view_direction, reflect_direction), 0.0), 16.0); // 32.0 // shininess
+    
+    // Specular:
+    vec3 mid_point = normalize(light_direction + view_direction);
 
-    vec3 specular = (spec * light.specular * light.diffuse);
+    float specular_factor = pow(max(dot(normal, mid_point), 0.0), 64.0);
+    //float specular_factor = pow(max(dot(view_direction, reflect_direction), 0.0), 16.0); // 32.0 // shininess
+
+    vec3 specular = (specular_factor * light.specular * light.diffuse);
 
     // Combine results:
     vec3 ambient = (light.ambient * diffuse_in);
     
-    //vec3 specular = light.specular * spec * specular_in;
+    //vec3 specular = (light.specular * specular_factor * specular_in);
     //return (ambient + diffuse + specular);
 
     return (ambient + lighting * (diffuse + specular)) * diffuse_in;
@@ -447,19 +437,19 @@ vec3 world_from_depth(float depth, in vec2 tex_coord, in mat4 inv_proj, in mat4 
     return world.xyz;
 }
 
-vec4 CalcEyeFromWindow(in float windowZ, in vec3 eyeDirection, in mat4 perspective)
+vec4 calculate_eye_from_window(in float window_z, in vec3 eye_direction, in mat4 perspective)
 {
-    //windowZ = windowZ * 2.0 - 1.0;
+    //window_z = window_z * 2.0 - 1.0;
 
-    float ndcZ = (2.0 * windowZ - depth_range.x - depth_range.y) / (depth_range.y - depth_range.x);
+    float ndcZ = (2.0 * window_z - depth_range.x - depth_range.y) / (depth_range.y - depth_range.x);
 
-    //float ndcZ = windowZ;
-    //float ndcZ = ((2.0 + depth_range.x) / (depth_range.y + depth_range.x - windowZ * (depth_range.y - depth_range.x)));
-    //float ndcZ = get_depth(windowZ);
+    //float ndcZ = window_z;
+    //float ndcZ = ((2.0 + depth_range.x) / (depth_range.y + depth_range.x - window_z * (depth_range.y - depth_range.x)));
+    //float ndcZ = get_depth(window_z);
     
     float eyeZ = perspective[3][2] / ((perspective[2][3] * ndcZ) - perspective[2][2]);
     
-    return vec4(eyeDirection * eyeZ, 1);
+    return vec4(eye_direction * eyeZ, 1);
     //return vec4(TexCoords * 2.0 - 1.0, eyeZ, 1.0);
 }
 
@@ -476,7 +466,7 @@ vec3 get_world_position(vec2 uv)
 
             vec3 eye_ray = eye_direction;
 
-            vec4 view_position = CalcEyeFromWindow(depth, eye_ray, projection);
+            vec4 view_position = calculate_eye_from_window(depth, eye_ray, projection);
             return (inv_view * view_position).xyz;
         #else
             return vec3(0.0, 0.0, 0.0);
@@ -484,23 +474,28 @@ vec3 get_world_position(vec2 uv)
     #endif
 }
 
-uint texture2DLinear(vec2 imageSize, usampler2D texSampler, vec2 uv)
+uint texture2DLinear(vec2 image_size, usampler2D texture_sampler, vec2 uv)
 {
-    vec2 pixelOff = vec2(0.5,0.5)/imageSize;
+    vec2 pixel_offset = (vec2(0.5, 0.5) / image_size);
 
-    vec2 imagePosCenterity = fract(uv * imageSize);
-    if (abs(imagePosCenterity.x-0.5) < 0.001 || abs(imagePosCenterity.y-0.5) < 0.001) {
-        pixelOff = pixelOff-vec2(0.00001,0.00001);
+    vec2 uv_precision = fract(uv * image_size);
+    
+    if (abs(uv_precision.x - 0.5) < 0.001 || abs(uv_precision.y - 0.5) < 0.001)
+    {
+        pixel_offset = (pixel_offset - vec2(0.00001, 0.00001));
     }
 
-    vec4 tl = vec4(texture(texSampler, uv + vec2(-pixelOff.x,-pixelOff.y))) * 255.0;
-    vec4 tr = vec4(texture(texSampler, uv + vec2(pixelOff.x,-pixelOff.y))) * 255.0;
-    vec4 bl = vec4(texture(texSampler, uv + vec2(-pixelOff.x,pixelOff.y))) * 255.0;
-    vec4 br = vec4(texture(texSampler, uv + vec2(pixelOff.x,pixelOff.y))) * 255.0;
-    vec2 f = fract( (uv.xy-pixelOff) * imageSize );
-    vec4 tA = mix( tl, tr, f.x );
-    vec4 tB = mix( bl, br, f.x );
-    return uint((mix( tA, tB, f.y ).r) / 255.0);
+    vec4 top_left     = vec4(texture(texture_sampler, uv + vec2(-pixel_offset.x, -pixel_offset.y))) * 255.0;
+    vec4 top_right    = vec4(texture(texture_sampler, uv + vec2(pixel_offset.x,  -pixel_offset.y))) * 255.0;
+    vec4 bottom_left  = vec4(texture(texture_sampler, uv + vec2(-pixel_offset.x,  pixel_offset.y))) * 255.0;
+    vec4 bottom_right = vec4(texture(texture_sampler, uv + vec2(pixel_offset.x,   pixel_offset.y))) * 255.0;
+
+    vec2 interpolation_factor = fract((uv.xy - pixel_offset) * image_size);
+
+    vec4 top    = mix(top_left, top_right, interpolation_factor.x);
+    vec4 bottom = mix(bottom_left, bottom_right, interpolation_factor.x);
+
+    return uint((mix(top, bottom, interpolation_factor.y).r) / 255.0);
 }
 
 uint get_render_flags(vec2 uv)
