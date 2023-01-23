@@ -23,10 +23,10 @@ namespace engine
 	struct ParsingContext;
 
 	// JSON-shorthand overload for string-to-any resolution function.
-	entt::meta_any meta_any_from_string(const util::json& value, const MetaAnyParseInstructions& instructions={});
+	MetaAny meta_any_from_string(const util::json& value, const MetaAnyParseInstructions& instructions={}, MetaType type={});
 
 	// Attempts to resolve a native value from a raw string value, using reflection.
-	entt::meta_any meta_any_from_string(std::string_view value, const MetaAnyParseInstructions& instructions={});
+	MetaAny meta_any_from_string(std::string_view value, const MetaAnyParseInstructions& instructions={}, MetaType type={});
 
 	// Attempts to resolve the value indicated by `string_reference` as a string.
 	// 
@@ -34,12 +34,12 @@ namespace engine
 	// If the value is not a string, `non_string_callback` will be called instead.
 	// 
 	// NOTE: Although the return value of `string_callback` is ignored, the return-value of
-	// `non_string_callback` is used to determine if the `entt::meta_any` instance
+	// `non_string_callback` is used to determine if the `MetaAny` instance
 	// retrieved should be returned back to the initial caller.
 	template <typename StringCallback, typename NonStringCallback>
-	inline entt::meta_any peek_string_value(std::string_view string_reference, StringCallback&& string_callback, NonStringCallback&& non_string_callback, const MetaAnyParseInstructions& instructions={}) // { .fallback_to_string=true }
+	inline MetaAny peek_string_value(std::string_view string_reference, StringCallback&& string_callback, NonStringCallback&& non_string_callback, const MetaAnyParseInstructions& instructions={}, MetaType type={}) // { .fallback_to_string=true }
 	{
-		const auto resolved_value = meta_any_from_string(string_reference, instructions);
+		const auto resolved_value = meta_any_from_string(string_reference, instructions, type);
 
 		if (!resolved_value)
 		{
@@ -73,7 +73,7 @@ namespace engine
 			string_reference,
 			std::forward<Callback>(callback),
 			
-			[](const entt::meta_any& non_string_value)
+			[](const MetaAny& non_string_value)
 			{
 				return false;
 			},
@@ -84,7 +84,7 @@ namespace engine
 		return static_cast<bool>(result);
 	}
 
-	entt::meta_any resolve_meta_any
+	MetaAny resolve_meta_any
 	(
 		const util::json& value,
 		MetaTypeID type_id,
@@ -92,7 +92,7 @@ namespace engine
 		const ParsingContext* opt_parsing_context=nullptr
 	);
 
-	entt::meta_any resolve_meta_any
+	MetaAny resolve_meta_any
 	(
 		const util::json& value,
 		MetaType type,
@@ -102,7 +102,7 @@ namespace engine
 
 	// NOTE: This overload cannot handle non-primitive values.
 	// (see overload taking a native-type identifier)
-	entt::meta_any resolve_meta_any
+	MetaAny resolve_meta_any
 	(
 		const util::json& value,
 		const MetaAnyParseInstructions& instructions={},
