@@ -4,5 +4,5 @@ target_sources(
     PRIVATE
 
     
-    "light_component.cpp"
+    
 )

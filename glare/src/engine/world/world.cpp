@@ -2,13 +2,23 @@
 
 #include "world_events.hpp"
 #include "entity.hpp"
-#include "camera.hpp"
 #include "player/player.hpp"
 #include "stage.hpp"
+
 #include "light.hpp"
 
 //#include "animator.hpp"
 #include "graphics_entity.hpp"
+
+#include "components/camera_component.hpp"
+
+#include "components/light_component.hpp"
+#include "components/directional_light_component.hpp"
+#include "components/directional_light_shadow_component.hpp"
+#include "components/point_light_component.hpp"
+#include "components/point_light_shadow_component.hpp"
+#include "components/spot_light_component.hpp"
+//#include "components/spot_light_shadow_component.hpp"
 
 #include "animation/components/bone_component.hpp"
 #include "physics/components/collision_component.hpp"
@@ -44,11 +54,71 @@
 
 namespace engine
 {
+	void* World::ensure_light_sub_component(Registry& registry, Entity entity, LightType type)
+	{
+		switch (type)
+		{
+			case LightType::Point:
+				return &(registry.get_or_emplace<PointLightComponent>(entity));
+			case LightType::Directional:
+				return &(registry.get_or_emplace<DirectionalLightComponent>(entity));
+			case LightType::Spot:
+				return &(registry.get_or_emplace<SpotLightComponent>(entity));
+			default:
+				return {};
+		}
+	}
+
+	std::size_t World::remove_light_sub_components(Registry& registry, Entity entity, std::optional<LightType> except_type)
+	{
+		//assert(registry.try_get<LightComponent>(entity));
+
+		std::size_t components_removed = 0;
+
+		if (except_type && (*except_type == LightType::Any))
+		{
+			return components_removed; // 0;
+		}
+
+		if (!except_type || (*except_type != LightType::Point))
+		{
+			components_removed += registry.remove<PointLightComponent>(entity);
+		}
+
+		if (!except_type || (*except_type != LightType::Directional))
+		{
+			components_removed += registry.remove<DirectionalLightComponent>(entity);
+		}
+
+		if (!except_type || (*except_type != LightType::Spot))
+		{
+			components_removed += registry.remove<SpotLightComponent>(entity);
+		}
+
+		return components_removed;
+	}
+
 	World::World(Config& config, ResourceManager& resource_manager, UpdateRate update_rate)
 		: config(config), resource_manager(resource_manager), delta_time(update_rate), fixed_delta_time(update_rate)
 	{
 		register_event<OnTransformChanged, &World::on_transform_change>(*this);
 		register_event<OnEntityDestroyed, &World::on_entity_destroyed>(*this);
+
+		registry.on_construct<LightComponent>().connect<&World::on_light_init>(*this);
+		registry.on_update<LightComponent>().connect<&World::on_light_update>(*this);
+		registry.on_destroy<LightComponent>().connect<&World::on_light_destroyed>(*this);
+
+		registry.on_construct<DirectionalLightComponent>().connect<&World::on_directional_light_init>(*this);
+		registry.on_update<DirectionalLightComponent>().connect<&World::on_directional_light_update>(*this);
+		registry.on_destroy<DirectionalLightComponent>().connect<&World::on_directional_light_destroyed>(*this);
+		
+		registry.on_construct<PointLightComponent>().connect<&World::on_point_light_init>(*this);
+		registry.on_update<PointLightComponent>().connect<&World::on_point_light_update>(*this);
+		registry.on_destroy<PointLightComponent>().connect<&World::on_point_light_destroyed>(*this);
+
+		registry.on_construct<SpotLightComponent>().connect<&World::on_spot_light_init>(*this);
+		registry.on_update<SpotLightComponent>().connect<&World::on_spot_light_update>(*this);
+		registry.on_destroy<SpotLightComponent>().connect<&World::on_spot_light_destroyed>(*this);
 
 		subscribe(resource_manager);
 
@@ -568,6 +638,199 @@ namespace engine
 
 		registry.destroy(entity);
 	}
+
+	std::size_t World::update_light_type(Entity entity, LightType light_type)
+	{
+		auto& light_comp = registry.get_or_emplace<LightComponent>(entity);
+
+		return update_light_type(entity, light_type, light_comp);
+	}
+
+	std::size_t World::update_light_type(Entity entity, LightType light_type, LightComponent& light_comp)
+	{
+		std::size_t components_removed = 0;
+
+		if (light_comp.type != LightType::Any)
+		{
+			if (light_comp.type != light_type)
+			{
+				light_comp.type = light_type;
+
+				components_removed += remove_light_sub_components(registry, entity, light_type);
+			}
+		}
+
+		// If we're currently indicating that we don't cast shadows,
+		// double-check that this status is still valid:
+		if (!light_comp.casts_shadows)
+		{
+			if (has_light_shadow_sub_components(entity))
+			{
+				light_comp.casts_shadows = true;
+			}
+		}
+
+		// Check against the `casts_shadows` flag again,
+		// since we could have modified it in the scenario above:
+		if (light_comp.casts_shadows)
+		{
+			attach_shadows(entity, light_type);
+		}
+
+		return components_removed;
+	}
+
+	bool World::attach_shadows(Entity entity, LightType light_type)
+	{
+		return engine::attach_shadows
+		(
+			*this,
+			
+			entity,
+			light_type,
+			
+			config.graphics.shadow.resolution,
+			config.graphics.shadow.cubemap_resolution
+		);
+	}
+
+	bool World::attach_shadows(Entity entity)
+	{
+		if (registry.try_get<DirectionalLightComponent>(entity))
+		{
+			if (!attach_shadows(entity, LightType::Directional))
+			{
+				return false;
+			}
+		}
+
+		if (registry.try_get<PointLightComponent>(entity))
+		{
+			if (!attach_shadows(entity, LightType::Point))
+			{
+				return false;
+			}
+		}
+
+		/*
+		if (registry.try_get<SpotLightComponent>(entity))
+		{
+			if (!attach_shadows(entity, LightType::Spot))
+			{
+				return false;
+			}
+		}
+		*/
+
+		return true;
+	}
+
+	bool World::has_light_shadow_sub_components(Entity entity) const
+	{
+		return
+		(
+			registry.try_get<DirectionalLightShadowComponent>(entity)
+			||
+			registry.try_get<PointLightShadowComponent>(entity)
+			//||
+			//registry.try_get<SpotLightShadowComponent>(entity)
+		);
+	}
+
+	void World::on_light_init(Registry& registry, Entity entity)
+	{
+		auto& light_comp = registry.get<LightComponent>(entity);
+
+		// NOTE: We don't need to explicitly validate `casts_shadows` here,
+		// since any sub-component instances will already handle that step.
+		ensure_light_sub_component(registry, entity, light_comp.type);
+	}
+	
+	void World::on_light_update(Registry& registry, Entity entity)
+	{
+		auto& light_comp = registry.get<LightComponent>(entity);
+
+		remove_light_sub_components(registry, entity, light_comp.type);
+		ensure_light_sub_component(registry, entity, light_comp.type);
+
+		// If we're not currently marked as casting shadows,
+		// validate that there aren't any shadow-related sub-components:
+		if (!light_comp.casts_shadows)
+		{
+			if (has_light_shadow_sub_components(entity))
+			{
+				// Shadow sub-component found, update the primary
+				// component to indicate shadow-casting.
+				light_comp.casts_shadows = true;
+			}
+		}
+
+		// Check against the `casts_shadows` flag again,
+		// since we could have modified it in the scenario above:
+		if (light_comp.casts_shadows)
+		{
+			attach_shadows(entity);
+		}
+	}
+
+	void World::on_light_destroyed(Registry& registry, Entity entity)
+	{
+		auto& light_comp = registry.get<LightComponent>(entity);
+
+		// NOTE: Shadow-related sub-components are automatically
+		// removed with their respective light components.
+		remove_light_sub_components(registry, entity);
+	}
+
+	void World::on_directional_light_init(Registry& registry, Entity entity)
+	{
+		on_directional_light_update(registry, entity);
+	}
+	
+	void World::on_directional_light_update(Registry& registry, Entity entity)
+	{
+		assert(&registry == &this->registry);
+
+		update_light_type(entity, LightType::Directional);
+	}
+	
+	void World::on_directional_light_destroyed(Registry& registry, Entity entity)
+	{
+		registry.remove<DirectionalLightShadowComponent>(entity);
+	}
+	
+	void World::on_point_light_init(Registry& registry, Entity entity)
+	{
+		on_point_light_update(registry, entity);
+	}
+	
+	void World::on_point_light_update(Registry& registry, Entity entity)
+	{
+		assert(&registry == &this->registry);
+
+		update_light_type(entity, LightType::Point);
+	}
+	
+	void World::on_point_light_destroyed(Registry& registry, Entity entity)
+	{
+		registry.remove<PointLightShadowComponent>(entity);
+	}
+	
+	void World::on_spot_light_init(Registry& registry, Entity entity)
+	{
+		on_spot_light_update(registry, entity);
+	}
+	
+	void World::on_spot_light_update(Registry& registry, Entity entity)
+	{
+		update_light_type(entity, LightType::Spot);
+	}
+	
+	void World::on_spot_light_destroyed(Registry& registry, Entity entity)
+	{
+		//registry.remove<SpotLightShadowComponent>(entity);
+	}
+
 
 	// This exists purely to circumvent having a complete type definition for `CollisionComponent` in the header.
 	CollisionComponent* World::get_collision_component(Entity entity)

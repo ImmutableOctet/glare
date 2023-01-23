@@ -13,6 +13,9 @@ namespace engine
 	struct RelationshipComponent;
 	struct LightComponent;
 	struct TransformComponent;
+	struct DirectionalLightComponent;
+	struct PointLightComponent;
+	struct SpotLightComponent;
 	
 	// Handles deferred shading/lighting phase, using previous phases' gbuffer data and render-state context as input.
 	class DeferredShadingPhase : public RenderPhase
@@ -41,7 +44,9 @@ namespace engine
 				TransformComponent& transform,
 				const RelationshipComponent& relationship,
 
-				unsigned int directional_light_idx
+				unsigned int directional_light_idx,
+
+				const DirectionalLightComponent* opt_directional_light_comp=nullptr
 			);
 
 			Entity render_spot_light
@@ -52,6 +57,7 @@ namespace engine
 
 				Entity entity,
 				const LightComponent& light,
+				const SpotLightComponent& spot_light_comp,
 				TransformComponent& transform,
 				const RelationshipComponent& relationship,
 
@@ -66,6 +72,7 @@ namespace engine
 				
 				Entity entity,
 				const LightComponent& light,
+				const PointLightComponent& point_light_comp,
 				TransformComponent& transform,
 				const RelationshipComponent& relationship,
 				

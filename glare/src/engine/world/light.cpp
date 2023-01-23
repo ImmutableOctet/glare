@@ -1,5 +1,13 @@
 #include "light.hpp"
+
 #include "components/light_component.hpp"
+
+#include "components/directional_light_component.hpp"
+#include "components/directional_light_shadow_component.hpp"
+#include "components/point_light_component.hpp"
+#include "components/point_light_shadow_component.hpp"
+#include "components/spot_light_component.hpp"
+//#include "components/spot_light_shadow_component.hpp"
 
 #include <engine/world/world.hpp>
 
@@ -22,120 +30,6 @@
 
 namespace engine
 {
-	// NOTE: This implementation is here since `LightProperties` will eventually be migrated to the main `world` module.
-	float LightProperties::calculate_max_brightness(const graphics::ColorRGB& diffuse)
-	{
-		return std::fmaxf(std::fmaxf(diffuse.r, diffuse.g), diffuse.b);
-	}
-
-	// NOTE: This implementation is here since `LightProperties` will eventually be migrated to the main `world` module.
-	float LightProperties::max_brightness() const
-	{
-		return calculate_max_brightness(diffuse);
-	}
-
-	static Entity create_light_impl(World& world, const math::Vector& position, LightType type, const LightProperties& properties, Entity parent=null, bool debug_mode=false, pass_ref<graphics::Shader> debug_shader={})
-	{
-		Entity light = null;
-
-		if (debug_mode) // (debug_shader)
-		{
-			//const auto& res = world.get_resource_manager();
-
-			auto type = EntityType::Light;
-			light = load_model(world, "assets/geometry/cube.b3d", parent, type, false, CollisionConfig(type, false), 0.0f, debug_shader); // {}
-
-			auto t = world.set_position(light, position);
-			t.set_scale(4.0f);
-
-			auto& registry = world.get_registry();
-			auto& model = registry.get<ModelComponent>(light);
-
-			model.color = { properties.diffuse, 1.0f };
-			model.casts_shadow = false;
-		}
-		else
-		{
-			light = create_pivot(world, position, parent, EntityType::Light);
-		}
-
-		world.get_registry().emplace<LightComponent>
-		(
-			light,
-
-			LightComponent
-			{
-				.type { type },
-				.properties { properties }
-			}
-		);
-
-		return light;
-	}
-
-	Entity create_directional_light(World& world, const math::Vector& position, const LightProperties& properties, const LightProperties::Directional& advanced_properties, Entity parent, bool debug_mode, pass_ref<graphics::Shader> debug_shader)
-	{
-		auto light = create_light_impl(world, position, LightType::Directional, properties, parent, debug_mode, debug_shader);
-
-		// Currently disabled due to zero members in 'DirectionalLightComponent'.
-		world.get_registry().emplace<DirectionalLightComponent>(light, advanced_properties);
-
-		return light;
-	}
-
-	Entity create_spot_light(World& world, const math::Vector& position, const LightProperties& properties, const LightProperties::Spot& advanced_properties, Entity parent, bool debug_mode, pass_ref<graphics::Shader> debug_shader)
-	{
-		auto light = create_light_impl(world, position, LightType::Spotlight, properties, parent, debug_mode, debug_shader);
-
-		world.get_registry().emplace<SpotLightComponent>(light, advanced_properties);
-
-		return light;
-	}
-
-	Entity create_point_light(World& world, const math::Vector& position, const LightProperties& properties, const LightProperties::Point& advanced_properties, Entity parent, bool debug_mode, pass_ref<graphics::Shader> debug_shader)
-	{
-		auto light = create_light_impl(world, position, LightType::Point, properties, parent, debug_mode, debug_shader);
-
-		world.get_registry().emplace<PointLightComponent>(light, advanced_properties);
-
-		return light;
-	}
-
-	bool attach_shadows(World& world, Entity light, const math::vec2i& resolution, float shadow_range, std::optional<LightType> shadow_light_type)
-	{
-		auto& registry = world.get_registry();
-
-		LightType light_type = util::value_or
-		(
-			shadow_light_type,
-
-			[&registry, &light]()
-			{
-				const auto& light_cfg = registry.get<LightComponent>(light);
-
-				return light_cfg.type;
-			}
-		);
-
-		CameraComponent perspective_cfg;
-		
-		switch (light_type)
-		{
-			case LightType::Point:
-				perspective_cfg = CameraComponent(90.0f, 1.0f, shadow_range, 0.0, CameraProjection::Perspective);
-
-				break;
-
-			case LightType::Directional:
-				perspective_cfg = CameraComponent(90.0f, 0.0f, shadow_range, 1.0f, CameraProjection::Orthographic); // 1.0f
-				//perspective_cfg = CameraComponent(45.0f, 1.0f, shadow_range, 1.0, CameraProjection::Perspective);
-
-				break;
-		}
-
-		return attach_shadows(world, light, light_type, resolution, perspective_cfg, true, true);
-	}
-
 	template <typename TFormData>
 	static TFormData get_tform_data(const math::Matrix4x4& light_projection, const math::Vector& light_position)
 	{
@@ -144,13 +38,13 @@ namespace engine
 	}
 
 	template <>
-	static PointLightShadows::TFormData get_tform_data<PointLightShadows::TFormData>(const math::Matrix4x4& light_projection, const math::Vector& light_position)
+	static PointLightShadowComponent::TFormData get_tform_data<PointLightShadowComponent::TFormData>(const math::Matrix4x4& light_projection, const math::Vector& light_position)
 	{
-		return PointLightShadows::TFormData(light_projection, light_position);
+		return PointLightShadowComponent::TFormData(light_projection, light_position);
 	}
 
 	template <>
-	static DirectionLightShadows::TFormData get_tform_data<DirectionLightShadows::TFormData>(const math::Matrix4x4& light_projection, const math::Vector& light_position)
+	static DirectionalLightShadowComponent::TFormData get_tform_data<DirectionalLightShadowComponent::TFormData>(const math::Matrix4x4& light_projection, const math::Vector& light_position)
 	{
 		auto view = glm::lookAt(light_position, math::Vector(0.0f), math::Vector(0.0f, 1.0f, 0.0f));
 		auto light_space = light_projection * view;
@@ -158,98 +52,133 @@ namespace engine
 		return light_space;
 	}
 
+	static std::optional<math::Matrix4x4> generate_light_projection_matrix(const CameraComponent& pov, const math::vec2i& resolution)
+	{
+		switch (pov.projection_mode)
+		{
+			case CameraProjection::Orthographic:
+			{
+				const auto div = 16; // 24;
+
+				const auto width = (resolution.x / div);
+				const auto height = (resolution.y / div);
+
+				//auto width = std::sqrtf(resolution.x);
+				//auto height = std::sqrtf(resolution.y);
+
+				const auto hw = (width / 2.0f);
+				const auto hh = (height / 2.0f);
+
+				return glm::ortho(-hw, hw, -hh, hh, pov.near_plane, pov.far_plane);
+			}
+			case CameraProjection::Perspective:
+			{
+				return glm::perspective(pov.fov, pov.aspect_ratio, pov.near_plane, pov.far_plane);
+			}
+		}
+
+		return {};
+	}
+
 	template <LightType light_type, typename ShadowType, typename TFormData>
-	static bool attach_shadows_impl(World& world, Entity light, const math::Vector& light_position, std::optional<math::vec2i> resolution, std::optional<CameraComponent> perspective_cfg, bool update_aspect_ratio)
+	static bool attach_shadows_impl
+	(
+		World& world,
+
+		Entity light,
+		
+		const math::Vector& light_position,
+		std::optional<math::vec2i> resolution,
+		std::optional<CameraComponent> perspective_cfg,
+		
+		bool update_aspect_ratio
+	)
 	{
 		auto& registry = world.get_registry();
 
-		auto* shadows = registry.try_get<ShadowType>(light);
+		if (auto* shadows = registry.try_get<ShadowType>(light))
+		{
+			const auto current_shadow_resolution = shadows->shadow_map.get_resolution();
 
-		auto* pcfg_ptr = util::get_mutable(perspective_cfg, (shadows) ? &shadows->shadow_perspective : nullptr);
+			if ((!resolution) || (*resolution == current_shadow_resolution))
+			{
+				if (perspective_cfg)
+				{
+					shadows->shadow_perspective = *perspective_cfg;
+				}
 
-		// Either the caller must specify perspective parameters, or the
-		// light-entity must already have the 'PointLightShadows' component.
-		//assert(pcfg_ptr); // <-- This should only fail if you're trying to attach shadows to a light without any parameters.
-		if (!pcfg_ptr)
+				const auto light_projection = generate_light_projection_matrix
+				(
+					shadows->shadow_perspective,
+					resolution.value_or(current_shadow_resolution)
+				);
+
+				if (light_projection)
+				{
+					shadows->transforms = get_tform_data<TFormData>(*light_projection, light_position);
+				}
+
+				// Mark this component as patched.
+				registry.patch<ShadowType>(light);
+
+				return true; // false;
+			}
+			else
+			{
+				resolution = current_shadow_resolution;
+			}
+		}
+		
+		if (!resolution)
+		{
+			return false;
+		}
+		
+		if (!perspective_cfg)
+		{
+			perspective_cfg = ShadowType::default_shadow_perspective;
+		}
+
+		const auto light_projection = generate_light_projection_matrix
+		(
+			*perspective_cfg,
+			*resolution
+		);
+
+		if (!light_projection)
 		{
 			return false;
 		}
 
-		auto& pcfg = *pcfg_ptr;
+		const auto light_tform = get_tform_data<TFormData>(*light_projection, light_position);
 
-		if ((update_aspect_ratio) && (resolution.has_value()))
-		{
-			pcfg.aspect_ratio = CameraComponent::calculate_aspect_ratio(*resolution);
-		}
-
-		math::Matrix4x4 light_projection;
-
-		switch (pcfg.projection_mode)
-		{
-			case CameraProjection::Orthographic:
-			{
-				math::vec2i r;
-
-				if (resolution)
-				{
-					r = *resolution;
-				}
-				else
-				{
-					assert(shadows);
-
-					r = shadows->shadow_map.get_resolution();
-				}
-
-				auto div = 16; // 24;
-
-				auto width = r.x/div; // 20.0f; // 200.0f;
-				auto height = r.y/div; // 20.0f; // 200.0f;
-
-				//auto width = std::sqrtf(r.x);
-				//auto height = std::sqrtf(r.y);
-
-				auto hw = (width / 2.0f);
-				auto hh = (height / 2.0f);
-
-				light_projection = glm::ortho(-hw, hw, -hh, hh, pcfg.near_plane, pcfg.far_plane);
-				//light_projection = glm::ortho(-2048.0f, 2048.0f, -2048.0f, 2048.0f, 1.0f, 4000.0f);
-
-				break;
-			}
-			case CameraProjection::Perspective:
-				light_projection = glm::perspective(pcfg.fov, pcfg.aspect_ratio, pcfg.near_plane, pcfg.far_plane);
-
-				break;
-			/*
-			default:
-				assert(false);
-
-				break;
-			*/
-		}
-
-		auto tform = get_tform_data<TFormData>(light_projection, light_position);
-
-		if ((shadows) && util::equal_or_nullopt(resolution, shadows->shadow_map.get_resolution()))
-		{
-			// No need to alter the shadow-map portion, simply update the perspective-config and cubemap transform:
-			if (perspective_cfg.has_value())
-			{
-				shadows->shadow_perspective = *perspective_cfg; // 'pcfg' is not used because the underlying object could be the same.
-			}
-
-			shadows->transforms = tform;
-		}
-		else
-		{
-			registry.emplace_or_replace<ShadowType>(light, world.get_resource_manager().get_context(), pcfg, tform, *resolution);
-		}
+		auto& shadow_comp = registry.emplace_or_replace<ShadowType>
+		(
+			light,
+			
+			world.get_resource_manager().get_context(),
+			light_tform,
+			*resolution,
+			*perspective_cfg
+		);
 
 		return true;
 	}
 	
-	bool attach_shadows(World& world, Entity light, LightType light_type, std::optional<math::vec2i> resolution, std::optional<CameraComponent> perspective_cfg, bool update_aspect_ratio, bool conform_to_light_type)
+	bool attach_shadows
+	(
+		World& world,
+		
+		Entity light,
+		LightType light_type,
+		
+		std::optional<math::vec2i> resolution_2d,
+		std::optional<math::vec2i> cube_map_resolution,
+		std::optional<CameraComponent> perspective_cfg,
+		
+		bool update_aspect_ratio,
+		bool conform_to_light_type
+	)
 	{
 		auto& registry = world.get_registry();
 
@@ -261,33 +190,30 @@ namespace engine
 			switch (light_type)
 			{
 				case LightType::Point:
-					return attach_shadows_impl<LightType::Point, PointLightShadows, PointLightShadows::TFormData>(world, light, light_position, resolution, perspective_cfg, update_aspect_ratio);
+					return attach_shadows_impl<LightType::Point, PointLightShadowComponent, PointLightShadowComponent::TFormData>(world, light, light_position, cube_map_resolution, perspective_cfg, update_aspect_ratio);
 
-					//break;
 				case LightType::Directional:
-					return attach_shadows_impl<LightType::Directional, DirectionLightShadows, DirectionLightShadows::TFormData>(world, light, light_position, resolution, perspective_cfg, update_aspect_ratio);
-
-					//break;
-				//default:
-					// Other light types are not currently supported. (Spotlights, etc.)
-					//assert(false);
-					//break;
+					return attach_shadows_impl<LightType::Directional, DirectionalLightShadowComponent, DirectionalLightShadowComponent::TFormData>(world, light, light_position, resolution_2d, perspective_cfg, update_aspect_ratio);
 			}
 		}
-		else
+		
+		if (registry.try_get<PointLightComponent>(light))
 		{
-			if (attach_shadows_impl<LightType::Point, PointLightShadows, PointLightShadows::TFormData>(world, light, light_position, resolution, perspective_cfg, update_aspect_ratio))
+			if (!attach_shadows_impl<LightType::Point, PointLightShadowComponent, PointLightShadowComponent::TFormData>(world, light, light_position, cube_map_resolution, perspective_cfg, update_aspect_ratio))
 			{
-				return true;
-			}
-
-			if (attach_shadows_impl<LightType::Directional, DirectionLightShadows, DirectionLightShadows::TFormData>(world, light, light_position, resolution, perspective_cfg, update_aspect_ratio))
-			{
-				return true;
+				return false;
 			}
 		}
 
-		return false;
+		if (registry.try_get<DirectionalLightComponent>(light))
+		{
+			if (!attach_shadows_impl<LightType::Directional, DirectionalLightShadowComponent, DirectionalLightShadowComponent::TFormData>(world, light, light_position, resolution_2d, perspective_cfg, update_aspect_ratio))
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	void update_shadows(World& world, Entity light)
@@ -296,11 +222,16 @@ namespace engine
 
 		const auto* light_component = registry.try_get<LightComponent>(light);
 
-		if (light_component)
+		if (!light_component)
 		{
-			auto light_type = light_component->type;
-
-			attach_shadows(world, light, light_type);
+			return;
 		}
+
+		if (!light_component->casts_shadows)
+		{
+			return;
+		}
+		
+ 		attach_shadows(world, light, light_component->type);
 	}
 }

@@ -10,7 +10,9 @@
 #include <graphics/shader.hpp>
 
 #include <engine/world/world.hpp>
-#include <engine/world/light.hpp>
+
+#include <engine/world/components/light_component.hpp>
+#include <engine/world/components/point_light_shadow_component.hpp>
 
 namespace engine
 {
@@ -70,7 +72,7 @@ namespace engine
 
 		ctx.use(shader, [&, this]()
 		{
-			registry.view<LightComponent, PointLightShadows>().each([&](auto entity, LightComponent& light_component, PointLightShadows& shadows)
+			registry.view<LightComponent, PointLightShadowComponent>().each([&](auto entity, LightComponent& light_component, PointLightShadowComponent& shadows)
 			{
 				auto prev_viewport = ctx.get_viewport();
 				auto viewport = shadows.shadow_map.get_viewport();

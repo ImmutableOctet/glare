@@ -8,7 +8,10 @@
 #include <graphics/shader.hpp>
 
 #include <engine/world/world.hpp>
-#include <engine/world/light.hpp>
+
+#include <engine/world/components/light_component.hpp>
+//#include <engine/world/components/directional_light_component.hpp>
+#include <engine/world/components/directional_light_shadow_component.hpp>
 
 #include <string>
 
@@ -69,7 +72,7 @@ namespace engine
 
 		ctx.use(shader, [&, this]()
 		{
-			registry.view<LightComponent, DirectionLightShadows>().each([&](auto entity, LightComponent& light_component, DirectionLightShadows& shadows)
+			registry.view<LightComponent, DirectionalLightShadowComponent>().each([&](auto entity, LightComponent& light_component, DirectionalLightShadowComponent& shadows)
 			{
 				auto prev_viewport = ctx.get_viewport();
 				auto viewport = shadows.shadow_map.get_viewport();
