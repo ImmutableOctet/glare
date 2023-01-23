@@ -3,7 +3,7 @@
 #include <app/window.hpp>
 
 #include <engine/world/world.hpp>
-#include <engine/world/camera.hpp>
+#include <engine/world/components/camera_component.hpp>
 
 #include <graphics/shader.hpp>
 
@@ -67,7 +67,7 @@ namespace game
 						if (light != engine::null)
 						{
 							auto& registry = world.get_registry();
-							auto* shadows = registry.try_get<engine::DirectionLightShadows>(light);
+							auto* shadows = registry.try_get<engine::DirectionalLightShadowComponent>(light);
 
 							if (shadows)
 							{
