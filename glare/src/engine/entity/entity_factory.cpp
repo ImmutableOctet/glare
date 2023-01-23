@@ -1289,6 +1289,7 @@ namespace engine
 	{
 		if (resolve_external_modules)
 		{
+			// Handles the following: "archetypes", "import", "imports", "modules"
 			resolve_archetypes(data, base_path, opt_parsing_context);
 		}
 
@@ -1341,6 +1342,40 @@ namespace engine
 				}
 			}
 		}
+
+		// Handle every other key-value pair as a component:
+		util::enumerate_map_filtered_ex
+		(
+			data.items(),
+			hash,
+
+			[this, &opt_parsing_context](const auto& component_declaration, const auto& component_content)
+			{
+				process_component
+				(
+					descriptor.components,
+
+					component_declaration,
+					&component_content,
+					{},
+					opt_parsing_context
+				);
+			},
+
+			// Ignore these keys:
+
+			// Handled in `resolve_archetypes` routine.
+			"archetypes", "import", "imports", "modules",
+
+			// Handled in this function (see above):
+			"component", "components",
+			"state", "states",
+			"do", "threads", "execute",
+			"default_state",
+
+			// Handled in callback-based implementation of `process_archetype`.
+			"children"
+		);
 	}
 
 	//std::size_t
