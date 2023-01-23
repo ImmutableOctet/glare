@@ -23,11 +23,11 @@ namespace engine
 		// Vertical FOV. (In radians)
 		float fov;
 
-		// Display aspect ratio. (Width / height)
-		float aspect_ratio;
-
 		float near_plane;
 		float far_plane;
+
+		// Display aspect ratio. (Width / height)
+		float aspect_ratio;
 
 		Projection projection_mode;
 
@@ -35,11 +35,13 @@ namespace engine
 		bool free_rotation        : 1;
 		bool dynamic_aspect_ratio : 1;
 
-		inline CameraComponent
+		inline constexpr CameraComponent
 		(
 			float v_fov_deg=75.0f,
+
 			float near_plane=0.1f,
 			float far_plane=4000.0f,
+
 			float aspect_ratio=(16.0f / 9.0f), // calculate_aspect_ratio(16, 9), // 16:9
 			
 			Projection projection_mode=Projection::Default, // Projection::Perspective
@@ -56,7 +58,7 @@ namespace engine
 			dynamic_aspect_ratio(dynamic_aspect_ratio)
 		{}
 
-		inline auto update_aspect_ratio(int width, int height)
+		inline auto constexpr update_aspect_ratio(int width, int height)
 		{
 			auto ratio = calculate_aspect_ratio(width, height);
 
@@ -64,11 +66,14 @@ namespace engine
 
 			return ratio;
 		}
+		
+		inline constexpr float get_vertical_fov() const { return glm::degrees(fov); }
+		inline constexpr void set_vertical_fov(float v_fov_deg) { fov = glm::radians(v_fov_deg); }
 
-		inline bool get_free_rotation() const { return free_rotation; }
-		inline void set_free_rotation(bool value) { free_rotation = value; }
+		inline constexpr bool get_free_rotation() const { return free_rotation; }
+		inline constexpr void set_free_rotation(bool value) { free_rotation = value; }
 
-		inline bool get_dynamic_aspect_ratio() const { return dynamic_aspect_ratio; }
-		inline void set_dynamic_aspect_ratio(bool value) { dynamic_aspect_ratio = value; }
+		inline constexpr bool get_dynamic_aspect_ratio() const { return dynamic_aspect_ratio; }
+		inline constexpr void set_dynamic_aspect_ratio(bool value) { dynamic_aspect_ratio = value; }
 	};
 }
