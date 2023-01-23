@@ -103,17 +103,17 @@ namespace engine
 
 		auto type = component.get_type();
 
-		auto patch_fn = type.func("patch_meta_component"_hs);
-
-		if (!patch_fn)
-		{
-			print_warn("Unable to resolve patch function for: #{}", type.id());
-
-			return false;
-		}
-
 		if (value_assignment && (!direct_modify))
 		{
+			auto patch_fn = type.func("patch_meta_component"_hs);
+
+			if (!patch_fn)
+			{
+				print_warn("Unable to resolve patch function for: #{}", type.id());
+
+				return false;
+			}
+
 			if (component.size() > 0)
 			{
 				auto result = patch_fn.invoke
@@ -156,7 +156,38 @@ namespace engine
 				{
 					if (component.size() > 0)
 					{
-						return (component.apply_fields(instance) > 0);
+						const auto result = component.apply_fields(instance);
+
+						//assert(result == component.size());
+
+						if (result != component.size())
+						{
+							print_warn("Unable to apply all of the specified fields while updating component #{}", type.id());
+
+							if (result == 0)
+							{
+								return false;
+							}
+						}
+
+						if (auto notify_patch_fn = type.func("mark_component_as_patched"_hs))
+						{
+							auto notify_result = notify_patch_fn.invoke
+							(
+								{},
+								entt::forward_as_meta(registry),
+								entt::forward_as_meta(entity)
+							);
+
+							if (!notify_result)
+							{
+								print_warn("Failed to notify listeners of patch for component #{}", type.id());
+							}
+						}
+						else
+						{
+							print_warn("Unable to resolve component-patch notification function from: #{}", type.id());
+						}
 					}
 				}
 
@@ -1302,7 +1333,7 @@ namespace engine
 		{
 			process_state_list(descriptor.states, *states, base_path, opt_parsing_context);
 		}
-
+		
 		if (auto threads = util::find_any(data, "do", "threads", "execute"); threads != data.end())
 		{
 			if (auto [initial_thread_index, thread_count] = process_thread_list(*threads, &base_path, opt_parsing_context); (thread_count > 0))
