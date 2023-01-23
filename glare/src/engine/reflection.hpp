@@ -125,7 +125,7 @@ namespace engine
     }
 
     template <typename T>
-    T& emplace_meta_component(Registry& registry, Entity entity, entt::meta_any value)
+    T& emplace_meta_component(Registry& registry, Entity entity, entt::meta_any& value)
     {
         if (auto raw_value = from_meta<T>(value))
         {
@@ -152,7 +152,7 @@ namespace engine
     }
 
     template <typename T>
-    T& get_or_emplace_component(Registry& registry, Entity entity, entt::meta_any value)
+    T& get_or_emplace_component(Registry& registry, Entity entity, entt::meta_any& value)
     {
         if (auto raw_value = from_meta<T>(value))
         {
