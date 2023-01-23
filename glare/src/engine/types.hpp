@@ -58,9 +58,16 @@ namespace engine
 
 	enum class LightType : std::uint8_t
 	{
+		// Allows for multiple light sub-components
+		// to be bound to the same entity.
+		Any,
+
+		// Specific types:
 		Point,
 		Directional,
-		Spotlight,
+		Spot,
+
+		Spotlight = Spot,
 	};
 	
 	FLAG_ENUM(std::uint8_t, LightType);
@@ -98,5 +105,7 @@ namespace engine
 
 	constexpr auto& null = entt::null;
 
-	constexpr PlayerIndex PRIMARY_LOCAL_PLAYER = 1;
+	inline constexpr PlayerIndex PRIMARY_LOCAL_PLAYER = 1;
+	inline constexpr PlayerIndex NO_PLAYER            = 0;
+	inline constexpr PlayerIndex ANY_PLAYER           = 0;
 }
