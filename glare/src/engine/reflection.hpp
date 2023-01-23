@@ -304,6 +304,17 @@ namespace engine
         return is_synchronized;
     }
 
+    template <typename T>
+    auto engine_empty_meta_type()
+    {
+        // Ensure that we're using the correct context.
+        sync_reflection_context();
+
+        auto type = entt::meta<T>()
+            .type(short_name_hash<T>())
+        ;
+    }
+
     // Associates a stripped version of the type's name to its reflection metadata.
     // Allows use of `T` without specifying `engine::T` in contexts where `T` is named dynamically. (e.g. JSON I/O)
     // 

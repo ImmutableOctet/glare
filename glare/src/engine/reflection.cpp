@@ -7,7 +7,6 @@
 
 #include "components/reflection.hpp"
 #include "commands/reflection.hpp"
-#include "meta/meta.hpp"
 
 #include "meta/reflection.hpp"
 #include "entity/reflection.hpp"
