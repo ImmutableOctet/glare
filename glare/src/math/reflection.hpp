@@ -34,14 +34,31 @@ namespace math
         template <>
         inline Vector3D make_vector2d<Vector3D>(float x, float y)
         {
-            //return make_vector3d(x, y, 0.0f);
             return { x, y, 0.0f };
+        }
+
+        template <>
+        inline Vector4D make_vector2d<Vector4D>(float x, float y)
+        {
+            return { x, y, 0.0f, 0.0f }; // 1.0f
         }
 
         template <typename VectorType>
         VectorType make_vector3d(float x, float y, float z) // typename VectorType::type
         {
             return { x, y, z };
+        }
+
+        template <>
+        Vector4D make_vector3d<Vector4D>(float x, float y, float z) // typename VectorType::type
+        {
+            return { x, y, z, 0.0f }; // 1.0f
+        }
+
+        template <typename VectorType>
+        VectorType make_vector4d(float x, float y, float z, float w) // typename VectorType::type
+        {
+            return { x, y, z, w };
         }
 
         // Registers members named `x` and `y` from `VectorType`.
@@ -53,14 +70,6 @@ namespace math
             return reflect_type<VectorType>(id)
                 .data<&VectorType::x>("x"_hs)
                 .data<&VectorType::y>("y"_hs)
-
-                /*
-                .ctor
-                <
-                    float, // typename VectorType::type
-                    float  // typename VectorType::type
-                >()
-                */
 
                 .ctor<&make_vector2d<VectorType>>()
             ;
@@ -74,16 +83,19 @@ namespace math
             return reflect_vector2d<VectorType>(id)
                 .data<&VectorType::z>("z"_hs)
 
-                /*
-                .ctor
-                <
-                    float, // typename VectorType::type,
-                    float, // typename VectorType::type,
-                    float  // typename VectorType::type
-                >()
-                */
-
                 .ctor<&make_vector3d<VectorType>>()
+            ;
+        }
+
+        template <typename VectorType, typename IdentifierType>
+        auto reflect_vector4d(IdentifierType&& id)
+        {
+            using namespace entt::literals;
+
+            return reflect_vector3d<VectorType>(id)
+                .data<&VectorType::w>("w"_hs)
+
+                .ctor<&make_vector4d<VectorType>>()
             ;
         }
     }
@@ -102,7 +114,20 @@ namespace math
         }
         else if constexpr (std::is_same_v<T, Vector3D>)
         {
-            return impl::reflect_vector3d<T>(id);
+            return impl::reflect_vector3d<T>(id)
+                .data<&T::r>("r"_hs)
+                .data<&T::g>("g"_hs)
+                .data<&T::b>("b"_hs)
+            ;
+        }
+        else if constexpr (std::is_same_v<T, Vector4D>)
+        {
+            return impl::reflect_vector4d<T>(id)
+                .data<&T::r>("r"_hs)
+                .data<&T::g>("g"_hs)
+                .data<&T::b>("b"_hs)
+                .data<&T::a>("a"_hs)
+            ;
         }
         else
         {

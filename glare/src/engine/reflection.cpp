@@ -4,6 +4,7 @@
 // TODO: Rework this source file into some form of automated 'reflection generation' procedure in the build process.
 
 #include "reflection.hpp"
+
 #include "components/reflection.hpp"
 #include "commands/reflection.hpp"
 #include "meta/meta.hpp"
@@ -60,13 +61,22 @@ namespace engine
         math::reflect<math::Vector2D>("Vector2D"_hs);
     }
 
-    // Reflects `math::Vector3D` with the generalized name of `Vector3D`.
+    // Reflects `math::Vector3D` with the generalized name of `Vector`.
     // 
     // TODO: Look into migrating this to another file/header.
     template <>
     void reflect<math::Vector3D>()
     {
-        math::reflect<math::Vector3D>("Vector3D"_hs);
+        math::reflect<math::Vector3D>("Vector"_hs); // "Vector3D"_hs
+    }
+
+    // Reflects `math::Vector4D` with the generalized name of `Vector4D`.
+    // 
+    // TODO: Look into migrating this to another file/header.
+    template <>
+    void reflect<math::Vector4D>()
+    {
+        math::reflect<math::Vector4D>("Vector4D"_hs);
     }
 
     // TODO: Implement reflection for matrix types.
@@ -74,6 +84,7 @@ namespace engine
     {
         reflect<math::Vector2D>();
         reflect<math::Vector3D>();
+        reflect<math::Vector4D>();
 
         // ...
     }
