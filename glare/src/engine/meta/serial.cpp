@@ -57,12 +57,12 @@ namespace engine
 		{
 			if (auto as_integer = util::from_string<std::int32_t>(value)) // std::int64_t
 			{
-				return as_integer;
+				return *as_integer;
 			}
 
 			if (auto as_float = util::from_string<float>(value)) // double
 			{
-				return as_float;
+				return *as_float;
 			}
 		}
 
