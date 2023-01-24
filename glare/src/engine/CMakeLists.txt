@@ -7,7 +7,7 @@ target_sources(
     PRIVATE
 
     "reflection.cpp"
-    "config.cpp"
+    
     "service.cpp"
     "timer.cpp"
     "transform.cpp"
