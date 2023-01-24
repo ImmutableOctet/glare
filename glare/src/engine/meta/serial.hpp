@@ -222,9 +222,9 @@ namespace engine
 		{
 			out = std::move(*raw_instance_ptr);
 		}
-		else if constexpr (std::is_move_constructible_v<T>)
+		else if constexpr (std::is_copy_assignable_v<T>)
 		{
-			out = T { std::move(*raw_instance_ptr) };
+			out = *raw_instance_ptr;
 		}
 	}
 
@@ -325,6 +325,30 @@ namespace engine
 		return load<T>
 		(
 			util::load_json(path),
+
+			parse_instructions,
+			descriptor_flags,
+			opt_parsing_context,
+
+			fallback_to_default_construction
+		);
+	}
+
+	template <typename T>
+	T load
+	(
+		std::string_view path,
+
+		const MetaAnyParseInstructions& parse_instructions={},
+		const MetaTypeDescriptorFlags& descriptor_flags={},
+		const ParsingContext* opt_parsing_context=nullptr,
+
+		bool fallback_to_default_construction=std::is_default_constructible_v<T>
+	)
+	{
+		return load<T>
+		(
+			std::filesystem::path(path),
 
 			parse_instructions,
 			descriptor_flags,
