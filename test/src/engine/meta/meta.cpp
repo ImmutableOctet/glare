@@ -91,13 +91,14 @@ TEST_CASE("engine::MetaTypeDescriptor", "[engine:meta]")
 		auto instance = descriptor();
 
 		REQUIRE(instance);
-		REQUIRE(instance.try_cast<engine::ReflectionTest>());
+		
+		auto* raw_instance = instance.try_cast<engine::ReflectionTest>();
 
-		auto& raw_instance = *(instance.try_cast<engine::ReflectionTest>());
+		REQUIRE(raw_instance);
 
-		REQUIRE(raw_instance.x == 10);
-		REQUIRE(raw_instance.y == 20);
-		REQUIRE(raw_instance.z == 30);
+		REQUIRE(raw_instance->x == 10);
+		REQUIRE(raw_instance->y == 20);
+		REQUIRE(raw_instance->z == 30);
 	}
 
 	SECTION("CSV assignment")
@@ -109,13 +110,14 @@ TEST_CASE("engine::MetaTypeDescriptor", "[engine:meta]")
 		auto instance = descriptor();
 
 		REQUIRE(instance);
-		REQUIRE(instance.try_cast<engine::ReflectionTest>());
 
-		auto& raw_instance = *(instance.try_cast<engine::ReflectionTest>());
+		auto* raw_instance = instance.try_cast<engine::ReflectionTest>();
 
-		REQUIRE(raw_instance.x == 1);
-		REQUIRE(raw_instance.y == 2);
-		REQUIRE(raw_instance.z == 3);
+		REQUIRE(raw_instance);
+
+		REQUIRE(raw_instance->x == 1);
+		REQUIRE(raw_instance->y == 2);
+		REQUIRE(raw_instance->z == 3);
 	}
 
 	SECTION("JSON assignment")
@@ -129,12 +131,13 @@ TEST_CASE("engine::MetaTypeDescriptor", "[engine:meta]")
 		auto instance = descriptor();
 
 		REQUIRE(instance);
-		REQUIRE(instance.try_cast<engine::ReflectionTest>());
+		
+		auto* raw_instance = instance.try_cast<engine::ReflectionTest>();
 
-		auto& raw_instance = *(instance.try_cast<engine::ReflectionTest>());
+		REQUIRE(raw_instance);
 
-		REQUIRE(raw_instance.x == 123);
-		REQUIRE(raw_instance.y == 456);
-		REQUIRE(raw_instance.z == 789);
+		REQUIRE(raw_instance->x == 123);
+		REQUIRE(raw_instance->y == 456);
+		REQUIRE(raw_instance->z == 789);
 	}
 }
