@@ -15,6 +15,7 @@
 
 #include <engine/config.hpp>
 #include <engine/meta/meta.hpp>
+#include <engine/meta/serial.hpp>
 #include <engine/resource_manager/resource_manager.hpp>
 #include <engine/entity/entity_factory.hpp>
 #include <engine/entity/serial.hpp>
@@ -287,9 +288,12 @@ namespace engine
 			world.set_name(stage, util::get_value<std::string>(data, "title", util::get_value<std::string>(data, "name", default_title)));
 		}
 
-		print("Initializing stage properties...");
+		if (auto properties = data.find("properties"); properties != data.end())
+		{
+			print("Initializing stage properties...");
 
-		world.set_properties(WorldProperties::from_json(data));
+			world.set_properties(engine::load<WorldProperties>(*properties));
+		}
 	}
 
 	void Stage::Loader::load_geometry()
