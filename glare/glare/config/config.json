@@ -1,0 +1,18 @@
+{
+	"graphics":
+	{
+		"shadows":
+		{
+			"resolution": { "x": 8192, "y": 8192 },
+			"cubemap_resolution": { "x": 2048, "y": 2048 },
+
+			"enabled": true
+		},
+
+		"parallax":
+		{
+			"min_layers": 32,
+			"max_layers": 64
+		}
+	}
+}
