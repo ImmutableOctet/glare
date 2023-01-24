@@ -21,10 +21,14 @@ namespace engine
 {
 	struct ParsingContext;
 
+	struct MetaTypeConstructionFlags
+	{
+		MetaType type = {};
+		bool allow_indirection = true;
+	};
+
 	struct MetaTypeDescriptor
 	{
-		protected:
-			MetaTypeDescriptor() = default;
 		public:
 			using Flags = MetaTypeDescriptorFlags;
 			using SmallSize = std::uint8_t; // std::uint16_t; // std::size_t;
@@ -40,6 +44,12 @@ namespace engine
 				std::string_view  // Type
 			>
 			parse_variable_declaration(std::string_view var_decl, std::string_view type_specifier_symbol=":");
+
+			// Alias for the version implemented in `meta`. (Acts as a forward declaration)
+			static std::optional<std::pair<entt::id_type, entt::meta_data>>
+			get_data_member_by_index(const entt::meta_type& type, std::size_t variable_index, bool recursive=true);
+
+			MetaTypeDescriptor() = default;
 
 			MetaTypeDescriptor(MetaType type, std::optional<SmallSize> constructor_argument_count=std::nullopt, const MetaTypeDescriptorFlags& flags={});
 			MetaTypeDescriptor(MetaTypeID type_id, std::optional<SmallSize> constructor_argument_count=std::nullopt, const MetaTypeDescriptorFlags& flags={});
@@ -72,6 +82,26 @@ namespace engine
 				const ParsingContext* opt_parsing_context=nullptr
 			);
 
+			/*
+			template <typename ...Content>
+			inline MetaTypeDescriptor(MetaType type, Content&&... content)
+				: type_id(type.id())
+			{
+				assert(type);
+
+				set_variables_direct_impl(type, std::forward<Content>(content)...);
+			}
+
+			template <typename ...Content>
+			inline MetaTypeDescriptor(MetaTypeID type_id, Content&&... content)
+				: type_id(type_id)
+			{
+				assert(type_id);
+
+				set_variables_direct(std::forward<Content>(content)...);
+			}
+			*/
+
 			MetaTypeDescriptor(const MetaTypeDescriptor&) = default;
 			MetaTypeDescriptor(MetaTypeDescriptor&&) noexcept = default;
 
@@ -79,7 +109,7 @@ namespace engine
 			MetaTypeDescriptor& operator=(MetaTypeDescriptor&&) noexcept = default;
 
 			// The type this descriptor is wrapping.
-			MetaTypeID type_id;
+			MetaTypeID type_id = {};
 
 			Names field_names;
 			Values field_values;
@@ -139,6 +169,20 @@ namespace engine
 				bool safe=true
 			);
 
+			/*
+			template <typename ...Content>
+			std::size_t set_variables(Content&&... content)
+			{
+				return set_variables_direct(std::forward<Content>(content)...);
+			}
+			*/
+
+			template <typename ...Content>
+			std::size_t set_variables_direct(Content&&... content)
+			{
+				return set_variables_direct_impl(get_type(), std::forward<Content>(content)...);
+			}
+
 			// Performs a shallow search of `field_values` to determine if an additional `MetaTypeDescriptor` is nested.
 			// This overload stops searching at the number of values specified.
 			// 
@@ -174,18 +218,18 @@ namespace engine
 				NOTE:
 			
 				When `allow_indirection` is true, if any of the entries in `field_values` is a `MetaTypeDescriptor`,
-				those objects' `instance` methods will be called as well. (recursion)
+				those objects' `instance` methods will be called as well. (Recursion)
 			
 				This allows for nested complex type definitions.
 			*/
 			template <typename ...Args>
-			inline MetaAny instance(bool allow_indirection, Args&&... args) const
+			inline MetaAny instance(const MetaTypeConstructionFlags& construction_flags, Args&&... args) const
 			{
 				MetaAny instance;
 
 				if (flags.allow_forwarding_fields_to_constructor)
 				{
-					instance = instance_exact(allow_indirection, std::forward<Args>(args)...);
+					instance = instance_exact(construction_flags, std::forward<Args>(args)...);
 				}
 
 				bool is_default_constructed = false;
@@ -194,14 +238,17 @@ namespace engine
 				{
 					if (flags.allow_default_construction)
 					{
-						instance = instance_default(); // std::forward<Args>(args)...
+						instance = instance_default(construction_flags.type); // std::forward<Args>(args)...
 
 						is_default_constructed = true;
 					}
 
 					if (!instance)
 					{
-						print_warn("Unable to resolve constructor for component: \"#{}\"", type_id);
+						if (construction_flags.type)
+						{
+							print_warn("Unable to resolve constructor for component: \"#{}\"", construction_flags.type.id());
+						}
 
 						return {};
 					}
@@ -215,6 +262,34 @@ namespace engine
 				return instance;
 			}
 
+			template <typename ...Args>
+			inline MetaAny instance(MetaType type, Args&&... args) const
+			{
+				return instance
+				(
+					MetaTypeConstructionFlags
+					{
+						type, true
+					},
+
+					std::forward<Args>(args)...
+				);
+			}
+
+			template <typename ...Args>
+			inline MetaAny instance(bool allow_indirection, Args&&... args) const
+			{
+				return instance
+				(
+					MetaTypeConstructionFlags
+					{
+						get_type(), allow_indirection
+					},
+
+					std::forward<Args>(args)...
+				);
+			}
+
 			inline MetaAny instance() const
 			{
 				return instance(true);
@@ -225,8 +300,15 @@ namespace engine
 			// 
 			// The `instance` member-function is recommended over this one for general purpose usage.
 			template <typename ...Args>
-			inline MetaAny instance_exact(bool allow_indirection, Args&&... args) const
+			inline MetaAny instance_exact(const MetaTypeConstructionFlags& construction_flags, Args&&... args) const
 			{
+				const auto& type = construction_flags.type;
+
+				if (!type)
+				{
+					return {};
+				}
+
 				auto constructor_args_count = field_values.size();
 
 				if (constructor_argument_count)
@@ -243,9 +325,7 @@ namespace engine
 					return {};
 				}
 
-				const auto type = get_type();
-
-				if (allow_indirection)
+				if (construction_flags.allow_indirection)
 				{
 					// NOTE: In the event of a nested descriptor without `allow_indirection`, we assume it is
 					// correct to pass the nested `MetaTypeDescriptor` object to the underlying type's constructor.
@@ -277,13 +357,51 @@ namespace engine
 				return type.construct(constructor_args, constructor_args_count);
 			}
 
+			template <typename ...Args>
+			inline MetaAny instance_exact(MetaType type, Args&&... args) const
+			{
+				return instance_exact
+				(
+					MetaTypeConstructionFlags
+					{
+						type, true
+					},
+
+					std::forward<Args>(args)...
+				);
+			}
+
+			template <typename ...Args>
+			inline MetaAny instance_exact(bool allow_indirection, Args&&... args) const
+			{
+				return instance_exact
+				(
+					MetaTypeConstructionFlags
+					{
+						get_type(), allow_indirection
+					},
+
+					std::forward<Args>(args)...
+				);
+			}
+
 			inline MetaAny instance_exact() const
 			{
 				return instance_exact(true);
 			}
 
 			// Attempts to default-construct an instance of `type`.
-			MetaAny instance_default() const;
+			MetaAny instance_default(MetaType type) const;
+
+			inline MetaAny instance_default(const MetaTypeConstructionFlags& construction_flags) const
+			{
+				return instance_default(construction_flags.type);
+			}
+
+			inline MetaAny instance_default() const
+			{
+				return instance_default(get_type());
+			}
 
 			/*
 				Updates each field of `instance`, defined by this descriptor.
@@ -310,12 +428,18 @@ namespace engine
 			std::size_t resolve_values(Values& values_out, std::size_t constructor_args_count, std::size_t offset=0) const;
 			std::size_t resolve_values(Values& values_out, std::size_t constructor_args_count, Registry& registry, Entity entity, std::size_t offset=0) const;
 
+			template <typename ...Args>
+			inline MetaAny operator()(Args&&... args) const
+			{
+				return instance(true, std::forward<Args>(args)...);
+			}
+
 			inline MetaAny operator()() const
 			{
 				return instance(true);
 			}
 		private:
-			std::size_t set_variables
+			std::size_t set_variables_impl
 			(
 				const MetaType& type,
 				const util::json& content,
@@ -324,7 +448,7 @@ namespace engine
 				const ParsingContext* opt_parsing_context=nullptr
 			);
 
-			std::size_t set_variables
+			std::size_t set_variables_impl
 			(
 				const MetaType& type,
 				std::string_view content,
@@ -335,6 +459,32 @@ namespace engine
 
 				bool safe=true
 			);
+
+			template <typename ...Content>
+			std::size_t set_variables_direct_impl(MetaType type, Content&&... content)
+			{
+				std::size_t variable_index = 0;
+				std::size_t count = 0;
+
+				(
+					[&]()
+					{
+						if (auto data_entry = get_data_member_by_index(type, variable_index, true))
+						{
+							const auto var_name_hash = data_entry->first;
+
+							if (set_variable(MetaVariable(var_name_hash, MetaAny { std::forward<Content>(content) })))
+							{
+								count++;
+							}
+						}
+
+						variable_index++;
+					}(), ...
+				);
+
+				return count;
+			}
 
 			static MetaAny resolve_indirect_value(const MetaAny& entry);
 			static MetaAny resolve_indirect_value(const MetaAny& entry, Registry& registry, Entity entity);

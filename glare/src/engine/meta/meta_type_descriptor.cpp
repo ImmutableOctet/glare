@@ -42,6 +42,12 @@ namespace engine
 		return { var_name, var_type };
 	}
 
+	std::optional<std::pair<entt::id_type, entt::meta_data>>
+	MetaTypeDescriptor::get_data_member_by_index(const entt::meta_type& type, std::size_t variable_index, bool recursive)
+	{
+		return engine::get_data_member_by_index(type, variable_index, recursive);
+	}
+
 	MetaTypeDescriptor::MetaTypeDescriptor(MetaType type, std::optional<SmallSize> constructor_argument_count, const MetaTypeDescriptorFlags& flags)
 		: type_id(type.id()), constructor_argument_count(constructor_argument_count), flags(flags) {}
 
@@ -184,7 +190,7 @@ namespace engine
 		const ParsingContext* opt_parsing_context
 	)
 	{
-		return set_variables
+		return set_variables_impl
 		(
 			get_type(),
 			content,
@@ -194,7 +200,7 @@ namespace engine
 		);
 	}
 
-	std::size_t MetaTypeDescriptor::set_variables
+	std::size_t MetaTypeDescriptor::set_variables_impl
 	(
 		const MetaType& type,
 		const util::json& content,
@@ -311,7 +317,7 @@ namespace engine
 		bool safe
 	)
 	{
-		return set_variables
+		return set_variables_impl
 		(
 			get_type(),
 			content, instructions,
@@ -320,7 +326,7 @@ namespace engine
 		);
 	}
 
-	std::size_t MetaTypeDescriptor::set_variables
+	std::size_t MetaTypeDescriptor::set_variables_impl
 	(
 		const MetaType& type,
 		std::string_view content,
@@ -450,10 +456,8 @@ namespace engine
 		return false;
 	}
 
-	MetaAny MetaTypeDescriptor::instance_default() const
+	MetaAny MetaTypeDescriptor::instance_default(MetaType type) const
 	{
-		const auto type = get_type();
-
 		if (!type)
 		{
 			return {};
@@ -493,7 +497,7 @@ namespace engine
 
 		const auto check_indirection = has_indirection(); // has_indirection(field_count, offset);
 
-		const auto type = get_type();
+		const auto type = instance.type(); // get_type();
 
 		for (std::size_t i = offset; i < (offset+field_count); i++)
 		{

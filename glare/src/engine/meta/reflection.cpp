@@ -106,7 +106,7 @@ namespace engine
 			//.func<&MetaTypeDescriptor::set_variables>("set_variables"_hs)
 
 			// NOTE: `operator()` used here due to conflict when reflecting boolean parameter `allow_recursion`.
-			.func<&MetaTypeDescriptor::operator()>("instance"_hs) // &MetaTypeDescriptor::instance
+			.func<static_cast<MetaAny (MetaTypeDescriptor::*)() const>(&MetaTypeDescriptor::operator())>("instance"_hs) // &MetaTypeDescriptor::instance
 		;
 	}
 
