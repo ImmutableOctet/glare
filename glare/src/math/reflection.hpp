@@ -129,6 +129,10 @@ namespace math
                 .data<&T::a>("a"_hs)
             ;
         }
+        else if constexpr (std::is_same_v<T, vec2i>)
+        {
+            return impl::reflect_vector2d<T>(id);
+        }
         else
         {
             static_assert(std::integral_constant<T, false>::value, "Reflection is not currently supported for this type.");

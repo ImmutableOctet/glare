@@ -14,6 +14,8 @@
 #include "input/reflection.hpp"
 #include "world/reflection.hpp"
 
+#include "config.hpp"
+
 #include <math/reflection.hpp>
 
 #include <util/format.hpp>
@@ -78,12 +80,51 @@ namespace engine
         math::reflect<math::Vector4D>("Vector4D"_hs);
     }
 
+    // Reflects `math::vec2i` with the generalized name of `vec2i`.
+    // 
+    // TODO: Look into migrating this to another file/header.
+    template <>
+    void reflect<math::vec2i>()
+    {
+        math::reflect<math::vec2i>("vec2i"_hs);
+    }
+
+    template <>
+    void reflect<GraphicsConfig>()
+    {
+        engine_meta_type<GraphicsConfig>()
+            .data<&GraphicsConfig::shadows>("shadows"_hs)
+            .data<&GraphicsConfig::parallax>("parallax"_hs)
+        ;
+
+        engine_meta_type<GraphicsConfig::Shadows>()
+            .data<&GraphicsConfig::Shadows::resolution>("resolution"_hs)
+            .data<&GraphicsConfig::Shadows::cubemap_resolution>("cubemap_resolution"_hs)
+            .data<&GraphicsConfig::Shadows::enabled>("enabled"_hs)
+        ;
+
+        engine_meta_type<GraphicsConfig::Parallax>()
+            .data<&GraphicsConfig::Parallax::min_layers>("min_layers"_hs)
+            .data<&GraphicsConfig::Parallax::max_layers>("max_layers"_hs)
+        ;
+    }
+
+    template <>
+    void reflect<Config>()
+    {
+        engine_meta_type<Config>()
+            .data<&Config::graphics>("graphics"_hs)
+        ;
+    }
+
     // TODO: Implement reflection for matrix types.
     void reflect_math()
     {
         reflect<math::Vector2D>();
         reflect<math::Vector3D>();
         reflect<math::Vector4D>();
+
+        reflect<math::vec2i>();
 
         // ...
     }
@@ -129,6 +170,9 @@ namespace engine
         reflect_core_components();
         reflect_core_commands();
         reflect_systems();
+
+        reflect<GraphicsConfig>();
+        reflect<Config>();
 
         // ...
 
