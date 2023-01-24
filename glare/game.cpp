@@ -29,6 +29,8 @@
 
 #include <engine/events.hpp>
 
+#include <engine/meta/serial.hpp>
+
 #include <engine/components/type_component.hpp>
 #include <engine/components/model_component.hpp>
 
@@ -66,6 +68,8 @@ namespace glare
 		Game("Project Glare", 1600, 900, 60, false, false) // true
 	{
 		using namespace graphics;
+		
+		engine::load(cfg, std::filesystem::path("config/config.json"), true);
 
 		init_input_system([](auto& input_system, auto& input_handler)
 		{

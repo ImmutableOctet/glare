@@ -689,8 +689,8 @@ namespace engine
 			entity,
 			light_type,
 			
-			config.graphics.shadow.resolution,
-			config.graphics.shadow.cubemap_resolution
+			config.graphics.shadows.resolution,
+			config.graphics.shadows.cubemap_resolution
 		);
 	}
 

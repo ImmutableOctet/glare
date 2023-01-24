@@ -190,7 +190,7 @@ namespace game
 
 		effects.bind(render_state, cfg);
 
-		if (cfg.graphics.shadow.enabled)
+		if (cfg.graphics.shadows.enabled)
 		{
 			render_state.directional_shadows.enabled = true;
 			render_state.point_shadows.enabled = true;
