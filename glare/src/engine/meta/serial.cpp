@@ -339,7 +339,21 @@ namespace engine
 			case jtype::object:
 			{
 				// Completely opaque object detected.
-				assert(false);
+				//assert(false);
+
+				print_warn("Opaque JSON object detected (No type information): Opaque objects are not currently supported.");
+
+				/*
+				return MetaTypeDescriptor
+				(
+					MetaType {},
+					value,
+					instructions,
+					std::nullopt,
+					{},
+					opt_parsing_context
+				);
+				*/
 
 				// TODO: Maybe handle as array instead...?
 				return {};

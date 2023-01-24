@@ -87,11 +87,11 @@ namespace engine
 		const MetaTypeDescriptorFlags& flags,
 		const ParsingContext* opt_parsing_context
 	) :
-		type_id(type.id()),
+		type_id((type) ? type.id() : 0),
 		constructor_argument_count(constructor_argument_count),
 		flags(flags)
 	{
-		assert(type);
+		//assert(type);
 
 		set_variables(content, instructions, 0, opt_parsing_context);
 	}
@@ -209,6 +209,11 @@ namespace engine
 		const ParsingContext* opt_parsing_context
 	)
 	{
+		if (!type)
+		{
+			return 0;
+		}
+
 		std::size_t count = 0;
 		std::size_t variable_index = argument_offset;
 
