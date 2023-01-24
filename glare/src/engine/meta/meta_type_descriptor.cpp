@@ -676,4 +676,51 @@ namespace engine
 
 		return {};
 	}
+
+	MetaTypeDescriptor load_descriptor
+	(
+		MetaType type,
+
+		const std::filesystem::path& path,
+		
+		const MetaAnyParseInstructions& parse_instructions,
+		const MetaTypeDescriptorFlags& descriptor_flags,
+		const ParsingContext* opt_parsing_context
+	)
+	{
+		return load_descriptor
+		(
+			type,
+
+			util::load_json(path),
+
+			parse_instructions,
+			descriptor_flags,
+			opt_parsing_context
+		);
+	}
+
+	MetaTypeDescriptor load_descriptor
+	(
+		MetaType type,
+
+		const util::json& content,
+
+		const MetaAnyParseInstructions& parse_instructions,
+		const MetaTypeDescriptorFlags& descriptor_flags,
+		const ParsingContext* opt_parsing_context
+	)
+	{
+		return MetaTypeDescriptor
+		(
+			type,
+			
+			content,
+			
+			parse_instructions,
+			std::nullopt,
+			descriptor_flags,
+			opt_parsing_context
+		);
+	}
 }

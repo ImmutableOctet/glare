@@ -527,4 +527,61 @@ namespace engine
 			read_aliases(*aliases, context.component_aliases);
 		}
 	}
+
+	MetaAny load
+	(
+		MetaAny out,
+		
+		const util::json& data,
+		
+		bool use_assignment,
+
+		const MetaAnyParseInstructions& parse_instructions,
+		const MetaTypeDescriptorFlags& descriptor_flags,
+		const ParsingContext* opt_parsing_context
+	)
+	{
+		auto descriptor = load_descriptor
+		(
+			out.type(),
+			data,
+			parse_instructions,
+			descriptor_flags,
+			opt_parsing_context
+		);
+
+		if (use_assignment)
+		{
+			descriptor.apply_fields(out);
+		}
+		else
+		{
+			return descriptor.instance();
+		}
+
+		return out;
+	}
+
+	MetaAny load
+	(
+		MetaType type,
+		
+		const util::json& data,
+
+		const MetaAnyParseInstructions& parse_instructions,
+		const MetaTypeDescriptorFlags& descriptor_flags,
+		const ParsingContext* opt_parsing_context
+	)
+	{
+		auto descriptor = load_descriptor
+		(
+			type,
+			data,
+			parse_instructions,
+			descriptor_flags,
+			opt_parsing_context
+		);
+
+		return descriptor.instance(); // false
+	}
 }

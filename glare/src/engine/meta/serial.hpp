@@ -3,11 +3,14 @@
 #include "types.hpp"
 #include "meta_data_member.hpp"
 #include "indirect_meta_data_member.hpp"
+#include "meta_type_descriptor_flags.hpp"
 
 #include <engine/entity/entity_target.hpp>
 
 // TODO: Forward declare `util::json`, etc.
 #include <util/json.hpp>
+
+#include <util/format.hpp>
 
 #include <entt/meta/meta.hpp>
 //#include <entt/entt.hpp>
@@ -16,6 +19,8 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <filesystem>
+#include <stdexcept>
 #include <tuple>
 
 namespace engine
@@ -130,4 +135,202 @@ namespace engine
 	EntityTarget::TargetType parse_target_type(const util::json& target_data);
 
 	void read_parsing_context(ParsingContext& context, const util::json& data);
+
+	MetaAny load
+	(
+		MetaAny out,
+		
+		const util::json& data,
+		bool use_assignment=true,
+
+		const MetaAnyParseInstructions& parse_instructions={},
+		const MetaTypeDescriptorFlags& descriptor_flags={},
+		const ParsingContext* opt_parsing_context=nullptr
+	);
+
+	MetaAny load
+	(
+		MetaType type,
+		const util::json& data,
+
+		const MetaAnyParseInstructions& parse_instructions={},
+		const MetaTypeDescriptorFlags& descriptor_flags={},
+		const ParsingContext* opt_parsing_context=nullptr
+	);
+
+	template <typename T>
+	void load
+	(
+		T& out,
+		
+		const util::json& data,
+		bool use_assignment=true,
+
+		const MetaAnyParseInstructions& parse_instructions={},
+		const MetaTypeDescriptorFlags& descriptor_flags={},
+		const ParsingContext* opt_parsing_context=nullptr,
+
+		bool fallback_to_default_construction=std::is_default_constructible_v<T>
+	)
+	{
+		auto instance = load
+		(
+			entt::forward_as_meta(out),
+			
+			data,
+
+			use_assignment,
+
+			parse_instructions,
+			descriptor_flags,
+			opt_parsing_context
+		);
+
+		if (use_assignment)
+		{
+			return;
+		}
+
+		if (!instance)
+		{
+			if (fallback_to_default_construction)
+			{
+				if constexpr (std::is_default_constructible_v<T> && (std::is_move_assignable_v<T> || std::is_copy_assignable_v<T>))
+				{
+					out = T{};
+				}
+			}
+
+			throw std::runtime_error(util::format("Unable to deserialize object of type: #{}", resolve<T>().id()));
+		}
+
+		auto raw_instance_ptr = instance.try_cast<T>();
+
+		if ((!raw_instance_ptr) && fallback_to_default_construction)
+		{
+			if constexpr (std::is_default_constructible_v<T> && (std::is_move_assignable_v<T> || std::is_copy_assignable_v<T>))
+			{
+				out = T {};
+			}
+
+			return;
+		}
+
+		assert(raw_instance_ptr);
+
+		if constexpr (std::is_move_assignable_v<T>)
+		{
+			out = std::move(*raw_instance_ptr);
+		}
+		else if constexpr (std::is_move_constructible_v<T>)
+		{
+			out = T { std::move(*raw_instance_ptr) };
+		}
+	}
+
+	template <typename T>
+	T load
+	(
+		const util::json& data,
+
+		const MetaAnyParseInstructions& parse_instructions={},
+		const MetaTypeDescriptorFlags& descriptor_flags={},
+		const ParsingContext* opt_parsing_context=nullptr,
+
+		bool fallback_to_default_construction=std::is_default_constructible_v<T>
+	)
+	{
+		auto type = resolve<T>();
+
+		assert(type);
+
+		auto instance = load
+		(
+			type,
+			data,
+
+			parse_instructions,
+			descriptor_flags,
+			opt_parsing_context
+		);
+
+		if (!instance)
+		{
+			if (fallback_to_default_construction)
+			{
+				if constexpr (std::is_default_constructible_v<T>)
+				{
+					return T {};
+				}
+			}
+
+			throw std::runtime_error(util::format("Unable to deserialize object of type: #{}", type.id()));
+		}
+
+		auto raw_instance_ptr = instance.try_cast<T>();
+
+		if ((!raw_instance_ptr) && fallback_to_default_construction)
+		{
+			return T{};
+		}
+
+		assert(raw_instance_ptr);
+
+		return T(std::move(*raw_instance_ptr));
+	}
+
+	template <typename T>
+	void load
+	(
+		T& out,
+		
+		const std::filesystem::path& path,
+		bool use_assignment=true,
+
+		const MetaAnyParseInstructions& parse_instructions={},
+		const MetaTypeDescriptorFlags& descriptor_flags={},
+		const ParsingContext* opt_parsing_context=nullptr,
+
+		bool fallback_to_default_construction=std::is_default_constructible_v<T>
+	)
+	{
+		load<T>
+		(
+			out,
+
+			util::load_json(path),
+			
+			use_assignment,
+
+			parse_instructions,
+			descriptor_flags,
+			opt_parsing_context,
+
+			fallback_to_default_construction
+		);
+	}
+
+	template <typename T>
+	T load
+	(
+		const std::filesystem::path& path,
+
+		const MetaAnyParseInstructions& parse_instructions={},
+		const MetaTypeDescriptorFlags& descriptor_flags={},
+		const ParsingContext* opt_parsing_context=nullptr,
+
+		bool fallback_to_default_construction=std::is_default_constructible_v<T>
+	)
+	{
+		return load<T>
+		(
+			util::load_json(path),
+
+			parse_instructions,
+			descriptor_flags,
+			opt_parsing_context,
+
+			fallback_to_default_construction
+		);
+	}
 }

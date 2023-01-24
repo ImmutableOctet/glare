@@ -211,7 +211,7 @@ namespace engine
 			{
 				return (has_nested_descriptor() || has_nested_member_reference());
 			}
-
+			
 			/*
 				Generates an instance of the described type.
 			
@@ -497,4 +497,26 @@ namespace engine
 			template <typename ...Args>
 			std::size_t resolve_values_impl(Values& values_out, std::size_t constructor_args_count, std::size_t offset, Args&&... args) const;
 	};
+
+	MetaTypeDescriptor load_descriptor
+	(
+		MetaType type,
+
+		const std::filesystem::path& path,
+		
+		const MetaAnyParseInstructions& parse_instructions={},
+		const MetaTypeDescriptorFlags& descriptor_flags={},
+		const ParsingContext* opt_parsing_context=nullptr
+	);
+
+	MetaTypeDescriptor load_descriptor
+	(
+		MetaType type,
+
+		const util::json& content,
+		
+		const MetaAnyParseInstructions& parse_instructions={},
+		const MetaTypeDescriptorFlags& descriptor_flags={},
+		const ParsingContext* opt_parsing_context=nullptr
+	);
 }
