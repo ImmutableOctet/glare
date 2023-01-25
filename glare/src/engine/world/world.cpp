@@ -2,7 +2,6 @@
 
 #include "world_events.hpp"
 #include "entity.hpp"
-#include "player/player.hpp"
 #include "stage.hpp"
 
 #include "light.hpp"
@@ -11,7 +10,6 @@
 #include "graphics_entity.hpp"
 
 #include "components/camera_component.hpp"
-
 #include "components/light_component.hpp"
 #include "components/directional_light_component.hpp"
 #include "components/directional_light_shadow_component.hpp"
@@ -511,15 +509,15 @@ namespace engine
 
 	Entity World::get_player(PlayerIndex player) const
 	{
-		auto view = registry.view<PlayerState>();
+		auto view = registry.view<PlayerComponent>();
 
 		for (auto it = view.begin(); it != view.end(); it++)
 		{
 			Entity entity = *it;
 
-			const auto& player_state = registry.get<PlayerState>(entity);
+			const auto& player_state = registry.get<PlayerComponent>(entity);
 
-			if (player_state.index == player)
+			if (player_state.player_index == player)
 			{
 				return entity;
 			}
