@@ -26,6 +26,8 @@
 
 #include <engine/input/components/input_component.hpp>
 
+#include <math/math.hpp>
+
 #include <util/json.hpp>
 #include <util/log.hpp>
 #include <util/string.hpp>
@@ -160,16 +162,28 @@ namespace engine
 
 	math::TransformVectors Stage::get_transform_data(const util::json& cfg)
 	{
-		auto tform = util::get_transform(cfg);
+		auto position = math::Vector {};
+		auto rotation = math::Vector {};
+		auto scale    = math::Vector { 1.0f, 1.0f, 1.0f };
 
-		// auto [position, rotation, scale] = tform;
-		// 
-		// print("Transform:");
-		// print("Position: {}", position);
-		// print("Rotation: {}", rotation);
-		// print("Scale: {}\n", scale);
+		if (auto vector_data = cfg.find("position"); vector_data != cfg.end())
+		{
+			engine::load(position, *vector_data);
+		}
 
-		return tform;
+		if (auto vector_data = cfg.find("rotation"); vector_data != cfg.end())
+		{
+			engine::load(rotation, *vector_data);
+
+			rotation = math::radians(rotation);
+		}
+
+		if (auto vector_data = cfg.find("scale"); vector_data != cfg.end())
+		{
+			engine::load(scale, *vector_data);
+		}
+
+		return { position, rotation, scale };
 	}
 
 	void Stage::apply_transform(World& world, Entity entity, const util::json& cfg)
