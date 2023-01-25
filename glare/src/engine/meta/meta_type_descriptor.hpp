@@ -188,15 +188,24 @@ namespace engine
 			// Performs a shallow search of `field_values` to determine if a `MetaDataMember` or `IndirectMetaDataMember` object is nested.
 			bool has_nested_member_reference() const;
 
+			// Performs a shallow search of `field_values` to determine if an `EntityTarget` object is nested.
+			// This overload stops searching at the number of values specified.
+			// 
+			// TODO: Implement optional `offset` parameter.
+			bool has_nested_entity_target(std::size_t n_values) const;
+
+			// Performs a shallow search of `field_values` to determine if an `EntityTarget` object is nested.
+			bool has_nested_entity_target() const;
+
 			// TODO: Implement optional `offset` parameter.
 			inline bool has_indirection(std::size_t n_values) const
 			{
-				return (has_nested_descriptor(n_values) || has_nested_member_reference(n_values));
+				return (has_nested_descriptor(n_values) || has_nested_member_reference(n_values) || has_nested_entity_target(n_values));
 			}
 
 			inline bool has_indirection() const
 			{
-				return (has_nested_descriptor() || has_nested_member_reference());
+				return (has_nested_descriptor() || has_nested_member_reference() || has_nested_entity_target());
 			}
 			
 			/*

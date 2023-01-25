@@ -6,6 +6,7 @@
 #include <engine/types.hpp>
 
 #include <engine/entity/entity_thread_target.hpp>
+#include <engine/entity/entity_target.hpp>
 
 #include <util/string.hpp>
 #include <util/parse.hpp>
@@ -171,7 +172,7 @@ namespace engine
 
 		if (resolve_symbol)
 		{
-			auto execute_string_command = [](const auto command_id, const auto& content) -> MetaAny
+			auto execute_string_command = [](const auto command_id, const auto& content, std::string_view content_raw) -> MetaAny
 			{
 				switch (command_id)
 				{
@@ -186,10 +187,15 @@ namespace engine
 						return EntityThreadTarget(content);
 				}
 
+				if (auto as_entity_target = EntityTarget::parse(content_raw))
+				{
+					return *as_entity_target;
+				}
+
 				return {};
 			};
 
-			auto execute_any_command = [&execute_string_command](const auto command_id, const MetaAny& content) -> MetaAny
+			auto execute_any_command = [&execute_string_command](const auto command_id, const MetaAny& content, std::string_view content_raw) -> MetaAny
 			{
 				//switch (command_id)
 				{
@@ -200,11 +206,11 @@ namespace engine
 					{
 						if (const auto* as_str_view = content.try_cast<std::string_view>())
 						{
-							return execute_string_command(command_id, *as_str_view);
+							return execute_string_command(command_id, *as_str_view, content_raw);
 						}
 						else if (const auto* as_str = content.try_cast<std::string>())
 						{
-							return execute_string_command(command_id, *as_str);
+							return execute_string_command(command_id, *as_str, content_raw);
 						}
 
 						//break;
@@ -218,12 +224,14 @@ namespace engine
 			if (value.starts_with('$') || value.starts_with('#'))
 			{
 				// Remove symbol prefix.
-				value = value.substr(1);
+				auto sub_value = value.substr(1);
 
-				if (auto result = execute_string_command("hash"_hs, value))
+				if (auto result = execute_string_command("hash"_hs, sub_value, value))
 				{
 					return result;
 				}
+
+				value = sub_value;
 			}
 			else
 			{
@@ -241,7 +249,7 @@ namespace engine
 					{
 						if (auto resolved = meta_any_from_string_resolve_impl(command_content, instructions, type))
 						{
-							if (auto result = execute_any_command(command_id, resolved))
+							if (auto result = execute_any_command(command_id, resolved, value))
 							{
 								return result;
 							}
@@ -251,7 +259,7 @@ namespace engine
 						}
 					}
 
-					if (auto result = execute_string_command(command_id, command_content))
+					if (auto result = execute_string_command(command_id, command_content, value))
 					{
 						return result;
 					}

@@ -3,6 +3,8 @@
 #include "serial.hpp"
 #include "parsing_context.hpp"
 
+#include <engine/entity/entity_target.hpp>
+
 #include <string_view>
 #include <string>
 
@@ -538,6 +540,49 @@ namespace engine
 		return false;
 	}
 
+	bool MetaTypeDescriptor::has_nested_entity_target(std::size_t n_values) const
+	{
+		using namespace entt::literals;
+
+		std::size_t idx = 0;
+
+		for (const auto& entry : field_values)
+		{
+			if (idx >= n_values)
+			{
+				break;
+			}
+
+			const auto type_id = entry.type().id();
+
+			if (type_id == "EntityTarget"_hs)
+			{
+				return true;
+			}
+
+			idx++;
+		}
+
+		return false;
+	}
+
+	bool MetaTypeDescriptor::has_nested_entity_target() const
+	{
+		using namespace entt::literals;
+
+		for (const auto& entry : field_values)
+		{
+			const auto type_id = entry.type().id();
+
+			if (type_id == "EntityTarget"_hs)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	MetaAny MetaTypeDescriptor::instance_default(MetaType type) const
 	{
 		if (!type)
@@ -609,16 +654,14 @@ namespace engine
 						return result;
 					}
 
-					/*
-					if (auto casted = value.allow_cast(meta_field.type()))
-					{
-						return meta_field.set(instance, casted);
-					}
-					*/
-
 					if (auto construct_from = meta_field.type().construct(value))
 					{
 						return meta_field.set(instance, std::move(construct_from));
+					}
+
+					if (auto casted = value.allow_cast(meta_field.type()))
+					{
+						return meta_field.set(instance, casted);
 					}
 
 					// Fallbacks for string-to-hash conversion scenarios:
@@ -705,7 +748,9 @@ namespace engine
 	{
 		using namespace entt::literals;
 
-		switch (entry.type().id())
+		const auto type = entry.type();
+
+		switch (type.id())
 		{
 			case "MetaTypeDescriptor"_hs: // self_type.id():
 			{
@@ -729,12 +774,9 @@ namespace engine
 	{
 		using namespace entt::literals;
 
-		if (auto result = resolve_indirect_value(entry))
-		{
-			return result;
-		}
+		const auto type = entry.type();
 
-		switch (entry.type().id())
+		switch (type.id())
 		{
 			case "MetaDataMember"_hs:
 			{
@@ -754,6 +796,20 @@ namespace engine
 
 				break;
 			}
+			case "EntityTarget"_hs:
+			{
+				if (const auto* entity_target = entry.try_cast<EntityTarget>())
+				{
+					return entity_target->get(registry, entity);
+				}
+
+				break;
+			}
+		}
+
+		if (auto result = resolve_indirect_value(entry))
+		{
+			return result;
 		}
 
 		return {};
