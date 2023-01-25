@@ -110,10 +110,25 @@ namespace engine
     }
 
     template <>
+    void reflect<PlayerConfig>()
+    {
+        engine_meta_type<PlayerConfig>()
+            .data<&PlayerConfig::default_player>("default_player"_hs)
+            .data<&PlayerConfig::character_path>("character_path"_hs)
+        ;
+
+        engine_meta_type<PlayerConfig::Player>()
+            .data<&PlayerConfig::Player::name>("name"_hs)
+            .data<&PlayerConfig::Player::character>("character"_hs)
+        ;
+    }
+
+    template <>
     void reflect<Config>()
     {
         engine_meta_type<Config>()
             .data<&Config::graphics>("graphics"_hs)
+            .data<&Config::players>("players"_hs)
         ;
     }
 
@@ -172,6 +187,7 @@ namespace engine
         reflect_systems();
 
         reflect<GraphicsConfig>();
+        reflect<PlayerConfig>();
         reflect<Config>();
 
         // ...
