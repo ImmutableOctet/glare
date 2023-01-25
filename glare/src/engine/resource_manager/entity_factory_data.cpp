@@ -7,6 +7,11 @@ namespace engine
 	{
 		auto entity = factory.create(context);
 
+		if (entity == null)
+		{
+			return null;
+		}
+
 		if (handle_children && !children.empty())
 		{
 			auto child_context = EntityConstructionContext
