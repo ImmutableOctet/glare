@@ -210,14 +210,14 @@ namespace engine
 			entity = context.registry.create();
 		}
 
-		for (const auto& component : descriptor.components.type_definitions)
-		{
-			emplace_component(context.registry, entity, component);
-		}
-
 		if (context.parent != null)
 		{
 			RelationshipComponent::set_parent(context.registry, entity, context.parent, true);
+		}
+
+		for (const auto& component : descriptor.components.type_definitions)
+		{
+			emplace_component(context.registry, entity, component);
 		}
 
 		if (!context.registry.try_get<NameComponent>(entity))
