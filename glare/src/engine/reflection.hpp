@@ -232,9 +232,9 @@ namespace engine
     {
         assert
         (
-            (descriptor.type_id == short_name_hash<T>().value())
+            (descriptor.get_type_id() == short_name_hash<T>().value())
             ||
-            (descriptor.type_id == entt::type_hash<T>::value())
+            (descriptor.get_type_id() == entt::type_hash<T>::value())
         );
 
         // Ensure `T` is currently a component of `entity`.
@@ -275,6 +275,37 @@ namespace engine
         }
     }
 
+    template <typename T>
+    T& from_optional(std::optional<T>& opt)
+    {
+        assert(opt);
+
+        return *opt;
+    }
+
+    template <typename T>
+    MetaTypeID type_id_from_optional()
+    {
+        //return short_name_hash<T>();
+
+        auto type = resolve<T>();
+
+        if (!type)
+        {
+            return MetaTypeID(0);
+        }
+
+        return type.id();
+    }
+
+    template <typename T>
+    MetaType type_from_optional()
+    {
+        //return resolve(type_id_from_optional<T>());
+
+        return resolve<T>();
+    }
+
     // Retrieves a handle to the shared entt meta-context.
     entt::locator<entt::meta_ctx>::node_type get_shared_reflection_handle();
     
@@ -313,6 +344,36 @@ namespace engine
         auto type = entt::meta<T>()
             .type(short_name_hash<T>())
         ;
+
+        return type;
+    }
+
+    template <typename T>
+    auto optional_engine_meta_type()
+    {
+        auto opt_type = entt::meta<std::optional<T>>()
+            .type(optional_short_name_hash<T>())
+            //.template func<&from_optional<T>>("from_optional"_hs)
+            .template func<&type_id_from_optional<T>>("type_id_from_optional"_hs)
+            .template func<&type_from_optional<T>>("type_from_optional"_hs)
+
+            //.base<T>()
+            //.conv<T>()
+        ;
+
+        if constexpr (std::is_copy_constructible_v<T>)
+        {
+            opt_type = opt_type.ctor<T>(); // const T&
+        }
+
+        /*
+        if constexpr (std::is_move_constructible_v<T>)
+        {
+            opt_type = opt_type.ctor<T&&>();
+        }
+        */
+
+        return opt_type;
     }
 
     // Associates a stripped version of the type's name to its reflection metadata.
@@ -321,13 +382,15 @@ namespace engine
     // By default, `entt` uses a fully qualified name, along with a "struct" or "class" prefix, etc.
     // This allows you to simply refer to the type by its namespace-local name.
     template <typename T>
-    auto engine_meta_type(bool capture_standard_data_members=true)
+    auto engine_meta_type(bool capture_standard_data_members=true, bool generate_optional_reflection=true)
     {
         // Ensure that we're using the correct context.
         sync_reflection_context();
 
+        const auto type_id = short_name_hash<T>();
+
         auto type = entt::meta<T>()
-            .type(short_name_hash<T>())
+            .type(type_id)
 
             .template func<from_meta<T>>("from_meta"_hs)
             .template func<has_component<T>>("has_component"_hs)
@@ -345,6 +408,11 @@ namespace engine
             .template func<&MetaEventListener::disconnect_component_listeners<T>>("disconnect_component_meta_events"_hs)
             .template func<&trigger_event_from_meta_any<T>>("trigger_event_from_meta_any"_hs);
         ;
+
+        if (generate_optional_reflection)
+        {
+            optional_engine_meta_type<T>();
+        }
 
         if (!capture_standard_data_members)
         {

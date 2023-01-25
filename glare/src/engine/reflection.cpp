@@ -21,6 +21,9 @@
 
 #include <util/format.hpp>
 
+#include <utility>
+#include <optional>
+
 //#include <entt/meta/meta.hpp>
 //#include <entt/entt.hpp>
 
@@ -54,13 +57,40 @@ namespace engine
     }
     */
 
+    template <typename T>
+    auto reflect_math_type(auto type_name)
+    {
+        auto type = math::reflect<T>(hash(type_name));
+
+        auto opt_type = entt::meta<std::optional<T>>()
+            .type(hash(optional_name(type_name)))
+            //.template func<&from_optional<T>>("from_optional"_hs)
+            .template func<&type_id_from_optional<T>>("type_id_from_optional"_hs)
+            .template func<&type_from_optional<T>>("type_from_optional"_hs)
+        ;
+
+        if constexpr (std::is_copy_constructible_v<T>)
+        {
+            opt_type = opt_type.ctor<T>(); // const T&
+        }
+
+        /*
+        if constexpr (std::is_move_constructible_v<T>)
+        {
+            opt_type = opt_type.ctor<T&&>();
+        }
+        */
+
+        return type;
+    }
+
     // Reflects `math::Vector2D` with the generalized name of `Vector2D`.
     // 
     // TODO: Look into migrating this to another file/header.
     template <>
     void reflect<math::Vector2D>()
     {
-        math::reflect<math::Vector2D>("Vector2D"_hs);
+        reflect_math_type<math::Vector2D>("Vector2D");
     }
 
     // Reflects `math::Vector3D` with the generalized name of `Vector`.
@@ -69,7 +99,7 @@ namespace engine
     template <>
     void reflect<math::Vector3D>()
     {
-        math::reflect<math::Vector3D>("Vector"_hs); // "Vector3D"_hs
+        reflect_math_type<math::Vector3D>("Vector"); // "Vector3D"
     }
 
     // Reflects `math::Vector4D` with the generalized name of `Vector4D`.
@@ -78,7 +108,7 @@ namespace engine
     template <>
     void reflect<math::Vector4D>()
     {
-        math::reflect<math::Vector4D>("Vector4D"_hs);
+        reflect_math_type<math::Vector4D>("Vector4D");
     }
 
     // Reflects `math::vec2i` with the generalized name of `vec2i`.
@@ -87,7 +117,7 @@ namespace engine
     template <>
     void reflect<math::vec2i>()
     {
-        math::reflect<math::vec2i>("vec2i"_hs);
+        reflect_math_type<math::vec2i>("vec2i");
     }
 
     template <>
