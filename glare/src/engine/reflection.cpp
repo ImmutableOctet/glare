@@ -9,6 +9,7 @@
 #include "commands/reflection.hpp"
 
 #include "meta/reflection.hpp"
+#include "resource_manager/reflection.hpp"
 #include "entity/reflection.hpp"
 #include "debug/reflection.hpp"
 #include "input/reflection.hpp"
@@ -184,6 +185,9 @@ namespace engine
 
         reflect_core_components();
         reflect_core_commands();
+
+        reflect<ResourceManager>();
+
         reflect_systems();
 
         reflect<GraphicsConfig>();
