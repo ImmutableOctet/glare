@@ -14,5 +14,18 @@
 			"min_layers": 32,
 			"max_layers": 64
 		}
+	},
+
+	"players":
+	{
+		//"player": "default_player",
+
+		"character_path": "assets/characters",
+
+		"default_player":
+		{
+			"character": "glare",
+			"name": "Player"
+		}
 	}
 }
