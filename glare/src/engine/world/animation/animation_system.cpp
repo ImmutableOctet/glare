@@ -116,9 +116,6 @@ namespace engine
 
 	void AnimationSystem::on_update(World& world, float delta_time)
 	{
-		// Debugging related:
-		return;
-
 		auto& registry = world.get_registry();
 
 		// Apply motion (gravity, velocity, deceleration, etc.):
