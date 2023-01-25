@@ -392,9 +392,9 @@ namespace engine
         auto type = entt::meta<T>()
             .type(type_id)
 
-            .template func<from_meta<T>>("from_meta"_hs)
-            .template func<has_component<T>>("has_component"_hs)
-            .template func<get_component<T>>("get_component"_hs)
+            .template func<&from_meta<T>>("from_meta"_hs)
+            .template func<&has_component<T>>("has_component"_hs)
+            .template func<&get_component<T>>("get_component"_hs)
             .template func<&emplace_meta_component<T>, entt::as_ref_t>("emplace_meta_component"_hs)
             .template func<&store_meta_component<T>>("store_meta_component"_hs)
             .template func<&copy_meta_component<T>>("copy_meta_component"_hs)
@@ -406,7 +406,8 @@ namespace engine
             .template func<&MetaEventListener::disconnect<T>>("disconnect_meta_event"_hs)
 			.template func<&MetaEventListener::connect_component_listeners<T>>("connect_component_meta_events"_hs)
             .template func<&MetaEventListener::disconnect_component_listeners<T>>("disconnect_component_meta_events"_hs)
-            .template func<&trigger_event_from_meta_any<T>>("trigger_event_from_meta_any"_hs);
+            .template func<&trigger_event_from_meta_any<T>>("trigger_event_from_meta_any"_hs)
+            .template func<&short_name<T>>("get_type_name"_hs)
         ;
 
         if (generate_optional_reflection)
