@@ -32,5 +32,10 @@
 			"character": "glare",
 			"name": "Player"
 		}
+	},
+
+	"entity":
+	{
+		"archetype_path": "engine/archetypes"
 	}
 }
