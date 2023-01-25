@@ -16,7 +16,7 @@ namespace engine
 		: TransformViewData(registry, entity, registry.get_or_emplace<RelationshipComponent>(entity)) {}
 
 	TransformViewData::TransformViewData(Registry& registry, Entity entity, const RelationshipComponent& relationship)
-		: TransformViewData(registry, entity, relationship, registry.get<TransformComponent>(entity)) {}
+		: TransformViewData(registry, entity, relationship, registry.get_or_emplace<TransformComponent>(entity)) {} // get
 
 	TransformViewData::TransformViewData(Registry& registry, Entity entity, const RelationshipComponent& relationship, TransformComponent& transform)
 		: registry(registry), relationship(relationship), transform(transform), entity(entity) {}
