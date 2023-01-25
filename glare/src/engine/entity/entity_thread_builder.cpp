@@ -29,7 +29,7 @@ namespace engine
 	EntityThreadBuilderContext::EntityThreadBuilderContext
 	(
 		EntityDescriptor& descriptor,
-		EntityThreadDescription& thread,
+		ThreadDescriptor thread,
 		const EntityFactoryContext* opt_factory_context,
 		const std::filesystem::path* opt_base_path,
 		const ParsingContext* opt_parsing_context
@@ -43,7 +43,9 @@ namespace engine
 
 	EntityThreadIndex EntityThreadBuilderContext::thread_index() const
 	{
-		return descriptor.shared_storage.get_index_safe(thread);
+		//return descriptor.shared_storage.get_index_safe(thread);
+
+		return thread.get_index();
 	}
 
 	// EntityThreadBuilder:
@@ -60,7 +62,7 @@ namespace engine
 	EntityThreadBuilder::EntityThreadBuilder
 	(
 		EntityDescriptor& descriptor,
-		EntityThreadDescription& thread,
+		ThreadDescriptor thread,
 		std::string_view opt_thread_name,
 		const EntityFactoryContext* opt_factory_context,
 		const std::filesystem::path* opt_base_path,
@@ -92,7 +94,13 @@ namespace engine
 		: EntityThreadBuilder
 		(
 			descriptor,
-			descriptor.shared_storage.allocate<EntityThreadDescription>(),
+			
+			ThreadDescriptor
+			(
+				descriptor,
+				descriptor.shared_storage.allocate<EntityThreadDescription>()
+			),
+
 			opt_thread_name,
 			opt_factory_context,
 			opt_base_path,
@@ -104,6 +112,8 @@ namespace engine
 
 	std::optional<EntityThreadID> EntityThreadBuilder::set_thread_name(std::string_view thread_name, bool resolve_name, bool force)
 	{
+		auto& thread = get_thread();
+
 		if ((!force) && (thread.thread_id))
 		{
 			return std::nullopt; // thread.thread_id;
@@ -176,7 +186,7 @@ namespace engine
 
 	std::optional<EntityThreadID> EntityThreadBuilder::get_thread_name() const
 	{
-		return thread.thread_id;
+		return get_thread().thread_id;
 	}
 
 	bool EntityThreadBuilder::thread_has_name() const
@@ -186,7 +196,7 @@ namespace engine
 
 	EntityThreadBuilder::InstructionIndex EntityThreadBuilder::get_instruction_index()
 	{
-		return static_cast<InstructionIndex>(thread.instructions.size());
+		return static_cast<InstructionIndex>(get_thread().instructions.size());
 	};
 
 	EntityStateUpdateAction& EntityThreadBuilder::get_update_instruction(EntityTarget target)
@@ -496,7 +506,7 @@ namespace engine
 		return *this;
 	}
 
-	EntityThreadBuilderContext EntityThreadBuilder::sub_context(EntityThreadDescription& target_sub_thread) const
+	EntityThreadBuilderContext EntityThreadBuilder::sub_context(ThreadDescriptor target_sub_thread) const
 	{
 		return EntityThreadBuilderContext
 		{
@@ -510,7 +520,15 @@ namespace engine
 
 	EntityThreadBuilderContext EntityThreadBuilder::sub_context() const
 	{
-		return sub_context(descriptor.shared_storage.allocate<EntityThreadDescription>());
+		return sub_context
+		(
+			ThreadDescriptor
+			(
+				descriptor,
+
+				descriptor.shared_storage.allocate<EntityThreadDescription>()
+			)
+		);
 	}
 
 	EntityThreadBuilder EntityThreadBuilder::sub_thread(std::string_view thread_name)
