@@ -141,6 +141,14 @@ namespace engine
     }
 
     template <>
+    void reflect<ObjectConfig>()
+    {
+        engine_meta_type<ObjectConfig>()
+            .data<&ObjectConfig::object_path>("object_path"_hs)
+        ;
+    }
+
+    template <>
     void reflect<PlayerConfig>()
     {
         engine_meta_type<PlayerConfig>()
@@ -155,10 +163,19 @@ namespace engine
     }
 
     template <>
+    void reflect<EntityConfig>()
+    {
+        engine_meta_type<EntityConfig>()
+            .data<&EntityConfig::archetype_path>("archetype_path"_hs)
+        ;
+    }
+
+    template <>
     void reflect<Config>()
     {
         engine_meta_type<Config>()
             .data<&Config::graphics>("graphics"_hs)
+            .data<&Config::objects>("objects"_hs)
             .data<&Config::players>("players"_hs)
         ;
     }
@@ -221,7 +238,9 @@ namespace engine
         reflect_systems();
 
         reflect<GraphicsConfig>();
+        reflect<ObjectConfig>();
         reflect<PlayerConfig>();
+        reflect<EntityConfig>();
         reflect<Config>();
 
         // ...

@@ -343,12 +343,11 @@ namespace engine
 
 		auto& resource_manager = get_resource_manager();
 
+		auto& registry = world.get_registry();
+		const auto& config = world.get_config();
+
 		ForEach(data["players"], [&](const auto& player_cfg)
 		{
-			auto& registry = world.get_registry();
-
-			const auto& config = world.get_config();
-
 			auto& player_idx_counter = indices.players.player_idx_counter;
 			auto& player_objects = indices.players.player_objects;
 
@@ -364,7 +363,9 @@ namespace engine
 					{
 						.instance_path               = character_path,
 						.instance_directory          = character_directory,
-						.service_archetype_root_path = "archetypes/world"
+						.shared_directory            = config.players.character_path,
+						.service_archetype_root_path = (std::filesystem::path(config.entity.archetype_path) / "world"),
+						.archetype_root_path         = config.entity.archetype_path
 					}
 				},
 
@@ -419,6 +420,9 @@ namespace engine
 	{
 		auto& registry = world.get_registry();
 		auto& resource_manager = world.get_resource_manager();
+
+		const auto& config = world.get_config();
+
 		auto& obj_idx_counter = indices.objects.obj_idx_counter;
 		auto& objects = indices.objects.objects;
 		auto& player_objects = indices.players.player_objects;
@@ -454,7 +458,9 @@ namespace engine
 							{
 								.instance_path               = util::format("{}.json", obj_type),
 								.instance_directory          = root_path,
-								.service_archetype_root_path = "archetypes/world"
+								.shared_directory            = config.objects.object_path,
+								.service_archetype_root_path = (std::filesystem::path(config.entity.archetype_path) / "world"),
+								.archetype_root_path         = config.entity.archetype_path
 							}
 						},
 

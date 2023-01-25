@@ -26,6 +26,11 @@ namespace engine
 		Parallax parallax;
 	};
 
+	struct ObjectConfig
+	{
+		std::string object_path; // std::filesystem::path
+	};
+
 	// TODO: Refactor to support multiple (local) player definitions.
 	struct PlayerConfig
 	{
@@ -40,12 +45,21 @@ namespace engine
 		Player default_player;
 	};
 
+	struct EntityConfig
+	{
+		std::string archetype_path = "engine/archetypes"; // std::filesystem::path
+	};
+
 	struct Config
 	{
 		using Graphics = GraphicsConfig;
 		using Players  = PlayerConfig;
+		using Objects  = ObjectConfig;
+		using Entities = EntityConfig;
 
 		Graphics graphics;
-		Players   players;
+		Objects  objects;
+		Players  players;
+		Entities entity;
 	};
 }
