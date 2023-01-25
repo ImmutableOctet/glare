@@ -10,10 +10,6 @@ target_sources(
     "reflection.cpp"
     "world_system.cpp"
     "entity.cpp"
-    
-
-    # TODO: Remove/rework.
-    "player/player.cpp"
 
     # TODO: Remove/rework.
     "zones/zones.cpp"
