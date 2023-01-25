@@ -9,13 +9,20 @@ namespace engine
 	{
 		struct Paths
 		{
-			std::filesystem::path instance_path = {};
+			// The path used to build this factory.
+			std::filesystem::path instance_path            = {};
 
-			// The local root directory for instances created with this factory.
-			std::filesystem::path instance_directory = {};
+			// The root directory for instances created with this factory. (Directory of `instance_path`)
+			std::filesystem::path instance_directory          = {};
 
+			// An optional shared directory to look for missing files.
+			std::filesystem::path shared_directory            = {};
+
+			// The root directory for the type of service this entity is constructed for.
 			std::filesystem::path service_archetype_root_path = {};
-			std::filesystem::path archetype_root_path = "archetypes"; // "engine/archetypes";
+
+			// The root directory for archetypes.
+			std::filesystem::path archetype_root_path         = "engine/archetypes";
 		};
 
 		Paths paths;
