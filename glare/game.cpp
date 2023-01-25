@@ -612,7 +612,7 @@ namespace glare
 int main(int argc, char** argv)
 {
 	util::log::init();
-	
+
 	auto application = glare::Glare();
 	application.execute();
 

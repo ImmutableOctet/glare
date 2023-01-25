@@ -4,11 +4,23 @@
 		"actor"
 	],
 
-	"components":
+	"TypeComponent": "EntityType::Player",
+
+	"MotionComponent": {},
+
+	"AlignmentComponent" : "child(player_model)",
+
+	"CollisionComponent":
 	{
-		"TypeComponent": "EntityType::Player",
-		"MotionComponent": {},
-		"AlignmentComponent" : "child(player_model)"
+		"shape:CollisionShapeDescription":
+		{
+			"primitive": "CollisionShapePrimitive::Capsule",
+			
+			"radius": 1.5,
+			"height": 6.25
+		},
+
+		"entity_type": "EntityType::Player"
 	},
 
 	"states":
