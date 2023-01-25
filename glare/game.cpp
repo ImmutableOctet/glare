@@ -426,8 +426,6 @@ namespace glare
 
 	void Glare::render_debug_controls()
 	{
-		using namespace engine::meta;
-
 		if (!imgui_enabled())
 			return;
 
@@ -440,10 +438,10 @@ namespace glare
 
 			auto target = player_model;
 
-			animation_control(world, target);
+			engine::animation_control(world, target);
 		}
 
-		hierarchy_control(world, world.get_root());
+		engine::hierarchy_control(world, world.get_root());
 	}
 
 	// Subroutine of `render_debug_controls`.

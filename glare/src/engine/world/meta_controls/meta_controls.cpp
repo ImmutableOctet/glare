@@ -20,7 +20,7 @@
 #include <optional>
 #include <string_view>
 
-// imgui extensions:
+// ImGui extensions:
 namespace ImGui
 {
 	template <typename ...Args>
@@ -30,7 +30,7 @@ namespace ImGui
 	}
 }
 
-namespace engine::meta
+namespace engine
 {
 	namespace display
 	{

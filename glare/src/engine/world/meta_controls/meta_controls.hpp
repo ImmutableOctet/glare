@@ -5,20 +5,17 @@
 
 #include <string>
 
-namespace engine
-{
-	struct RelationshipComponent;
-	struct Transform;
-	struct Animator;
-}
-
 namespace graphics
 {
 	struct Animation;
 }
 
-namespace engine::meta
+namespace engine
 {
+	struct RelationshipComponent;
+	struct Transform;
+	struct Animator;
+
 	namespace display
 	{
 		struct empty_child_display { void operator()(World& world, Entity child, const RelationshipComponent& relationship) {} };
