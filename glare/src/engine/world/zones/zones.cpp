@@ -47,11 +47,11 @@ namespace engine
 		auto half_extents = (extents / 2.0f);
 
 		//auto collision_data = resources.generate_cube_collision(half_extents);
-		auto collision_data = resources.generate_sphere_collision(glm::length(half_extents));
+		//auto collision_data = resources.generate_sphere_collision(glm::length(half_extents));
 
-		assert(collision_data.has_shape());
+		//assert(collision_data.has_shape());
 
-		attach_collision(world, entity, collision_data.collision_shape, CollisionConfig(type));
+		//attach_collision(world, entity, collision_data.collision_shape, CollisionConfig(type));
 
 		//registry.emplace_or_replace<>(entity);
 

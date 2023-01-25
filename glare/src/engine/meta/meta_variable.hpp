@@ -9,6 +9,8 @@
 
 namespace engine
 {
+	struct ParsingContext;
+
 	// Wrapper type around a name + meta_any value; used to represent a definition of a variable.
 	struct MetaVariable
 	{
@@ -19,20 +21,20 @@ namespace engine
 		
 		// NOTE: This overload does not allow for non-primitive type resolution.
 		// (see overload taking `type_id`)
-		MetaVariable(MetaSymbolID name, const util::json& value, const Instructions& instructions={});
+		MetaVariable(MetaSymbolID name, const util::json& value, const Instructions& instructions={}, const ParsingContext* opt_parsing_context=nullptr);
 
-		MetaVariable(MetaSymbolID name, const util::json& value, MetaType type, const Instructions& instructions={});
-		MetaVariable(MetaSymbolID name, const util::json& value, MetaTypeID type_id, const Instructions& instructions={});
+		MetaVariable(MetaSymbolID name, const util::json& value, MetaType type, const Instructions& instructions={}, const ParsingContext* opt_parsing_context=nullptr);
+		MetaVariable(MetaSymbolID name, const util::json& value, MetaTypeID type_id, const Instructions& instructions={}, const ParsingContext* opt_parsing_context=nullptr);
 
 		// Utility overload that automates hash generation of `name`.
 		// (see notes on primitive type limitations)
-		MetaVariable(std::string_view name, const util::json& value, const Instructions& instructions={});
+		MetaVariable(std::string_view name, const util::json& value, const Instructions& instructions={}, const ParsingContext* opt_parsing_context=nullptr);
 
 		// Utility overload that automates hash generation of `name`.
-		MetaVariable(std::string_view name, const util::json& value, MetaTypeID type_id, const Instructions& instructions={});
+		MetaVariable(std::string_view name, const util::json& value, MetaTypeID type_id, const Instructions& instructions={}, const ParsingContext* opt_parsing_context=nullptr);
 
 		// Utility overload that automates hash generation of `name`.
-		MetaVariable(std::string_view name, const util::json& value, MetaType type, const Instructions& instructions={});
+		MetaVariable(std::string_view name, const util::json& value, MetaType type, const Instructions& instructions={}, const ParsingContext* opt_parsing_context=nullptr);
 
 		MetaVariable(const MetaVariable&) = default;
 		MetaVariable(MetaVariable&&) noexcept = default;

@@ -7,7 +7,7 @@ include(Catch)
 
 # ---- Tests ----
 
-add_executable(glare_test "src/engine/entity/serial.cpp" "src/engine/meta/meta.cpp" "src/util/string.cpp") # "src/util/parse.cpp"
+add_executable(glare_test "src/engine/entity/serial.cpp" "src/engine/meta/meta.cpp" "src/util/string.cpp" "src/engine/meta/serial.cpp") # "src/util/parse.cpp"
 
 target_compile_features(glare_test PRIVATE cxx_std_23)
 

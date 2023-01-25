@@ -4,10 +4,23 @@
 		"actor"
 	],
 
-	"components":
+	"TypeComponent": "EntityType::Player",
+
+	"MotionComponent": {},
+
+	"AlignmentComponent" : "child(player_model)",
+
+	"CollisionComponent":
 	{
-		"NameComponent": "Player",
-		"TypeComponent": "EntityType::Player"
+		"shape:CollisionShapeDescription":
+		{
+			"primitive": "CollisionShapePrimitive::Capsule",
+			
+			"radius": 1.5,
+			"height": 6.25
+		},
+
+		"entity_type": "EntityType::Player"
 	},
 
 	"states":
@@ -18,28 +31,6 @@
 		//"on_ground/player_heavy_attack",
 		//"on_ground/player_shield"
 	],
-
-	"do":
-	{
-		"player_start_thread":
-		[
-			"print(Player entity created)",
-			"start(continuous_print)"
-		],
-
-		"continuous_print":
-		[
-			"wait(OnButtonPressed)",
-			
-			[
-				"print(Still running...)",
-				"print(The button you pressed was:)",
-				"print(OnButtonPressed::button)"
-			],
-
-			"restart()"
-		]
-	},
 
 	"default_state": "player_common",
 

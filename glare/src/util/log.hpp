@@ -36,6 +36,11 @@ namespace util
         template <typename ...Args>
         inline Logger print(fmt::format_string<Args...> fmt, Args &&...args)
         {
+            if (!console)
+            {
+                return {};
+            }
+
             console->info(fmt, std::forward<Args>(args)...);
 
             return console;
@@ -44,6 +49,11 @@ namespace util
         template <typename T>
         inline Logger print(const T& msg)
         {
+            if (!console)
+            {
+                return {};
+            }
+
             console->info(msg);
 
             return console;
@@ -52,6 +62,11 @@ namespace util
         template <typename ...Args>
         inline Logger print_warn(fmt::format_string<Args...> fmt, Args &&...args)
         {
+            if (!console)
+            {
+                return {};
+            }
+
             console->warn(fmt, std::forward<Args>(args)...);
 
             return console;
@@ -60,6 +75,11 @@ namespace util
         template <typename T>
         inline Logger print_warn(const T& msg)
         {
+            if (!console)
+            {
+                return {};
+            }
+
             console->warn(msg);
 
             return console;
@@ -68,6 +88,11 @@ namespace util
         template <typename ...Args>
         inline Logger print_error(fmt::format_string<Args...> fmt, Args &&...args)
         {
+            if (!console)
+            {
+                return {};
+            }
+
             console->error(fmt, std::forward<Args>(args)...);
 
             return console;
@@ -76,6 +101,11 @@ namespace util
         template <typename T>
         inline Logger print_error(const T& msg)
         {
+            if (!console)
+            {
+                return {};
+            }
+
             console->error(msg);
 
             return console;

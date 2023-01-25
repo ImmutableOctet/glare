@@ -40,7 +40,13 @@ namespace engine
 {
 	class ResourceManager;
 	class Config;
+
 	struct CollisionComponent;
+
+	struct LightComponent;
+	struct DirectionalLightComponent;
+	struct PointLightComponent;
+	struct SpotLightComponent;
 
 	struct OnTransformChanged;
 	struct OnEntityDestroyed;
@@ -50,6 +56,13 @@ namespace engine
 		public:
 			using UpdateRate = app::DeltaTime::Rate;
 		protected:
+			// Ensure the relevant light (sub)-component is associated to `entity`.
+			// The return value is an opaque pointer to the component associated with `type`.
+			static void* ensure_light_sub_component(Registry& registry, Entity entity, LightType type);
+
+			// Removes all light components except for the component-type associated with `except_type` (if specified).
+			static std::size_t remove_light_sub_components(Registry& registry, Entity entity, std::optional<LightType> except_type=std::nullopt);
+
 			Config& config;
 			ResourceManager& resource_manager;
 			
@@ -252,6 +265,43 @@ namespace engine
 			{
 				defer(std::forward<fn_t>(f), this, std::forward<arguments>(args)...);
 			}
+		protected:
+			// Enforces explicit light-type rules, as well as handling shadow sub-components.
+			// (i.e. only one sub-component at a time unless `light_comp.type` == `LightType::Any`)
+			// 
+			// The return-value indicates how many light sub-components were removed, if any.
+			std::size_t update_light_type(Entity entity, LightType light_type);
+
+			// Explicit overload. (Allows user to specify `LightComponent` instance)
+			std::size_t update_light_type(Entity entity, LightType light_type, LightComponent& light_comp);
+
+			bool has_light_shadow_sub_components(Entity entity) const;
+
+			// Attempts to attach shadows to `entity` for the `light_type` specified.
+			bool attach_shadows(Entity entity, LightType light_type);
+
+			// Attempts to attach shadows to `entity` for
+			// each light sub-component currently attached.
+			bool attach_shadows(Entity entity);
+
+			void on_instance(Registry& registry, Entity entity);
+
+			void on_light_init(Registry& registry, Entity entity);
+			void on_light_update(Registry& registry, Entity entity);
+			void on_light_destroyed(Registry& registry, Entity entity);
+
+			void on_directional_light_init(Registry& registry, Entity entity);
+			void on_directional_light_update(Registry& registry, Entity entity);
+			void on_directional_light_destroyed(Registry& registry, Entity entity);
+
+			void on_point_light_init(Registry& registry, Entity entity);
+			void on_point_light_update(Registry& registry, Entity entity);
+			void on_point_light_destroyed(Registry& registry, Entity entity);
+
+			void on_spot_light_init(Registry& registry, Entity entity);
+			void on_spot_light_update(Registry& registry, Entity entity);
+			void on_spot_light_destroyed(Registry& registry, Entity entity);
+
 		private:
 			CollisionComponent* get_collision_component(Entity entity);
 

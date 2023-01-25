@@ -7,7 +7,6 @@
 #include <math/math.hpp>
 
 #include <engine/engine.hpp>
-#include <engine/world/debug/debug.hpp>
 
 #include <graphics/mesh.hpp>
 #include <graphics/texture.hpp>

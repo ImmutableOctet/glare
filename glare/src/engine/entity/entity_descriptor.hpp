@@ -3,9 +3,14 @@
 #include "types.hpp"
 #include "entity_state.hpp"
 #include "entity_thread_description.hpp"
+#include "entity_thread_range.hpp"
 
 #include <engine/meta/meta_description.hpp>
 #include <engine/meta/meta_type_descriptor.hpp>
+
+#include <engine/world/physics/collision_config.hpp>
+
+#include <math/types.hpp>
 
 #include <optional>
 #include <memory>
@@ -27,12 +32,7 @@ namespace engine
 			using StateCollection = util::small_vector<std::unique_ptr<EntityState>, 16>; // util::small_vector<EntityState, 4>; // std::shared_ptr<...>;
 
 			using ThreadCount = EntityThreadCount; // std::uint16_t; // std::uint8_t
-
-			// Statically assigned components.
-			MetaDescription components;
-
-			// Dynamic component permutations, applied as state changes.
-			StateCollection states;
+			using ImmediateThreadDetails = EntityThreadRange;
 
 			using SharedStorage = util::SharedStorage
 			<
@@ -40,6 +40,35 @@ namespace engine
 				EventTriggerCondition,
 				EntityThreadDescription
 			>;
+
+			// TODO: Look into separating this from the `EntityDescriptor` type.
+			struct ModelDetails
+			{
+				using Path = std::string; // std::filesystem::path;
+
+				Path path;
+
+				std::optional<math::Vector> offset = {};
+
+				std::optional<CollisionConfig> collision_cfg;
+
+				bool allow_multiple = true;
+
+				inline explicit operator bool() const
+				{
+					return !path.empty();
+				}
+			};
+
+			// Statically assigned components.
+			MetaDescription components;
+
+			// Dynamic component permutations, applied as state changes.
+			StateCollection states;
+
+			util::small_vector<ImmediateThreadDetails, 1> immediate_threads; // 2
+
+			ModelDetails model_details;
 
 			SharedStorage shared_storage;
 

@@ -3,12 +3,14 @@
 #include "types.hpp"
 #include "meta_data_member.hpp"
 #include "indirect_meta_data_member.hpp"
-#include "command_parsing_context.hpp"
+#include "meta_type_descriptor_flags.hpp"
 
 #include <engine/entity/entity_target.hpp>
 
 // TODO: Forward declare `util::json`, etc.
 #include <util/json.hpp>
+
+#include <util/format.hpp>
 
 #include <entt/meta/meta.hpp>
 //#include <entt/entt.hpp>
@@ -17,15 +19,19 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <filesystem>
+#include <stdexcept>
 #include <tuple>
 
 namespace engine
 {
+	struct ParsingContext;
+
 	// JSON-shorthand overload for string-to-any resolution function.
-	entt::meta_any meta_any_from_string(const util::json& value, const MetaAnyParseInstructions& instructions={});
+	MetaAny meta_any_from_string(const util::json& value, const MetaAnyParseInstructions& instructions={}, MetaType type={});
 
 	// Attempts to resolve a native value from a raw string value, using reflection.
-	entt::meta_any meta_any_from_string(std::string_view value, const MetaAnyParseInstructions& instructions={});
+	MetaAny meta_any_from_string(std::string_view value, const MetaAnyParseInstructions& instructions={}, MetaType type={});
 
 	// Attempts to resolve the value indicated by `string_reference` as a string.
 	// 
@@ -33,12 +39,12 @@ namespace engine
 	// If the value is not a string, `non_string_callback` will be called instead.
 	// 
 	// NOTE: Although the return value of `string_callback` is ignored, the return-value of
-	// `non_string_callback` is used to determine if the `entt::meta_any` instance
+	// `non_string_callback` is used to determine if the `MetaAny` instance
 	// retrieved should be returned back to the initial caller.
 	template <typename StringCallback, typename NonStringCallback>
-	inline entt::meta_any peek_string_value(std::string_view string_reference, StringCallback&& string_callback, NonStringCallback&& non_string_callback, const MetaAnyParseInstructions& instructions={}) // { .fallback_to_string=true }
+	inline MetaAny peek_string_value(std::string_view string_reference, StringCallback&& string_callback, NonStringCallback&& non_string_callback, const MetaAnyParseInstructions& instructions={}, MetaType type={}) // { .fallback_to_string=true }
 	{
-		const auto resolved_value = meta_any_from_string(string_reference, instructions);
+		const auto resolved_value = meta_any_from_string(string_reference, instructions, type);
 
 		if (!resolved_value)
 		{
@@ -72,7 +78,7 @@ namespace engine
 			string_reference,
 			std::forward<Callback>(callback),
 			
-			[](const entt::meta_any& non_string_value)
+			[](const MetaAny& non_string_value)
 			{
 				return false;
 			},
@@ -83,12 +89,30 @@ namespace engine
 		return static_cast<bool>(result);
 	}
 
-	entt::meta_any resolve_meta_any(const util::json& value, MetaTypeID type_id, const MetaAnyParseInstructions& instructions={});
-	entt::meta_any resolve_meta_any(const util::json& value, MetaType type, const MetaAnyParseInstructions& instructions={});
+	MetaAny resolve_meta_any
+	(
+		const util::json& value,
+		MetaTypeID type_id,
+		const MetaAnyParseInstructions& instructions={},
+		const ParsingContext* opt_parsing_context=nullptr
+	);
+
+	MetaAny resolve_meta_any
+	(
+		const util::json& value,
+		MetaType type,
+		const MetaAnyParseInstructions& instructions={},
+		const ParsingContext* opt_parsing_context=nullptr
+	);
 
 	// NOTE: This overload cannot handle non-primitive values.
 	// (see overload taking a native-type identifier)
-	entt::meta_any resolve_meta_any(const util::json& value, const MetaAnyParseInstructions& instructions={});
+	MetaAny resolve_meta_any
+	(
+		const util::json& value,
+		const MetaAnyParseInstructions& instructions={},
+		const ParsingContext* opt_parsing_context=nullptr
+	);
 
 	// Attempts to resolve a `MetaDataMember` from `value`.
 	// NOTE: Does not support indirection. (i.e. other entities from the initial source)
@@ -110,5 +134,227 @@ namespace engine
 
 	EntityTarget::TargetType parse_target_type(const util::json& target_data);
 
-	void read_command_parsing_context(CommandParsingContext& context, const util::json& data);
+	void read_parsing_context(ParsingContext& context, const util::json& data);
+
+	MetaAny load
+	(
+		MetaAny out,
+		
+		const util::json& data,
+		bool use_assignment=true,
+
+		const MetaAnyParseInstructions& parse_instructions={},
+		const MetaTypeDescriptorFlags& descriptor_flags={},
+		const ParsingContext* opt_parsing_context=nullptr
+	);
+
+	MetaAny load
+	(
+		MetaType type,
+		const util::json& data,
+
+		const MetaAnyParseInstructions& parse_instructions={},
+		const MetaTypeDescriptorFlags& descriptor_flags={},
+		const ParsingContext* opt_parsing_context=nullptr
+	);
+
+	template <typename T>
+	void load
+	(
+		T& out,
+		
+		const util::json& data,
+		bool use_assignment=true,
+
+		const MetaAnyParseInstructions& parse_instructions={},
+		const MetaTypeDescriptorFlags& descriptor_flags={},
+		const ParsingContext* opt_parsing_context=nullptr,
+
+		bool fallback_to_default_construction=std::is_default_constructible_v<T>
+	)
+	{
+		auto instance = load
+		(
+			entt::forward_as_meta(out),
+			
+			data,
+
+			use_assignment,
+
+			parse_instructions,
+			descriptor_flags,
+			opt_parsing_context
+		);
+
+		if (use_assignment)
+		{
+			return;
+		}
+
+		if (!instance)
+		{
+			if (fallback_to_default_construction)
+			{
+				if constexpr (std::is_default_constructible_v<T> && (std::is_move_assignable_v<T> || std::is_copy_assignable_v<T>))
+				{
+					out = T{};
+				}
+			}
+
+			throw std::runtime_error(util::format("Unable to deserialize object of type: #{}", resolve<T>().id()));
+		}
+
+		auto raw_instance_ptr = instance.try_cast<T>();
+
+		if ((!raw_instance_ptr) && fallback_to_default_construction)
+		{
+			if constexpr (std::is_default_constructible_v<T> && (std::is_move_assignable_v<T> || std::is_copy_assignable_v<T>))
+			{
+				out = T {};
+			}
+
+			return;
+		}
+
+		assert(raw_instance_ptr);
+
+		if constexpr (std::is_move_assignable_v<T>)
+		{
+			out = std::move(*raw_instance_ptr);
+		}
+		else if constexpr (std::is_copy_assignable_v<T>)
+		{
+			out = *raw_instance_ptr;
+		}
+	}
+
+	template <typename T>
+	T load
+	(
+		const util::json& data,
+
+		const MetaAnyParseInstructions& parse_instructions={},
+		const MetaTypeDescriptorFlags& descriptor_flags={},
+		const ParsingContext* opt_parsing_context=nullptr,
+
+		bool fallback_to_default_construction=std::is_default_constructible_v<T>
+	)
+	{
+		auto type = resolve<T>();
+
+		assert(type);
+
+		auto instance = load
+		(
+			type,
+			data,
+
+			parse_instructions,
+			descriptor_flags,
+			opt_parsing_context
+		);
+
+		if (!instance)
+		{
+			if (fallback_to_default_construction)
+			{
+				if constexpr (std::is_default_constructible_v<T>)
+				{
+					return T {};
+				}
+			}
+
+			throw std::runtime_error(util::format("Unable to deserialize object of type: #{}", type.id()));
+		}
+
+		auto raw_instance_ptr = instance.try_cast<T>();
+
+		if ((!raw_instance_ptr) && fallback_to_default_construction)
+		{
+			return T{};
+		}
+
+		assert(raw_instance_ptr);
+
+		return T(std::move(*raw_instance_ptr));
+	}
+
+	template <typename T>
+	void load
+	(
+		T& out,
+		
+		const std::filesystem::path& path,
+		bool use_assignment=true,
+
+		const MetaAnyParseInstructions& parse_instructions={},
+		const MetaTypeDescriptorFlags& descriptor_flags={},
+		const ParsingContext* opt_parsing_context=nullptr,
+
+		bool fallback_to_default_construction=std::is_default_constructible_v<T>
+	)
+	{
+		load<T>
+		(
+			out,
+
+			util::load_json(path),
+			
+			use_assignment,
+
+			parse_instructions,
+			descriptor_flags,
+			opt_parsing_context,
+
+			fallback_to_default_construction
+		);
+	}
+
+	template <typename T>
+	T load
+	(
+		const std::filesystem::path& path,
+
+		const MetaAnyParseInstructions& parse_instructions={},
+		const MetaTypeDescriptorFlags& descriptor_flags={},
+		const ParsingContext* opt_parsing_context=nullptr,
+
+		bool fallback_to_default_construction=std::is_default_constructible_v<T>
+	)
+	{
+		return load<T>
+		(
+			util::load_json(path),
+
+			parse_instructions,
+			descriptor_flags,
+			opt_parsing_context,
+
+			fallback_to_default_construction
+		);
+	}
+
+	template <typename T>
+	T load
+	(
+		std::string_view path,
+
+		const MetaAnyParseInstructions& parse_instructions={},
+		const MetaTypeDescriptorFlags& descriptor_flags={},
+		const ParsingContext* opt_parsing_context=nullptr,
+
+		bool fallback_to_default_construction=std::is_default_constructible_v<T>
+	)
+	{
+		return load<T>
+		(
+			std::filesystem::path(path),
+
+			parse_instructions,
+			descriptor_flags,
+			opt_parsing_context,
+
+			fallback_to_default_construction
+		);
+	}
 }

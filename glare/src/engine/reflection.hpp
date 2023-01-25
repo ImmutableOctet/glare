@@ -125,7 +125,7 @@ namespace engine
     }
 
     template <typename T>
-    T& emplace_meta_component(Registry& registry, Entity entity, entt::meta_any value)
+    T& emplace_meta_component(Registry& registry, Entity entity, entt::meta_any& value)
     {
         if (auto raw_value = from_meta<T>(value))
         {
@@ -152,7 +152,7 @@ namespace engine
     }
 
     template <typename T>
-    T& get_or_emplace_component(Registry& registry, Entity entity, entt::meta_any value)
+    T& get_or_emplace_component(Registry& registry, Entity entity, entt::meta_any& value)
     {
         if (auto raw_value = from_meta<T>(value))
         {
@@ -232,9 +232,9 @@ namespace engine
     {
         assert
         (
-            (descriptor.type_id == short_name_hash<T>().value())
+            (descriptor.get_type_id() == short_name_hash<T>().value())
             ||
-            (descriptor.type_id == entt::type_hash<T>::value())
+            (descriptor.get_type_id() == entt::type_hash<T>::value())
         );
 
         // Ensure `T` is currently a component of `entity`.
@@ -255,6 +255,13 @@ namespace engine
         return count;
     }
 
+    // Notifies listeners that a component of type `T` has been patched.
+    template <typename T>
+    void mark_component_as_patched(Registry& registry, Entity entity)
+    {
+        registry.patch<T>(entity);
+    }
+
     template <typename EventType>
     void trigger_event_from_meta_any(Service& service, entt::meta_any event_instance)
     {
@@ -266,6 +273,37 @@ namespace engine
         {
             //throw std::exception("Invalid value specified; unable to trigger event.");
         }
+    }
+
+    template <typename T>
+    T& from_optional(std::optional<T>& opt)
+    {
+        assert(opt);
+
+        return *opt;
+    }
+
+    template <typename T>
+    MetaTypeID type_id_from_optional()
+    {
+        //return short_name_hash<T>();
+
+        auto type = resolve<T>();
+
+        if (!type)
+        {
+            return MetaTypeID(0);
+        }
+
+        return type.id();
+    }
+
+    template <typename T>
+    MetaType type_from_optional()
+    {
+        //return resolve(type_id_from_optional<T>());
+
+        return resolve<T>();
     }
 
     // Retrieves a handle to the shared entt meta-context.
@@ -297,19 +335,62 @@ namespace engine
         return is_synchronized;
     }
 
-    // Associates a stripped version of the type's name to its reflection metadata.
-    // Allows use of `T` without specifying `engine::T` in contexts where `T` is named dynamically. (e.g. JSON I/O)
-    // 
-    // By default, `entt` uses a fully qualified name, along with a "struct" or "class" prefix, etc.
-    // This allows you to simply refer to the type by its namespace-local name.
     template <typename T>
-    auto engine_meta_type(bool capture_standard_data_members=true)
+    auto engine_empty_meta_type()
     {
         // Ensure that we're using the correct context.
         sync_reflection_context();
 
         auto type = entt::meta<T>()
             .type(short_name_hash<T>())
+        ;
+
+        return type;
+    }
+
+    template <typename T>
+    auto optional_engine_meta_type()
+    {
+        auto opt_type = entt::meta<std::optional<T>>()
+            .type(optional_short_name_hash<T>())
+            //.template func<&from_optional<T>>("from_optional"_hs)
+            .template func<&type_id_from_optional<T>>("type_id_from_optional"_hs)
+            .template func<&type_from_optional<T>>("type_from_optional"_hs)
+
+            //.base<T>()
+            //.conv<T>()
+        ;
+
+        if constexpr (std::is_copy_constructible_v<T>)
+        {
+            opt_type = opt_type.ctor<T>(); // const T&
+        }
+
+        /*
+        if constexpr (std::is_move_constructible_v<T>)
+        {
+            opt_type = opt_type.ctor<T&&>();
+        }
+        */
+
+        return opt_type;
+    }
+
+    // Associates a stripped version of the type's name to its reflection metadata.
+    // Allows use of `T` without specifying `engine::T` in contexts where `T` is named dynamically. (e.g. JSON I/O)
+    // 
+    // By default, `entt` uses a fully qualified name, along with a "struct" or "class" prefix, etc.
+    // This allows you to simply refer to the type by its namespace-local name.
+    template <typename T>
+    auto engine_meta_type(bool capture_standard_data_members=true, bool generate_optional_reflection=true)
+    {
+        // Ensure that we're using the correct context.
+        sync_reflection_context();
+
+        const auto type_id = short_name_hash<T>();
+
+        auto type = entt::meta<T>()
+            .type(type_id)
 
             .template func<from_meta<T>>("from_meta"_hs)
             .template func<has_component<T>>("has_component"_hs)
@@ -320,12 +401,18 @@ namespace engine
             .template func<&remove_component<T>>("remove_component"_hs)
             .template func<&get_or_emplace_component<T>, entt::as_ref_t>("get_or_emplace_component"_hs)
             .template func<&patch_meta_component<T>>("patch_meta_component"_hs)
+            .template func<&mark_component_as_patched<T>>("mark_component_as_patched"_hs)
             .template func<&MetaEventListener::connect<T>>("connect_meta_event"_hs)
             .template func<&MetaEventListener::disconnect<T>>("disconnect_meta_event"_hs)
 			.template func<&MetaEventListener::connect_component_listeners<T>>("connect_component_meta_events"_hs)
             .template func<&MetaEventListener::disconnect_component_listeners<T>>("disconnect_component_meta_events"_hs)
             .template func<&trigger_event_from_meta_any<T>>("trigger_event_from_meta_any"_hs);
         ;
+
+        if (generate_optional_reflection)
+        {
+            optional_engine_meta_type<T>();
+        }
 
         if (!capture_standard_data_members)
         {

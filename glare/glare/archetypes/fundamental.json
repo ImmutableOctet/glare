@@ -1,7 +1,7 @@
 {
 	"components":
 	{
-		"NameComponent": "Unknown",
+		//"NameComponent": "Unknown",
 		"TypeComponent": "EntityType::Default"
 	}
 }

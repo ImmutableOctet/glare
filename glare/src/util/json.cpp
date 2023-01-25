@@ -27,25 +27,6 @@ namespace util
 		}
 	}
 
-	math::TransformVectors get_transform(const json& data)
-	{
-		auto position = get_vector(data, "position");
-		auto rotation = math::radians(get_vector(data, "rotation"));
-		auto scale = get_vector(data, "scale", { 1.0f, 1.0f, 1.0f });
-
-		return { position, rotation, scale };
-	}
-
-	math::Vector3D to_vector(const json& j)
-	{
-		return { j["x"].get<float>(), j["y"].get<float>(), j["z"].get<float>() };
-	}
-
-	math::vec2i to_vec2i(const json& j)
-	{
-		return { j["x"].get<int>(), j["y"].get<int>() };
-	}
-
 	graphics::ColorRGBA to_color(const json& j, float default_alpha)
 	{
 		return

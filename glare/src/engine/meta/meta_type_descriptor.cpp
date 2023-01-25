@@ -1,6 +1,9 @@
 #include "meta_type_descriptor.hpp"
 #include "meta.hpp"
 #include "serial.hpp"
+#include "parsing_context.hpp"
+
+#include <engine/entity/entity_target.hpp>
 
 #include <string_view>
 #include <string>
@@ -15,6 +18,57 @@ namespace engine
 	MetaType MetaTypeDescriptor::get_self_type()
 	{
 		return resolve<MetaTypeDescriptor>();
+	}
+
+	MetaType MetaTypeDescriptor::resolve_type(MetaType type, const Flags& flags)
+	{
+		using namespace entt::literals;
+
+		if (!type)
+		{
+			return type; // {};
+		}
+
+		if (flags.allow_type_aliasing)
+		{
+			if (auto real_type_fn = type.func("type_from_optional"_hs))
+			{
+				if (auto real_type_opaque = real_type_fn.invoke({}))
+				{
+					if (auto real_type = real_type_opaque.try_cast<MetaType>())
+					{
+						// NOTE: Recursion.
+						if (auto real_type_out = resolve_type(*real_type, flags))
+						{
+							return real_type_out;
+						}
+					}
+				}
+			}
+		}
+
+		return type;
+	}
+
+	MetaTypeID MetaTypeDescriptor::resolve_type_id(MetaTypeID type_id, const Flags& flags)
+	{
+		if (type_id == static_cast<MetaTypeID>(0))
+		{
+			return type_id; // 0;
+		}
+
+		if (flags.allow_type_aliasing)
+		{
+			if (auto initial_type = engine::resolve(type_id))
+			{
+				if (auto resolved_type = resolve_type(initial_type, flags))
+				{
+					return resolved_type.id();
+				}
+			}
+		}
+
+		return type_id;
 	}
 
 	std::tuple<std::string_view, std::string_view>
@@ -35,14 +89,23 @@ namespace engine
 			(var_decl.length() - symbol_position)
 		);
 
+		var_name = util::trim(var_name);
+		var_type = util::trim(var_type);
+
 		return { var_name, var_type };
 	}
 
+	std::optional<std::pair<entt::id_type, entt::meta_data>>
+	MetaTypeDescriptor::get_data_member_by_index(const entt::meta_type& type, std::size_t variable_index, bool recursive)
+	{
+		return engine::get_data_member_by_index(type, variable_index, recursive);
+	}
+
 	MetaTypeDescriptor::MetaTypeDescriptor(MetaType type, std::optional<SmallSize> constructor_argument_count, const MetaTypeDescriptorFlags& flags)
-		: type_id(type.id()), constructor_argument_count(constructor_argument_count), flags(flags) {}
+		: type_id(resolve_type(type, flags).id()), constructor_argument_count(constructor_argument_count), flags(flags) {}
 
 	MetaTypeDescriptor::MetaTypeDescriptor(MetaTypeID type_id, std::optional<SmallSize> constructor_argument_count, const MetaTypeDescriptorFlags& flags)
-		: type_id(type_id), constructor_argument_count(constructor_argument_count), flags(flags) {}
+		: type_id(resolve_type_id(type_id, flags)), constructor_argument_count(constructor_argument_count), flags(flags) {}
 
 	MetaTypeDescriptor::MetaTypeDescriptor
 	(
@@ -57,13 +120,13 @@ namespace engine
 		std::optional<SmallSize> constructor_argument_count,
 		const MetaTypeDescriptorFlags& flags
 	) :
-		type_id(type.id()),
+		type_id(resolve_type(type, flags).id()),
 		constructor_argument_count(constructor_argument_count),
 		flags(flags)
 	{
 		assert(type);
 
-		set_variables(content, instructions, arg_separator, argument_offset);
+		set_variables(content, instructions, arg_separator, argument_offset, true); // false
 	}
 
 	MetaTypeDescriptor::MetaTypeDescriptor
@@ -74,15 +137,42 @@ namespace engine
 		const MetaAnyParseInstructions& instructions,
 
 		std::optional<SmallSize> constructor_argument_count,
-		const MetaTypeDescriptorFlags& flags
+		const MetaTypeDescriptorFlags& flags,
+		const ParsingContext* opt_parsing_context
 	) :
-		type_id(type.id()),
+		type_id((type) ? resolve_type(type, flags).id() : 0),
 		constructor_argument_count(constructor_argument_count),
 		flags(flags)
 	{
-		assert(type);
+		//assert(type);
 
-		set_variables(content, instructions);
+		set_variables(content, instructions, 0, opt_parsing_context);
+	}
+
+	bool MetaTypeDescriptor::set_type(MetaType type)
+	{
+		using namespace entt::literals;
+
+		if (!type)
+		{
+			return false;
+		}
+
+		this->type_id = resolve_type(type, this->flags).id();
+
+		return true;
+	}
+
+	bool MetaTypeDescriptor::set_type_id(MetaTypeID type_id)
+	{
+		this->type_id = resolve_type_id(type_id, this->flags);
+
+		return true;
+	}
+
+	MetaTypeID MetaTypeDescriptor::get_type_id() const
+	{
+		return type_id;
 	}
 
 	MetaType MetaTypeDescriptor::get_type() const
@@ -175,20 +265,34 @@ namespace engine
 	(
 		const util::json& content,
 		const MetaAnyParseInstructions& instructions,
-		std::size_t argument_offset
+		std::size_t argument_offset,
+		const ParsingContext* opt_parsing_context
 	)
 	{
-		return set_variables(get_type(), content, instructions, argument_offset);
+		return set_variables_impl
+		(
+			get_type(),
+			content,
+			instructions,
+			argument_offset,
+			opt_parsing_context
+		);
 	}
 
-	std::size_t MetaTypeDescriptor::set_variables
+	std::size_t MetaTypeDescriptor::set_variables_impl
 	(
 		const MetaType& type,
 		const util::json& content,
 		const MetaAnyParseInstructions& instructions,
-		std::size_t argument_offset
+		std::size_t argument_offset,
+		const ParsingContext* opt_parsing_context
 	)
 	{
+		if (!type)
+		{
+			return 0;
+		}
+
 		std::size_t count = 0;
 		std::size_t variable_index = argument_offset;
 
@@ -202,7 +306,7 @@ namespace engine
 			// TODO: Change to `std::optional<MetaSymbolID>`, where `std::nullopt` in case of `content.is_array()`.
 			MetaSymbolID var_name_hash = hash(var_name);
 			//process_value(var_name, var_value);
-
+			
 			auto resolve_data_entry = [this, &type, &content, &variable_index, &var_name_hash]() mutable -> entt::meta_data
 			{
 				/*
@@ -235,7 +339,7 @@ namespace engine
 				return {};
 			};
 
-			auto resolve_variable_type = [&var_type_spec, &resolve_data_entry]() -> MetaType
+			auto resolve_variable_type = [&opt_parsing_context, &var_type_spec, &resolve_data_entry]() -> MetaType
 			{
 				if (var_type_spec.empty())
 				{
@@ -246,6 +350,14 @@ namespace engine
 				}
 				else
 				{
+					if (opt_parsing_context)
+					{
+						if (auto type = opt_parsing_context->get_type(var_type_spec))
+						{
+							return type;
+						}
+					}
+
 					return resolve(hash(var_type_spec));
 				}
 
@@ -254,14 +366,14 @@ namespace engine
 
 			// NOTE: In the case of `resolve_meta_any` and related functions,
 			// this is where recursion may take place; caused by use of nested objects. (see `MetaVariable`)
-			auto resolve_meta_variable = [&instructions, &resolve_variable_type, &var_name_hash, &var_value]()
+			auto resolve_meta_variable = [&instructions, &opt_parsing_context, &resolve_variable_type, &var_name_hash, &var_value]()
 			{
 				if (auto variable_type = resolve_variable_type())
 				{
-					return MetaVariable(var_name_hash, var_value, variable_type, instructions);
+					return MetaVariable(var_name_hash, var_value, variable_type, instructions, opt_parsing_context);
 				}
 
-				return MetaVariable(var_name_hash, var_value, instructions);
+				return MetaVariable(var_name_hash, var_value, instructions, opt_parsing_context);
 			};
 
 			if (auto meta_var = resolve_meta_variable(); meta_var.value)
@@ -289,7 +401,7 @@ namespace engine
 		bool safe
 	)
 	{
-		return set_variables
+		return set_variables_impl
 		(
 			get_type(),
 			content, instructions,
@@ -298,7 +410,7 @@ namespace engine
 		);
 	}
 
-	std::size_t MetaTypeDescriptor::set_variables
+	std::size_t MetaTypeDescriptor::set_variables_impl
 	(
 		const MetaType& type,
 		std::string_view content,
@@ -428,10 +540,51 @@ namespace engine
 		return false;
 	}
 
-	MetaAny MetaTypeDescriptor::instance_default() const
+	bool MetaTypeDescriptor::has_nested_entity_target(std::size_t n_values) const
 	{
-		const auto type = get_type();
+		using namespace entt::literals;
 
+		std::size_t idx = 0;
+
+		for (const auto& entry : field_values)
+		{
+			if (idx >= n_values)
+			{
+				break;
+			}
+
+			const auto type_id = entry.type().id();
+
+			if (type_id == "EntityTarget"_hs)
+			{
+				return true;
+			}
+
+			idx++;
+		}
+
+		return false;
+	}
+
+	bool MetaTypeDescriptor::has_nested_entity_target() const
+	{
+		using namespace entt::literals;
+
+		for (const auto& entry : field_values)
+		{
+			const auto type_id = entry.type().id();
+
+			if (type_id == "EntityTarget"_hs)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	MetaAny MetaTypeDescriptor::instance_default(MetaType type) const
+	{
 		if (!type)
 		{
 			return {};
@@ -471,7 +624,7 @@ namespace engine
 
 		const auto check_indirection = has_indirection(); // has_indirection(field_count, offset);
 
-		const auto type = get_type();
+		const auto type = instance.type(); // get_type();
 
 		for (std::size_t i = offset; i < (offset+field_count); i++)
 		{
@@ -501,16 +654,14 @@ namespace engine
 						return result;
 					}
 
-					/*
-					if (auto casted = value.allow_cast(meta_field.type()))
-					{
-						return meta_field.set(instance, casted);
-					}
-					*/
-
 					if (auto construct_from = meta_field.type().construct(value))
 					{
 						return meta_field.set(instance, std::move(construct_from));
+					}
+
+					if (auto casted = value.allow_cast(meta_field.type()))
+					{
+						return meta_field.set(instance, casted);
 					}
 
 					// Fallbacks for string-to-hash conversion scenarios:
@@ -597,7 +748,9 @@ namespace engine
 	{
 		using namespace entt::literals;
 
-		switch (entry.type().id())
+		const auto type = entry.type();
+
+		switch (type.id())
 		{
 			case "MetaTypeDescriptor"_hs: // self_type.id():
 			{
@@ -621,12 +774,9 @@ namespace engine
 	{
 		using namespace entt::literals;
 
-		if (auto result = resolve_indirect_value(entry))
-		{
-			return result;
-		}
+		const auto type = entry.type();
 
-		switch (entry.type().id())
+		switch (type.id())
 		{
 			case "MetaDataMember"_hs:
 			{
@@ -646,8 +796,69 @@ namespace engine
 
 				break;
 			}
+			case "EntityTarget"_hs:
+			{
+				if (const auto* entity_target = entry.try_cast<EntityTarget>())
+				{
+					return entity_target->get(registry, entity);
+				}
+
+				break;
+			}
+		}
+
+		if (auto result = resolve_indirect_value(entry))
+		{
+			return result;
 		}
 
 		return {};
+	}
+
+	MetaTypeDescriptor load_descriptor
+	(
+		MetaType type,
+
+		const std::filesystem::path& path,
+		
+		const MetaAnyParseInstructions& parse_instructions,
+		const MetaTypeDescriptorFlags& descriptor_flags,
+		const ParsingContext* opt_parsing_context
+	)
+	{
+		return load_descriptor
+		(
+			type,
+
+			util::load_json(path),
+
+			parse_instructions,
+			descriptor_flags,
+			opt_parsing_context
+		);
+	}
+
+	MetaTypeDescriptor load_descriptor
+	(
+		MetaType type,
+
+		const util::json& content,
+
+		const MetaAnyParseInstructions& parse_instructions,
+		const MetaTypeDescriptorFlags& descriptor_flags,
+		const ParsingContext* opt_parsing_context
+	)
+	{
+		return MetaTypeDescriptor
+		(
+			type,
+			
+			content,
+			
+			parse_instructions,
+			std::nullopt,
+			descriptor_flags,
+			opt_parsing_context
+		);
 	}
 }

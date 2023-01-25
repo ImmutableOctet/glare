@@ -8,10 +8,12 @@
 #include <iterator>
 #include <cstdint>
 
+#include <vector>
+
 namespace util
 {
-	template <typename T, std::size_t preallocated = 8>
-	using DefaultSharedStorageContainer = small_vector<T, preallocated>;
+	template <typename T, std::size_t preallocated = 4> // 8
+	using DefaultSharedStorageContainer = std::vector<T>; // small_vector<T, preallocated>;
 
 	using DefaultSharedStorageIndex = std::uint16_t; // std::size_t;
 
@@ -60,9 +62,12 @@ namespace util
 			{
 				const auto resource_it = &resource;
 
-				if ((resource_it >= container.cbegin()) && (resource_it < container.cend()))
+				const auto* begin = container.data(); // &(*container.cbegin());
+				const auto* end   = (begin + container.size()); // &(*container.cend());
+
+				if ((resource_it >= begin) && (resource_it < end))
 				{
-					return static_cast<IndexType>(std::distance(container.cbegin(), resource_it));
+					return static_cast<IndexType>(std::distance(begin, resource_it));
 				}
 
 				return std::nullopt;
@@ -79,7 +84,9 @@ namespace util
 
 			inline IndexType get_index_unsafe(const ResourceType& resource) const
 			{
-				return static_cast<IndexType>(std::distance(container.cbegin(), &resource));
+				const auto* begin = container.data(); // cbegin();
+
+				return static_cast<IndexType>(std::distance(begin, &resource));
 			}
 
 			inline const container_type& data() const

@@ -12,7 +12,7 @@ namespace engine
 	{
 		for (const auto& type_desc : type_definitions)
 		{
-			if (type_desc.type_id == type_id)
+			if (type_desc.get_type_id() == type_id)
 			{
 				return &type_desc;
 			}

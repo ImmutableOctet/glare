@@ -10,7 +10,7 @@
 
 #include <engine/meta/meta.hpp>
 #include <engine/meta/serial.hpp>
-#include <engine/meta/command_parsing_context.hpp>
+#include <engine/meta/parsing_context.hpp>
 #include <engine/meta/meta_type_descriptor.hpp>
 
 #include <tuple>
@@ -29,21 +29,23 @@ namespace engine
 	EntityThreadBuilderContext::EntityThreadBuilderContext
 	(
 		EntityDescriptor& descriptor,
-		EntityThreadDescription& thread,
+		ThreadDescriptor thread,
 		const EntityFactoryContext* opt_factory_context,
 		const std::filesystem::path* opt_base_path,
-		const CommandParsingContext* opt_command_context
+		const ParsingContext* opt_parsing_context
 	) :
 		descriptor(descriptor),
 		thread(thread),
 		opt_factory_context(opt_factory_context),
 		opt_base_path(opt_base_path),
-		opt_command_context(opt_command_context)
+		opt_parsing_context(opt_parsing_context)
 	{}
 
 	EntityThreadIndex EntityThreadBuilderContext::thread_index() const
 	{
-		return descriptor.shared_storage.get_index_safe(thread);
+		//return descriptor.shared_storage.get_index_safe(thread);
+
+		return thread.get_index();
 	}
 
 	// EntityThreadBuilder:
@@ -60,11 +62,11 @@ namespace engine
 	EntityThreadBuilder::EntityThreadBuilder
 	(
 		EntityDescriptor& descriptor,
-		EntityThreadDescription& thread,
+		ThreadDescriptor thread,
 		std::string_view opt_thread_name,
 		const EntityFactoryContext* opt_factory_context,
 		const std::filesystem::path* opt_base_path,
-		const CommandParsingContext* opt_command_context
+		const ParsingContext* opt_parsing_context
 	)
 		: EntityThreadBuilder
 		(
@@ -74,7 +76,7 @@ namespace engine
 				thread,
 				opt_factory_context,
 				opt_base_path,
-				opt_command_context
+				opt_parsing_context
 			),
 
 			opt_thread_name
@@ -87,16 +89,22 @@ namespace engine
 		std::string_view opt_thread_name,
 		const EntityFactoryContext* opt_factory_context,
 		const std::filesystem::path* opt_base_path,
-		const CommandParsingContext* opt_command_context
+		const ParsingContext* opt_parsing_context
 	)
 		: EntityThreadBuilder
 		(
 			descriptor,
-			descriptor.shared_storage.allocate<EntityThreadDescription>(),
+			
+			ThreadDescriptor
+			(
+				descriptor,
+				descriptor.shared_storage.allocate<EntityThreadDescription>()
+			),
+
 			opt_thread_name,
 			opt_factory_context,
 			opt_base_path,
-			opt_command_context
+			opt_parsing_context
 		)
 	{}
 
@@ -104,6 +112,8 @@ namespace engine
 
 	std::optional<EntityThreadID> EntityThreadBuilder::set_thread_name(std::string_view thread_name, bool resolve_name, bool force)
 	{
+		auto& thread = get_thread();
+
 		if ((!force) && (thread.thread_id))
 		{
 			return std::nullopt; // thread.thread_id;
@@ -176,7 +186,7 @@ namespace engine
 
 	std::optional<EntityThreadID> EntityThreadBuilder::get_thread_name() const
 	{
-		return thread.thread_id;
+		return get_thread().thread_id;
 	}
 
 	bool EntityThreadBuilder::thread_has_name() const
@@ -186,7 +196,7 @@ namespace engine
 
 	EntityThreadBuilder::InstructionIndex EntityThreadBuilder::get_instruction_index()
 	{
-		return static_cast<InstructionIndex>(thread.instructions.size());
+		return static_cast<InstructionIndex>(get_thread().instructions.size());
 	};
 
 	EntityStateUpdateAction& EntityThreadBuilder::get_update_instruction(EntityTarget target)
@@ -260,7 +270,7 @@ namespace engine
 
 		auto& update_instruction = get_update_instruction();
 
-		return (process_update_action(update_instruction, update_entry) > 0);
+		return (process_update_action(update_instruction, update_entry, opt_parsing_context) > 0);
 	}
 
 	bool EntityThreadBuilder::on_instruction_change(InstructionID instruction_id, InstructionID prev_instruction_id)
@@ -370,9 +380,9 @@ namespace engine
 
 		if (!command_type)
 		{
-			if (opt_command_context)
+			if (opt_parsing_context)
 			{
-				command_type = opt_command_context->get_command_type_from_alias(instruction_name);
+				command_type = opt_parsing_context->get_command_type_from_alias(instruction_name);
 
 				if (!command_type)
 				{
@@ -463,6 +473,10 @@ namespace engine
 				// See also: `multi` command.
 				return generate_multi_block(content_source, content_index);
 
+			//case "forever"_hs:
+			case "repeat"_hs:
+				return generate_repeat_block(content_source, content_index);
+
 			case "stop"_hs:
 			case "terminate"_hs:
 				return instruct_thread<Stop>(thread_details);
@@ -492,7 +506,7 @@ namespace engine
 		return *this;
 	}
 
-	EntityThreadBuilderContext EntityThreadBuilder::sub_context(EntityThreadDescription& target_sub_thread) const
+	EntityThreadBuilderContext EntityThreadBuilder::sub_context(ThreadDescriptor target_sub_thread) const
 	{
 		return EntityThreadBuilderContext
 		{
@@ -500,13 +514,21 @@ namespace engine
 			target_sub_thread,
 			opt_factory_context,
 			opt_base_path,
-			opt_command_context
+			opt_parsing_context
 		};
 	}
 
 	EntityThreadBuilderContext EntityThreadBuilder::sub_context() const
 	{
-		return sub_context(descriptor.shared_storage.allocate<EntityThreadDescription>());
+		return sub_context
+		(
+			ThreadDescriptor
+			(
+				descriptor,
+
+				descriptor.shared_storage.allocate<EntityThreadDescription>()
+			)
+		);
 	}
 
 	EntityThreadBuilder EntityThreadBuilder::sub_thread(std::string_view thread_name)
@@ -653,6 +675,21 @@ namespace engine
 
 				return scope_result;
 			}
+		);
+	}
+
+	EntityInstructionCount EntityThreadBuilder::generate_repeat_block
+	(
+		const ContentSource& content_source,
+		EntityInstructionCount content_index
+	)
+	{
+		return generate_while_block
+		(
+			EventTriggerTrueCondition {},
+
+			content_source,
+			content_index
 		);
 	}
 
@@ -859,7 +896,10 @@ namespace engine
 									content_index
 								)
 							);
-						}
+						},
+
+						false, // true,
+						opt_parsing_context
 					);
 
 					if (instructions_processed)
@@ -878,7 +918,7 @@ namespace engine
 				case "when_any"_hs:
 				case "when"_hs:
 				{
-					auto condition = process_unified_condition_block(instruction_content);
+					auto condition = process_unified_condition_block(instruction_content, opt_parsing_context);
 
 					if (condition)
 					{
@@ -894,7 +934,7 @@ namespace engine
 
 				case "if"_hs:
 				{
-					auto condition = process_unified_condition_block(instruction_content);
+					auto condition = process_unified_condition_block(instruction_content, opt_parsing_context);
 
 					if (condition)
 					{
@@ -910,7 +950,7 @@ namespace engine
 
 				case "while"_hs:
 				{
-					auto condition = process_unified_condition_block(instruction_content);
+					auto condition = process_unified_condition_block(instruction_content, opt_parsing_context);
 
 					if (condition)
 					{
@@ -923,6 +963,10 @@ namespace engine
 
 					break;
 				}
+
+				//case "forever"_hs:
+				case "repeat"_hs:
+					return generate_repeat_block(content_source, content_index);
 
 				// Executes multiple instructions in one fixed update-step.
 				// 
@@ -1027,7 +1071,7 @@ namespace engine
 						{
 							return instruct_thread<Sleep>(thread_details, std::move(*sleep_duration));
 						}
-						else if (auto condition = process_unified_condition_block(instruction_content))
+						else if (auto condition = process_unified_condition_block(instruction_content, opt_parsing_context))
 						{
 							auto condition_ref = descriptor.allocate<EventTriggerCondition>(std::move(*condition));
 

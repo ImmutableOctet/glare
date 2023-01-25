@@ -66,6 +66,8 @@ namespace engine
 				// Alternate implementation:
 				//SizeType size;
 			public:
+				using ValueType = SizeType;
+
 				inline SizeTypeImpl(SizeType size):
 					//size(size),
 					half_size(size * 0.5f)
@@ -73,6 +75,16 @@ namespace engine
 
 				//SizeType(const SizeType&) = default;
 				//SizeType(SizeType&&) noexcept = default;
+
+				inline void set_size(SizeType value)
+				{
+					half_size = (value * 0.5f);
+				}
+
+				inline void set_half_size(SizeType value)
+				{
+					half_size = value;
+				}
 
 				inline SizeType get_size() const { return (half_size * 2.0f); }
 				inline SizeType get_half_size() const { return half_size; }
@@ -83,26 +95,31 @@ namespace engine
 		};
 
 		// Allows the user to specify an exact size.
-		using SizeType = SizeTypeImpl<float, false>;
+		struct SizeType : SizeTypeImpl<float, false> { using SizeTypeImpl::SizeTypeImpl; };
 
 		// Allows the user to specify an exact size on all three axes.
-		using VectorSizeType = SizeTypeImpl<math::Vector, false>;
+		struct VectorSizeType : SizeTypeImpl<math::Vector, false> { using SizeTypeImpl::SizeTypeImpl; };
 
 		// Similar to `VectorSizeType`, but accounts for object orientation.
 		// NOTE: We do not further account for approach angle, just the transform.
-		using OrientedVectorSizeType = SizeTypeImpl<math::Vector, true>;
+		struct OrientedVectorSizeType : SizeTypeImpl<math::Vector, true> { using SizeTypeImpl::SizeTypeImpl; };
 
 		// Used to select between different size-type options at runtime.
-		using SizeConfig = std::variant
-		<
-			std::monostate,
-			AABBType, AABBVectorType, OrientedAABBVectorType,
-			SphereType, InnerSphereType,
-			SizeType, VectorSizeType, OrientedVectorSizeType
-		>;
+		struct SizeConfig
+		{
+			using Type = std::variant
+			<
+				std::monostate,
+				AABBType, AABBVectorType, OrientedAABBVectorType,
+				SphereType, InnerSphereType,
+				SizeType, VectorSizeType, OrientedVectorSizeType
+			>;
+
+			Type value;
+		};
 
 		CollisionCastMethod cast_method = CollisionCastMethod::None;
-		SizeConfig size = std::monostate{};
+		SizeConfig size = { std::monostate {} };
 
 		// If true, this object can influence the position of other kinematic objects.
 		// The affected object must also be accepting influences. (see `accepts_influence`)
@@ -126,6 +143,18 @@ namespace engine
 		// Similar to `can_influence_children`, this controls whether a child entity can influence this entity.
 		// NOTE: This also includes adjustments made because of potential overlap with children.
 		bool can_be_influenced_by_children : 1 = false;
+
+		inline bool get_is_influencer() const                 { return is_influencer;                 }
+		inline bool get_accepts_influence() const             { return accepts_influence;             }
+		inline bool get_resolve_intersections() const         { return resolve_intersections;         }
+		inline bool get_can_influence_children() const        { return can_influence_children;        }
+		inline bool get_can_be_influenced_by_children() const { return can_be_influenced_by_children; }
+
+		inline void set_is_influencer(bool value)                 { is_influencer = value;                 }
+		inline void set_accepts_influence(bool value)             { accepts_influence = value;             }
+		inline void set_resolve_intersections(bool value)         { resolve_intersections = value;         }
+		inline void set_can_influence_children(bool value)        { can_influence_children = value;        }
+		inline void set_can_be_influenced_by_children(bool value) { can_be_influenced_by_children = value; }
 
 		float get_size(const CollisionComponent& collision) const;
 		float get_half_size(const CollisionComponent& collision) const;

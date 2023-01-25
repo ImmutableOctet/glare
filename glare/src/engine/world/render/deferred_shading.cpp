@@ -13,7 +13,11 @@
 #include <engine/transform.hpp>
 
 #include <engine/world/world.hpp>
-#include <engine/world/light.hpp>
+
+#include <engine/world/components/light_component.hpp>
+#include <engine/world/components/directional_light_component.hpp>
+#include <engine/world/components/point_light_component.hpp>
+#include <engine/world/components/spot_light_component.hpp>
 
 #include <math/math.hpp>
 #include <util/variant.hpp>
@@ -272,32 +276,39 @@ namespace engine
 		unsigned int spot_light_idx        = 0;
 		unsigned int point_light_idx       = 0;
 
+		// TODO: Optimize enumeration.
+		// 
 		// Enumerate lights, branching to each lighting subroutine based on the `LightComponent::type` field, incrementing light counters appropriately.
-		registry.view<LightComponent, TransformComponent, RelationshipComponent>().each([&](auto entity, const auto& light, auto& transform, const auto& relationship) // const auto&
+		registry.view<LightComponent, TransformComponent, RelationshipComponent>().each([&](auto entity, const auto& light_comp, auto& transform, const auto& relationship) // const auto&
 		{
-			switch (light.type)
+			bool light_sub_component_found = false;
+
+			if (const auto point_light_comp = registry.try_get<PointLightComponent>(entity))
 			{
-				case LightType::Directional:
-					if (render_directional_light(world, render_state, shader, entity, light, transform, relationship, directional_light_idx) != null)
-					{
-						directional_light_idx++;
-					}
+				if (render_point_light(world, render_state, shader, entity, light_comp, *point_light_comp, transform, relationship, point_light_idx) != null)
+				{
+					point_light_idx++;
+				}
 
-					break;
-				case LightType::Spotlight:
-					if (render_spot_light(world, render_state, shader, entity, light, transform, relationship, spot_light_idx) != null)
-					{
-						spot_light_idx++;
-					}
+				light_sub_component_found = true;
+			}
 
-					break;
-				case LightType::Point:
-					if (render_point_light(world, render_state, shader, entity, light, transform, relationship, point_light_idx) != null)
-					{
-						point_light_idx++;
-					}
+			if (const auto spot_light_comp = registry.try_get<SpotLightComponent>(entity))
+			{
+				if (render_spot_light(world, render_state, shader, entity, light_comp, *spot_light_comp, transform, relationship, spot_light_idx) != null)
+				{
+					spot_light_idx++;
+				}
 
-					break;
+				light_sub_component_found = true;
+			}
+
+			if (const auto directional_light_comp = registry.try_get<DirectionalLightComponent>(entity); (directional_light_comp || ((light_comp.type == LightType::Any) && (!light_sub_component_found))))
+			{
+				if (render_directional_light(world, render_state, shader, entity, light_comp, transform, relationship, directional_light_idx, directional_light_comp) != null)
+				{
+					directional_light_idx++;
+				}
 			}
 		});
 
@@ -318,7 +329,9 @@ namespace engine
 		TransformComponent& transform,
 		const RelationshipComponent& relationship,
 		
-		unsigned int directional_light_idx
+		unsigned int directional_light_idx,
+
+		const DirectionalLightComponent* opt_directional_light_comp
 	)
 	{
 		auto& registry = world.get_registry();
@@ -341,16 +354,19 @@ namespace engine
 		attr("position",  light_position); // <-- TODO: Remove (Not needed for directional lights)
 		attr("direction", light_direction);
 
-		attr("ambient",   light.properties.ambient);
-		attr("diffuse",   light.properties.diffuse);
-		attr("specular",  light.properties.specular);
+		attr("ambient",   light.ambient);
+		attr("diffuse",   light.diffuse);
+		attr("specular",  light.specular);
 
-		// Retrieve the directional-light specific component to determine the `DirectionalLightComponent::use_position` flag:
-		auto* dir = registry.try_get<DirectionalLightComponent>(entity);
-		
-		assert(dir);
-
-		attr("use_position", dir->use_position);
+		// Optionally retrieve additional attributes specific to directional lights:
+		if (opt_directional_light_comp)
+		{
+			attr("use_position", opt_directional_light_comp->use_position);
+		}
+		else
+		{
+			attr("use_position", false);
+		}
 
 		return entity;
 	}
@@ -363,9 +379,10 @@ namespace engine
 		
 		Entity entity,
 		const LightComponent& light,
+		const SpotLightComponent& spot_light_comp,
 		TransformComponent& transform,
 		const RelationshipComponent& relationship,
-		
+
 		unsigned int spot_light_idx
 	)
 	{
@@ -389,20 +406,16 @@ namespace engine
 		attr("position", light_position);
 		attr("direction", light_direction);
 
-		attr("ambient",  light.properties.ambient);
-		attr("diffuse",  light.properties.diffuse);
-		attr("specular", light.properties.specular);
+		attr("ambient",  light.ambient);
+		attr("diffuse",  light.diffuse);
+		attr("specular", light.specular);
 
 		// Retrieve additional attributes specific to spotlights:
-		auto* spot = registry.try_get<SpotLightComponent>(entity);
-		
-		assert(spot);
-
-		attr("cutoff",       spot->cutoff);
-		attr("outer_cutoff", spot->outer_cutoff);
-		attr("constant",     spot->constant);
-		attr("linear",       spot->linear);
-		attr("quadratic",    spot->quadratic);
+		attr("cutoff",       spot_light_comp.cutoff);
+		attr("outer_cutoff", spot_light_comp.outer_cutoff);
+		attr("constant",     spot_light_comp.constant);
+		attr("linear",       spot_light_comp.linear);
+		attr("quadratic",    spot_light_comp.quadratic);
 
 		return entity;
 	}
@@ -415,6 +428,7 @@ namespace engine
 		
 		Entity entity,
 		const LightComponent& light,
+		const PointLightComponent& point_light_comp,
 		TransformComponent& transform,
 		const RelationshipComponent& relationship,
 		
@@ -437,18 +451,15 @@ namespace engine
 		// Update attributes on the shader's side:
 		attr("position", light_position);
 		
-		attr("diffuse", light.properties.diffuse);
-		//attr("ambient", light.properties.ambient);
-		//attr("specular", light.properties.specular);
+		attr("diffuse", light.diffuse);
+		//attr("ambient", light.ambient);
+		//attr("specular", light.specular);
 
 		// Retrieve additional attributes specific to point lights:
-		auto* point_light = registry.try_get<PointLightComponent>(entity);
-
-		assert(point_light);
-
-		attr("linear",    point_light->linear); // light.linear
-		attr("quadratic", point_light->quadratic); // light.linear
-		attr("radius",    point_light->get_radius(light.properties));
+		attr("constant",  point_light_comp.constant);
+		attr("linear",    point_light_comp.linear);
+		attr("quadratic", point_light_comp.quadratic);
+		attr("radius",    point_light_comp.get_radius(light));
 
 		return entity;
 	}

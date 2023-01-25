@@ -30,6 +30,11 @@ namespace engine
 			return projected_path;
 		}
 
+		if (std::filesystem::exists(path))
+		{
+			return path;
+		}
+
 		return {};
 	}
 

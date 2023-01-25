@@ -1,4 +1,7 @@
 #include "entity_factory.hpp"
+
+#include "serial_impl.hpp"
+
 #include "entity_target.hpp"
 #include "entity_state.hpp"
 #include "entity_state_rule.hpp"
@@ -6,10 +9,11 @@
 #include "entity_thread_builder.hpp"
 #include "event_trigger_condition.hpp"
 
-#include "serial_impl.hpp"
-
 #include "components/instance_component.hpp"
 #include "components/state_component.hpp"
+#include "components/entity_thread_component.hpp"
+
+#include <engine/world/graphics_entity.hpp>
 
 #include <engine/components/relationship_component.hpp>
 #include <engine/components/name_component.hpp>
@@ -19,7 +23,7 @@
 #include <engine/meta/meta_variable.hpp>
 #include <engine/meta/meta_data_member.hpp>
 #include <engine/meta/indirect_meta_data_member.hpp>
-#include <engine/meta/command_parsing_context.hpp>
+#include <engine/meta/parsing_context.hpp>
 
 #include <util/algorithm.hpp>
 #include <util/string.hpp>
@@ -41,27 +45,28 @@
 // Debugging related:
 #include <util/format.hpp>
 #include <util/log.hpp>
+
 #include <engine/components/type_component.hpp>
+#include <engine/world/physics/components/collision_component.hpp>
 
 namespace engine
 {
-	Entity EntityFactory::create(const EntityConstructionContext& context) const
+	MetaAny EntityFactory::emplace_component
+	(
+		Registry& registry, Entity entity,
+		const MetaTypeDescriptor& component
+	)
 	{
 		using namespace entt::literals;
 
-		auto entity = context.opt_entity_out;
+		auto instance = component.instance(true, registry, entity);
 
-		if (entity == null)
+		//assert(instance);
+
+		MetaAny result;
+
+		if (instance)
 		{
-			entity = context.registry.create();
-		}
-
-		for (const auto& component : descriptor.components.type_definitions)
-		{
-			auto instance = component.instance(true, context.registry, entity);
-
-			MetaAny result;
-
 			const auto type = component.get_type();
 
 			if (auto emplace_fn = type.func("emplace_meta_component"_hs))
@@ -69,16 +74,140 @@ namespace engine
 				result = emplace_fn.invoke
 				(
 					{},
-					entt::forward_as_meta(context.registry),
+
+					entt::forward_as_meta(registry),
 					entt::forward_as_meta(entity),
-					entt::forward_as_meta(std::move(instance))
+					entt::forward_as_meta(std::move(instance)) // entt::forward_as_meta(instance)
 				);
 			}
 
 			if (!result)
 			{
-				print_warn("Failed to instantiate component: \"#{}\"", type.id()); // component.type_id
+				print_warn("Failed to attach component: #{} to Entity #{}", component.get_type_id(), entity);
 			}
+		}
+		else
+		{
+			print_warn("Failed to instantiate component: #{} for Entity #{}", component.get_type_id(), entity);
+		}
+
+		return result;
+	}
+
+	bool EntityFactory::update_component_fields
+	(
+		Registry& registry, Entity entity,
+		const MetaTypeDescriptor& component,
+		
+		bool value_assignment, bool direct_modify
+	)
+	{
+		using namespace entt::literals;
+
+		auto type = component.get_type();
+
+		if (value_assignment && (!direct_modify))
+		{
+			auto patch_fn = type.func("patch_meta_component"_hs);
+
+			if (!patch_fn)
+			{
+				print_warn("Unable to resolve patch function for: #{}", type.id());
+
+				return false;
+			}
+
+			if (component.size() > 0)
+			{
+				auto result = patch_fn.invoke
+				(
+					{},
+					entt::forward_as_meta(registry),
+					entt::forward_as_meta(entity),
+					entt::forward_as_meta(component),
+					entt::forward_as_meta(component.size()),
+					entt::forward_as_meta(0)
+				);
+
+				if (result)
+				{
+					return (result.cast<std::size_t>() > 0);
+				}
+			}
+		}
+		else
+		{
+			auto get_fn = type.func("get_component"_hs);
+
+			if (!get_fn)
+			{
+				print_warn("Unable to resolve component-get function from: #{}", type.id());
+
+				return false;
+			}
+
+			auto result = get_fn.invoke
+			(
+				{},
+				entt::forward_as_meta(registry),
+				entt::forward_as_meta(entity)
+			);
+
+			if (auto instance = *result) // ; (*result).cast<bool>()
+			{
+				if (value_assignment) // (&& direct_modify) <-- Already implied due to prior clause.
+				{
+					if (component.size() > 0)
+					{
+						const auto result = component.apply_fields(instance);
+
+						//assert(result == component.size());
+
+						if (result != component.size())
+						{
+							print_warn("Unable to apply all of the specified fields while updating component #{}", type.id());
+
+							if (result == 0)
+							{
+								return false;
+							}
+						}
+
+						if (auto notify_patch_fn = type.func("mark_component_as_patched"_hs))
+						{
+							auto notify_result = notify_patch_fn.invoke
+							(
+								{},
+								entt::forward_as_meta(registry),
+								entt::forward_as_meta(entity)
+							);
+
+							if (!notify_result)
+							{
+								print_warn("Failed to notify listeners of patch for component #{}", type.id());
+							}
+						}
+						else
+						{
+							print_warn("Unable to resolve component-patch notification function from: #{}", type.id());
+						}
+					}
+				}
+
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	Entity EntityFactory::create(const EntityConstructionContext& context) const
+	{
+		auto entity = context.opt_entity_out;
+
+		if (entity == null)
+		{
+			entity = context.registry.create();
 		}
 
 		if (context.parent != null)
@@ -86,7 +215,10 @@ namespace engine
 			RelationshipComponent::set_parent(context.registry, entity, context.parent, true);
 		}
 
-		context.registry.emplace_or_replace<InstanceComponent>(entity, paths.instance_path.string());
+		for (const auto& component : descriptor.components.type_definitions)
+		{
+			emplace_component(context.registry, entity, component);
+		}
 
 		if (!context.registry.try_get<NameComponent>(entity))
 		{
@@ -94,6 +226,8 @@ namespace engine
 
 			context.registry.emplace<NameComponent>(entity, instance_filename.string());
 		}
+
+		context.registry.emplace_or_replace<InstanceComponent>(entity, paths.instance_path.string());
 
 		if (default_state_index)
 		{
@@ -103,6 +237,19 @@ namespace engine
 			{
 				print_warn("Unable to assign default state: Index #{}", *default_state_index);
 			}
+		}
+
+		if (!descriptor.immediate_threads.empty())
+		{
+			auto& thread_component = context.registry.get_or_emplace<EntityThreadComponent>(entity);
+
+			for (const auto& thread_range : descriptor.immediate_threads)
+			{
+				thread_component.start_threads(thread_range);
+			}
+
+			// Trigger listeners looking for `EntityThreadComponent` patches.
+			context.registry.patch<EntityThreadComponent>(entity);
 		}
 
 		return entity;
@@ -155,14 +302,14 @@ namespace engine
 		EntityDescriptor::StateCollection& states_out,
 		std::string_view state_path_raw, // const std::string&
 		const std::filesystem::path& base_path,
-		const CommandParsingContext* opt_command_context
+		const ParsingContext* opt_parsing_context
 	)
 	{
 		auto [state_base_path, state_path, state_data] = load_state_data(state_path_raw, base_path);
 
 		auto state_name = resolve_state_name(state_data, state_path);
 
-		if (const auto state = process_state(states_out, state_data, state_name, state_base_path, opt_command_context))
+		if (const auto state = process_state(states_out, state_data, state_name, state_base_path, opt_parsing_context))
 		{
 			assert(state->name.has_value());
 
@@ -179,7 +326,7 @@ namespace engine
 
 		const util::json& data,
 		const std::filesystem::path& base_path,
-		const CommandParsingContext* opt_command_context
+		const ParsingContext* opt_parsing_context
 	)
 	{
 		std::size_t count = 0;
@@ -188,7 +335,7 @@ namespace engine
 		(
 			data,
 
-			[this, &states_out, &state, &base_path, opt_command_context, &count](const util::json& content)
+			[this, &states_out, &state, &base_path, opt_parsing_context, &count](const util::json& content)
 			{
 				switch (content.type())
 				{
@@ -207,7 +354,7 @@ namespace engine
 								state.name = hash(default_state_name);
 							}
 
-							if (process_state(states_out, state, state_data, state_base_path, opt_command_context))
+							if (process_state(states_out, state, state_data, state_base_path, opt_parsing_context))
 							{
 								count++;
 							}
@@ -217,7 +364,7 @@ namespace engine
 					}
 
 					default:
-						if (process_state(states_out, state, content, base_path, opt_command_context))
+						if (process_state(states_out, state, content, base_path, opt_parsing_context))
 						{
 							count++;
 						}
@@ -236,7 +383,7 @@ namespace engine
 		const util::json& data,
 		std::string_view state_name,
 		const std::filesystem::path& base_path,
-		const CommandParsingContext* opt_command_context
+		const ParsingContext* opt_parsing_context
 	)
 	{
 		std::optional<EntityStateID> state_id = std::nullopt;
@@ -256,7 +403,7 @@ namespace engine
 				existing->name = state_id;
 
 				// Execute the main processing routine.
-				auto result = process_state(states_out, *existing, data, base_path, opt_command_context);
+				auto result = process_state(states_out, *existing, data, base_path, opt_parsing_context);
 
 				assert(result);
 
@@ -271,7 +418,7 @@ namespace engine
 		// Assign the state's name to the ID we resolved.
 		state->name = state_id;
 
-		if (!process_state(states_out, *state, data, base_path, opt_command_context))
+		if (!process_state(states_out, *state, data, base_path, opt_parsing_context))
 		{
 			return {};
 		}
@@ -325,7 +472,7 @@ namespace engine
 		EntityState& state,
 		const util::json& data,
 		const std::filesystem::path& base_path,
-		const CommandParsingContext* opt_command_context
+		const ParsingContext* opt_parsing_context
 	)
 	{
 		using namespace entt::literals;
@@ -349,7 +496,7 @@ namespace engine
 		if (auto merge = util::find_any(data, "merge", "merge_state", "merge_states", "using"); merge != data.end())
 		{
 			// NOTE: Recursion by proxy.
-			merge_state_list(states_out, state, *merge, base_path, opt_command_context);
+			merge_state_list(states_out, state, *merge, base_path, opt_parsing_context);
 		}
 
 		// Handle embedded imports of other states before any further operations.
@@ -357,47 +504,47 @@ namespace engine
 		if (auto imports = util::find_any(data, "import", "imports", "state", "states"); imports != data.end())
 		{
 			// NOTE: Recursion by proxy.
-			process_state_list(states_out, *imports, base_path, opt_command_context);
+			process_state_list(states_out, *imports, base_path, opt_parsing_context);
 		}
 
 		if (auto persist = util::find_any(data, "persist", "share", "shared", "modify", "="); persist != data.end())
 		{
-			process_component_list(state.components.persist, *persist, {}, true, true, true);
+			process_component_list(state.components.persist, *persist, {}, opt_parsing_context, true, true, true);
 		}
 
 		if (auto add = util::find_any(data, "add", "+"); add != data.end())
 		{
-			process_component_list(state.components.add, *add, {}, true, true, true);
+			process_component_list(state.components.add, *add, {}, opt_parsing_context, true, true, true);
 		}
 
 		if (auto removal_list = util::find_any(data, "remove", "-", "~"); removal_list != data.end())
 		{
-			state.build_removals(*removal_list);
+			state.build_removals(*removal_list, opt_parsing_context);
 		}
 		
 		if (auto frozen_list = util::find_any(data, "frozen", "freeze", "exclude", "%", "^"); frozen_list != data.end())
 		{
-			state.build_frozen(*frozen_list);
+			state.build_frozen(*frozen_list, opt_parsing_context);
 		}
 
 		if (auto storage_list = util::find_any(data, "store", "storage", "include", "temp", "temporary", "#"); storage_list != data.end())
 		{
-			state.build_storage(*storage_list);
+			state.build_storage(*storage_list, opt_parsing_context);
 		}
 
 		if (auto isolated = util::find_any(data, "local", "local_storage", "isolate", "isolated"); isolated != data.end())
 		{
-			process_state_isolated_components(state, *isolated);
+			process_state_isolated_components(state, *isolated, opt_parsing_context);
 		}
 
 		if (auto local_copy = util::find_any(data, "local_copy", "copy"); local_copy != data.end())
 		{
-			process_state_local_copy_components(state, *local_copy);
+			process_state_local_copy_components(state, *local_copy, opt_parsing_context);
 		}
 
 		if (auto init_copy = util::find_any(data, "init_copy", "local_modify", "copy_once", "clone"); init_copy != data.end())
 		{
-			process_state_init_copy_components(state, *init_copy);
+			process_state_init_copy_components(state, *init_copy, opt_parsing_context);
 		}
 
 		if (auto time_data = util::find_any(data, "timer", "wait", "delay"); time_data != data.end())
@@ -407,7 +554,7 @@ namespace engine
 
 		if (auto threads = util::find_any(data, "do", "threads", "execute"); threads != data.end())
 		{
-			if (auto [initial_thread_index, thread_count] = process_thread_list(*threads, &base_path, opt_command_context); (thread_count > 0))
+			if (auto [initial_thread_index, thread_count] = process_thread_list(*threads, &base_path, opt_parsing_context); (thread_count > 0))
 			{
 				state.immediate_threads.emplace_back(initial_thread_index, thread_count);
 			}
@@ -415,7 +562,7 @@ namespace engine
 
 		if (auto rules = util::find_any(data, "rule", "rules", "trigger", "triggers"); rules != data.end())
 		{
-			process_state_rule_list(state, *rules, &states_out, &base_path, opt_command_context);
+			process_state_rule_list(state, *rules, &states_out, &base_path, opt_parsing_context);
 		}
 
 		return true;
@@ -426,12 +573,12 @@ namespace engine
 		EntityDescriptor::StateCollection& states_out,
 		const util::json& data,
 		const std::filesystem::path& base_path,
-		const CommandParsingContext* opt_command_context
+		const ParsingContext* opt_parsing_context
 	)
 	{
 		std::size_t count = 0;
 
-		util::json_for_each(data, [this, &base_path, &states_out, &opt_command_context, &count](const util::json& state_entry)
+		util::json_for_each(data, [this, &base_path, &states_out, &opt_parsing_context, &count](const util::json& state_entry)
 		{
 			switch (state_entry.type())
 			{
@@ -440,7 +587,7 @@ namespace engine
 					// NOTE: Embedded state definitions must have a `name` field.
 					const auto state_name = util::get_value<std::string>(state_entry, "name");
 
-					if (process_state(states_out, state_entry, state_name, base_path, opt_command_context))
+					if (process_state(states_out, state_entry, state_name, base_path, opt_parsing_context))
 					{
 						count++;
 					}
@@ -451,7 +598,7 @@ namespace engine
 				{
 					const auto state_path_raw = state_entry.get<std::string>();
 
-					if (process_state(states_out, state_path_raw, base_path, opt_command_context))
+					if (process_state(states_out, state_path_raw, base_path, opt_parsing_context))
 					{
 						count++;
 					}
@@ -464,7 +611,7 @@ namespace engine
 		return count;
 	}
 
-	std::size_t EntityFactory::process_state_isolated_components(EntityState& state, const util::json& isolated)
+	std::size_t EntityFactory::process_state_isolated_components(EntityState& state, const util::json& isolated, const ParsingContext* opt_parsing_context)
 	{
 		return process_and_inspect_component_list
 		(
@@ -472,16 +619,16 @@ namespace engine
 
 			isolated,
 
-			[&state](std::string_view component_name)
+			[&state, &opt_parsing_context](std::string_view component_name)
 			{
-				if (!state.process_type_list_entry(state.components.freeze, component_name, true)) // false
+				if (!state.process_type_list_entry(state.components.freeze, component_name, true, opt_parsing_context)) // false
 				{
 					print_warn("Failed to process embedded `freeze` entry from isolation data.");
 
 					return false;
 				}
 
-				if (!state.process_type_list_entry(state.components.store, component_name, true)) // false
+				if (!state.process_type_list_entry(state.components.store, component_name, true, opt_parsing_context)) // false
 				{
 					print_warn("Failed to process embedded `store` entry from isolation data.");
 
@@ -491,13 +638,15 @@ namespace engine
 				return true;
 			},
 
-			false
+			false,
+			{},
+			opt_parsing_context
 		);
 	}
 
-	std::size_t EntityFactory::process_state_local_copy_components(EntityState& state, const util::json& local_copy)
+	std::size_t EntityFactory::process_state_local_copy_components(EntityState& state, const util::json& local_copy, const ParsingContext* opt_parsing_context)
 	{
-		const auto build_result = state.build_local_copy(local_copy);
+		const auto build_result = state.build_local_copy(local_copy, opt_parsing_context);
 
 		const auto components_processed = process_component_list
 		(
@@ -508,6 +657,8 @@ namespace engine
 				.force_field_assignment                 = true
 			},
 
+			opt_parsing_context,
+
 			true, false
 		);
 
@@ -516,9 +667,9 @@ namespace engine
 		return build_result;
 	}
 
-	std::size_t EntityFactory::process_state_init_copy_components(EntityState& state, const util::json& init_copy)
+	std::size_t EntityFactory::process_state_init_copy_components(EntityState& state, const util::json& init_copy, const ParsingContext* opt_parsing_context)
 	{
-		const auto build_result = state.build_init_copy(init_copy);
+		const auto build_result = state.build_init_copy(init_copy, opt_parsing_context);
 
 		const auto components_processed = process_component_list
 		(
@@ -528,6 +679,8 @@ namespace engine
 				.allow_forwarding_fields_to_constructor = false,
 				.force_field_assignment                 = true
 			},
+
+			opt_parsing_context,
 
 			true, false
 		);
@@ -547,7 +700,7 @@ namespace engine
 
 		EntityDescriptor::StateCollection* opt_states_out,
 		const std::filesystem::path* opt_base_path,
-		const CommandParsingContext* opt_command_context,
+		const ParsingContext* opt_parsing_context,
 
 		bool allow_inline_import
 	)
@@ -609,7 +762,7 @@ namespace engine
 			}
 
 			// TODO: Look into tracking imports/inline-imports.
-			const auto inline_import = process_state_inline_import(opt_states_out, next_state_raw, opt_base_path, opt_command_context);
+			const auto inline_import = process_state_inline_import(opt_states_out, next_state_raw, opt_base_path, opt_parsing_context);
 
 			StringHash next_state_id = (inline_import) // EntityStateHash
 				? *inline_import->name
@@ -636,7 +789,7 @@ namespace engine
 			);
 		};
 
-		auto init_empty_command = [this, opt_command_context](std::string_view command_name) -> CommandContent*
+		auto init_empty_command = [this, opt_parsing_context](std::string_view command_name) -> CommandContent*
 		{
 			if (command_name.empty())
 			{
@@ -652,9 +805,9 @@ namespace engine
 			}
 			else
 			{
-				if (opt_command_context)
+				if (opt_parsing_context)
 				{
-					if (auto resolved_command_type = opt_command_context->get_command_type_from_alias(command_name))
+					if (auto resolved_command_type = opt_parsing_context->get_command_type_from_alias(command_name))
 					{
 						return &(descriptor.generate_empty_command(resolved_command_type));
 					}
@@ -700,7 +853,7 @@ namespace engine
 			return process_command_rule_from_csv(command_name, command_content, !is_string_content);
 		};
 
-		auto process_command_rule_from_object = [&init_empty_command, &process_command](std::string_view command_name, const util::json& command_data) -> EntityStateRule*
+		auto process_command_rule_from_object = [&opt_parsing_context, &init_empty_command, &process_command](std::string_view command_name, const util::json& command_data) -> EntityStateRule*
 		{
 			if (auto command_content = init_empty_command(command_name))
 			{
@@ -708,7 +861,8 @@ namespace engine
 				(
 					command_data,
 					{ .resolve_component_member_references = true },
-					command_arg_offset
+					command_arg_offset,
+					opt_parsing_context
 				);
 
 				return process_command(*command_content); // std::move(*command_content)
@@ -812,7 +966,7 @@ namespace engine
 					(
 						*update,
 
-						[this, &process_rule, &target](const util::json& update_entry)
+						[this, &opt_parsing_context, &process_rule, &target](const util::json& update_entry)
 						{
 							auto action = EntityStateUpdateAction
 							{
@@ -820,7 +974,7 @@ namespace engine
 								target
 							};
 
-							process_update_action(action, update_entry);
+							process_update_action(action, update_entry, opt_parsing_context);
 
 							process_rule(std::move(action));
 						}
@@ -829,7 +983,7 @@ namespace engine
 
 				if (auto threads = util::find_any(content, "do", "threads", "execute"); threads != content.end())
 				{
-					auto [initial_thread_index, thread_count] = process_thread_list(*threads, opt_base_path, opt_command_context);
+					auto [initial_thread_index, thread_count] = process_thread_list(*threads, opt_base_path, opt_parsing_context);
 
 					process_rule
 					(
@@ -912,7 +1066,7 @@ namespace engine
 
 		EntityDescriptor::StateCollection* opt_states_out,
 		const std::filesystem::path* opt_base_path,
-		const CommandParsingContext* opt_command_context,
+		const ParsingContext* opt_parsing_context,
 		bool allow_inline_import
 	)
 	{
@@ -922,7 +1076,7 @@ namespace engine
 		(
 			trigger_condition_expr,
 
-			[this, &state, &content, opt_states_out, opt_base_path, opt_command_context, allow_inline_import, &number_processed]
+			[this, &state, &content, opt_states_out, opt_base_path, opt_parsing_context, allow_inline_import, &number_processed]
 			(
 				MetaTypeID type_name_id,
 				std::optional<EventTriggerCondition> condition
@@ -932,14 +1086,17 @@ namespace engine
 				(
 					state,
 					type_name_id, content, condition,
-					opt_states_out, opt_base_path, opt_command_context,
+					opt_states_out, opt_base_path, opt_parsing_context,
 					allow_inline_import
 				);
 				
 				number_processed += result;
 
 				return result;
-			}
+			},
+
+			false, // true,
+			opt_parsing_context
 		);
 
 		// NOTE: Updated automatically in `process_rule` subroutine.
@@ -953,7 +1110,7 @@ namespace engine
 
 		EntityDescriptor::StateCollection* opt_states_out,
 		const std::filesystem::path* opt_base_path,
-		const CommandParsingContext* opt_command_context,
+		const ParsingContext* opt_parsing_context,
 		bool allow_inline_import
 	)
 	{
@@ -989,7 +1146,7 @@ namespace engine
 					count += process_trigger_expression
 					(
 						state, trigger_condition_expr, content,
-						opt_states_out, opt_base_path, opt_command_context,
+						opt_states_out, opt_base_path, opt_parsing_context,
 						allow_inline_import
 					);
 				});
@@ -1002,7 +1159,7 @@ namespace engine
 			count += process_trigger_expression
 			(
 				state, trigger_condition_expr, content,
-				opt_states_out, opt_base_path, opt_command_context,
+				opt_states_out, opt_base_path, opt_parsing_context,
 				allow_inline_import
 			);
 		};
@@ -1118,7 +1275,7 @@ namespace engine
 		EntityDescriptor::StateCollection* states_out,
 		const std::string& command, // std::string_view
 		const std::filesystem::path* base_path,
-		const CommandParsingContext* opt_command_context,
+		const ParsingContext* opt_parsing_context,
 		bool allow_inline_import
 	)
 	{
@@ -1150,7 +1307,7 @@ namespace engine
 		{
 			case "import"_hs:
 				// NOTE: Recursion.
-				return process_state(*states_out, state_path_raw, *base_path, opt_command_context);
+				return process_state(*states_out, state_path_raw, *base_path, opt_parsing_context);
 		}
 
 		return nullptr;
@@ -1160,23 +1317,32 @@ namespace engine
 	(
 		const util::json& data,
 		const std::filesystem::path& base_path,
-		const CommandParsingContext* opt_command_context,
+		const ParsingContext* opt_parsing_context,
 		bool resolve_external_modules
 	)
 	{
 		if (resolve_external_modules)
 		{
-			resolve_archetypes(data, base_path, opt_command_context);
+			// Handles the following: "archetypes", "import", "imports", "modules"
+			resolve_archetypes(data, base_path, opt_parsing_context);
 		}
 
 		if (auto components = util::find_any(data, "component", "components"); components != data.end())
 		{
-			process_component_list(descriptor.components, *components);
+			process_component_list(descriptor.components, *components, {}, opt_parsing_context);
 		}
 
 		if (auto states = util::find_any(data, "state", "states"); states != data.end())
 		{
-			process_state_list(descriptor.states, *states, base_path, opt_command_context);
+			process_state_list(descriptor.states, *states, base_path, opt_parsing_context);
+		}
+		
+		if (auto threads = util::find_any(data, "do", "threads", "execute"); threads != data.end())
+		{
+			if (auto [initial_thread_index, thread_count] = process_thread_list(*threads, &base_path, opt_parsing_context); (thread_count > 0))
+			{
+				descriptor.immediate_threads.emplace_back(initial_thread_index, thread_count);
+			}
 		}
 
 		if (auto default_state = data.find("default_state"); default_state != data.end())
@@ -1210,6 +1376,53 @@ namespace engine
 				}
 			}
 		}
+
+		// Handle every other key-value pair as a component:
+		util::enumerate_map_filtered_ex
+		(
+			data.items(),
+			hash,
+
+			[this, &opt_parsing_context](const auto& component_declaration, const auto& component_content)
+			{
+				process_component
+				(
+					descriptor.components,
+
+					component_declaration,
+					&component_content,
+					{},
+					opt_parsing_context
+				);
+			},
+
+			// Ignore these keys:
+
+			// Handled in `resolve_archetypes` routine.
+			"archetypes", "import", "imports", "modules",
+
+			// Handled in this function (see above):
+			"component", "components",
+			"state", "states",
+			"do", "threads", "execute",
+			"default_state",
+
+			// See below.
+			"model", "models",
+
+			// Handled in callback-based implementation of `process_archetype`.
+			"children"
+		);
+
+		if (auto model = util::find_any(data, "model", "models"); model != data.end())
+		{
+			engine::load<EntityDescriptor::ModelDetails>(descriptor.model_details, *model);
+
+			if (!descriptor.model_details.path.empty())
+			{
+				descriptor.model_details.path = (base_path / std::filesystem::path(descriptor.model_details.path)).string();
+			}
+		}
 	}
 
 	//std::size_t
@@ -1218,12 +1431,12 @@ namespace engine
 	(
 		const util::json& content,
 		const std::filesystem::path* opt_base_path,
-		const CommandParsingContext* opt_command_context
+		const ParsingContext* opt_parsing_context
 	)
 	{
 		const auto initial_thread_index = descriptor.get_next_thread_index();
 
-		auto process_thread = [this, opt_base_path, opt_command_context]
+		auto process_thread = [this, opt_base_path, opt_parsing_context]
 		(
 			const util::json& content,
 			std::string_view opt_thread_name
@@ -1237,7 +1450,7 @@ namespace engine
 
 				this,
 				opt_base_path,
-				opt_command_context
+				opt_parsing_context
 			};
 
 			thread_builder << content;

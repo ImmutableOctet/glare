@@ -1,7 +1,6 @@
 #pragma once
 
 #include "entity.hpp"
-#include "player/player.hpp"
 
 #include <engine/types.hpp>
 #include <util/log.hpp>
@@ -29,6 +28,8 @@ namespace engine
 	class World;
 	class ResourceManager;
 
+	struct ParsingContext;
+
 	// A Stage, sometimes referred to as a Map is an abstract concept for
 	// a portion of the scene-graph that's been loaded from an external source.
 	// e.g. from disk, network, etc.
@@ -39,41 +40,15 @@ namespace engine
 
 			using ObjectMap       = std::unordered_map<ObjectIndex, Entity>;
 			using PlayerObjectMap = std::unordered_map<PlayerIndex, Entity>;
-			
-			//using ObjectCreationFunction = Entity(*)(World& world, Entity parent, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const util::json& data);
-			using ObjectCreationFunction = std::function<Entity(World& world, Entity parent, const filesystem::path&, const PlayerObjectMap&, const ObjectMap&, const util::json&)>;
-
-			using ObjectCreationMap = std::unordered_map<std::string, ObjectCreationFunction>;
-
-			static constexpr PlayerIndex NoPlayer = PlayerState::NoPlayer;
+		private:
+			template <typename ...IgnoredKeys>
+			static void process_component_entries(Registry& registry, Entity entity, const util::json& object_data, const ParsingContext& parsing_context, IgnoredKeys&&... ignored_keys);
 		protected:
-			static const ObjectCreationMap ObjectRoutines;
-
-			static Entity CreateCamera(World& world, Entity parent, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data);
-			static Entity CreateLight(World& world, Entity parent, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data);
-			static Entity CreateFollowSphere(World& world, Entity parent, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data);
-			static Entity CreateBillboard(World& world, Entity parent, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data);
-			static Entity CreatePlatform(World& world, Entity parent, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data);
-			static Entity CreateScenery(World& world, Entity parent, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data);
-
 			static void resolve_parent(World& world, Entity entity, Entity stage, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data);
 
 			static Entity resolve_object_reference(const std::string& query, World& world, const PlayerObjectMap& player_objects, const ObjectMap& objects); // std::tuple<std::string, std::string>
 
-			static inline math::TransformVectors get_transform_data(const util::json& cfg)
-			{
-				auto tform = util::get_transform(cfg);
-
-				auto [position, rotation, scale] = tform;
-
-				print("Transform:");
-
-				print("Position: {}", position);
-				print("Rotation: {}", rotation);
-				print("Scale: {}\n", scale);
-
-				return tform;
-			};
+			static math::TransformVectors get_transform_data(const util::json& cfg);
 
 			static void apply_transform(World& world, Entity entity, const util::json& cfg);
 			static std::optional<graphics::ColorRGBA> apply_color(World& world, Entity entity, const util::json& cfg);

@@ -6,11 +6,8 @@ target_sources(
     
     PRIVATE
 
-    # TODO: Move somewhere else.
-    "collision_shape_primitive.cpp"
-
     "reflection.cpp"
-    "config.cpp"
+    
     "service.cpp"
     "timer.cpp"
     "transform.cpp"

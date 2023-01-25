@@ -1,9 +1,16 @@
-#include "command_parsing_context.hpp"
+#include "parsing_context.hpp"
 
 #include "meta.hpp"
 
 namespace engine
 {
+	static MetaType get_type_raw(std::string_view name)
+	{
+		const auto name_id = hash(name);
+
+		return resolve(name_id);
+	}
+
 	// TODO: Move to a different location.
 	template <typename Callback>
     inline void generate_simplified_type_names(Callback callback, std::string_view suffix, std::string_view opt_snake_prefix={})
@@ -61,22 +68,49 @@ namespace engine
         }
     }
 
-	CommandParsingContext CommandParsingContext::generate(bool standard_mapping, bool reverse_mapping, std::string_view suffix)
+	ParsingContext ParsingContext::generate(bool standard_mapping, bool reverse_mapping)
 	{
-		CommandParsingContext context;
+		ParsingContext context;
 
-		generate(context, standard_mapping, reverse_mapping, suffix);
+		generate_aliases
+		(
+			context.command_aliases,
+			
+			"Command",
+
+			standard_mapping, reverse_mapping,
+
+			// Removes need for `entity` prefix on some commands.
+			// (e.g. `entity_thread_resume` becomes `thread_resume`)
+			"entity"
+		);
+
+		generate_aliases
+		(
+			context.component_aliases,
+			
+			"Component",
+
+			standard_mapping, reverse_mapping
+			//, "entity"
+		);
 
 		return context;
 	}
 
-	std::size_t CommandParsingContext::generate(CommandParsingContext& context, bool standard_mapping, bool reverse_mapping, std::string_view suffix)
+	std::size_t ParsingContext::generate_aliases
+	(
+		AliasContainer& container_out,
+		std::string_view suffix,
+		bool standard_mapping, bool reverse_mapping,
+		std::string_view opt_snake_prefix
+	)
 	{
 		std::size_t count = 0;
 
 		generate_simplified_type_names
 		(
-			[&context, standard_mapping, reverse_mapping, &count]
+			[&container_out, standard_mapping, reverse_mapping, opt_snake_prefix, &count]
 			(
 				auto&& type_id, auto&& type,
 				std::string_view short_name, std::string_view short_name_no_suffix,
@@ -85,13 +119,13 @@ namespace engine
 			{
 				if (standard_mapping)
 				{
-					context.command_aliases[std::move(snake_name)] = short_name;
+					container_out[std::move(snake_name)] = short_name;
 
 					count++;
 
 					if (!snake_name_no_prefix.empty())
 					{
-						context.command_aliases[std::move(snake_name_no_prefix)] = short_name;
+						container_out[std::move(snake_name_no_prefix)] = short_name;
 
 						count++;
 					}
@@ -99,7 +133,7 @@ namespace engine
 
 				if (reverse_mapping)
 				{
-					context.command_aliases[std::move(snake_name_reversed)] = short_name;
+					container_out[std::move(snake_name_reversed)] = short_name;
 
 					count++;
 				}
@@ -107,53 +141,69 @@ namespace engine
 
 			suffix,
 
-			// Removes need for `entity` prefix on some commands.
-			// (e.g. `entity_thread_resume` becomes `thread_resume`)
-			"entity"
+			opt_snake_prefix
 		);
 
 		return count;
 	}
 
-	std::string_view CommandParsingContext::resolve_command_alias(std::string_view command_alias) const
+	std::string_view ParsingContext::resolve_alias(const AliasContainer& container, std::string_view alias)
 	{
-		if (const auto cmd_it = command_aliases.find(command_alias); cmd_it != command_aliases.end())
+		if (const auto it = container.find(alias); it != container.end())
 		{
-			const auto& resolved_command_name = cmd_it->second;
+			const auto& resolved_name = it->second;
 
-			return resolved_command_name;
+			return resolved_name;
 		}
 
 		return {};
 	}
 
-	MetaType CommandParsingContext::get_command_type(std::string_view command_name, bool is_known_alias) const
+	MetaType ParsingContext::get_type(const AliasContainer& aliases, std::string_view name, bool is_known_alias)
 	{
 		if (!is_known_alias)
 		{
-			const auto command_name_id = hash(command_name);
-
-			if (const auto command_type = resolve(command_name_id))
+			if (auto type = get_type_raw(name))
 			{
-				return command_type;
+				return type;
 			}
 		}
 
-		return get_command_type_from_alias(command_name);
+		return get_type_from_alias(aliases, name);
 	}
 
-	MetaType CommandParsingContext::get_command_type_from_alias(std::string_view command_alias) const
+	MetaType ParsingContext::get_type_from_alias(const AliasContainer& alias_container, std::string_view alias)
 	{
-		if (auto resolved_name = resolve_command_alias(command_alias); !resolved_name.empty())
+		if (auto resolved_name = resolve_alias(alias_container, alias); !resolved_name.empty())
 		{
 			auto resolved_name_id = hash(resolved_name);
 
-			if (const auto command_type = resolve(resolved_name_id))
+			if (const auto type = resolve(resolved_name_id))
 			{
-				return command_type;
+				return type;
 			}
 		}
 
 		return {};
+	}
+
+	MetaType ParsingContext::get_type(std::string_view name) const
+	{
+		if (auto as_component = get_component_type(name, true))
+		{
+			return as_component;
+		}
+
+		if (auto as_command = get_command_type(name, true))
+		{
+			return as_command;
+		}
+
+		return get_type_raw(name);
+	}
+
+	MetaTypeID ParsingContext::get_type_id(std::string_view name) const
+	{
+		return get_type(name).id();
 	}
 }

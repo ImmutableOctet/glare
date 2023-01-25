@@ -1,10 +1,12 @@
 #include "serial.hpp"
 #include "meta.hpp"
 #include "meta_type_descriptor.hpp"
+#include "parsing_context.hpp"
 
 #include <engine/types.hpp>
 
 #include <engine/entity/entity_thread_target.hpp>
+#include <engine/entity/entity_target.hpp>
 
 #include <util/string.hpp>
 #include <util/parse.hpp>
@@ -20,13 +22,13 @@ namespace engine
 	{
 		// TODO: Determine if `util::small_vector` would work here.
 		// See: https://github.com/skypjack/entt/blob/master/docs/md/meta.md#container-support
-		//using ArrayType = util::small_vector<entt::meta_any, 8>;
-		using ArrayType = std::vector<entt::meta_any>;
+		//using ArrayType = util::small_vector<MetaAny, 8>;
+		using ArrayType = std::vector<MetaAny>;
 
 		using StringType = util::json::string_t; // std::string;
 		
 		// Resolves primitive types from an array input.
-		static entt::meta_any resolve_array(const util::json& value, const MetaAnyParseInstructions& instructions={})
+		static MetaAny resolve_array(const util::json& value, const MetaAnyParseInstructions& instructions={}, const ParsingContext* opt_parsing_context=nullptr)
 		{
 			ArrayType output;
 
@@ -34,34 +36,38 @@ namespace engine
 
 			for (const auto& element : value)
 			{
-				output.emplace_back(resolve_meta_any(element, instructions));
+				output.emplace_back(resolve_meta_any(element, instructions, opt_parsing_context));
 			}
 
 			return { std::move(output) }; // output;
 		}
 	};
 
-	entt::meta_any meta_any_from_string(const util::json& value, const MetaAnyParseInstructions& instructions)
+	MetaAny meta_any_from_string(const util::json& value, const MetaAnyParseInstructions& instructions, MetaType type)
 	{
 		auto string_value = value.get<engine::impl::StringType>();
 
-		return meta_any_from_string(std::string_view { string_value }, instructions);
+		return meta_any_from_string(std::string_view { string_value }, instructions, type);
 	}
 
-	static entt::meta_any meta_any_from_string_resolve_impl(std::string_view value, const MetaAnyParseInstructions& instructions)
+	static MetaAny meta_any_from_string_resolve_impl(std::string_view value, const MetaAnyParseInstructions& instructions, MetaType type={})
 	{
-		if (auto as_integer = util::from_string<std::int32_t>(value)) // std::int64_t
+		const auto had_initial_type = static_cast<bool>(type);
+
+		if (!had_initial_type)
 		{
-			return as_integer;
-		}
-		
-		if (auto as_float = util::from_string<float>(value)) // double
-		{
-			return as_float;
+			if (auto as_integer = util::from_string<std::int32_t>(value)) // std::int64_t
+			{
+				return *as_integer;
+			}
+
+			if (auto as_float = util::from_string<float>(value)) // double
+			{
+				return *as_float;
+			}
 		}
 
-		entt::meta_any output;
-		entt::meta_type type;
+		MetaAny output;
 
 		auto has_scope_resolution = util::split
 		(
@@ -73,7 +79,7 @@ namespace engine
 
 				auto as_type = resolve(symbol_id);
 
-				if (as_type)
+				if (as_type && (!is_last_symbol || !type))
 				{
 					type = as_type;
 				}
@@ -131,13 +137,14 @@ namespace engine
 			}
 		);
 
-		if (output && has_scope_resolution)
+		if (output && (has_scope_resolution || had_initial_type))
 		{
 			return output;
 		}
 
 		if (instructions.resolve_component_member_references)
 		{
+			// TODO: Look into forwarding `type` into this routine, if applicable.
 			if (auto result = indirect_meta_data_member_from_string(value))
 			{
 				return *result;
@@ -147,7 +154,7 @@ namespace engine
 		return {};
 	}
 
-	entt::meta_any meta_any_from_string(std::string_view value, const MetaAnyParseInstructions& instructions)
+	MetaAny meta_any_from_string(std::string_view value, const MetaAnyParseInstructions& instructions, MetaType type)
 	{
 		using namespace entt::literals;
 
@@ -165,7 +172,7 @@ namespace engine
 
 		if (resolve_symbol)
 		{
-			auto execute_string_command = [](const auto command_id, const auto& content) -> entt::meta_any
+			auto execute_string_command = [](const auto command_id, const auto& content, std::string_view content_raw) -> MetaAny
 			{
 				switch (command_id)
 				{
@@ -180,10 +187,15 @@ namespace engine
 						return EntityThreadTarget(content);
 				}
 
+				if (auto as_entity_target = EntityTarget::parse(content_raw))
+				{
+					return *as_entity_target;
+				}
+
 				return {};
 			};
 
-			auto execute_any_command = [&execute_string_command](const auto command_id, const entt::meta_any& content) -> entt::meta_any
+			auto execute_any_command = [&execute_string_command](const auto command_id, const MetaAny& content, std::string_view content_raw) -> MetaAny
 			{
 				//switch (command_id)
 				{
@@ -194,11 +206,11 @@ namespace engine
 					{
 						if (const auto* as_str_view = content.try_cast<std::string_view>())
 						{
-							return execute_string_command(command_id, *as_str_view);
+							return execute_string_command(command_id, *as_str_view, content_raw);
 						}
 						else if (const auto* as_str = content.try_cast<std::string>())
 						{
-							return execute_string_command(command_id, *as_str);
+							return execute_string_command(command_id, *as_str, content_raw);
 						}
 
 						//break;
@@ -212,12 +224,14 @@ namespace engine
 			if (value.starts_with('$') || value.starts_with('#'))
 			{
 				// Remove symbol prefix.
-				value = value.substr(1);
+				auto sub_value = value.substr(1);
 
-				if (auto result = execute_string_command("hash"_hs, value))
+				if (auto result = execute_string_command("hash"_hs, sub_value, value))
 				{
 					return result;
 				}
+
+				value = sub_value;
 			}
 			else
 			{
@@ -233,9 +247,9 @@ namespace engine
 
 					if (!command_content_is_string)
 					{
-						if (auto resolved = meta_any_from_string_resolve_impl(command_content, instructions))
+						if (auto resolved = meta_any_from_string_resolve_impl(command_content, instructions, type))
 						{
-							if (auto result = execute_any_command(command_id, resolved))
+							if (auto result = execute_any_command(command_id, resolved, value))
 							{
 								return result;
 							}
@@ -245,7 +259,7 @@ namespace engine
 						}
 					}
 
-					if (auto result = execute_string_command(command_id, command_content))
+					if (auto result = execute_string_command(command_id, command_content, value))
 					{
 						return result;
 					}
@@ -256,7 +270,7 @@ namespace engine
 				}
 				else
 				{
-					if (auto resolved = meta_any_from_string_resolve_impl(value, instructions))
+					if (auto resolved = meta_any_from_string_resolve_impl(value, instructions, type))
 					{
 						return resolved;
 					}
@@ -266,18 +280,32 @@ namespace engine
 
 		if (instructions.fallback_to_string)
 		{
+			//assert(!type);
+
 			return { std::string(value) };
 		}
 
 		return {};
 	}
 
-	entt::meta_any resolve_meta_any(const util::json& value, MetaTypeID type_id, const MetaAnyParseInstructions& instructions)
+	MetaAny resolve_meta_any
+	(
+		const util::json& value,
+		MetaTypeID type_id,
+		const MetaAnyParseInstructions& instructions,
+		const ParsingContext* opt_parsing_context
+	)
 	{
-		return resolve_meta_any(value, entt::resolve(type_id), instructions);
+		return resolve_meta_any(value, entt::resolve(type_id), instructions, opt_parsing_context);
 	}
 
-	entt::meta_any resolve_meta_any(const util::json& value, MetaType type, const MetaAnyParseInstructions& instructions)
+	MetaAny resolve_meta_any
+	(
+		const util::json& value,
+		MetaType type,
+		const MetaAnyParseInstructions& instructions,
+		const ParsingContext* opt_parsing_context
+	)
 	{
 		using jtype = util::json::value_t;
 
@@ -289,13 +317,28 @@ namespace engine
 			case jtype::object:
 				// NOTE: Nesting `MetaTypeDescriptor` objects within the any-chain
 				// implies recursion during object construction later on.
-				return MetaTypeDescriptor(type, value, instructions);
+				return MetaTypeDescriptor
+				(
+					type, value,
+					instructions,
+					std::nullopt,
+					{},
+					opt_parsing_context
+				);
+
+			case jtype::string:
+				return meta_any_from_string(value, instructions, type);
 		}
 
-		return resolve_meta_any(value, instructions);
+		return resolve_meta_any(value, instructions, opt_parsing_context);
 	}
 
-	entt::meta_any resolve_meta_any(const util::json& value, const MetaAnyParseInstructions& instructions)
+	MetaAny resolve_meta_any
+	(
+		const util::json& value,
+		const MetaAnyParseInstructions& instructions,
+		const ParsingContext* opt_parsing_context
+	)
 	{
 		using jtype = util::json::value_t;
 
@@ -304,13 +347,27 @@ namespace engine
 			case jtype::object:
 			{
 				// Completely opaque object detected.
-				assert(false);
+				//assert(false);
+
+				print_warn("Opaque JSON object detected (No type information): Opaque objects are not currently supported.");
+
+				/*
+				return MetaTypeDescriptor
+				(
+					MetaType {},
+					value,
+					instructions,
+					std::nullopt,
+					{},
+					opt_parsing_context
+				);
+				*/
 
 				// TODO: Maybe handle as array instead...?
 				return {};
 			}
 			case jtype::array:
-				return impl::resolve_array(value, instructions);
+				return impl::resolve_array(value, instructions, opt_parsing_context);
 			case jtype::string:
 				return meta_any_from_string(value, instructions);
 			case jtype::boolean:
@@ -452,11 +509,11 @@ namespace engine
 		return Target::SelfTarget {};
 	}
 
-	void read_command_parsing_context(CommandParsingContext& context, const util::json& data)
+	void read_parsing_context(ParsingContext& context, const util::json& data)
 	{
-		if (auto aliases = data.find("aliases"); aliases != data.end())
+		auto read_aliases = [](const util::json& aliases, auto& alias_container_out)
 		{
-			for (const auto& proxy : aliases->items())
+			for (const auto& proxy : aliases.items())
 			{
 				const auto& raw_value = proxy.value();
 
@@ -467,19 +524,86 @@ namespace engine
 
 				const auto& alias = proxy.key();
 
-				auto command_name = raw_value.get<std::string>();
+				auto type_name = raw_value.get<std::string>();
 
-				const auto command_id = hash(command_name);
+				const auto type_id = hash(type_name);
 
-				auto command_type = resolve(command_id);
+				const auto type = resolve(type_id);
 
-				if (!command_type)
+				if (!type)
 				{
 					continue;
 				}
 
-				context.command_aliases[alias] = command_type.info().name(); // std::string(...);
+				alias_container_out[alias] = type.info().name(); // std::string(...);
 			}
+		};
+
+		if (auto aliases = data.find("command_aliases"); aliases != data.end())
+		{
+			read_aliases(*aliases, context.command_aliases);
 		}
+
+		if (auto aliases = data.find("component_aliases"); aliases != data.end())
+		{
+			read_aliases(*aliases, context.component_aliases);
+		}
+	}
+
+	MetaAny load
+	(
+		MetaAny out,
+		
+		const util::json& data,
+		
+		bool use_assignment,
+
+		const MetaAnyParseInstructions& parse_instructions,
+		const MetaTypeDescriptorFlags& descriptor_flags,
+		const ParsingContext* opt_parsing_context
+	)
+	{
+		auto descriptor = load_descriptor
+		(
+			out.type(),
+			data,
+			parse_instructions,
+			descriptor_flags,
+			opt_parsing_context
+		);
+
+		if (use_assignment)
+		{
+			descriptor.apply_fields(out);
+		}
+		else
+		{
+			return descriptor.instance();
+		}
+
+		return out;
+	}
+
+	MetaAny load
+	(
+		MetaType type,
+		
+		const util::json& data,
+
+		const MetaAnyParseInstructions& parse_instructions,
+		const MetaTypeDescriptorFlags& descriptor_flags,
+		const ParsingContext* opt_parsing_context
+	)
+	{
+		auto descriptor = load_descriptor
+		(
+			type,
+			data,
+			parse_instructions,
+			descriptor_flags,
+			opt_parsing_context
+		);
+
+		return descriptor.instance(); // false
 	}
 }

@@ -21,7 +21,7 @@ namespace engine
 {
 	class EntityDescriptor;
 
-	struct CommandParsingContext;
+	struct ParsingContext;
 	struct EntityThreadDescription;
 	struct MetaTypeDescriptor;
 	struct EntityFactoryContext;
@@ -29,25 +29,31 @@ namespace engine
 	class EntityThreadBuilderContext
 	{
 		public:
+			using ThreadDescriptor = EntityDescriptorShared<EntityThreadDescription>;
+
 			EntityThreadBuilderContext
 			(
 				EntityDescriptor& descriptor,
-				EntityThreadDescription& thread,
+				ThreadDescriptor thread,
 				const EntityFactoryContext* opt_factory_context = nullptr,
 				const std::filesystem::path* opt_base_path = nullptr,
-				const CommandParsingContext* opt_command_context = nullptr
+				const ParsingContext* opt_parsing_context = nullptr
 			);
 
 			EntityThreadIndex thread_index() const;
 
 			inline EntityThreadDescription& get_thread()
 			{
-				return thread;
+				//return thread;
+
+				return thread.get(descriptor);
 			}
 
 			inline const EntityThreadDescription& get_thread() const
 			{
-				return thread;
+				//return thread;
+
+				return thread.get(descriptor);
 			}
 
 			inline EntityDescriptor& get_descriptor()
@@ -59,13 +65,16 @@ namespace engine
 			{
 				return descriptor;
 			}
+
 		protected:
 			EntityDescriptor& descriptor;
-			EntityThreadDescription& thread;
 
 			const EntityFactoryContext* opt_factory_context = nullptr;
 			const std::filesystem::path* opt_base_path = nullptr;
-			const CommandParsingContext* opt_command_context = nullptr;
+			const ParsingContext* opt_parsing_context = nullptr;
+
+		private:
+			ThreadDescriptor thread; // EntityThreadDescription&
 	};
 
 	// Handles processing steps for one or more `EntityThreadDescription` objects.
@@ -91,11 +100,11 @@ namespace engine
 			EntityThreadBuilder
 			(
 				EntityDescriptor& descriptor,
-				EntityThreadDescription& thread,
+				ThreadDescriptor thread,
 				std::string_view opt_thread_name={},
 				const EntityFactoryContext* opt_factory_context=nullptr,
 				const std::filesystem::path* opt_base_path=nullptr,
-				const CommandParsingContext* opt_command_context=nullptr
+				const ParsingContext* opt_parsing_context=nullptr
 			);
 
 			EntityThreadBuilder
@@ -104,7 +113,7 @@ namespace engine
 				std::string_view opt_thread_name={},
 				const EntityFactoryContext* opt_factory_context=nullptr,
 				const std::filesystem::path* opt_base_path=nullptr,
-				const CommandParsingContext* opt_command_context=nullptr
+				const ParsingContext* opt_parsing_context=nullptr
 			);
 
 			virtual ~EntityThreadBuilder();
@@ -203,6 +212,8 @@ namespace engine
 			template <typename InstructionType, typename ...Args>
 			inline InstructionType& emit(Args&&... args)
 			{
+				auto& thread = get_thread();
+
 				auto& stored_instance = thread.instructions.emplace_back
 				(
 					EntityInstruction::InstructionType
@@ -303,7 +314,7 @@ namespace engine
 			const EntityThreadBuilderContext& context() const;
 
 			// Generates a sub-context for a given `target_sub_thread`.
-			EntityThreadBuilderContext sub_context(EntityThreadDescription& target_sub_thread) const;
+			EntityThreadBuilderContext sub_context(ThreadDescriptor target_sub_thread) const;
 
 			// Generates a sub-context and allocates a new thread to be associated.
 			EntityThreadBuilderContext sub_context() const;
@@ -379,6 +390,12 @@ namespace engine
 			(
 				EventTriggerCondition&& condition,
 
+				const ContentSource& content_source,
+				EntityInstructionCount content_index
+			);
+
+			EntityInstructionCount generate_repeat_block
+			(
 				const ContentSource& content_source,
 				EntityInstructionCount content_index
 			);

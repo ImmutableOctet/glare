@@ -13,6 +13,7 @@ target_sources(
     "collision_data.cpp"
     "entity_factory_data.cpp"
     "resource_manager.cpp"
+    "reflection.cpp"
 )
 
 #target_link_libraries(

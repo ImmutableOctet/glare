@@ -13,7 +13,7 @@ namespace engine
 					
 		util::visit
 		(
-			size,
+			size.value,
 
 			[&](const AABBType& aabb)
 			{
@@ -68,7 +68,7 @@ namespace engine
 					
 		util::visit
 		(
-			size,
+			size.value,
 
 			[&](const AABBType& aabb)
 			{
@@ -123,7 +123,7 @@ namespace engine
 					
 		util::visit
 		(
-			size,
+			size.value,
 
 			[&](const AABBType& aabb)
 			{
@@ -189,7 +189,7 @@ namespace engine
 					
 		util::visit
 		(
-			size,
+			size.value,
 
 			[&](const AABBType& aabb)
 			{

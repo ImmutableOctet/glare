@@ -149,24 +149,27 @@ namespace engine
 			// Determine if this is a player-specific event type:
 			if (event_player_index)
 			{
-				// Check if this entity has a `PlayerComponent` attached:
-				if (const auto* player_comp = registry.try_get<PlayerComponent>(entity))
+				if (*event_player_index != ANY_PLAYER)
 				{
-					const auto entity_player_index = player_comp->player_index;
-
-					if (*event_player_index != entity_player_index)
+					// Check if this entity has a `PlayerComponent` attached:
+					if (const auto* player_comp = registry.try_get<PlayerComponent>(entity))
 					{
-						continue;
+						const auto entity_player_index = player_comp->player_index;
+
+						if (*event_player_index != entity_player_index)
+						{
+							continue;
+						}
 					}
-				}
-				// Check if this entity has a `PlayerTargetComponent` attached:
-				else if (const auto* player_comp = registry.try_get<PlayerTargetComponent>(entity))
-				{
-					const auto entity_player_index = player_comp->player_index;
-
-					if (*event_player_index != entity_player_index)
+					// Check if this entity has a `PlayerTargetComponent` attached:
+					else if (const auto* player_comp = registry.try_get<PlayerTargetComponent>(entity))
 					{
-						continue;
+						const auto entity_player_index = player_comp->player_index;
+
+						if (*event_player_index != entity_player_index)
+						{
+							continue;
+						}
 					}
 				}
 			}

@@ -4,19 +4,25 @@
 // TODO: Rework this source file into some form of automated 'reflection generation' procedure in the build process.
 
 #include "reflection.hpp"
+
 #include "components/reflection.hpp"
 #include "commands/reflection.hpp"
-#include "meta/meta.hpp"
 
 #include "meta/reflection.hpp"
+#include "resource_manager/reflection.hpp"
 #include "entity/reflection.hpp"
 #include "debug/reflection.hpp"
 #include "input/reflection.hpp"
 #include "world/reflection.hpp"
 
+#include "config.hpp"
+
 #include <math/reflection.hpp>
 
 #include <util/format.hpp>
+
+#include <utility>
+#include <optional>
 
 //#include <entt/meta/meta.hpp>
 //#include <entt/entt.hpp>
@@ -51,22 +57,110 @@ namespace engine
     }
     */
 
+    template <typename T>
+    auto reflect_math_type(auto type_name)
+    {
+        auto type = math::reflect<T>(hash(type_name));
+
+        auto opt_type = entt::meta<std::optional<T>>()
+            .type(hash(optional_name(type_name)))
+            //.template func<&from_optional<T>>("from_optional"_hs)
+            .template func<&type_id_from_optional<T>>("type_id_from_optional"_hs)
+            .template func<&type_from_optional<T>>("type_from_optional"_hs)
+        ;
+
+        if constexpr (std::is_copy_constructible_v<T>)
+        {
+            opt_type = opt_type.ctor<T>(); // const T&
+        }
+
+        /*
+        if constexpr (std::is_move_constructible_v<T>)
+        {
+            opt_type = opt_type.ctor<T&&>();
+        }
+        */
+
+        return type;
+    }
+
     // Reflects `math::Vector2D` with the generalized name of `Vector2D`.
     // 
     // TODO: Look into migrating this to another file/header.
     template <>
     void reflect<math::Vector2D>()
     {
-        math::reflect<math::Vector2D>("Vector2D"_hs);
+        reflect_math_type<math::Vector2D>("Vector2D");
     }
 
-    // Reflects `math::Vector3D` with the generalized name of `Vector3D`.
+    // Reflects `math::Vector3D` with the generalized name of `Vector`.
     // 
     // TODO: Look into migrating this to another file/header.
     template <>
     void reflect<math::Vector3D>()
     {
-        math::reflect<math::Vector3D>("Vector3D"_hs);
+        reflect_math_type<math::Vector3D>("Vector"); // "Vector3D"
+    }
+
+    // Reflects `math::Vector4D` with the generalized name of `Vector4D`.
+    // 
+    // TODO: Look into migrating this to another file/header.
+    template <>
+    void reflect<math::Vector4D>()
+    {
+        reflect_math_type<math::Vector4D>("Vector4D");
+    }
+
+    // Reflects `math::vec2i` with the generalized name of `vec2i`.
+    // 
+    // TODO: Look into migrating this to another file/header.
+    template <>
+    void reflect<math::vec2i>()
+    {
+        reflect_math_type<math::vec2i>("vec2i");
+    }
+
+    template <>
+    void reflect<GraphicsConfig>()
+    {
+        engine_meta_type<GraphicsConfig>()
+            .data<&GraphicsConfig::shadows>("shadows"_hs)
+            .data<&GraphicsConfig::parallax>("parallax"_hs)
+        ;
+
+        engine_meta_type<GraphicsConfig::Shadows>()
+            .data<&GraphicsConfig::Shadows::resolution>("resolution"_hs)
+            .data<&GraphicsConfig::Shadows::cubemap_resolution>("cubemap_resolution"_hs)
+            .data<&GraphicsConfig::Shadows::enabled>("enabled"_hs)
+        ;
+
+        engine_meta_type<GraphicsConfig::Parallax>()
+            .data<&GraphicsConfig::Parallax::min_layers>("min_layers"_hs)
+            .data<&GraphicsConfig::Parallax::max_layers>("max_layers"_hs)
+        ;
+    }
+
+    template <>
+    void reflect<PlayerConfig>()
+    {
+        engine_meta_type<PlayerConfig>()
+            .data<&PlayerConfig::default_player>("default_player"_hs)
+            .data<&PlayerConfig::character_path>("character_path"_hs)
+        ;
+
+        engine_meta_type<PlayerConfig::Player>()
+            .data<&PlayerConfig::Player::name>("name"_hs)
+            .data<&PlayerConfig::Player::character>("character"_hs)
+        ;
+    }
+
+    template <>
+    void reflect<Config>()
+    {
+        engine_meta_type<Config>()
+            .data<&Config::graphics>("graphics"_hs)
+            .data<&Config::players>("players"_hs)
+        ;
     }
 
     // TODO: Implement reflection for matrix types.
@@ -74,6 +168,9 @@ namespace engine
     {
         reflect<math::Vector2D>();
         reflect<math::Vector3D>();
+        reflect<math::Vector4D>();
+
+        reflect<math::vec2i>();
 
         // ...
     }
@@ -118,7 +215,14 @@ namespace engine
 
         reflect_core_components();
         reflect_core_commands();
+
+        reflect<ResourceManager>();
+
         reflect_systems();
+
+        reflect<GraphicsConfig>();
+        reflect<PlayerConfig>();
+        reflect<Config>();
 
         // ...
 

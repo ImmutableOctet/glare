@@ -1,6 +1,14 @@
 #include "resource_manager.hpp"
 #include "collision_data.hpp"
 
+#include <engine/world/physics/collision_shape_description.hpp>
+#include <engine/world/world.hpp>
+
+#include <util/string.hpp>
+#include <util/algorithm.hpp>
+
+#include <math/bullet.hpp>
+
 #include <graphics/model.hpp>
 #include <graphics/shader.hpp>
 
@@ -9,13 +17,6 @@
 #include <memory>
 #include <tuple>
 #include <limits>
-
-#include <math/bullet.hpp>
-
-#include <util/string.hpp>
-#include <util/algorithm.hpp>
-
-#include <engine/world/world.hpp>
 
 /*
 #define AI_CONFIG_PP_PTV_NORMALIZE   "PP_PTV_NORMALIZE"
@@ -161,30 +162,6 @@ namespace engine
 		return shader;
 	}
 
-	// TODO: Implement some form of caching/optimization for basic shapes.
-	CollisionData ResourceManager::generate_capsule_collision(float radius, float height)
-	{
-		return { std::static_pointer_cast<CollisionRaw>(std::make_shared<btCapsuleShape>(radius, height)) };
-	}
-
-	// TODO: Implement some form of caching/optimization for basic shapes.
-	CollisionData ResourceManager::generate_sphere_collision(float radius)
-	{
-		return { std::static_pointer_cast<CollisionRaw>(std::make_shared<btSphereShape>(radius)) };
-	}
-
-	// TODO: Implement some form of caching/optimization for basic shapes.
-	CollisionData ResourceManager::generate_cube_collision(float radius)
-	{
-		return generate_cube_collision({radius, radius, radius});
-	}
-
-	// TODO: Implement some form of caching/optimization for basic shapes.
-	CollisionData ResourceManager::generate_cube_collision(const math::Vector& size)
-	{
-		return { std::static_pointer_cast<CollisionRaw>(std::make_shared<btBoxShape>(math::to_bullet_vector(size))) };
-	}
-
 	const CollisionData* ResourceManager::get_collision(const WeakModelRef model) const
 	{
 		auto it = collision_data.find(model);
@@ -239,7 +216,7 @@ namespace engine
 
 	const EntityFactoryData* ResourceManager::get_factory(const EntityFactoryContext& context) const
 	{
-		auto path_str = context.paths.instance_path.string();
+		const auto path_str = context.paths.instance_path.string();
 
 		if (auto* existing_factory = get_existing_factory(path_str))
 		{
@@ -250,14 +227,14 @@ namespace engine
 		// (Used during entity instantiation)
 		EntityFactoryChildren children;
 
-		const auto& command_context = get_command_parsing_context();
+		const auto& command_context = get_parsing_context();
 
 		auto factory = EntityFactory
 		(
 			context,
 
 			// NOTE: Recursion.
-			[this, &path_str, &children](const EntityFactory& parent_factory, const EntityFactoryContext& child_context)
+			[this, &children](const EntityFactory& parent_factory, const EntityFactoryContext& child_context)
 			{
 				// Call back into this function recursively for each child.
 				auto child_factory_data = this->get_factory(child_context);
@@ -312,65 +289,20 @@ namespace engine
 		return path;
 	}
 
-	CollisionData ResourceManager::generate_shape(const util::json& collision_data)
+	ParsingContext& ResourceManager::set_parsing_context(ParsingContext&& context)
 	{
-		using enum CollisionShapePrimitive;
+		parsing_context = std::move(context);
 
-		auto shape_primitive = collision_shape_primitive(util::get_value<std::string>(collision_data, "shape", "capsule"));
-
-		switch (shape_primitive)
-		{
-			case Capsule:
-			{
-				auto radius = util::get_value<float>(collision_data, "radius", 2.0f);
-				auto height = util::get_value<float>(collision_data, "height", 8.0f);
-
-				return generate_capsule_collision(radius, height);
-			}
-			case Cube:
-			{
-				if (collision_data.contains("size"))
-				{
-					auto size = util::get_vector(collision_data, "size", { 4.0f, 4.0f, 4.0f });
-
-					return generate_cube_collision(size);
-				}
-				
-				auto radius = util::get_value<float>(collision_data, "radius", 4.0f);
-
-				return generate_cube_collision(radius);
-			}
-			case Sphere:
-			{
-				auto radius = util::get_value<float>(collision_data, "radius", 4.0f);
-
-				return generate_sphere_collision(radius);
-			}
-
-			default:
-				// Unsupported shape primitive.
-				//assert(false);
-
-				break;
-		}
-
-		return {};
+		return *parsing_context;
 	}
 
-	CommandParsingContext& ResourceManager::set_command_parsing_context(CommandParsingContext&& context)
+	const ParsingContext& ResourceManager::get_parsing_context() const
 	{
-		command_parsing_context = std::move(context);
-
-		return *command_parsing_context;
-	}
-
-	const CommandParsingContext& ResourceManager::get_command_parsing_context() const
-	{
-		if (!command_parsing_context.has_value())
+		if (!parsing_context.has_value())
 		{
-			command_parsing_context = CommandParsingContext::generate();
+			parsing_context = ParsingContext::generate();
 		}
 
-		return *command_parsing_context;
+		return *parsing_context;
 	}
 }

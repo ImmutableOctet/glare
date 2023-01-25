@@ -3,8 +3,6 @@
 #include <types.hpp>
 //#include <engine/types.hpp>
 
-#include <engine/collision_shape_primitive.hpp>
-
 #include <graphics/model.hpp>
 
 #include <util/json.hpp>
@@ -19,7 +17,7 @@
 
 #include "loaders/loaders.hpp"
 
-#include <engine/meta/command_parsing_context.hpp>
+#include <engine/meta/parsing_context.hpp>
 
 //#include <vector>
 #include <memory>
@@ -50,10 +48,10 @@ namespace engine
 {
 	class World;
 	class WorldRenderer;
+	class EntityDescriptor;
 
 	struct RenderScene;
-
-	class EntityDescriptor;
+	struct CollisionShapeDescription;
 
 	// TODO: Revisit weak vs. strong references for caching.
 	// Theoretically we could use weak references but return strong references upon initial request.
@@ -138,13 +136,6 @@ namespace engine
 			// Optionally returns a pointer to a 'CollisionData' object for the 'model' specified.
 			//const CollisionData* get_collision(WeakModelRef model);
 
-			CollisionData generate_capsule_collision(float radius, float height);
-			CollisionData generate_sphere_collision(float radius);
-			CollisionData generate_cube_collision(float radius);
-			CollisionData generate_cube_collision(const math::Vector& size);
-
-			CollisionData generate_shape(const util::json& collision_data);
-
 			const CollisionData* get_collision(const WeakModelRef model) const;
 			const ref<AnimationData> get_animation_data(const WeakModelRef model) const;
 
@@ -154,8 +145,8 @@ namespace engine
 
 			Entity generate_entity(const EntityFactoryContext& factory_context, const EntityConstructionContext& entity_context) const;
 
-			CommandParsingContext& set_command_parsing_context(CommandParsingContext&& context);
-			const CommandParsingContext& get_command_parsing_context() const;
+			ParsingContext& set_parsing_context(ParsingContext&& context);
+			const ParsingContext& get_parsing_context() const;
 
 			// Links events from `world` to this resource manager instance.
 			void subscribe(World& world);
@@ -169,6 +160,6 @@ namespace engine
 			mutable ref<graphics::Shader> default_shader;
 			mutable ref<graphics::Shader> default_animated_shader;
 
-			mutable std::optional<CommandParsingContext> command_parsing_context = std::nullopt;
+			mutable std::optional<ParsingContext> parsing_context = std::nullopt;
 	};
 }

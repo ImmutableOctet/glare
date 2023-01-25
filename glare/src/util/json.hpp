@@ -38,6 +38,17 @@ namespace util
 		return (data.contains(name) ? data[name].get<T>() : default_value);
 	}
 
+	template <typename T, typename UIDType>
+	inline std::optional<T> get_optional(const json& data, const UIDType& name, std::optional<T> default_value=std::nullopt)
+	{
+		if (data.contains(name))
+		{
+			return data[name].get<T>();
+		}
+
+		return default_value;
+	}
+
 	template <typename T, typename UIDType, typename get_fn>
 	inline void retrieve_value(const json& data, const UIDType& name, T& dest, get_fn&& fn)
 	{

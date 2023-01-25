@@ -7,6 +7,7 @@
 #include <engine/meta/types.hpp>
 #include <engine/meta/meta.hpp>
 #include <engine/meta/serial.hpp>
+#include <engine/meta/parsing_context.hpp>
 
 //#include <util/json.hpp>
 
@@ -261,7 +262,8 @@ namespace engine
 	(
 		const std::string& trigger_condition_expr, // std::string_view
 		Callback&& callback,
-		bool always_embed_type=false
+		bool always_embed_type=false,
+		const ParsingContext* opt_parsing_context=nullptr
 	)
 	{
 		//using namespace entt::literals;
@@ -391,53 +393,56 @@ namespace engine
 			// Update the processing offset to the latest location reported by our parsing step.
 			offset = static_cast<std::size_t>(updated_offset);
 
-			// Attempt to resolve `type_name`:
-			auto type_name_id = hash(type_name).value();
-
 			bool active_type_changed = false;
+
+			MetaType expr_type = (opt_parsing_context)
+				? opt_parsing_context->get_type(type_name) // TODO: Optimize.
+				: resolve(hash(type_name).value())
+			;
 
 			if (!active_type.has_value())
 			{
-				active_type = resolve(type_name_id);
+				//assert(expr_type);
 
-				if (!active_type)
+				if (!expr_type)
 				{
-					throw std::runtime_error(util::format("Unable to resolve trigger/event type: \"{}\" (#{})", type_name, type_name_id));
+					throw std::runtime_error(util::format("Unable to resolve trigger/event type: \"{}\"", type_name));
+				}
+
+				active_type = expr_type;
+			}
+			else if (active_combinator == Combinator::And)
+			{
+				if (!expr_type)
+				{
+					// NOTE: `expr_type` is technically considered optional in the case of `And` combinators.
+					// (i.e. we use the active type instead)
+					expr_type = *active_type;
 				}
 			}
-
-			MetaType expr_type = *active_type;
-
-			if (active_type->id() != type_name_id)
+			else // && (active_combinator == Combinator::Or)
 			{
-				if (active_combinator == Combinator::And)
-				{
-					//throw std::runtime_error(util::format("Unsupported operation: Unable to build 'AND' compound condition with multiple event types. ({})", parsed_expr));
-					//print("NOTE: Use of type other than initial event type will result in component-only qualification.");
+				//assert(expr_type);
 
-					if (auto type = resolve(type_name_id))
-					{
-						expr_type = type;
-					}
+				if (!expr_type)
+				{
+					throw std::runtime_error(util::format("Unable to resolve trigger/event type in compound condition: \"{}\"", type_name));
 				}
-				else
+
+				if (active_type->id() != expr_type.id())
 				{
 					// Since combining event types in trigger-clauses is not supported,
 					// we need to process the condition we've already built.
 					store_condition();
 
 					// With the previous condition handled, we can switch to the new event-type:
-					active_type = resolve(type_name_id);
-
-					if (!active_type)
-					{
-						throw std::runtime_error(util::format("Unable to resolve trigger/event type in compound condition: \"{}\" (#{})", type_name, type_name_id));
-					}
+					active_type = expr_type;
 
 					active_type_changed = true;
 				}
 			}
 
+			//assert(expr_type);
 			assert(active_type);
 
 			auto on_condition = [&store_condition](EventTriggerCondition& condition_out, auto&& generated_condition, Combinator combinator)
@@ -545,7 +550,7 @@ namespace engine
 	
 	// Processes an 'all-in-one' (unified) condition-block from `trigger_condition_expr`.
 	// This condition cannot be used in a traditional rule/trigger scenario, since it could encode multiple primary types.
-	inline std::optional<EventTriggerCondition> process_unified_condition_block(const std::string& trigger_condition_expr) // std::string_view
+	inline std::optional<EventTriggerCondition> process_unified_condition_block(const std::string& trigger_condition_expr, const ParsingContext* opt_parsing_context=nullptr) // std::string_view
 	{
 		using Combinator = EventTriggerCompoundMethod;
 
@@ -573,15 +578,17 @@ namespace engine
 			},
 
 			// Always embed type information. (Required for `EntityThread` runtime)
-			true
+			true,
+
+			opt_parsing_context
 		);
 
 		return condition_out;
 	}
 
 	// TODO: Optimize. (Temporary string generated due to limitation with `std::regex`)
-	inline std::optional<EventTriggerCondition> process_unified_condition_block(std::string_view trigger_condition_expr)
+	inline std::optional<EventTriggerCondition> process_unified_condition_block(std::string_view trigger_condition_expr, const ParsingContext* opt_parsing_context=nullptr)
 	{
-		return process_unified_condition_block(std::string(trigger_condition_expr));
+		return process_unified_condition_block(std::string(trigger_condition_expr), opt_parsing_context);
 	}
 }

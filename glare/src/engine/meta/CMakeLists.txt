@@ -8,7 +8,7 @@ target_sources(
     "meta.cpp"
     "serial.cpp"
 
-    "command_parsing_context.cpp"
+    "parsing_context.cpp"
     "component_storage.cpp"
     "indirect_meta_data_member.cpp"
     "meta_data_member.cpp"

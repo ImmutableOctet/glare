@@ -5,10 +5,18 @@ namespace engine
 {
 	Entity EntityFactoryData::create(const EntityConstructionContext& context, bool handle_children) const
 	{
-		auto entity = factory.create(context);
-
 		if (handle_children && !children.empty())
 		{
+			// Allocate an initial (blank) entity to act as the parent
+			// (See below for details):
+			auto entity = context.registry.create();
+
+			if (entity == null)
+			{
+				return null;
+			}
+
+			// Allocate and construct children:
 			auto child_context = EntityConstructionContext
 			{
 				.registry = context.registry,
@@ -17,10 +25,22 @@ namespace engine
 				.parent = entity
 			};
 
+			// NOTE: Recursion.
 			generate_children(child_context);
-		}
 
-		return entity;
+			// Finish constructing the entity we first allocated:
+			auto self_context = context;
+
+			self_context.opt_entity_out = entity;
+
+			// NOTE: Construction of the initial entity is
+			// deferred to allow referencing of its children.
+			// (e.g. via nested `EntityTarget` objects in the descriptor)
+			return factory.create(self_context);
+		}
+		
+		// If there are no children present, construct a new entity immediately.
+		return factory.create(context);
 	}
 
 	// NOTE: Recursion via inner calls to `create` and `generate_children`.
