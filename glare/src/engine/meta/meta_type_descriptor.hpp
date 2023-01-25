@@ -38,6 +38,9 @@ namespace engine
 
 			static MetaType get_self_type();
 
+			static MetaType resolve_type(MetaType type, const Flags& flags);
+			static MetaTypeID resolve_type_id(MetaTypeID type_id, const Flags& flags);
+
 			static std::tuple
 			<
 				std::string_view, // Name
@@ -82,35 +85,16 @@ namespace engine
 				const ParsingContext* opt_parsing_context=nullptr
 			);
 
-			/*
-			template <typename ...Content>
-			inline MetaTypeDescriptor(MetaType type, Content&&... content)
-				: type_id(type.id())
-			{
-				assert(type);
-
-				set_variables_direct_impl(type, std::forward<Content>(content)...);
-			}
-
-			template <typename ...Content>
-			inline MetaTypeDescriptor(MetaTypeID type_id, Content&&... content)
-				: type_id(type_id)
-			{
-				assert(type_id);
-
-				set_variables_direct(std::forward<Content>(content)...);
-			}
-			*/
-
 			MetaTypeDescriptor(const MetaTypeDescriptor&) = default;
 			MetaTypeDescriptor(MetaTypeDescriptor&&) noexcept = default;
 
 			MetaTypeDescriptor& operator=(const MetaTypeDescriptor&) = default;
 			MetaTypeDescriptor& operator=(MetaTypeDescriptor&&) noexcept = default;
 
+		protected:
 			// The type this descriptor is wrapping.
 			MetaTypeID type_id = {};
-
+		public:
 			Names field_names;
 			Values field_values;
 
@@ -125,8 +109,11 @@ namespace engine
 			inline bool can_forward_fields_to_constructor() const { return flags.allow_forwarding_fields_to_constructor; }
 			inline bool forces_field_assignment() const { return flags.force_field_assignment; }
 
+			bool set_type(MetaType type);
 			MetaType get_type() const;
-			inline MetaTypeID get_type_id() const { return type_id; }
+
+			bool set_type_id(MetaTypeID type_id);
+			MetaTypeID get_type_id() const;
 
 			std::optional<std::size_t> get_variable_index(MetaSymbolID name) const;
 

@@ -325,7 +325,7 @@ namespace engine
 			loaded_components.begin(), loaded_components.end(),
 			[&component_type](const MetaTypeDescriptor& entry) -> bool
 			{
-				if (entry.type_id == component_type.id())
+				if (entry.get_type_id() == component_type.id())
 				{
 					return true;
 				}

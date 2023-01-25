@@ -85,7 +85,7 @@ namespace engine
 				const MetaTypeDescriptorFlags&
 			>()
 
-			.data<&MetaTypeDescriptor::type_id>("type_id"_hs)
+			.data<&MetaTypeDescriptor::set_type_id, &MetaTypeDescriptor::get_type_id>("type_id"_hs)
 			.data<&MetaTypeDescriptor::field_names>("field_names"_hs)
 			.data<&MetaTypeDescriptor::field_values>("field_values"_hs)
 			.data<&MetaTypeDescriptor::constructor_argument_count>("constructor_argument_count"_hs)

@@ -322,7 +322,7 @@ namespace engine
 	{
 		for (const auto& component : components.add.type_definitions)
 		{
-			const auto& type_id = component.type_id;
+			const auto type_id = component.get_type_id();
 
 			if (component.forces_field_assignment() || components.persist.get_definition(type_id))
 			{

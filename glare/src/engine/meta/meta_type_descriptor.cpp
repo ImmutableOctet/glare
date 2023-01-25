@@ -18,6 +18,57 @@ namespace engine
 		return resolve<MetaTypeDescriptor>();
 	}
 
+	MetaType MetaTypeDescriptor::resolve_type(MetaType type, const Flags& flags)
+	{
+		using namespace entt::literals;
+
+		if (!type)
+		{
+			return type; // {};
+		}
+
+		if (flags.allow_type_aliasing)
+		{
+			if (auto real_type_fn = type.func("type_from_optional"_hs))
+			{
+				if (auto real_type_opaque = real_type_fn.invoke({}))
+				{
+					if (auto real_type = real_type_opaque.try_cast<MetaType>())
+					{
+						// NOTE: Recursion.
+						if (auto real_type_out = resolve_type(*real_type, flags))
+						{
+							return real_type_out;
+						}
+					}
+				}
+			}
+		}
+
+		return type;
+	}
+
+	MetaTypeID MetaTypeDescriptor::resolve_type_id(MetaTypeID type_id, const Flags& flags)
+	{
+		if (type_id == static_cast<MetaTypeID>(0))
+		{
+			return type_id; // 0;
+		}
+
+		if (flags.allow_type_aliasing)
+		{
+			if (auto initial_type = engine::resolve(type_id))
+			{
+				if (auto resolved_type = resolve_type(initial_type, flags))
+				{
+					return resolved_type.id();
+				}
+			}
+		}
+
+		return type_id;
+	}
+
 	std::tuple<std::string_view, std::string_view>
 	MetaTypeDescriptor::parse_variable_declaration(std::string_view var_decl, std::string_view type_specifier_symbol)
 	{
@@ -49,10 +100,10 @@ namespace engine
 	}
 
 	MetaTypeDescriptor::MetaTypeDescriptor(MetaType type, std::optional<SmallSize> constructor_argument_count, const MetaTypeDescriptorFlags& flags)
-		: type_id(type.id()), constructor_argument_count(constructor_argument_count), flags(flags) {}
+		: type_id(resolve_type(type, flags).id()), constructor_argument_count(constructor_argument_count), flags(flags) {}
 
 	MetaTypeDescriptor::MetaTypeDescriptor(MetaTypeID type_id, std::optional<SmallSize> constructor_argument_count, const MetaTypeDescriptorFlags& flags)
-		: type_id(type_id), constructor_argument_count(constructor_argument_count), flags(flags) {}
+		: type_id(resolve_type_id(type_id, flags)), constructor_argument_count(constructor_argument_count), flags(flags) {}
 
 	MetaTypeDescriptor::MetaTypeDescriptor
 	(
@@ -67,7 +118,7 @@ namespace engine
 		std::optional<SmallSize> constructor_argument_count,
 		const MetaTypeDescriptorFlags& flags
 	) :
-		type_id(type.id()),
+		type_id(resolve_type(type, flags).id()),
 		constructor_argument_count(constructor_argument_count),
 		flags(flags)
 	{
@@ -87,13 +138,39 @@ namespace engine
 		const MetaTypeDescriptorFlags& flags,
 		const ParsingContext* opt_parsing_context
 	) :
-		type_id((type) ? type.id() : 0),
+		type_id((type) ? resolve_type(type, flags).id() : 0),
 		constructor_argument_count(constructor_argument_count),
 		flags(flags)
 	{
 		//assert(type);
 
 		set_variables(content, instructions, 0, opt_parsing_context);
+	}
+
+	bool MetaTypeDescriptor::set_type(MetaType type)
+	{
+		using namespace entt::literals;
+
+		if (!type)
+		{
+			return false;
+		}
+
+		this->type_id = resolve_type(type, this->flags).id();
+
+		return true;
+	}
+
+	bool MetaTypeDescriptor::set_type_id(MetaTypeID type_id)
+	{
+		this->type_id = resolve_type_id(type_id, this->flags);
+
+		return true;
+	}
+
+	MetaTypeID MetaTypeDescriptor::get_type_id() const
+	{
+		return type_id;
 	}
 
 	MetaType MetaTypeDescriptor::get_type() const
