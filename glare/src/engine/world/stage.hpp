@@ -1,7 +1,6 @@
 #pragma once
 
 #include "entity.hpp"
-#include "player/player.hpp"
 
 #include <engine/types.hpp>
 #include <util/log.hpp>

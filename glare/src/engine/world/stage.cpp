@@ -3,7 +3,6 @@
 #include "world.hpp"
 #include "world_events.hpp"
 #include "entity.hpp"
-#include "player/player.hpp"
 #include "graphics_entity.hpp"
 
 #include "components/camera_component.hpp"
@@ -21,9 +20,11 @@
 #include <engine/entity/serial.hpp>
 
 #include <engine/components/name_component.hpp>
-#include <engine/components/player_component.hpp>
 #include <engine/components/model_component.hpp>
+#include <engine/components/player_component.hpp>
 #include <engine/components/player_target_component.hpp>
+
+#include <engine/input/components/input_component.hpp>
 
 #include <util/json.hpp>
 #include <util/log.hpp>
@@ -332,14 +333,16 @@ namespace engine
 		{
 			auto& registry = world.get_registry();
 
+			const auto& config = world.get_config();
+
 			auto& player_idx_counter = indices.players.player_idx_counter;
 			auto& player_objects = indices.players.player_objects;
 
-			auto player_character = util::get_value<std::string>(player_cfg, "character", DEFAULT_CHARACTER);
+			auto player_character = util::get_value<std::string>(player_cfg, "character", config.players.default_player.character);
 			auto player_parent    = stage; // null;
 
-			auto character_directory = (std::filesystem::path("assets/characters") / player_character);
-			auto character_path = (character_directory / "instance.json");
+			auto character_directory = (std::filesystem::path(config.players.character_path) / player_character);
+			auto character_path = (character_directory / util::format("{}.json", player_character));
 
 			auto player = resource_manager.generate_entity
 			(
@@ -381,6 +384,12 @@ namespace engine
 			assert(player_idx != NO_PLAYER);
 
 			registry.emplace_or_replace<PlayerComponent>(player, player_idx);
+			registry.emplace_or_replace<InputComponent>(player, static_cast<InputStateIndex>(player_idx));
+
+			if (!config.players.default_player.name.empty())
+			{
+				registry.emplace_or_replace<NameComponent>(player, config.players.default_player.name);
+			}
 
 			player_objects[player_idx] = player;
 
