@@ -20,7 +20,7 @@
 
 #include <engine/debug/debug.hpp>
 
-#include <engine/world/meta/meta.hpp>
+#include <engine/world/meta_controls/meta_controls.hpp>
 
 #include <graphics/context.hpp>
 #include <graphics/native/opengl.hpp>
