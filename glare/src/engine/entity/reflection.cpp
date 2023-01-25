@@ -6,6 +6,7 @@
 #include "events.hpp"
 
 #include "entity_target.hpp"
+#include "entity_descriptor.hpp"
 #include "entity_thread_target.hpp"
 #include "event_trigger_condition.hpp"
 #include "state_storage_manager.hpp"
@@ -46,6 +47,25 @@ namespace engine
             //.func<&EntityTarget::parse_type>("parse_type"_hs)
         ;
     }
+
+	template <>
+	void reflect<EntityDescriptor>()
+	{
+		//engine_empty_meta_type<EntityDescriptor>() // engine_meta_type
+			//.data<&EntityDescriptor::components>("components"_hs)
+			//.data<&EntityDescriptor::states>("states"_hs)
+			//.data<&EntityDescriptor::immediate_threads>("immediate_threads"_hs)
+			//.data<&EntityDescriptor::model_details>("model_details"_hs)
+			//.data<&EntityDescriptor::shared_storage>("shared_storage"_hs)
+		//;
+
+		engine_meta_type<EntityDescriptor::ModelDetails>()
+			.data<&EntityDescriptor::ModelDetails::path>("path"_hs)
+			.data<&EntityDescriptor::ModelDetails::offset>("offset"_hs)
+			.data<&EntityDescriptor::ModelDetails::collision_cfg>("collision_cfg"_hs)
+			.data<&EntityDescriptor::ModelDetails::allow_multiple>("allow_multiple"_hs)
+		;
+	}
 
 	template <>
 	void reflect<EntityThreadRange>()
@@ -438,6 +458,7 @@ namespace engine
 		// General:
 		reflect<EntityThreadRange>();
 		reflect<EntityTarget>();
+		reflect<EntityDescriptor>();
 		reflect<EntityThreadTarget>();
 		reflect<EventTriggerCondition>();
 
