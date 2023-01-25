@@ -1420,7 +1420,7 @@ namespace engine
 
 			if (!descriptor.model_details.path.empty())
 			{
-				descriptor.model_details.path = (base_path / std::filesystem::path(descriptor.model_details.path)).string();
+				descriptor.model_details.path = resolve_path(std::filesystem::path(descriptor.model_details.path), base_path).string();
 			}
 		}
 	}
