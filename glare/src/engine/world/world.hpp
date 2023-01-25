@@ -284,6 +284,8 @@ namespace engine
 			// each light sub-component currently attached.
 			bool attach_shadows(Entity entity);
 
+			void on_instance(Registry& registry, Entity entity);
+
 			void on_light_init(Registry& registry, Entity entity);
 			void on_light_update(Registry& registry, Entity entity);
 			void on_light_destroyed(Registry& registry, Entity entity);

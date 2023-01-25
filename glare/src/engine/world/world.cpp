@@ -23,6 +23,12 @@
 #include "animation/components/bone_component.hpp"
 #include "physics/components/collision_component.hpp"
 
+#include <engine/components/model_component.hpp>
+#include <engine/components/player_component.hpp>
+
+#include <engine/entity/entity_descriptor.hpp>
+#include <engine/entity/components/instance_component.hpp>
+
 #include <math/math.hpp>
 
 #include <util/json.hpp>
@@ -103,6 +109,8 @@ namespace engine
 	{
 		register_event<OnTransformChanged, &World::on_transform_change>(*this);
 		register_event<OnEntityDestroyed, &World::on_entity_destroyed>(*this);
+
+		registry.on_construct<InstanceComponent>().connect<&World::on_instance>(*this);
 
 		registry.on_construct<LightComponent>().connect<&World::on_light_init>(*this);
 		registry.on_update<LightComponent>().connect<&World::on_light_update>(*this);
@@ -735,6 +743,46 @@ namespace engine
 			//||
 			//registry.try_get<SpotLightShadowComponent>(entity)
 		);
+	}
+
+	void World::on_instance(Registry& registry, Entity entity)
+	{
+		auto& instance_comp = registry.get<InstanceComponent>(entity);
+
+		auto* descriptor = resource_manager.get_existing_descriptor(instance_comp.instance);
+
+		if (!descriptor)
+		{
+			return;
+		}
+
+		if (!descriptor->model_details)
+		{
+			return;
+		}
+
+		if (registry.try_get<ModelComponent>(entity))
+		{
+			return;
+		}
+
+		load_model_attachment
+		(
+			*this,
+
+			entity,
+
+			descriptor->model_details.path,
+			descriptor->model_details.allow_multiple,
+			descriptor->model_details.collision_cfg
+		);
+
+		if (const auto& offset = descriptor->model_details.offset)
+		{
+			auto tform = get_transform(entity);
+
+			tform.set_local_position(*offset);
+		}
 	}
 
 	void World::on_light_init(Registry& registry, Entity entity)

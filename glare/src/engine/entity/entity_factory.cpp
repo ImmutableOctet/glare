@@ -1,4 +1,7 @@
 #include "entity_factory.hpp"
+
+#include "serial_impl.hpp"
+
 #include "entity_target.hpp"
 #include "entity_state.hpp"
 #include "entity_state_rule.hpp"
@@ -6,11 +9,11 @@
 #include "entity_thread_builder.hpp"
 #include "event_trigger_condition.hpp"
 
-#include "serial_impl.hpp"
-
 #include "components/instance_component.hpp"
 #include "components/state_component.hpp"
 #include "components/entity_thread_component.hpp"
+
+#include <engine/world/graphics_entity.hpp>
 
 #include <engine/components/relationship_component.hpp>
 #include <engine/components/name_component.hpp>
@@ -217,14 +220,14 @@ namespace engine
 			RelationshipComponent::set_parent(context.registry, entity, context.parent, true);
 		}
 
-		context.registry.emplace_or_replace<InstanceComponent>(entity, paths.instance_path.string());
-
 		if (!context.registry.try_get<NameComponent>(entity))
 		{
 			auto instance_filename = paths.instance_path.filename(); instance_filename.replace_extension();
 
 			context.registry.emplace<NameComponent>(entity, instance_filename.string());
 		}
+
+		context.registry.emplace_or_replace<InstanceComponent>(entity, paths.instance_path.string());
 
 		if (default_state_index)
 		{
@@ -1404,9 +1407,22 @@ namespace engine
 			"do", "threads", "execute",
 			"default_state",
 
+			// See below.
+			"model", "models",
+
 			// Handled in callback-based implementation of `process_archetype`.
 			"children"
 		);
+
+		if (auto model = util::find_any(data, "model", "models"); model != data.end())
+		{
+			engine::load<EntityDescriptor::ModelDetails>(descriptor.model_details, *model);
+
+			if (!descriptor.model_details.path.empty())
+			{
+				descriptor.model_details.path = (base_path / std::filesystem::path(descriptor.model_details.path)).string();
+			}
+		}
 	}
 
 	//std::size_t

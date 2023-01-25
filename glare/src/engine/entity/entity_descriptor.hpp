@@ -8,6 +8,10 @@
 #include <engine/meta/meta_description.hpp>
 #include <engine/meta/meta_type_descriptor.hpp>
 
+#include <engine/world/physics/collision_config.hpp>
+
+#include <math/types.hpp>
+
 #include <optional>
 #include <memory>
 #include <utility>
@@ -30,6 +34,32 @@ namespace engine
 			using ThreadCount = EntityThreadCount; // std::uint16_t; // std::uint8_t
 			using ImmediateThreadDetails = EntityThreadRange;
 
+			using SharedStorage = util::SharedStorage
+			<
+				MetaTypeDescriptor,
+				EventTriggerCondition,
+				EntityThreadDescription
+			>;
+
+			// TODO: Look into separating this from the `EntityDescriptor` type.
+			struct ModelDetails
+			{
+				using Path = std::string; // std::filesystem::path;
+
+				Path path;
+
+				std::optional<math::Vector> offset = {};
+
+				std::optional<CollisionConfig> collision_cfg;
+
+				bool allow_multiple = true;
+
+				inline explicit operator bool() const
+				{
+					return !path.empty();
+				}
+			};
+
 			// Statically assigned components.
 			MetaDescription components;
 
@@ -38,12 +68,7 @@ namespace engine
 
 			util::small_vector<ImmediateThreadDetails, 1> immediate_threads; // 2
 
-			using SharedStorage = util::SharedStorage
-			<
-				MetaTypeDescriptor,
-				EventTriggerCondition,
-				EntityThreadDescription
-			>;
+			ModelDetails model_details;
 
 			SharedStorage shared_storage;
 
