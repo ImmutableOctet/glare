@@ -12,6 +12,7 @@
 #include <util/magic_enum.hpp>
 #include <util/reflection.hpp>
 #include <util/string.hpp>
+#include <util/format.hpp>
 
 #include <string>
 #include <string_view>
@@ -48,6 +49,17 @@ namespace engine
 
             short_name_prefixes
         );
+    }
+
+    constexpr std::string optional_name(const auto& type_name)
+    {
+        return util::format("std::optional<{}>", type_name);
+    }
+
+    template <typename T>
+    constexpr std::string optional_short_name()
+    {
+        return optional_name(short_name<T>());
     }
 
     constexpr std::string_view as_short_name(std::string_view name_view)
@@ -87,6 +99,12 @@ namespace engine
         //return entt::type_hash<T>();
 
         return hash(short_name<T>());
+    }
+
+    template <typename T>
+    constexpr auto optional_short_name_hash()
+    {
+        return hash(optional_short_name<T>());
     }
 
     template <typename EnumType>
