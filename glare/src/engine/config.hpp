@@ -26,10 +26,26 @@ namespace engine
 		Parallax parallax;
 	};
 
+	// TODO: Refactor to support multiple (local) player definitions.
+	struct PlayerConfig
+	{
+		struct Player
+		{
+			std::string name;
+			std::string character;
+		};
+
+		std::string character_path = "assets/characters"; // std::filesystem::path
+
+		Player default_player;
+	};
+
 	struct Config
 	{
 		using Graphics = GraphicsConfig;
+		using Players  = PlayerConfig;
 
 		Graphics graphics;
+		Players   players;
 	};
 }
