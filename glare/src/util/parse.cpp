@@ -12,7 +12,7 @@ namespace util
 	parse_single_argument_command(const std::string& command, bool allow_trailing_expr) // std::string_view
 	{
 		//const auto command_rgx = std::regex("([^\\s\\.\\:\\-\\>\\|\\(]+)\\s*\\(\\s*([^\\)]*)\\s*\\)\\s*(.*)");
-		const auto command_rgx = std::regex("([^\\s\\.\\:\\-\\>\\|\\(]+)\\s*\\(\\s*(\\\"[^\\\"]*\\\"|[^\\(\\)]*)\\s*\\)\\s*(.*)");
+		const auto command_rgx = std::regex("([^\\s\\\"\\.\\:\\-\\>\\|\\(]+)\\s*\\(\\s*(\\\"[^\\\"]*\\\"|[^\\(\\)]*)\\s*\\)\\s*(.*)");
 
 		if (std::smatch rgx_match; std::regex_search(command.begin(), command.end(), rgx_match, command_rgx))
 		{
@@ -50,6 +50,69 @@ namespace util
 			remap_string_view(temp, command, std::get<2>(result)),
 
 			std::get<3>(result)
+		};
+	}
+
+	std::tuple<std::string_view, std::string_view, std::string_view, bool, bool>
+	parse_single_argument_command_or_value(const std::string& command_or_value, bool allow_trailing_expr) // std::string_view
+	{
+		const auto command_or_value_rgx = std::regex("((([^\\s\\\"\\.\\:\\-\\>\\|\\+\\-\\~\\*\\/\\%\\<\\>\\^\\(]+)\\s*(\\(\\s*(\\\"[^\\\"]*\\\"|[^\\(\\)]*)\\s*\\))?)|([^\\s\\\"\\(]+)|(\\\"[^\\\"]+\\\"))\\s*(.*)");
+
+		if (std::smatch rgx_match; std::regex_search(command_or_value.begin(), command_or_value.end(), rgx_match, command_or_value_rgx))
+		{
+			auto command_name_or_content = match_view(command_or_value, rgx_match, 1);
+			auto command_content         = match_view(command_or_value, rgx_match, 5);
+			auto trailing_expr           = match_view(command_or_value, rgx_match, 8);
+
+			bool is_string_content = false;
+			bool is_command = (!command_content.empty());
+
+			std::string_view content;
+
+			if (is_command)
+			{
+				if (is_quoted(command_content))
+				{
+					command_content = unquote(command_content);
+					is_string_content = true;
+				}
+
+				content = command_name_or_content;
+			}
+			else
+			{
+				if (is_quoted(command_name_or_content))
+				{
+					command_name_or_content = unquote(command_name_or_content);
+					is_string_content = true;
+				}
+
+				content = command_name_or_content;
+			}
+
+			if (allow_trailing_expr || trailing_expr.empty())
+			{
+				return { command_name_or_content, content, trailing_expr, is_string_content, is_command };
+			}
+		}
+
+		return { {}, {}, {}, false, false };
+	}
+
+	std::tuple<std::string_view, std::string_view, std::string_view, bool, bool>
+	parse_single_argument_command_or_value(std::string_view command_or_value, bool allow_trailing_expr)
+	{
+		const auto temp = std::string(command_or_value);
+		auto result = parse_single_argument_command_or_value(temp);
+
+		return
+		{
+			remap_string_view(temp, command_or_value, std::get<0>(result)),
+			remap_string_view(temp, command_or_value, std::get<1>(result)),
+			remap_string_view(temp, command_or_value, std::get<2>(result)),
+
+			std::get<3>(result),
+			std::get<4>(result)
 		};
 	}
 

@@ -26,6 +26,27 @@ namespace util
 
 	std::tuple
 	<
+		std::string_view, // command_name_or_value
+		std::string_view, // content
+		std::string_view, // trailing_expr
+		bool,             // is_string_content
+		bool              // is_command
+	>
+	parse_single_argument_command_or_value(const std::string& command_or_value, bool allow_trailing_expr=true);
+
+	// TODO: Remove/refactor. (`std::regex` doesn't (currently) support `std::string_view`.
+	std::tuple
+	<
+		std::string_view, // command_name_or_value
+		std::string_view, // content
+		std::string_view, // trailing_expr
+		bool,             // is_string_content
+		bool              // is_command
+	>
+	parse_single_argument_command_or_value(std::string_view command_or_value, bool allow_trailing_expr=true);
+
+	std::tuple
+	<
 		std::string_view, // entity_ref (optional)
 		std::string_view, // type_name
 		std::string_view, // member_name
