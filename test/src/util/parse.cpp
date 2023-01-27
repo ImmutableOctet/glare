@@ -87,6 +87,21 @@ TEST_CASE("parse_single_argument_command", "[util:parse]")
 		REQUIRE(trailing_expr.empty());
 		REQUIRE(!is_string_content);
 	}
+
+	SECTION("Unrelated expression that uses parentheses")
+	{
+		auto
+		[
+			command_name,
+			command_content,
+			trailing_expr,
+			is_string_content
+		] = util::parse_single_argument_command(std::string_view("a + b(c)"), true, true);
+		
+		REQUIRE(command_name.empty());
+		REQUIRE(command_content.empty());
+		REQUIRE(trailing_expr.empty());
+	}
 }
 
 TEST_CASE("parse_single_argument_command_or_value", "[util:parse]")
