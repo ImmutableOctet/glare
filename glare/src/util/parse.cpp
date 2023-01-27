@@ -40,7 +40,7 @@ namespace util
 	parse_single_argument_command(std::string_view command, bool allow_trailing_expr)
 	{
 		const auto temp = std::string(command);
-		auto result = parse_single_argument_command(temp);
+		auto result = parse_single_argument_command(temp, allow_trailing_expr);
 
 		return
 		{
@@ -102,7 +102,7 @@ namespace util
 	parse_single_argument_command_or_value(std::string_view command_or_value, bool allow_trailing_expr)
 	{
 		const auto temp = std::string(command_or_value);
-		auto result = parse_single_argument_command_or_value(temp);
+		auto result = parse_single_argument_command_or_value(temp, allow_trailing_expr);
 
 		return
 		{
@@ -112,6 +112,38 @@ namespace util
 
 			std::get<3>(result),
 			std::get<4>(result)
+		};
+	}
+
+	std::tuple<std::string_view, std::string_view>
+	parse_standard_operator_segment(const std::string& operator_expr, bool allow_trailing_expr)
+	{
+		const auto operator_rgx = std::regex("\\s*([\\|\\+\\-\\~\\*\\/\\%\\<\\>\\^])\\s*(.*)");
+
+		if (std::smatch rgx_match; std::regex_search(operator_expr.begin(), operator_expr.end(), rgx_match, operator_rgx))
+		{
+			auto operator_symbol = match_view(operator_expr, rgx_match, 1);
+			auto trailing_expr   = match_view(operator_expr, rgx_match, 2);
+
+			if (allow_trailing_expr || trailing_expr.empty())
+			{
+				return { operator_symbol, trailing_expr };
+			}
+		}
+
+		return { {}, {} };
+	}
+
+	std::tuple<std::string_view, std::string_view>
+	parse_standard_operator_segment(std::string_view operator_expr, bool allow_trailing_expr)
+	{
+		const auto temp = std::string(operator_expr);
+		auto result = parse_standard_operator_segment(temp, allow_trailing_expr);
+
+		return
+		{
+			remap_string_view(temp, operator_expr, std::get<0>(result)),
+			remap_string_view(temp, operator_expr, std::get<1>(result))
 		};
 	}
 

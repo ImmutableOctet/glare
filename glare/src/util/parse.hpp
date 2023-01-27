@@ -47,6 +47,21 @@ namespace util
 
 	std::tuple
 	<
+		std::string_view, // operator_symbol
+		std::string_view  // trailing_expr
+	>
+	parse_standard_operator_segment(const std::string& operator_expr, bool allow_trailing_expr=true);
+
+	// TODO: Remove/refactor. (`std::regex` doesn't (currently) support `std::string_view`.
+	std::tuple
+	<
+		std::string_view, // operator_symbol
+		std::string_view  // trailing_expr
+	>
+	parse_standard_operator_segment(std::string_view operator_expr, bool allow_trailing_expr=true);
+
+	std::tuple
+	<
 		std::string_view, // entity_ref (optional)
 		std::string_view, // type_name
 		std::string_view, // member_name
