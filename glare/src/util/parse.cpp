@@ -11,14 +11,13 @@ namespace util
 	std::tuple<std::string_view, std::string_view, std::string_view, bool>
 	parse_single_argument_command(const std::string& command, bool allow_trailing_expr) // std::string_view
 	{
-		//const auto command_rgx = std::regex("([^\\s\\.\\:\\-\\>\\|\\(]+)\\s*\\(\\s*([^\\)]*)\\s*\\)\\s*(.*)");
-		const auto command_rgx = std::regex("([^\\s\\\"\\.\\:\\-\\>\\|\\(]+)\\s*\\(\\s*(\\\"[^\\\"]*\\\"|[^\\(\\)]*)\\s*\\)\\s*(.*)");
+		const auto command_rgx = std::regex("([^\\s\\\"\\.\\:\\-\\>\\|\\+\\-\\~\\*\\/\\%\\<\\>\\^\\(]+)\\s*\\(\\s*(\\\"[^\\\"]*\\\"|[^\\(\\)]*)\\s*\\)\\s*(.*)");
 
 		if (std::smatch rgx_match; std::regex_search(command.begin(), command.end(), rgx_match, command_rgx))
 		{
 			auto command_name    = match_view(command, rgx_match, 1);
 			auto command_content = match_view(command, rgx_match, 2);
-			auto trailing_expr = match_view(command, rgx_match, 3);
+			auto trailing_expr   = match_view(command, rgx_match, 3);
 
 			bool is_string_content = false;
 
