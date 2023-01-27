@@ -88,3 +88,39 @@ TEST_CASE("parse_single_argument_command", "[util:parse]")
 		REQUIRE(!is_string_content);
 	}
 }
+
+TEST_CASE("parse_single_argument_command_or_value", "[util:parse]")
+{
+	SECTION("Regular value")
+	{
+		auto
+		[
+			value_or_command, value,
+			trailing_expr,
+			is_string_content, is_command
+		] = util::parse_single_argument_command_or_value(std::string_view("some_value"));
+
+		REQUIRE(!value_or_command.empty());
+		REQUIRE(!value.empty());
+		REQUIRE(trailing_expr.empty());
+		REQUIRE(!is_command);
+		REQUIRE(value == "some_value");
+	}
+
+	SECTION("Regular value as string")
+	{
+		auto
+		[
+			value_or_command, value,
+			trailing_expr,
+			is_string_content, is_command
+		] = util::parse_single_argument_command_or_value(std::string_view("\"This is a string.\""));
+
+		REQUIRE(!value_or_command.empty());
+		REQUIRE(!value.empty());
+		REQUIRE(trailing_expr.empty());
+		REQUIRE(is_string_content);
+		REQUIRE(!is_command);
+		REQUIRE(value == "This is a string.");
+	}
+}
