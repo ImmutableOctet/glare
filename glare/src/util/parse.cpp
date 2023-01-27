@@ -9,11 +9,16 @@
 namespace util
 {
 	std::tuple<std::string_view, std::string_view, std::string_view, bool>
-	parse_single_argument_command(const std::string& command, bool allow_trailing_expr) // std::string_view
+	parse_single_argument_command(const std::string& command, bool allow_trailing_expr, bool beginning_of_string_only) // std::string_view
 	{
 		const auto command_rgx = std::regex("([^\\s\\\"\\.\\:\\-\\>\\|\\+\\-\\~\\*\\/\\%\\<\\>\\^\\(]+)\\s*\\(\\s*(\\\"[^\\\"]*\\\"|[^\\(\\)]*)\\s*\\)\\s*(.*)");
 
-		if (std::smatch rgx_match; std::regex_search(command.begin(), command.end(), rgx_match, command_rgx))
+		auto flags = (beginning_of_string_only)
+			? std::regex_constants::match_continuous
+			: std::regex_constants::match_default
+		;
+
+		if (std::smatch rgx_match; std::regex_search(command.begin(), command.end(), rgx_match, command_rgx, flags))
 		{
 			auto command_name    = match_view(command, rgx_match, 1);
 			auto command_content = match_view(command, rgx_match, 2);
@@ -37,10 +42,10 @@ namespace util
 	}
 
 	std::tuple<std::string_view, std::string_view, std::string_view, bool>
-	parse_single_argument_command(std::string_view command, bool allow_trailing_expr)
+	parse_single_argument_command(std::string_view command, bool allow_trailing_expr, bool beginning_of_string_only)
 	{
 		const auto temp = std::string(command);
-		auto result = parse_single_argument_command(temp, allow_trailing_expr);
+		auto result = parse_single_argument_command(temp, allow_trailing_expr, beginning_of_string_only);
 
 		return
 		{
@@ -53,9 +58,14 @@ namespace util
 	}
 
 	std::tuple<std::string_view, std::string_view, std::string_view, bool, bool>
-	parse_single_argument_command_or_value(const std::string& command_or_value, bool allow_trailing_expr) // std::string_view
+	parse_single_argument_command_or_value(const std::string& command_or_value, bool allow_trailing_expr, bool beginning_of_string_only) // std::string_view
 	{
 		const auto command_or_value_rgx = std::regex("((([^\\s\\\"\\.\\:\\-\\>\\|\\+\\-\\~\\*\\/\\%\\<\\>\\^\\(]+)\\s*(\\(\\s*(\\\"[^\\\"]*\\\"|[^\\(\\)]*)\\s*\\))?)|([^\\s\\\"\\(]+)|(\\\"[^\\\"]+\\\"))\\s*(.*)");
+
+		auto flags = (beginning_of_string_only)
+			? std::regex_constants::match_continuous
+			: std::regex_constants::match_default
+		;
 
 		if (std::smatch rgx_match; std::regex_search(command_or_value.begin(), command_or_value.end(), rgx_match, command_or_value_rgx))
 		{
@@ -99,10 +109,10 @@ namespace util
 	}
 
 	std::tuple<std::string_view, std::string_view, std::string_view, bool, bool>
-	parse_single_argument_command_or_value(std::string_view command_or_value, bool allow_trailing_expr)
+	parse_single_argument_command_or_value(std::string_view command_or_value, bool allow_trailing_expr, bool beginning_of_string_only)
 	{
 		const auto temp = std::string(command_or_value);
-		auto result = parse_single_argument_command_or_value(temp, allow_trailing_expr);
+		auto result = parse_single_argument_command_or_value(temp, allow_trailing_expr, beginning_of_string_only);
 
 		return
 		{

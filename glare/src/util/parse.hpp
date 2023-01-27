@@ -12,7 +12,7 @@ namespace util
 		std::string_view, // command_content
 		std::string_view, // trailing_expr
 		bool              // is_string_content
-	> parse_single_argument_command(const std::string& command, bool allow_trailing_expr=true); // std::string_view
+	> parse_single_argument_command(const std::string& command, bool allow_trailing_expr=true, bool beginning_of_string_only=true); // std::string_view
 
 	// TODO: Remove/refactor. (`std::regex` doesn't (currently) support `std::string_view`.
 	std::tuple
@@ -22,7 +22,7 @@ namespace util
 		std::string_view, // trailing_expr
 		bool              // is_string_content
 	>
-	parse_single_argument_command(std::string_view command, bool allow_trailing_expr=true);
+	parse_single_argument_command(std::string_view command, bool allow_trailing_expr=true, bool beginning_of_string_only=true);
 
 	std::tuple
 	<
@@ -32,7 +32,7 @@ namespace util
 		bool,             // is_string_content
 		bool              // is_command
 	>
-	parse_single_argument_command_or_value(const std::string& command_or_value, bool allow_trailing_expr=true);
+	parse_single_argument_command_or_value(const std::string& command_or_value, bool allow_trailing_expr=true, bool beginning_of_string_only=true);
 
 	// TODO: Remove/refactor. (`std::regex` doesn't (currently) support `std::string_view`.
 	std::tuple
@@ -43,7 +43,7 @@ namespace util
 		bool,             // is_string_content
 		bool              // is_command
 	>
-	parse_single_argument_command_or_value(std::string_view command_or_value, bool allow_trailing_expr=true);
+	parse_single_argument_command_or_value(std::string_view command_or_value, bool allow_trailing_expr=true, bool beginning_of_string_only=true);
 
 	std::tuple
 	<
