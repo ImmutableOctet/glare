@@ -124,3 +124,30 @@ TEST_CASE("parse_single_argument_command_or_value", "[util:parse]")
 		REQUIRE(value == "This is a string.");
 	}
 }
+
+TEST_CASE("parse_standard_operator_segment", "[util:parse]")
+{
+	SECTION("+ operator with trailing content")
+	{
+		auto [operator_symbol, trailing_content] = util::parse_standard_operator_segment(std::string_view("+ 12345"));
+
+		REQUIRE(operator_symbol == "+");
+		REQUIRE(trailing_content == "12345");
+	}
+
+	SECTION("- operator without trailing content")
+	{
+		auto [operator_symbol, trailing_content] = util::parse_standard_operator_segment(std::string_view("-"));
+
+		REQUIRE(operator_symbol == "-");
+		REQUIRE(trailing_content.empty());
+	}
+
+	SECTION("/ operator with illegal trailing content (Force-disabled)")
+	{
+		auto [operator_symbol, trailing_content] = util::parse_standard_operator_segment(std::string_view("/trailing"), false);
+
+		REQUIRE(operator_symbol.empty());
+		REQUIRE(trailing_content.empty());
+	}
+}
