@@ -126,11 +126,16 @@ namespace util
 	}
 
 	std::tuple<std::string_view, std::string_view>
-	parse_standard_operator_segment(const std::string& operator_expr, bool allow_trailing_expr)
+	parse_standard_operator_segment(const std::string& operator_expr, bool allow_trailing_expr, bool beginning_of_string_only)
 	{
 		const auto operator_rgx = std::regex("\\s*([\\|\\+\\-\\~\\*\\/\\%\\<\\>\\^])\\s*(.*)");
 
-		if (std::smatch rgx_match; std::regex_search(operator_expr.begin(), operator_expr.end(), rgx_match, operator_rgx))
+		auto flags = (beginning_of_string_only)
+			? std::regex_constants::match_continuous
+			: std::regex_constants::match_default
+		;
+
+		if (std::smatch rgx_match; std::regex_search(operator_expr.begin(), operator_expr.end(), rgx_match, operator_rgx, flags))
 		{
 			auto operator_symbol = match_view(operator_expr, rgx_match, 1);
 			auto trailing_expr   = match_view(operator_expr, rgx_match, 2);
@@ -145,10 +150,10 @@ namespace util
 	}
 
 	std::tuple<std::string_view, std::string_view>
-	parse_standard_operator_segment(std::string_view operator_expr, bool allow_trailing_expr)
+	parse_standard_operator_segment(std::string_view operator_expr, bool allow_trailing_expr, bool beginning_of_string_only)
 	{
 		const auto temp = std::string(operator_expr);
-		auto result = parse_standard_operator_segment(temp, allow_trailing_expr);
+		auto result = parse_standard_operator_segment(temp, allow_trailing_expr, beginning_of_string_only);
 
 		return
 		{
