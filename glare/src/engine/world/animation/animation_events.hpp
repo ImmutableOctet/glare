@@ -11,7 +11,7 @@ namespace graphics
 namespace engine
 {
 	class World;
-	struct Animator;
+	struct AnimationComponent;
 	struct TransformComponent;
 
 	/*
@@ -26,7 +26,7 @@ namespace engine
 	{
 		Entity entity;
 
-		const Animator* animator;
+		const AnimationComponent* animator;
 		const Animation* animation;
 	};
 
@@ -34,7 +34,7 @@ namespace engine
 	{
 		Entity entity;
 
-		const Animator* animator;
+		const AnimationComponent* animator;
 		const Animation* prev_animation;
 		const Animation* current_animation;
 
@@ -49,7 +49,7 @@ namespace engine
 		float current_time;
 		float prev_time;
 
-		const Animator* animator;
+		const AnimationComponent* animator;
 		const Animation* current_animation;
 
 		std::uint16_t bones_changed;

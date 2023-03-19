@@ -1,13 +1,12 @@
 #include "animation_component.hpp"
 
-#include <engine/resource_manager/resource_manager.hpp>
 #include <graphics/animation.hpp>
 
 #include <algorithm>
 
 namespace engine
 {
-	const Animation* Animator::resolve_animation(const std::shared_ptr<AnimationData>& animations, AnimationID id)
+	const Animation* AnimationComponent::resolve_animation(const std::shared_ptr<AnimationData>& animations, AnimationID id)
 	{
 		//assert(animations);
 
@@ -20,7 +19,7 @@ namespace engine
 		return &animations->animations[id];
 	}
 
-	std::optional<AnimationID> Animator::resolve_animation_id(const std::shared_ptr<AnimationData>& animations, const Animation* animation)
+	std::optional<AnimationID> AnimationComponent::resolve_animation_id(const std::shared_ptr<AnimationData>& animations, const Animation* animation)
 	{
 		if ((!animations) || (!animation))
 		{
@@ -52,10 +51,10 @@ namespace engine
 		*/
 	}
 
-	Animator::Animator(float rate)
+	AnimationComponent::AnimationComponent(float rate)
 		: rate(rate) {}
 
-	Animator::Animator
+	AnimationComponent::AnimationComponent
 	(
 		const std::shared_ptr<AnimationData>& animations,
 		const Animation* current_animation,
@@ -96,7 +95,7 @@ namespace engine
 		pose = Matrices(number_of_bones);
 	}
 
-	Animator& Animator::set_animations(const std::shared_ptr<AnimationData>& animations, State new_state)
+	AnimationComponent& AnimationComponent::set_animations(const std::shared_ptr<AnimationData>& animations, State new_state)
 	{
 		this->animations = animations;
 
@@ -110,17 +109,17 @@ namespace engine
 		return *this;
 	}
 
-	void Animator::play()
+	void AnimationComponent::play()
 	{
 		state = State::Play;
 	}
 
-	void Animator::pause()
+	void AnimationComponent::pause()
 	{
 		state = State::Pause;
 	}
 
-	bool Animator::toggle()
+	bool AnimationComponent::toggle()
 	{
 		if (playing())
 		{
