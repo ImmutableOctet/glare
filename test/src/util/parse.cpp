@@ -52,13 +52,40 @@ TEST_CASE("util::find_operator", "[util::parse]")
 	}
 }
 
-#include <string_view>
-
-TEST_CASE("parse_data_member_reference", "[util:parse]")
+TEST_CASE("util::find_assignment_operator", "[util:parse]")
 {
-	SECTION("Regular access with `::` operator")
+	SECTION("Regular assignment operator")
 	{
-		auto [type_name, data_member_name] = util::parse_data_member_reference(std::string_view("A::B"));
+		REQUIRE(std::get<0>(util::find_assignment_operator("x = 10", false, false, false)) == 2);
+		REQUIRE(std::get<0>(util::find_assignment_operator(" y  = 50", false, false, false)) == 4);
+		REQUIRE(std::get<0>(util::find_assignment_operator(" z() = 100", false, true, false)) == 5);
+		REQUIRE(std::get<0>(util::find_assignment_operator(" w() = 500", false, true, true)) == std::string_view::npos);
+		REQUIRE(std::get<0>(util::find_assignment_operator(" fn(a=b)", false, false, false)) == 5);
+		REQUIRE(std::get<0>(util::find_assignment_operator("other_fn(a=b)", false, true, true)) == std::string_view::npos);
+		REQUIRE(std::get<0>(util::find_assignment_operator("other_fn(a=b)", false, false, false)) == 10);
+		REQUIRE(std::get<0>(util::find_assignment_operator("other_fn(a=b)", false, true, false)) == std::string_view::npos);
+		REQUIRE(std::get<0>(util::find_assignment_operator("c=(a)", false, true, true)) == 1);
+
+		REQUIRE(std::get<1>(util::find_assignment_operator("x = y", false, false, false)) == "=");
+	}
+
+	SECTION("Compound assignment operator")
+{
+		auto [index, symbol] = util::find_assignment_operator("x += y", true, false, false);
+
+		REQUIRE(index == 2);
+		REQUIRE(symbol == "+=");
+	}
+
+	SECTION("Compound assignment operator + embedded assignment in unrelated scope")
+	{
+		REQUIRE(std::get<0>(util::find_assignment_operator("x += (y+=z)", true, true, false)) == 2);
+		REQUIRE(std::get<0>(util::find_assignment_operator("x(y+=z)", true, true, false)) == std::string_view::npos);
+		REQUIRE(std::get<0>(util::find_assignment_operator("x(y+=z)", true, false, false)) == 3);
+		REQUIRE(std::get<0>(util::find_assignment_operator("x(y+=z) += 10", true, true, false)) == 8);
+		REQUIRE(std::get<0>(util::find_assignment_operator("x(y+=z) += 10", true, true, true)) == std::string_view::npos);
+	}
+}
 
 		REQUIRE(type_name == "A");
 		REQUIRE(data_member_name == "B");
