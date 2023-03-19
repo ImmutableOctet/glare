@@ -140,7 +140,7 @@ TEST_CASE("parse_single_argument_command_or_value", "[util:parse]")
 	}
 }
 
-TEST_CASE("parse_standard_operator_segment", "[util:parse]")
+TEST_CASE("util::parse_standard_operator_segment", "[util:parse]")
 {
 	SECTION("+ operator with trailing content")
 	{
