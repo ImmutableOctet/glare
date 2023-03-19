@@ -103,7 +103,7 @@ namespace engine
 		Other = Default
 	};
 
-	constexpr auto& null = entt::null;
+	inline constexpr auto& null = entt::null;
 
 	inline constexpr PlayerIndex PRIMARY_LOCAL_PLAYER = 1;
 	inline constexpr PlayerIndex NO_PLAYER            = 0;
