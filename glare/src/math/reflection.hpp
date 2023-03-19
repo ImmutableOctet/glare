@@ -65,7 +65,7 @@ namespace math
         template <typename VectorType, typename IdentifierType>
         auto reflect_vector2d(IdentifierType&& id)
         {
-            using namespace entt::literals;
+            using namespace engine::literals;
 
             return reflect_type<VectorType>(id)
                 .data<&VectorType::x>("x"_hs)
@@ -78,7 +78,7 @@ namespace math
         template <typename VectorType, typename IdentifierType>
         auto reflect_vector3d(IdentifierType&& id)
         {
-            using namespace entt::literals;
+            using namespace engine::literals;
 
             return reflect_vector2d<VectorType>(id)
                 .data<&VectorType::z>("z"_hs)
@@ -90,7 +90,7 @@ namespace math
         template <typename VectorType, typename IdentifierType>
         auto reflect_vector4d(IdentifierType&& id)
         {
-            using namespace entt::literals;
+            using namespace engine::literals;
 
             return reflect_vector3d<VectorType>(id)
                 .data<&VectorType::w>("w"_hs)
@@ -106,7 +106,7 @@ namespace math
     template <typename T, typename IdentifierType>
     auto reflect(IdentifierType&& id)
     {
-        using namespace entt::literals;
+        using namespace engine::literals;
 
         if constexpr (std::is_same_v<T, Vector2D>)
         {
