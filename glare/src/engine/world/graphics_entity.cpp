@@ -11,6 +11,7 @@
 #include "physics/components/collision_component.hpp"
 
 #include <engine/resource_manager/resource_manager.hpp>
+#include <engine/resource_manager/animation_data.hpp>
 
 #include <engine/components/model_component.hpp>
 #include <engine/components/name_component.hpp>
@@ -26,7 +27,7 @@ namespace graphics
 
 namespace engine
 {
-	Entity create_model(World& world, pass_ref<graphics::Model> model, Entity parent, EntityType type)
+	Entity create_model(World& world, const std::shared_ptr<graphics::Model>& model, Entity parent, EntityType type)
 	{
 		assert(model);
 
@@ -42,7 +43,7 @@ namespace engine
 		return attach_model(world, entity, model);
 	}
 
-	Entity attach_model(World& world, Entity entity, pass_ref<graphics::Model> model, graphics::ColorRGBA color, std::optional<bool> update_name)
+	Entity attach_model(World& world, Entity entity, const std::shared_ptr<graphics::Model>& model, graphics::ColorRGBA color, std::optional<bool> update_name)
 	{
 		///assert(model);
 
@@ -84,7 +85,7 @@ namespace engine
 		std::optional<CollisionConfig> collision_cfg,
 		float mass,
 
-		pass_ref<graphics::Shader> shader
+		const std::shared_ptr<graphics::Shader>& shader
 	)
 	{
 		if (path.empty())
@@ -214,7 +215,7 @@ namespace engine
 		std::optional<CollisionConfig> collision_cfg,
 		float mass,
 
-		pass_ref<graphics::Shader> shader
+		const std::shared_ptr<graphics::Shader>& shader
 	)
 	{
 		if (path.empty())
@@ -242,13 +243,13 @@ namespace engine
 		return load_model(world, "assets/geometry/cube.b3d", parent, type, false);
 	}
 
-	Entity attach_animator(World& world, Entity entity, const pass_ref<AnimationData> animations, float rate)
+	Entity attach_animator(World& world, Entity entity, const std::shared_ptr<AnimationData>& animations, float rate)
 	{
 		auto& registry = world.get_registry();
 
 		assert(!animations->animations.empty());
 
-		registry.emplace_or_replace<Animator>(entity, animations, AnimationID(0), rate);
+		registry.emplace_or_replace<AnimationComponent>(entity, animations, AnimationID(0), rate);
 
 		return entity;
 	}

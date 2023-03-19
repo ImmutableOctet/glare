@@ -1,7 +1,7 @@
 #pragma once
 
 //#include <math/types.hpp>
-#include <graphics/types.hpp>
+#include <graphics/math_types.hpp>
 
 #include <cmath>
 

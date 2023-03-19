@@ -3,14 +3,16 @@
 // TODO: Look into reworking/replacing this header with something more cohesive.
 
 //#include "types.hpp"
-#include <types.hpp>
-#include <graphics/types.hpp>
 
 #include "entity.hpp"
 
 //#include "physics/collision_group.hpp"
 #include "physics/collision_config.hpp"
 
+#include <graphics/types.hpp>
+#include <util/enum_operators.hpp>
+
+#include <cstdint>
 #include <optional>
 #include <string>
 
@@ -50,8 +52,8 @@ namespace engine
 	};
 	*/
 
-	Entity create_model(World& world, pass_ref<graphics::Model> model, Entity parent=null, EntityType type=EntityType::Geometry);
-	Entity attach_model(World& world, Entity entity, pass_ref<graphics::Model> model, graphics::ColorRGBA color={1.0f, 1.0f, 1.0f, 1.0f}, std::optional<bool> update_name=std::nullopt);
+	Entity create_model(World& world, const std::shared_ptr<graphics::Model>& model, Entity parent=null, EntityType type=EntityType::Geometry);
+	Entity attach_model(World& world, Entity entity, const std::shared_ptr<graphics::Model>& model, graphics::ColorRGBA color={1.0f, 1.0f, 1.0f, 1.0f}, std::optional<bool> update_name=std::nullopt);
 
 	Entity load_model_attachment
 	(
@@ -63,7 +65,7 @@ namespace engine
 		std::optional<CollisionConfig> collision_cfg=std::nullopt,
 		float mass=0.0f,
 
-		pass_ref<graphics::Shader> shader={}
+		const std::shared_ptr<graphics::Shader>& shader={}
 	);
 
 	Entity load_model
@@ -76,13 +78,13 @@ namespace engine
 		
 		bool allow_multiple=true,
 
-		std::optional<CollisionConfig> collision_cfg = std::nullopt,
-		float mass = 0.0f,
+		std::optional<CollisionConfig> collision_cfg=std::nullopt,
+		float mass=0.0f,
 
-		pass_ref<graphics::Shader> shader={}
+		const std::shared_ptr<graphics::Shader>& shader={}
 	);
 
 	Entity create_cube(World& world, Entity parent=null, EntityType type=EntityType::Default);
 
-	Entity attach_animator(World& world, Entity entity, const pass_ref<AnimationData> animations, float rate=1.0f);
+	Entity attach_animator(World& world, Entity entity, const std::shared_ptr<AnimationData>& animations, float rate=1.0f);
 }
