@@ -74,7 +74,8 @@
       "cacheVariables": {
         //"CMAKE_CXX_FLAGS": "/MP /Zm100 /utf-8 /w14165 /w44242 /w44254 /w44263 /w34265 /w34287 /w44296 /w44365 /w44388 /w44464 /w14545 /w14546 /w14547 /w14549 /w14555 /w34619 /w34640 /w24826 /w14905 /w14906 /w14928 /w45038 /W4 /permissive- /volatile:iso /Zc:preprocessor /Zc:__cplusplus /Zc:externConstexpr /Zc:throwingNew /EHsc /bigobj /D _SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING"
         //"CMAKE_CXX_FLAGS": "/MP /Zm100 /W3 /WX- /permissive- /EHsc /sdl /JMC /ZI /bigobj /D _SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING" // /MP /Zm100
-        "CMAKE_CXX_FLAGS": "/MP /Zm100 /utf-8 /W3 /permissive- /volatile:iso /Zc:preprocessor /Zc:__cplusplus /Zc:externConstexpr /Zc:throwingNew /EHsc /bigobj /D _SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING"
+        "CMAKE_CXX_FLAGS": "/JMC /MP8 /Zm100 /utf-8 /W3 /permissive- /volatile:iso /Zc:preprocessor /Zc:__cplusplus /Zc:externConstexpr /Zc:throwingNew /EHsc /bigobj /D _SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING" //,
+        //"CMAKE_VS_JUST_MY_CODE_DEBUGGING": "ON"
       }
     },
     {
@@ -123,6 +124,12 @@
       }
     },
     {
+      "name": "ci-build",
+      "binaryDir": "${sourceDir}/build",
+      "hidden": true
+    },
+    /*
+    {
       "name": "ci-coverage",
       "inherits": [ "coverage-unix", "dev-mode", "vcpkg" ],
       "cacheVariables": {
@@ -140,11 +147,6 @@
       }
     },
     {
-      "name": "ci-build",
-      "binaryDir": "${sourceDir}/build",
-      "hidden": true
-    },
-    {
       "name": "ci-macos",
       "inherits": [ "ci-build", "ci-unix", "dev-mode", "vcpkg" ]
     },
@@ -152,6 +154,7 @@
       "name": "ci-ubuntu",
       "inherits": [ "ci-build", "ci-unix", "clang-tidy", "vcpkg", "cppcheck", "dev-mode" ]
     },
+    */
     {
       "name": "ci-windows",
       "inherits": [ "ci-build", "ci-win64", "dev-mode", "vcpkg", "vcpkg-win64" ] // vcpkg-win64-static
