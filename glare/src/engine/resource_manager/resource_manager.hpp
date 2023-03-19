@@ -1,29 +1,26 @@
 #pragma once
 
-#include <types.hpp>
-//#include <engine/types.hpp>
-
-#include <graphics/model.hpp>
+#include "types.hpp"
 
 #include <util/json.hpp>
 
 //#include <engine/world/physics/collision.hpp>
 
-#include "animation_data.hpp"
 #include "collision_data.hpp"
 #include "model_data.hpp"
 
-#include "entity_factory_data.hpp"
+//#include "loaders/loaders.hpp"
 
-#include "loaders/loaders.hpp"
-
-#include <engine/meta/parsing_context.hpp>
+#include <engine/meta/meta_parsing_context.hpp>
+#include <engine/meta/meta_type_resolution_context.hpp>
+//#include <engine/meta/meta_variable_context.hpp>
 
 //#include <vector>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <tuple>
+#include <vector>
 
 #include <unordered_map>
 #include <map>
@@ -53,25 +50,28 @@ namespace engine
 	struct RenderScene;
 	struct CollisionShapeDescription;
 
+	struct EntityFactoryData;
+	struct EntityFactoryContext;
+	struct EntityConstructionContext;
+
+	using EntityFactoryKey = std::string; // std::string_view; // EntityFactory::FactoryKey:
+
 	// TODO: Revisit weak vs. strong references for caching.
 	// Theoretically we could use weak references but return strong references upon initial request.
 
 	struct Resources
 	{
 		// Aliases:
-		using AnimationData = engine::AnimationData;
 
 		// Reference to a 'Model' object; used internally for path lookups, etc.
-		using Models = engine::Models;
+		using Models = std::vector<ModelRef>; // util::small_vector<ModelRef, ...>;
 
-		using ShaderRef = ref<graphics::Shader>;
-		using WeakShaderRef = weak_ref<graphics::Shader>;
+		using ShaderRef = std::shared_ptr<graphics::Shader>;
+		using WeakShaderRef = std::weak_ptr<graphics::Shader>;
 
-		using TextureData = ref<graphics::Texture>;
+		using TextureData = std::shared_ptr<graphics::Texture>;
 
-		// Output from load/creation function for models.
-		//using ModelData = Models; // std::tuple<Models, const CollisionData*>; // ModelRef // std::optional<...> // ref<ModelLoader::ModelStorage>;
-		using ModelData = engine::ModelData;
+		using FactoryKey = EntityFactoryKey;
 
 		// Resource collections:
 		mutable std::unordered_map<std::string, ModelData> loaded_models; // Models // std::map // ModelRef
@@ -79,12 +79,12 @@ namespace engine
 
 		mutable std::map<const WeakModelRef, CollisionData, std::owner_less<>> collision_data; //std::unordered_map<WeakModelRef, CollisionData, std::hash<WeakModelRef>, std::owner_less<>> collision_data;
 
-		mutable std::map<const WeakModelRef, ref<AnimationData>, std::owner_less<>> animation_data;
+		mutable std::map<const WeakModelRef, std::shared_ptr<AnimationData>, std::owner_less<>> animation_data;
 
 		//std::unordered_map<std::string, TextureData> texture_data;
 
 		// Maps file paths to factory objects able to generate entities of a given specification.
-		mutable std::unordered_map<EntityFactoryKey, EntityFactoryData> entity_factories; // , std::owner_less<> // std::map
+		mutable std::unordered_map<FactoryKey, std::weak_ptr<EntityFactoryData>> entity_factories; // , std::owner_less<> // std::map
 	};
 
 	class ResourceManager : protected Resources
@@ -97,22 +97,22 @@ namespace engine
 			// TODO: Look into removing this. (Needed for construction of `RenderScene` object in `Game`)
 			friend class game::Game;
 
-			ResourceManager(pass_ref<graphics::Context> context, pass_ref<graphics::Shader> default_shader={}, pass_ref<graphics::Shader> default_animated_shader={});
+			ResourceManager(const std::shared_ptr<graphics::Context>& context, const std::shared_ptr<graphics::Shader>& default_shader={}, const std::shared_ptr<graphics::Shader>& default_animated_shader={});
 			~ResourceManager();
 
-			inline pass_ref<graphics::Context> get_context() const { return context; }
+			inline const std::shared_ptr<graphics::Context>& get_context() const { return context; }
 
-			inline pass_ref<graphics::Shader> get_default_shader() const { return default_shader; }
-			inline pass_ref<graphics::Shader> get_default_animated_shader() const { return default_animated_shader; }
+			inline const std::shared_ptr<graphics::Shader>& get_default_shader() const { return default_shader; }
+			inline const std::shared_ptr<graphics::Shader>& get_default_animated_shader() const { return default_animated_shader; }
 
-			inline void set_default_shader(pass_ref<graphics::Shader> shader)
+			inline void set_default_shader(const std::shared_ptr<graphics::Shader>& shader)
 			{
 				default_shader = shader;
 
 				loaded_shaders["DEFAULT"] = shader;
 			}
 
-			inline void set_default_animated_shader(pass_ref<graphics::Shader> shader)
+			inline void set_default_animated_shader(const std::shared_ptr<graphics::Shader>& shader)
 			{
 				default_animated_shader = shader;
 
@@ -124,7 +124,7 @@ namespace engine
 				const std::string& path,
 				bool load_collision=false,
 				
-				pass_ref<graphics::Shader> shader={},
+				const std::shared_ptr<graphics::Shader>& shader={},
 
 				bool optimize_collision=true,
 				bool force_reload=false,
@@ -137,16 +137,19 @@ namespace engine
 			//const CollisionData* get_collision(WeakModelRef model);
 
 			const CollisionData* get_collision(const WeakModelRef model) const;
-			const ref<AnimationData> get_animation_data(const WeakModelRef model) const;
+			const std::shared_ptr<AnimationData> get_animation_data(const WeakModelRef model) const;
 
-			const EntityFactoryData* get_existing_factory(const std::string& path) const; // std::string_view
+			std::shared_ptr<const EntityFactoryData> get_existing_factory(const std::string& path) const; // std::string_view
 			const EntityDescriptor* get_existing_descriptor(const std::string& path) const;
-			const EntityFactoryData* get_factory(const EntityFactoryContext& context) const;
+			std::shared_ptr<const EntityFactoryData> get_factory(const EntityFactoryContext& context) const;
 
-			Entity generate_entity(const EntityFactoryContext& factory_context, const EntityConstructionContext& entity_context) const;
+			Entity generate_entity(const EntityFactoryContext& factory_context, const EntityConstructionContext& entity_context, bool handle_children=true) const;
 
-			ParsingContext& set_parsing_context(ParsingContext&& context);
-			const ParsingContext& get_parsing_context() const;
+			MetaParsingContext set_type_resolution_context(MetaTypeResolutionContext&& context);
+			//MetaParsingContext set_variable_context(MetaVariableContext&& context);
+
+			MetaParsingContext get_parsing_context() const;
+			MetaParsingContext get_existing_parsing_context() const;
 
 			// Links events from `world` to this resource manager instance.
 			void subscribe(World& world);
@@ -155,11 +158,12 @@ namespace engine
 
 			static std::string resolve_path(const std::string& path);
 
-			mutable ref<graphics::Context> context;
+			mutable std::shared_ptr<graphics::Context> context;
 
-			mutable ref<graphics::Shader> default_shader;
-			mutable ref<graphics::Shader> default_animated_shader;
+			mutable std::shared_ptr<graphics::Shader> default_shader;
+			mutable std::shared_ptr<graphics::Shader> default_animated_shader;
 
-			mutable std::optional<ParsingContext> parsing_context = std::nullopt;
+			mutable std::optional<MetaTypeResolutionContext> type_resolution_context = std::nullopt;
+			//mutable std::optional<MetaVariableContext> variable_context = std::nullopt;
 	};
 }
