@@ -25,17 +25,46 @@ namespace util
 			using resource_type  = ResourceType;
 			using index_type     = IndexType;
 
+			/*
+			SharedStorageData() {}
+			virtual ~SharedStorageData() {}
+
+			SharedStorageData(SharedStorageData&&) noexcept = default;
+			SharedStorageData& operator=(SharedStorageData&&) noexcept = default;
+
+			SharedStorageData(const SharedStorageData&) = delete;
+			SharedStorageData& operator=(const SharedStorageData&) = delete;
+			*/
+
 			// Retrieves a temporary pointer to a meta-type description.
 			inline const ResourceType& get(IndexType index) const
 			{
-				return (container[index]);
-				//return container.at(index);
+				return container.at(index);
 			}
 
 			inline ResourceType& get(IndexType index)
 			{
-				return (container[index]);
-				//return container.at(index);
+				return container.at(index);
+			}
+
+			inline ResourceType* try_get(IndexType index)
+			{
+				if (index < container.size())
+				{
+					return &(container[index]);
+				}
+
+				return {};
+			}
+
+			inline const ResourceType* try_get(IndexType index) const
+			{
+				if (index < container.size())
+				{
+					return &(container[index]);
+				}
+
+				return {};
 			}
 			
 			inline IndexType allocate(ResourceType&& resource)
@@ -53,9 +82,46 @@ namespace util
 				return container.emplace_back(std::forward<Args>(args)...);
 			}
 
+			inline bool deallocate(IndexType index)
+			{
+				if (auto prev_index = get_prev_index())
+				{
+					if (index == *prev_index)
+					{
+						container.pop_back();
+
+						return true;
+					}
+				}
+
+				return false;
+			}
+
+			inline bool deallocate(const ResourceType& resource)
+			{
+				if (auto resource_index = get_index(resource))
+				{
+					return deallocate(*resource_index);
+				}
+
+				return false;
+			}
+
 			inline IndexType get_next_index() const
 			{
 				return static_cast<IndexType>(container.size());
+			}
+
+			inline std::optional<IndexType> get_prev_index() const
+			{
+				const auto next_index = get_next_index();
+
+				if (next_index == static_cast<IndexType>(0))
+				{
+					return std::nullopt;
+				}
+
+				return (next_index - 1);
 			}
 
 			inline std::optional<IndexType> get_index(const ResourceType& resource) const
@@ -98,9 +164,11 @@ namespace util
 	};
 
 	template <typename StorageType, template <typename ResourceType> typename StorageData=StorageType::Data>
-	class SharedStorageInterface : protected StorageType
+	class SharedStorageInterface // : protected StorageType
 	{
 		protected:
+			StorageType _storage;
+
 			constexpr auto storage()
 			{
 				/*
@@ -111,7 +179,8 @@ namespace util
 				else
 				*/
 				{
-					return static_cast<StorageType*>(this);
+					//return static_cast<StorageType*>(this);
+					return &_storage;
 				}
 			}
 
@@ -125,7 +194,8 @@ namespace util
 				else
 				*/
 				{
-					return static_cast<const StorageType*>(this);
+					//return static_cast<const StorageType*>(this);
+					return &_storage;
 				}
 			}
 		public:
@@ -173,6 +243,18 @@ namespace util
 				return get_storage<ResourceType>().get(index);
 			}
 
+			template <typename ResourceType>
+			inline auto try_get(auto index)
+			{
+				return get_storage<ResourceType>().try_get(index);
+			}
+
+			template <typename ResourceType>
+			inline const auto try_get(auto index) const
+			{
+				return get_storage<ResourceType>().try_get(index);
+			}
+
 			template <typename ResourceType, typename ...Args>
 			inline ResourceType& allocate(Args&&... args)
 			{
@@ -183,6 +265,18 @@ namespace util
 			inline auto allocate(ResourceType&& resource)
 			{
 				return get_storage<ResourceType>().allocate(std::forward<ResourceType>(resource));
+			}
+
+			template <typename ResourceType>
+			inline auto deallocate(auto index)
+			{
+				return get_storage<ResourceType>().deallocate(index);
+			}
+
+			template <typename ResourceType>
+			inline auto deallocate(const ResourceType& instance)
+			{
+				return get_storage<ResourceType>().deallocate(std::forward<ResourceType>(instance));
 			}
 
 			template <typename ResourceType>
@@ -266,27 +360,41 @@ namespace util
 
 			template <typename ResourceType>
 			struct Data : util::SharedStorageDescriptor<> {};
-				
+			
 			template <> struct Data<TypeA> : util::SharedStorageDescriptor<&CustomStorageType::a> {};
 			template <> struct Data<TypeB> : util::SharedStorageDescriptor<&CustomStorageType::b> {};
 		};
 	*/
 
-	template <template <typename> typename ContainerTypeTemplate, typename IndexType=DefaultSharedStorageIndex, typename ...Resources>
+	template
+	<
+		template <typename> typename ContainerTypeTemplate,
+		typename IndexType=DefaultSharedStorageIndex,
+
+		template
+		<
+			typename,
+			template <typename> typename,
+			typename
+		>
+		typename StorageDataTemplate=util::SharedStorageData,
+
+		typename ...Resources
+	>
 	struct AutomaticSharedStorageImpl
 	{
 		protected:
 			constexpr auto storage() { return this; }
 			constexpr const auto storage() const { return this; }
 
-			std::tuple<SharedStorageData<Resources, ContainerTypeTemplate, IndexType>...> resources = {};
+			std::tuple<StorageDataTemplate<Resources, ContainerTypeTemplate, IndexType>...> resources = {};
 		public:
 			template <typename ResourceType>
 			struct Data
 			{
 				using type = ResourceType;
 
-				using StorageData = SharedStorageData<ResourceType, ContainerTypeTemplate, IndexType>;
+				using StorageData = StorageDataTemplate<ResourceType, ContainerTypeTemplate, IndexType>;
 
 				static constexpr auto& get(auto self)
 				{
@@ -296,7 +404,14 @@ namespace util
 	};
 
 	template <typename ...Resources>
-	using AutomaticSharedStorage = AutomaticSharedStorageImpl<DefaultSharedStorageContainer, DefaultSharedStorageIndex, Resources...>;
+	using AutomaticSharedStorage = AutomaticSharedStorageImpl
+	<
+		DefaultSharedStorageContainer,
+		DefaultSharedStorageIndex,
+		SharedStorageData,
+
+		Resources...
+	>;
 
 	template <typename ...Resources>
 	using SharedStorage = SharedStorageInterface<AutomaticSharedStorage<Resources...>>;
