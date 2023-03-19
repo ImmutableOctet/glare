@@ -1,8 +1,11 @@
 #pragma once
 
-#include <types.hpp>
+#include <util/enum_operators.hpp>
 
-///#include <entt/signal/delegate.hpp>
+#include <cstdint>
+
+//#include <entt/signal/delegate.hpp>
+
 #include <functional>
 
 namespace app
