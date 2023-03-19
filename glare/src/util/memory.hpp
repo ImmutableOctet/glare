@@ -1,24 +1,11 @@
 #pragma once
 
-#include <debug.hpp>
 #include <memory>
 
 namespace memory
 {
 	using raw_ptr    = void*;
 	using raw_string = const char*;
-
-	template <typename T>
-	using ref = std::shared_ptr<T>;
-
-	template <typename T>
-	using unique_ref = std::unique_ptr<T>;
-
-	template <typename T>
-	using weak_ref = std::weak_ptr<T>;
-
-	template <typename T>
-	using pass_ref = const ref<T>&;
 
 	/*
 		A type-erased `unique_ptr` type:
@@ -60,18 +47,6 @@ namespace memory
 	};
 
 	using memory_view = array_view<void>;
-
-	template <typename T, typename ...Args>
-	ref<T> allocate(Args&&... args)
-	{
-		return (std::make_shared<T>(args...)); // std::forward<Args>(args)
-	}
-
-	template <typename T, typename ...Args>
-	unique_ref<T> unique(Args&&... args)
-	{
-		return (std::make_unique<T>(args...)); // std::forward<Args>(args)
-	}
 
 	/*
 		Allocates an object of type `T` as an opaque unique-pointer. For more details, please view `opaque_unique_ptr`.
