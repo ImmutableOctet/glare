@@ -6,27 +6,44 @@
 // Function traits:
 
 // This macro generates a trait that checks if a type has a static member function with a given signature.
-#define GENERATE_HAS_FUNCTION_TRAIT(function_name)                                                                                 \
-    template <typename, typename T>                                                                                                \
-    struct has_function_##function_name                                                                                            \
-    {                                                                                                                              \
-        static_assert                                                                                                              \
-        (                                                                                                                          \
-            std::integral_constant<T, false>::value,                                                                               \
-            "The second template parameter needs to be a function type."                                                           \
-        );                                                                                                                         \
-    };                                                                                                                             \
-                                                                                                                                   \
-    template <typename Type, typename ReturnType, typename... Args>                                                                \
-    struct has_function_##function_name<Type, ReturnType(Args...)>                                                                 \
-    {                                                                                                                              \
-        private:                                                                                                                   \
-            template<typename T, T> struct type_and_signature;                                                                     \
-            template<typename T> static std::true_type  has_function(type_and_signature<ReturnType(Args...), &T::function_name>*); \
-            template<typename T> static std::false_type has_function(...);                                                         \
-        public:                                                                                                                    \
-        static constexpr bool value = std::is_same_v<decltype(has_function<Type>(nullptr)), std::true_type>;                       \
-    };
+#define GENERATE_HAS_FUNCTION_TRAIT(function_name) \
+    GENERATE_HAS_FUNCTION_TRAIT_EX(has_function_##function_name, function_name)
+
+#define GENERATE_HAS_FUNCTION_TRAIT_EX(trait_name, function_name)                                                                    \
+    template <typename, typename T>                                                                                                  \
+    struct trait_name                                                                                                                \
+    {                                                                                                                                \
+        static_assert                                                                                                                \
+        (                                                                                                                            \
+            std::integral_constant<T, false>::value,                                                                                 \
+            "The second template parameter needs to be a function type."                                                             \
+        );                                                                                                                           \
+    };                                                                                                                               \
+                                                                                                                                     \
+    template <typename Type, typename ReturnType, typename... Args>                                                                  \
+    struct trait_name<Type, ReturnType(Args...)>                                                                                     \
+    {                                                                                                                                \
+        private:                                                                                                                     \
+            template<typename T, T> struct type_and_signature;                                                                       \
+            template<typename T> static std::true_type  has_function(type_and_signature<ReturnType(Args...), (&T::function_name)>*); \
+            template<typename T> static std::false_type has_function(...);                                                           \
+        public:                                                                                                                      \
+            static constexpr bool value = std::is_same_v<decltype(has_function<Type>(nullptr)), std::true_type>;                     \
+            static constexpr auto ptr()                                                                                              \
+            {                                                                                                                        \
+                if constexpr (value)                                                                                                 \
+                {                                                                                                                    \
+                    return static_cast<ReturnType(Args...)>((&Type::function_name));                                                 \
+                }                                                                                                                    \
+                else                                                                                                                 \
+                {                                                                                                                    \
+                    return nullptr;                                                                                                  \
+                }                                                                                                                    \
+            }                                                                                                                        \
+    };                                                                                                                               \
+                                                                                                                                     \
+    template <typename Type, typename ReturnType, typename... Args>                                                                  \
+    inline constexpr bool trait_name##_v = trait_name<Type, ReturnType, Args...>::value;
 
 // Shorthand for using a generated trait from `GENERATE_HAS_FUNCTION_TRAIT`.
 #define TYPE_HAS_FUNCTION(type, function_name, function_signature) \
@@ -55,36 +72,76 @@
 // Method traits:
 
 // This macro generates a trait that checks if a type has a non-static member-function (method) with a given signature.
-#define GENERATE_HAS_METHOD_TRAIT(method_name)                                       \
-    template <typename, typename T>                                                  \
-    struct has_method_##method_name                                                  \
-    {                                                                                \
-        static_assert                                                                \
-        (                                                                            \
-            std::integral_constant<T, false>::value,                                 \
-            "The second template parameter must be a function type."                 \
-        );                                                                           \
-    };                                                                               \
-                                                                                     \
-    template <typename Type, typename ReturnType, typename... Args>                  \
-    struct has_method_##method_name<Type, ReturnType(Args...)>                       \
-    {                                                                                \
-        private:                                                                     \
-            template <typename T>                                                    \
-            static constexpr auto check(T*)                                          \
-            -> typename std::is_same                                                 \
-            <                                                                        \
-                decltype(std::declval<T>().method_name(std::declval<Args>()...)),    \
-                ReturnType                                                           \
-            >::type;                                                                 \
-                                                                                     \
-             template <typename>                                                     \
-            static constexpr std::false_type check(...);                             \
-                                                                                     \
-            using type = decltype(check<Type>(nullptr));                             \
-        public:                                                                      \
-            static constexpr bool value = type::value;                               \
-    };
+#define GENERATE_HAS_METHOD_TRAIT(method_name) \
+    GENERATE_HAS_METHOD_TRAIT_EX(has_method_##method_name, method_name)
+
+#define GENERATE_HAS_METHOD_TRAIT_EX(trait_name, method_name)                                                      \
+    template <typename, typename T>                                                                                \
+    struct trait_name                                                                                              \
+    {                                                                                                              \
+        static_assert                                                                                              \
+        (                                                                                                          \
+            std::integral_constant<T, false>::value,                                                               \
+            "The second template parameter must be a function type."                                               \
+        );                                                                                                         \
+    };                                                                                                             \
+                                                                                                                   \
+    template <typename Type, typename ReturnType, typename... Args>                                                \
+    struct trait_name<Type, ReturnType(Args...)>                                                                   \
+    {                                                                                                              \
+        private:                                                                                                   \
+            template <typename T>                                                                                  \
+            static constexpr auto check(T*)                                                                        \
+            -> typename std::is_same                                                                               \
+            <                                                                                                      \
+                decltype(std::declval<T>().method_name(std::declval<Args>()...)),                                  \
+                ReturnType                                                                                         \
+            >::type;                                                                                               \
+                                                                                                                   \
+             template <typename>                                                                                   \
+            static constexpr std::false_type check(...);                                                           \
+                                                                                                                   \
+            using type = decltype(check<Type>(nullptr));                                                           \
+        public:                                                                                                    \
+            static constexpr bool value = type::value;                                                             \
+                                                                                                                   \
+            template <bool is_const=false, bool is_noexcept=false>                                                 \
+            static constexpr auto ptr()                                                                            \
+            {                                                                                                      \
+                if constexpr (value)                                                                               \
+                {                                                                                                  \
+                    if constexpr (is_const)                                                                        \
+                    {                                                                                              \
+                        if constexpr (is_noexcept)                                                                 \
+                        {                                                                                          \
+                            return static_cast<ReturnType(Type::*)(Args...) const noexcept>((&Type::method_name)); \
+                        }                                                                                          \
+                        else                                                                                       \
+                        {                                                                                          \
+                            return static_cast<ReturnType(Type::*)(Args...) const>((&Type::method_name));          \
+                        }                                                                                          \
+                    }                                                                                              \
+                    else                                                                                           \
+                    {                                                                                              \
+                        if constexpr (is_noexcept)                                                                 \
+                        {                                                                                          \
+                            return static_cast<ReturnType(Type::*)(Args...) noexcept>((&Type::method_name));       \
+                        }                                                                                          \
+                        else                                                                                       \
+                        {                                                                                          \
+                            return static_cast<ReturnType(Type::*)(Args...)>((&Type::method_name));                \
+                        }                                                                                          \
+                    }                                                                                              \
+                }                                                                                                  \
+                else                                                                                               \
+                {                                                                                                  \
+                    return nullptr;                                                                                \
+                }                                                                                                  \
+            }                                                                                                      \
+    };                                                                                                             \
+                                                                                                                   \
+    template <typename Type, typename ReturnType, typename... Args>                                                \
+    inline constexpr bool trait_name##_v = trait_name<Type, ReturnType(Args...)>::value;
 
 // Shorthand for using a generated trait from `GENERATE_HAS_METHOD_TRAIT`.
 #define TYPE_HAS_METHOD(type, method_name, function_signature) \
