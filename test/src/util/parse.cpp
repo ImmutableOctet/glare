@@ -165,7 +165,105 @@ TEST_CASE("parse_standard_operator_segment", "[util:parse]")
 		REQUIRE(operator_symbol.empty());
 		REQUIRE(trailing_content.empty());
 	}
+TEST_CASE("util::parse_member_reference", "[util:parse]")
+{
+	SECTION("Regular access with `::` operator")
+	{
+		auto [type_name, data_member_name] = util::parse_member_reference(std::string_view("A::B"));
+
+		REQUIRE(type_name == "A");
+		REQUIRE(data_member_name == "B");
+	}
+
+	SECTION("Command syntax")
+	{
+		auto [type_name, data_member_name] = util::parse_member_reference(std::string_view("A(some text).B"), true);
+
+		REQUIRE(type_name == "A(some text)");
+		REQUIRE(data_member_name == "B");
+	}
+
+	SECTION("Command syntax where command syntax is prohibited")
+	{
+		auto [type_name, data_member_name] = util::parse_member_reference(std::string_view("A(some text)->B"), false);
+
+		REQUIRE(type_name.empty());
+		REQUIRE(data_member_name.empty());
+	}
+
+	SECTION("Command with member reference inside")
+	{
+		auto [leading_expr, trailing_expr] = util::parse_member_reference
+		(
+			std::string_view("sleep(child(player_model).AnimationComponent::time)"),
+			true, true
+		);
+
+		REQUIRE(leading_expr.empty());
+		REQUIRE(trailing_expr.empty());
+	}
+
+	SECTION("Command with member reference inside + trailing content")
+	{
+		auto [leading_expr, trailing_expr] = util::parse_member_reference
+		(
+			std::string_view("sleep(child(player_model).AnimationComponent::time)::value::some_other_field"),
+			true, true
+		);
+
+		REQUIRE(leading_expr == "sleep(child(player_model).AnimationComponent::time)");
+		REQUIRE(trailing_expr == "value::some_other_field");
+	}
+
+	SECTION("Allow trailing command")
+	{
+		auto [leading_expr, trailing_expr] = util::parse_member_reference
+		(
+			std::string_view("sleep(child(player_model).AnimationComponent::time)::value::some_method(xyz)"),
+			true, true, true, false
+		);
+
+		REQUIRE(leading_expr == "sleep(child(player_model).AnimationComponent::time)");
+		REQUIRE(trailing_expr == "value::some_method(xyz)");
 }
+
+	SECTION("Disallow trailing command")
+	{
+		auto [leading_expr, trailing_expr] = util::parse_member_reference
+		(
+			std::string_view("sleep(child(player_model).AnimationComponent::time)::value::some_method(xyz)"),
+			true, true, false, false
+		);
+
+		REQUIRE(leading_expr.empty());
+		REQUIRE(trailing_expr.empty());
+	}
+
+	SECTION("Truncate at first member")
+	{
+		auto [leading_expr, trailing_expr] = util::parse_member_reference
+		(
+			std::string_view("sleep(child(player_model).AnimationComponent::time)::value::something else unrelated"),
+			true, true, false, true
+		);
+
+		REQUIRE(leading_expr == "sleep(child(player_model).AnimationComponent::time)");
+		REQUIRE(trailing_expr == "value");
+	}
+
+	SECTION("Truncate at first command in place of member")
+	{
+		auto [leading_expr, trailing_expr] = util::parse_member_reference
+		(
+			std::string_view("sleep(child(player_model).AnimationComponent::time)::get_value()::something else unrelated"),
+			true, true, true, true
+		);
+
+		REQUIRE(leading_expr == "sleep(child(player_model).AnimationComponent::time)");
+		REQUIRE(trailing_expr == "get_value()");
+	}
+}
+
 TEST_CASE("util::find_quotes", "[util:parse]")
 {
 	SECTION("Embedded escaped string")
