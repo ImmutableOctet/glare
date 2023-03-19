@@ -17,8 +17,8 @@ namespace app
 		public:
 			Graphics(app::Window& window, WindowFlags flags, bool vsync=true, bool extensions=true);
 
-			ref<::graphics::Context> context;
-			ref<::graphics::Canvas> canvas;
+			std::shared_ptr<::graphics::Context> context;
+			std::shared_ptr<::graphics::Canvas> canvas;
 
 			FrameCounter framerate = 0;
 

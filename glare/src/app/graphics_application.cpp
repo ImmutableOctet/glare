@@ -23,10 +23,10 @@ namespace app
 			graphics_flags &= ~graphics::ContextFlags::VSync;
 		}
 
-		context = memory::allocate<graphics::Context>(window, graphics::Backend::OpenGL, graphics_flags, extensions);
+		context = std::make_unique<graphics::Context>(window, graphics::Backend::OpenGL, graphics_flags, extensions);
 
 		// Create the default canvas.
-		canvas = memory::allocate<graphics::Canvas>(context);
+		canvas = std::make_unique<graphics::Canvas>(context);
 	}
 
 	void GraphicsApplication::begin_render()
