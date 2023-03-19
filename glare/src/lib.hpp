@@ -1,8 +1,6 @@
 #pragma once
 
-#include <debug.hpp>
-#include <types.hpp>
-
+#include <cstdint>
 #include <optional>
 
 struct SDL_Window;
