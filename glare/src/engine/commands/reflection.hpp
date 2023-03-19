@@ -9,6 +9,8 @@
 #include "component_patch_command.hpp"
 #include "component_replace_command.hpp"
 
+#include <engine/meta/meta_evaluation_context.hpp>
+
 namespace engine
 {
 	template <>
@@ -36,11 +38,19 @@ namespace engine
 	{
 		engine_command_type<ComponentPatchCommand>()
 			.data<&ComponentPatchCommand::component>("component"_hs)
+			.data<&ComponentPatchCommand::context>("context"_hs)
 			.ctor
 			<
 				decltype(ComponentPatchCommand::source),
 				decltype(ComponentPatchCommand::target),
 				decltype(ComponentPatchCommand::component)
+			>()
+			.ctor
+			<
+				decltype(ComponentPatchCommand::source),
+				decltype(ComponentPatchCommand::target),
+				decltype(ComponentPatchCommand::component),
+				decltype(ComponentPatchCommand::context)
 			>()
 		;
 	}
@@ -61,6 +71,7 @@ namespace engine
 
 	void reflect_core_commands()
 	{
+		reflect<Command>();
 		reflect<PrintCommand>();
 		reflect<ComponentPatchCommand>();
 		reflect<ComponentReplaceCommand>();
