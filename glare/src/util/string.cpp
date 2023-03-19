@@ -49,6 +49,178 @@ namespace util
         return get_regex_groups(str, std::regex(regex_str));
     }
 
+    std::string_view trim_beginning(std::string_view str, std::string_view trim_values)
+    {
+        if (str.empty())
+        {
+            return {};
+        }
+
+        if (trim_values.empty())
+        {
+            return str;
+        }
+
+        const auto content_start_index = str.find_first_not_of(trim_values);
+
+        if (content_start_index == std::string_view::npos)
+        {
+            return str;
+        }
+
+        str.remove_prefix(content_start_index);
+
+        return str;
+    }
+
+    std::string_view trim_ending(std::string_view str, std::string_view trim_values)
+    {
+        if (str.empty())
+        {
+            return {};
+        }
+
+        if (trim_values.empty())
+        {
+            return str;
+        }
+
+        const auto content_end_index = str.find_last_not_of(trim_values);
+
+        if (content_end_index == std::string_view::npos)
+        {
+            return str;
+        }
+
+        str.remove_suffix((str.length() - content_end_index - 1));
+
+        return str;
+    }
+
+    std::string_view trim(std::string_view str, std::string_view trim_values, bool empty_on_only_trim_values)
+	{
+        str = trim_ending(trim_beginning(str, trim_values), trim_values);
+
+        if (empty_on_only_trim_values)
+        {
+            if (is_whitespace(str, trim_values))
+            {
+                return {};
+            }
+        }
+
+        return str;
+	}
+
+    std::string_view trim(std::string_view str, bool empty_on_only_whitespace)
+    {
+        return trim(str, whitespace_symbols, empty_on_only_whitespace);
+    }
+
+    bool is_whitespace(std::string_view str, std::string_view whitespace_values)
+    {
+        if (str.empty())
+        {
+            return false;
+        }
+
+        if (whitespace_values.empty())
+        {
+            return false;
+        }
+
+        for (const auto chr : str)
+        {
+            if (!is_whitespace(chr, whitespace_values))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    bool is_whitespace(char symbol, std::string_view whitespace_values)
+    {
+        //return (whitespace_values.find(symbol) != std::string_view::npos);
+        return whitespace_values.contains(symbol);
+    }
+
+    std::string_view remap_string_view(std::string_view old_basis, std::string_view new_basis, std::string_view old_view)
+	{
+		if (old_view.empty())
+		{
+			return {};
+		}
+
+		const auto offset = (old_view.data() - old_basis.data());
+		const auto length = old_view.size(); // length();
+
+		//assert(new_basis.size() >= (length + offset));
+
+		if (new_basis.size() < (length + offset))
+		{
+			return {};
+		}
+
+		return { (new_basis.data() + offset), length };
+	}
+
+    std::string_view match_view(std::string_view str, const std::smatch& matches, std::size_t index, std::string_view trim_values)
+	{
+		if (index >= matches.size())
+		{
+			return {};
+		}
+
+		if (!matches[index].matched)
+		{
+			return {};
+		}
+
+		if (matches.length(index) == 0)
+		{
+			return {};
+		}
+
+		return trim
+		(
+			std::string_view
+			{
+				(str.data() + matches.position(index)),
+				static_cast<std::size_t>(matches.length(index))
+			},
+
+			trim_values
+		);
+	}
+
+	std::string& remove_quotes(std::string& str)
+	{
+		str.erase(0, 1);
+		str.erase(str.length() - 1);
+
+		return str;
+	}
+
+	std::string& remove_quotes_safe(std::string& str)
+	{
+		// NOTE: Length check performed inside `is_quoted`.
+		if (!is_quoted(std::string_view(str)))
+		{
+			return str;
+		}
+
+		return remove_quotes(str);
+	}
+
+    std::string quote(std::string_view str)
+    {
+        //return format("\"{}\"", str);
+
+        return "\"" + std::string(str) + "\"";
+    }
+
     std::string_view to_string_view(const aiString& str)
     {
         return { str.C_Str(), str.length };
@@ -128,7 +300,7 @@ namespace util
         return out;
     }
 
-    std::string reverse_from_separator(std::string_view str, std::string_view separator, std::string_view trim_values)
+    std::string reverse_from_separator(std::string_view str, std::string_view separator, bool separator_required, std::string_view trim_values)
     {
         std::string out;
 
@@ -157,9 +329,72 @@ namespace util
                 }
             },
 
+            separator_required,
+
             trim_values
         );
 
         return out;
     }
+
+    bool is_quoted(std::string_view str, char quote_char)
+	{
+        //return simplified_is_quoted(str, quote_char);
+
+		// TODO: Revisit how this function handles whitespace.
+		//str = trim(str);
+
+		if (str.length() < 2)
+		{
+			return false;
+		}
+
+		const auto first_quote = str.find(quote_char);
+
+		if (first_quote != 0) // || (first_quote == std::string_view::npos)
+		{
+			return false;
+		}
+
+		// Iterative implementation:
+		std::size_t offset = (first_quote + 1); // 1
+
+		while (offset < str.length())
+		{
+			const auto second_quote = str.find(quote_char, offset);
+
+			if (second_quote == std::string_view::npos)
+			{
+				break;
+			}
+
+			const auto prev_char = str[second_quote - 1];
+
+			if (prev_char == '\\')
+			{
+				offset = (second_quote + 1);
+
+				continue;
+			}
+
+			return (second_quote == (str.length() - 1));
+		}
+
+		// Non-iterative implementation (Has gaps/edge-cases):
+        /*
+		if (str.ends_with(quote_char))
+		{
+			const auto prev_char = str[str.length() - 2];
+
+			if (prev_char == '\\')
+			{
+				return false;
+			}
+
+			return true;
+		}
+        */
+
+		return false;
+	}
 }
