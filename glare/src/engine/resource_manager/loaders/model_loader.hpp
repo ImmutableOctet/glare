@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -7,8 +8,6 @@
 #include <filesystem>
 #include <variant>
 #include <functional>
-
-#include <types.hpp>
 
 #include <util/variant.hpp>
 
@@ -77,7 +76,7 @@ namespace engine
 			using MeshData     = graphics::MeshData<VertexType>;
 			using AnimMeshData = graphics::MeshData<AVertexType>;
 
-			using Materials   = std::vector<ref<Material>>;
+			using Materials   = std::vector<std::shared_ptr<Material>>;
 			
 			using NativeFlags = unsigned int;
 
@@ -158,22 +157,22 @@ namespace engine
 			std::function<void(ModelLoader&, Texture&)>   on_texture;
 			std::function<void(ModelLoader&, Material&)>  on_material;
 			std::function<void(ModelLoader&, ModelData&)> on_model;
-			//std::function<void(ModelLoader&, pass_ref<ModelData>, const Bone&)> on_bone;
+			//std::function<void(ModelLoader&, const std::shared_ptr<ModelData>&, const Bone&)> on_bone;
 
 			ModelLoader
 			(
-				pass_ref<graphics::Context> context,
-				pass_ref<graphics::Shader> default_shader,
-				pass_ref<graphics::Shader> default_animated_shader,
+				const std::shared_ptr<graphics::Context>& context,
+				const std::shared_ptr<graphics::Shader>& default_shader,
+				const std::shared_ptr<graphics::Shader>& default_animated_shader,
 
 				const Config& cfg = {}
 			);
 
 			ModelLoader
 			(
-				pass_ref<graphics::Context> context,
-				pass_ref<graphics::Shader> default_shader,
-				pass_ref<graphics::Shader> default_animated_shader,
+				const std::shared_ptr<graphics::Context>& context,
+				const std::shared_ptr<graphics::Shader>& default_shader,
+				const std::shared_ptr<graphics::Shader>& default_animated_shader,
 				const filesystem::path& filepath,
 				std::optional<NativeFlags> native_flags=std::nullopt,
 				const Config& cfg = {}
@@ -187,7 +186,7 @@ namespace engine
 			);
 
 			inline const Config& get_config() const { return cfg; }
-			inline pass_ref<Context> get_context() const { return context; }
+			inline const std::shared_ptr<Context>& get_context() const { return context; }
 
 			//inline const ModelStorage& get_model_storage() const { return model_storage; }
 			inline ModelStorage& get_model_storage() { return model_storage; }
@@ -204,8 +203,8 @@ namespace engine
 		protected:
 			void store_model_data(ModelData&& model);
 
-			ref<Material> process_material(const aiScene* scene, const aiMaterial* native_material, bool load_values=true, bool load_textures=true);
-			ref<Texture> process_texture(const filesystem::path& texture_path);
+			std::shared_ptr<Material> process_material(const aiScene* scene, const aiMaterial* native_material, bool load_values=true, bool load_textures=true);
+			std::shared_ptr<Texture> process_texture(const filesystem::path& texture_path);
 			void process_node(const aiScene* scene, const aiNode* node, const _aiMatrix4x4* orientation=nullptr, const _aiMatrix4x4* global_orientation=nullptr);
 			//MeshData process_mesh(const aiScene* scene, const aiNode* node, const aiMesh* mesh, const Skeleton* skeleton=nullptr, const _aiMatrix4x4* orientation=nullptr);
 			
@@ -215,9 +214,9 @@ namespace engine
 
 			const std::vector<Animation> process_animations(const aiScene* scene, Skeleton& skeleton, const _aiMatrix4x4* orientation=nullptr);
 
-			ref<Context> context;
+			std::shared_ptr<Context> context;
 
-			ref<Shader> default_shader;
-			ref<Shader> default_animated_shader;
+			std::shared_ptr<Shader> default_shader;
+			std::shared_ptr<Shader> default_animated_shader;
 	};
 }

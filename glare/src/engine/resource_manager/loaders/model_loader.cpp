@@ -113,7 +113,7 @@ namespace engine
 
 		const auto vertex_count = (mesh->mNumVertices);
 
-		MeshData data = { {}, memory::allocate<std::vector<MeshIndex>>() };
+		MeshData data = { {}, std::make_shared<std::vector<MeshIndex>>() };
 
 		data.vertices.reserve(vertex_count);
 
@@ -290,9 +290,9 @@ namespace engine
 
 	ModelLoader::ModelLoader
 	(
-		pass_ref<graphics::Context> context,
-		pass_ref<graphics::Shader> default_shader,
-		pass_ref<graphics::Shader> default_animated_shader,
+		const std::shared_ptr<graphics::Context>& context,
+		const std::shared_ptr<graphics::Shader>& default_shader,
+		const std::shared_ptr<graphics::Shader>& default_animated_shader,
 
 		const Config& cfg
 	) :
@@ -305,9 +305,9 @@ namespace engine
 
 	ModelLoader::ModelLoader
 	(
-		pass_ref<graphics::Context> context,
-		pass_ref<graphics::Shader> default_shader,
-		pass_ref<graphics::Shader> default_animated_shader,
+		const std::shared_ptr<graphics::Context>& context,
+		const std::shared_ptr<graphics::Shader>& default_shader,
+		const std::shared_ptr<graphics::Shader>& default_animated_shader,
 		
 		const filesystem::path& filepath,
 		std::optional<NativeFlags> native_flags,
@@ -842,7 +842,7 @@ namespace engine
 		return animations;
 	}
 
-	ref<ModelLoader::Material> ModelLoader::process_material
+	std::shared_ptr<ModelLoader::Material> ModelLoader::process_material
 	(
 		const aiScene* scene,
 		const aiMaterial* native_material,
@@ -851,14 +851,14 @@ namespace engine
 	)
 	{
 		bool is_animated = cfg.is_animated.value_or(false);
-		auto material = memory::allocate<Material>((is_animated) ? default_animated_shader : default_shader);
+		auto material = std::make_shared<Material>((is_animated) ? default_animated_shader : default_shader);
 
 		//auto texture_types = 0;
 		
 		if (load_textures)
 		{
 			// Load and store each texture according to its type:
-			graphics::enumerate_texture_types([&](graphics::TextureClass texture_type)
+			graphics::enumerate_texture_classes([&](graphics::TextureClass texture_type)
 			{
 				auto native_type = to_aiTextureType(static_cast<graphics::TextureClass>(texture_type));
 				auto texture_count = native_material->GetTextureCount(native_type);
@@ -948,16 +948,16 @@ namespace engine
 		return material;
 	}
 
-	ref<ModelLoader::Texture> ModelLoader::process_texture(const filesystem::path& texture_path)
+	std::shared_ptr<ModelLoader::Texture> ModelLoader::process_texture(const filesystem::path& texture_path)
 	{
 		bool file_exists = filesystem::exists(texture_path);
 
-		ref<Texture> t;
+		std::shared_ptr<Texture> t;
 
 		if (file_exists)
 		{
 			// TODO: Review management of 'Texture' resources.
-			t = memory::allocate<Texture>(context, texture_path.string());
+			t = std::make_shared<Texture>(context, texture_path.string());
 		}
 		else
 		{
@@ -965,7 +965,7 @@ namespace engine
 
 			alternate_path.make_preferred();
 
-			t = memory::allocate<Texture>(context, alternate_path.string());
+			t = std::make_shared<Texture>(context, alternate_path.string());
 		}
 
 		if (on_texture)
