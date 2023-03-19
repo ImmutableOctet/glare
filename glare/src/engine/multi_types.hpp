@@ -4,7 +4,6 @@
 	General-purpose container type aliases. (e.g. array types)
 */
 
-//#include <types.hpp>
 #include "types.hpp"
 
 #include <math/types.hpp>
