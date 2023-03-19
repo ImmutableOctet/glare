@@ -1,7 +1,5 @@
 #pragma once
 
-#include <lib.hpp>
-
 #include "types.hpp"
 #include "delta_time.hpp"
 #include "input/input.hpp"
@@ -33,20 +31,9 @@ namespace app
 		protected:
 			friend Window;
 
-			struct Libraries
-			{
-				Libraries()
-				{
-					ASSERT(glare::lib::init_sdl());
-				}
-
-				~Libraries() {}
-			};
-
 			bool running : 1 = false;
 
-			Libraries init_libraries;
-			unique_ref<Window> window;
+			std::unique_ptr<Window> window;
 
 			std::chrono::time_point<std::chrono::system_clock> start_point;
 			std::chrono::time_point<std::chrono::system_clock> stop_point;
