@@ -1,5 +1,56 @@
 #include <catch2/catch_test_macros.hpp>
+
+#include <string_view>
+
+#include <util/string.hpp>
 #include <util/parse.hpp>
+#include <util/algorithm.hpp>
+
+TEST_CASE("util::find_operator", "[util::parse]")
+{
+	SECTION("Regular operators")
+	{
+		REQUIRE(std::get<1>(util::find_operator("+")) == "+");
+		REQUIRE(std::get<1>(util::find_operator("-")) == "-");
+		REQUIRE(std::get<1>(util::find_operator("!")) == "!");
+		REQUIRE(std::get<1>(util::find_operator("~")) == "~");
+		REQUIRE(std::get<1>(util::find_operator("*")) == "*");
+		REQUIRE(std::get<1>(util::find_operator("/")) == "/");
+		REQUIRE(std::get<1>(util::find_operator("<<")) == "<<");
+		REQUIRE(std::get<1>(util::find_operator(">>")) == ">>");
+
+		REQUIRE(std::get<1>(util::find_operator("&")) == "&");
+		REQUIRE(std::get<1>(util::find_operator("^")) == "^");
+		REQUIRE(std::get<1>(util::find_operator("|")) == "|");
+		REQUIRE(std::get<1>(util::find_operator("&&")) == "&&");
+		REQUIRE(std::get<1>(util::find_operator("||")) == "||");
+	}
+
+	SECTION("Comparison operators")
+	{
+		REQUIRE(std::get<1>(util::find_operator("<")) == "<");
+		REQUIRE(std::get<1>(util::find_operator(">")) == ">");
+		REQUIRE(std::get<1>(util::find_operator("<=")) == "<=");
+		REQUIRE(std::get<1>(util::find_operator(">=")) == ">=");
+		REQUIRE(std::get<1>(util::find_operator("==")) == "==");
+		REQUIRE(std::get<1>(util::find_operator("!=")) == "!=");
+		REQUIRE(std::get<1>(util::find_operator("<>")) == "<>");
+	}
+
+	SECTION("Assignment operators")
+	{
+		REQUIRE(std::get<1>(util::find_operator("=")) == "=");
+		REQUIRE(std::get<1>(util::find_operator("+=")) == "+=");
+		REQUIRE(std::get<1>(util::find_operator("-=")) == "-=");
+		REQUIRE(std::get<1>(util::find_operator("*=")) == "*=");
+		REQUIRE(std::get<1>(util::find_operator("/=")) == "/=");
+		REQUIRE(std::get<1>(util::find_operator("%=")) == "%=");
+		REQUIRE(std::get<1>(util::find_operator("<<=")) == "<<=");
+		REQUIRE(std::get<1>(util::find_operator(">>=")) == ">>=");
+		REQUIRE(std::get<1>(util::find_operator("&=")) == "&=");
+		REQUIRE(std::get<1>(util::find_operator("|=")) == "|=");
+	}
+}
 
 #include <string_view>
 
