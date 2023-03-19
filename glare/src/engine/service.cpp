@@ -3,9 +3,13 @@
 
 #include "meta/meta.hpp"
 #include "meta/meta_type_descriptor.hpp"
+#include "meta/meta_evaluation_context.hpp"
 
 #include "commands/component_patch_command.hpp"
 #include "commands/component_replace_command.hpp"
+#include "commands/function_command.hpp"
+
+#include "event_handler.hpp"
 
 #include <app/input/mouse_state.hpp>
 #include <app/input/keyboard_state.hpp>
@@ -22,7 +26,10 @@ namespace engine
 	(
 		bool register_input_events,
 		bool register_timed_event_wrapper,
-		bool register_core_commands
+		bool register_core_commands,
+		bool register_function_commands,
+		bool allocate_root_entity,
+		bool allocate_universal_variables
 	)
 		: active_event_handler(&standard_event_handler)
 	{
@@ -45,11 +52,26 @@ namespace engine
 			register_event<ComponentPatchCommand,   &Service::on_component_patch>(*this);
 			register_event<ComponentReplaceCommand, &Service::on_component_replace>(*this);
 		}
+
+		if (register_function_commands)
+		{
+			register_event<FunctionCommand, &Service::opaque_function_handler>(*this);
+		}
+
+		if (allocate_root_entity)
+		{
+			root = registry.create();
+		}
+
+		if (allocate_universal_variables)
+		{
+			universal_variables = std::make_shared<UniversalVariables>();
+		}
 	}
 
 	void Service::on_component_patch(const ComponentPatchCommand& component_patch)
 	{
-		using namespace entt::literals;
+		using namespace engine::literals;
 
 		if (!component_patch.component)
 		{
@@ -59,7 +81,6 @@ namespace engine
 		}
 
 		const auto& component = *component_patch.component;
-		const auto& entity = component_patch.target;
 
 		const auto type = component.get_type();
 
@@ -74,26 +95,30 @@ namespace engine
 
 		auto& registry = get_registry();
 
+		auto opt_evaluation_context = component_patch.context.get_context();
+
 		auto result = patch_fn.invoke
 		(
 			{},
 
 			entt::forward_as_meta(registry),
-			entt::forward_as_meta(entity),
+			entt::forward_as_meta(component_patch.target),
 			entt::forward_as_meta(component),
 			entt::forward_as_meta(component.size()),
-			entt::forward_as_meta(0)
+			entt::forward_as_meta(0),
+			entt::forward_as_meta(component_patch.source),
+			entt::forward_as_meta(const_cast<const MetaEvaluationContext*>(&opt_evaluation_context))
 		);
 
 		if (!result)
 		{
-			print_warn("Entity #{}: Failed to patch component type: {}", entity, type.id());
+			print_warn("Entity #{}: Failed to patch component type: {}", component_patch.target, type.id());
 		}
 	}
 
 	void Service::on_component_replace(ComponentReplaceCommand& component_replace)
 	{
-		using namespace entt::literals;
+		using namespace engine::literals;
 
 		auto& component = component_replace.component;
 
@@ -132,6 +157,22 @@ namespace engine
 		{
 			print_warn("Entity #{}: Failed to replace component type: {}", entity, type.id());
 		}
+	}
+
+	void Service::opaque_function_handler(const FunctionCommand& function_command)
+	{
+		on_function_command(function_command);
+	}
+
+	void Service::on_function_command(const FunctionCommand& function_command)
+	{
+		execute_opaque_function
+		(
+			function_command.function,
+			registry,
+			function_command.source, // function_command.target
+			function_command.context.get_context()
+		);
 	}
 
 	EventHandler* Service::swap_event_handlers()
@@ -228,6 +269,28 @@ namespace engine
 		return forwarding_event_handler;
 	}
 
+	// Retrieves a non-owning pointer to an internal `UniversalVariables` object.
+	// If a `UniversalVariables` object does not already exist for this service, this will return `nullptr`.
+	Service::UniversalVariables* Service::peek_universal_variables() const
+	{
+		if (universal_variables)
+		{
+			return universal_variables.get();
+		}
+
+		return nullptr;
+	}
+
+	const std::shared_ptr<Service::UniversalVariables>& Service::get_universal_variables()
+	{
+		if (!universal_variables)
+		{
+			universal_variables = std::make_shared<UniversalVariables>();
+		}
+
+		return universal_variables;
+	}
+
 	// Input re-submission callbacks (see class declaration(s) for details):
 	void Service::on_mouse_input(const app::input::MouseState& mouse)
 	{
@@ -264,7 +327,7 @@ namespace engine
 
 				[this](TimedEvent& timed_event)
 				{
-					using namespace entt::literals;
+					using namespace engine::literals;
 
 					if (timed_event.completed())
 					{
@@ -283,7 +346,7 @@ namespace engine
 
 	bool Service::trigger_opaque_event(MetaAny&& event_instance)
 	{
-		using namespace entt::literals;
+		using namespace engine::literals;
 
 		auto type = event_instance.type();
 

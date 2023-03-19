@@ -8,16 +8,22 @@
 #include "timer.hpp"
 #include "command.hpp"
 
+#include "event_handler.hpp"
+
 #include "commands/events.hpp"
 
+#include "entity/entity_variables.hpp"
 #include "meta/types.hpp"
 
 #include <util/small_vector.hpp>
+
+//#include <entt/signal/fwd.hpp>
 
 #include <utility>
 #include <functional>
 #include <type_traits>
 #include <optional>
+#include <memory>
 //#include <vector>
 
 // Debugging related:
@@ -43,17 +49,24 @@ namespace engine
 
 	struct ComponentPatchCommand;
 	struct ComponentReplaceCommand;
+	struct FunctionCommand;
 
 	class Service
 	{
 		public:
+			using EventHandler = entt::dispatcher;
+
 			using OpaqueFunction = std::function<void()>;
+			using UniversalVariables = EntityVariables<8>;
 
 			Service
 			(
 				bool register_input_events=true,
 				bool register_timed_event_wrapper=false,
-				bool register_core_commands=true
+				bool register_core_commands=true,
+				bool register_function_commands=true,
+				bool allocate_root_entity=true,
+				bool allocate_universal_variables=false
 			);
 
 			Service(Service&&) noexcept = default;
@@ -75,6 +88,16 @@ namespace engine
 			inline Registry& get_registry() const
 			{
 				return registry;
+			}
+
+			inline Entity get_root() const
+			{
+				return root;
+			}
+
+			inline operator Entity() const
+			{
+				return get_root();
 			}
 
 			// TODO: Determine if it makes more sense to store the `ResourceManager` inside this class instead.
@@ -368,6 +391,17 @@ namespace engine
 			// See `get_active_event_handler` for notes on using service-owned event handlers directly.
 			EventHandler& get_forwarding_event_handler();
 
+			// Retrieves a non-owning pointer to an internal `UniversalVariables` object.
+			// If a `UniversalVariables` object does not already exist for this service, this will return `nullptr`.
+			UniversalVariables* peek_universal_variables() const;
+
+			// Attempts to allocate a `UniversalVariables` object, managed internally.
+			// If a `UniversalVariables` object has already been allocated, the existing instance will be used.
+			// 
+			// The return value of this member-function is a const-reference to the internal member referencing the remote object.
+			// 
+			// TODO: Look into pros/cons of changing this interface to const + mutable member.
+			const std::shared_ptr<UniversalVariables>& get_universal_variables();
 		private:
 			// Generates a generic `Command` base-type from a derived type.
 			template <typename CommandType, typename ...Args>
@@ -442,11 +476,18 @@ namespace engine
 			// This in turn means that said object is in a moved-from state after this method executes.
 			void on_component_replace(ComponentReplaceCommand& component_replace);
 
+			void opaque_function_handler(const FunctionCommand& function_command);
 		protected:
+			virtual void on_function_command(const FunctionCommand& function_command);
+
 			void handle_deferred_operations();
 
 			// TODO: Allow the user to specify a registry, rather than owning it outright.
 			mutable Registry registry;
+
+			Entity root = null;
+
+			std::shared_ptr<UniversalVariables> universal_variables;
 
 			EventHandler* swap_event_handlers();
 			EventHandler* use_standard_events();
