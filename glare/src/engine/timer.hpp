@@ -27,22 +27,20 @@ namespace engine
 			using FloatSeconds = std::chrono::duration<float>;
 			using DoubleSeconds = std::chrono::duration<double>;
 
+			static std::optional<Duration> to_duration(DurationRaw duration_rep, StringHash time_symbol_id);
+			static std::optional<Duration> to_duration(DurationRaw duration_rep, std::string_view time_symbol);
+
+			static std::optional<Duration> to_duration(float duration_raw, StringHash time_symbol_id);
+			static std::optional<Duration> to_duration(double duration_raw, StringHash time_symbol_id);
+
+			static std::optional<Duration> to_duration(double duration_raw, std::string_view time_symbol);
+			static std::optional<Duration> to_duration(float duration_raw, std::string_view time_symbol);
+
 			static Duration to_duration(FloatSeconds seconds);
-			
-			static inline Duration to_duration(float seconds)
-			{
-				return to_duration(FloatSeconds(seconds));
-			}
+			static Duration to_duration(float seconds);
 
 			static Duration to_duration(DoubleSeconds seconds);
-
-			static inline Duration to_duration(double seconds)
-			{
-				return to_duration(DoubleSeconds(seconds));
-			}
-
-			static std::optional<Duration> to_duration(DurationRaw duration_rep, std::string_view time_symbol);
-			static std::optional<Duration> to_duration(DurationRaw duration_rep, StringHash time_symbol_id);
+			static Duration to_duration(double seconds);
 
 			// Default initializes a timer with no specified length/duration.
 			Timer() = default;
@@ -101,24 +99,6 @@ namespace engine
 			// Sets a new length/duration for this timer.
 			bool set_duration(Duration length);
 
-			// Simple alias to default (parameterless) overload of `start`.
-			inline bool activate()
-			{
-				return start();
-			}
-
-			// Alias for `active` method.
-			inline explicit operator bool() const
-			{
-				return active();
-			}
-
-			// Equivalent to calling `activate`, or `start` with no parameters.
-			inline bool operator()()
-			{
-				return activate();
-			}
-
 			// Indicates if this timer has been started.
 			//
 			// NOTE:
@@ -137,19 +117,13 @@ namespace engine
 
 			// Checks if a timer is currently active.
 			// (Started, but not paused)
-			inline bool active() const
-			{
-				return (started() && !paused());
-			}
+			bool active() const;
 
 			// Indicates if this timer is currently stopped.
 			// (i.e. not yet started)
 			//
 			// See also: `started`, `paused`, `active`
-			inline bool stopped() const
-			{
-				return !started();
-			}
+			bool stopped() const;
 
 			// Checks whether `remaining` indicates a duration of
 			// zero or less than zero, thus indicating completion.
@@ -195,17 +169,35 @@ namespace engine
 			// 
 			// This point is updated when starting, restarting, or resuming this timer.
 			// NOTE: The value of this field is preserved while this timer is paused. (Updated on resume)
-			std::optional<TimePoint> get_start_point() const { return start_point; }
+			std::optional<TimePoint> get_start_point() const;
 
 			// Retrieves the current pause-point. If this timer isn't
 			// currently paused, this will return `std::nullopt`.
-			std::optional<TimePoint> get_pause_point() const { return pause_point; }
+			std::optional<TimePoint> get_pause_point() const;
 
 			// Indicates the last known projected end-point.
 			// 
 			// This is updated when stopping, starting or resuming, but is otherwise preserved.
 			// (e.g. the last projected end-point is preserved while paused, but later updated when resuming)
-			std::optional<TimePoint> get_projected_end_point() const { return end_point; }
+			std::optional<TimePoint> get_projected_end_point() const;
+
+			// Simple alias to default (parameterless) overload of `start`.
+			inline bool activate()
+			{
+				return start();
+			}
+
+			// Alias for `active` method.
+			inline explicit operator bool() const
+			{
+				return active();
+			}
+
+			// Equivalent to calling `activate`, or `start` with no parameters.
+			inline bool operator()()
+			{
+				return activate();
+			}
 		protected:
 			std::optional<TimePoint> start_point;
 			std::optional<TimePoint> pause_point;
