@@ -87,29 +87,98 @@ TEST_CASE("util::find_assignment_operator", "[util:parse]")
 	}
 }
 
-		REQUIRE(type_name == "A");
-		REQUIRE(data_member_name == "B");
-	}
-
-	SECTION("Command syntax")
+TEST_CASE("util::parse_variable_declaration", "[util:parse]")
+{
+	SECTION("Local variable, no assignment")
 	{
-		auto [type_name, data_member_name] = util::parse_data_member_reference(std::string_view("A(some text).B"), true);
+		auto
+		[
+			scope_qualifier,
+			variable_name,
+			variable_type,
+			assignment_expr,
+			trailing_expr
+		] = util::parse_variable_declaration(std::string_view("local x:int something unrelated"));
 
-		REQUIRE(type_name == "A(some text)");
-		REQUIRE(data_member_name == "B");
+		REQUIRE(scope_qualifier == "local");
+		REQUIRE(variable_name == "x");
+		REQUIRE(variable_type == "int");
+		REQUIRE(assignment_expr.empty());
+		REQUIRE(trailing_expr == " something unrelated");
 	}
 
-	SECTION("Command syntax where command syntax is prohibited")
+	SECTION("Local variable, no assignment, no type + trailing content")
 	{
-		auto [type_name, data_member_name] = util::parse_data_member_reference(std::string_view("A(some text)->B"), false);
+		auto
+		[
+			scope_qualifier,
+			variable_name,
+			variable_type,
+			assignment_expr,
+			trailing_expr
+		] = util::parse_variable_declaration(std::string_view("local my_var_name unrelated trailing content"));
 
-		REQUIRE(type_name.empty());
-		REQUIRE(data_member_name.empty());
+		REQUIRE(scope_qualifier == "local");
+		REQUIRE(variable_name == "my_var_name");
+		REQUIRE(variable_type.empty());
+		REQUIRE(assignment_expr.empty());
+		REQUIRE(trailing_expr == " unrelated trailing content");
 	}
+
+	SECTION("Context variable, no type + assignment")
+	{
+		auto
+		[
+			scope_qualifier,
+			variable_name,
+			variable_type,
+			assignment_expr,
+			trailing_expr
+		] = util::parse_variable_declaration(std::string_view("context context_var =     30.02 "));
+
+		REQUIRE(scope_qualifier == "context");
+		REQUIRE(variable_name == "context_var");
+		REQUIRE(variable_type.empty());
+		REQUIRE(assignment_expr == "30.02");
+		REQUIRE(trailing_expr.empty());
+	}
+
+	SECTION("Local variable, infer type syntax")
+	{
+		auto
+		[
+			scope_qualifier,
+			variable_name,
+			variable_type,
+			assignment_expr,
+			trailing_expr
+		] = util::parse_variable_declaration(std::string_view("local local_var:=     something "));
+
+		REQUIRE(scope_qualifier == "local");
+		REQUIRE(variable_name == "local_var");
+		REQUIRE(variable_type.empty());
+		REQUIRE(assignment_expr == "something");
+		REQUIRE(trailing_expr.empty());
 }
 
-TEST_CASE("parse_single_argument_command", "[util:parse]")
+	SECTION("Global variable + type + assignment")
 {
+		auto
+		[
+			scope_qualifier,
+			variable_name,
+			variable_type,
+			assignment_expr,
+			trailing_expr
+		] = util::parse_variable_declaration(std::string_view("global global_var_name:int =     100 "));
+
+		REQUIRE(scope_qualifier == "global");
+		REQUIRE(variable_name == "global_var_name");
+		REQUIRE(variable_type == "int");
+		REQUIRE(assignment_expr == "100");
+		REQUIRE(trailing_expr.empty());
+	}
+}
 	SECTION("`if` condition treated as command")
 	{
 		auto [command_name, command_content, trailing_expr, is_string_content] = util::parse_single_argument_command
