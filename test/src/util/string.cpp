@@ -2,6 +2,16 @@
 #include <util/string.hpp>
 
 #include <cstdint>
+TEST_CASE("util::is_quoted", "[util:string]")
+{
+	REQUIRE(!util::is_quoted(std::string_view("\"Test\" == \"Test\"")));
+	REQUIRE(!util::is_quoted(std::string_view("\"Test\\\" == \\\"Test\\\"")));
+	REQUIRE(util::is_quoted(std::string_view("\"Test\\\" == \\\"Test\"")));
+	REQUIRE(util::is_quoted(std::string_view("\"Test\"")));
+	REQUIRE(!util::is_quoted(std::string_view("\\\"Test\\\"")));
+	REQUIRE(!util::is_quoted(std::string_view("\"Test\\\"")));
+	REQUIRE(!util::is_quoted(std::string_view("Test")));
+}
 
 TEST_CASE("util:string", "[util]")
 {
