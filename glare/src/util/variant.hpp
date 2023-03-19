@@ -3,6 +3,7 @@
 #include <variant>
 #include <utility>
 #include <optional>
+#include <type_traits>
 
 namespace util
 {
@@ -95,5 +96,52 @@ namespace util
 		{
 			return variant_index<VT, T, index + 1>();
 		}
+	}
+
+	template <typename T, typename variant_type>
+	struct variant_contains;
+
+	template<typename T, typename... variant_type_list>
+	struct variant_contains<T, std::variant<variant_type_list...>>
+		: std::disjunction<std::is_same<T, variant_type_list>...>
+	{};
+
+	template<typename T, typename... variant_type_list>
+	inline constexpr bool variant_contains_v = variant_contains<T, variant_type_list...>::value;
+
+	template <typename variant_t>
+	struct for_each_variant_type_impl;
+
+	template <typename ...Types>
+	struct for_each_variant_type_impl<std::variant<Types...>>
+	{
+		template <typename T>
+		struct type
+		{
+			using underlying_t = T;
+		};
+
+		template <typename ...Args>
+		void operator()(auto&& callback, Args&&... args)
+		{
+			(callback(type<Types>(), std::forward<Args>(args)...), ...);
+		}
+	};
+
+	template <typename VariantType, typename ...Args>
+	void for_each_variant_type(auto&& templated_lambda, Args&&... args)
+	{
+		for_each_variant_type_impl<VariantType>()
+		(
+			[&templated_lambda](auto&& symbolic, auto&&... args)
+			{
+				using symbolic_t = std::decay_t<decltype(symbolic)>;
+				using underlying_t = typename symbolic_t::underlying_t;
+
+				templated_lambda.template operator()<underlying_t>(std::forward<decltype(args)>(args)...);
+			},
+
+			std::forward<Args>(args)...
+		);
 	}
 }
