@@ -28,7 +28,7 @@ namespace engine
 	class World;
 	class ResourceManager;
 
-	struct ParsingContext;
+	class MetaParsingContext;
 
 	// A Stage, sometimes referred to as a Map is an abstract concept for
 	// a portion of the scene-graph that's been loaded from an external source.
@@ -42,7 +42,7 @@ namespace engine
 			using PlayerObjectMap = std::unordered_map<PlayerIndex, Entity>;
 		private:
 			template <typename ...IgnoredKeys>
-			static void process_component_entries(Registry& registry, Entity entity, const util::json& object_data, const ParsingContext& parsing_context, IgnoredKeys&&... ignored_keys);
+			static void process_component_entries(Registry& registry, Entity entity, const util::json& object_data, const MetaParsingContext& parsing_context, IgnoredKeys&&... ignored_keys);
 		protected:
 			static void resolve_parent(World& world, Entity entity, Entity stage, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data);
 
