@@ -21,7 +21,7 @@ namespace engine
 	BulletDebugRenderPhase::BulletDebugRenderPhase(const std::shared_ptr<graphics::Context>& ctx, std::string_view shader_preprocessor)
 		: BulletDebugRenderPhase
 		(
-			memory::allocate<graphics::Shader>
+			std::make_shared<graphics::Shader>
 			(
 				ctx,
 

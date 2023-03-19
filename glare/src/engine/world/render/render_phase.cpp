@@ -5,6 +5,7 @@
 
 #include <graphics/canvas.hpp>
 #include <graphics/shader.hpp>
+#include <graphics/gbuffer_render_flags.hpp>
 
 #include <engine/world/world.hpp>
 #include <engine/world/components/camera_component.hpp>
@@ -117,7 +118,7 @@ namespace engine
 		}
 		*/
 
-		auto* animator = registry.try_get<Animator>(entity);
+		auto* animator = registry.try_get<AnimationComponent>(entity);
 
 		if (animator)
 		{

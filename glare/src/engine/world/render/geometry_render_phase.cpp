@@ -8,13 +8,13 @@
 
 namespace engine
 {
-	GeometryRenderPhase::GeometryRenderPhase(const ref<graphics::Shader>& geometry_pass, const ref<graphics::Shader>& geometry_pass_animated)
+	GeometryRenderPhase::GeometryRenderPhase(const std::shared_ptr<graphics::Shader>& geometry_pass, const std::shared_ptr<graphics::Shader>& geometry_pass_animated)
 		: geometry_pass(geometry_pass), geometry_pass_animated(geometry_pass_animated) {}
 
-	GeometryRenderPhase::GeometryRenderPhase(const ref<graphics::Context>& ctx, std::string_view shader_preprocessor)
+	GeometryRenderPhase::GeometryRenderPhase(const std::shared_ptr<graphics::Context>& ctx, std::string_view shader_preprocessor)
 		: GeometryRenderPhase
 		(
-			memory::allocate<graphics::Shader>
+			std::make_shared<graphics::Shader>
 			(
 				ctx,
 
@@ -25,7 +25,7 @@ namespace engine
 				shader_preprocessor
 			),
 
-			memory::allocate<graphics::Shader>
+			std::make_shared<graphics::Shader>
 			(
 				ctx,
 

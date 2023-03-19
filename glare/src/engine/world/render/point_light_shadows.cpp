@@ -16,13 +16,13 @@
 
 namespace engine
 {
-	PointLightShadowPhase::PointLightShadowPhase(const ref<graphics::Shader>& point_shadow_depth)
+	PointLightShadowPhase::PointLightShadowPhase(const std::shared_ptr<graphics::Shader>& point_shadow_depth)
 		: point_shadow_depth(point_shadow_depth) {}
 
-	PointLightShadowPhase::PointLightShadowPhase(const ref<graphics::Context>& ctx, std::string_view shader_preprocessor)
+	PointLightShadowPhase::PointLightShadowPhase(const std::shared_ptr<graphics::Context>& ctx, std::string_view shader_preprocessor)
 		: PointLightShadowPhase
 		(
-			memory::allocate<graphics::Shader>
+			std::make_shared<graphics::Shader>
 			(
 				ctx,
 

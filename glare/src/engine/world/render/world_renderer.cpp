@@ -9,7 +9,7 @@
 
 namespace engine
 {
-	WorldRenderer::WorldRenderer(const RenderScene& scene, unique_ref<RenderPipeline>&& pipeline)
+	WorldRenderer::WorldRenderer(const RenderScene& scene, std::unique_ptr<RenderPipeline>&& pipeline)
 		: scene(scene), pipeline(std::move(pipeline)) {}
 
 	RenderBuffer& WorldRenderer::render

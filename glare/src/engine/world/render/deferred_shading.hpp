@@ -21,11 +21,11 @@ namespace engine
 	class DeferredShadingPhase : public RenderPhase
 	{
 		protected:
-			ref<graphics::Shader> deferred_shading;
+			std::shared_ptr<graphics::Shader> deferred_shading;
 
 		public:
-			DeferredShadingPhase(const ref<graphics::Shader>& deferred_shading);
-			DeferredShadingPhase(const ref<graphics::Context>& ctx, std::string_view shader_preprocessor);
+			DeferredShadingPhase(const std::shared_ptr<graphics::Shader>& deferred_shading);
+			DeferredShadingPhase(const std::shared_ptr<graphics::Context>& ctx, std::string_view shader_preprocessor);
 
 			const RenderParameters& operator()(const RenderParameters& parameters);
 

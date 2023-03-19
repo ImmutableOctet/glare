@@ -1,7 +1,11 @@
 #pragma once
 
-#include <optional>
 #include <graphics/types.hpp>
+#include <graphics/texture_array.hpp>
+#include <graphics/light_types.hpp>
+#include <graphics/array_types.hpp>
+
+#include <optional>
 
 namespace engine
 {

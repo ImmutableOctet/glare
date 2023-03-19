@@ -3,8 +3,9 @@
 #include "render_phase.hpp"
 #include "types.hpp"
 
-#include <util/memory.hpp>
-#include <graphics/types.hpp>
+#include <graphics/array_types.hpp>
+
+#include <memory>
 
 namespace graphics
 {
@@ -16,14 +17,14 @@ namespace engine
 	class PointLightShadowPhase : public RenderPhase
 	{
 		protected:
-			ref<graphics::Shader> point_shadow_depth;
+			std::shared_ptr<graphics::Shader> point_shadow_depth;
 
 			graphics::VectorArray light_positions; // std::vector<math::Vector>
 			graphics::FloatArray  far_planes; // std::vector<float>
 
 		public:
-			PointLightShadowPhase(const ref<graphics::Shader>& point_shadow_depth);
-			PointLightShadowPhase(const ref<graphics::Context>& ctx, std::string_view shader_preprocessor);
+			PointLightShadowPhase(const std::shared_ptr<graphics::Shader>& point_shadow_depth);
+			PointLightShadowPhase(const std::shared_ptr<graphics::Context>& ctx, std::string_view shader_preprocessor);
 
 			void clear();
 

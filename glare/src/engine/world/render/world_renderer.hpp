@@ -37,10 +37,10 @@ namespace engine
 			RenderScene scene;
 
 			// The rendering pipeline (collection of rendering phases) used to process `scene`.
-			unique_ref<RenderPipeline> pipeline;
+			std::unique_ptr<RenderPipeline> pipeline;
 		public:
 			// Rendering pipelines can be created using `engine::make_render_pipeline`.
-			WorldRenderer(const RenderScene& scene, unique_ref<RenderPipeline>&& pipeline);
+			WorldRenderer(const RenderScene& scene, std::unique_ptr<RenderPipeline>&& pipeline);
 
 			RenderBuffer& render
 			(
@@ -50,7 +50,7 @@ namespace engine
 				RenderState& render_state
 			);
 
-			inline void set_pipeline(unique_ref<RenderPipeline>&& pipeline)
+			inline void set_pipeline(std::unique_ptr<RenderPipeline>&& pipeline)
 			{
 				this->pipeline = std::move(pipeline);
 			}

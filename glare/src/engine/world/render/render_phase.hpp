@@ -1,11 +1,12 @@
 #pragma once
 
-#include <graphics/types.hpp>
-#include <engine/types.hpp>
-
 #include "render_parameters.hpp"
 
+#include <engine/types.hpp>
 #include <engine/transform.hpp>
+
+#include <graphics/types.hpp>
+#include <graphics/canvas_draw_mode.hpp>
 
 namespace game
 {

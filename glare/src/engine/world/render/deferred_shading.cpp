@@ -24,13 +24,13 @@
 
 namespace engine
 {
-	DeferredShadingPhase::DeferredShadingPhase(const ref<graphics::Shader>& deferred_shading)
+	DeferredShadingPhase::DeferredShadingPhase(const std::shared_ptr<graphics::Shader>& deferred_shading)
 		: deferred_shading(deferred_shading) {}
 
-	DeferredShadingPhase::DeferredShadingPhase(const ref<graphics::Context>& ctx, std::string_view shader_preprocessor)
+	DeferredShadingPhase::DeferredShadingPhase(const std::shared_ptr<graphics::Context>& ctx, std::string_view shader_preprocessor)
 		: DeferredShadingPhase
 		(
-			memory::allocate<graphics::Shader>
+			std::make_shared<graphics::Shader>
 			(
 				ctx,
 
