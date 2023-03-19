@@ -12,6 +12,7 @@ TEST_CASE("util::is_quoted", "[util:string]")
 	REQUIRE(!util::is_quoted(std::string_view("\"Test\\\"")));
 	REQUIRE(!util::is_quoted(std::string_view("Test")));
 }
+
 TEST_CASE("util::is_whitespace", "[util:string]")
 {
 	REQUIRE(util::is_whitespace(' '));
@@ -19,6 +20,16 @@ TEST_CASE("util::is_whitespace", "[util:string]")
 	REQUIRE(util::is_whitespace("     \t\t\n  \t\n"));
 	REQUIRE(!util::is_whitespace("    \t \n  \t\tabc\t\n"));
 	REQUIRE(!util::is_whitespace("Nowhitespacecharactersatall"));
+}
+
+TEST_CASE("util::trim", "[util:string]")
+{
+	REQUIRE(util::trim_beginning(" Test ") == "Test ");
+	REQUIRE(util::trim_ending(" Test ") == " Test");
+	REQUIRE(util::trim(" Hello world ") == "Hello world");
+	REQUIRE(util::trim("  ", util::whitespace_symbols, true).empty());
+	REQUIRE(!util::trim("  ", util::whitespace_symbols, false).empty());
+	REQUIRE(util::trim("some::values::etc") == "some::values::etc");
 }
 
 TEST_CASE("util:string", "[util]")
