@@ -165,6 +165,19 @@ TEST_CASE("parse_standard_operator_segment", "[util:parse]")
 		REQUIRE(operator_symbol.empty());
 		REQUIRE(trailing_content.empty());
 	}
+TEST_CASE("util::find_parentheses", "[util:string]")
+{
+	const auto expr = std::string_view("fn((2), ((3)), 4) + other_fn(1, 2, (3)) + something_else()");
+	const auto [begin, end] = util::find_parentheses(expr);
+
+	REQUIRE(begin == 2);
+	REQUIRE(end == 16);
+
+	auto view = expr.substr(begin, (end-begin+1));
+
+	REQUIRE(view == "((2), ((3)), 4)");
+}
+
 TEST_CASE("util::parse_member_reference", "[util:parse]")
 {
 	SECTION("Regular access with `::` operator")
