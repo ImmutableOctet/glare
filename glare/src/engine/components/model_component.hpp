@@ -1,7 +1,9 @@
 #pragma once
 
-#include <types.hpp>
-#include <graphics/types.hpp>
+#include <graphics/math_types.hpp>
+
+#include <cstdint>
+#include <memory>
 
 namespace graphics
 {
@@ -12,9 +14,9 @@ namespace engine
 {
 	struct ModelComponent
 	{
-		//ModelComponent(ref<graphics::Model> model);
+		//ModelComponent(std::shared_ptr<graphics::Model> model);
 
-		ref<graphics::Model> model;
+		std::shared_ptr<graphics::Model> model;
 
 		graphics::ColorRGBA color = { 1.0f, 1.0f, 1.0f, 1.0f };
 
