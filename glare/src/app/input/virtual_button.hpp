@@ -1,6 +1,8 @@
 #pragma once
 
 #include "types.hpp"
+
+#include <util/enum_operators.hpp>
 #include <math/math.hpp>
 
 namespace app::input

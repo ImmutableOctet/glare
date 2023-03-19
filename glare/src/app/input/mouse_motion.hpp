@@ -1,8 +1,8 @@
 #pragma once
 
 //#include "types.hpp"
-#include <types.hpp>
 
+#include <cstdint>
 #include <tuple>
 
 namespace app::input

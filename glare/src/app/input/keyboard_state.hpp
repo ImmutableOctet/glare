@@ -1,11 +1,10 @@
 #pragma once
 
-#include <types.hpp>
-
 #include "keyboard_buttons.hpp"
 
 #include <util/memory.hpp>
 
+#include <cstdint>
 #include <span>
 #include <array>
 #include <bitset>

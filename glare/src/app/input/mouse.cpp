@@ -10,7 +10,8 @@
 
 #include <util/magic_enum.hpp>
 
-// SDL:
+#include <entt/signal/dispatcher.hpp>
+
 #include <sdl2/SDL_hints.h>
 #include <sdl2/SDL_mouse.h>
 

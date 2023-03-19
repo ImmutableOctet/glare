@@ -1,6 +1,5 @@
 #pragma once
 
-//#include <types.hpp>
 //#include <math/types.hpp>
 
 #include "mouse_buttons.hpp"
