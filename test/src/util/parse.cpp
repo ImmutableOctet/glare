@@ -165,6 +165,47 @@ TEST_CASE("parse_standard_operator_segment", "[util:parse]")
 		REQUIRE(operator_symbol.empty());
 		REQUIRE(trailing_content.empty());
 	}
+}
+
+TEST_CASE("util::parse_trailing_reference", "[util:parse]")
+{
+	SECTION("Leading + Trailing")
+	{
+		auto [leading, trailing, access_operator] = util::parse_trailing_reference(std::string_view("a::b"));
+
+		REQUIRE(leading == "a");
+		REQUIRE(trailing == "b");
+		REQUIRE(access_operator == "::");
+	}
+
+	SECTION("Trailing only")
+	{
+		auto [leading, trailing, access_operator] = util::parse_trailing_reference(std::string_view("->test"));
+
+		REQUIRE(leading.empty());
+		REQUIRE(trailing == "test");
+		REQUIRE(access_operator == "->");
+	}
+
+	SECTION("Leading only")
+	{
+		auto [leading, trailing, access_operator] = util::parse_trailing_reference(std::string_view("test"), true, true);
+
+		REQUIRE(leading == "test");
+		REQUIRE(trailing.empty());
+		REQUIRE(access_operator.empty());
+	}
+
+	SECTION("Trailing + Unrelated Content")
+	{
+		auto [leading, trailing, access_operator] = util::parse_trailing_reference(std::string_view(".intended_value other unrelated content"), true, false, true);
+
+		REQUIRE(leading.empty());
+		REQUIRE(trailing == "intended_value");
+		REQUIRE(access_operator == ".");
+	}
+}
+
 TEST_CASE("util::find_parentheses", "[util:string]")
 {
 	const auto expr = std::string_view("fn((2), ((3)), 4) + other_fn(1, 2, (3)) + something_else()");
