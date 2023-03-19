@@ -70,7 +70,7 @@ TEST_CASE("util::find_assignment_operator", "[util:parse]")
 	}
 
 	SECTION("Compound assignment operator")
-{
+	{
 		auto [index, symbol] = util::find_assignment_operator("x += y", true, false, false);
 
 		REQUIRE(index == 2);
@@ -159,10 +159,10 @@ TEST_CASE("util::parse_variable_declaration", "[util:parse]")
 		REQUIRE(variable_type.empty());
 		REQUIRE(assignment_expr == "something");
 		REQUIRE(trailing_expr.empty());
-}
+	}
 
 	SECTION("Global variable + type + assignment")
-{
+	{
 		auto
 		[
 			scope_qualifier,
@@ -179,11 +179,14 @@ TEST_CASE("util::parse_variable_declaration", "[util:parse]")
 		REQUIRE(trailing_expr.empty());
 	}
 }
+
+TEST_CASE("util::parse_command", "[util:parse]")
+{
 	SECTION("`if` condition treated as command")
 	{
-		auto [command_name, command_content, trailing_expr, is_string_content] = util::parse_single_argument_command
+		auto [command_name, command_content, trailing_expr, is_string_content, parsed_length] = util::parse_command
 		(
-			std::string_view("if (NameComponent::name != \"Hello world\") then"),
+			std::string_view("if (NameComponent::name() != \"Hello world\") then"),
 			true
 		);
 
@@ -195,7 +198,7 @@ TEST_CASE("util::parse_variable_declaration", "[util:parse]")
 
 	SECTION("Command with parentheses in explicit string content")
 	{
-		auto [command_name, command_content, trailing_expr, is_string_content] = util::parse_single_argument_command
+		auto [command_name, command_content, trailing_expr, is_string_content, parsed_length] = util::parse_command
 		(
 			std::string_view("function_name(\"some)()_value\") trailing_expr"),
 			true
@@ -209,7 +212,7 @@ TEST_CASE("util::parse_variable_declaration", "[util:parse]")
 
 	SECTION("Standard yield instruction")
 	{
-		auto [command_name, command_content, trailing_expr, is_string_content] = util::parse_single_argument_command
+		auto [command_name, command_content, trailing_expr, is_string_content, parsed_length] = util::parse_command
 		(
 			std::string_view("yield(OnButtonPressed::button|Button::Jump)"),
 			true
@@ -223,7 +226,7 @@ TEST_CASE("util::parse_variable_declaration", "[util:parse]")
 
 	SECTION("Empty command")
 	{
-		auto [command_name, command_content, trailing_expr, is_string_content] = util::parse_single_argument_command
+		auto [command_name, command_content, trailing_expr, is_string_content, parsed_length] = util::parse_command
 		(
 			std::string_view("pause()"),
 			true
@@ -234,33 +237,36 @@ TEST_CASE("util::parse_variable_declaration", "[util:parse]")
 		REQUIRE(trailing_expr.empty());
 		REQUIRE(!is_string_content);
 	}
+}
 
-	SECTION("Unrelated expression that uses parentheses")
+TEST_CASE("util::parse_command_or_value", "[util:parse]")
+{
+	SECTION("Empty command")
 	{
 		auto
 		[
-			command_name,
-			command_content,
+			command_name, content,
 			trailing_expr,
-			is_string_content
-		] = util::parse_single_argument_command(std::string_view("a + b(c)"), true, true);
-		
-		REQUIRE(command_name.empty());
-		REQUIRE(command_content.empty());
-		REQUIRE(trailing_expr.empty());
-	}
-}
+			is_string_content, is_command,
+			parsed_length
+		] = util::parse_command_or_value(std::string_view("empty_command()"), false, true);
 
-TEST_CASE("parse_single_argument_command_or_value", "[util:parse]")
-{
+		REQUIRE(!command_name.empty());
+		REQUIRE(command_name == "empty_command");
+		REQUIRE(content.empty());
+		REQUIRE(trailing_expr.empty());
+		REQUIRE(is_command);
+	}
+
 	SECTION("Regular value")
 	{
 		auto
 		[
 			value_or_command, value,
 			trailing_expr,
-			is_string_content, is_command
-		] = util::parse_single_argument_command_or_value(std::string_view("some_value"));
+			is_string_content, is_command,
+			parsed_length
+		] = util::parse_command_or_value(std::string_view("some_value"));
 
 		REQUIRE(!value_or_command.empty());
 		REQUIRE(!value.empty());
@@ -269,14 +275,33 @@ TEST_CASE("parse_single_argument_command_or_value", "[util:parse]")
 		REQUIRE(value == "some_value");
 	}
 
+	SECTION("Regular value + trailing expression")
+	{
+		auto
+		[
+			value_or_command, value,
+			trailing_expr,
+			is_string_content, is_command,
+			parsed_length
+		] = util::parse_command_or_value(std::string_view("some_value some_trailing_value"));
+
+		REQUIRE(!value_or_command.empty());
+		REQUIRE(!value.empty());
+		REQUIRE(!trailing_expr.empty());
+		REQUIRE(!is_command);
+		REQUIRE(value == "some_value");
+		REQUIRE(trailing_expr == "some_trailing_value");
+	}
+
 	SECTION("Regular value as string")
 	{
 		auto
 		[
 			value_or_command, value,
 			trailing_expr,
-			is_string_content, is_command
-		] = util::parse_single_argument_command_or_value(std::string_view("\"This is a string.\""));
+			is_string_content, is_command,
+			parsed_length
+		] = util::parse_command_or_value(std::string_view("\"This is a string.\""));
 
 		REQUIRE(!value_or_command.empty());
 		REQUIRE(!value.empty());
@@ -284,6 +309,53 @@ TEST_CASE("parse_single_argument_command_or_value", "[util:parse]")
 		REQUIRE(is_string_content);
 		REQUIRE(!is_command);
 		REQUIRE(value == "This is a string.");
+	}
+
+	SECTION("Unrelated expression expected as value")
+	{
+		auto
+		[
+			value_or_command, value,
+			trailing_expr,
+			is_string_content, is_command,
+			parsed_length
+		] = util::parse_command_or_value(std::string_view("child(fn(player_model())) .AnimationComponent::time 12345"));
+
+		REQUIRE(value_or_command == "child");
+		REQUIRE(value == "fn(player_model())");
+		REQUIRE(trailing_expr == ".AnimationComponent::time 12345");
+		REQUIRE(!is_string_content);
+		REQUIRE(is_command);
+	}
+
+	SECTION("Value and assignment operator (+ trailing unintended accessor symbol)")
+	{
+		auto
+		[
+			value_or_command, value,
+			trailing_expr,
+			is_string_content, is_command,
+			parsed_length
+		] = util::parse_command_or_value
+		(
+			std::string_view("time += 0.3 * 4"),
+			true,
+			false,
+			true, // truncate_value_at_first_accessor
+			false,
+			false,
+			true  // truncate_value_at_operator_symbol
+		);
+
+		REQUIRE(!value_or_command.empty());
+		REQUIRE(value_or_command == value);
+		REQUIRE(value == "time");
+		REQUIRE(trailing_expr == "+= 0.3 * 4");
+		REQUIRE(!is_string_content);
+		REQUIRE(!is_command);
+
+		// Length of `time` + whitespace character.
+		REQUIRE(parsed_length == (value.length() + 1));
 	}
 }
 
@@ -426,7 +498,7 @@ TEST_CASE("util::parse_member_reference", "[util:parse]")
 
 		REQUIRE(leading_expr == "sleep(child(player_model).AnimationComponent::time)");
 		REQUIRE(trailing_expr == "value::some_method(xyz)");
-}
+	}
 
 	SECTION("Disallow trailing command")
 	{
