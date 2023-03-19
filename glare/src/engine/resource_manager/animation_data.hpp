@@ -6,6 +6,9 @@
 #include <graphics/animation.hpp>
 #include <graphics/skeleton.hpp>
 
+#include <vector>
+#include <map>
+
 namespace engine
 {
 	using Animations = std::vector<graphics::Animation>;
