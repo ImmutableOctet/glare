@@ -160,8 +160,8 @@ namespace engine
 		enable<OnThreadSpawn>();
 		enable<OnThreadComplete>();
 		enable<OnThreadTerminated>();
-		enable<OnThreadPaused>();
-		enable<OnThreadResumed>();
+		//enable<OnThreadPaused>();
+		//enable<OnThreadResumed>();
 	}
 
 	void DebugListener::on_skeleton(Registry& registry, Entity entity)
