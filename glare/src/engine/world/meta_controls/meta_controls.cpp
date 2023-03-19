@@ -102,9 +102,9 @@ namespace engine
 			}
 		}
 
-		void animator(Animator& animator)
+		void animator(AnimationComponent& animator)
 		{
-			if (ImGui::TreeNode("Animator"))
+			if (ImGui::TreeNode("AnimationComponent"))
 			{
 				const Animation* cur_anim = animator.get_current_animation();
 
@@ -336,7 +336,7 @@ namespace engine
 
 			ImGui::Separator();
 
-			auto& animator = registry.get<Animator>(entity);
+			auto& animator = registry.get<AnimationComponent>(entity);
 
 			display::animator(animator);
 

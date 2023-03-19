@@ -14,7 +14,7 @@ namespace engine
 {
 	struct RelationshipComponent;
 	struct Transform;
-	struct Animator;
+	struct AnimationComponent;
 
 	namespace display
 	{
@@ -23,12 +23,13 @@ namespace engine
 
 		std::string name_and_id(World& world, Entity entity);
 		void vectors(const math::Vector& pos, const math::Vector& rot, const math::Vector& scale);
+		
 		void transform(World& world, Transform& t); // const Transform& t
 		void transform(World& world, Entity entity);
 
 		// `display_name` must be NULL-terminated.
 		void animation(const graphics::Animation& a, std::string_view display_name="Animation");
-		void animator(Animator& animator);
+		void animator(AnimationComponent& animator);
 
 		void child_tree(World& world, Entity entity);
 		void transform_tree(World& world, Entity entity);
