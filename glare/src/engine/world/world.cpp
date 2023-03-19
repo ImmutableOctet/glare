@@ -747,14 +747,9 @@ namespace engine
 	{
 		auto& instance_comp = registry.get<InstanceComponent>(entity);
 
-		auto* descriptor = resource_manager.get_existing_descriptor(instance_comp.instance);
+		const auto& descriptor = instance_comp.get_descriptor();
 
-		if (!descriptor)
-		{
-			return;
-		}
-
-		if (!descriptor->model_details)
+		if (!descriptor.model_details)
 		{
 			return;
 		}
@@ -770,12 +765,12 @@ namespace engine
 
 			entity,
 
-			descriptor->model_details.path,
-			descriptor->model_details.allow_multiple,
-			descriptor->model_details.collision_cfg
+			descriptor.model_details.path,
+			descriptor.model_details.allow_multiple,
+			descriptor.model_details.collision_cfg
 		);
 
-		if (const auto& offset = descriptor->model_details.offset)
+		if (const auto& offset = descriptor.model_details.offset)
 		{
 			auto tform = get_transform(entity);
 
