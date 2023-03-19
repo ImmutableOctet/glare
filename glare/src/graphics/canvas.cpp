@@ -19,7 +19,7 @@ namespace graphics
 		// Nothing so far.
 	}
 
-	Canvas::Canvas(memory::pass_ref<Context> context)
+	Canvas::Canvas(const std::shared_ptr<Context>& context)
 		: Canvas()
 	{
 		attach(context);
@@ -30,7 +30,7 @@ namespace graphics
 		detach();
 	}
 
-	bool Canvas::attach(memory::pass_ref<Context> ctx)
+	bool Canvas::attach(const std::shared_ptr<Context>& ctx)
 	{
 		if (ctx == nullptr)
 		{
@@ -178,7 +178,7 @@ namespace graphics
 					}
 
 					// TODO: Implement as visit:
-					if (util::peek_value<ref<Texture>>(_data, [&](const ref<Texture>& texture)
+					if (util::peek_value<std::shared_ptr<Texture>>(_data, [&](const std::shared_ptr<Texture>& texture)
 					{
 						bind_texture(*texture, texture_name);
 					}))

@@ -4,7 +4,7 @@
 #include "mesh.hpp"
 #include "texture.hpp"
 #include "framebuffer.hpp"
-#include "gbuffer.hpp"
+#include "gbuffer_flags.hpp"
 
 namespace glare
 {
@@ -18,9 +18,9 @@ namespace graphics
 	class GBuffer
 	{
 		public:
-			GBuffer(pass_ref<Context> context, int width, int height, GBufferFlags flags=GBufferFlags::Default, TextureFlags texture_flags=TextureFlags::None);
+			GBuffer(const std::shared_ptr<Context>& context, int width, int height, GBufferFlags flags=GBufferFlags::Default, TextureFlags texture_flags=TextureFlags::None);
 
-			inline GBuffer(pass_ref<Context> context, std::tuple<int, int> resolution, GBufferFlags flags=GBufferFlags::Default, TextureFlags texture_flags=TextureFlags::None)
+			inline GBuffer(const std::shared_ptr<Context>& context, std::tuple<int, int> resolution, GBufferFlags flags=GBufferFlags::Default, TextureFlags texture_flags=TextureFlags::None)
 				: GBuffer(context, std::get<0>(resolution), std::get<1>(resolution), flags, texture_flags) {}
 
 			GBuffer(GBuffer&&) noexcept = default;

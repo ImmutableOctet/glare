@@ -9,7 +9,7 @@ namespace graphics
 	RenderBuffer::RenderBuffer()
 		: RenderBuffer({}, RenderBufferType::Unknown, 0, 0) {}
 
-	RenderBuffer::RenderBuffer(pass_ref<Context> ctx, Type type, int width, int height)
+	RenderBuffer::RenderBuffer(const std::shared_ptr<Context>& ctx, Type type, int width, int height)
 		: Resource(ctx, ctx->generate_renderbuffer(type, width, height)), type(type), width(width), height(height)
 	{
 	}

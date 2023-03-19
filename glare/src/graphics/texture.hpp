@@ -1,13 +1,17 @@
 #pragma once
 
+#include "types.hpp"
+#include "math_types.hpp"
+#include "resource.hpp"
+#include "texture_format.hpp"
+#include "texture_flags.hpp"
+#include "texture_type.hpp"
+#include "element_type.hpp"
+#include "point_rect.hpp"
+
 #include <string>
 #include <type_traits>
 #include <optional>
-
-#include <debug.hpp>
-
-#include "types.hpp"
-#include "resource.hpp"
 
 namespace graphics
 {
@@ -38,14 +42,14 @@ namespace graphics
 
 			friend void swap(Texture& x, Texture& y);
 
-			Texture(pass_ref<Context> ctx, raw_string path, Flags flags=Flags::Default, TextureType type=TextureType::Default);
-			Texture(pass_ref<Context> ctx, const std::string& path, Flags flags=Flags::Default, TextureType type=TextureType::Default);
-			Texture(pass_ref<Context> ctx, const PixelMap& data, Flags flags=Flags::Default, TextureType type=TextureType::Default);
+			Texture(const std::shared_ptr<Context>& ctx, const char* path, Flags flags=Flags::Default, TextureType type=TextureType::Default);
+			Texture(const std::shared_ptr<Context>& ctx, const std::string& path, Flags flags=Flags::Default, TextureType type=TextureType::Default);
+			Texture(const std::shared_ptr<Context>& ctx, const PixelMap& data, Flags flags=Flags::Default, TextureType type=TextureType::Default);
 
 			// TextureFlags::Dynamic is automatically applied internally.
 			Texture
 			(
-				pass_ref<Context> ctx,
+				const std::shared_ptr<Context>& ctx,
 				int width, int height,
 				TextureFormat format, ElementType element_type,
 				TextureFlags flags=Flags::None, TextureType type=TextureType::Default,
@@ -89,6 +93,6 @@ namespace graphics
 
 			explicit operator bool() const;
 		protected:
-			Texture(weak_ref<Context> ctx, ContextHandle&& resource_handle, int width, int height, TextureFormat format, ElementType element_type, TextureFlags flags, TextureType type);
+			Texture(std::weak_ptr<Context> ctx, ContextHandle&& resource_handle, int width, int height, TextureFormat format, ElementType element_type, TextureFlags flags, TextureType type);
 	};
 }

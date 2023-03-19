@@ -2,10 +2,8 @@
 
 // TODO: Move to a more appropriate submodule. (i.e. anywhere else but `graphics`)
 
-#include "mesh.hpp"
-
-//#include <types.hpp>
 //#include "types.hpp"
+#include "mesh.hpp"
 
 #include <memory>
 #include <vector>

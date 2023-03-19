@@ -1,5 +1,33 @@
 #pragma once
 
+#include "types.hpp"
+#include "context_flags.hpp"
+#include "texture.hpp"
+#include "texture_format.hpp"
+#include "texture_array.hpp"
+#include "framebuffer.hpp"
+#include "buffer_type.hpp"
+#include "buffer_access_mode.hpp"
+#include "shader_type.hpp"
+#include "primitive.hpp"
+#include "vertex_attribute.hpp"
+#include "vertex_winding.hpp"
+#include "bind.hpp"
+#include "viewport.hpp"
+#include "array_types.hpp"
+#include "uniform_data.hpp"
+#include "uniform_map.hpp"
+//#include "shader.hpp"
+
+//#include "context_state.hpp"
+
+// Driver-specific:
+#include "drivers/drivers.hpp"
+
+#include <util/memory.hpp>
+
+#include <math/types.hpp>
+
 #include <type_traits>
 #include <utility>
 #include <functional>
@@ -11,18 +39,6 @@
 //#include <version>
 //#include <concepts>
 #include <type_traits>
-#include <math/types.hpp>
-
-#include "types.hpp"
-#include "bind.hpp"
-//#include "shader.hpp"
-#include "texture.hpp"
-#include "framebuffer.hpp"
-
-//#include "context_state.hpp"
-
-// Driver-specific:
-#include "drivers/drivers.hpp"
 
 namespace app
 {
@@ -111,7 +127,7 @@ namespace graphics
 			// TODO: Graphics abstraction -- Use std::variant or similar.
 			NativeContext native_context;
 
-			memory::unique_ref<State> state;
+			std::unique_ptr<State> state;
 
 			Viewport viewport;
 		protected:
@@ -321,12 +337,12 @@ namespace graphics
 
 
 			bool set_uniform(Shader& shader, std::string_view name, const TextureArray& textures);
-			bool set_uniform(Shader& shader, std::string_view name, const pass_ref<Texture> texture);
+			bool set_uniform(Shader& shader, std::string_view name, const std::shared_ptr<Texture>& texture);
 			bool set_uniform(Shader& shader, std::string_view name, const Texture& texture); // std::int32_t
 
 			bool set_uniform(Shader& shader, std::string_view name, const UniformData& uniform);
 
-			//bool set_uniform(Shader& shader, const std::string& name, const pass_ref<Texture> texture); // std::int32_t
+			//bool set_uniform(Shader& shader, const std::string& name, const std::shared_ptr<Texture>& texture); // std::int32_t
 			//bool set_uniform(Shader& shader, const std::string& name, const Texture& texture); // std::int32_t
 
 			bool apply_uniforms(Shader& shader, const UniformMap& uniforms);
@@ -373,12 +389,12 @@ namespace graphics
 			Handle generate_texture(const PixelMap& texture_data, ElementType channel_type, TextureFlags flags=TextureFlags::Default, TextureType type=TextureType::Default, bool _keep_bound=true, bool _loose_internal_format=true); // noexcept;
 			Handle generate_texture(int width, int height, TextureFormat format, ElementType channel_type, TextureFlags flags=TextureFlags::Default, TextureType type=TextureType::Default, std::optional<ColorRGBA> _border_color=std::nullopt, bool _keep_bound=true, bool _loose_internal_format=true); // noexcept;
 
-			void allocate_texture_2d(int width, int height, TextureFormat format, ElementType channel_type, const memory::raw_ptr raw_data=nullptr, bool is_dynamic=true, bool generate_mipmaps=false, bool _calculate_exact_format=true, bool _loose_internal_format=true); // TextureType type
-			void allocate_texture_cubemap(int width, int height, TextureFormat format, ElementType channel_type, const memory::raw_ptr raw_data=nullptr, bool is_dynamic=true, bool generate_mipmaps=false, bool _calculate_exact_format=true); // TextureType type
+			void allocate_texture_2d(int width, int height, TextureFormat format, ElementType channel_type, const void* raw_data=nullptr, bool is_dynamic=true, bool generate_mipmaps=false, bool _calculate_exact_format=true, bool _loose_internal_format=true); // TextureType type
+			void allocate_texture_cubemap(int width, int height, TextureFormat format, ElementType channel_type, const void* raw_data=nullptr, bool is_dynamic=true, bool generate_mipmaps=false, bool _calculate_exact_format=true); // TextureType type
 
 			void release_texture(Handle&& handle);
 
-			void resize_texture(Texture& texture, int width, int height, const memory::raw_ptr raw_data=nullptr, bool generate_mipmaps=false);
+			void resize_texture(Texture& texture, int width, int height, const void* raw_data=nullptr, bool generate_mipmaps=false);
 
 			// Shader related:
 

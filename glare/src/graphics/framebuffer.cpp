@@ -11,7 +11,7 @@ namespace graphics
 	FrameBuffer::FrameBuffer()
 		: Resource({}, {}) {}
 
-	FrameBuffer::FrameBuffer(pass_ref<Context> ctx)
+	FrameBuffer::FrameBuffer(const std::shared_ptr<Context>& ctx)
 		: Resource(ctx, ctx->generate_framebuffer()) {}
 
 	FrameBuffer::~FrameBuffer()

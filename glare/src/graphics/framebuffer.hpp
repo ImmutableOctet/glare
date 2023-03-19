@@ -4,12 +4,13 @@
 #include <optional>
 //#include <utility>
 
-#include <debug.hpp>
-
 #include "types.hpp"
 #include "resource.hpp"
+#include "framebuffer_type.hpp"
 #include "renderbuffer.hpp"
 #include "texture.hpp"
+
+#include <util/defaultable_ref.hpp>
 
 namespace graphics
 {
@@ -30,7 +31,7 @@ namespace graphics
 			friend void swap(FrameBuffer& x, FrameBuffer& y);
 
 			FrameBuffer();
-			FrameBuffer(pass_ref<Context> ctx);
+			FrameBuffer(const std::shared_ptr<Context>& ctx);
 			FrameBuffer(const FrameBuffer&)=delete;
 
 			FrameBuffer(FrameBuffer&& buffer) noexcept : FrameBuffer() { swap(*this, buffer); }
@@ -68,7 +69,7 @@ namespace graphics
 			// TODO: Look into moving to 'shared_ptr' objects instead of raw references.
 			// TODO: Review whether we want to keep this data available. (Required for 'detach', if added)
 			// Attachments are handled by the associated context, but stored in the 'FrameBuffer' object itself.
-			std::vector<defaultable_ref<Texture>> attachments;
+			std::vector<util::defaultable_ref<Texture>> attachments;
 			std::vector<unsigned int> attachment_indices;
 
 			std::vector<RenderBuffer> render_buffers;

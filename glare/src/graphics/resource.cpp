@@ -5,7 +5,7 @@
 
 namespace graphics
 {
-	Resource::Resource(weak_ref<Context> context, ContextHandle&& handle)
+	Resource::Resource(std::weak_ptr<Context> context, ContextHandle&& handle)
 		: context(context), handle(handle) {}
 
 	Resource::~Resource() {}

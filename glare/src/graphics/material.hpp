@@ -1,11 +1,17 @@
 #pragma once
 
-//#include <string>
-#include <string_view>
-//#include <util/variant.hpp>
-//#include <math/math.hpp>
 #include "types.hpp"
 //#include "shader.hpp"
+
+#include "texture_array.hpp"
+#include "uniform_map.hpp"
+
+//#include <util/variant.hpp>
+//#include <math/math.hpp>
+
+#include <unordered_map>
+#include <string_view>
+//#include <string>
 
 namespace engine
 {
@@ -19,6 +25,9 @@ namespace graphics
 	class Shader;
 	class Mesh;
 	class Model;
+
+	// Map of string-identifiers to 'TextureGroup' objects.
+	using TextureMap = std::unordered_map<std::string, TextureGroup>; // string_view
 
 	class Material
 	{
@@ -50,11 +59,11 @@ namespace graphics
 			TextureMap textures;
 			UniformMap uniforms;
 
-			ref<Shader> shader;
+			std::shared_ptr<Shader> shader;
 		public:
 			Material(const Material&) = default;
 
-			Material(pass_ref<Shader> shader);
+			Material(const std::shared_ptr<Shader>& shader);
 
 			template <typename T>
 			inline Material& set_var(std::string_view material_var, const T& value)
@@ -80,18 +89,18 @@ namespace graphics
 	class Material
 	{
 		protected:
-			ref<Shader> shader;
+			std::shared_ptr<Shader> shader;
 		public:
 			Shader& get_shader();
 
-			Material(pass_ref<Shader> shader);
+			Material(const std::shared_ptr<Shader>& shader);
 	};
 
 	// Forward renderer:
 	class ForwardMaterial : public Material
 	{
 		public:
-			ForwardMaterial(pass_ref<Shader> shader);
+			ForwardMaterial(const std::shared_ptr<Shader>& shader);
 		protected:
 			Color diffuse;
 			Color ambient;
@@ -101,10 +110,10 @@ namespace graphics
 			float shininess; // = 40.0f;
 			float alpha; // = 1.0f;
 
-			ref<Texture> color_map;
-			ref<Texture> detail_map;
-			ref<Texture> alpha_map;
-			ref<Texture> bump_map;
+			std::shared_ptr<Texture> color_map;
+			std::shared_ptr<Texture> detail_map;
+			std::shared_ptr<Texture> alpha_map;
+			std::shared_ptr<Texture> bump_map;
 	};
 	*/
 }

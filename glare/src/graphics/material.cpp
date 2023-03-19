@@ -4,7 +4,7 @@
 
 namespace graphics
 {
-	Material::Material(pass_ref<Shader> shader)
+	Material::Material(const std::shared_ptr<Shader>& shader)
 		: shader(shader) {}
 
 	bool Material::transparent() const
