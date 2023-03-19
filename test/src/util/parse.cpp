@@ -166,3 +166,55 @@ TEST_CASE("parse_standard_operator_segment", "[util:parse]")
 		REQUIRE(trailing_content.empty());
 	}
 }
+TEST_CASE("util::find_quotes", "[util:parse]")
+{
+	SECTION("Embedded escaped string")
+	{
+		const auto test_string = std::string_view("\"Some \\\"string\\\"\"");
+
+		auto [first_quote, second_quote] = util::find_quotes(test_string);
+
+		REQUIRE(first_quote == 0);
+		REQUIRE(second_quote == (test_string.length() - 1));
+	}
+
+	SECTION("Quote without unquote")
+	{
+		const auto test_string = std::string_view("\"Text without ending quote");
+
+		auto [first_quote, second_quote] = util::find_quotes(test_string);
+
+		REQUIRE(first_quote == std::string_view::npos);
+		REQUIRE(second_quote == std::string_view::npos);
+	}
+
+	SECTION("Unquote without quote")
+	{
+		const auto test_string = std::string_view("Text without beginning quote\"");
+
+		auto [first_quote, second_quote] = util::find_quotes(test_string);
+
+		REQUIRE(first_quote == std::string_view::npos);
+		REQUIRE(second_quote == std::string_view::npos);
+	}
+
+	SECTION("Only escaped quotes")
+	{
+		const auto test_string = std::string_view("\\\"Text without beginning quote\\\"");
+
+		auto [first_quote, second_quote] = util::find_quotes(test_string);
+
+		REQUIRE(first_quote == std::string_view::npos);
+		REQUIRE(second_quote == std::string_view::npos);
+	}
+
+	SECTION("Beginning quote with only escaped quotes")
+	{
+		const auto test_string = std::string_view("\"Text without beginning quote\\\"");
+
+		auto [first_quote, second_quote] = util::find_quotes(test_string);
+
+		REQUIRE(first_quote == std::string_view::npos);
+		REQUIRE(second_quote == std::string_view::npos);
+	}
+}
