@@ -1,6 +1,9 @@
 #pragma once
 
 #include <engine/types.hpp>
+#include <math/types.hpp>
+
+#include <string>
 
 namespace engine
 {
