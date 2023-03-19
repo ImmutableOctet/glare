@@ -1,12 +1,12 @@
 #pragma once
 
-#include <tuple>
-
-#include <types.hpp>
 #include <engine/types.hpp>
-#include <graphics/types.hpp>
 
+#include <graphics/types.hpp>
 #include <graphics/gbuffer.hpp>
+
+#include <tuple>
+#include <cstdint>
 
 namespace app
 {
@@ -26,7 +26,7 @@ namespace engine
 namespace game
 {
 	// Used for debugging purposes.
-	enum class GBufferDisplayMode : int
+	enum class GBufferDisplayMode : int // std::int32_t
 	{
 		Combined,
 		None=Combined,
@@ -50,8 +50,8 @@ namespace game
 			using Viewport = graphics::Viewport;
 
 		protected:
-			ref<graphics::Context> context;
-			ref<graphics::Shader> display_shader;
+			std::shared_ptr<graphics::Context> context;
+			std::shared_ptr<graphics::Shader> display_shader;
 
 			Size screen_size;
 		public:
@@ -60,7 +60,7 @@ namespace game
 			// Deferred rendering screen buffer(s).
 			graphics::GBuffer gbuffer;
 
-			Screen(const ref<graphics::Context>& ctx, const Size& screen_size, const ref<graphics::Shader>& display_shader={});
+			Screen(const std::shared_ptr<graphics::Context>& ctx, const Size& screen_size, const std::shared_ptr<graphics::Shader>& display_shader={});
 
 			inline operator graphics::GBuffer& () { return gbuffer; }
 
@@ -76,12 +76,12 @@ namespace game
 
 			Size get_size() const;
 
-			void set_display_shader(const ref<graphics::Shader>& display_shader)
+			void set_display_shader(const std::shared_ptr<graphics::Shader>& display_shader)
 			{
 				this->display_shader = display_shader;
 			}
 
-			const ref<graphics::Shader>& get_display_shader() const
+			const std::shared_ptr<graphics::Shader>& get_display_shader() const
 			{
 				return display_shader;
 			}
