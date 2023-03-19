@@ -1,7 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <engine/entity/serial.hpp>
-#include <engine/meta/meta.hpp>
 
 #include <string_view>
 
@@ -35,6 +34,18 @@ TEST_CASE("engine::parse_instruction_header", "[engine:entity]")
 		REQUIRE(opt_thread_details.has_value());
 		REQUIRE(opt_thread_details->thread_id.has_value());
 		REQUIRE(*opt_thread_details->thread_id == engine::hash("some_thread").value());
+	}
+
+	SECTION("Explicit entity designation + explicit thread designation with wait instruction")
+	{
+		std::string_view instruction_raw = "child(player_model).thread(some_thread).wait(OnButtonPressed::button == Button::Pause)";
+		auto [instruction, opt_thread_details] = engine::parse_instruction_header(instruction_raw);
+
+		REQUIRE(instruction == "wait(OnButtonPressed::button == Button::Pause)");
+		REQUIRE(opt_thread_details.has_value());
+		REQUIRE(opt_thread_details->thread_id.has_value());
+		REQUIRE(*opt_thread_details->thread_id == engine::hash("some_thread").value());
+		REQUIRE(opt_thread_details->target_entity.is_child_target());
 	}
 
 	SECTION("Thread-local yield instruction with simplified condition syntax")
