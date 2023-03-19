@@ -1,6 +1,7 @@
 #pragma once
 
 #include "type_traits.hpp"
+#include "min_max.hpp"
 
 #include <type_traits>
 #include <algorithm>
