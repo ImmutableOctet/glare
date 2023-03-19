@@ -1,9 +1,7 @@
 #pragma once
 
-#include <types.hpp>
-
 #include <math/types.hpp>
-//#include <graphics/types.hpp>
+#include <graphics/math_types.hpp>
 
 #include <nlohmann/json.hpp>
 //#include <nlohmann/fifo_map.hpp>
@@ -11,6 +9,9 @@
 //#include <tuple>
 //#include <string>
 //#include <string_view>
+
+//#include <cstdint>
+//#include <cstddef>
 
 #include <optional>
 #include <filesystem>
@@ -21,6 +22,16 @@ namespace util
 	//using json = nlohmann::json;
 	//using json = nlohmann::basic_json<nlohmann::fifo_map>;
 	using json = nlohmann::ordered_json;
+
+	namespace literals
+	{
+		//using nlohmann::literals::operator "" _json;
+
+		inline json operator "" _json(const char* str_raw, std::size_t length) // constexpr
+		{
+			return json::parse(str_raw, (str_raw + length));
+		}
+	}
 
 	json load_json(const std::filesystem::path& path);
 
