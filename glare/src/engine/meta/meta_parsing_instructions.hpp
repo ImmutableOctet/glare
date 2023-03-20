@@ -33,7 +33,7 @@ namespace engine
 		
 		// Controls whether a freestanding symbol can be
 		// treated as a direct reference to a component type.
-		bool fallback_to_component_reference  : 1 = false;
+		bool fallback_to_component_reference  : 1 = true;
 
 		// Controls whether a freestanding symbol can be
 		// treated as a direct reference to an entity by name.
