@@ -2,15 +2,46 @@
 
 #include "reflection.hpp"
 
+#include "meta_any_wrapper.hpp"
 #include "meta_variable.hpp"
+#include "meta_variable_scope.hpp"
+#include "meta_variable_target.hpp"
+#include "meta_variable_context.hpp"
 #include "meta_data_member.hpp"
+#include "meta_parsing_instructions.hpp"
 #include "indirect_meta_data_member.hpp"
 #include "meta_type_descriptor.hpp"
+#include "meta_type_conversion.hpp"
+#include "meta_value_operation.hpp"
+#include "meta_function_call.hpp"
+#include "meta_type_reference.hpp"
+#include "shared_storage_interface.hpp"
+#include "indirect_meta_any.hpp"
+#include "indirect_meta_variable_target.hpp"
 
 #include "events.hpp"
 
 namespace engine
 {
+	template <>
+	void reflect<MetaAnyWrapper>()
+	{
+		engine_meta_type<MetaAnyWrapper>()
+			// Added for conversion compatibility.
+			.base<MetaAny>()
+			
+			//.ctor<MetaAny>()
+			//.ctor<const MetaAny&>()
+			.ctor<MetaAny&&>()
+
+			.conv<MetaAny>()
+			//.conv<MetaAny&>()
+			//.conv<MetaAny*>()
+			.conv<const MetaAny&>()
+			//.conv<const MetaAny*>()
+		;
+	}
+
 	template <>
 	void reflect<MetaVariable>()
 	{
@@ -33,13 +64,46 @@ namespace engine
 	}
 
 	template <>
+	void reflect<MetaVariableTarget>()
+	{
+		engine_meta_type<MetaVariableTarget>()
+			.data<&MetaVariableTarget::name>("name"_hs)
+			.data<&MetaVariableTarget::scope>("scope"_hs)
+			.ctor
+			<
+				decltype(MetaVariableTarget::name),
+				decltype(MetaVariableTarget::scope)
+			>()
+		;
+	}
+
+	template <>
+	void reflect<IndirectMetaVariableTarget>()
+	{
+		engine_meta_type<IndirectMetaVariableTarget>()
+			.data<&IndirectMetaVariableTarget::target>("target"_hs)
+			.data<&IndirectMetaVariableTarget::variable>("variable"_hs)
+		;
+	}
+
+	template <>
+	void reflect<MetaVariableContext>()
+	{
+		static_engine_meta_type<MetaVariableContext>()
+			.func<static_cast<MetaSymbolID(*)(MetaSymbolID, std::string_view, MetaVariableScope)>(&MetaVariableContext::resolve_path)>("resolve_path"_hs)
+			.func<static_cast<MetaSymbolID(*)(MetaSymbolID, MetaSymbolID, MetaVariableScope)>(&MetaVariableContext::resolve_path)>("resolve_path"_hs)
+		;
+	}
+
+	template <>
 	void reflect<MetaDataMember>()
 	{
 		engine_meta_type<MetaDataMember>()
 			.data<&MetaDataMember::type_id>("type_id"_hs)
 			.data<&MetaDataMember::data_member_id>("data_member_id"_hs)
-			.func<static_cast<MetaAny (MetaDataMember::*)(const MetaAny& instance) const>(&MetaDataMember::get)>("get_value"_hs)
-			.func<static_cast<MetaAny (MetaDataMember::*)(Registry& registry, Entity entity) const>(&MetaDataMember::get)>("get_value_from_component"_hs)
+			
+			//.data<nullptr, &MetaDataMember::get_type>("type"_hs)
+			.data<nullptr, &MetaDataMember::has_type>("has_type"_hs)
 		;
 	}
 
@@ -49,8 +113,6 @@ namespace engine
 		engine_meta_type<IndirectMetaDataMember>()
 			.data<&IndirectMetaDataMember::target>("target"_hs)
 			.data<&IndirectMetaDataMember::data_member>("data_member"_hs)
-			.func<static_cast<MetaAny (IndirectMetaDataMember::*)(const MetaAny& instance) const>(&IndirectMetaDataMember::get)>("get_value"_hs)
-			.func<static_cast<MetaAny (IndirectMetaDataMember::*)(Registry& registry, Entity entity, bool) const>(&IndirectMetaDataMember::get)>("get_value_from_component"_hs)
 		;
 	}
 
@@ -69,8 +131,7 @@ namespace engine
 			.ctor
 			<
 				MetaType, std::string_view,
-				const MetaAnyParseInstructions&,
-				std::string_view,
+				const MetaParsingInstructions&,
 				std::size_t,
 				std::optional<MetaTypeDescriptor::SmallSize>,
 				const MetaTypeDescriptorFlags&
@@ -79,7 +140,7 @@ namespace engine
 			.ctor
 			<
 				MetaType, const util::json&,
-				const MetaAnyParseInstructions&,
+				const MetaParsingInstructions&,
 				//std::size_t,
 				std::optional<MetaTypeDescriptor::SmallSize>,
 				const MetaTypeDescriptorFlags&
@@ -110,6 +171,80 @@ namespace engine
 		;
 	}
 
+	template <>
+	void reflect<MetaTypeConversion>()
+	{
+		engine_meta_type<MetaTypeConversion>()
+			.data<&MetaTypeConversion::type_id>("type_id"_hs)
+			.func<&MetaTypeConversion::get_type>("type"_hs)
+			.ctor<decltype(MetaTypeConversion::type_id)>()
+		;
+	}
+
+	template <>
+	void reflect<MetaValueOperation>()
+	{
+		engine_meta_type<MetaValueOperation>()
+			.data<&MetaValueOperation::segments>("segments"_hs)
+		;
+
+		engine_meta_type<MetaValueOperation::Segment>()
+			.data<&MetaValueOperation::Segment::value>("value"_hs)
+			.data<&MetaValueOperation::Segment::operation>("operation"_hs)
+		;
+	}
+
+	template <>
+	void reflect<MetaFunctionCall>()
+	{
+		engine_meta_type<MetaFunctionCall>()
+			.data<&MetaFunctionCall::type_id>("type_id"_hs)
+			.data<&MetaFunctionCall::function_id>("function_id"_hs)
+			.data<&MetaFunctionCall::arguments>("arguments"_hs)
+			.data<&MetaFunctionCall::self>("self"_hs)
+		;
+	}
+
+	template <>
+	void reflect<MetaTypeReference>()
+	{
+		engine_meta_type<MetaTypeReference>()
+			.data<&MetaTypeReference::type_id>("type_id"_hs)
+		;
+	}
+
+	template <>
+	void reflect<SharedStorageInterface>()
+	{
+		engine_meta_type<SharedStorageInterface>()
+			//.func<&SharedStorageInterface::allocate>("allocate"_hs)
+			//.func<&SharedStorageInterface::get_storage_as_any>("get_storage"_hs)
+			//.func<&SharedStorageInterface::get_storage>("get_storage_ptr"_hs)
+		;
+	}
+
+	template <>
+	void reflect<IndirectMetaAny>()
+	{
+		engine_meta_type<IndirectMetaAny>()
+			.data<nullptr, &IndirectMetaAny::get_type>("type"_hs)
+			.data<nullptr, &IndirectMetaAny::get_type_id>("type_id"_hs)
+			.data<nullptr, &IndirectMetaAny::get_checksum>("checksum"_hs)
+
+			.func<&IndirectMetaAny::validate_checksum>("validate_checksum"_hs)
+			.func<static_cast<MetaAny (IndirectMetaAny::*)(Registry&, Entity) const>(&IndirectMetaAny::get)>("get"_hs)
+
+			.ctor<MetaTypeID, IndirectMetaAny::IndexType, IndirectMetaAny::ChecksumType>()
+			.ctor<MetaTypeID, IndirectMetaAny::IndexType>()
+
+			.ctor<MetaType, IndirectMetaAny::IndexType, IndirectMetaAny::ChecksumType>()
+			.ctor<MetaType, IndirectMetaAny::IndexType>()
+
+			.ctor<const SharedStorageInterface&, const MetaAny&>()
+			.ctor<SharedStorageInterface&, MetaAny&&>()
+		;
+	}
+
 	GENERATE_EMPTY_DERIVED_TYPE_REFLECTION(OnComponentCreate,  ComponentEvent);
 	GENERATE_EMPTY_DERIVED_TYPE_REFLECTION(OnComponentUpdate,  ComponentEvent);
 	GENERATE_EMPTY_DERIVED_TYPE_REFLECTION(OnComponentDestroy, ComponentEvent);
@@ -130,10 +265,21 @@ namespace engine
 
 	void reflect_meta()
 	{
+		reflect<MetaAnyWrapper>();
 		reflect<MetaVariable>();
+		reflect<MetaVariableScope>();
+		reflect<MetaVariableTarget>();
+		reflect<IndirectMetaVariableTarget>();
+		reflect<MetaVariableContext>();
 		reflect<MetaDataMember>();
 		reflect<IndirectMetaDataMember>();
 		reflect<MetaTypeDescriptor>();
+		reflect<MetaTypeConversion>();
+		reflect<MetaValueOperation>();
+		reflect<MetaFunctionCall>();
+		reflect<MetaTypeReference>();
+		reflect<SharedStorageInterface>();
+		reflect<IndirectMetaAny>();
 
 		reflect<ComponentEvent>();
 	}
