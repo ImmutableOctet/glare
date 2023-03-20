@@ -9,7 +9,7 @@ namespace engine
 {
 	std::size_t ComponentStorage::store(Registry& registry, Entity entity, const MetaStorageDescription& component_details, bool store_as_copy, bool skip_existing)
 	{
-		using namespace entt::literals;
+		using namespace engine::literals;
 
 		if (component_details.empty())
 		{
@@ -87,7 +87,7 @@ namespace engine
 
 	std::size_t ComponentStorage::retrieve(Registry& registry, Entity entity)
 	{
-		using namespace entt::literals;
+		using namespace engine::literals;
 
 		if (empty())
 		{
