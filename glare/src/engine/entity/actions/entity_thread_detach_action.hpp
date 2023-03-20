@@ -4,5 +4,9 @@
 
 namespace engine
 {
-	struct EntityThreadDetachAction : EntityThreadControlFlowAction {};
+	struct EntityThreadDetachAction : EntityThreadControlFlowAction
+	{
+		bool operator==(const EntityThreadDetachAction&) const noexcept = default;
+		bool operator!=(const EntityThreadDetachAction&) const noexcept = default;
+	};
 }

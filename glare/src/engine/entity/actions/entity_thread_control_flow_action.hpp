@@ -11,5 +11,8 @@ namespace engine
 		EntityThreadTarget threads;
 
 		bool check_linked = true;
+
+		bool operator==(const EntityThreadControlFlowAction&) const noexcept = default;
+		bool operator!=(const EntityThreadControlFlowAction&) const noexcept = default;
 	};
 }
