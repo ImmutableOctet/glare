@@ -28,5 +28,8 @@ namespace engine
 		{
 			return (size() == 0);
 		}
+
+		bool operator==(const EntityThreadRange&) const noexcept = default;
+		bool operator!=(const EntityThreadRange&) const noexcept = default;
 	};
 }
