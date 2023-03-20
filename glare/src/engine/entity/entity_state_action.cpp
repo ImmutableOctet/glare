@@ -1,11 +1,11 @@
 #include "entity_state_action.hpp"
 
+#include "entity_descriptor.hpp"
 #include "components/instance_component.hpp"
-
 #include "commands/commands.hpp"
 
 #include <engine/service.hpp>
-#include <engine/resource_manager/resource_manager.hpp>
+//#include <engine/resource_manager/resource_manager.hpp>
 
 #include <engine/commands/component_patch_command.hpp>
 #include <engine/commands/component_replace_command.hpp>
@@ -24,10 +24,16 @@ namespace engine
 		const EntityDescriptor& descriptor,
 		const EntityStateTransitionAction& transition,
 		Entity source, Entity target,
-		std::optional<engine::Timer::Duration> delay
+		std::optional<engine::Timer::Duration> delay,
+		const MetaEvaluationContext& context
 	)
 	{
-		service.timed_event<StateChangeCommand>(delay, source, target, transition.state_name);
+		service.timed_event<StateChangeCommand>
+		(
+			delay,
+			source, target,
+			transition.state_name
+		);
 	}
 
 	void execute_action
@@ -37,13 +43,14 @@ namespace engine
 		const EntityDescriptor& descriptor,
 		const EntityStateCommandAction& command,
 		Entity source, Entity target,
-		std::optional<engine::Timer::Duration> delay
+		std::optional<engine::Timer::Duration> delay,
+		const MetaEvaluationContext& context
 	)
 	{
 		//const auto& command_descriptor = command.command;
 		const auto& command_descriptor = command.command.get(descriptor);
 
-		auto command_instance = command_descriptor.instance(true, registry, source);
+		auto command_instance = command_descriptor.instance(true, registry, source, context);
 
 		assert(command_instance);
 		assert(command_instance.type());
@@ -64,7 +71,8 @@ namespace engine
 		const EntityDescriptor& descriptor,
 		const EntityStateUpdateAction& update,
 		Entity source, Entity target,
-		std::optional<engine::Timer::Duration> delay
+		std::optional<engine::Timer::Duration> delay,
+		const MetaEvaluationContext& context
 	)
 	{
 		if (auto redirected_target = update.target_entity.get(registry, ((target == null) ? source : target)); redirected_target != null)
@@ -72,11 +80,13 @@ namespace engine
 			target = redirected_target;
 		}
 
-		for (const auto& component : update.updated_components->type_definitions)
+		for (const auto& component_entry : update.updated_components.type_definitions)
 		{
+			const auto& component = component_entry.get(descriptor);
+
 			if (!component.forces_field_assignment())
 			{
-				auto instance = component.instance(true, registry, source);
+				auto instance = component.instance(true, registry, source, context);
 
 				if (instance)
 				{
@@ -95,7 +105,16 @@ namespace engine
 
 			// Attempt to patch the component in-place, rather than reconstructing it.
 			// NOTE: Raw pointer type. (May replace with `std::shared_ptr` later)
-			service.timed_event<ComponentPatchCommand>(delay, source, target, &component);
+			service.timed_event<ComponentPatchCommand>
+			(
+				delay,
+				source, target,
+				&component,
+
+				// NOTE: Technically unsafe due to usage of raw pointers with assumption of extended lifetime.
+				// (i.e. we aren't currently storing shared pointers internally)
+				MetaEvaluationContextStore { context }
+			);
 		}
 	}
 
@@ -106,7 +125,8 @@ namespace engine
 		const EntityDescriptor& descriptor,
 		const EntityThreadSpawnAction& thread_spawn,
 		Entity source, Entity target,
-		std::optional<engine::Timer::Duration> delay
+		std::optional<engine::Timer::Duration> delay,
+		const MetaEvaluationContext& context
 	)
 	{
 		service.timed_event<EntityThreadSpawnCommand>
@@ -127,7 +147,8 @@ namespace engine
 		const EntityDescriptor& descriptor,
 		const EntityThreadStopAction& thread_stop,
 		Entity source, Entity target,
-		std::optional<engine::Timer::Duration> delay
+		std::optional<engine::Timer::Duration> delay,
+		const MetaEvaluationContext& context
 	)
 	{
 		service.timed_event<EntityThreadStopCommand>
@@ -148,7 +169,8 @@ namespace engine
 		const EntityDescriptor& descriptor,
 		const EntityThreadPauseAction& thread_pause,
 		Entity source, Entity target,
-		std::optional<engine::Timer::Duration> delay
+		std::optional<engine::Timer::Duration> delay,
+		const MetaEvaluationContext& context
 	)
 	{
 		service.timed_event<EntityThreadPauseCommand>
@@ -169,7 +191,8 @@ namespace engine
 		const EntityDescriptor& descriptor,
 		const EntityThreadResumeAction& thread_resume,
 		Entity source, Entity target,
-		std::optional<engine::Timer::Duration> delay
+		std::optional<engine::Timer::Duration> delay,
+		const MetaEvaluationContext& context
 	)
 	{
 		service.timed_event<EntityThreadResumeCommand>
@@ -190,7 +213,8 @@ namespace engine
 		const EntityDescriptor& descriptor,
 		const EntityThreadAttachAction& thread_attach,
 		Entity source, Entity target,
-		std::optional<engine::Timer::Duration> delay
+		std::optional<engine::Timer::Duration> delay,
+		const MetaEvaluationContext& context
 	)
 	{
 		service.timed_event<EntityThreadAttachCommand>
@@ -212,7 +236,8 @@ namespace engine
 		const EntityDescriptor& descriptor,
 		const EntityThreadDetachAction& thread_detach,
 		Entity source, Entity target,
-		std::optional<engine::Timer::Duration> delay
+		std::optional<engine::Timer::Duration> delay,
+		const MetaEvaluationContext& context
 	)
 	{
 		service.timed_event<EntityThreadDetachCommand>
@@ -233,7 +258,8 @@ namespace engine
 		const EntityDescriptor& descriptor,
 		const EntityThreadUnlinkAction& thread_detach,
 		Entity source, Entity target,
-		std::optional<engine::Timer::Duration> delay
+		std::optional<engine::Timer::Duration> delay,
+		const MetaEvaluationContext& context
 	)
 	{
 		service.timed_event<EntityThreadUnlinkCommand>
@@ -253,7 +279,8 @@ namespace engine
 		const EntityDescriptor& descriptor,
 		const EntityThreadSkipAction& thread_skip,
 		Entity source, Entity target,
-		std::optional<engine::Timer::Duration> delay
+		std::optional<engine::Timer::Duration> delay,
+		const MetaEvaluationContext& context
 	)
 	{
 		service.timed_event<EntityThreadSkipCommand>
@@ -275,7 +302,8 @@ namespace engine
 		const EntityDescriptor& descriptor,
 		const EntityThreadRewindAction& thread_rewind,
 		Entity source, Entity target,
-		std::optional<engine::Timer::Duration> delay
+		std::optional<engine::Timer::Duration> delay,
+		const MetaEvaluationContext& context
 	)
 	{
 		service.timed_event<EntityThreadRewindCommand>
@@ -297,7 +325,8 @@ namespace engine
 		const EntityDescriptor& descriptor,
 		const EntityStateAction& action,
 		Entity source, Entity target,
-		std::optional<engine::Timer::Duration> delay
+		std::optional<engine::Timer::Duration> delay,
+		const MetaEvaluationContext& context
 	)
 	{
 		std::visit
@@ -312,7 +341,8 @@ namespace engine
 					action,
 					source,
 					target,
-					delay
+					delay,
+					context
 				);
 			},
 
@@ -327,7 +357,8 @@ namespace engine
 		const EntityDescriptor& descriptor,
 		const EntityStateAction& action,
 		Entity source_entity, const EntityTarget& target,
-		std::optional<engine::Timer::Duration> delay
+		std::optional<engine::Timer::Duration> delay,
+		const MetaEvaluationContext& context
 	)
 	{
 		auto target_entity = target.get(registry, source_entity);
@@ -347,7 +378,8 @@ namespace engine
 			action,
 			source_entity,
 			target_entity,
-			delay
+			delay,
+			context
 		);
 	}
 
@@ -356,33 +388,28 @@ namespace engine
 		Service& service,
 		const EntityStateAction& action,
 		Entity source_entity, const EntityTarget& target,
-		std::optional<engine::Timer::Duration> delay
+		std::optional<engine::Timer::Duration> delay,
+		const MetaEvaluationContext& context
 	)
 	{
 		auto& registry = service.get_registry();
 
 		const auto& instance_comp = registry.get<InstanceComponent>(source_entity);
 
-		auto& resource_manager = service.get_resource_manager();
+		//auto& resource_manager = service.get_resource_manager();
 
-		const auto* descriptor = resource_manager.get_existing_descriptor(instance_comp.instance);
-
-		assert(descriptor);
-
-		if (!descriptor)
-		{
-			return;
-		}
+		const auto& descriptor = instance_comp.get_descriptor();
 
 		execute_action
 		(
 			registry,
 			service,
-			*descriptor,
+			descriptor,
 			action,
 			source_entity,
 			target,
-			delay
+			delay,
+			context
 		);
 	}
 }
