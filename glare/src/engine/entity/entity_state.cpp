@@ -3,7 +3,7 @@
 #include "entity_factory.hpp"
 
 #include <engine/meta/meta.hpp>
-#include <engine/meta/parsing_context.hpp>
+#include <engine/meta/meta_type_resolution_context.hpp>
 
 #include "components/state_component.hpp"
 #include "components/state_storage_component.hpp"
@@ -70,19 +70,21 @@ namespace engine
 		{
 			// Enumerate components added by this state, cross-referencing the 'persistent components' lists
 			// from both this state and the next state, to determine if removal is necessary:
-			for (const auto& component : components.add.type_definitions)
+			for (const auto& component_entry : components.add.type_definitions)
 			{
+				const auto& component = component_entry.get(descriptor);
+
 				const auto type = component.get_type();
 
 				if (next_state_persist)
 				{
-					if (next_state_persist->get_definition(type))
+					if (next_state_persist->get_definition(descriptor, type))
 					{
 						continue;
 					}
 				}
 
-				if (components.persist.get_definition(type))
+				if (components.persist.get_definition(descriptor, type))
 				{
 					continue;
 				}
@@ -101,7 +103,7 @@ namespace engine
 
 		// Ensure that persistent components are accounted for, but do not alter any existing state.
 		// (This step is necessary due to the possibility of the next state being dependent on a now-removed component)
-		persist(registry, entity, false);
+		persist(descriptor, registry, entity, false);
 	}
 
 	void EntityState::activate(const EntityDescriptor& descriptor, Registry& registry, Entity entity, EntityStateIndex self_index, std::optional<EntityStateIndex> prev_index, bool update_state_component) const
@@ -110,8 +112,8 @@ namespace engine
 		freeze(registry, entity, self_index);
 		retrieve(registry, entity, self_index);
 		remove(registry, entity);
-		add(registry, entity);
-		persist(registry, entity);
+		add(descriptor, registry, entity);
+		persist(descriptor, registry, entity);
 
 		if (update_state_component)
 		{
@@ -126,36 +128,36 @@ namespace engine
 		registry.emplace_or_replace<StateComponent>(entity, self_index, prev_index.value_or(self_index));
 	}
 
-	std::size_t EntityState::build_removals(const util::json& removal_list, const ParsingContext* opt_parsing_context, bool cross_reference_persist)
+	std::size_t EntityState::build_removals(const EntityDescriptor& descriptor, const util::json& removal_list, const MetaParsingContext& opt_parsing_context, bool cross_reference_persist)
 	{
-		return build_type_list(removal_list, components.remove, cross_reference_persist, opt_parsing_context);
+		return build_type_list(descriptor, removal_list, components.remove, cross_reference_persist, opt_parsing_context);
 	}
 
-	std::size_t EntityState::build_frozen(const util::json& frozen_list, const ParsingContext* opt_parsing_context, bool cross_reference_persist)
+	std::size_t EntityState::build_frozen(const EntityDescriptor& descriptor, const util::json& frozen_list, const MetaParsingContext& opt_parsing_context, bool cross_reference_persist)
 	{
-		return build_type_list(frozen_list, components.freeze, cross_reference_persist, opt_parsing_context);
+		return build_type_list(descriptor, frozen_list, components.freeze, cross_reference_persist, opt_parsing_context);
 	}
 
-	std::size_t EntityState::build_storage(const util::json& storage_list, const ParsingContext* opt_parsing_context, bool cross_reference_persist)
+	std::size_t EntityState::build_storage(const EntityDescriptor& descriptor, const util::json& storage_list, const MetaParsingContext& opt_parsing_context, bool cross_reference_persist)
 	{
-		return build_type_list(storage_list, components.store, cross_reference_persist, opt_parsing_context);
+		return build_type_list(descriptor, storage_list, components.store, cross_reference_persist, opt_parsing_context);
 	}
 
-	std::size_t EntityState::build_local_copy(const util::json& local_copy_list, const ParsingContext* opt_parsing_context, bool cross_reference_persist)
+	std::size_t EntityState::build_local_copy(const EntityDescriptor& descriptor, const util::json& local_copy_list, const MetaParsingContext& opt_parsing_context, bool cross_reference_persist)
 	{
-		const auto local_copy_result    = build_type_list(local_copy_list, components.local_copy, cross_reference_persist, opt_parsing_context);
-		const auto freeze_append_result = build_type_list(local_copy_list, components.freeze, cross_reference_persist, opt_parsing_context);
+		const auto local_copy_result    = build_type_list(descriptor, local_copy_list, components.local_copy, cross_reference_persist, opt_parsing_context);
+		const auto freeze_append_result = build_type_list(descriptor, local_copy_list, components.freeze, cross_reference_persist, opt_parsing_context);
 
 		assert(local_copy_result == freeze_append_result);
 
 		return local_copy_result;
 	}
 
-	std::size_t EntityState::build_init_copy(const util::json& init_copy_list, const ParsingContext* opt_parsing_context, bool cross_reference_persist)
+	std::size_t EntityState::build_init_copy(const EntityDescriptor& descriptor, const util::json& init_copy_list, const MetaParsingContext& opt_parsing_context, bool cross_reference_persist)
 	{
-		const auto init_copy_result     = build_type_list(init_copy_list, components.init_copy, cross_reference_persist, opt_parsing_context);
-		const auto freeze_append_result = build_type_list(init_copy_list, components.freeze, cross_reference_persist, opt_parsing_context);
-		const auto store_append_result  = build_type_list(init_copy_list, components.store, cross_reference_persist, opt_parsing_context);
+		const auto init_copy_result     = build_type_list(descriptor, init_copy_list, components.init_copy, cross_reference_persist, opt_parsing_context);
+		const auto freeze_append_result = build_type_list(descriptor, init_copy_list, components.freeze, cross_reference_persist, opt_parsing_context);
+		const auto store_append_result  = build_type_list(descriptor, init_copy_list, components.store, cross_reference_persist, opt_parsing_context);
 
 		assert(freeze_append_result == init_copy_result);
 		assert(store_append_result == init_copy_result);
@@ -163,7 +165,7 @@ namespace engine
 		return init_copy_result;
 	}
 
-	bool EntityState::process_type_list_entry(MetaIDStorage& types_out, const util::json& list_entry, bool cross_reference_persist, const ParsingContext* opt_parsing_context)
+	bool EntityState::process_type_list_entry(const EntityDescriptor& descriptor, MetaIDStorage& types_out, const util::json& list_entry, bool cross_reference_persist, const MetaParsingContext& opt_parsing_context)
 	{
 		if (!list_entry.is_string())
 		{
@@ -172,17 +174,17 @@ namespace engine
 
 		const auto component_name = list_entry.get<std::string>();
 
-		return process_type_list_entry(types_out, std::string_view(component_name), cross_reference_persist, opt_parsing_context);
+		return process_type_list_entry(descriptor, types_out, std::string_view(component_name), cross_reference_persist, opt_parsing_context);
 	}
 
-	bool EntityState::process_type_list_entry(MetaIDStorage& types_out, std::string_view component_name, bool cross_reference_persist, const ParsingContext* opt_parsing_context)
+	bool EntityState::process_type_list_entry(const EntityDescriptor& descriptor, MetaIDStorage& types_out, std::string_view component_name, bool cross_reference_persist, const MetaParsingContext& opt_parsing_context)
 	{
 		MetaType component_type;
 		MetaTypeID component_type_id = {};
 
-		if (opt_parsing_context)
+		if (const auto opt_type_context = opt_parsing_context.get_type_context())
 		{
-			component_type = opt_parsing_context->get_component_type(component_name);
+			component_type = opt_type_context->get_component_type(component_name);
 
 			if (component_type)
 			{
@@ -204,7 +206,7 @@ namespace engine
 
 		if (cross_reference_persist)
 		{
-			if (components.persist.get_definition(component_type))
+			if (components.persist.get_definition(descriptor, component_type))
 			{
 				print_warn("Component entry ignored due to overlapping persistent entry. ({}, #{})", component_name, component_type_id);
 
@@ -217,11 +219,11 @@ namespace engine
 		return true;
 	}
 
-	std::size_t EntityState::build_type_list(const util::json& type_names, MetaIDStorage& types_out, bool cross_reference_persist, const ParsingContext* opt_parsing_context)
+	std::size_t EntityState::build_type_list(const EntityDescriptor& descriptor, const util::json& type_names, MetaIDStorage& types_out, bool cross_reference_persist, const MetaParsingContext& opt_parsing_context)
 	{
 		std::size_t count = 0;
 
-		util::json_for_each(type_names, [this, &types_out, &count, cross_reference_persist, &opt_parsing_context](const util::json& list_entry)
+		util::json_for_each(type_names, [this, &descriptor, &types_out, &count, cross_reference_persist, &opt_parsing_context](const util::json& list_entry)
 		{
 			switch (list_entry.type())
 			{
@@ -230,7 +232,7 @@ namespace engine
 					{
 						const auto& component_name = proxy.key();
 
-						if (process_type_list_entry(types_out, std::string_view(component_name), cross_reference_persist, opt_parsing_context))
+						if (process_type_list_entry(descriptor, types_out, std::string_view(component_name), cross_reference_persist, opt_parsing_context))
 						{
 							count++;
 						}
@@ -238,7 +240,7 @@ namespace engine
 
 					break;
 				default:
-					if (process_type_list_entry(types_out, list_entry, cross_reference_persist, opt_parsing_context))
+					if (process_type_list_entry(descriptor, types_out, list_entry, cross_reference_persist, opt_parsing_context))
 					{
 						count++;
 					}
@@ -264,7 +266,7 @@ namespace engine
 
 	bool EntityState::remove_component(Registry& registry, Entity entity, const MetaType& type) const
 	{
-		using namespace entt::literals;
+		using namespace engine::literals;
 
 		auto remove_fn = type.func("remove_component"_hs);
 
@@ -300,7 +302,7 @@ namespace engine
 
 	bool EntityState::has_component(Registry& registry, Entity entity, const MetaType& type) const
 	{
-		using namespace entt::literals;
+		using namespace engine::literals;
 
 		auto get_fn = type.func("get_component"_hs);
 
@@ -318,13 +320,15 @@ namespace engine
 		return (*result).cast<bool>();
 	}
 
-	void EntityState::add(Registry& registry, Entity entity) const
+	void EntityState::add(const EntityDescriptor& descriptor, Registry& registry, Entity entity) const
 	{
-		for (const auto& component : components.add.type_definitions)
+		for (const auto& component_entry : components.add.type_definitions)
 		{
+			const auto& component = component_entry.get(descriptor);
+
 			const auto type_id = component.get_type_id();
 
-			if (component.forces_field_assignment() || components.persist.get_definition(type_id))
+			if (component.forces_field_assignment() || components.persist.get_definition(descriptor, type_id))
 			{
 				EntityFactory::update_component_fields(registry, entity, component);
 			}
@@ -352,10 +356,12 @@ namespace engine
 		}
 	}
 
-	void EntityState::persist(Registry& registry, Entity entity, bool value_assignment) const
+	void EntityState::persist(const EntityDescriptor& descriptor, Registry& registry, Entity entity, bool value_assignment) const
 	{
-		for (const auto& component : components.persist.type_definitions)
+		for (const auto& component_entry : components.persist.type_definitions)
 		{
+			const auto& component = component_entry.get(descriptor);
+
 			if (!EntityFactory::update_component_fields(registry, entity, component, value_assignment))
 			{
 				EntityFactory::emplace_component(registry, entity, component);
