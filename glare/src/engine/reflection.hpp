@@ -1120,7 +1120,20 @@ namespace engine
             .template func<&from_meta<T>>("from_meta"_hs)
             .template func<&short_name<T>>("get_type_name"_hs)
             .template func<&trigger_event_from_meta_any<T>>("trigger_event_from_meta_any"_hs)
+            .template func<&try_get_underlying_type<T>>("try_get_underlying_type"_hs)
         ;
+
+        if constexpr (has_method_has_type_v<T, bool>)
+        {
+            type = type.template func<&T::has_type>("has_type"_hs);
+        }
+
+        if constexpr (has_method_get_type_v<T, MetaType>)
+        {
+            // NOTE: `get_type` is not guaranteed to be the same type as the result of `try_get_underlying_value`, or `try_get_underlying_type`.
+            // For example, a `MetaFunctionCall` object can have several different types associated; 'self' type, 'return' type, etc.
+            type = type.template func<&T::get_type>("get_type"_hs);
+        }
 
         if constexpr (!std::is_empty_v<T>)
         {
