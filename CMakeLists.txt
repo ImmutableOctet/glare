@@ -16,7 +16,7 @@ endif()
 
 project(
     glare
-    VERSION 0.0.5
+    VERSION 0.1.0
     DESCRIPTION "WIP Game Engine"
     HOMEPAGE_URL "https://github.com/ImmutableOctet/glare"
     LANGUAGES CXX
