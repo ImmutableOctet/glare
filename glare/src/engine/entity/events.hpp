@@ -2,6 +2,11 @@
 
 #include "types.hpp"
 
+//#include <engine/meta/types.hpp>
+
+#include <engine/meta/meta_variable_scope.hpp>
+//#include <engine/meta/meta_variable_target.hpp>
+
 namespace engine
 {
 	// Triggers when a state change takes place.
@@ -74,4 +79,14 @@ namespace engine
 
 	// Triggered when a thread is formally unlinked.
 	struct OnThreadUnlink : ThreadEvent {};
+
+	struct OnThreadVariableUpdate : ThreadEvent
+	{
+		MetaSymbolID resolved_variable_name;
+		MetaVariableScope variable_scope;
+
+		MetaAny variable_update_result;
+	};
+
+	using OnThreadStart = OnThreadSpawn;
 }
