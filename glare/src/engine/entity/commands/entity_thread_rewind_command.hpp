@@ -11,5 +11,8 @@ namespace engine
 	struct EntityThreadRewindCommand :
 		public Command,
 		public EntityThreadRewindAction
-	{};
+	{
+		bool operator==(const EntityThreadRewindCommand&) const noexcept = default;
+		bool operator!=(const EntityThreadRewindCommand&) const noexcept = default;
+	};
 }

@@ -11,5 +11,8 @@ namespace engine
 	struct EntityThreadSkipCommand :
 		public Command,
 		public EntityThreadSkipAction
-	{};
+	{
+		bool operator==(const EntityThreadSkipCommand&) const noexcept = default;
+		bool operator!=(const EntityThreadSkipCommand&) const noexcept = default;
+	};
 }

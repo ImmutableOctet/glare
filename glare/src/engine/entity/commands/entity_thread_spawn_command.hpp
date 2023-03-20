@@ -13,5 +13,8 @@ namespace engine
 		public EntityThreadSpawnAction
 	{
 		std::optional<EntityStateIndex> state_index = std::nullopt;
+
+		bool operator==(const EntityThreadSpawnCommand&) const noexcept = default;
+		bool operator!=(const EntityThreadSpawnCommand&) const noexcept = default;
 	};
 }

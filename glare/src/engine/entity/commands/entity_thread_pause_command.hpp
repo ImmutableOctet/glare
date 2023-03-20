@@ -11,5 +11,8 @@ namespace engine
 	struct EntityThreadPauseCommand :
 		public Command,
 		public EntityThreadPauseAction
-	{};
+	{
+		bool operator==(const EntityThreadPauseCommand&) const noexcept = default;
+		bool operator!=(const EntityThreadPauseCommand&) const noexcept = default;
+	};
 }
