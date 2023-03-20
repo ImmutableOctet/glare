@@ -20,5 +20,33 @@ namespace engine
 		// NOTE: Unlike `MetaDataMember`, this method can take `null` as a
 		// (possibly) valid value for `entity`, due to the indirection from `target`.
 		MetaAny get(Registry& registry, Entity entity=null, bool fallback_to_entity=false) const;
+
+		// Wrapper for `get`; added for reflection purposes.
+		inline MetaAny get_indirect_value(Registry& registry, Entity entity) const
+		{
+			return get(registry, entity);
+		}
+
+		bool has_member() const;
+		entt::meta_data get_data() const;
+
+		bool has_type() const;
+		MetaType get_type() const;
+
+		bool has_member_type() const;
+		MetaType get_member_type() const;
+
+		bool operator==(const IndirectMetaDataMember&) const noexcept = default;
+		bool operator!=(const IndirectMetaDataMember&) const noexcept = default;
+
+		bool operator==(const MetaDataMember& value) const noexcept
+		{
+			return ((target.is_self_targeted()) && (data_member == value));
+		}
+
+		inline bool operator!=(const MetaDataMember& value) const noexcept
+		{
+			return !operator==(value);
+		}
 	};
 }

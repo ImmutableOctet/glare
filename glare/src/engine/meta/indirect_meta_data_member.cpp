@@ -27,4 +27,34 @@ namespace engine
 
 		return data_member.get(registry, target_entity);
 	}
+
+	bool IndirectMetaDataMember::has_member() const
+	{
+		return data_member.has_member();
+	}
+
+	entt::meta_data IndirectMetaDataMember::get_data() const
+	{
+		return data_member.get_data();
+	}
+
+	bool IndirectMetaDataMember::has_type() const
+	{
+		return data_member.has_type();
+	}
+
+	MetaType IndirectMetaDataMember::get_type() const
+	{
+		return data_member.get_type();
+	}
+
+	bool IndirectMetaDataMember::has_member_type() const
+	{
+		return data_member.has_member_type();
+	}
+
+	MetaType IndirectMetaDataMember::get_member_type() const
+	{
+		return data_member.get_member_type();
+	}
 }
