@@ -2,12 +2,14 @@
 
 #include <engine/entity/entity_thread.hpp>
 #include <engine/entity/entity_thread_range.hpp>
+#include <engine/entity/entity_variables.hpp>
 
 #include <util/small_vector.hpp>
 
 #include <utility>
 #include <optional>
 #include <type_traits>
+#include <memory>
 
 namespace engine
 {
@@ -18,8 +20,17 @@ namespace engine
 	{
 		public:
 			using LocalThreadIndex = std::size_t; // EntityThreadIndex;
+			using ThreadGlobalVariables = EntityVariables<8>;
 
 			util::small_vector<EntityThread, 4> threads;
+
+			// Optional pointer to a container of global variables shared between each thread of this entity.
+			std::shared_ptr<ThreadGlobalVariables> global_variables;
+
+			// Attempts to allocate a `ThreadGlobalVariables` object, managed internally.
+			// If a `ThreadGlobalVariables` object has already been allocated, this will return a pointer to the existing instance.
+			// The value returned is a non-owning pointer to the remote object. (see `global_variables`)
+			ThreadGlobalVariables* get_global_variables(); // const
 
 			EntityThread* start_thread
 			(
