@@ -17,6 +17,7 @@
 		// Pure local instances.
 	},
 
+	/*
 	"threads":
 	{
 		"some_thread":
@@ -94,6 +95,7 @@
 			//revert() // <-- Need to think about this one; i.e. stepping backward in time.
 		]
 	},
+	*/
 
 	"rules":
 	[

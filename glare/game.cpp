@@ -13,8 +13,6 @@
 #include <app/events.hpp>
 #include <app/input/keycodes.hpp>
 
-#include <engine/engine.hpp>
-
 #include <util/variant.hpp>
 #include <util/log.hpp>
 
@@ -62,6 +60,8 @@
 #include <engine/world/zones/zones.hpp>
 #include <bullet/btBulletCollisionCommon.h>
 
+#include <engine/meta/meta.hpp>
+
 namespace glare
 {
 	Glare::Glare():
@@ -69,14 +69,29 @@ namespace glare
 	{
 		using namespace graphics;
 		
+		/*
+		for (const auto& type_entry : entt::resolve())
+		{
+			if (engine::type_has_indirection(type_entry.second))
+			{
+				print("{} ({})", type_entry.second.info().name(), type_entry.first);
+			}
+		}
+
+		print("Done.");
+		*/
+
 		engine::load(cfg, std::filesystem::path("config/config.json"), true);
 
-		init_input_system([](auto& input_system, auto& input_handler)
-		{
-			// TODO: Migrate these to the `glare` namespace:
-			engine::generate_button_map(input_handler.get_buttons());
-			engine::generate_analog_map(input_handler.get_analogs());
-		});
+		init_input_system
+		(
+			[](auto& input_system, auto& input_handler)
+			{
+				// TODO: Migrate these to the `glare` namespace:
+				engine::generate_button_map(input_handler.get_buttons());
+				engine::generate_analog_map(input_handler.get_analogs());
+			}
+		);
 
 		world_system<engine::DebugListener>();
 
@@ -434,11 +449,13 @@ namespace glare
 		if (auto player = world.get_player(); player != engine::null)
 		{
 			auto player_model = world.get_child_by_name(player, "player_model", false);
-			assert(player_model != engine::null);
 
-			auto target = player_model;
+			if (player_model != engine::null)
+			{
+				auto target = player_model;
 
-			engine::animation_control(world, target);
+				engine::animation_control(world, target);
+			}
 		}
 
 		engine::hierarchy_control(world, world.get_root());
@@ -465,145 +482,135 @@ namespace glare
 	{
 		switch (event.keysym.sym)
 		{
-		case SDLK_ESCAPE:
-			stop();
+			case SDLK_ESCAPE:
+				stop();
 
-			break;
-		case SDLK_TAB:
-		{
-			toggle_input_lock();
+				break;
+			case SDLK_TAB:
+				toggle_input_lock();
 
-			break;
-		}
-		case SDLK_SEMICOLON:
-			graphics.context->set_flags(graphics::ContextFlags::Wireframe, !graphics.context->get_flag(graphics::ContextFlags::Wireframe));
+				break;
+			
+			case SDLK_SEMICOLON:
+				graphics.context->set_flags(graphics::ContextFlags::Wireframe, !graphics.context->get_flag(graphics::ContextFlags::Wireframe));
 
-			break;
+				break;
 
-		case SDLK_F2:
-		{
-			//print("World: {}", world);
-			//print_children(world, world.get_root());
-
-			auto zone = world.get_by_name("Zone");
-			const auto& collision = world.get_registry().get<engine::CollisionComponent>(zone);
-
-			auto* obj = collision.get_collision_object();
-
-			print("Collision object is located at: {}", math::to_vector(obj->getWorldTransform().getOrigin()));
-
-			break;
-		}
-
-		case SDLK_y:
-		{
-			auto camera = world.get_camera();
-
-			//world.set_parent(camera, world.get_by_name("Player"));
-
-			auto cube = world.get_by_name("Cube");
-			auto cube2 = world.get_by_name("Cube2");
-			auto root = world.get_root();
-
-			math::Matrix local_camera_matrix;
-
+			case SDLK_F2:
 			{
-				auto camera_t = world.get_transform(camera);
-				auto cube_t = world.get_transform(cube);
-				auto root_t = world.get_transform(root);
+				//print("World: {}", world);
+				//print_children(world, world.get_root());
 
-				const auto& camera_matrix = camera_t.get_matrix();
-				auto cube_matrix = cube_t.get_matrix();
-				auto root_matrix = root_t.get_matrix();
+				auto zone = world.get_by_name("Zone");
+				const auto& collision = world.get_registry().get<engine::CollisionComponent>(zone);
 
-				auto cube_inv_matrix = cube_t.get_inverse_matrix();
+				auto* obj = collision.get_collision_object();
 
-				print("cube_t.get_position(): {}", cube_t.get_position());
-				print("cube_t.get_matrix(): {}", math::get_translation(cube_matrix));
-				print("cube_t.get_inverse_matrix(): {}", math::get_translation(cube_inv_matrix));
+				print("Collision object is located at: {}", math::to_vector(obj->getWorldTransform().getOrigin()));
+
+				break;
 			}
 
-			world.set_parent(camera, cube);
+			case SDLK_y:
+			{
+				auto camera = world.get_camera();
 
-			/*
-			auto& registry = world.get_registry();
-			auto& relationship = registry.get<engine::RelationshipComponent>(camera);
-			auto camera_parent = relationship.get_parent();
-			auto& camera_parent_relationship = registry.get<engine::RelationshipComponent>(camera_parent);
-			camera_parent_relationship.remove_child(registry, camera, camera_parent);
-			*/
+				//world.set_parent(camera, world.get_by_name("Player"));
 
-			//auto camera_t = world.get_transform(camera);
-			//camera_t.set_matrix(local_camera_matrix);
+				auto cube = world.get_by_name("Cube");
+				auto cube2 = world.get_by_name("Cube2");
+				auto root = world.get_root();
 
-			//camera_t.set_local_matrix(local_camera_matrix);
+				math::Matrix local_camera_matrix;
+
+				{
+					auto camera_t = world.get_transform(camera);
+					auto cube_t = world.get_transform(cube);
+					auto root_t = world.get_transform(root);
+
+					const auto& camera_matrix = camera_t.get_matrix();
+					auto cube_matrix = cube_t.get_matrix();
+					auto root_matrix = root_t.get_matrix();
+
+					auto cube_inv_matrix = cube_t.get_inverse_matrix();
+
+					print("cube_t.get_position(): {}", cube_t.get_position());
+					print("cube_t.get_matrix(): {}", math::get_translation(cube_matrix));
+					print("cube_t.get_inverse_matrix(): {}", math::get_translation(cube_inv_matrix));
+				}
+
+				world.set_parent(camera, cube);
+
+				/*
+				auto& registry = world.get_registry();
+				auto& relationship = registry.get<engine::RelationshipComponent>(camera);
+				auto camera_parent = relationship.get_parent();
+				auto& camera_parent_relationship = registry.get<engine::RelationshipComponent>(camera_parent);
+				camera_parent_relationship.remove_child(registry, camera, camera_parent);
+				*/
+
+				//auto camera_t = world.get_transform(camera);
+				//camera_t.set_matrix(local_camera_matrix);
+
+				//camera_t.set_local_matrix(local_camera_matrix);
 			
 
-			world.set_parent(camera, root);
+				world.set_parent(camera, root);
 
-			world.set_parent(camera, cube);
-			world.set_parent(camera, cube2);
+				world.set_parent(camera, cube);
+				world.set_parent(camera, cube2);
 
-			break;
-		}
-
-		case SDLK_f:
-		{
-			auto target_entity = world.get_camera(); // world.get_by_name("Moving Sphere"); // "Spinning Cube" // world.get_root()
-
-			if (target_entity != engine::null)
-			{
-				auto t = world.get_transform(target_entity);
-
-				auto position = t.get_position();
-				auto rotation = math::degrees(t.get_rotation());
-				auto scale = t.get_scale();
-
-				std::cout << "\nCamera:\n";
-
-				//std::cout << "Position: " << t.get_position() << '\n';
-				//std::cout << "Rotation: " << math::degrees(t.get_rotation()) << '\n';
-				//std::cout << "Scale: " << t.get_scale() << '\n';
-				std::cout << "\"position\": { " << "\"x\": " << position.x << ", " << "\"y\": " << position.y << ", " << "\"z\": " << position.z << " }," << '\n';
-				std::cout << "\"rotation\": { " << "\"x\": " << rotation.x << ", " << "\"y\": " << rotation.y << ", " << "\"z\": " << rotation.z << " }," << '\n';
-				std::cout << "\"scale\": { " << "\"x\": " << scale.x << ", " << "\"y\": " << scale.y << ", " << "\"z\": " << scale.z << " }" << '\n';
+				break;
 			}
 
-			//engine::SimpleFollowComponent::update(world);
+			case SDLK_f:
+			{
+				auto target_entity = world.get_camera(); // world.get_by_name("Moving Sphere"); // "Spinning Cube" // world.get_root()
 
-			break;
+				if (target_entity != engine::null)
+				{
+					auto t = world.get_transform(target_entity);
+
+					auto position = t.get_position();
+					auto rotation = math::degrees(t.get_rotation());
+					auto scale = t.get_scale();
+
+					std::cout << "\nCamera:\n";
+
+					//std::cout << "Position: " << t.get_position() << '\n';
+					//std::cout << "Rotation: " << math::degrees(t.get_rotation()) << '\n';
+					//std::cout << "Scale: " << t.get_scale() << '\n';
+					std::cout << "\"position\": { " << "\"x\": " << position.x << ", " << "\"y\": " << position.y << ", " << "\"z\": " << position.z << " }," << '\n';
+					std::cout << "\"rotation\": { " << "\"x\": " << rotation.x << ", " << "\"y\": " << rotation.y << ", " << "\"z\": " << rotation.z << " }," << '\n';
+					std::cout << "\"scale\": { " << "\"x\": " << scale.x << ", " << "\"y\": " << scale.y << ", " << "\"z\": " << scale.z << " }" << '\n';
+				}
+
+				//engine::SimpleFollowComponent::update(world);
+
+				break;
+			}
+
+			case SDLK_h:
+			{
+				auto& registry = world.get_registry();
+
+				auto light = world.get_by_name("shadow_test");
+				//auto& shadows = registry.get<engine::PointLightShadowComponent>(light);
+
+				auto lt = world.get_transform(light);
+				auto ct = world.get_transform(world.get_camera());
+
+				lt.set_position(ct.get_local_position());
+				lt.set_rotation(ct.get_rotation());
+
+				break;
+			}
+
+			case SDLK_c:
+				screen.display_mode = static_cast<GBufferDisplayMode>((static_cast<int>(screen.display_mode) + 1) % static_cast<int>(GBufferDisplayMode::Modes));
+
+				break;
 		}
-
-		case SDLK_h:
-		{
-			auto& registry = world.get_registry();
-
-			auto light = world.get_by_name("shadow_test");
-			//auto& shadows = registry.get<engine::PointLightShadowComponent>(light);
-
-			auto lt = world.get_transform(light);
-			auto ct = world.get_transform(world.get_camera());
-
-			lt.set_position(ct.get_local_position());
-			lt.set_rotation(ct.get_rotation());
-
-			break;
-		}
-
-		case SDLK_c:
-			screen.display_mode = static_cast<GBufferDisplayMode>((static_cast<int>(screen.display_mode) + 1) % static_cast<int>(GBufferDisplayMode::Modes));
-
-			break;
-		}
-	}
-
-	void Glare::on_keydown(const keyboard_event_t& event)
-	{
-		/*
-		switch (event.keysym.sym)
-		{
-		}
-		*/
 	}
 }
 

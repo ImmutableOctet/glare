@@ -8,6 +8,200 @@
 
 	"merge": "player_common_test",
 
+	"threads":
+	{
+		/*
+		"some_other_thread":
+		[
+			"local counter:int = 0",
+			"repeat",
+				"counter += 1",
+				//"print(counter)",
+				"sleep(1)",
+			"end"
+		],
+		*/
+
+		"add_test":
+		[
+			"thread (sleep_test, false)",
+				"print(\"Hello from sleep_test\")",
+				"local should_exit:bool = false",
+
+				"while (!should_exit)",
+					/*
+					"print(Waiting...)",
+					"yield(2.0)",
+					"print(\"Setting `x` to 1\")",
+					"add_test.x = 1",
+					"print(Waiting...)",
+					"yield(2.0)",
+					"print(\"Setting `x` to 5\")",
+					"add_test.x = 5",
+					"print(Waiting...)",
+					"yield(2.0)",
+					"print(add_test should exit now.)",
+					*/
+					"yield(5.0)",
+					"should_exit = true",
+				"end",
+
+				/*
+				"while (should_exit)",
+					"print(Waiting for remote assignment of my variable...)",
+					"sleep(1)",
+				"end",
+				*/
+
+				"when (add_test.is_done)",
+					"print(First)",
+				"end",
+
+				"when (!add_test.is_done_inv)",
+					"print(Second)",
+				"end",
+
+				"print(\"Making really_done\")",
+
+				"local really_done = false",
+
+				"print(\"really_done is:\")",
+				"print(really_done)",
+				"print(\"Waiting for really_done to be true\")",
+
+				"yield(really_done)",
+
+				"print(\"Done on sleep_test\")",
+			"end",
+
+			//"child(player_model).NameComponent::name += _some_name",
+			//"child(player_model_some_name).NameComponent::name += _some_name"
+			//"child(player_model).AnimationComponent::time += 0.3 * 4",
+			//"child(player_model).NameComponent::name = NameComponent::name + \"_\" + child(player_model).NameComponent::name + _new_name",
+			//"wait(5)",
+			//"print(Hello world)"
+			//"child(player_model).AnimationComponent::time += 0.2 * child(player_model).AnimationComponent::time"
+			//"child(player_model).AnimationComponent::time += 0.2 * child(player_model).AnimationComponent::time+1"
+			//"child(player_model).AnimationComponent::time += 0.2 * child(player_model).AnimationComponent::time + 0.1"
+			//"child(player_model).AnimationComponent::time += 0.2 * child(player_model) + 1.2"
+			
+			/*
+			"repeat",
+			"wait(2)",
+			"print(Play)",
+			"child(player_model).AnimationComponent::play()",
+			"wait(2)",
+			"print(Pause)",
+			"child(player_model).AnimationComponent::pause()",
+			"end"
+			*/
+
+			/*
+			"child(player_model).AnimationComponent::time = 5.0",
+			"child(player_model).AnimationComponent::time += 1.0",
+			"child(player_model).AnimationComponent::time += 1.0",
+			"print(child(player_model).AnimationComponent::time)"
+			*/
+
+			"sleep(7)",
+			//"auto entity_name = \"player_\" + \"model\"",
+			//"print(entity(entity_name).NameComponent::name)",
+			//"print(NameComponent::name)",
+			//"print(player_model.NameComponent::name)",
+			"player_model.name = NameComponent(\"Test\")",
+			//"sleep(100)",
+
+			"print(\"Starting thread: sleep_test\")",
+			"sleep_test.start()",
+			"print(\"sleep_test started.\")",
+
+			"local x:int = 100",
+
+			"while (!sleep_test.should_exit)",
+				/*
+				"if (x == 5)",
+					"print(\"x is 5\")",
+				"else",
+					"print(\"x is not 5, it's: \" + x)",
+				"end",
+				*/
+
+				"print(\"Waiting for sleep_test...\")",
+				"wait(1)",
+				//"should_exit = true",
+			"end",
+
+			"print(\"On main thread: waiting for really_done to be false.\")",
+
+			"yield(!sleep_test.really_done)",
+
+			"local is_done = true",
+			"local is_done_inv = !is_done",
+
+			"sleep_test.really_done = true",
+
+			"print(\"Done on main thread\")"
+
+			/*
+			"repeat",
+				//"child(player_model).AnimationComponent::time = x",
+				//"x += 1",
+				"print(self.some_other_thread.counter)",
+
+				//"if (x > 7) then",
+				"if (self.some_other_thread.counter > 10) then",
+					"print(Yes)",
+				"end",
+
+				"sleep(1)",
+			"end"
+			*/
+
+			/*
+			"when(self.some_other_thread.counter > 5)",
+				"print(Hello world)",
+			"end"
+			*/
+
+			//"print(child(player_model).AnimationComponent::time)"
+			//"print(x + y)"
+
+			/*
+			"global y:float",
+			"print(x)",
+			"x = 11",
+			"print(x)",
+			"print(y)",
+			"y = 4.0",
+			"print(y)",
+			"if (x > 10) then",
+				"print(\"x is greater than 10.\")",
+				"print(\"y is currently:\")",
+				"print(y)",
+			"end",
+			"print(\"Sleeping for `y` seconds\")",
+			"sleep(y)",
+			"print(\"Setting AnimationComponent's time value\")",
+			"child(player_model).AnimationComponent::time = 5.0",
+			"print(\"Setting `y` to animator's time value\")",
+			"y = child(player_model).AnimationComponent::time",
+			"print(\"y is currently:\")",
+			"print(y)",
+			"print(sleeping for `y` seconds again)",
+			"sleep(y)",
+			"print(\"Done.\")"
+			*/
+
+			//"child(player_model).AnimationComponent::time += 0.2 * child(player_model).AnimationComponent::time+0.1 + 0.1"
+			//"child(player_model).AnimationComponent::time += 0.2 * hash(player_model+some_name+something)"
+			//"child(player_model).AnimationComponent::time += 0.2 * thread(some+_thread+_name)::empty + 1.0"
+			//"child(player_model).AnimationComponent::time += 0.2 * child(player_model).AnimationComponent::fn()::fn()::time"
+			//"child(player_model).AnimationComponent::time += 0.2 * hash(player_model).something"
+			//"child(player_model).AnimationComponent::time += 0.2 * hash(player_model) + 1"
+			//"child(player_model).AnimationComponent::time += 0.2 * hash(player_model)+hash(player_model)"
+		]
+	},
+
 	"rules":
 	{
 		/*
@@ -27,6 +221,8 @@
 			//"state": "player_shield"
 			//"command": "ActivateCommand(child(child_name))"
 			"print": ["SHIELD"],
+			//"do": [["print(\"SHIELD\")"]],
+
 			"delay": 1
 		}
 	}

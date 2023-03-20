@@ -3,15 +3,14 @@
 #include <vector>
 #include <tuple>
 
-#include <core.hpp>
 #include <math/math.hpp>
-
-#include <engine/engine.hpp>
 
 #include <graphics/mesh.hpp>
 #include <graphics/texture.hpp>
 #include <graphics/framebuffer.hpp>
 #include <graphics/gbuffer.hpp>
+
+#include <engine/transform.hpp>
 
 #include <game/game.hpp>
 
@@ -41,6 +40,5 @@ namespace glare
 			void meta_controls();
 
 			void on_keyup(const keyboard_event_t& event) override;
-			void on_keydown(const keyboard_event_t& event) override;
 	};
 }
