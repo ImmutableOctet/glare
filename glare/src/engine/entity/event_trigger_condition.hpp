@@ -1,9 +1,12 @@
 #pragma once
 
 #include "types.hpp"
+#include "entity_descriptor_shared.hpp"
 
 #include <engine/meta/types.hpp>
+#include <engine/meta/hash.hpp>
 #include <engine/meta/indirect_meta_data_member.hpp>
+#include <engine/meta/meta_value_operator.hpp>
 
 #include <util/small_vector.hpp>
 #include <util/variant.hpp>
@@ -12,9 +15,14 @@
 #include <utility>
 #include <variant>
 #include <type_traits>
+#include <optional>
 
 namespace engine
 {
+	class EntityDescriptor;
+
+	struct MetaEvaluationContext;
+
 	// TODO: Implement compound conditions.
 	// i.e. Check against clauses/multiple data-members of a type.
 
@@ -23,12 +31,11 @@ namespace engine
 		Equal,
 		NotEqual,
 
-		// Currently unsupported:
 		LessThan,
-		LessThanOrEqualTo,
+		LessThanOrEqual,
 
 		GreaterThan,
-		GreaterThanOrEqualTo,
+		GreaterThanOrEqual,
 	};
 
 	enum class EventTriggerCompoundMethod : std::uint8_t
@@ -38,6 +45,8 @@ namespace engine
 		Or
 	};
 
+	class EventTriggerCondition;
+	class EventTriggerConditionType;
 	class EventTriggerSingleCondition;
 	class EventTriggerMemberCondition;
 	class EventTriggerCompoundCondition;
@@ -52,6 +61,7 @@ namespace engine
 	{
 		public:
 			using ComparisonMethod = EventTriggerComparisonMethod;
+			using RemoteConditionType = EntityDescriptorShared<EventTriggerCondition>;
 
 			template <typename ConditionType>
 			static inline constexpr bool has_type_introspection()
@@ -75,22 +85,39 @@ namespace engine
 				}
 			}
 
+			static const EntityDescriptor& get_descriptor(Registry& registry, Entity entity);
+			static const EntityDescriptor* try_get_descriptor(Registry& registry, Entity entity);
+
+			static const EventTriggerCondition& from_remote_condition(const EntityDescriptor& descriptor, const RemoteConditionType& condition);
+
+			static const EventTriggerConditionType* get_condition_interface(const MetaAny& condition);
+			static const EventTriggerConditionType* get_condition_interface(const MetaAny& condition, Registry& registry, Entity entity);
+
 			static ComparisonMethod get_comparison_method(std::string_view comparison_operator);
+			static ComparisonMethod get_comparison_method(std::string_view comparison_operator, bool apply_inversion);
+
+			static ComparisonMethod invert_comparison_method(ComparisonMethod comparison_method);
+
 			static MetaAny resolve_value(Registry& registry, Entity entity, const MetaAny& data, bool fallback_to_input_value=true, bool recursive=true);
+			
+			static MetaValueOperator operation_from_comparison_method(EventTriggerComparisonMethod comparison_method);
+			static std::optional<EventTriggerComparisonMethod> comparison_method_from_operation(MetaValueOperator operation);
+
 			static MetaAny get_component(const MetaType& component_type, Registry& registry, Entity entity);
 
+			// NOTE: Indirection of the `current_value` and `comparison_value` is not resolved when using this overload.
 			static bool compare(const MetaAny& current_value, const MetaAny& comparison_value, ComparisonMethod comparison_method);
 
 			// Retrieves a reference to the shared `EventTriggerConditionType` interface from an `EventTriggerCondition` variant.
 			// TODO: Look into adding `std::monostate` behavior. (Would require changing to pointer return-type)
-			template <typename ConditionVariant>
-			static const EventTriggerConditionType& get_condition_interface(const ConditionVariant& condition) // EventTriggerCondition
+			template <typename ConditionWrapper>
+			static const EventTriggerConditionType* get_condition_interface(const ConditionWrapper& condition) // EventTriggerCondition
 			{
 				const EventTriggerConditionType* out = nullptr;
 
 				util::visit
 				(
-					condition,
+					condition.value,
 
 					[&out](const EventTriggerSingleCondition& single_condition)
 					{
@@ -128,14 +155,12 @@ namespace engine
 					}
 				);
 
-				assert(out);
-
-				return *out;
+				return out;
 			}
 
 			// Visits the exact type of `condition` if said type has type-introspection abilities.
-			template <typename ConditionVariant, typename Callback>
-			static void visit_type_enabled(ConditionVariant&& condition, Callback&& callback)
+			template <typename ConditionWrapper, typename Callback>
+			static void visit_type_enabled(ConditionWrapper&& condition, Callback&& callback)
 			{
 				std::visit
 				(
@@ -147,13 +172,13 @@ namespace engine
 						}
 					},
 
-					std::forward<ConditionVariant>(condition)
+					condition.value
 				);
 			}
 
 			// Resolves the underlying type of `condition`, then wraps the object in a `MetaAny` object.
-			template <typename ConditionVariant>
-			static MetaAny opaque_condition(ConditionVariant&& condition, bool move_content=false) // EventTriggerCondition
+			template <typename ConditionWrapper>
+			static MetaAny opaque_condition(ConditionWrapper&& condition, bool move_content=false) // EventTriggerCondition
 			{
 				MetaAny out;
 
@@ -171,7 +196,7 @@ namespace engine
 
 				util::visit
 				(
-					condition,
+					condition.value,
 
 					[&capture](EventTriggerSingleCondition& single_condition)
 					{
@@ -215,53 +240,21 @@ namespace engine
 			}
 
 			// Creates a copy of `condition`, then stores the copy inside an opaque object.
-			template <typename ConditionVariant>
-			static MetaAny opaque_copy(ConditionVariant&& condition)
+			template <typename ConditionWrapper>
+			static MetaAny opaque_copy(ConditionWrapper&& condition)
 			{
 				return opaque_condition
 				(
-					ConditionVariant(std::forward<ConditionVariant>(condition)),
+					ConditionWrapper(std::forward<ConditionWrapper>(condition)),
 
 					true
 				);
 			}
 
-			inline static const EventTriggerConditionType* get_condition_interface(const MetaAny& condition)
-			{
-				using namespace entt::literals;
-
-				if (!condition)
-				{
-					return {};
-				}
-
-				const auto type = condition.type();
-
-				if (!type)
-				{
-					return {};
-				}
-
-				switch (type.id())
-				{
-					case "EventTriggerSingleCondition"_hs:
-					case "EventTriggerMemberCondition"_hs:
-					case "EventTriggerAndCondition"_hs:
-					case "EventTriggerOrCondition"_hs:
-					case "EventTriggerTrueCondition"_hs:
-					case "EventTriggerFalseCondition"_hs:
-					case "EventTriggerInverseCondition"_hs:
-						return reinterpret_cast<const EventTriggerConditionType*>(condition.data());
-					//case "EventTriggerCondition"_hs:
-				}
-
-				return {};
-			}
-
 			template <typename Callback>
-			inline static bool from_opaque_condition(const MetaAny& condition, Callback&& callback)
+			static bool from_opaque_condition(const MetaAny& condition, Callback&& callback)
 			{
-				using namespace entt::literals;
+				using namespace engine::literals;
 
 				if (!condition)
 				{
@@ -318,8 +311,25 @@ namespace engine
 				return true;
 			}
 
-			template <typename ConditionVariant, typename ...Args>
-			static bool get_condition_status(const ConditionVariant& condition, Args&&... args) // EventTriggerCondition
+			template <typename ConditionWrapper, typename Callback>
+			static void from_condition_wrapper(ConditionWrapper&& condition, Callback&& callback)
+			{
+				std::visit
+				(
+					std::forward<Callback>(callback),
+
+					condition.value
+				);
+			}
+
+			template <typename Callback>
+			static void from_remote_condition(const EntityDescriptor& descriptor, const RemoteConditionType& condition, Callback&& callback)
+			{
+				from_condition_wrapper(from_remote_condition(descriptor, condition), callback);
+			}
+
+			template <typename ConditionWrapper, typename ...Args>
+			static bool get_condition_status(const ConditionWrapper& condition, Args&&... args) // EventTriggerCondition
 			{
 				auto check_condition = [&](auto&& condition_obj)
 				{
@@ -338,7 +348,7 @@ namespace engine
 						}
 						else if constexpr (std::is_same_v<EventTriggerFalseCondition, std::decay_t<decltype(exact_condition)>>)
 						{
-							result = true;
+							result = false;
 						}
 						else
 						{
@@ -346,7 +356,7 @@ namespace engine
 						}
 					},
 
-					condition
+					condition.value
 				);
 
 				return result;
@@ -359,6 +369,9 @@ namespace engine
 			virtual bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const = 0;
 			virtual bool condition_met(const MetaAny& event_instance) const = 0;
 
+			virtual bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity, const MetaEvaluationContext& context) const = 0;
+			virtual bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity, const MetaEvaluationContext& context) const = 0;
+
 			virtual EventTriggerCompoundMethod compound_method() const = 0;
 
 			template <typename ...Args>
@@ -366,17 +379,53 @@ namespace engine
 			{
 				return condition_met(std::forward<Args>(args)...);
 			}
+
+			bool operator==(const EventTriggerConditionType&) const noexcept = default;
+			bool operator!=(const EventTriggerConditionType&) const noexcept = default;
+
+			/*
+			inline bool operator==(const EventTriggerConditionType& value) const noexcept
+			{
+				return (&value == this);
+			}
+
+			inline bool operator!=(const EventTriggerConditionType& value) const noexcept
+			{
+				return !operator==(value);
+			}
+			*/
 		protected:
-			// Default implementation of most explicit form of `condition_met`.
-			// (Primarily responsible for resolving indirection from `comparison_value`)
-			// 
-			// Calls virtual `condition_met(event_instance, comparison_value)` method internally.
-			bool condition_met_impl(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const;
+			// Overload added for generic programming compatibility.
+			static const EntityDescriptor& get_descriptor(Registry& registry, Entity entity, const MetaEvaluationContext& context);
+
+			// Overload added for generic programming compatibility.
+			static const EntityDescriptor* try_get_descriptor(Registry& registry, Entity entity, const MetaEvaluationContext& context);
+
+			// Overload added for generic programming compatibility.
+			static MetaAny get_component(const MetaType& component_type, Registry& registry, Entity entity, const MetaEvaluationContext& context);
+
+			// This overload is used internally; use the non-template version instead.
+			template <typename ...Args>
+			static bool compare(const MetaAny& current_value, const MetaAny& comparison_value, ComparisonMethod comparison_method, Args&&... args);
 	};
 
 	class EventTriggerSingleCondition : public EventTriggerConditionType
 	{
 		public:
+			EventTriggerSingleCondition
+			(
+				MetaAny&& comparison_value,
+				ComparisonMethod comparison_method=ComparisonMethod::Equal,
+				MetaTypeID event_type_id={}
+			);
+
+			EventTriggerSingleCondition
+			(
+				MetaAny&& comparison_value,
+				ComparisonMethod comparison_method,
+				const MetaType& event_type
+			);
+
 			EventTriggerSingleCondition
 			(
 				MetaSymbolID event_type_member,
@@ -393,19 +442,24 @@ namespace engine
 				MetaSymbolID event_type_member,
 				MetaAny&& comparison_value,
 				ComparisonMethod comparison_method,
-				MetaType event_type
+				const MetaType& event_type
 			);
 
+			bool operator==(const EventTriggerSingleCondition&) const noexcept = default;
+			bool operator!=(const EventTriggerSingleCondition&) const noexcept = default;
+
 			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const override;
+			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity, const MetaEvaluationContext& context) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity, const MetaEvaluationContext& context) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const override;
 			bool condition_met(const MetaAny& event_instance) const override;
 
-			bool condition_met_as_component(const MetaType& component_type, const MetaAny& comparison_value, Registry& registry, Entity entity) const;
-
 			EventTriggerCompoundMethod compound_method() const override;
 
-			MetaAny get_member_value(const MetaAny& event_instance) const;
+			MetaAny get_member_value(const MetaAny& event_instance, bool resolve_underlying=true) const;
+			MetaAny get_member_value(const MetaAny& event_instance, Registry& registry, Entity entity, bool resolve_underlying=true) const;
+			MetaAny get_member_value(const MetaAny& event_instance, Registry& registry, Entity entity, const MetaEvaluationContext& context, bool resolve_underlying=true) const;
 
 			inline MetaSymbolID get_event_type_member() const
 			{
@@ -449,6 +503,12 @@ namespace engine
 			}
 
 			template <typename Callback>
+			inline std::size_t enumerate_conditions(const EntityDescriptor& descriptor, Callback&& callback, bool recursive=true) const
+			{
+				return enumerate_conditions(std::forward<Callback>(callback), recursive);
+			}
+
+			template <typename Callback>
 			inline bool enumerate_types(Callback&& callback, bool recursive=true) const
 			{
 				if constexpr (std::is_invocable_r_v<bool, Callback, MetaTypeID>)
@@ -461,6 +521,12 @@ namespace engine
 
 					return true;
 				}
+			}
+
+			template <typename Callback>
+			inline bool enumerate_types(const EntityDescriptor& descriptor, Callback&& callback, bool recursive=true) const
+			{
+				return enumerate_types(std::forward<Callback>(callback), recursive);
 			}
 
 			template <typename Callback>
@@ -486,6 +552,12 @@ namespace engine
 				return 0;
 			}
 
+			template <typename Callback>
+			inline std::size_t enumerate_type_compatible(const EntityDescriptor& descriptor, MetaTypeID type_id, Callback&& callback, bool recursive=true, bool allow_true_condition=true) const
+			{
+				return enumerate_type_compatible(type_id, std::forward<Callback>(callback), recursive, allow_true_condition);
+			}
+
 			inline std::size_t count_type_compatible(MetaTypeID type_id, bool recursive=true, bool allow_true_condition=true) const
 			{
 				return enumerate_type_compatible
@@ -500,19 +572,48 @@ namespace engine
 				);
 			}
 
+			inline std::size_t count_type_compatible(const EntityDescriptor& descriptor, MetaTypeID type_id, bool recursive=true, bool allow_true_condition=true) const
+			{
+				return count_type_compatible(type_id, recursive, allow_true_condition);
+			}
+
 			inline bool has_type_compatible(MetaTypeID type_id, bool recursive=true, bool allow_true_condition=true) const
 			{
 				return (count_type_compatible(type_id, recursive, allow_true_condition) > 0);
 			}
+
+			inline bool has_type_compatible(const EntityDescriptor& descriptor, MetaTypeID type_id, bool recursive=true, bool allow_true_condition=true) const
+			{
+				return has_type_compatible(type_id, recursive, allow_true_condition);
+			}
+		private:
+			template <typename ...Args>
+			bool condition_met_as_component(const MetaType& component_type, const MetaAny& comparison_value, Args&&... args) const;
+
+			template <typename ...Args>
+			MetaAny get_indirect_member_value_impl(const MetaAny& event_instance, bool resolve_underlying, Args&&... args) const;
+
+			// Default implementation of most explicit form of `condition_met`.
+			// (Primarily responsible for resolving indirection from `comparison_value`)
+			template <typename ...Args>
+			bool condition_met_impl(const MetaAny& event_instance, const MetaAny& comparison_value, Args&&... args) const;
+
+			template <typename ...Args>
+			bool condition_met_comparison_impl(const MetaAny& event_instance, const MetaAny& comparison_value, Args&&... args) const;
+
+			template <typename ...Args>
+			bool standalone_boolean_result(Args&&... args) const;
 		protected:
-			MetaSymbolID event_type_member;
-			MetaAny comparison_value;
+			MetaSymbolID event_type_member = {};
+			MetaAny comparison_value = {};
 
 			// NOTE: Optional; uses type of event instance if not specified.
 			MetaTypeID event_type_id = {};
 
-			ComparisonMethod comparison_method;
+			ComparisonMethod comparison_method = ComparisonMethod::Equal;
+
 			bool fallback_to_component : 1 = true;
+			bool fallback_to_boolean_evaluation : 1 = true;
 	};
 
 	class EventTriggerMemberCondition : public EventTriggerConditionType
@@ -525,11 +626,15 @@ namespace engine
 				ComparisonMethod comparison_method=ComparisonMethod::Equal
 			);
 
+			bool operator==(const EventTriggerMemberCondition&) const noexcept = default;
+			bool operator!=(const EventTriggerMemberCondition&) const noexcept = default;
+
 			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const override;
+			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity, const MetaEvaluationContext& context) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const override;
 			bool condition_met(const MetaAny& event_instance) const override;
-
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity, const MetaEvaluationContext& context) const override;
 
 			EventTriggerCompoundMethod compound_method() const override;
 
@@ -548,6 +653,10 @@ namespace engine
 				return component_member.data_member.data_member_id;
 			}
 
+			// TODO: Determine if introspection functions make sense for this type. (see `has_type_introspection`)
+		private:
+			template <typename ...Args>
+			bool condition_met_impl(const MetaAny& event_instance, const MetaAny& comparison_value, Args&&... args) const;
 		protected:
 			// This field effectively acts as a path and 'accessor'
 			// to the component data member we're referencing.
@@ -561,16 +670,16 @@ namespace engine
 	class EventTriggerCompoundCondition : public EventTriggerConditionType
 	{
 		public:
-			using ConditionContainer = util::small_vector<MetaAny, 2>;
+			using ConditionContainer = util::small_vector<RemoteConditionType, 4>; // 2 // 8 // MetaAny
 
-			template <typename ConditionVariant>
-			static const EventTriggerCompoundCondition* get_compound_condition_interface(const ConditionVariant& condition) // EventTriggerCondition
+			template <typename ConditionWrapper>
+			static const EventTriggerCompoundCondition* get_compound_condition_interface(const ConditionWrapper& condition) // EventTriggerCondition
 			{
 				const EventTriggerCompoundCondition* out = nullptr;
 
 				util::visit
 				(
-					condition,
+					condition.value,
 
 					[](const EventTriggerSingleCondition& single_condition) {},
 					[](const EventTriggerMemberCondition& member_condition) {},
@@ -592,61 +701,13 @@ namespace engine
 				return out;
 			}
 
-			std::size_t add_condition(EventTriggerSingleCondition&& condition_in);
-			std::size_t add_condition(EventTriggerMemberCondition&& condition_in);
-			std::size_t add_condition(EventTriggerAndCondition&& condition_in);
-			std::size_t add_condition(EventTriggerOrCondition&& condition_in);
-			std::size_t add_condition(EventTriggerTrueCondition&& condition_in);
-			std::size_t add_condition(EventTriggerFalseCondition&& condition_in);
-			std::size_t add_condition(EventTriggerInverseCondition&& condition_in);
+			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const override;
+			bool condition_met(const MetaAny& event_instance) const override;
 
-			template <typename ConditionVariant>
-			std::size_t add_condition(ConditionVariant&& condition_in)
-			{
-				std::size_t result = 0;
+			std::size_t add_condition(RemoteConditionType&& condition_in);
 
-				util::visit
-				(
-					std::move(condition_in),
-
-					[this, &result](EventTriggerSingleCondition&& single_condition)
-					{
-						result = this->add_condition(std::move(single_condition));
-					},
-
-					[this, &result](EventTriggerMemberCondition&& member_condition)
-					{
-						result = this->add_condition(std::move(member_condition));
-					},
-
-					[this, &result](EventTriggerAndCondition&& and_condition)
-					{
-						result = this->add_condition(std::move(and_condition));
-					},
-
-					[this, &result](EventTriggerOrCondition&& or_condition)
-					{
-						result = this->add_condition(std::move(or_condition));
-					},
-
-					[this, &result](EventTriggerTrueCondition&& true_condition)
-					{
-						result = this->add_condition(std::move(true_condition));
-					},
-
-					[this, &result](EventTriggerFalseCondition&& false_condition)
-					{
-						result = this->add_condition(std::move(false_condition));
-					},
-
-					[this, &result](EventTriggerInverseCondition&& inverse_condition)
-					{
-						result = this->add_condition(std::move(inverse_condition));
-					}
-				);
-
-				return result;
-			}
+			std::size_t size() const;
+			bool empty() const;
 
 			inline const ConditionContainer& get_conditions() const
 			{
@@ -659,19 +720,20 @@ namespace engine
 			}
 
 			template <typename Callback>
-			inline std::size_t enumerate_conditions(Callback&& callback, bool recursive=true) const
+			inline std::size_t enumerate_conditions(const EntityDescriptor& descriptor, Callback&& callback, bool recursive=true) const
 			{
 				std::size_t condition_count = 0;
 
-				for (const auto& opaque_condition : conditions)
+				for (const auto& remote_condition : conditions)
 				{
 					bool should_break = false;
 
-					from_opaque_condition
+					from_remote_condition
 					(
-						opaque_condition,
+						descriptor,
+						remote_condition,
 
-						[&callback, &condition_count, recursive, &should_break](const auto& condition)
+						[&descriptor, &callback, &condition_count, recursive, &should_break](const auto& condition)
 						{
 							if constexpr (std::is_base_of_v<EventTriggerCompoundCondition, std::decay_t<decltype(condition)>>)
 							{
@@ -680,7 +742,7 @@ namespace engine
 									return;
 								}
 
-								condition_count += condition.enumerate_conditions(callback, recursive);
+								condition_count += condition.enumerate_conditions(descriptor, callback, recursive);
 							}
 							else if constexpr (std::is_invocable_r_v<bool, Callback, decltype(condition)>)
 							{
@@ -712,15 +774,17 @@ namespace engine
 			}
 
 			template <typename Callback>
-			inline bool enumerate_types(Callback&& callback, bool recursive=true) const
+			inline bool enumerate_types(const EntityDescriptor& descriptor, Callback&& callback, bool recursive=true) const
 			{
 				enumerate_conditions
 				(
-					[&callback, recursive](const auto& condition)
+					descriptor,
+
+					[&descriptor, &callback, recursive](const auto& condition)
 					{
-						auto on_type_enabled = [&callback, recursive](const auto& condition)
+						auto on_type_enabled = [&descriptor, &callback, recursive](const auto& condition)
 						{
-							return condition.enumerate_types(callback, recursive);
+							return condition.enumerate_types(descriptor, callback, recursive);
 						};
 
 						if constexpr (std::is_base_of_v<EventTriggerCompoundCondition, std::decay_t<decltype(condition)>>)
@@ -751,13 +815,15 @@ namespace engine
 			}
 
 			template <typename Callback>
-			inline std::size_t enumerate_type_compatible(MetaTypeID type_id, Callback&& callback, bool recursive=true, bool allow_true_condition=true) const
+			inline std::size_t enumerate_type_compatible(const EntityDescriptor& descriptor, MetaTypeID type_id, Callback&& callback, bool recursive=true, bool allow_true_condition=true) const
 			{
 				std::size_t type_compatible = 0;
 
 				enumerate_conditions
 				(
-					[type_id, recursive, allow_true_condition, &callback, &type_compatible](const auto& condition) -> bool
+					descriptor,
+
+					[&descriptor, type_id, recursive, allow_true_condition, &callback, &type_compatible](const auto& condition) -> bool
 					{
 						auto on_match = [&callback, &type_compatible](const auto& condition) -> bool
 						{
@@ -794,7 +860,7 @@ namespace engine
 						}
 						else if constexpr (std::is_base_of_v<EventTriggerInverseCondition, std::decay_t<decltype(condition)>>)
 						{
-							if (condition.enumerate_type_compatible(type_id, callback, recursive, allow_true_condition) > 0)
+							if (condition.enumerate_type_compatible(descriptor, type_id, callback, recursive, allow_true_condition) > 0)
 							{
 								return on_match(condition);
 							}
@@ -809,10 +875,11 @@ namespace engine
 				return type_compatible;
 			}
 
-			inline std::size_t count_type_compatible(MetaTypeID type_id, bool recursive=true, bool allow_true_condition=true) const
+			inline std::size_t count_type_compatible(const EntityDescriptor& descriptor, MetaTypeID type_id, bool recursive=true, bool allow_true_condition=true) const
 			{
 				return enumerate_type_compatible
 				(
+					descriptor,
 					type_id,
 
 					// Empty lambda; no additional operations needed.
@@ -822,9 +889,9 @@ namespace engine
 				);
 			}
 
-			inline bool has_type_compatible(MetaTypeID type_id, bool recursive=true, bool allow_true_condition=true) const
+			inline bool has_type_compatible(const EntityDescriptor& descriptor, MetaTypeID type_id, bool recursive=true, bool allow_true_condition=true) const
 			{
-				return (count_type_compatible(type_id, recursive, allow_true_condition) > 0);
+				return (count_type_compatible(descriptor, type_id, recursive, allow_true_condition) > 0);
 			}
 		protected:
 			ConditionContainer conditions;
@@ -833,30 +900,56 @@ namespace engine
 	class EventTriggerAndCondition : public EventTriggerCompoundCondition
 	{
 		public:
+			bool operator==(const EventTriggerAndCondition&) const noexcept = default;
+			bool operator!=(const EventTriggerAndCondition&) const noexcept = default;
+
 			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const override;
+			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity, const MetaEvaluationContext& context) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const override;
-			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const override;
-			bool condition_met(const MetaAny& event_instance) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity, const MetaEvaluationContext& context) const override;
 
 			EventTriggerCompoundMethod compound_method() const override;
+		private:
+			template <typename ...Args>
+			bool implicit_condition_met_impl(const MetaAny& event_instance, Args&&... args) const;
+
+			template <typename ...Args>
+			bool explicit_condition_met_impl(const MetaAny& event_instance, const MetaAny& comparison_value, Args&&... args) const;
 	};
 
 	class EventTriggerOrCondition : public EventTriggerCompoundCondition
 	{
 		public:
+			bool operator==(const EventTriggerOrCondition&) const noexcept = default;
+			bool operator!=(const EventTriggerOrCondition&) const noexcept = default;
+
 			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const override;
+			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity, const MetaEvaluationContext& context) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const override;
-			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const override;
-			bool condition_met(const MetaAny& event_instance) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity, const MetaEvaluationContext& context) const override;
 
 			EventTriggerCompoundMethod compound_method() const override;
+		private:
+			template <typename ...Args>
+			bool implicit_condition_met_impl(const MetaAny& event_instance, Args&&... args) const;
+
+			template <typename ...Args>
+			bool explicit_condition_met_impl(const MetaAny& event_instance, const MetaAny& comparison_value, Args&&... args) const;
 	};
 
 	class EventTriggerTrueCondition : public EventTriggerConditionType
 	{
 		public:
+			inline bool operator==(const EventTriggerTrueCondition&) const noexcept { return true; }
+			inline bool operator!=(const EventTriggerTrueCondition&) const noexcept { return true; }
+
+			inline bool operator==(const EventTriggerFalseCondition&) const noexcept { return false; }
+			inline bool operator!=(const EventTriggerFalseCondition&) const noexcept { return false; }
+
 			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const override;
+			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity, const MetaEvaluationContext& context) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity, const MetaEvaluationContext& context) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const override;
 			bool condition_met(const MetaAny& event_instance) const override;
 
@@ -866,8 +959,16 @@ namespace engine
 	class EventTriggerFalseCondition : public EventTriggerConditionType
 	{
 		public:
+			inline bool operator==(const EventTriggerFalseCondition&) const noexcept { return true; }
+			inline bool operator!=(const EventTriggerFalseCondition&) const noexcept { return true; }
+
+			inline bool operator==(const EventTriggerTrueCondition&) const noexcept { return false; }
+			inline bool operator!=(const EventTriggerTrueCondition&) const noexcept { return false; }
+
 			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const override;
+			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity, const MetaEvaluationContext& context) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity, const MetaEvaluationContext& context) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const override;
 			bool condition_met(const MetaAny& event_instance) const override;
 
@@ -878,16 +979,22 @@ namespace engine
 	class EventTriggerInverseCondition : public EventTriggerConditionType
 	{
 		public:
-			EventTriggerInverseCondition(MetaAny&& inv_condition);
+			EventTriggerInverseCondition(RemoteConditionType&& inv_condition);
+
+			bool operator==(const EventTriggerInverseCondition&) const noexcept = default;
+			bool operator!=(const EventTriggerInverseCondition&) const noexcept = default;
 
 			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const override;
+			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity, const MetaEvaluationContext& context) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity, const MetaEvaluationContext& context) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const override;
 			bool condition_met(const MetaAny& event_instance) const override;
 
 			EventTriggerCompoundMethod compound_method() const override;
 
-			const EventTriggerConditionType& get_inverse() const;
+			const EventTriggerConditionType& get_inverse(const EntityDescriptor& descriptor) const;
+			const EventTriggerConditionType& get_inverse(Registry& registry, Entity entity) const;
 
 			// Interface added for compatibility with compound condition types:
 			template <typename Callback>
@@ -909,19 +1016,26 @@ namespace engine
 			}
 
 			template <typename Callback>
-			inline bool enumerate_types(Callback&& callback, bool recursive=true) const
+			inline std::size_t enumerate_conditions(const EntityDescriptor& descriptor, Callback&& callback, bool recursive=true) const
+			{
+				return enumerate_conditions(std::forward<Callback>(callback), recursive);
+			}
+
+			template <typename Callback>
+			inline bool enumerate_types(const EntityDescriptor& descriptor, Callback&& callback, bool recursive=true) const
 			{
 				bool result = false;
 
-				from_opaque_condition
+				from_remote_condition
 				(
+					descriptor,
 					inv_condition,
 
-					[&callback, recursive, &result](const auto& condition)
+					[&descriptor, &callback, recursive, &result](const auto& condition)
 					{
 						if constexpr (has_type_introspection<std::decay_t<decltype(condition)>>())
 						{
-							result = condition.enumerate_types(callback, recursive);
+							result = condition.enumerate_types(descriptor, callback, recursive);
 						}
 					}
 				);
@@ -930,19 +1044,20 @@ namespace engine
 			}
 
 			template <typename Callback>
-			inline std::size_t enumerate_type_compatible(MetaTypeID type_id, Callback&& callback, bool recursive=true, bool allow_true_condition=true) const
+			inline std::size_t enumerate_type_compatible(const EntityDescriptor& descriptor, MetaTypeID type_id, Callback&& callback, bool recursive=true, bool allow_true_condition=true) const
 			{
 				std::size_t result = 0;
 
-				from_opaque_condition
+				from_remote_condition
 				(
+					descriptor,
 					inv_condition,
 
-					[type_id, &callback, recursive, allow_true_condition, &result](const auto& condition)
+					[&descriptor, type_id, &callback, recursive, allow_true_condition, &result](const auto& condition)
 					{
 						if constexpr (has_type_introspection<std::decay_t<decltype(condition)>>())
 						{
-							result = condition.enumerate_type_compatible(type_id, callback, recursive, allow_true_condition);
+							result = condition.enumerate_type_compatible(descriptor, type_id, callback, recursive, allow_true_condition);
 						}
 					}
 				);
@@ -950,19 +1065,20 @@ namespace engine
 				return result;
 			}
 
-			inline std::size_t count_type_compatible(MetaTypeID type_id, bool recursive=true, bool allow_true_condition=true) const
+			inline std::size_t count_type_compatible(const EntityDescriptor& descriptor, MetaTypeID type_id, bool recursive=true, bool allow_true_condition=true) const
 			{
 				std::size_t result = 0;
 
-				from_opaque_condition
+				from_remote_condition
 				(
+					descriptor,
 					inv_condition,
 
-					[type_id, recursive, allow_true_condition, &result](const auto& condition)
+					[&descriptor, type_id, recursive, allow_true_condition, &result](const auto& condition)
 					{
 						if constexpr (has_type_introspection<std::decay_t<decltype(condition)>>())
 						{
-							result = condition.count_type_compatible(type_id, recursive, allow_true_condition);
+							result = condition.count_type_compatible(descriptor, type_id, recursive, allow_true_condition);
 						}
 					}
 				);
@@ -970,19 +1086,20 @@ namespace engine
 				return result;
 			}
 
-			inline bool has_type_compatible(MetaTypeID type_id, bool recursive=true, bool allow_true_condition=true) const
+			inline bool has_type_compatible(const EntityDescriptor& descriptor, MetaTypeID type_id, bool recursive=true, bool allow_true_condition=true) const
 			{
 				bool result = false;
 
-				from_opaque_condition
+				from_remote_condition
 				(
+					descriptor,
 					inv_condition,
 
-					[type_id, recursive, allow_true_condition, &result](const auto& condition)
+					[&descriptor, type_id, recursive, allow_true_condition, &result](const auto& condition)
 					{
 						if constexpr (has_type_introspection<std::decay_t<decltype(condition)>>())
 						{
-							result = condition.has_type_compatible(type_id, recursive, allow_true_condition);
+							result = condition.has_type_compatible(descriptor, type_id, recursive, allow_true_condition);
 						}
 					}
 				);
@@ -991,12 +1108,12 @@ namespace engine
 			}
 
 		protected:
-			MetaAny inv_condition;
+			RemoteConditionType inv_condition;
 	};
 
 	// Variant type used to represent an event-trigger condition held by an external type. (e.g. `EntityStateRule`)
 	// TODO: Look into adding `std::monostate` option here. (Currently using `std::optional` to wrap 'no condition' scenario)
-	using EventTriggerCondition = std::variant
+	using EventTriggerConditionVariant = std::variant
 	<
 		EventTriggerSingleCondition,
 		EventTriggerMemberCondition,
@@ -1006,4 +1123,53 @@ namespace engine
 		EventTriggerFalseCondition,
 		EventTriggerInverseCondition
 	>;
+
+	class EventTriggerCondition
+	{
+		public:
+			using ValueType = EventTriggerConditionVariant;
+
+			ValueType value;
+
+			EventTriggerCondition(const ValueType& value)
+				: value(value) {}
+
+			EventTriggerCondition(ValueType&& value) noexcept
+				: value(std::move(value)) {}
+
+			EventTriggerCondition(const EventTriggerCondition&) = default;
+			EventTriggerCondition(EventTriggerCondition&&) noexcept = default;
+
+			EventTriggerCondition& operator=(const EventTriggerCondition&) = default;
+			EventTriggerCondition& operator=(EventTriggerCondition&&) noexcept = default;
+
+			EventTriggerCondition& operator=(ValueType&& value_in) noexcept
+			{
+				value = std::move(value_in);
+
+				return *this;
+			}
+
+			EventTriggerCondition& operator=(const ValueType& value_in)
+			{
+				value = value_in;
+
+				return *this;
+			}
+
+			inline auto index() const { return value.index(); }
+
+			bool operator==(const EventTriggerCondition&) const noexcept = default;
+			bool operator!=(const EventTriggerCondition&) const noexcept = default;
+
+			inline bool operator==(const ValueType& value_in) const noexcept
+			{
+				return (value == value_in);
+			}
+
+			inline bool operator!=(const ValueType& value_in) const noexcept
+			{
+				return (value != value_in);
+			}
+	};
 }
