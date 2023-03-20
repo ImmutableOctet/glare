@@ -1,87 +1,131 @@
 #include "serial.hpp"
 #include "serial_impl.hpp"
+
 #include "entity_descriptor.hpp"
+#include "entity_descriptor_shared.hpp"
+#include "entity_target.hpp"
+#include "entity_state.hpp"
+#include "entity_state_rule.hpp"
+#include "entity_state_collection.hpp"
+#include "entity_thread_description.hpp"
+#include "entity_thread_builder.hpp"
+#include "event_trigger_condition.hpp"
+#include "meta_description.hpp"
 
 #include <engine/meta/meta.hpp>
-#include <engine/meta/meta_description.hpp>
+#include <engine/meta/serial.hpp>
 #include <engine/meta/meta_type_descriptor.hpp>
 #include <engine/meta/meta_type_descriptor_flags.hpp>
-#include <engine/meta/parsing_context.hpp>
+#include <engine/meta/meta_type_resolution_context.hpp>
+#include <engine/meta/meta_variable.hpp>
+#include <engine/meta/meta_variable_context.hpp>
+#include <engine/meta/meta_data_member.hpp>
+#include <engine/meta/indirect_meta_data_member.hpp>
 
 #include <util/algorithm.hpp>
 #include <util/string.hpp>
+#include <util/parse.hpp>
+#include <util/variant.hpp>
+#include <util/io.hpp>
 
-#include <regex>
-#include <charconv>
+#include <algorithm>
+#include <chrono>
+#include <stdexcept>
 #include <type_traits>
+#include <tuple>
+#include <array>
+#include <memory>
+#include <utility>
+#include <charconv>
+
+// TODO: Change to better regular expression library.
+#include <regex>
 
 // Debugging related:
+#include <util/format.hpp>
 #include <util/log.hpp>
 
 namespace engine
 {
-	std::optional<Timer::Duration> parse_time_duration(const std::string& time_expr) // std::string_view
+	// NOTE: Used internally by trigger-condition routines.
+	static std::tuple<MetaTypeID, entt::meta_data>
+	resolve_member(const entt::meta_type& type, std::string_view member_name)
 	{
-		using namespace entt::literals;
-
-		const auto time_rgx = std::regex("([\\d\\.]+)\\s*(.*)"); // (d|h|m|s|ms|us)?
-
-		if (std::smatch rgx_match; std::regex_search(time_expr.begin(), time_expr.end(), rgx_match, time_rgx))
+		if (member_name.empty())
 		{
-			const auto numeric_str = util::match_view(time_expr, rgx_match, 1);
+			return resolve_data_member(type, true, "entity", "target", "button", "self", "value", "name");
+		}
+		
+		return resolve_data_member(type, true, member_name);
+	}
 
-			if (const auto number = util::from_string<Timer::DurationRaw>(numeric_str))
+	static std::string get_embedded_name(const util::json& data)
+	{
+		if (auto name_it = data.find("name"); name_it != data.end())
+		{
+			return name_it->get<std::string>();
+		}
+
+		return {};
+	}
+
+	static std::string default_state_name_from_path(const std::filesystem::path& state_path)
+	{
+		auto filename = state_path.filename(); filename.replace_extension();
+
+		// An embedded name couldn't be found; use the state's filename instead.
+		return filename.string();
+	}
+
+	static std::optional<EntityStateIndex> get_default_state_index(const EntityDescriptor& descriptor, const util::json& data)
+	{
+		if (auto default_state = data.find("default_state"); default_state != data.end())
+		{
+			switch (default_state->type())
 			{
-				const auto time_symbol = util::match_view(time_expr, rgx_match, 2);
+				case util::json::value_t::string:
+				{
+					auto state_name = default_state->get<std::string>();
+					auto state_name_hash = hash(state_name).value();
 
-				return Timer::to_duration(*number, time_symbol);
+					if (auto index = descriptor.get_state_index(state_name_hash))
+					{
+						return *index;
+					}
+
+					break;
+				}
+
+				case util::json::value_t::number_integer:
+				case util::json::value_t::number_unsigned:
+				{
+					auto index = default_state->get<EntityStateIndex>();
+
+					if (index < descriptor.states.size())
+					{
+						return index;
+					}
+
+					break;
+				}
 			}
 		}
 
 		return std::nullopt;
 	}
 
-	// TODO: Optimize. (Temporary string generated due to limitation of `std::regex`)
-	std::optional<Timer::Duration> parse_time_duration(std::string_view time_expr)
-	{
-		return parse_time_duration(std::string(time_expr));
-	}
-
-	std::optional<Timer::Duration> parse_time_duration(const util::json& time_data)
-	{
-		switch (time_data.type())
-		{
-			case util::json::value_t::string:
-				if (const auto timer_expr = time_data.get<std::string>(); !timer_expr.empty())
-				{
-					return parse_time_duration(timer_expr);
-				}
-
-				break;
-
-			case util::json::value_t::number_float:
-				return Timer::to_duration(time_data.get<float>()); // double
-
-			case util::json::value_t::number_integer:
-			case util::json::value_t::number_unsigned:
-				return Timer::Seconds(time_data.get<std::uint32_t>()); // std::uint64_t
-		}
-
-		return std::nullopt;
-	}
-
-	std::tuple<std::string_view, std::ptrdiff_t>
-	parse_event_type(const std::string& event_type, std::ptrdiff_t offset) // std::string_view
+	std::tuple<std::string_view, std::size_t>
+	parse_event_type(const std::string& event_type, std::size_t offset) // std::string_view
 	{
 		const auto event_type_rgx = std::regex("([^\\s\\:\\.\\-\\>\\&\\|\\(\\)]+)\\s*([^\\s\\&\\|\\(\\)]+)?");
 
-		if (std::smatch rgx_match; std::regex_search((event_type.begin() + offset), event_type.end(), rgx_match, event_type_rgx))
+		if (std::smatch rgx_match; std::regex_search((event_type.begin() + static_cast<std::ptrdiff_t>(offset)), event_type.end(), rgx_match, event_type_rgx))
 		{
-			auto updated_offset = (rgx_match.suffix().first - event_type.begin());
+			auto updated_offset = static_cast<std::size_t>(rgx_match.suffix().first - event_type.begin());
 
 			auto parsed_view = std::string_view
 			{
-				(event_type.data() + offset),
+				(event_type.data() + static_cast<std::ptrdiff_t>(offset)),
 				static_cast<std::size_t>(updated_offset)
 			};
 
@@ -151,16 +195,48 @@ namespace engine
 		return std::nullopt;
 	}
 
+	std::string resolve_state_name(const util::json& state_data, const std::filesystem::path& state_path)
+	{
+		// Check for a top-level `name` field in the imported state:
+		if (auto name = get_embedded_name(state_data); !name.empty())
+		{
+			// Use the embedded name.
+			return name;
+		}
+
+		return default_state_name_from_path(state_path);
+	}
+
+	std::tuple<std::filesystem::path, std::filesystem::path, util::json>
+	load_state_data(std::string_view state_path_raw, const std::filesystem::path& base_path, const EntityFactoryContext* opt_context)
+	{
+		auto state_path = std::filesystem::path(state_path_raw);
+
+		if (opt_context)
+		{
+			state_path = opt_context->resolve_reference(state_path, base_path);
+		}
+
+		auto state_base_path = state_path.parent_path();
+
+		// TODO: Optimize.
+		auto state_data = util::load_json(state_path);
+
+		return { std::move(state_base_path), std::move(state_path), std::move(state_data) };
+	}
+
 	std::size_t process_update_action
 	(
+		EntityDescriptor& descriptor,
 		EntityStateUpdateAction& action_out,
 		const util::json& update_entry,
-		const ParsingContext* opt_parsing_context
+		const MetaParsingContext& opt_parsing_context
 	)
 	{
 		const auto result = process_component_list
 		(
-			*action_out.updated_components,
+			descriptor,
+			action_out.updated_components,
 			update_entry, {}, // { .force_field_assignment = true },
 			opt_parsing_context,
 			true, true, true,
@@ -177,11 +253,12 @@ namespace engine
 
 	std::size_t process_component_list
 	(
+		EntityDescriptor& descriptor,
 		MetaDescription& components_out, // EntityDescriptor::TypeInfo&
 		const util::json& components,
 
 		const MetaTypeDescriptorFlags& shared_component_flags,
-		const ParsingContext* opt_parsing_context,
+		const MetaParsingContext& opt_parsing_context,
 
 		bool allow_new_entry,
 		bool allow_default_entries,
@@ -193,7 +270,7 @@ namespace engine
 		// Shorthand for `process_component`.
 		auto as_component =
 		[
-			&components_out, &shared_component_flags, &opt_parsing_context,
+			&descriptor, &components_out, &shared_component_flags, &opt_parsing_context,
 			allow_new_entry, allow_default_entries, forward_entry_update_condition_to_flags,
 			ignore_special_symbols
 		]
@@ -201,6 +278,7 @@ namespace engine
 		{
 			return process_component
 			(
+				descriptor,
 				components_out,
 
 				component_declaration,
@@ -257,6 +335,7 @@ namespace engine
 
 	bool process_component
 	(
+		EntityDescriptor& descriptor,
 		MetaDescription& components_out, // EntityDescriptor::TypeInfo&
 
 		// TODO: Change to `std::string_view` (`std::regex` limitation)
@@ -265,7 +344,7 @@ namespace engine
 
 		const MetaTypeDescriptorFlags& component_flags,
 
-		const ParsingContext* opt_parsing_context,
+		const MetaParsingContext& opt_parsing_context,
 
 		bool allow_new_entry,
 		bool allow_default_entries,
@@ -287,8 +366,10 @@ namespace engine
 
 		const bool force_entry_update = ((!allow_new_entry) && (!allow_default_entries));
 
-		auto component_type = (opt_parsing_context)
-			? opt_parsing_context->get_component_type(component_name)
+		const auto opt_type_context = opt_parsing_context.get_type_context();
+
+		auto component_type = (opt_type_context)
+			? opt_type_context->get_component_type(component_name)
 			: meta_type_from_name(component_name)
 		;
 
@@ -313,7 +394,8 @@ namespace engine
 				component_type, component_content,
 				constructor_arg_count,
 				flags,
-				opt_parsing_context
+				opt_parsing_context,
+				&(descriptor.get_shared_storage())
 			);
 		};
 
@@ -323,9 +405,11 @@ namespace engine
 		auto it = std::find_if
 		(
 			loaded_components.begin(), loaded_components.end(),
-			[&component_type](const MetaTypeDescriptor& entry) -> bool
+			[&descriptor, &component_type](const auto& existing_entry) -> bool
 			{
-				if (entry.get_type_id() == component_type.id())
+				auto& existing_component = existing_entry.get(descriptor);
+
+				if (existing_component.get_type_id() == component_type.id())
 				{
 					return true;
 				}
@@ -342,11 +426,13 @@ namespace engine
 			}
 
 			// There's no existing instance, and we're allowed 
-			loaded_components.emplace_back(make_component());
+			loaded_components.emplace_back(descriptor.allocate(make_component()));
 		}
 		else if (allow_entry_update || force_entry_update)
 		{
-			it->set_variables(make_component());
+			auto& existing = it->get(descriptor);
+
+			existing.set_variables(make_component());
 		}
 		else
 		{
@@ -355,7 +441,9 @@ namespace engine
 				return false;
 			}
 
-			*it = make_component();
+			auto& existing = it->get(descriptor);
+
+			existing = make_component();
 		}
 
 		return true;
@@ -369,11 +457,14 @@ namespace engine
 		std::optional<std::uint8_t> constructor_arg_count, // SmallSize
 
 		const MetaTypeDescriptorFlags& component_flags,
-		const ParsingContext* opt_parsing_context
+		const MetaParsingContext& opt_parsing_context,
+		SharedStorageInterface* opt_storage
 	)
 	{
-		auto component_type = (opt_parsing_context)
-			? opt_parsing_context->get_component_type(component_name)
+		const auto opt_type_context = opt_parsing_context.get_type_context();
+
+		auto component_type = (opt_type_context)
+			? opt_type_context->get_component_type(component_name)
 			: meta_type_from_name(component_name)
 		;
 
@@ -390,7 +481,8 @@ namespace engine
 			data,
 			constructor_arg_count,
 			component_flags,
-			opt_parsing_context
+			opt_parsing_context,
+			opt_storage
 		);
 	}
 
@@ -401,7 +493,8 @@ namespace engine
 		
 		std::optional<std::uint8_t> constructor_arg_count, // SmallSize
 		const MetaTypeDescriptorFlags& component_flags,
-		const ParsingContext* opt_parsing_context
+		const MetaParsingContext& opt_parsing_context,
+		SharedStorageInterface* opt_storage
 	)
 	{
 		assert(component_type);
@@ -413,9 +506,18 @@ namespace engine
 				return MetaTypeDescriptor
 				(
 					component_type, component_content,
-					{ .resolve_component_member_references=true },
-					constructor_arg_count, component_flags,
-					opt_parsing_context
+					{
+						.context = opt_parsing_context,
+						.storage = opt_storage,
+
+						// TODO: Look into direct component assignment.
+						.fallback_to_component_reference = false,
+
+						.allow_member_references  = true,
+						.allow_entity_indirection = true
+					},
+
+					constructor_arg_count, component_flags
 				);
 			}
 		}
@@ -428,19 +530,12 @@ namespace engine
 		);
 	}
 
-	// NOTE: Used internally by trigger-condition routines.
-	static std::tuple<MetaTypeID, entt::meta_data>
-	resolve_member(const entt::meta_type& type, std::string_view member_name)
-	{
-		if (member_name.empty())
-		{
-			return resolve_data_member(type, true, "entity", "target", "button", "self", "value", "name");
-		}
-		
-		return resolve_data_member(type, true, member_name);
-	}
-
-	MetaAny process_trigger_condition_value(std::string_view compared_value_raw)
+	MetaAny process_trigger_condition_value
+	(
+		EntityDescriptor& descriptor,
+		std::string_view compared_value_raw,
+		const MetaParsingContext& opt_parsing_context
+	)
 	{
 		MetaAny compared_value;
 
@@ -465,9 +560,19 @@ namespace engine
 				compared_value_raw,
 				
 				{
-					.resolve_symbol     = true,
-					.strip_quotes       = false,
-					.fallback_to_string = false
+					.context = opt_parsing_context,
+					.storage = &(descriptor.get_shared_storage()),
+
+					.resolve_symbol           = true,
+					.strip_quotes             = false,
+					.fallback_to_string       = false,
+					
+					// TODO: Look into direct component comparison.
+					.fallback_to_component_reference = false,
+
+					.allow_member_references  = true, // false
+					.allow_entity_indirection = true,
+					.allow_remote_variable_references = true
 				}
 			);
 
@@ -477,14 +582,14 @@ namespace engine
 				// Look for (optionally entity-qualified) reference to data member of component:
 				if (auto data_member = indirect_meta_data_member_from_string(compared_value_raw))
 				{
-					compared_value = *data_member;
+					compared_value = allocate_meta_any(*data_member, &(descriptor.get_shared_storage()));
 				}
 				else
 				{
 					// Look for reference to entity target:
 					if (auto parse_result = EntityTarget::parse_type(compared_value_raw))
 					{
-						compared_value = EntityTarget { std::move(std::get<0>(*parse_result)) };
+						compared_value = allocate_meta_any(EntityTarget { std::move(std::get<0>(*parse_result)) }, &(descriptor.get_shared_storage()));
 					}
 				}
 			}
@@ -501,6 +606,8 @@ namespace engine
 
 	std::optional<EventTriggerSingleCondition> process_standard_trigger_condition // std::optional<EventTriggerCondition>
 	(
+		EntityDescriptor& descriptor,
+
 		const entt::meta_type& type,
 
 		std::string_view member_name,
@@ -509,7 +616,10 @@ namespace engine
 
 		std::string_view trigger_condition_expr,
 
-		bool embed_type_in_condition
+		bool embed_type_in_condition,
+		bool invert_comparison_operator,
+
+		const MetaParsingContext& opt_parsing_context
 	)
 	{
 		auto [member_id, member] = resolve_member(type, member_name);
@@ -528,7 +638,9 @@ namespace engine
 		
 		MetaAny compared_value = {};
 
-		auto comparison_method = EventTriggerComparisonMethod::Equal;
+		auto comparison_method = (invert_comparison_operator)
+			? EventTriggerComparisonMethod::NotEqual
+			: EventTriggerComparisonMethod::Equal;
 
 		if (compared_value_raw.empty())
 		{
@@ -547,18 +659,20 @@ namespace engine
 
 			// See above notes for details.
 			// (Intentionally comparing not-equal against an empty `MetaAny` value)
-			comparison_method = EventTriggerComparisonMethod::NotEqual;
+			comparison_method = (invert_comparison_operator)
+				? EventTriggerComparisonMethod::Equal
+				: EventTriggerComparisonMethod::NotEqual;
 		}
 		else
 		{
-			compared_value = process_trigger_condition_value(compared_value_raw);
+			compared_value = process_trigger_condition_value(descriptor, compared_value_raw, opt_parsing_context);
 
 			if (!compared_value)
 			{
 				return std::nullopt;
 			}
 
-			comparison_method = EventTriggerConditionType::get_comparison_method(comparison_operator);
+			comparison_method = EventTriggerConditionType::get_comparison_method(comparison_operator, invert_comparison_operator);
 		}
 
 		return EventTriggerSingleCondition
@@ -573,6 +687,8 @@ namespace engine
 
 	std::optional<EventTriggerMemberCondition> process_member_trigger_condition
 	(
+		EntityDescriptor& descriptor,
+
 		const entt::meta_type& type,
 
 		std::string_view entity_ref,
@@ -581,7 +697,11 @@ namespace engine
 		std::string_view comparison_operator,
 		std::string_view compared_value_raw,
 
-		std::string_view trigger_condition_expr
+		std::string_view trigger_condition_expr,
+
+		bool invert_comparison_operator,
+
+		const MetaParsingContext& opt_parsing_context
 	)
 	{
 		auto [member_id, member] = resolve_member(type, member_name);
@@ -593,7 +713,7 @@ namespace engine
 			return std::nullopt;
 		}
 
-		auto comparison_value = process_trigger_condition_value(compared_value_raw);
+		auto comparison_value = process_trigger_condition_value(descriptor, compared_value_raw, opt_parsing_context);
 
 		if (!comparison_value)
 		{
@@ -609,7 +729,7 @@ namespace engine
 			return std::nullopt;
 		}
 
-		auto comparison_method = EventTriggerConditionType::get_comparison_method(comparison_operator);
+		auto comparison_method = EventTriggerConditionType::get_comparison_method(comparison_operator, invert_comparison_operator);
 
 		return EventTriggerMemberCondition
 		{
@@ -639,7 +759,7 @@ namespace engine
 		}
 
 		// Look for an initial level of indirection:
-		auto [initial_ref, remainder] = util::parse_data_member_reference(instruction_raw, true);
+		auto [initial_ref, remainder] = util::parse_member_reference(instruction_raw, true, true, true, false, true, true);
 
 		if (initial_ref.empty())
 		{
@@ -653,7 +773,7 @@ namespace engine
 		std::string_view instruction;
 
 		// Check for a second level of indirection.
-		if (auto [second_ref, sub_remainder] = util::parse_data_member_reference(remainder); !second_ref.empty())
+		if (auto [second_ref, sub_remainder] = util::parse_member_reference(remainder, true, false, true, false, true, true); !second_ref.empty())
 		{
 			// Use the initial reference as an entity-target.
 			entity_ref  = initial_ref;
@@ -676,11 +796,19 @@ namespace engine
 			instruction = remainder;
 		}
 
-		return
+		auto result = parse_thread_details(thread_ref, entity_ref, opt_descriptor);
+
+		// In the event `parse_thread_details` fails, it could mean that
+		// we mistook one reference type for the other.
+		if (!result) // && !thread_ref.empty() && entity_ref.empty()
 		{
-			instruction,
-			parse_thread_details(thread_ref, entity_ref, opt_descriptor)
-		};
+			// Try again, but with `entity_ref` and `thread_ref` swapped:
+			std::swap(entity_ref, thread_ref);
+
+			result = parse_thread_details(thread_ref, entity_ref, opt_descriptor);
+		}
+
+		return { instruction, std::move(result) };
 	}
 
 	std::optional<EntityThreadInstruction>
@@ -696,7 +824,7 @@ namespace engine
 			return std::nullopt;
 		}
 
-		if (auto [entity_ref, thread_ref] = util::parse_data_member_reference(combined_expr, true); !entity_ref.empty())
+		if (auto [entity_ref, thread_ref] = util::parse_member_reference(combined_expr, true); !entity_ref.empty())
 		{
 			return parse_thread_details(thread_ref, entity_ref, opt_descriptor);
 		}
@@ -713,7 +841,7 @@ namespace engine
 		const EntityDescriptor* opt_descriptor
 	)
 	{
-		using namespace entt::literals;
+		using namespace engine::literals;
 
 		EntityThreadInstruction thread_details;
 
@@ -725,13 +853,16 @@ namespace engine
 			}
 		}
 
-		const auto thread_accessor_content = util::parse_single_argument_command(thread_ref, false);
+		const auto thread_accessor_content = util::parse_command(thread_ref, false);
 		const auto& thread_accessor = std::get<0>(thread_accessor_content);
 
 		if (thread_accessor.empty())
 		{
-			// No accessor found; use the thread-reference directly as an ID.
-			thread_details.thread_id = hash(thread_ref);
+			if (!thread_ref.empty())
+			{
+				// No accessor found; use the thread-reference directly as an ID.
+				thread_details.thread_id = hash(thread_ref);
+			}
 		}
 		else
 		{
@@ -766,16 +897,1375 @@ namespace engine
 
 					break;
 				}
+
 				default:
 				{
 					// Invalid/unsupported accessor.
-					assert(false);
-
-					break;
+					return std::nullopt;
 				}
 			}
 		}
 
 		return thread_details;
+	}
+
+	const EntityState* process_state
+	(
+		EntityDescriptor& descriptor,
+		EntityStateCollection& states_out,
+		std::string_view state_path_raw, // const std::string&
+		const std::filesystem::path& base_path,
+		const MetaParsingContext& opt_parsing_context,
+		const EntityFactoryContext* opt_factory_context
+	)
+	{
+		auto [state_base_path, state_path, state_data] = load_state_data(state_path_raw, base_path, opt_factory_context);
+
+		auto state_name = resolve_state_name(state_data, state_path);
+
+		if (const auto state = process_state(descriptor, states_out, state_data, state_name, state_base_path, opt_parsing_context, opt_factory_context))
+		{
+			assert(state->name.has_value());
+
+			return state;
+		}
+
+		return nullptr;
+	}
+
+	std::size_t merge_state_list
+	(
+		EntityDescriptor& descriptor,
+		EntityStateCollection& states_out,
+		EntityState& state,
+
+		const util::json& data,
+		const std::filesystem::path& base_path,
+		const MetaParsingContext& opt_parsing_context,
+		const EntityFactoryContext* opt_factory_context
+	)
+	{
+		std::size_t count = 0;
+
+		util::json_for_each
+		(
+			data,
+
+			[&base_path, opt_parsing_context, opt_factory_context, &descriptor, &states_out, &state, &count](const util::json& content)
+			{
+				switch (content.type())
+				{
+					case util::json::value_t::string:
+					{
+						const auto state_path_raw = content.get<std::string>();
+
+						auto [state_base_path, state_path, state_data] = load_state_data(state_path_raw, base_path, opt_factory_context);
+
+						if (!state_data.empty())
+						{
+							if (!state.name)
+							{
+								const auto default_state_name = default_state_name_from_path(state_path);
+
+								state.name = hash(default_state_name);
+							}
+
+							if (process_state(descriptor, states_out, state, state_data, state_base_path, opt_parsing_context, opt_factory_context))
+							{
+								count++;
+							}
+						}
+
+						break;
+					}
+
+					default:
+						if (process_state(descriptor, states_out, state, content, base_path, opt_parsing_context, opt_factory_context))
+						{
+							count++;
+						}
+
+						break;
+				}
+			}
+		);
+
+		return count;
+	}
+
+	const EntityState* process_state
+	(
+		EntityDescriptor& descriptor,
+		EntityStateCollection& states_out,
+		const util::json& data,
+		std::string_view state_name,
+		const std::filesystem::path& base_path,
+		const MetaParsingContext& opt_parsing_context,
+		const EntityFactoryContext* opt_factory_context
+	)
+	{
+		std::optional<EntityStateID> state_id = std::nullopt;
+
+		if (!state_name.empty())
+		{
+			state_id = hash(state_name);
+
+			// TODO: Implement multi-entity state descriptions. (use of `descriptor`)
+			if (auto existing = states_out.get_state(descriptor, *state_id))
+			{
+				print_warn("Overriding existing definition of state: \"{}\"", state_name);
+
+				// Initialize `existing` back to its default state.
+				*existing = {};
+
+				// Re-assign the name/ID of this state.
+				existing->name = state_id;
+
+				// Execute the main processing routine.
+				auto result = process_state(descriptor, states_out, *existing, data, base_path, opt_parsing_context, opt_factory_context);
+
+				assert(result);
+
+				return existing;
+			}
+		}
+
+		EntityState state;
+
+		// Assign the state's name to the ID we resolved.
+		state.name = state_id;
+
+		if (!process_state(descriptor, states_out, state, data, base_path, opt_parsing_context, opt_factory_context))
+		{
+			return {};
+		}
+
+		// Check if `state`'s name has been changed from `state_id`.
+		// 
+		// NOTE: Control paths from the path-based overload of `process_state`
+		// should always provide the state's name ahead of time, so that shouldn't trigger this.
+		if (state.name != state_id)
+		{
+			// TODO: Implement multi-entity state descriptions. (use of `descriptor`)
+			if (auto existing = states_out.get_state(descriptor, state_id))
+			{
+				// If this additional check for an existing state is triggered, it means a
+				// `merge` operation caused the name of a state to be defined,
+				// rather than during the initial declaration.
+				print_warn("Existing state named \"{}\" (#{}) detected after initial safety checks. -- Perhaps you merged an unnamed state with a named one? (Continuing anyway; replacing existing)", state_name, *state_id);
+
+				*existing = std::move(state);
+
+				return existing;
+			}
+			else
+			{
+				// This path is only reached if the state's name has changed,
+				// but there's no existing state with the new name. (No conflict)
+
+				if (state.name && state_id)
+				{
+					print_warn("State name (#{}) differs from initially resolved value (#{}: \"{}\") -- Maybe caused by a merge operation? (Continuing anyway; no known name conflicts detected.)", *state.name, *state_id, state_name);
+				}
+				else
+				{
+					print_warn("State name inherited from initial merge operation. (#{}) (Continuing anyway; no known name conflicts detected)", *state.name);
+				}
+			}
+		}
+
+		//descriptor.set_state(std::move(state));
+		//descriptor.states.emplace_back(std::move(state));
+
+		// TODO: Implement multi-entity state descriptions.
+		auto storage_result = descriptor.allocate(std::move(state));
+
+		const auto state_ptr = &(storage_result.get(descriptor));
+
+		// Store `state` inside of `states_out`.
+		const auto& result = states_out.data.emplace_back(std::move(storage_result));
+
+		return state_ptr;
+	}
+
+	bool process_state
+	(
+		EntityDescriptor& descriptor,
+		EntityStateCollection& states_out,
+		EntityState& state,
+		const util::json& data,
+		const std::filesystem::path& base_path,
+		const MetaParsingContext& opt_parsing_context,
+		const EntityFactoryContext* opt_factory_context
+	)
+	{
+		using namespace engine::literals;
+
+		if (!state.name)
+		{
+			if (auto state_name = get_embedded_name(data); !state_name.empty())
+			{
+				state.name = hash(state_name);
+			}
+			else
+			{
+				// NOTE: Because merge operations can take place, we'll refrain
+				// from spamming the user, but this warning is still valid.
+				//print_warn("Missing name detected while processing state. Nameless states may cause conflicts.");
+			}
+		}
+
+		// Handle merge operations first.
+		// (Allows the contents of `data` to take priority over merged-in definitions):
+		if (auto merge = util::find_any(data, "merge", "merge_state", "merge_states", "using"); merge != data.end())
+		{
+			// NOTE: Recursion by proxy.
+			merge_state_list(descriptor, states_out, state, *merge, base_path, opt_parsing_context, opt_factory_context);
+		}
+
+		// Handle embedded imports of other states before any further operations.
+		// (Allows imports in this scope to take priority over imports-within-imports):
+		if (auto imports = util::find_any(data, "import", "imports", "state", "states"); imports != data.end())
+		{
+			// NOTE: Recursion by proxy.
+			process_state_list(descriptor, states_out, *imports, base_path, opt_parsing_context, opt_factory_context);
+		}
+
+		if (auto persist = util::find_any(data, "persist", "share", "shared", "modify", "="); persist != data.end())
+		{
+			process_component_list(descriptor, state.components.persist, *persist, {}, opt_parsing_context, true, true, true);
+		}
+
+		if (auto add = util::find_any(data, "add", "+"); add != data.end())
+		{
+			process_component_list(descriptor, state.components.add, *add, {}, opt_parsing_context, true, true, true);
+		}
+
+		if (auto removal_list = util::find_any(data, "remove", "-", "~"); removal_list != data.end())
+		{
+			state.build_removals(descriptor, *removal_list, opt_parsing_context);
+		}
+		
+		if (auto frozen_list = util::find_any(data, "frozen", "freeze", "exclude", "%", "^"); frozen_list != data.end())
+		{
+			state.build_frozen(descriptor, *frozen_list, opt_parsing_context);
+		}
+
+		if (auto storage_list = util::find_any(data, "store", "storage", "include", "temp", "temporary", "#"); storage_list != data.end())
+		{
+			state.build_storage(descriptor, *storage_list, opt_parsing_context);
+		}
+
+		if (auto isolated = util::find_any(data, "local", "local_storage", "isolate", "isolated"); isolated != data.end())
+		{
+			process_state_isolated_components(descriptor, state, *isolated, opt_parsing_context);
+		}
+
+		if (auto local_copy = util::find_any(data, "local_copy", "copy"); local_copy != data.end())
+		{
+			process_state_local_copy_components(descriptor, state, *local_copy, opt_parsing_context);
+		}
+
+		if (auto init_copy = util::find_any(data, "init_copy", "local_modify", "copy_once", "clone"); init_copy != data.end())
+		{
+			process_state_init_copy_components(descriptor, state, *init_copy, opt_parsing_context);
+		}
+
+		if (auto time_data = util::find_any(data, "timer", "wait", "delay"); time_data != data.end())
+		{
+			state.activation_delay = parse_time_duration(*time_data);
+		}
+
+		if (auto threads = util::find_any(data, "do", "threads", "execute"); threads != data.end())
+		{
+			if (auto [initial_thread_index, top_level_threads_processed, threads_and_sub_threads_processed] = process_thread_list(descriptor, *threads, &base_path, opt_parsing_context, opt_factory_context); (top_level_threads_processed > 0))
+			{
+				state.immediate_threads.emplace_back(initial_thread_index, top_level_threads_processed);
+			}
+		}
+
+		if (auto rules = util::find_any(data, "rule", "rules", "trigger", "triggers"); rules != data.end())
+		{
+			process_state_rule_list(descriptor, state, *rules, &states_out, &base_path, opt_parsing_context, opt_factory_context);
+		}
+
+		return true;
+	}
+
+	std::size_t process_state_list
+	(
+		EntityDescriptor& descriptor,
+		EntityStateCollection& states_out,
+		const util::json& data,
+		const std::filesystem::path& base_path,
+		const MetaParsingContext& opt_parsing_context,
+		const EntityFactoryContext* opt_factory_context
+	)
+	{
+		std::size_t count = 0;
+
+		util::json_for_each(data, [&base_path, &states_out, opt_parsing_context, opt_factory_context, &descriptor, &count](const util::json& state_entry)
+		{
+			switch (state_entry.type())
+			{
+				case util::json::value_t::object:
+				{
+					// NOTE: Embedded state definitions must have a `name` field.
+					const auto state_name = util::get_value<std::string>(state_entry, "name");
+
+					if (process_state(descriptor, states_out, state_entry, state_name, base_path, opt_parsing_context, opt_factory_context))
+					{
+						count++;
+					}
+
+					break;
+				}
+				case util::json::value_t::string:
+				{
+					const auto state_path_raw = state_entry.get<std::string>();
+
+					if (process_state(descriptor, states_out, state_path_raw, base_path, opt_parsing_context, opt_factory_context))
+					{
+						count++;
+					}
+
+					break;
+				}
+			}
+		});
+
+		return count;
+	}
+
+	std::size_t process_state_isolated_components
+	(
+		EntityDescriptor& descriptor,
+		EntityState& state,
+		const util::json& isolated,
+		const MetaParsingContext& opt_parsing_context
+	)
+	{
+		return process_and_inspect_component_list
+		(
+			descriptor,
+			state.components.add,
+
+			isolated,
+
+			[&descriptor, &state, &opt_parsing_context](std::string_view component_name)
+			{
+				if (!state.process_type_list_entry(descriptor, state.components.freeze, component_name, true, opt_parsing_context)) // false
+				{
+					print_warn("Failed to process embedded `freeze` entry from isolation data.");
+
+					return false;
+				}
+
+				if (!state.process_type_list_entry(descriptor, state.components.store, component_name, true, opt_parsing_context)) // false
+				{
+					print_warn("Failed to process embedded `store` entry from isolation data.");
+
+					return false;
+				}
+
+				return true;
+			},
+
+			false,
+			{},
+			opt_parsing_context
+		);
+	}
+
+	std::size_t process_state_local_copy_components
+	(
+		EntityDescriptor& descriptor,
+		EntityState& state,
+		const util::json& local_copy,
+		const MetaParsingContext& opt_parsing_context
+	)
+	{
+		const auto build_result = state.build_local_copy(descriptor, local_copy, opt_parsing_context);
+
+		const auto components_processed = process_component_list
+		(
+			descriptor, state.components.add, local_copy,
+			{
+				.allow_default_construction             = false,
+				.allow_forwarding_fields_to_constructor = false,
+				.force_field_assignment                 = true
+			},
+
+			opt_parsing_context,
+
+			true, false
+		);
+
+		assert(components_processed == build_result);
+
+		return build_result;
+	}
+
+	std::size_t process_state_init_copy_components
+	(
+		EntityDescriptor& descriptor,
+		EntityState& state,
+		const util::json& init_copy,
+		const MetaParsingContext& opt_parsing_context
+	)
+	{
+		const auto build_result = state.build_init_copy(descriptor, init_copy, opt_parsing_context);
+
+		const auto components_processed = process_component_list
+		(
+			descriptor, state.components.add, init_copy,
+			{
+				.allow_default_construction             = false,
+				.allow_forwarding_fields_to_constructor = false,
+				.force_field_assignment                 = true
+			},
+
+			opt_parsing_context,
+
+			true, false
+		);
+
+		assert(components_processed == build_result);
+
+		return build_result;
+	}
+
+	std::size_t process_state_rule
+	(
+		EntityDescriptor& descriptor,
+		EntityState& state,
+		MetaTypeID type_name_id,
+		const util::json& content,
+		
+		std::optional<EventTriggerCondition> condition,
+
+		EntityStateCollection* opt_states_out,
+		const std::filesystem::path* opt_base_path,
+		const MetaParsingContext& opt_parsing_context,
+		const EntityFactoryContext* opt_factory_context,
+
+		bool allow_inline_import
+	)
+	{
+		using CommandContent = MetaTypeDescriptor; // EntityStateCommandAction::CommandContent;
+
+		std::size_t count = 0;
+
+		EntityTarget::TargetType target = EntityTarget::SelfTarget {};
+		std::optional<Timer::Duration> delay = std::nullopt;
+
+		// NOTE: Modified below, used in `process_transition_rule` and co.
+		bool forward_condition = true;
+
+		if (condition)
+		{
+			// Handle special-case scenarios: direct usage of `EventTriggerTrueCondition` and `EventTriggerFalseCondition`.
+			switch (condition->index())
+			{
+				case util::variant_index<EventTriggerConditionVariant, EventTriggerTrueCondition>():
+					//print("Pure 'true-condition' detected; generating rule without condition.");
+
+					// Don't bother forwarding this condition since it's guaranteed to always report true.
+					forward_condition = false;
+
+					break;
+				case util::variant_index<EventTriggerConditionVariant, EventTriggerFalseCondition>():
+					print_warn("Pure 'false-condition' found outside of compound condition; ignoring rule generation.");
+
+					// Exit early; trigger condition will never be met.
+					return count; // 0;
+			}
+		}
+
+		auto& rules_out = state.rules[type_name_id];
+
+		auto process_rule = [&descriptor, &count, &rules_out, forward_condition, &condition, &delay, &target](auto&& action)
+		{
+			std::optional<EntityDescriptorShared<EventTriggerCondition>> condition_out = std::nullopt;
+
+			if (forward_condition && condition)
+			{
+				condition_out = descriptor.allocate<EventTriggerCondition>(*condition); // std::move(*condition)
+			}
+
+			auto& rule = rules_out.emplace_back
+			(
+				std::move(condition_out),
+
+				delay, // std::move(delay),
+				EntityTarget(target), // std::move(target)
+
+				EntityStateAction(std::move(action))
+			);
+
+			count++;
+
+			return &rule;
+		};
+
+		auto process_transition_rule = [&](const auto& next_state_raw) -> EntityStateRule*
+		{
+			if (next_state_raw.empty())
+			{
+				return nullptr;
+			}
+
+			// TODO: Look into tracking imports/inline-imports.
+			const auto inline_import = process_state_inline_import(descriptor, opt_states_out, next_state_raw, opt_base_path, opt_parsing_context, opt_factory_context);
+
+			StringHash next_state_id = (inline_import) // EntityStateHash
+				? *inline_import->name
+				: hash(next_state_raw)
+			;
+
+			return process_rule
+			(
+				EntityStateTransitionAction
+				{
+					.state_name = next_state_id
+				}
+			);
+		};
+
+		auto process_command = [&descriptor, &process_rule](CommandContent& content) // CommandContent&& content
+		{
+			return process_rule
+			(
+				EntityStateCommandAction
+				{
+					descriptor.shared_storage.get_index_unsafe(content) // std::move(content)
+				}
+			);
+		};
+
+		auto init_empty_command = [&descriptor, opt_parsing_context](std::string_view command_name) -> CommandContent*
+		{
+			if (command_name.empty())
+			{
+				return {};
+			}
+
+			const auto command_name_id = hash(command_name);
+			const auto command_type = resolve(command_name_id);
+
+			if (command_type)
+			{
+				return &(descriptor.generate_empty_command(command_type));
+			}
+			else
+			{
+				if (const auto opt_type_context = opt_parsing_context.get_type_context())
+				{
+					if (auto resolved_command_type = opt_type_context->get_command_type_from_alias(command_name))
+					{
+						return &(descriptor.generate_empty_command(resolved_command_type));
+					}
+				}
+
+				print_warn("Unable to resolve command name: {} (#{})", command_name, command_name_id.value());
+			}
+
+			return {};
+		};
+
+		auto process_command_rule_from_csv = [&descriptor, &opt_parsing_context, &init_empty_command, &process_command](std::string_view command_name, std::string_view args, bool resolve_values=true) -> EntityStateRule*
+		{
+			if (args.empty())
+			{
+				return {};
+			}
+
+			if (auto command_content = init_empty_command(command_name))
+			{
+				command_content->set_variables
+				(
+					args,
+					
+					{
+						.context = opt_parsing_context,
+						.storage = &(descriptor.get_shared_storage()),
+
+						.resolve_symbol = resolve_values,
+						.allow_member_references = resolve_values
+					},
+					
+					command_arg_offset
+				);
+
+				return process_command(*command_content); // std::move(*command_content)
+			}
+
+			return {};
+		};
+
+		auto process_command_rule_from_expr = [&process_command_rule_from_csv](const auto& command_expr) -> EntityStateRule*
+		{
+			auto [command_name, command_content, trailing_expr, is_string_content, command_parsed_length] = util::parse_command(command_expr);
+
+			return process_command_rule_from_csv(command_name, command_content, !is_string_content);
+		};
+
+		auto process_command_rule_from_object = [&descriptor, &opt_parsing_context, &init_empty_command, &process_command](std::string_view command_name, const util::json& command_data) -> EntityStateRule*
+		{
+			if (auto command_content = init_empty_command(command_name))
+			{
+				command_content->set_variables
+				(
+					command_data,
+					{
+						.context = opt_parsing_context,
+						.storage = &(descriptor.get_shared_storage()),
+						
+						.fallback_to_component_reference  = false,
+
+						.allow_member_references          = true,
+						.allow_entity_indirection         = true
+					},
+
+					command_arg_offset
+				);
+
+				return process_command(*command_content); // std::move(*command_content)
+			}
+
+			return {};
+		};
+
+		auto for_each_command = [&process_command_rule_from_object, &process_command_rule_from_expr, &process_command_rule_from_csv](const util::json& command)
+		{
+			util::json_for_each<util::json::value_t::string, util::json::value_t::object>
+			(
+				command,
+
+				[&process_command_rule_from_object, &process_command_rule_from_expr, &process_command_rule_from_csv](const util::json& command_content)
+				{
+					switch (command_content.type())
+					{
+						case util::json::value_t::object:
+						{
+							if (auto command_name_it = util::find_any(command_content, "command", "name", "type"); command_name_it != command_content.end())
+							{
+								const auto command_name = command_name_it->get<std::string>();
+
+								process_command_rule_from_object(command_name, command_content);
+							}
+							else
+							{
+								// TODO: Refactor to share code with `enumerate_map_filtered_ex` section.
+								for (const auto& [command_name, embedded_content] : command_content.items())
+								{
+									switch (embedded_content.type())
+									{
+										case util::json::value_t::object:
+										{
+											process_command_rule_from_object(command_name, embedded_content);
+
+											break;
+										}
+
+										case util::json::value_t::string:
+										{
+											auto string_data = embedded_content.get<std::string>();
+
+											process_command_rule_from_csv(command_name, string_data);
+
+											break;
+										}
+									}
+								}
+							}
+
+							break;
+						}
+
+						case util::json::value_t::string:
+							process_command_rule_from_expr(command_content.get<std::string>());
+
+							break;
+					}
+				}
+			);
+		};
+
+		switch (content.type())
+		{
+			case util::json::value_t::string:
+			{
+				process_transition_rule(content.get<std::string>());
+
+				break;
+			}
+
+			case util::json::value_t::array:
+			{
+				for_each_command(content);
+
+				break;
+			}
+
+			case util::json::value_t::object:
+			{
+				if (auto target_data = util::find_any(content, "target"); target_data != content.end())
+				{
+					target = parse_target_type(*target_data);
+				}
+
+				if (auto time_data = util::find_any(content, "timer", "wait", "delay"); time_data != content.end())
+				{
+					delay = parse_time_duration(*time_data);
+				}
+
+				if (auto next_state = util::find_any(content, "state", "next", "next_state"); next_state != content.end())
+				{
+					process_transition_rule(next_state->get<std::string>());
+				}
+
+				if (auto update = util::find_any(content, "update", "updates", "components", "change"); update != content.end())
+				{
+					util::json_for_each
+					(
+						*update,
+
+						[&opt_parsing_context, &process_rule, &descriptor, &target](const util::json& update_entry)
+						{
+							auto action = EntityStateUpdateAction { target };
+
+							process_update_action(descriptor, action, update_entry, opt_parsing_context);
+
+							process_rule(std::move(action));
+						}
+					);
+				}
+
+				if (auto threads = util::find_any(content, "do", "threads", "execute"); threads != content.end())
+				{
+					auto
+					[
+						initial_thread_index,
+						top_level_threads_processed,
+						threads_and_sub_threads_processed
+					] = process_thread_list(descriptor, *threads, opt_base_path, opt_parsing_context, opt_factory_context);
+
+					process_rule
+					(
+						EntityThreadSpawnAction
+						{
+							EntityThreadRange
+							{
+								initial_thread_index,
+								top_level_threads_processed
+							},
+							
+							false
+						}
+					);
+				}
+
+				// TODO: Implement sections for thread control-flow actions.
+
+				if (auto command = util::find_any(content, "command", "commands", "generate"); command != content.end())
+				{
+					for_each_command(*command);
+
+					break;
+				}
+				else
+				{
+					util::enumerate_map_filtered_ex
+					(
+						content.items(),
+
+						[](auto&& value) { return hash(std::forward<decltype(value)>(value)); },
+
+						[&process_command_rule_from_object, &process_command_rule_from_csv](const auto& command_name, const auto& content)
+						{
+							switch (content.type())
+							{
+								case util::json::value_t::array:
+								case util::json::value_t::object:
+								{
+									process_command_rule_from_object(command_name, content);
+
+									break;
+								}
+
+								case util::json::value_t::string:
+								{
+									auto string_data = content.get<std::string>();
+
+									process_command_rule_from_csv(command_name, string_data);
+
+									break;
+								}
+							}
+						},
+
+						// Ignore these keys (see above):
+						"trigger", "triggers", "condition", "conditions",
+
+						"target",
+						"timer", "wait", "delay",
+						"state", "next", "next_state",
+						"update", "updates", "components", "change",
+						"do", "threads", "execute",
+						"command", "commands", "generate"
+					);
+				}
+
+				break;
+			}
+		}
+
+		return count;
+	}
+
+	std::size_t process_trigger_expression
+	(
+		EntityDescriptor& descriptor,
+		EntityState& state,
+
+		std::string_view trigger_condition_expr,
+		const util::json& content,
+
+		EntityStateCollection* opt_states_out,
+		const std::filesystem::path* opt_base_path,
+		const MetaParsingContext& opt_parsing_context,
+		const EntityFactoryContext* opt_factory_context,
+		bool allow_inline_import
+	)
+	{
+		std::size_t number_processed = 0;
+
+		process_trigger_expression
+		(
+			descriptor,
+
+			trigger_condition_expr,
+
+			[&descriptor, &state, &content, opt_states_out, opt_base_path, opt_parsing_context, opt_factory_context, allow_inline_import, &number_processed]
+			(
+				MetaTypeID type_name_id,
+				std::optional<EventTriggerCondition> condition
+			)
+			{
+				const auto result = process_state_rule
+				(
+					descriptor,
+					state,
+					type_name_id, content, condition,
+					opt_states_out, opt_base_path,
+					opt_parsing_context, opt_factory_context,
+					allow_inline_import
+				);
+				
+				number_processed += result;
+
+				return result;
+			},
+
+			false, // true,
+			opt_parsing_context
+		);
+
+		// NOTE: Updated automatically in `process_rule` subroutine.
+		return number_processed;
+	}
+
+	std::size_t process_state_rule_list
+	(
+		EntityDescriptor& descriptor,
+		EntityState& state,
+		const util::json& rules,
+
+		EntityStateCollection* opt_states_out,
+		const std::filesystem::path* opt_base_path,
+		const MetaParsingContext& opt_parsing_context,
+		const EntityFactoryContext* opt_factory_context,
+		bool allow_inline_import
+	)
+	{
+		std::size_t count = 0;
+
+		const auto collection_has_named_members = (rules.is_object());
+
+		constexpr auto trigger_symbols = std::array { "trigger", "triggers", "condition", "conditions" };
+
+		auto get_trigger_object = [&](const util::json& content)
+		{
+			return std::apply
+			(
+				[&](auto&&... values)
+				{
+					return util::find_any(content, std::forward<decltype(values)>(values)...);
+				},
+
+				trigger_symbols
+			);
+		};
+
+		// Handles the "rules": [{}, {}, {}] (object array) syntax.
+		auto from_json_object = [&](const util::json& content)
+		{
+			if (const auto trigger_decl = get_trigger_object(content); trigger_decl != content.end())
+			{
+				util::json_for_each(*trigger_decl, [&](const util::json& decl)
+				{
+					// Embedded (i.e. regular) trigger condition.
+					const auto trigger_condition_expr = decl.get<std::string>();
+
+					count += process_trigger_expression
+					(
+						descriptor,
+						state, trigger_condition_expr, content,
+						opt_states_out, opt_base_path,
+						opt_parsing_context, opt_factory_context,
+						allow_inline_import
+					);
+				});
+			}
+		};
+
+		// Handles the '"TriggerCondition": { actions }' syntax.
+		auto from_simplified = [&](const auto& trigger_condition_expr, const util::json& content)
+		{
+			count += process_trigger_expression
+			(
+				descriptor,
+				state, trigger_condition_expr, content,
+				opt_states_out, opt_base_path,
+				opt_parsing_context, opt_factory_context,
+				allow_inline_import
+			);
+		};
+
+		auto from_data = [&](const auto& declaration, const auto& content)
+		{
+			if ((!collection_has_named_members) || declaration.empty())
+			{
+				from_json_object(content);
+			}
+			else
+			{
+				// In-place trigger condition.
+				const auto& trigger_condition_expr = declaration;
+
+				from_simplified(trigger_condition_expr, content);
+			}
+		};
+
+		auto for_each = [&](const util::json& rule_container)
+		{
+			for (const auto& proxy : rule_container.items())
+			{
+				const auto& declaration = proxy.key();
+				const auto& content = proxy.value();
+
+				from_data(declaration, content);
+			}
+		};
+
+		// Same as `for_each`, but ignores the `trigger` field.
+		auto for_each_ignore_trigger = [&](const util::json& rule_container)
+		{
+			return std::apply
+			(
+				[&](auto&&... values)
+				{
+					util::enumerate_map_filtered(rule_container.items(), from_data, std::forward<decltype(values)>(values)...);
+				},
+
+				trigger_symbols
+			);
+		};
+
+		switch (rules.type())
+		{
+			case util::json::value_t::object:
+			{
+				// Check if a trigger was specified.
+				if (auto trigger = get_trigger_object(rules); trigger != rules.end())
+				{
+					switch (trigger->type())
+					{
+						case util::json::value_t::string:
+						{
+							// Because we have a `trigger` field in the top-level definition,
+							// and that trigger is a conditional expression, we can assume
+							// that the user wanted a single rule, rather than multiple.
+							const auto trigger_condition_expr = rules.get<std::string>();
+
+							// Assume the content for this trigger is stored in `rules`.
+							from_simplified(trigger_condition_expr, rules);
+
+							break;
+						}
+						default:
+						{
+							// Similar to the above, we have a top-level `trigger` field.
+							// Unlike that path, however, we do have explicitly defined content available.
+							if (auto embedded_trigger = get_trigger_object(*trigger); embedded_trigger != trigger->end())
+							{
+								switch (embedded_trigger->type())
+								{
+									case util::json::value_t::string:
+										from_simplified(embedded_trigger->get<std::string>(), *trigger);
+
+										break;
+									default:
+										for_each(*embedded_trigger);
+
+										break;
+								}
+							}
+
+							// Since we're looking at an encapsulated `trigger` object, the rest of
+							// the top-level entries (if any) should be fair game.
+							for_each_ignore_trigger(rules);
+
+							break;
+						}
+					}
+				}
+				else
+				{
+					for_each(rules);
+				}
+
+				break;
+			}
+			default:
+			{
+				for_each(rules);
+
+				break;
+			}
+		}
+
+		return count;
+	}
+
+	const EntityState* process_state_inline_import
+	(
+		EntityDescriptor& descriptor,
+		EntityStateCollection* states_out,
+		const std::string& command, // std::string_view
+		const std::filesystem::path* base_path,
+		const MetaParsingContext& opt_parsing_context,
+		const EntityFactoryContext* opt_factory_context,
+		bool allow_inline_import
+	)
+	{
+		using namespace engine::literals;
+
+		if (!allow_inline_import)
+		{
+			return nullptr;
+		}
+
+		if (!states_out)
+		{
+			return nullptr;
+		}
+
+		if (!base_path)
+		{
+			return nullptr;
+		}
+
+		auto
+		[
+			inline_command,
+			state_path_raw,
+			trailing_expr,
+			is_string_content,
+			inline_command_parsed_length
+		] = util::parse_command(command);
+
+		if (state_path_raw.empty())
+		{
+			return nullptr;
+		}
+
+		switch (hash(inline_command))
+		{
+			case "import"_hs:
+				// NOTE: Recursion.
+				return process_state
+				(
+					descriptor,
+					*states_out,
+					state_path_raw, *base_path,
+					opt_parsing_context, opt_factory_context
+				);
+		}
+
+		return nullptr;
+	}
+
+	void process_archetype
+	(
+		EntityDescriptor& descriptor,
+		const util::json& data,
+		const std::filesystem::path& base_path,
+		const MetaParsingContext& opt_parsing_context,
+		const EntityFactoryContext* opt_factory_context,
+		bool resolve_external_modules,
+		std::optional<EntityStateIndex>* opt_default_state_index_out
+	)
+	{
+		if (resolve_external_modules)
+		{
+			// Handles the following: "archetypes", "import", "imports", "modules"
+			resolve_archetypes(descriptor, data, base_path, opt_parsing_context, opt_factory_context, opt_default_state_index_out);
+		}
+
+		if (auto components = util::find_any(data, "component", "components"); components != data.end())
+		{
+			process_component_list(descriptor, descriptor.components, *components, {}, opt_parsing_context);
+		}
+
+		if (auto states = util::find_any(data, "state", "states"); states != data.end())
+		{
+			process_state_list(descriptor, descriptor.states, *states, base_path, opt_parsing_context, opt_factory_context);
+		}
+		
+		if (auto threads = util::find_any(data, "do", "threads", "execute"); threads != data.end())
+		{
+			if (auto [initial_thread_index, top_level_threads_processed, threads_and_sub_threads_processed] = process_thread_list(descriptor, *threads, &base_path, opt_parsing_context, opt_factory_context); (top_level_threads_processed > 0))
+			{
+				descriptor.immediate_threads.emplace_back(initial_thread_index, top_level_threads_processed);
+			}
+		}
+
+		if (opt_default_state_index_out)
+		{
+			if (auto default_state_index = get_default_state_index(descriptor, data))
+			{
+				*opt_default_state_index_out = default_state_index;
+			}
+		}
+
+		// Handle every other key-value pair as a component:
+		util::enumerate_map_filtered_ex
+		(
+			data.items(),
+
+			[](auto&& value) { return hash(std::forward<decltype(value)>(value)); },
+
+			[&descriptor, opt_parsing_context](const auto& component_declaration, const auto& component_content)
+			{
+				process_component
+				(
+					descriptor,
+					descriptor.components,
+
+					component_declaration,
+					&component_content,
+					{},
+					opt_parsing_context
+				);
+			},
+
+			// Ignore these keys:
+
+			// Handled in `resolve_archetypes` routine.
+			"archetypes", "import", "imports", "modules",
+
+			// Handled in this function (see above):
+			"component", "components",
+			"state", "states",
+			"do", "threads", "execute",
+
+			"default_state",
+
+			// See below.
+			"model", "models",
+
+			// Handled in callback-based implementation of `process_archetype`.
+			"children"
+		);
+
+		if (auto model = util::find_any(data, "model", "models"); model != data.end())
+		{
+			engine::load<EntityDescriptor::ModelDetails>(descriptor.model_details, *model);
+
+			if (!descriptor.model_details.path.empty())
+			{
+				const auto path_raw = std::filesystem::path(descriptor.model_details.path);
+
+				if (opt_factory_context)
+				{
+					descriptor.model_details.path = opt_factory_context->resolve_path(path_raw, base_path).string();
+				}
+				else
+				{
+					descriptor.model_details.path = path_raw.string();
+				}
+			}
+		}
+	}
+
+	bool resolve_archetypes
+	(
+		EntityDescriptor& descriptor,
+		const util::json& instance,
+		const std::filesystem::path& base_path,
+		const MetaParsingContext& opt_parsing_context,
+		const EntityFactoryContext* opt_factory_context,
+		bool resolve_external_modules,
+		std::optional<EntityStateIndex>* opt_default_state_index_out
+	)
+	{
+		return resolve_archetypes
+		(
+			descriptor,
+			instance, base_path,
+			[](const auto& parent_factory, const auto& child_ctx) {},
+			opt_parsing_context,
+			opt_factory_context,
+			resolve_external_modules,
+			false,
+			opt_default_state_index_out
+		);
+	}
+
+	//std::size_t
+	std::tuple<EntityThreadIndex, EntityThreadCount, EntityThreadCount>
+	process_thread_list
+	(
+		EntityDescriptor& descriptor,
+		const util::json& content,
+		const std::filesystem::path* opt_base_path,
+		const MetaParsingContext& opt_parsing_context,
+		const EntityFactoryContext* opt_factory_context
+	)
+	{
+		auto shared_thread_context = MetaVariableContext { opt_parsing_context };
+
+		const auto initial_thread_index = descriptor.get_next_thread_index();
+
+		EntityThreadCount top_level_threads_processed = 0;
+
+		auto allocate_top_level_threads = [&descriptor](std::size_t threads_to_allocate) -> std::size_t
+		{
+			if (!threads_to_allocate)
+			{
+				return {};
+			}
+
+			const auto& thread_storage = descriptor.shared_storage.get_storage<EntityThreadDescription>();
+			const auto initial_thread_count = thread_storage.data().size();
+
+			// TODO: Implement bulk allocation interface for `shared_storage`.
+			for (std::size_t i = 0; i < threads_to_allocate; i++)
+			{
+				descriptor.shared_storage.allocate<EntityThreadDescription>();
+			}
+
+			assert(thread_storage.data().size() == (initial_thread_count + threads_to_allocate));
+
+			return threads_to_allocate;
+		};
+
+		const auto top_level_threads_allocated = allocate_top_level_threads(content.size());
+		const auto top_level_thread_max_index_allowed = (initial_thread_index + static_cast<EntityThreadCount>(top_level_threads_allocated));
+
+		auto process_thread = [&descriptor, opt_factory_context, opt_base_path, &opt_parsing_context, &shared_thread_context, top_level_thread_max_index_allowed, &top_level_threads_processed]
+		(
+			const util::json& content,
+			std::string_view opt_thread_name
+		)
+		{
+			auto thread_variable_context = MetaVariableContext
+			{
+				&shared_thread_context,
+
+				(opt_thread_name.empty())
+					? static_cast<MetaSymbolID>(descriptor.get_threads().size()) // MetaSymbolID {}
+					: hash(opt_thread_name).value()
+			};
+
+			const auto top_level_thread_index = static_cast<EntityThreadIndex>(top_level_threads_processed);
+
+			assert(top_level_thread_index <= top_level_thread_max_index_allowed);
+
+			//auto& thread_description = descriptor.shared_storage.get<EntityThreadDescription>(top_level_thread_index);
+
+			auto thread_builder = EntityThreadBuilder
+			{
+				descriptor,
+				
+				EntityThreadBuilder::ThreadDescriptor
+				(
+					top_level_thread_index // descriptor, thread_description
+				),
+
+				opt_thread_name,
+
+				opt_factory_context,
+				opt_base_path,
+				
+				MetaParsingContext
+				{
+					opt_parsing_context.get_type_context(),
+					&thread_variable_context
+				}
+			};
+
+			thread_builder << content;
+
+			top_level_threads_processed++;
+
+			//return thread_builder;
+		};
+
+		switch (content.type())
+		{
+			case util::json::value_t::array:
+			{
+				util::json_for_each
+				(
+					content,
+
+					[&process_thread](const util::json& thread_content)
+					{
+						process_thread(thread_content, {});
+					}
+				);
+
+				break;
+			}
+
+			case util::json::value_t::object:
+			{
+				for (const auto& proxy : content.items())
+				{
+					const auto& thread_name = proxy.key();
+					const auto& thread_content = proxy.value();
+
+					process_thread(thread_content, thread_name);
+				}
+
+				break;
+			}
+
+			default:
+			{
+				process_thread(content, {});
+
+				break;
+			}
+		}
+
+		const auto processed_count = static_cast<EntityThreadCount>(descriptor.get_next_thread_index() - initial_thread_index);
+
+		assert(top_level_threads_processed == top_level_threads_allocated);
+
+		return { initial_thread_index, top_level_threads_processed, processed_count };
 	}
 }
