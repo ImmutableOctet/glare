@@ -2,10 +2,9 @@
 
 //#include <array>
 
-#include <types.hpp>
-
 #include <math/types.hpp>
 
+#include <cstdint>
 #include <unordered_map>
 #include <string>
 

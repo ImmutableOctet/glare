@@ -1,5 +1,7 @@
 #include "transform.hpp"
 
+#include <entt/entity/registry.hpp>
+
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/orthonormalize.hpp>
 

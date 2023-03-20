@@ -16,13 +16,18 @@
 #include "world/reflection.hpp"
 
 #include "config.hpp"
+#include "timer.hpp"
 
 #include <math/reflection.hpp>
 
 #include <util/format.hpp>
+#include <util/string.hpp>
 
 #include <utility>
 #include <optional>
+#include <string>
+#include <cstdint>
+#include <type_traits>
 
 //#include <entt/meta/meta.hpp>
 //#include <entt/entt.hpp>
@@ -44,18 +49,157 @@ namespace engine
         // ...
     }
 
-    /*
+    static std::string add_strings(const std::string& a, const std::string& b)
+    {
+        return (a + b);
+    }
+
+    static bool string_equality(const std::string a, const std::string& b)
+    {
+        return (a == b);
+    }
+
+    static bool string_inequality(const std::string a, const std::string& b)
+    {
+        return (a != b);
+    }
+
+    static std::string entity_to_string_impl(Entity entity)
+    {
+        return util::format("Entity #{}", entity);
+    }
+
+    template <typename ArithmeticType, typename=std::enable_if_t<std::is_arithmetic_v<ArithmeticType>>>
+    static std::string arithmetic_to_string_impl(ArithmeticType value) // const ArithmeticType&
+    {
+        if constexpr (std::is_same_v<std::decay_t<ArithmeticType>, bool>)
+        {
+            if (value)
+            {
+                return "true";
+            }
+            else
+            {
+                return "false";
+            }
+        }
+        else
+        {
+            return std::to_string(value);
+        }
+    }
+
+    template <typename T>
+    static T from_string_view_impl(std::string_view value) // const std::string_view&
+    {
+        // TODO: Determine if `bool` should have different behavior here.
+        // (e.g. checking against `value.empty()` instead of looking for `true`-like values)
+
+        if (auto result = util::from_string<T>(value, true))
+        {
+            return *result;
+        }
+
+        return {};
+    }
+
+    template <typename ToType, typename FromType>
+    static ToType static_cast_impl(const FromType& from_value)
+    {
+        return static_cast<ToType>(from_value);
+    }
+
+    template <typename T>
+    static T from_string_impl(const std::string& value)
+    {
+        return from_string_view_impl<T>(value);
+    }
+
+    template <typename PrimitiveType>
+    static auto extend_language_primitive_type()
+    {
+        auto type = entt::meta<PrimitiveType>()
+            .ctor<&from_string_view_impl<PrimitiveType>>()
+            .ctor<&from_string_impl<PrimitiveType>>()
+            .ctor<&static_cast_impl<PrimitiveType, float>>()
+            .ctor<&static_cast_impl<PrimitiveType, double>>()
+            .ctor<&static_cast_impl<PrimitiveType, long double>>()
+            .ctor<&static_cast_impl<PrimitiveType, std::int64_t>>()
+            .ctor<&static_cast_impl<PrimitiveType, std::uint64_t>>()
+            .ctor<&static_cast_impl<PrimitiveType, std::int32_t>>()
+            .ctor<&static_cast_impl<PrimitiveType, std::uint32_t>>()
+            .ctor<&static_cast_impl<PrimitiveType, std::int16_t>>()
+            .ctor<&static_cast_impl<PrimitiveType, std::uint16_t>>()
+            //.ctor<&static_cast_impl<PrimitiveType, std::int8_t>>()
+            //.ctor<&static_cast_impl<PrimitiveType, std::uint8_t>>()
+
+            .conv<&arithmetic_to_string_impl<PrimitiveType>>()
+        ;
+
+        return type;
+    }
+
     template <>
     void reflect<std::string>()
     {
-        engine_meta_type<std::string>();
+        custom_meta_type<std::string>
+        (
+            "string"_hs, // "std::string"_hs // "String"_hs
+            false, // Standard members not needed.
+            true,  // Optional reflection enabled.
+            true,  // TODO: Revisit operator bindings for strings.
+            false, // Indirection unsupported.
+            false  // Indirection unsupported.
+        )
+
+        //entt::meta<std::string>().type("string"_hs)
+
+            .func<&add_strings>("operator+"_hs)
+            .func<&string_equality>("operator=="_hs)
+            .func<&string_inequality>("operator!="_hs)
+
+            // Constructors for floating-point-to-string conversions:
+            .ctor<&arithmetic_to_string_impl<float>>()
+            .ctor<&arithmetic_to_string_impl<double>>()
+            .ctor<&arithmetic_to_string_impl<long double>>()
+
+            // Constructors for integral-to-string conversions:
+            .ctor<&arithmetic_to_string_impl<std::int64_t>>()
+            .ctor<&arithmetic_to_string_impl<std::uint64_t>>()
+            .ctor<&arithmetic_to_string_impl<std::int32_t>>()
+            .ctor<&arithmetic_to_string_impl<std::uint32_t>>()
+            .ctor<&arithmetic_to_string_impl<std::int16_t>>()
+            .ctor<&arithmetic_to_string_impl<std::uint16_t>>()
+            //.ctor<&arithmetic_to_string_impl<std::int8_t>>()
+            //.ctor<&arithmetic_to_string_impl<std::uint8_t>>()
+
+            .ctor<&entity_to_string_impl>()
+
+            .conv<&from_string_impl<std::int32_t>>()
+            .conv<&from_string_impl<std::uint32_t>>()
+            .conv<&from_string_impl<std::int64_t>>()
+            .conv<&from_string_impl<std::uint64_t>>()
+            .conv<&from_string_impl<float>>()
+            .conv<&from_string_impl<double>>()
+            .conv<&from_string_impl<bool>>()
+        ;
+    }
+
+    template <>
+    void reflect<std::chrono::system_clock::duration>()
+    {
+        entt::meta<std::chrono::system_clock::duration>()
+            // Constructor to convert from floating-point values (seconds) to STL system-clock duration values.
+            // (Commonly aliased via `Timer::Duration`)
+            .ctor<static_cast<std::chrono::system_clock::duration(*)(float)>(&Timer::to_duration)>()
+        ;
     }
 
     static void reflect_stl()
     {
         reflect<std::string>();
+        reflect<std::chrono::system_clock::duration>();
     }
-    */
 
     template <typename T>
     auto reflect_math_type(auto type_name)
@@ -141,6 +285,14 @@ namespace engine
     }
 
     template <>
+    void reflect<ObjectConfig>()
+    {
+        engine_meta_type<ObjectConfig>()
+            .data<&ObjectConfig::object_path>("object_path"_hs)
+        ;
+    }
+
+    template <>
     void reflect<PlayerConfig>()
     {
         engine_meta_type<PlayerConfig>()
@@ -155,10 +307,19 @@ namespace engine
     }
 
     template <>
+    void reflect<EntityConfig>()
+    {
+        engine_meta_type<EntityConfig>()
+            .data<&EntityConfig::archetype_path>("archetype_path"_hs)
+        ;
+    }
+
+    template <>
     void reflect<Config>()
     {
         engine_meta_type<Config>()
             .data<&Config::graphics>("graphics"_hs)
+            .data<&Config::objects>("objects"_hs)
             .data<&Config::players>("players"_hs)
         ;
     }
@@ -177,7 +338,7 @@ namespace engine
 
     void reflect_dependencies()
     {
-        //reflect_stl();
+        reflect_stl();
         reflect_math();
     }
 
@@ -185,10 +346,28 @@ namespace engine
     {
         reflect<EntityType>();
         reflect<LightType>();
-        reflect<Command>();
+
+        // See: `std::chrono::system_clock::duration` in `reflect_stl`.
+        //reflect<Timer::Duration>();
 
         //reflect<LightProperties>();
         //reflect<Axis>(); // RotationAxis
+
+        // Primitive type extensions:
+        extend_language_primitive_type<std::int64_t>();
+        extend_language_primitive_type<std::uint64_t>();
+        extend_language_primitive_type<std::int32_t>();
+        extend_language_primitive_type<std::uint32_t>();
+        extend_language_primitive_type<std::int16_t>();
+        extend_language_primitive_type<std::uint16_t>();
+        //extend_language_primitive_type<std::int8_t>();
+        //extend_language_primitive_type<std::uint8_t>();
+
+        extend_language_primitive_type<float>();
+        extend_language_primitive_type<double>();
+        extend_language_primitive_type<long double>();
+
+        extend_language_primitive_type<bool>();
     }
 
     void reflect_all(bool primitives, bool dependencies)
@@ -221,7 +400,9 @@ namespace engine
         reflect_systems();
 
         reflect<GraphicsConfig>();
+        reflect<ObjectConfig>();
         reflect<PlayerConfig>();
+        reflect<EntityConfig>();
         reflect<Config>();
 
         // ...

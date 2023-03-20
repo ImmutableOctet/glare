@@ -1,21 +1,37 @@
 #pragma once
 
+#include "serial.hpp"
+
 #include "types.hpp"
 #include "event_trigger_condition.hpp"
 #include "entity_target.hpp"
+#include "entity_descriptor.hpp"
+#include "entity_thread_target.hpp"
+#include "entity_thread_range.hpp"
+
+#include "events.hpp"
 
 #include <engine/meta/types.hpp>
 #include <engine/meta/meta.hpp>
+#include <engine/meta/hash.hpp>
 #include <engine/meta/serial.hpp>
-#include <engine/meta/parsing_context.hpp>
+#include <engine/meta/meta_type_resolution_context.hpp>
+#include <engine/meta/meta_parsing_instructions.hpp>
+#include <engine/meta/meta_variable_context.hpp>
+#include <engine/meta/shared_storage_interface.hpp>
+#include <engine/meta/meta_value_operator.hpp>
+#include <engine/meta/meta_value_operation.hpp>
+#include <engine/meta/meta_variable_target.hpp>
+#include <engine/meta/indirect_meta_variable_target.hpp>
 
 //#include <util/json.hpp>
+#include <util/magic_enum.hpp>
 
 #include <string>
 #include <string_view>
 #include <optional>
 #include <type_traits>
-#include <stdexcept>
+//#include <stdexcept>
 
 // Debugging related:
 #include <util/log.hpp>
@@ -24,10 +40,19 @@ namespace engine
 {
 	class EntityDescriptor;
 
-	MetaAny process_trigger_condition_value(std::string_view compared_value_raw);
+	// Subroutine of `process_member_trigger_condition`, `process_standard_trigger_condition`, etc.
+	MetaAny process_trigger_condition_value
+	(
+		EntityDescriptor& descriptor,
+		std::string_view compared_value_raw,
+		const MetaParsingContext& opt_parsing_context={}
+	);
 
+	// Subroutine of `process_trigger_expression`.
 	std::optional<EventTriggerSingleCondition> process_standard_trigger_condition // std::optional<EventTriggerCondition>
 	(
+		EntityDescriptor& descriptor,
+
 		const entt::meta_type& type,
 
 		std::string_view member_name,
@@ -37,11 +62,17 @@ namespace engine
 		// Used for debugging purposes, etc.
 		std::string_view trigger_condition_expr={},
 
-		bool embed_type_in_condition=false
+		bool embed_type_in_condition=false,
+		bool invert_comparison_operator=false,
+
+		const MetaParsingContext& opt_parsing_context={}
 	);
 
+	// Subroutine of `process_trigger_expression`.
 	std::optional<EventTriggerMemberCondition> process_member_trigger_condition
 	(
+		EntityDescriptor& descriptor,
+
 		const entt::meta_type& type,
 
 		std::string_view entity_ref,
@@ -49,9 +80,13 @@ namespace engine
 		std::string_view member_name,
 		std::string_view comparison_operator,
 		std::string_view compared_value_raw,
-				
+		
 		// Used for debugging purposes, etc.
-		std::string_view trigger_condition_expr={}
+		std::string_view trigger_condition_expr={},
+
+		bool invert_comparison_operator=false,
+
+		const MetaParsingContext& opt_parsing_context={}
 	);
 
 	// Attempts to concatenate/add `condition_to_add` (exact-type) to `condition_out` (opaque-type) using the method described by `combinator`.
@@ -64,6 +99,7 @@ namespace engine
 	template <typename AddedConditionType, typename StorageRoutine>
 	void concatenate_conditions
 	(
+		EntityDescriptor& descriptor,
 		EventTriggerCondition& condition_out,
 		AddedConditionType&& condition_to_add,
 		EventTriggerCompoundMethod combinator,
@@ -73,15 +109,15 @@ namespace engine
 		using Combinator = EventTriggerCompoundMethod;
 
 		// Simplified wrapper for `store_condition`.
-		auto store = [&store_condition, &condition_out]() -> bool
+		auto store = [&store_condition, &condition_out, &condition_to_add]() -> bool
 		{
-			if constexpr (std::is_invocable_r_v<bool, StorageRoutine>)
+			if constexpr (std::is_invocable_r_v<bool, StorageRoutine, EventTriggerCondition&, AddedConditionType&>)
 			{
-				return store_condition();
+				return store_condition(condition_out, condition_to_add);
 			}
-			else if constexpr (std::is_invocable_r_v<void, StorageRoutine>)
+			else if constexpr (std::is_invocable_r_v<void, StorageRoutine, EventTriggerCondition&, AddedConditionType&>)
 			{
-				store_condition();
+				store_condition(condition_out, condition_to_add);
 
 				return true;
 			}
@@ -92,6 +128,16 @@ namespace engine
 			else if constexpr (std::is_invocable_r_v<void, StorageRoutine, EventTriggerCondition&>)
 			{
 				store_condition(condition_out);
+
+				return true;
+			}
+			else if constexpr (std::is_invocable_r_v<bool, StorageRoutine>)
+			{
+				return store_condition();
+			}
+			else if constexpr (std::is_invocable_r_v<void, StorageRoutine>)
+			{
+				store_condition();
 
 				return true;
 			}
@@ -107,7 +153,7 @@ namespace engine
 
 		// Covers the first time visiting a condition. (Fragment only; no AND/OR container generated)
 		// 'Basic condition' scenarios: `EventTriggerSingleCondition`, `EventTriggerTrueCondition`, `EventTriggerFalseCondition`, `EventTriggerInverseCondition` (see below)
-		auto basic_condition = [combinator, &store, &condition_out, &condition_to_add](auto& condition)
+		auto basic_condition = [&descriptor, combinator, &store, &condition_out, &condition_to_add](auto& condition)
 		{
 			switch (combinator)
 			{
@@ -116,8 +162,8 @@ namespace engine
 					// Generate an AND container:
 					EventTriggerAndCondition and_condition;
 
-					and_condition.add_condition(std::move(condition));
-					and_condition.add_condition(std::move(condition_to_add));
+					and_condition.add_condition(descriptor.allocate<EventTriggerCondition>(std::move(condition)));
+					and_condition.add_condition(descriptor.allocate<EventTriggerCondition>(std::move(condition_to_add)));
 
 					// Store the newly generated container in place of the old condition-fragment.
 					condition_out = std::move(and_condition);
@@ -134,8 +180,8 @@ namespace engine
 						print_warn("Attempting to add 'always-true' condition(s) to 'OR' compound condition.");
 					}
 
-					or_condition.add_condition(std::move(condition));
-					or_condition.add_condition(std::move(condition_to_add));
+					or_condition.add_condition(descriptor.allocate<EventTriggerCondition>(std::move(condition)));
+					or_condition.add_condition(descriptor.allocate<EventTriggerCondition>(std::move(condition_to_add)));
 
 					// Store the newly generated container in place of the old condition-fragment.
 					condition_out = std::move(or_condition);
@@ -157,7 +203,7 @@ namespace engine
 
 		util::visit
 		(
-			condition_out,
+			condition_out.value,
 
 			[&basic_condition](EventTriggerSingleCondition& single_condition)   { basic_condition(single_condition);  },
 			[&basic_condition](EventTriggerMemberCondition& member_condition)   { basic_condition(member_condition);  },
@@ -166,13 +212,13 @@ namespace engine
 			[&basic_condition](EventTriggerInverseCondition& inverse_condition) { basic_condition(inverse_condition); },
 
 			// Existing AND container:
-			[combinator, &store, &condition_out, &condition_to_add](EventTriggerAndCondition& and_condition)
+			[&descriptor, combinator, &store, &condition_out, &condition_to_add](EventTriggerAndCondition& and_condition)
 			{
 				switch (combinator)
 				{
 					case Combinator::And:
 						// Add to this container as usual.
-						and_condition.add_condition(std::move(condition_to_add));
+						and_condition.add_condition(descriptor.allocate<EventTriggerCondition>(std::move(condition_to_add)));
 
 						break;
 					case Combinator::Or:
@@ -194,7 +240,7 @@ namespace engine
 			},
 
 			// Existing OR container:
-			[combinator, &store, &condition_out, &condition_to_add](EventTriggerOrCondition& or_condition)
+			[&descriptor, combinator, &store, &condition_out, &condition_to_add](EventTriggerOrCondition& or_condition)
 			{
 				switch (combinator)
 				{
@@ -210,7 +256,7 @@ namespace engine
 						break;
 					case Combinator::Or:
 						// Add to this container as usual.
-						or_condition.add_condition(std::move(condition_to_add));
+						or_condition.add_condition(descriptor.allocate<EventTriggerCondition>(std::move(condition_to_add)));
 
 						break;
 
@@ -223,11 +269,13 @@ namespace engine
 		);
 	}
 
-	// This overload assumes that attempting to store or otherwise flush the
-	// contents of `condition_out` is an invalid operation that should never happen.
+	// This overload performs in-line combinations, which may
+	// not be supported in event-driven scenarios.
+	// (Usually due to a required event-type association)
 	template <typename AddedConditionType>
 	void concatenate_conditions
 	(
+		EntityDescriptor& descriptor,
 		EventTriggerCondition& condition_out,
 		AddedConditionType&& condition_to_add,
 		EventTriggerCompoundMethod combinator
@@ -235,21 +283,46 @@ namespace engine
 	{
 		concatenate_conditions
 		(
+			descriptor,
 			condition_out,
 			std::forward<AddedConditionType>(condition_to_add),
 			combinator,
 
-			[]() -> bool
+			[&descriptor, combinator](auto& existing_instance, auto& new_instance) -> bool
 			{
-				// Illegal operation.
-				assert(false);
+				auto inline_combine = [&descriptor, &existing_instance, &new_instance]<typename CompoundType>() -> bool
+				{
+					auto condition_out = CompoundType {};
+
+					condition_out.add_condition(descriptor.allocate<EventTriggerCondition>(std::move(existing_instance)));
+					condition_out.add_condition(descriptor.allocate<EventTriggerCondition>(std::move(new_instance)));
+
+					existing_instance = std::move(condition_out);
+
+					// Ownership of `new_instance` taken.
+					return false;
+				};
+
+				switch (combinator)
+				{
+					case EventTriggerCompoundMethod::And:
+						return inline_combine.operator()<EventTriggerAndCondition>();
+
+					case EventTriggerCompoundMethod::Or:
+						return inline_combine.operator()<EventTriggerOrCondition>();
+
+					case EventTriggerCompoundMethod::None:
+						break;
+				}
 				
-				// If asserts are disabled, ensure this is a no-op.
-				return false;
+				return true;
 			}
 		);
 	}
 
+	// TODO: Rework this routine to properly take advantage of `meta_any_from_string`'s parsing functionality,
+	// rather than manually parsing portions of the expression.
+	// 
 	// Processes the expression specified, executing `callback` for
 	// every condition block or compound-condition block generated.
 	// 
@@ -260,26 +333,29 @@ namespace engine
 	template <typename Callback>
 	void process_trigger_expression
 	(
-		const std::string& trigger_condition_expr, // std::string_view
+		EntityDescriptor& descriptor,
+		std::string_view trigger_condition_expr,
 		Callback&& callback,
 		bool always_embed_type=false,
-		const ParsingContext* opt_parsing_context=nullptr
+		const MetaParsingContext& opt_parsing_context={}
 	)
 	{
-		//using namespace entt::literals;
+		using namespace engine::literals;
+
 		using Combinator = EventTriggerCompoundMethod;
 
 		std::size_t offset = 0; // std::ptrdiff_t
 
 		std::optional<EventTriggerCondition> condition_out;
-		std::optional<MetaType> active_type;
-		Combinator active_combinator = Combinator::None;
+		
+		auto active_type = MetaType {};
+		auto active_combinator = Combinator::None;
 
 		bool is_first_expr = true;
 
 		// NOTE: Nesting (i.e. parentheses) is not currently supported.
 		// Therefore, a 'store' operation simply processes a rule immediately, consuming the condition object.
-		auto store_condition = [&active_type, &condition_out, &callback]()
+		auto store_condition = [&active_type, &condition_out, &callback](bool fallback_to_empty=true) // -> bool
 		{
 			if (!condition_out.has_value())
 			{
@@ -291,30 +367,50 @@ namespace engine
 				return;
 			}
 
-			callback(active_type->id(), std::move(*condition_out));
+			callback(active_type.id(), std::move(*condition_out));
 
-			// Ensure `std::nullopt` status.
-			// (As opposed to 'moved-from' status)
-			condition_out = std::nullopt;
+			// NOTE: If `fallback_to_empty` is set to false,
+			// `condition_out` will be left in a 'moved-from' state.
+			if (fallback_to_empty)
+			{
+				condition_out = std::nullopt;
+			}
 		};
 
 		do
 		{
+			bool invert_condition = false;
+
+			if (auto [leading_operator, remainder] = util::parse_standard_operator_segment(trigger_condition_expr); ((!leading_operator.empty()) && leading_operator == "!"))
+			{
+				invert_condition = true;
+
+				trigger_condition_expr = remainder;
+			}
+
 			auto
 			[
 				entity_ref,
-				type_name,
-				member_name,
+				first_symbol,
+				second_symbol,
 				comparison_operator,
 				compared_value_raw,
 				updated_offset
-			] = util::parse_qualified_assignment_or_comparison(trigger_condition_expr, static_cast<std::ptrdiff_t>(offset));
+			] = parse_qualified_assignment_or_comparison
+			(
+				trigger_condition_expr, offset, {},
+				true, true, true
+			);
+
+			auto& type_name = first_symbol;
+			auto& member_name = second_symbol;
 
 			bool is_standalone_event_trigger = false;
 
 			if (type_name.empty())
 			{
-				auto standalone_event_result = parse_event_type(trigger_condition_expr, static_cast<std::ptrdiff_t>(offset));
+				// TODO: Optimize. (Temporary string created due to limitation of `std::regex`)
+				auto standalone_event_result = parse_event_type(std::string { trigger_condition_expr }, offset);
 
 				type_name = std::get<0>(standalone_event_result);
 
@@ -395,21 +491,21 @@ namespace engine
 
 			bool active_type_changed = false;
 
-			MetaType expr_type = (opt_parsing_context)
-				? opt_parsing_context->get_type(type_name) // TODO: Optimize.
+			const auto opt_type_context = opt_parsing_context.get_type_context();
+
+			MetaType expr_type = (opt_type_context)
+				? opt_type_context->get_type(type_name) // TODO: Optimize.
 				: resolve(hash(type_name).value())
 			;
 
-			if (!active_type.has_value())
+			if (!active_type)
 			{
 				//assert(expr_type);
 
-				if (!expr_type)
+				if (expr_type)
 				{
-					throw std::runtime_error(util::format("Unable to resolve trigger/event type: \"{}\"", type_name));
+					active_type = expr_type;
 				}
-
-				active_type = expr_type;
 			}
 			else if (active_combinator == Combinator::And)
 			{
@@ -417,37 +513,50 @@ namespace engine
 				{
 					// NOTE: `expr_type` is technically considered optional in the case of `And` combinators.
 					// (i.e. we use the active type instead)
-					expr_type = *active_type;
+					expr_type = active_type;
 				}
 			}
 			else // && (active_combinator == Combinator::Or)
 			{
-				//assert(expr_type);
-
-				if (!expr_type)
-				{
-					throw std::runtime_error(util::format("Unable to resolve trigger/event type in compound condition: \"{}\"", type_name));
-				}
-
-				if (active_type->id() != expr_type.id())
+				if (!expr_type || (active_type.id() != expr_type.id()))
 				{
 					// Since combining event types in trigger-clauses is not supported,
 					// we need to process the condition we've already built.
-					store_condition();
+					store_condition(true);
+				}
 
+				if (expr_type)
+				{
 					// With the previous condition handled, we can switch to the new event-type:
 					active_type = expr_type;
 
 					active_type_changed = true;
 				}
+				/*
+				else
+				{
+					//throw std::runtime_error(util::format("Unable to resolve trigger/event type in compound condition: \"{}\"", type_name));
+					//print_warn("Unable to resolve trigger/event type in compound condition: \"{}\"", type_name);
+
+					break;
+				}
+				*/
 			}
 
-			//assert(expr_type);
-			assert(active_type);
-
-			auto on_condition = [&store_condition](EventTriggerCondition& condition_out, auto&& generated_condition, Combinator combinator)
+			auto on_condition = [&descriptor, &store_condition](EventTriggerCondition& condition_out, auto&& generated_condition, Combinator combinator)
 			{
-				concatenate_conditions(condition_out, std::forward<decltype(generated_condition)>(generated_condition), combinator, store_condition);
+				concatenate_conditions
+				(
+					descriptor,
+					condition_out,
+					std::forward<decltype(generated_condition)>(generated_condition),
+					combinator,
+
+					[&store_condition]()
+					{
+						store_condition(false);
+					}
+				);
 			};
 			
 			// Workaround for compound AND/OR on 'standalone' (no-condition) of same event type.
@@ -464,60 +573,372 @@ namespace engine
 			}
 			else
 			{
-				auto handle_condition = [&on_condition, &active_combinator, &condition_out](auto&& generated_condition)
+				auto handle_condition = [&on_condition, &condition_out](auto combinator, auto&& generated_condition)
 				{
-					// Attempt to resolve a single condition (i.e. fragment) from the expression we parsed.
-					if (generated_condition) // *active_type
+					if constexpr (std::is_base_of_v<EventTriggerConditionType, std::decay_t<decltype(generated_condition)>>)
 					{
 						if (condition_out.has_value())
 						{
-							on_condition(*condition_out, *generated_condition, active_combinator);
+							on_condition(*condition_out, generated_condition, combinator);
 						}
 						else
 						{
-							condition_out = std::move(*generated_condition);
+							condition_out = { std::move(generated_condition) };
 						}
 					}
 					else
 					{
-						if (condition_out.has_value())
+						// Attempt to resolve a single condition (i.e. fragment) from the expression we parsed.
+						if (generated_condition) // *active_type
 						{
-							on_condition(*condition_out, EventTriggerTrueCondition {}, active_combinator);
+							if (condition_out.has_value())
+							{
+								on_condition(*condition_out, *generated_condition, combinator); // std::move(*generated_condition)
+							}
+							else
+							{
+								condition_out = { std::move(*generated_condition) };
+							}
 						}
 						else
 						{
-							condition_out = EventTriggerTrueCondition {};
+							if (condition_out.has_value())
+							{
+								on_condition(*condition_out, EventTriggerTrueCondition {}, combinator);
+							}
+							else
+							{
+								condition_out = { EventTriggerTrueCondition {} };
+							}
 						}
 					}
 				};
 
-				if (entity_ref.empty())
+				if (expr_type)
 				{
-					// Standard event triggers:
-					handle_condition
-					(
-						process_standard_trigger_condition
+					if (entity_ref.empty())
+					{
+						// Standard event triggers:
+						handle_condition
 						(
-							expr_type, member_name,
-							comparison_operator, compared_value_raw,
-							parsed_expr,
+							active_combinator,
 
-							(always_embed_type || (expr_type != *active_type))
-						)
-					);
+							process_standard_trigger_condition
+							(
+								descriptor,
+								expr_type, member_name,
+								comparison_operator, compared_value_raw,
+								parsed_expr,
+
+								(always_embed_type || (expr_type != active_type)),
+								invert_condition,
+								opt_parsing_context
+							)
+						);
+					}
+					else
+					{
+						// Fully qualified component-member event triggers:
+						handle_condition
+						(
+							active_combinator,
+
+							process_member_trigger_condition
+							(
+								descriptor,
+								expr_type, entity_ref, member_name,
+								comparison_operator, compared_value_raw,
+								parsed_expr,
+								invert_condition,
+								opt_parsing_context
+							)
+						);
+					}
 				}
 				else
 				{
-					// Fully qualified component-member event triggers:
+					auto variable_name = std::string_view {};
+					auto thread_name = std::string_view {};
+
+					if (first_symbol.empty())
+					{
+						break;
+					}
+					else
+					{
+						if (second_symbol.empty())
+						{
+							variable_name = first_symbol;
+						}
+						else
+						{
+							thread_name = first_symbol;
+							variable_name = second_symbol;
+						}
+					}
+
+					auto thread_id = (thread_name.empty())
+						? std::optional<EntityThreadID>(std::nullopt)
+						: std::optional<EntityThreadID>(hash(thread_name).value())
+					;
+
+					auto entity_target = EntityTarget::parse(entity_ref);
+
+					const auto is_remote_variable = ((entity_target) && (!entity_target->is_self_targeted()));
+
+					if (!entity_target)
+					{
+						// Default to 'self' target.
+						entity_target = EntityTarget {};
+					}
+
+					// NOTE: May change this logic later. (see also: `EntityThreadBuilder::process_remote_variable_assignment`)
+					auto variable_scope = (thread_id || entity_target->is_self_targeted()) // (is_remote_variable)
+						? MetaVariableScope::Local
+						: MetaVariableScope::Global
+					;
+
+					auto resolved_variable_id = MetaSymbolID {};
+
+					if (!is_remote_variable && !thread_id && (variable_scope == MetaVariableScope::Local))
+					{
+						auto opt_variable_context = opt_parsing_context.get_variable_context();
+
+						if (!opt_variable_context)
+						{
+							break;
+						}
+
+						const auto variable_entry = opt_variable_context->retrieve_variable(variable_name);
+
+						if (!variable_entry)
+						{
+							break;
+						}
+
+						variable_scope = variable_entry->scope;
+						resolved_variable_id = variable_entry->resolved_name;
+					}
+					else // if (!resolved_variable_id)
+					{
+						resolved_variable_id = MetaVariableContext::resolve_path
+						(
+							(thread_id)
+								? (*thread_id)
+								: (MetaSymbolID {})
+							,
+
+							variable_name,
+							variable_scope
+						);
+					}
+
+					expr_type = resolve<OnThreadVariableUpdate>();
+
+					if (expr_type)
+					{
+						if (!active_type)
+						{
+							active_type = expr_type;
+						}
+					}
+					else
+					{
+						break;
+					}
+
+					const auto expr_type_id = expr_type.id();
+
+					auto& shared_storage = descriptor.get_shared_storage();
+
+					constexpr MetaSymbolID entity_field_id = "entity"_hs;
+
+					assert(expr_type.data(entity_field_id));
+
 					handle_condition
 					(
-						process_member_trigger_condition
-						(
-							expr_type, entity_ref, member_name,
-							comparison_operator, compared_value_raw,
-							parsed_expr
-						)
+						active_combinator,
+
+						EventTriggerSingleCondition
+						{
+							entity_field_id,
+
+							allocate_meta_any(*entity_target, &shared_storage), // std::move(*entity_target)
+
+							(variable_scope == MetaVariableScope::Local)
+								? EventTriggerComparisonMethod::Equal
+								: EventTriggerComparisonMethod::NotEqual
+							,
+
+							expr_type_id
+						}
 					);
+
+					constexpr MetaSymbolID variable_scope_field_id = "variable_scope"_hs;
+
+					assert(expr_type.data(variable_scope_field_id));
+
+					handle_condition
+					(
+						Combinator::And,
+
+						EventTriggerSingleCondition
+						{
+							variable_scope_field_id,
+								
+							allocate_meta_any(MetaVariableScope::Local, &shared_storage),
+
+							(variable_scope == MetaVariableScope::Local)
+								? EventTriggerComparisonMethod::Equal
+								: EventTriggerComparisonMethod::NotEqual
+							,
+
+							expr_type_id
+						}
+					);
+
+					constexpr MetaSymbolID resolved_variable_name_field_id = "resolved_variable_name"_hs;
+
+					assert(expr_type.data(resolved_variable_name_field_id));
+
+					handle_condition
+					(
+						Combinator::And,
+
+						EventTriggerSingleCondition
+						{
+							resolved_variable_name_field_id,
+								
+							allocate_meta_any(resolved_variable_id, &shared_storage),
+
+							EventTriggerComparisonMethod::Equal,
+
+							expr_type_id
+						}
+					);
+
+					constexpr MetaSymbolID variable_update_result_field_id = "variable_update_result"_hs;
+
+					assert(expr_type.data(variable_update_result_field_id));
+
+					auto comparison_value = (compared_value_raw.empty())
+						? MetaAny { true }
+						: process_trigger_condition_value(descriptor, compared_value_raw, opt_parsing_context)
+					;
+
+					const auto comparison_method = EventTriggerConditionType::get_comparison_method(comparison_operator, invert_condition);
+
+					handle_condition
+					(
+						Combinator::And,
+
+						EventTriggerSingleCondition
+						{
+							variable_update_result_field_id,
+								
+							MetaAny { comparison_value }, // std::move(comparison_value) // comparison_value.as_ref()
+
+							comparison_method,
+
+							expr_type_id
+						}
+					);
+
+					const auto value_operator = EventTriggerConditionType::operation_from_comparison_method(comparison_method);
+
+					auto operation_out = MetaValueOperation {};
+
+					// if (value_has_indirection(comparison_value)) ...
+
+					if (is_remote_variable || thread_id)
+					{
+						operation_out.segments.emplace_back
+						(
+							allocate_meta_any
+							(
+								IndirectMetaVariableTarget
+								{
+									*entity_target,
+
+									MetaVariableTarget
+									{
+										resolved_variable_id,
+										variable_scope
+									},
+									
+									(thread_id)
+										? EntityThreadTarget { *thread_id }
+										: EntityThreadTarget {}
+								},
+
+								&shared_storage
+							),
+
+							value_operator
+						);
+					}
+					else
+					{
+						operation_out.segments.emplace_back
+						(
+							allocate_meta_any
+							(
+								MetaVariableTarget
+								{
+									resolved_variable_id,
+									variable_scope
+								},
+
+								&shared_storage
+							),
+
+							value_operator
+						);
+					}
+
+					operation_out.segments.emplace_back
+					(
+						std::move(comparison_value), // MetaAny { comparison_value }, // comparison_value.as_ref()
+						value_operator
+					);
+
+					//store_condition();
+
+					handle_condition
+					(
+						Combinator::Or,
+
+						EventTriggerSingleCondition
+						{
+							allocate_meta_any
+							(
+								std::move(operation_out),
+								&shared_storage
+							)
+						}
+					);
+
+					/*
+					// Alternative implementation:
+					if (!is_remote_variable)
+					{
+						const auto comparison_expr = std::string_view
+						{
+							variable_name.data(),
+							static_cast<std::size_t>((compared_value_raw.data() + compared_value_raw.length()) - variable_name.data())
+						};
+
+						handle_condition
+						(
+							Combinator::Or,
+
+							EventTriggerSingleCondition
+							{
+								process_trigger_condition_value(descriptor, comparison_expr, opt_parsing_context)
+							}
+						);
+					}
+					*/
 				}
 			}
 
@@ -540,17 +961,17 @@ namespace engine
 		// Process the rule using whatever's left.
 		if (condition_out)
 		{
-			callback(active_type->id(), std::move(*condition_out));
+			callback(active_type.id(), std::move(*condition_out));
 		}
 		else
 		{
-			callback(active_type->id(), std::nullopt);
+			callback(active_type.id(), std::nullopt);
 		}
 	}
 	
 	// Processes an 'all-in-one' (unified) condition-block from `trigger_condition_expr`.
 	// This condition cannot be used in a traditional rule/trigger scenario, since it could encode multiple primary types.
-	inline std::optional<EventTriggerCondition> process_unified_condition_block(const std::string& trigger_condition_expr, const ParsingContext* opt_parsing_context=nullptr) // std::string_view
+	inline std::optional<EventTriggerCondition> process_unified_condition_block(EntityDescriptor& descriptor, const std::string& trigger_condition_expr, const MetaParsingContext& opt_parsing_context={}) // std::string_view
 	{
 		using Combinator = EventTriggerCompoundMethod;
 
@@ -558,9 +979,11 @@ namespace engine
 
 		process_trigger_expression
 		(
+			descriptor,
+
 			trigger_condition_expr,
 
-			[&condition_out](MetaTypeID type_id, std::optional<EventTriggerCondition> condition)
+			[&descriptor, &condition_out](MetaTypeID type_id, std::optional<EventTriggerCondition> condition)
 			{
 				if (!condition.has_value())
 				{
@@ -569,7 +992,7 @@ namespace engine
 
 				if (condition_out.has_value())
 				{
-					concatenate_conditions(*condition_out, std::move(*condition), Combinator::Or);
+					concatenate_conditions(descriptor, *condition_out, std::move(*condition), Combinator::Or);
 				}
 				else
 				{
@@ -587,8 +1010,8 @@ namespace engine
 	}
 
 	// TODO: Optimize. (Temporary string generated due to limitation with `std::regex`)
-	inline std::optional<EventTriggerCondition> process_unified_condition_block(std::string_view trigger_condition_expr, const ParsingContext* opt_parsing_context=nullptr)
+	inline std::optional<EventTriggerCondition> process_unified_condition_block(EntityDescriptor& descriptor, std::string_view trigger_condition_expr, const MetaParsingContext& opt_parsing_context={})
 	{
-		return process_unified_condition_block(std::string(trigger_condition_expr), opt_parsing_context);
+		return process_unified_condition_block(descriptor, std::string(trigger_condition_expr), opt_parsing_context);
 	}
 }

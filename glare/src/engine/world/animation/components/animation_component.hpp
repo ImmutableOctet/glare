@@ -1,6 +1,8 @@
 #pragma once
 
 #include <engine/types.hpp>
+#include <engine/resource_manager/animation_data.hpp>
+
 #include <graphics/vertex.hpp>
 
 #include <optional>
@@ -9,10 +11,7 @@ namespace engine
 {
 	class AnimationSystem;
 
-	// Main animation component type.
-	//
-	// TODO: Rename to `AnimationComponent`.
-	struct Animator
+	struct AnimationComponent
 	{
 		public:
 			using Matrices = std::vector<math::Matrix>;
@@ -42,12 +41,12 @@ namespace engine
 			static const Animation* resolve_animation(const std::shared_ptr<AnimationData>& animations, AnimationID id);
 			static std::optional<AnimationID> resolve_animation_id(const std::shared_ptr<AnimationData>& animations, const Animation* animation);
 
-			Animator() = default;
+			AnimationComponent() = default;
 
-			Animator(float rate);
+			AnimationComponent(float rate);
 
-			inline Animator(const std::shared_ptr<AnimationData>& animations, AnimationID current_animation={}, float rate=1.0f, float time=0.0f)
-				: Animator(animations, resolve_animation(animations, current_animation), rate, time) {}
+			inline AnimationComponent(const std::shared_ptr<AnimationData>& animations, AnimationID current_animation={}, float rate=1.0f, float time=0.0f)
+				: AnimationComponent(animations, resolve_animation(animations, current_animation), rate, time) {}
 
 			// Animation rate multiplier.
 			float rate = 1.0f;
@@ -58,7 +57,7 @@ namespace engine
 			// Buffer containing the last updated state of each bone.
 			Matrices pose; // bone_matrices;
 		protected:
-			ref<AnimationData> animations;
+			std::shared_ptr<AnimationData> animations;
 
 			const Animation* current_animation = nullptr;
 
@@ -73,9 +72,9 @@ namespace engine
 
 			std::optional<TransitionState> transition_state = std::nullopt;
 			
-			Animator(pass_ref<AnimationData> animations, const Animation* current_animation=nullptr, float rate=1.0f, float time=0.0f);
+			AnimationComponent(const std::shared_ptr<AnimationData>& animations, const Animation* current_animation=nullptr, float rate=1.0f, float time=0.0f);
 
-			inline Animator& set_animation(const Animation* animation)
+			inline AnimationComponent& set_animation(const Animation* animation)
 			{
 				current_animation = animation;
 
@@ -97,7 +96,7 @@ namespace engine
 				return resolve_id(get_current_animation());
 			}
 
-			inline Animator& set_animation_id(AnimationID id)
+			inline AnimationComponent& set_animation_id(AnimationID id)
 			{
 				const auto* animation = get_animation(id);
 
@@ -111,7 +110,7 @@ namespace engine
 			}
 
 			// Alias for `set_animation_id`.
-			inline Animator& set_animation(AnimationID id)
+			inline AnimationComponent& set_animation(AnimationID id)
 			{
 				return set_animation_id(id);
 			}
@@ -122,7 +121,7 @@ namespace engine
 			}
 
 			// TODO: Need to test this part of the public API.
-			Animator& set_animations(const std::shared_ptr<AnimationData>& animations, State new_state=State::Play);
+			AnimationComponent& set_animations(const std::shared_ptr<AnimationData>& animations, State new_state=State::Play);
 
 			inline const Animation* get_current_animation() const { return current_animation; }
 			inline const Animation* get_prev_animation() const { return prev_animation; }
@@ -147,7 +146,4 @@ namespace engine
 			void pause();
 			bool toggle();
 	};
-
-	// TODO: Rename `Animator` to `AnimationComponent`.
-	using AnimationComponent = Animator;
 }

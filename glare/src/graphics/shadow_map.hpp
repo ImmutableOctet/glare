@@ -1,6 +1,12 @@
 #pragma once
 
 #include "types.hpp"
+#include "texture_type.hpp"
+#include "viewport.hpp"
+
+#include <math/types.hpp>
+
+#include <memory>
 
 namespace graphics
 {
@@ -11,8 +17,8 @@ namespace graphics
 	class ShadowMap
 	{
 		public:
-			ShadowMap(pass_ref<graphics::Context>& context, int width, int height, TextureType texture_type=TextureType::Texture2D);
-			ShadowMap(pass_ref<graphics::Texture> depth_map, pass_ref<graphics::FrameBuffer> framebuffer={});
+			ShadowMap(const std::shared_ptr<graphics::Context>& context, int width, int height, TextureType texture_type=TextureType::Texture2D);
+			ShadowMap(const std::shared_ptr<graphics::Texture>& depth_map, const std::shared_ptr<graphics::FrameBuffer>& framebuffer={});
 
 			ShadowMap(ShadowMap&&) noexcept = default;
 
@@ -21,10 +27,10 @@ namespace graphics
 			math::vec2i get_resolution() const;
 			graphics::Viewport get_viewport() const;
 
-			ref<graphics::Texture>& get_depth_map() { return depth_map; }
-			ref<graphics::FrameBuffer>& get_framebuffer() { return framebuffer; }
+			std::shared_ptr<graphics::Texture>& get_depth_map() { return depth_map; }
+			std::shared_ptr<graphics::FrameBuffer>& get_framebuffer() { return framebuffer; }
 		protected:
-			ref<graphics::Texture> depth_map;
-			ref<graphics::FrameBuffer> framebuffer;
+			std::shared_ptr<graphics::Texture> depth_map;
+			std::shared_ptr<graphics::FrameBuffer> framebuffer;
 	};
 }

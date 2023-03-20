@@ -26,7 +26,7 @@ namespace engine
 		world.register_event<OnParentChanged, &AnimationSystem::on_parent_changed>(*this);
 	}
 
-	static std::uint16_t animate_bones(World& world, const math::Matrix& inv_root_matrix, Animator& animator, const Animation& current_animation, RelationshipComponent& relationship)
+	static std::uint16_t animate_bones(World& world, const math::Matrix& inv_root_matrix, AnimationComponent& animator, const Animation& current_animation, RelationshipComponent& relationship)
 	{
 		auto& registry = world.get_registry();
 
@@ -79,8 +79,8 @@ namespace engine
 
 			// Get current bone state (matrix) based on ID, time, and data found in 'current_animation'.
 			// Update bone entity's transform in-engine to correspond to new matrix.
-			// Log matrix results according to bone ID in array or uniform buffer held in the Animator component.
-			// Check against Animator component's existence in render loop,
+			// Log matrix results according to bone ID in array or uniform buffer held in the AnimationComponent component.
+			// Check against AnimationComponent component's existence in render loop,
 			// bind already correct shader (see resource manager and co.),
 			// upload bone matrices to shader
 			// update vertex position based on matrices, weights and indices.
@@ -100,7 +100,7 @@ namespace engine
 		return bones_animated;
 	}
 
-	static std::uint16_t animate(World& world, Entity entity, Animator& animator, const Animation& current_animation, RelationshipComponent& relationship, TransformComponent& tform_comp)
+	static std::uint16_t animate(World& world, Entity entity, AnimationComponent& animator, const Animation& current_animation, RelationshipComponent& relationship, TransformComponent& tform_comp)
 	{
 		// Retrieve the inverse world-space matrix of the root entity.
 		math::Matrix inv_root_matrix;
@@ -121,7 +121,7 @@ namespace engine
 		auto& registry = world.get_registry();
 
 		// Apply motion (gravity, velocity, deceleration, etc.):
-		registry.view<Animator, RelationshipComponent, TransformComponent>().each([&](auto entity, Animator& animator, RelationshipComponent& relationship, TransformComponent& tform_comp)
+		registry.view<AnimationComponent, RelationshipComponent, TransformComponent>().each([&](auto entity, AnimationComponent& animator, RelationshipComponent& relationship, TransformComponent& tform_comp)
 		{
 			if (!animator)
 			{
@@ -168,7 +168,7 @@ namespace engine
 
 			if (frame_advance)
 			{
-				if (animator.state != Animator::State::Pause)
+				if (animator.state != AnimationComponent::State::Pause)
 				{
 					auto prev_time = animator.time;
 

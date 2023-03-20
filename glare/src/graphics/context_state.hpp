@@ -11,6 +11,8 @@
 #include "texture.hpp"
 #include "mesh.hpp"
 
+#include <util/defaultable_ref.hpp>
+
 namespace graphics
 {
 	class Context;
@@ -34,13 +36,13 @@ namespace graphics
 			// Modified and otherwise managed by 'Context' and 'Context::Driver'.
 			Flags flags = Flags::Default;
 
-			defaultable_ref<Shader> shader;
-			defaultable_ref<Mesh> mesh;
+			util::defaultable_ref<Shader> shader;
+			util::defaultable_ref<Mesh> mesh;
 
-			defaultable_ref<FrameBuffer> read_framebuffer;
-			defaultable_ref<FrameBuffer> write_framebuffer;
+			util::defaultable_ref<FrameBuffer> read_framebuffer;
+			util::defaultable_ref<FrameBuffer> write_framebuffer;
 
-			defaultable_ref<RenderBuffer> renderbuffer;
+			util::defaultable_ref<RenderBuffer> renderbuffer;
 
 			std::vector<const Texture*> textures; // std::stack<Texture>
 

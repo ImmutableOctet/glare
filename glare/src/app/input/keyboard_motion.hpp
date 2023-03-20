@@ -1,6 +1,6 @@
 #pragma once
 
-#include <types.hpp>
+#include <cstdint>
 
 namespace app::input
 {
@@ -11,16 +11,16 @@ namespace app::input
 	{
 		RuntimeAnalogOffset = 0,
 
-		_Runtime_Reserved_0 = RuntimeAnalogOffset,
-		_Runtime_Reserved_1,
-		_Runtime_Reserved_2,
-		_Runtime_Reserved_3,
-		_Runtime_Reserved_4,
-		_Runtime_Reserved_5,
-		_Runtime_Reserved_6,
-		_Runtime_Reserved_7,
+		_runtime_reserved_0 = RuntimeAnalogOffset,
+		_runtime_reserved_1,
+		_runtime_reserved_2,
+		_runtime_reserved_3,
+		_runtime_reserved_4,
+		_runtime_reserved_5,
+		_runtime_reserved_6,
+		_runtime_reserved_7,
 
-		_Max
+		_max
 
 		//Touchpad,
 		//Nub

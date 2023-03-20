@@ -40,7 +40,7 @@ namespace app::input
 		return false;
 	}
 
-	const InputDevices& InputHandler::poll(engine::EventHandler* opt_event_handler)
+	const InputDevices& InputHandler::poll(entt::dispatcher* opt_event_handler)
 	{
 		const auto mk_event_handler = ((locked) ? opt_event_handler : nullptr);
 

@@ -1,7 +1,8 @@
 #pragma once
 
 //#include "types.hpp"
-#include <types.hpp>
+
+#include <cstdint>
 
 namespace app::input
 {

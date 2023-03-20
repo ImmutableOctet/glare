@@ -12,9 +12,20 @@ namespace engine
 			}
 		}
 
-		if (auto projected_path = (paths.instance_directory / path); std::filesystem::exists(projected_path))
+		if (!paths.instance_directory.empty())
 		{
-			return projected_path;
+			if (auto projected_path = (paths.instance_directory / path); std::filesystem::exists(projected_path))
+			{
+				return projected_path;
+			}
+		}
+
+		if (!paths.shared_directory.empty())
+		{
+			if (auto projected_path = (paths.shared_directory / path); std::filesystem::exists(projected_path))
+			{
+				return projected_path;
+			}
 		}
 
 		if (!paths.service_archetype_root_path.empty())
@@ -25,9 +36,12 @@ namespace engine
 			}
 		}
 
-		if (auto projected_path = (paths.archetype_root_path / path); std::filesystem::exists(projected_path))
+		if (!paths.archetype_root_path.empty())
 		{
-			return projected_path;
+			if (auto projected_path = (paths.archetype_root_path / path); std::filesystem::exists(projected_path))
+			{
+				return projected_path;
+			}
 		}
 
 		if (std::filesystem::exists(path))

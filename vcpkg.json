@@ -1,6 +1,6 @@
 {
   "name": "glare",
-  "version-semver": "0.0.5",
+  "version-semver": "0.1.0",
   "dependencies": [
     {
       "name": "entt",

@@ -6,11 +6,11 @@
 
 namespace graphics
 {
-	ShadowMap::ShadowMap(pass_ref<graphics::Texture> depth_map, pass_ref<graphics::FrameBuffer> framebuffer)
+	ShadowMap::ShadowMap(const std::shared_ptr<graphics::Texture>& depth_map, const std::shared_ptr<graphics::FrameBuffer>& framebuffer)
 		: depth_map(depth_map), framebuffer(framebuffer)
 	{}
 
-	ShadowMap::ShadowMap(pass_ref<graphics::Context>& context, int width, int height, TextureType texture_type) :
+	ShadowMap::ShadowMap(const std::shared_ptr<graphics::Context>& context, int width, int height, TextureType texture_type) :
 		depth_map
 		(
 			std::make_shared<graphics::Texture>

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <debug.hpp>
-
 #include "types.hpp"
 #include "resource.hpp"
+
+#include "renderbuffer_type.hpp"
 
 namespace graphics
 {
@@ -28,7 +28,7 @@ namespace graphics
 
 		public:
 			RenderBuffer();
-			RenderBuffer(pass_ref<Context> ctx, Type type, int width, int height);
+			RenderBuffer(const std::shared_ptr<Context>& ctx, Type type, int width, int height);
 			RenderBuffer(RenderBuffer&& buffer) noexcept : RenderBuffer() { swap(*this, buffer); }
 
 			~RenderBuffer();

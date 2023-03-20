@@ -41,7 +41,7 @@ namespace game
 		app::WindowFlags window_flags,
 		bool imgui_enabled,
 
-		unique_ref<engine::RenderPipeline>&& rendering_pipeline
+		std::unique_ptr<engine::RenderPipeline>&& rendering_pipeline
 	) :
 		GraphicsApplication(title, width, height, window_flags, update_rate, vsync, imgui_enabled),
 		
@@ -260,9 +260,9 @@ namespace game
 
 	void Game::init_default_systems(bool init_renderer)
 	{
-		auto& resource_manager = world.get_resource_manager();
+		//auto& resource_manager = world.get_resource_manager();
 
-		world_system<engine::EntitySystem>(resource_manager);
+		world_system<engine::EntitySystem>();
 
 		auto& physics = world_system<engine::PhysicsSystem>();
 

@@ -9,5 +9,8 @@ namespace engine
 		EntityThreadTarget threads;
 
 		bool restart_existing = false;
+
+		bool operator==(const EntityThreadSpawnAction&) const noexcept = default;
+		bool operator!=(const EntityThreadSpawnAction&) const noexcept = default;
 	};
 }

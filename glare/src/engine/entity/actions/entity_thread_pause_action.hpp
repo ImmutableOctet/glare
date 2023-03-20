@@ -4,5 +4,9 @@
 
 namespace engine
 {
-	struct EntityThreadPauseAction : EntityThreadControlFlowAction {};
+	struct EntityThreadPauseAction : EntityThreadControlFlowAction
+	{
+		bool operator==(const EntityThreadPauseAction&) const noexcept = default;
+		bool operator!=(const EntityThreadPauseAction&) const noexcept = default;
+	};
 }

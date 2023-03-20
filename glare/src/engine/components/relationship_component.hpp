@@ -2,8 +2,12 @@
 
 #include "types.hpp"
 
+#include <entt/entity/registry.hpp>
+
 #include <util/log.hpp>
+
 #include <utility>
+#include <type_traits>
 //#include <optional>
 
 namespace engine
@@ -238,23 +242,61 @@ namespace engine
 			// `entity_relationship` is optional; if not specified, a lookup will take place.
 			static RelationshipComponent* remove_previous_parent(Registry& registry, Entity entity, RelationshipComponent* entity_relationship=nullptr);
 		public:
-			template <typename enum_fn>
-			inline std::uint32_t enumerate_parents(Registry& registry, enum_fn)
+			template <typename ParentFn>
+			inline std::size_t enumerate_parents(Registry& registry, ParentFn&& enum_fn)
 			{
-				auto entity = get_parent();
+				auto parent_entity = get_parent();
 
-				std::uint32_t count = 0;
+				std::size_t count = 0;
 
-				while (entity != null)
+				while (parent_entity != null)
 				{
-					auto& relationship = registry.get<RelationshipComponent>(entity);
+					auto& parent_relationship = registry.get<RelationshipComponent>(parent_entity);
 
-					enum_fn(entity, relationship, ++count);
+					if constexpr (std::is_invocable_r_v<bool, ParentFn, Entity, RelationshipComponent&, std::size_t> || std::is_invocable_r_v<bool, ParentFn, Entity, const RelationshipComponent&, std::size_t>)
+					{
+						if (!enum_fn(parent_entity, parent_relationship, ++count))
+						{
+							break;
+						}
+					}
+					else if constexpr (std::is_invocable_v<bool, ParentFn, Entity, RelationshipComponent&, std::size_t> || std::is_invocable_r_v<bool, ParentFn, Entity, const RelationshipComponent&, std::size_t>)
+					{
+						enum_fn(parent_entity, parent_relationship, ++count);
+					}
+					else if constexpr (std::is_invocable_r_v<bool, ParentFn, Entity, RelationshipComponent&> || std::is_invocable_r_v<bool, ParentFn, Entity, const RelationshipComponent&>)
+					{
+						if (!enum_fn(parent_entity, parent_relationship))
+						{
+							break;
+						}
+					}
+					else if constexpr (std::is_invocable_v<ParentFn, Entity, RelationshipComponent&> || std::is_invocable_v<ParentFn, Entity, const RelationshipComponent&>)
+					{
+						enum_fn(parent_entity, parent_relationship);
+					}
+					else if constexpr (std::is_invocable_r_v<bool, ParentFn, Entity>)
+					{
+						if (!enum_fn(parent_entity))
+						{
+							break;
+						}
+					}
+					else // if constexpr (std::is_invocable_v<ParentFn, Entity>)
+					{
+						enum_fn(parent_entity);
+					}
 
-					entity = relationship.get_parent();
+					parent_entity = parent_relationship.get_parent();
 				}
 
 				return count;
+			}
+
+			template <typename ParentFn>
+			inline std::size_t enumerate_parents(Registry& registry, ParentFn&& enum_fn) const
+			{
+				return const_cast<RelationshipComponent*>(this)->enumerate_parents(registry, std::forward<ParentFn>(enum_fn));
 			}
 	};
 }

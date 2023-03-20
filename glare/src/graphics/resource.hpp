@@ -1,10 +1,8 @@
 #pragma once
 
-#pragma once
-
-#include <debug.hpp>
-
 #include "types.hpp"
+
+#include <memory>
 
 namespace graphics
 {
@@ -17,11 +15,11 @@ namespace graphics
 			friend class BindOperation;
 
 			// TODO: Review whether this should handle proper context-references instead.
-			weak_ref<Context> context;
+			std::weak_ptr<Context> context;
 			ContextHandle handle;
 		public:
 			inline ContextHandle get_handle() const { return handle; }
-			inline ref<Context> get_context() const
+			inline std::shared_ptr<Context> get_context() const
 			{
 				auto ctx = context.lock();
 
@@ -37,7 +35,7 @@ namespace graphics
 		protected:
 			friend void swap(Resource& x, Resource& y);
 
-			Resource(weak_ref<Context> context={}, ContextHandle&& handle={});
+			Resource(std::weak_ptr<Context> context={}, ContextHandle&& handle={});
 			Resource(const Resource&) = delete;
 
 			inline Resource(Resource&& resource) noexcept : Resource() { swap(*this, resource); }

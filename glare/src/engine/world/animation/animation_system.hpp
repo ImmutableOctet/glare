@@ -8,7 +8,7 @@ namespace engine
 	class World;
 	class Service;
 
-	struct Animator;
+	struct AnimationComponent;
 	struct AnimationTransition;
 
 	struct OnParentChanged;

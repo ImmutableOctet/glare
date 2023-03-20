@@ -15,5 +15,8 @@ namespace engine
 	struct StateActivationCommand : public Command
 	{
 		StringHash state_name;
+
+		bool operator==(const StateActivationCommand&) const noexcept = default;
+		bool operator!=(const StateActivationCommand&) const noexcept = default;
 	};
 }

@@ -21,7 +21,6 @@
 
 #include <engine/world/render/world_renderer.hpp>
 
-#include <util/shorthand.hpp>
 #include <utility>
 
 namespace graphics
@@ -72,7 +71,7 @@ namespace game
 				app::WindowFlags window_flags=(app::WindowFlags::OpenGL|app::WindowFlags::Resizable),
 				bool imgui_enabled=true,
 
-				unique_ref<engine::RenderPipeline>&& rendering_pipeline=nullptr
+				std::unique_ptr<engine::RenderPipeline>&& rendering_pipeline=nullptr
 			);
 
 			// Alias for `emplace_system`; allocates a system internally and returns a reference to it.

@@ -1,12 +1,13 @@
 #pragma once
 
-#include <debug.hpp>
-
 #include <utility>
 #include <optional>
+#include <memory>
 
 #include "types.hpp"
 #include "resource.hpp"
+#include "uniform_map.hpp"
+#include "uniform_data.hpp"
 
 #include "context.hpp"
 
@@ -17,6 +18,8 @@ namespace graphics
 	class ContextState;
 	class Shader;
 	class Uniform;
+
+	class ShaderSource;
 
 	class Shader : public Resource
 	{
@@ -39,8 +42,8 @@ namespace graphics
 				swap(x.uniforms, y.uniforms);
 			}
 
-			Shader(pass_ref<Context> ctx, const std::string& vertex_path, const std::string& fragment_path, const std::string& geometry_path={}, std::optional<std::string_view> preprocessor=std::nullopt);
-			Shader(pass_ref<Context> ctx, const Source& source, std::optional<std::string_view> preprocessor=std::nullopt);
+			Shader(const std::shared_ptr<Context>& ctx, const std::string& vertex_path, const std::string& fragment_path, const std::string& geometry_path={}, std::optional<std::string_view> preprocessor=std::nullopt);
+			Shader(const std::shared_ptr<Context>& ctx, const Source& source, std::optional<std::string_view> preprocessor=std::nullopt);
 
 			inline Shader() : Shader({}, {}) {}
 			inline Shader(Shader&& shader) noexcept : Shader() { swap(*this, shader); }
@@ -56,7 +59,7 @@ namespace graphics
 				return *this;
 			}
 
-			//Uniform operator[](memory::raw_string str);
+			//Uniform operator[](const char* str);
 			//Uniform<const std::string&> operator[](const std::string& str);
 			Uniform operator[](const std::string& str); // std::string_view // Uniform<std::string_view>
 
@@ -65,7 +68,7 @@ namespace graphics
 				return uniforms;
 			}
 		protected:
-			Shader(weak_ref<Context> ctx, ContextHandle&& resource_handle);
+			Shader(std::weak_ptr<Context> ctx, ContextHandle&& resource_handle);
 
 			//void on_bind(Context& context) override;
 	};
@@ -77,7 +80,7 @@ namespace graphics
 			using string_t = std::string; // std::string_view;
 		private:
 			Shader& shader;
-			string_t name; // memory::raw_string // const std::string&
+			string_t name; // const char* // const std::string&
 		public:
 			inline Uniform(Shader& shader, const string_t& name) // const std::string&
 				: shader(shader), name(name) {} // std::forward<string_t>(...)
@@ -117,7 +120,7 @@ namespace graphics
 			inline const std::string& get_name() const { return name; }
 			inline const T& get_value() const { return value; }
 
-			inline raw_string get_name_raw() const { return get_name().c_str(); }
+			inline const char* get_name_raw() const { return get_name().c_str(); }
 
 			inline void set_value(const T& value) { this->value = value; }
 
@@ -125,7 +128,7 @@ namespace graphics
 			inline operator const T&() const { return value; }
 			inline Uniform& operator=(const T& value) { set_value(value); return (*this); }
 		protected:
-			std::string name; // raw_string
+			std::string name; // const char*
 			T value;
 	};
 	*/

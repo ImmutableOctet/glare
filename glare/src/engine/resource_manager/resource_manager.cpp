@@ -1,5 +1,14 @@
 #include "resource_manager.hpp"
-#include "collision_data.hpp"
+
+#include "animation_data.hpp"
+#include "entity_factory_data.hpp"
+
+#include "loaders/loaders.hpp"
+
+#include <engine/meta/meta_type_resolution_context.hpp>
+
+#include <engine/entity/entity_factory_context.hpp>
+#include <engine/entity/entity_construction_context.hpp>
 
 #include <engine/world/physics/collision_shape_description.hpp>
 #include <engine/world/world.hpp>
@@ -32,7 +41,7 @@
 
 namespace engine
 {
-	ResourceManager::ResourceManager(pass_ref<graphics::Context> context, pass_ref<graphics::Shader> default_shader, pass_ref<graphics::Shader> default_animated_shader)
+	ResourceManager::ResourceManager(const std::shared_ptr<graphics::Context>& context, const std::shared_ptr<graphics::Shader>& default_shader, const std::shared_ptr<graphics::Shader>& default_animated_shader)
 		: context(context) //, default_shader(default_shader)
 	{
 		set_default_shader(default_shader);
@@ -41,7 +50,7 @@ namespace engine
 
 	ResourceManager::~ResourceManager() {}
 
-	const ResourceManager::ModelData& ResourceManager::load_model(const std::string& path, bool load_collision, pass_ref<graphics::Shader> shader, bool optimize_collision, bool force_reload, bool cache_result) const
+	const ModelData& ResourceManager::load_model(const std::string& path, bool load_collision, const std::shared_ptr<graphics::Shader>& shader, bool optimize_collision, bool force_reload, bool cache_result) const
 	{
 		auto path_resolved = resolve_path(path);
 
@@ -76,11 +85,11 @@ namespace engine
 
 		ModelData model_data_out;
 
-		ref<AnimationData> animations;
+		std::shared_ptr<AnimationData> animations;
 
 		model_loader.on_model = [&](ModelLoader& loader, ModelLoader::ModelData& model_data) -> void
 		{
-			auto loaded_model = memory::allocate<graphics::Model>(); // ModelRef
+			auto loaded_model = std::make_shared<graphics::Model>(); // ModelRef
 			*loaded_model = std::move(model_data.model);
 
 			assert(loaded_model->has_meshes());
@@ -97,7 +106,7 @@ namespace engine
 			{
 				if (!animations)
 				{
-					animations = memory::allocate<AnimationData>();
+					animations = std::make_shared<AnimationData>();
 				}
 
 				animation_data[loaded_model] = animations;
@@ -174,7 +183,7 @@ namespace engine
 		return nullptr;
 	}
 
-	const ref<ResourceManager::AnimationData> ResourceManager::get_animation_data(const WeakModelRef model) const
+	const std::shared_ptr<AnimationData> ResourceManager::get_animation_data(const WeakModelRef model) const
 	{
 		auto it = animation_data.find(model);
 
@@ -186,27 +195,38 @@ namespace engine
 		return nullptr;
 	}
 
-	const EntityFactoryData* ResourceManager::get_existing_factory(const std::string& path) const // std::string_view
+	// NOTE: Implementation may not be thread-safe due to use of `erase`.
+	std::shared_ptr<const EntityFactoryData> ResourceManager::get_existing_factory(const std::string& path) const // std::string_view
 	{
 		auto it = entity_factories.find(path);
 
 		if (it != entity_factories.end())
 		{
-			return &it->second;
+			if (auto ptr_out = it->second.lock())
+			{
+				return ptr_out;
+			}
+			else
+			{
+				entity_factories.erase(it);
+			}
 		}
 
-		return nullptr;
+		return {};
 	}
 
+	// NOTE: We may want to revisit this interface, since `factory_data` could theoretically become
+	// the only reference to the underlying factory data during the execution of this function.
+	// (This is very unlikely in practice, but still possible)
 	const EntityDescriptor* ResourceManager::get_existing_descriptor(const std::string& path) const
 	{
-		const auto* factory_data = get_existing_factory(path);
+		auto factory_data = get_existing_factory(path);
 
 		//assert(factory_data);
 
 		if (!factory_data)
 		{
-			return nullptr;
+			return {};
 		}
 
 		const auto& descriptor = factory_data->factory.get_descriptor();
@@ -214,11 +234,11 @@ namespace engine
 		return &descriptor;
 	}
 
-	const EntityFactoryData* ResourceManager::get_factory(const EntityFactoryContext& context) const
+	std::shared_ptr<const EntityFactoryData> ResourceManager::get_factory(const EntityFactoryContext& context) const
 	{
 		const auto path_str = context.paths.instance_path.string();
 
-		if (auto* existing_factory = get_existing_factory(path_str))
+		if (auto existing_factory = get_existing_factory(path_str))
 		{
 			return existing_factory;
 		}
@@ -234,7 +254,7 @@ namespace engine
 			context,
 
 			// NOTE: Recursion.
-			[this, &children](const EntityFactory& parent_factory, const EntityFactoryContext& child_context)
+			[this, &children](const EntityDescriptor& parent_descriptor, const EntityFactoryContext& child_context)
 			{
 				// Call back into this function recursively for each child.
 				auto child_factory_data = this->get_factory(child_context);
@@ -250,29 +270,29 @@ namespace engine
 				// via lookup when `EntityFactoryData::create` is later called.
 				// 
 				// See also: `generate_entity`
-				children.push_back(child_context.paths.instance_path.string()); // c_str();
+				children.push_back(std::move(child_factory_data)); // child_context.paths.instance_path.string();
 			},
 
-			&command_context
+			command_context
 		);
 
 		// NOTE: In the case of child factories, the parent factory is initialized last.
 		// This applies recursively to each level of the hierarchy.
-		if (auto [it, result] = entity_factories.try_emplace(path_str, std::move(factory), std::move(children)); result)
+		auto factory_data = std::make_shared<EntityFactoryData>(std::move(factory), std::move(children));
+
+		if (auto [it, result] = entity_factories.try_emplace(path_str, factory_data); result)
 		{
-			return &it->second;
+			return factory_data;
 		}
 
-		return nullptr;
+		return {}; // factory_data;
 	}
 
-	Entity ResourceManager::generate_entity(const EntityFactoryContext& factory_context, const EntityConstructionContext& entity_context) const
+	Entity ResourceManager::generate_entity(const EntityFactoryContext& factory_context, const EntityConstructionContext& entity_context, bool handle_children) const
 	{
-		auto* factory = get_factory(factory_context);
-
-		if (factory)
+		if (auto factory = get_factory(factory_context))
 		{
-			return factory->create(entity_context);
+			return EntityFactoryData::create(std::move(factory), entity_context, handle_children);
 		}
 
 		return null;
@@ -289,20 +309,32 @@ namespace engine
 		return path;
 	}
 
-	ParsingContext& ResourceManager::set_parsing_context(ParsingContext&& context)
+	MetaParsingContext ResourceManager::set_type_resolution_context(MetaTypeResolutionContext&& context)
 	{
-		parsing_context = std::move(context);
+		type_resolution_context = std::move(context);
 
-		return *parsing_context;
+		return get_existing_parsing_context();
 	}
 
-	const ParsingContext& ResourceManager::get_parsing_context() const
+	MetaParsingContext ResourceManager::get_parsing_context() const
 	{
-		if (!parsing_context.has_value())
+		if (!type_resolution_context)
 		{
-			parsing_context = ParsingContext::generate();
+			type_resolution_context = MetaTypeResolutionContext::generate();
 		}
 
-		return *parsing_context;
+		return get_existing_parsing_context();
+	}
+
+	MetaParsingContext ResourceManager::get_existing_parsing_context() const
+	{
+		return
+		{
+			(type_resolution_context)
+				? &(*type_resolution_context)
+				: nullptr,
+
+			{}
+		};
 	}
 }

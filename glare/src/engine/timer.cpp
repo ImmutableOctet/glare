@@ -2,6 +2,8 @@
 
 #include "meta/meta.hpp"
 
+#include <ratio>
+
 namespace engine
 {
 	static constexpr Timer::Duration to_duration_seconds_impl(auto seconds)
@@ -9,31 +11,57 @@ namespace engine
 		return std::chrono::duration_cast<Timer::Duration>(std::chrono::round<std::chrono::nanoseconds>(seconds));
 	}
 
-	Timer::Duration Timer::to_duration(FloatSeconds seconds)
+	template <typename FloatType>
+	static std::optional<Timer::Duration> to_duration_float_impl(FloatType duration_raw, StringHash time_symbol_id)
 	{
-		return to_duration_seconds_impl(seconds);
+		using namespace engine::literals;
+
+		auto convert = [duration_raw]<typename OutType, typename RatioType=typename OutType::period>()
+		{
+			constexpr auto duration_ratio = (static_cast<FloatType>(Timer::Duration::period::num) / static_cast<FloatType>(Timer::Duration::period::den));
+			constexpr auto local_scale_ratio = (static_cast<FloatType>(RatioType::num) / static_cast<FloatType>(RatioType::den));
+			constexpr auto time_symbol_inversion_ratio = (local_scale_ratio / duration_ratio);
+
+			auto raw_out = static_cast<OutType::rep>(duration_raw * time_symbol_inversion_ratio);
+
+			return Timer::Duration(raw_out);
+		};
+
+		switch (time_symbol_id)
+		{
+			case "d"_hs:
+				return convert.operator()<Timer::Days>();
+			case "h"_hs:
+				return convert.operator()<Timer::Hours>();
+			case "m"_hs:
+				return convert.operator()<Timer::Minutes>();
+			case "s"_hs:
+				return Timer::to_duration(duration_raw); // return convert.operator()<Timer::Seconds>();
+			case "ms"_hs:
+				return convert.operator()<Timer::Milliseconds>(); // std::milli
+			case "us"_hs:
+				return convert.operator()<Timer::Microseconds>();
+		}
+
+		return std::nullopt;
 	}
 
-	Timer::Duration Timer::to_duration(DoubleSeconds seconds)
+	template <typename DurationTypeRaw>
+	static std::optional<Timer::Duration> to_duration_dispatch_impl(DurationTypeRaw duration_raw, std::string_view time_symbol)
 	{
-		return to_duration_seconds_impl(seconds);
-	}
-
-	std::optional<Timer::Duration> Timer::to_duration(DurationRaw duration_rep, std::string_view time_symbol)
-	{
-		using namespace entt::literals;
+		using namespace engine::literals;
 
 		const auto time_symbol_id = (time_symbol.empty())
 			? "s"_hs
 			: hash(time_symbol)
 		;
 
-		return to_duration(duration_rep, time_symbol_id);
+		return Timer::to_duration(duration_raw, time_symbol_id);
 	}
 
 	std::optional<Timer::Duration> Timer::to_duration(DurationRaw duration_rep, StringHash time_symbol_id)
 	{
-		using namespace entt::literals;
+		using namespace engine::literals;
 
 		switch (time_symbol_id)
 		{
@@ -52,6 +80,51 @@ namespace engine
 		}
 
 		return std::nullopt;
+	}
+
+	std::optional<Timer::Duration> Timer::to_duration(DurationRaw duration_rep, std::string_view time_symbol)
+	{
+		return to_duration_dispatch_impl(duration_rep, time_symbol);
+	}
+
+	std::optional<Timer::Duration> Timer::to_duration(float duration_raw, StringHash time_symbol_id)
+	{
+		return to_duration_float_impl(duration_raw, time_symbol_id);
+	}
+
+	std::optional<Timer::Duration> Timer::to_duration(double duration_raw, StringHash time_symbol_id)
+	{
+		return to_duration_float_impl(duration_raw, time_symbol_id);
+	}
+
+	std::optional<Timer::Duration> Timer::to_duration(float duration_raw, std::string_view time_symbol)
+	{
+		return to_duration_dispatch_impl(duration_raw, time_symbol);
+	}
+
+	std::optional<Timer::Duration> Timer::to_duration(double duration_raw, std::string_view time_symbol)
+	{
+		return to_duration_dispatch_impl(duration_raw, time_symbol);
+	}
+
+	Timer::Duration Timer::to_duration(FloatSeconds seconds)
+	{
+		return to_duration_seconds_impl(seconds);
+	}
+
+	Timer::Duration Timer::to_duration(float seconds)
+	{
+		return to_duration(FloatSeconds(seconds));
+	}
+
+	Timer::Duration Timer::to_duration(DoubleSeconds seconds)
+	{
+		return to_duration_seconds_impl(seconds);
+	}
+
+	Timer::Duration Timer::to_duration(double seconds)
+	{
+		return to_duration(DoubleSeconds(seconds));
 	}
 
 	Timer::Timer(Duration length, bool start_immediately)
@@ -204,6 +277,16 @@ namespace engine
 		return end_point.has_value();
 	}
 
+	bool Timer::active() const
+	{
+		return (started() && !paused());
+	}
+
+	bool Timer::stopped() const
+	{
+		return !started();
+	}
+
 	bool Timer::completed() const
 	{
 		if (stopped())
@@ -275,4 +358,8 @@ namespace engine
 	{
 		return std::chrono::duration_cast<Milliseconds>(remaining());
 	}
+
+	std::optional<Timer::TimePoint> Timer::get_start_point() const { return start_point; }
+	std::optional<Timer::TimePoint> Timer::get_pause_point() const { return pause_point; }
+	std::optional<Timer::TimePoint> Timer::get_projected_end_point() const { return end_point; }
 }

@@ -16,6 +16,11 @@
 		}
 	},
 
+	"objects":
+	{
+		"object_path": "assets/objects"
+	},
+
 	"players":
 	{
 		//"player": "default_player",
@@ -27,5 +32,10 @@
 			"character": "glare",
 			"name": "Player"
 		}
+	},
+
+	"entity":
+	{
+		"archetype_path": "engine/archetypes"
 	}
 }

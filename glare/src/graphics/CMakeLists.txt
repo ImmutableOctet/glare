@@ -15,7 +15,7 @@ target_sources(
     "bullet_debug.cpp"
     "collision_geometry.cpp"
 
-    "types.cpp"
+    "point_rect.cpp"
     "vertex.cpp"
     "resource.cpp"
     "skeleton.cpp"
@@ -31,7 +31,7 @@ target_sources(
     "pixelmap.cpp"
     "shader.cpp"
     "shadow_map.cpp"
-)
+ "shader_source.cpp")
 
 add_subdirectory("drivers")
 

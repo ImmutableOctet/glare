@@ -4,9 +4,9 @@
 
 #include "entity_state_rule.hpp"
 #include "entity_thread_range.hpp"
+#include "meta_description.hpp"
 
 #include <engine/meta/types.hpp>
-#include <engine/meta/meta_description.hpp>
 #include <engine/timer.hpp>
 
 // TODO: Forward declare JSON type.
@@ -25,7 +25,7 @@ namespace engine
 	struct FrozenStateComponent;
 	struct StateStorageComponent;
 
-	struct ParsingContext;
+	class MetaParsingContext;
 
 	class EntityDescriptor;
 
@@ -105,31 +105,31 @@ namespace engine
 			void force_update_component(Registry& registry, Entity entity, EntityStateIndex self_index, std::optional<EntityStateIndex> prev_index=std::nullopt) const;
 
 			// Utility function for building the `components.remove` collection.
-			std::size_t build_removals(const util::json& removal_list, const ParsingContext* opt_parsing_context=nullptr, bool cross_reference_persist=false);
+			std::size_t build_removals(const EntityDescriptor& descriptor, const util::json& removal_list, const MetaParsingContext& opt_parsing_context={}, bool cross_reference_persist=false);
 
 			// Utility function for building the `components.freeze` collection.
-			std::size_t build_frozen(const util::json& frozen_list, const ParsingContext* opt_parsing_context=nullptr, bool cross_reference_persist=true);
+			std::size_t build_frozen(const EntityDescriptor& descriptor, const util::json& frozen_list, const MetaParsingContext& opt_parsing_context={}, bool cross_reference_persist=true);
 
 			// Utility function for building the `components.store` collection.
-			std::size_t build_storage(const util::json& storage_list, const ParsingContext* opt_parsing_context=nullptr, bool cross_reference_persist=true);
+			std::size_t build_storage(const EntityDescriptor& descriptor, const util::json& storage_list, const MetaParsingContext& opt_parsing_context={}, bool cross_reference_persist=true);
 
 			// Utility function for building the `components.local_copy`
 			// collection, as well as appending to `components.freeze`.
-			std::size_t build_local_copy(const util::json& local_copy_list, const ParsingContext* opt_parsing_context=nullptr, bool cross_reference_persist=false); // true
+			std::size_t build_local_copy(const EntityDescriptor& descriptor, const util::json& local_copy_list, const MetaParsingContext& opt_parsing_context={}, bool cross_reference_persist=false); // true
 
 			// Utility function for building the `components.init_copy` collection,
 			// as well as appending to `components.freeze` and `components.store`.
-			std::size_t build_init_copy(const util::json& init_copy_list, const ParsingContext* opt_parsing_context=nullptr, bool cross_reference_persist=false); // true
+			std::size_t build_init_copy(const EntityDescriptor& descriptor, const util::json& init_copy_list, const MetaParsingContext& opt_parsing_context={}, bool cross_reference_persist=false); // true
 
 			// Subroutine of `build_type_list`, meant to handle individual entries, rather than JSON arrays.
 			// This method returns true if a component entry could be processed from `list_entry`.
-			bool process_type_list_entry(MetaIDStorage& types_out, const util::json& list_entry, bool cross_reference_persist, const ParsingContext* opt_parsing_context=nullptr);
+			bool process_type_list_entry(const EntityDescriptor& descriptor, MetaIDStorage& types_out, const util::json& list_entry, bool cross_reference_persist, const MetaParsingContext& opt_parsing_context={});
 
 			// Convenience overload that bypasses JSON-to-string conversion.
-			bool process_type_list_entry(MetaIDStorage& types_out, std::string_view list_entry, bool cross_reference_persist, const ParsingContext* opt_parsing_context=nullptr);
+			bool process_type_list_entry(const EntityDescriptor& descriptor, MetaIDStorage& types_out, std::string_view list_entry, bool cross_reference_persist, const MetaParsingContext& opt_parsing_context={});
 
 			// Shared processing routine for resolving `MetaIDStorage` objects from a JSON array.
-			std::size_t build_type_list(const util::json& type_names, MetaIDStorage& types_out, bool cross_reference_persist, const ParsingContext* opt_parsing_context=nullptr);
+			std::size_t build_type_list(const EntityDescriptor& descriptor, const util::json& type_names, MetaIDStorage& types_out, bool cross_reference_persist, const MetaParsingContext& opt_parsing_context={});
 
 			const RuleCollection* get_rules(MetaTypeID type_id) const;
 
@@ -140,7 +140,7 @@ namespace engine
 			}
 		protected:
 
-			bool add_component(Registry& registry, Entity entity, const MetaTypeDescriptor& component) const;
+			//bool add_component(Registry& registry, Entity entity, const MetaTypeDescriptor& component) const;
 
 			bool remove_component(Registry& registry, Entity entity, const MetaType& type) const;
 			bool remove_component(Registry& registry, Entity entity, const MetaTypeDescriptor& component) const;
@@ -149,9 +149,9 @@ namespace engine
 
 			// Adds components to `entity` in `registry`.
 			// Added components are removed during `decay`.
-			void add(Registry& registry, Entity entity) const;
+			void add(const EntityDescriptor& descriptor, Registry& registry, Entity entity) const;
 			void remove(Registry& registry, Entity entity) const;
-			void persist(Registry& registry, Entity entity, bool value_assignment=true) const;
+			void persist(const EntityDescriptor& descriptor, Registry& registry, Entity entity, bool value_assignment=true) const;
 
 			void activate_threads(const EntityDescriptor& descriptor, Registry& registry, Entity entity, EntityStateIndex self_index) const;
 			void decay_threads(const EntityDescriptor& descriptor, Registry& registry, Entity entity, EntityStateIndex self_index) const;

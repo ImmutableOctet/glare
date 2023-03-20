@@ -1,7 +1,8 @@
 #pragma once
 
-#include <types.hpp>
 #include <app/input/types.hpp>
+
+#include <cstdint>
 
 namespace engine
 {

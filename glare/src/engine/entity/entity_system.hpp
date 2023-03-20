@@ -4,7 +4,9 @@
 
 #include <engine/types.hpp>
 #include <engine/basic_system.hpp>
+
 #include <engine/meta/types.hpp>
+#include <engine/meta/meta_variable_scope.hpp>
 
 #include <util/small_vector.hpp>
 
@@ -15,7 +17,6 @@
 namespace engine
 {
 	class Service;
-	class ResourceManager;
 
 	class EntityDescriptor;
 
@@ -27,6 +28,8 @@ namespace engine
 	struct OnComponentCreate;
 	struct OnComponentUpdate;
 	struct OnComponentDestroy;
+
+	struct OnParentChanged;
 
 	struct StateChangeCommand;
 	struct StateActivationCommand;
@@ -46,16 +49,33 @@ namespace engine
 	struct EntityThreadComponent;
 	struct EntityInstruction;
 
+	struct RelationshipComponent;
+	struct EntityContextComponent;
+
 	class EntitySystem : public BasicSystem
 	{
 		public:
-			EntitySystem(Service& service, const ResourceManager& resource_manager, bool subscribe_immediately=false);
+			// TODO: Separate this function from `EntitySystem`.
+			static MetaVariableEvaluationContext resolve_variable_context
+			(
+				Service* opt_service={},
+				Registry* opt_registry={},
+				Entity opt_entity=null,
+
+				EntityThreadComponent* opt_thread_comp={},
+				EntityThread* opt_thread={},
+
+				EntityContextComponent* opt_context_comp={},
+
+				std::optional<MetaVariableScope> referenced_scope=std::nullopt
+			);
+
+			EntitySystem(Service& service, bool subscribe_immediately=false);
 
 			bool set_state(Entity entity, std::string_view state_name) const;
 			bool set_state(Entity entity, StringHash state_name) const;
 			bool set_state_by_id(Entity entity, StringHash state_id) const;
 		protected:
-			const ResourceManager& resource_manager;
 			std::unordered_map<MetaTypeID, EntityListener> listeners;
 
 			// Used internally by `on_state_activation_command` for 'delayed activation' behavior.
@@ -96,6 +116,17 @@ namespace engine
 			void on_component_create(const OnComponentCreate& component_details);
 			void on_component_update(const OnComponentUpdate& component_details);
 			void on_component_destroy(const OnComponentDestroy& component_details);
+
+			void on_parent_changed(const OnParentChanged& parent_changed);
+			
+			void on_context_init(Registry& registry, Entity entity);
+			void realign_child_contexts(Registry& registry, Entity entity, EntityContextComponent& context_comp, const RelationshipComponent& relationship_comp);
+
+			void on_parent_context_changed(Registry& registry, const OnParentChanged& parent_changed);
+
+			// The return value of this function indicates if the parent's context was used.
+			// NOTE: This routine does not mark `context_comp` as patched.
+			bool use_parent_context_or_generate(Registry& registry, Entity entity, EntityContextComponent& context_comp, const RelationshipComponent& relationship_comp, bool realign_children=true, bool keep_existing=true);
 
 			EntityInstructionIndex step_thread
 			(

@@ -1,9 +1,10 @@
 #pragma once
 
-//#include <cstdint>
-#include <types.hpp> // Global header.
-
 #include "collision_body_type.hpp"
+
+#include <util/enum_operators.hpp>
+
+#include <cstdint>
 
 namespace engine
 {

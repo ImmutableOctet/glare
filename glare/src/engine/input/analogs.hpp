@@ -1,10 +1,10 @@
 #pragma once
 
-#include <types.hpp>
 #include <app/input/types.hpp>
 
 #include <math/types.hpp>
 
+#include <cstdint>
 #include <cstddef>
 
 namespace engine

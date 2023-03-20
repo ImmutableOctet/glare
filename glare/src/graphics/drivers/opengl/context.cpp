@@ -8,6 +8,7 @@
 #include <graphics/vertex.hpp>
 #include <graphics/canvas.hpp>
 #include <graphics/shader.hpp>
+#include <graphics/shader_source.hpp>
 #include <graphics/framebuffer.hpp>
 #include <graphics/renderbuffer.hpp>
 #include <graphics/texture.hpp>
@@ -1136,7 +1137,7 @@ namespace graphics
 
 	// Context API:
 	Context::Context(app::Window& wnd, Backend gfx, Flags flags, bool extensions)
-		: graphics_backend(gfx), state(memory::unique<Context::State>())
+		: graphics_backend(gfx), state(std::make_unique<Context::State>())
 	{
 		auto backend = get_backend();
 
@@ -1595,7 +1596,7 @@ namespace graphics
 		return true;
 	}
 
-	bool Context::set_uniform(Shader& shader, std::string_view name, const pass_ref<Texture> texture)
+	bool Context::set_uniform(Shader& shader, std::string_view name, const std::shared_ptr<Texture>& texture)
 	{
 		return set_uniform(shader, name, *texture);
 	}
@@ -2046,7 +2047,7 @@ namespace graphics
 		return texture;
 	}
 
-	void Context::allocate_texture_2d(int width, int height, TextureFormat format, ElementType channel_type, const memory::raw_ptr raw_data, bool is_dynamic, bool generate_mipmaps, bool _calculate_exact_format, bool _loose_internal_format) // TextureType type
+	void Context::allocate_texture_2d(int width, int height, TextureFormat format, ElementType channel_type, const void* raw_data, bool is_dynamic, bool generate_mipmaps, bool _calculate_exact_format, bool _loose_internal_format) // TextureType type
 	{
 		const GLenum texture_type = GL_TEXTURE_2D;
 		//const auto texture_type = Driver::get_texture_type(type);
@@ -2076,7 +2077,7 @@ namespace graphics
 	}
 
 	// TODO: Determine if this can be implemented using 'glTexStorage2D' and co. (see: 'is_dynamic' argument for 'allocate_texture_2d')
-	void Context::allocate_texture_cubemap(int width, int height, TextureFormat format, ElementType channel_type, const memory::raw_ptr raw_data, bool is_dynamic, bool generate_mipmaps, bool _calculate_exact_format)
+	void Context::allocate_texture_cubemap(int width, int height, TextureFormat format, ElementType channel_type, const void* raw_data, bool is_dynamic, bool generate_mipmaps, bool _calculate_exact_format)
 	{
 		const auto texture_format = Driver::get_texture_format(format, channel_type, (_calculate_exact_format)); // ((_calculate_exact_format) || (!is_dynamic))
 		const auto element_type = Driver::get_element_type(channel_type); // element_type
@@ -2101,7 +2102,7 @@ namespace graphics
 		glDeleteTextures(1, &handle);
 	}
 
-	void Context::resize_texture(Texture& texture, int width, int height, const memory::raw_ptr raw_data, bool generate_mipmaps)
+	void Context::resize_texture(Texture& texture, int width, int height, const void* raw_data, bool generate_mipmaps)
 	{
 		assert(texture.is_dynamic());
 

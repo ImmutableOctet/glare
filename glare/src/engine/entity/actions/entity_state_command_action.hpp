@@ -13,5 +13,8 @@ namespace engine
 		using CommandContent = EntityDescriptorShared<MetaTypeDescriptor>;
 		
 		CommandContent command;
+
+		bool operator==(const EntityStateCommandAction&) const noexcept = default;
+		bool operator!=(const EntityStateCommandAction&) const noexcept = default;
 	};
 }

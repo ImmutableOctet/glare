@@ -8,6 +8,8 @@
 #include <math/types.hpp>
 #include <math/joyhat.hpp>
 
+#include <entt/signal/dispatcher.hpp>
+
 #include <sdl2/SDL_keyboard.h>
 
 namespace app::input

@@ -6,6 +6,10 @@
 #include <graphics/animation.hpp>
 #include <graphics/skeleton.hpp>
 
+#include <vector>
+#include <map>
+#include <tuple>
+
 namespace engine
 {
 	using Animations = std::vector<graphics::Animation>;

@@ -1,17 +1,20 @@
 #pragma once
 
+#include "types.hpp"
+#include "math_types.hpp"
+#include "vertex_attribute.hpp"
+
+#include <math/types.hpp>
+
+#include <util/algorithm.hpp>
+
 #include <typeinfo>
 #include <string>
 #include <array>
 #include <algorithm>
 #include <cstddef>
 
-///#include <half/half.hpp>
-
-#include "types.hpp"
-
-#include <util/algorithm.hpp>
-#include <math/types.hpp>
+//#include <half/half.hpp>
 
 #define DECLARE_ATTRIBUTE(vertex_type, member) Vertex::get_attribute<decltype(member)>(offsetof(vertex_type, member)) // Vertex::get_attribute
 

@@ -24,7 +24,7 @@ add_subdirectory("components")
 add_subdirectory("common")
 
 # TODO: Rename `meta` subdirectory to something better. (`meta_controls`, etc.)
-add_subdirectory("meta")
+add_subdirectory("meta_controls")
 
 add_subdirectory("animation")
 add_subdirectory("behaviors")

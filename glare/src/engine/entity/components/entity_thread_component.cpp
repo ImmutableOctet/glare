@@ -9,6 +9,16 @@
 
 namespace engine
 {
+	EntityThreadComponent::ThreadGlobalVariables* EntityThreadComponent::get_global_variables() // const
+	{
+		if (!global_variables)
+		{
+			global_variables = std::make_shared<ThreadGlobalVariables>();
+		}
+
+		return global_variables.get();
+	}
+
 	EntityThread* EntityThreadComponent::start_thread
 	(
 		EntityThreadIndex thread_index,

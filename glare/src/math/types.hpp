@@ -2,14 +2,13 @@
 
 #define GLM_FORCE_CTOR_INIT
 
-//#include <types.hpp>
-
-//#include <cmath>
 #include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
 //#include <glm/gtc/quaternion.hpp>
 #include <glm/mat3x4.hpp>
 
+//#include <cstdint>
+//#include <cmath>
 #include <tuple>
 
 namespace math
@@ -40,13 +39,4 @@ namespace math
 
 	using TransformVectors = std::tuple<Vector, Vector, Vector>; // Position, Rotation, Scale
 	using OrthogonalVectors = std::tuple<Vector, Vector, Vector>; // Left, Up, Forward
-}
-
-// TODO: Move this into its own header/module.
-namespace graphics
-{
-	using ColorRGB = math::vec3f;
-	using ColorRGBA = math::vec4f;
-
-	using Color = ColorRGB;
 }

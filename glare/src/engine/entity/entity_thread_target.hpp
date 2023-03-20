@@ -46,6 +46,9 @@ namespace engine
 
 		bool empty() const;
 
+		bool operator==(const EntityThreadTarget&) const noexcept = default;
+		bool operator!=(const EntityThreadTarget&) const noexcept = default;
+
 		Type value;
 	};
 }

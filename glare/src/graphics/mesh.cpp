@@ -16,7 +16,7 @@
 
 namespace graphics
 {
-	Mesh Mesh::GenerateTexturedQuad(pass_ref<Context> ctx, VertexWinding winding)
+	Mesh Mesh::GenerateTexturedQuad(const std::shared_ptr<Context>& ctx, VertexWinding winding)
 	{
 		constexpr auto primitive = Primitive::TriangleStrip;
 

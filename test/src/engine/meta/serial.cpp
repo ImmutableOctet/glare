@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <util/json.hpp>
+
 #include <engine/meta/serial.hpp>
 #include <engine/meta/meta.hpp>
 
@@ -8,11 +9,9 @@
 
 TEST_CASE("engine::load", "[engine:meta]")
 {
-	using namespace nlohmann::literals;
-
 	engine::reflect_all();
 
-	util::json data = "{\"name\": \"Test Name\"}"_json;
+	auto data = util::json::parse("{\"name\": \"Test Name\"}");
 
 	SECTION("Load new object")
 	{

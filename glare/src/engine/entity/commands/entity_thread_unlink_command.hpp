@@ -11,5 +11,8 @@ namespace engine
 	struct EntityThreadUnlinkCommand :
 		public Command,
 		public EntityThreadUnlinkAction
-	{};
+	{
+		bool operator==(const EntityThreadUnlinkCommand&) const noexcept = default;
+		bool operator!=(const EntityThreadUnlinkCommand&) const noexcept = default;
+	};
 }

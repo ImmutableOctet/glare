@@ -4,6 +4,7 @@
 #include "entity_target.hpp"
 #include "entity_state_action.hpp"
 #include "event_trigger_condition.hpp"
+#include "entity_descriptor_shared.hpp"
 
 #include <engine/timer.hpp>
 
@@ -20,7 +21,7 @@ namespace engine
 		using Action = EntityStateAction;
 		using TargetType = EntityTarget::TargetType;
 
-		std::optional<EventTriggerCondition> condition;
+		std::optional<EntityDescriptorShared<EventTriggerCondition>> condition;
 		std::optional<Timer::Duration> delay; // std::nullopt; // Timer::Duration::zero();
 
 		// The target (entity) this rule applies to.

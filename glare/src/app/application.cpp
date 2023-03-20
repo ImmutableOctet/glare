@@ -1,19 +1,23 @@
-#include <sdl2/SDL_events.h>
-#include <iostream>
-
 #include "application.hpp"
 #include "window.hpp"
 
+#include <lib.hpp>
+
+#include <cassert>
+#include <sdl2/SDL_events.h>
+
 // Debugging related:
+#include <iostream>
 #include <util/log.hpp>
 
 namespace app
 {
 	Application::Application(UpdateRate update_rate) :
-		init_libraries(),
 		//delta_time(update_rate),
 		fixed_update_rate(update_rate)
 	{
+		assert(glare::lib::init_sdl());
+
 		*this << Timer::make_continuous(fixed_update_duration(), milliseconds(), [this](Timer& timer, Duration time_elapsed)
 		{
 			auto time = milliseconds();
@@ -50,7 +54,7 @@ namespace app
 	{
 		if (window == nullptr)
 		{
-			window = memory::unique<app::Window>(width, height, title, flags);
+			window = std::make_unique<app::Window>(width, height, title, flags);
 		}
 
 		return (*window);

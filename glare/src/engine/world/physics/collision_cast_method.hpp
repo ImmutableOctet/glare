@@ -1,6 +1,6 @@
 #pragma once
 
-#include <types.hpp>
+#include <cstdint>
 //#include <engine/types.hpp>
 
 namespace engine

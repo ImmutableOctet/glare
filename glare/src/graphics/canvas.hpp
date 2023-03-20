@@ -5,21 +5,22 @@
 		* Add scissor functionality for rendering portions of the screen.
 */
 
-#include <memory>
-#include <unordered_map>
-#include <vector>
-#include <optional>
+#include "types.hpp"
+#include "uniform_map.hpp"
+#include "canvas_draw_mode.hpp"
+#include "material.hpp"
+#include "context.hpp"
 
 #include <util/memory.hpp>
 
 // TODO: Look into removing/replacing this.
 #include <math/types.hpp>
 
-#include "types.hpp"
-
-#include "material.hpp"
-
-#include "context.hpp"
+#include <memory>
+#include <unordered_map>
+#include <vector>
+#include <optional>
+#include <cassert>
 
 namespace app
 {
@@ -39,13 +40,13 @@ namespace graphics
 			using DrawMode = CanvasDrawMode;
 
 			Canvas();
-			Canvas(memory::pass_ref<Context> ctx);
+			Canvas(const std::shared_ptr<Context>& ctx);
 
 			~Canvas();
 
 			inline Context& get_context() { return *context; }
 
-			bool attach(memory::pass_ref<Context> ctx);
+			bool attach(const std::shared_ptr<Context>& ctx);
 			void detach();
 
 			void begin();
@@ -90,7 +91,7 @@ namespace graphics
 					{
 						const auto t_ptr = (textures[0]); // auto
 
-						ASSERT(t_ptr);
+						assert(t_ptr);
 
 						bind_texture(*t_ptr, name);
 
@@ -102,7 +103,7 @@ namespace graphics
 
 				for (const auto& t : textures)
 				{
-					ASSERT(t);
+					assert(t);
 
 					bind_texture(*t, name + "[" + std::to_string(idx) + "]");
 
@@ -201,8 +202,8 @@ namespace graphics
 			// The 'diffuse_color' uniform will only be updated if the 'transparency_mode' variable matches the return-value.
 			bool handle_diffuse(const UniformMap& uniforms, const ColorRGBA& color, DrawMode draw_mode, bool& is_transparent);
 
-			ref<Context> context;
+			std::shared_ptr<Context> context;
 
-			//std::unordered_map<const weak_ref<Material>, std::vector<const ref<Mesh>>> draw_operations;
+			//std::unordered_map<const std::weak_ptr<Material>, std::vector<const std::shared_ptr<Mesh>>> draw_operations;
 	};
 }

@@ -11,5 +11,8 @@ namespace engine
 	struct EntityThreadDetachCommand :
 		public Command,
 		public EntityThreadDetachAction
-	{};
+	{
+		bool operator==(const EntityThreadDetachCommand&) const noexcept = default;
+		bool operator!=(const EntityThreadDetachCommand&) const noexcept = default;
+	};
 }

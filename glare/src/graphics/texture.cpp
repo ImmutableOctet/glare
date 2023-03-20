@@ -8,15 +8,15 @@
 namespace graphics
 {
 	// Texture:
-	Texture::Texture(weak_ref<Context> ctx, ContextHandle&& handle, int width, int height, TextureFormat format, ElementType element_type, TextureFlags flags, TextureType type)
+	Texture::Texture(std::weak_ptr<Context> ctx, ContextHandle&& handle, int width, int height, TextureFormat format, ElementType element_type, TextureFlags flags, TextureType type)
 		: Resource(ctx, std::move(handle)), width(width), height(height), format(format), element_type(element_type), flags(flags), type(type) {}
 
-	Texture::Texture(pass_ref<Context> ctx, const PixelMap& data, Flags flags, TextureType type)
+	Texture::Texture(const std::shared_ptr<Context>& ctx, const PixelMap& data, Flags flags, TextureType type)
 		: Texture(ctx, ctx->generate_texture(data, ElementType::UByte, flags, type), data.width(), data.height(), data.format(), ElementType::UByte, flags, type) {}
 
 	Texture::Texture
 	(
-		pass_ref<Context> ctx,
+		const std::shared_ptr<Context>& ctx,
 		int width, int height,
 		TextureFormat format, ElementType element_type,
 		TextureFlags flags, TextureType type,
@@ -25,10 +25,10 @@ namespace graphics
 	)
 		: Texture(ctx, ctx->generate_texture(width, height, format, element_type, (flags | TextureFlags::Dynamic), type, _border_color, true, _loose_internal_format), width, height, format, element_type, (flags | TextureFlags::Dynamic), type) {}
 
-	Texture::Texture(pass_ref<Context> ctx, raw_string path, Flags flags, TextureType type)
+	Texture::Texture(const std::shared_ptr<Context>& ctx, const char* path, Flags flags, TextureType type)
 		: Texture(ctx, PixelMap::Load(path), flags, type) {}
 
-	Texture::Texture(pass_ref<Context> ctx, const std::string& path, Flags flags, TextureType type)
+	Texture::Texture(const std::shared_ptr<Context>& ctx, const std::string& path, Flags flags, TextureType type)
 		: Texture(ctx, PixelMap::Load(path), flags, type)
 	{
 		#ifdef _DEBUG

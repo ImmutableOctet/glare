@@ -1,5 +1,7 @@
 #include "entity_listener.hpp"
 #include "entity_state_action.hpp"
+#include "entity_instruction.hpp"
+#include "entity_descriptor.hpp"
 
 #include "components/instance_component.hpp"
 #include "components/state_component.hpp"
@@ -14,7 +16,7 @@
 #include <engine/components/player_component.hpp>
 #include <engine/components/player_target_component.hpp>
 
-#include <engine/resource_manager/resource_manager.hpp>
+//#include <engine/resource_manager/resource_manager.hpp>
 
 #include <util/variant.hpp>
 
@@ -48,7 +50,7 @@ namespace engine
 		return true;
 	}
 
-	bool EntityListener::remove_entity(Entity entity, bool force)
+	bool EntityListener::remove_entity(Entity entity, ReferenceCount references_to_remove, bool force)
 	{
 		for (auto it = listening_entities.begin(); it != listening_entities.end(); it++)
 		{
@@ -56,17 +58,33 @@ namespace engine
 
 			if (listener_entry.entity == entity)
 			{
-				if (force || ((--listener_entry.reference_count) == 0)) // <=
+				if (force)
 				{
 					listening_entities.erase(it);
 
 					// Exit immediately, since we've removed the specified `entity`.
 					return true;
 				}
+				else
+				{
+					if (listener_entry.reference_count > references_to_remove)
+					{
+						listener_entry.reference_count -= references_to_remove;
 
-				// Exit immediately, since we've found the intended `entity`,
-				// but only needed to decrement its reference-count.
-				return false;
+						// Exit immediately, since we've found the intended `entity`,
+						// but only needed to decrement its reference-count.
+						return false;
+					}
+					else
+					{
+						//listener_entry.reference_count = 0;
+
+						listening_entities.erase(it);
+
+						// Exit immediately, since we've removed the specified `entity`.
+						return true;
+					}
+				}
 			}
 		}
 
@@ -131,7 +149,7 @@ namespace engine
 		assert(event_instance.type().id() == this->type_id);
 
 		auto& registry = service->get_registry();
-		const auto& resource_manager = service->get_resource_manager();
+		//const auto& resource_manager = service->get_resource_manager();
 
 		const auto event_player_index = resolve_player_index(event_instance);
 
@@ -174,20 +192,12 @@ namespace engine
 				}
 			}
 
-			const auto& instance_path = instance_comp->instance;
-			const auto* descriptor = resource_manager.get_existing_descriptor(instance_path);
-
-			assert(descriptor);
-
-			if (!descriptor)
-			{
-				continue;
-			}
+			const auto& descriptor = instance_comp->get_descriptor();
 
 			update_entity
 			(
 				registry, entity,
-				*descriptor,
+				descriptor,
 				event_instance
 			);
 		}
@@ -205,7 +215,9 @@ namespace engine
 		if (const auto state_comp = registry.try_get<StateComponent>(entity))
 		{
 			const auto& state_index = state_comp->state_index;
-			const auto& state = *(descriptor.states[state_index]);
+
+			// TODO: Implement multi-entity state descriptions. (use of `get(descriptor)`)
+			const auto& state = descriptor.states[state_index].get(descriptor);
 
 			if (const auto rules = state.get_rules(this->type_id))
 			{
@@ -242,17 +254,21 @@ namespace engine
 
 				const auto& yield_condition = yield_instruction.condition.get(descriptor);
 
+				ReferenceCount condition_reference_count = 0;
+
 				bool yield_condition_met = false;
 
 				EventTriggerConditionType::visit_type_enabled
 				(
 					yield_condition,
 
-					[this, &registry, entity, &event_instance, &yield_condition_met](const auto& condition)
+					[this, &registry, entity, &descriptor, &event_instance, &condition_reference_count, &yield_condition_met](const auto& condition)
 					{
-						if (condition.has_type_compatible(this->type_id))
+						if (condition.has_type_compatible(descriptor, this->type_id))
 						{
-							yield_condition_met = condition.condition_met(event_instance, registry, entity);
+							yield_condition_met = (yield_condition_met || condition.condition_met(event_instance, registry, entity));
+
+							condition_reference_count++;
 						}
 					}
 				);
@@ -264,7 +280,7 @@ namespace engine
 					thread.next_instruction++;
 
 					// See `EntitySystem::step_thread` for corresponding `add_entity` usage prior.
-					remove_entity(entity);
+					remove_entity(entity, condition_reference_count);
 				}
 			}
 		}
@@ -285,7 +301,7 @@ namespace engine
 			// Resolve trigger condition status:
 			if (condition)
 			{
-				if (!EventTriggerConditionType::get_condition_status(*condition, event_instance, registry, entity))
+				if (!EventTriggerConditionType::get_condition_status(condition->get(descriptor), event_instance, registry, entity))
 				{
 					// Condition has not been met; continue to next rule.
 					continue;
@@ -296,6 +312,7 @@ namespace engine
 
 			assert(service);
 
+			// TODO: Determine if it makes sense to resolve an evaluation context for this call.
 			execute_action
 			(
 				registry,

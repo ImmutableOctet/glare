@@ -2,7 +2,7 @@
 
 #include <engine/entity/entity_target.hpp>
 
-#include <engine/meta/meta_description.hpp>
+#include <engine/entity/meta_description.hpp>
 //#include <engine/meta/meta_type_descriptor.hpp>
 
 #include <memory>
@@ -16,13 +16,6 @@ namespace engine
 	struct EntityStateUpdateAction
 	{
 		using ComponentStore = MetaDescription;
-
-		// NOTE: `std::unique_ptr` is used here as a workaround for `MetaDescription`
-		// making this action significantly larger than other action types.
-		using Components = std::unique_ptr<ComponentStore>;
-		//using Components = ComponentStore;
-
-		Components updated_components;
 
 		/*
 			NOTES:
@@ -40,5 +33,10 @@ namespace engine
 			reserved as a 'special symbol' for this feature.
 		*/
 		EntityTarget target_entity;
+
+		ComponentStore updated_components = {};
+
+		bool operator==(const EntityStateUpdateAction&) const noexcept = default;
+		bool operator!=(const EntityStateUpdateAction&) const noexcept = default;
 	};
 }

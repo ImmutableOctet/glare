@@ -2,10 +2,12 @@
 
 #include "types.hpp"
 #include "entity_state.hpp"
+#include "entity_state_collection.hpp"
 #include "entity_thread_description.hpp"
 #include "entity_thread_range.hpp"
+#include "entity_shared_storage.hpp"
+#include "meta_description.hpp"
 
-#include <engine/meta/meta_description.hpp>
 #include <engine/meta/meta_type_descriptor.hpp>
 
 #include <engine/world/physics/collision_config.hpp>
@@ -16,30 +18,24 @@
 #include <memory>
 #include <utility>
 #include <type_traits>
+#include <string_view>
 //#include <cstddef>
-
-#include <util/shared_storage.hpp>
 
 namespace engine
 {
+	struct EntityFactoryContext;
+
 	class EntityDescriptor
 	{
 		public:
 			using TypeInfo = MetaDescription;
 
-			// Could also be handled as a map-type, but that would
-			// be less efficient for what is normally a small number of states.
-			using StateCollection = util::small_vector<std::unique_ptr<EntityState>, 16>; // util::small_vector<EntityState, 4>; // std::shared_ptr<...>;
+			using StateCollection = EntityStateCollection;
 
 			using ThreadCount = EntityThreadCount; // std::uint16_t; // std::uint8_t
 			using ImmediateThreadDetails = EntityThreadRange;
 
-			using SharedStorage = util::SharedStorage
-			<
-				MetaTypeDescriptor,
-				EventTriggerCondition,
-				EntityThreadDescription
-			>;
+			using SharedStorage = EntitySharedStorage;
 
 			// TODO: Look into separating this from the `EntityDescriptor` type.
 			struct ModelDetails
@@ -59,6 +55,17 @@ namespace engine
 					return !path.empty();
 				}
 			};
+
+			EntityDescriptor() = default;
+
+			EntityDescriptor(std::string_view path);
+			EntityDescriptor(const EntityFactoryContext& factory_context);
+
+			EntityDescriptor(const EntityDescriptor&) = delete;
+			EntityDescriptor(EntityDescriptor&&) noexcept = default;
+
+			EntityDescriptor& operator=(const EntityDescriptor&) = delete;
+			EntityDescriptor& operator=(EntityDescriptor&&) noexcept = default; // delete;
 
 			// Statically assigned components.
 			MetaDescription components;
@@ -121,28 +128,43 @@ namespace engine
 
 			std::optional<EntityThreadID> get_thread_id(EntityThreadIndex thread_index) const;
 
-			const EntityState* get_state(StringHash name) const;
-			EntityState* get_state(StringHash name);
+			inline const EntityState* get_state(EntityStateID name) const
+			{
+				return states.get_state(*this, name);
+			}
 
-			const EntityState* get_state(std::optional<StringHash> name) const;
-			EntityState* get_state(std::optional<StringHash> name);
+			inline EntityState* get_state(EntityStateID name)
+			{
+				return states.get_state(*this, name);
+			}
 
-			std::optional<EntityStateIndex> get_state_index(EntityStateID name) const;
+			inline const EntityState* get_state(std::optional<EntityStateID> name) const
+			{
+				return states.get_state(*this, name);
+			}
+
+			inline EntityState* get_state(std::optional<EntityStateID> name)
+			{
+				return states.get_state(*this, name);
+			}
+
+			inline std::optional<EntityStateIndex> get_state_index(EntityStateID name) const
+			{
+				return states.get_state_index(*this, name);
+			}
 
 			inline std::optional<EntityStateIndex> get_state_index(std::optional<EntityStateID> name) const
 			{
-				if (!name)
-				{
-					return std::nullopt;
-				}
-
-				return get_state_index(*name);
+				return states.get_state_index(*this, name);
 			}
 
-			const EntityState* get_state_by_index(EntityStateIndex state_index) const;
+			inline const EntityState* get_state_by_index(EntityStateIndex state_index) const
+			{
+				return states.get_state_by_index(*this, state_index);
+			}
 
 			bool set_state(Registry& registry, Entity entity, std::optional<EntityStateIndex> previous_state, std::string_view state_name) const;
-			bool set_state_by_id(Registry& registry, Entity entity, std::optional<EntityStateIndex> previous_state, StringHash state_id) const;
+			bool set_state_by_id(Registry& registry, Entity entity, std::optional<EntityStateIndex> previous_state, EntityStateID state_id) const;
 			bool set_state_by_index(Registry& registry, Entity entity, std::optional<EntityStateIndex> previous_state, EntityStateIndex state_index) const;
 	};
 }

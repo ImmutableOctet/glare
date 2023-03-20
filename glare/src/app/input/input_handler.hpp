@@ -3,7 +3,7 @@
 #include "types.hpp"
 
 #include <app/input/devices.hpp>
-#include <entt/signal/dispatcher.hpp>
+#include <entt/signal/fwd.hpp>
 
 namespace app::input
 {
@@ -63,6 +63,6 @@ namespace app::input
 			bool process_event(const SDL_Event& e, entt::dispatcher* opt_event_handler=nullptr);
 
 			// Polls input on all device types.
-			const InputDevices& poll(engine::EventHandler* opt_event_handler);
+			const InputDevices& poll(entt::dispatcher* opt_event_handler);
 	};
 }

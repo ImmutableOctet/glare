@@ -1,7 +1,9 @@
 #pragma once
 
-#include <types.hpp>
-#include <graphics/types.hpp>
+#include <graphics/math_types.hpp>
+#include <graphics/texture_array.hpp>
+
+#include <string_view>
 
 namespace graphics
 {

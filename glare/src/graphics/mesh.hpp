@@ -8,6 +8,9 @@
 #include "types.hpp"
 #include "context.hpp"
 #include "vertex.hpp"
+#include "primitive.hpp"
+#include "vertex_winding.hpp"
+#include "buffer_access_mode.hpp"
 
 // Assimp mesh object.
 struct aiMesh;
@@ -81,7 +84,7 @@ namespace graphics
 			using VertexSize = std::uint16_t;
 
 			// Fields:
-			weak_ref<Context> context;
+			std::weak_ptr<Context> context;
 
 			MeshComposition composition = {};
 			Primitive primitive_type = Primitive::Unknown;
@@ -96,7 +99,7 @@ namespace graphics
 
 			inline Mesh
 			(
-				weak_ref<Context> ctx,
+				std::weak_ptr<Context> ctx,
 				MeshComposition composition,
 				Primitive primitive_type,
 				std::size_t vertex_count, Index vertex_offset=0,
@@ -119,7 +122,7 @@ namespace graphics
 			Mesh(const Mesh&) = delete;
 			//Mesh& operator=(const Mesh&) = delete;
 
-			inline ref<Context> get_context_ref() { return context.lock(); }
+			inline std::shared_ptr<Context> get_context_ref() { return context.lock(); }
 			
 			inline Context* get_context()
 			{
@@ -139,7 +142,7 @@ namespace graphics
 			template <typename VertexType>
 			inline static Mesh Generate
 			(
-				pass_ref<Context> ctx, const Data<VertexType>& data,
+				const std::shared_ptr<Context>& ctx, const Data<VertexType>& data,
 				Primitive primitive_type=Primitive::Triangle, std::optional<bool> animated=std::nullopt,
 				BufferAccessMode access_mode=BufferAccessMode::StaticDraw
 			)
@@ -166,7 +169,7 @@ namespace graphics
 				);
 			}
 
-			static Mesh GenerateTexturedQuad(pass_ref<Context> ctx, VertexWinding winding=VertexWinding::CounterClockwise); // Clockwise
+			static Mesh GenerateTexturedQuad(const std::shared_ptr<Context>& ctx, VertexWinding winding=VertexWinding::CounterClockwise); // Clockwise
 
 			friend void swap(Mesh& x, Mesh& y) noexcept;
 
@@ -187,7 +190,7 @@ namespace graphics
 			template <typename VertexType>
 			inline void update_contents
 			(
-				pass_ref<Context> ctx, const Data<VertexType>& data,
+				const std::shared_ptr<Context>& ctx, const Data<VertexType>& data,
 				bool attempt_buffer_reuse=true, bool update_attributes=true,
 				std::optional<Primitive> primitive_type=std::nullopt,
 				std::optional<bool> animated=std::nullopt,

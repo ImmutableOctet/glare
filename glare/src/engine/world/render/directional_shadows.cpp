@@ -17,13 +17,13 @@
 
 namespace engine
 {
-	DirectionalShadowPhase::DirectionalShadowPhase(const ref<graphics::Shader>& depth_shader)
+	DirectionalShadowPhase::DirectionalShadowPhase(const std::shared_ptr<graphics::Shader>& depth_shader)
 		: depth_shader(depth_shader) {}
 
-	DirectionalShadowPhase::DirectionalShadowPhase(const ref<graphics::Context>& ctx, std::string_view shader_preprocessor)
+	DirectionalShadowPhase::DirectionalShadowPhase(const std::shared_ptr<graphics::Context>& ctx, std::string_view shader_preprocessor)
 		: DirectionalShadowPhase
 		(
-			memory::allocate<graphics::Shader>
+			std::make_shared<graphics::Shader>
 			(
 				ctx,
 

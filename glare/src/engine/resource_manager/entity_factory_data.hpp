@@ -1,37 +1,48 @@
 #pragma once
 
 #include <engine/types.hpp>
+
 #include <engine/entity/entity_factory.hpp>
+#include <engine/entity/entity_construction_context.hpp>
 
 #include <util/small_vector.hpp>
-//#include <string>
+
+#include <memory>
 
 namespace engine
 {
-	using EntityFactoryKey = EntityFactory::FactoryKey; // std::string; // std::filsystem::path;
-	using EntityFactoryChildren = util::small_vector<EntityFactoryKey, 8>; // 16
+	struct EntityConstructionContext;
+
+	struct EntityFactoryData;
+
+	using EntityFactoryChildren = util::small_vector<std::shared_ptr<const EntityFactoryData>, 8>; // 4
 
 	struct EntityFactoryData
 	{
-		using FactoryKey = EntityFactoryKey;
+		public:
+			using Children = EntityFactoryChildren;
 
-		// The underlying factory instance.
-		EntityFactory factory;
+			// The underlying factory instance.
+			EntityFactory factory;
 
-		// List of factory instance paths, representing children of entities
-		// produced by `create` and related functions.
-		EntityFactoryChildren children;
+			// List of factory instance paths, representing children of entities
+			// produced by `create` and related functions.
+			Children children;
 
-		// Generates an entity using `context`.
-		Entity create(const EntityConstructionContext& context, bool handle_children=true) const;
+			static Entity create(std::shared_ptr<const EntityFactoryData> factory_data, const EntityConstructionContext& context, bool handle_children=true);
 
-		// Generates the child entities associated with this factory, then adds them as children to `entity`.
-		// Entities are generated from referenced factories (via instance-path) -- i.e. `EntityFactoryData` instances.
-		// 
-		// NOTE: If `parent` is `null` or omitted, this will attempt to use the `parent` field of `context`.
-		bool generate_children(const EntityConstructionContext& child_context, Entity parent) const;
+			// Generates the child entities associated with this factory, then adds them as children to `entity`.
+			// Entities are generated from referenced factories (via instance-path) -- i.e. `EntityFactoryData` instances.
+			// 
+			// NOTE: If `parent` is `null` or omitted, this will attempt to use the `parent` field of `context`.
+			bool generate_children(const EntityConstructionContext& child_context, Entity parent) const;
 
-		// Generates the child entities associated with this factory, then adds them as children to `context.parent`.
-		bool generate_children(const EntityConstructionContext& child_context) const;
+			// Generates the child entities associated with this factory, then adds them as children to `context.parent`.
+			bool generate_children(const EntityConstructionContext& child_context) const;
+		protected:
+			// Generates an entity using `context`.
+			Entity create_impl(std::shared_ptr<const EntityFactoryData>&& factory_data, const EntityConstructionContext& context, bool handle_children=true) const;
+			
+			Entity on_entity_create(Entity entity, const EntityConstructionContext& context) const;
 	};
 }

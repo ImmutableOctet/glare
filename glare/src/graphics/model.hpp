@@ -13,6 +13,7 @@
 #include "types.hpp"
 #include "mesh.hpp"
 #include "material.hpp"
+#include "texture_class.hpp"
 
 // Bullet:
 class btTriangleIndexVertexArray;
@@ -51,7 +52,7 @@ namespace graphics
 			struct MeshDescriptor
 			{
 				//Material material;
-				ref<Material> material;
+				std::shared_ptr<Material> material;
 				std::vector<Mesh> meshes;
 
 				/*
@@ -62,10 +63,10 @@ namespace graphics
 					: material(std::move(material)) {}
 				*/
 
-				MeshDescriptor(pass_ref<Material> material, std::vector<Mesh>&& meshes) noexcept
+				MeshDescriptor(const std::shared_ptr<Material>& material, std::vector<Mesh>&& meshes) noexcept
 					: material(material), meshes(std::move(meshes)) {}
 
-				MeshDescriptor(pass_ref<Material> material) noexcept
+				MeshDescriptor(const std::shared_ptr<Material>& material) noexcept
 					: material(material) {}
 
 				MeshDescriptor() noexcept = default;

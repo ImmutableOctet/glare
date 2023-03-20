@@ -5,8 +5,10 @@
 #include "types.hpp"
 #include "events.hpp"
 
+#include "entity_system.hpp"
 #include "entity_target.hpp"
 #include "entity_descriptor.hpp"
+#include "entity_instruction.hpp"
 #include "entity_thread_target.hpp"
 #include "event_trigger_condition.hpp"
 #include "state_storage_manager.hpp"
@@ -20,6 +22,12 @@
 
 #include "commands/commands.hpp"
 
+//#include <engine/meta/meta_variable_evaluation_context.hpp>
+
+#include <engine/resource_manager/entity_factory_data.hpp>
+
+#include <util/variant.hpp>
+
 #include <string>
 #include <string_view>
 
@@ -28,24 +36,74 @@ namespace engine
 	template <>
     void reflect<EntityTarget>()
     {
-        engine_meta_type<EntityTarget>()
-            .data<nullptr, &EntityTarget::target_index>("target_index"_hs)
+		engine_meta_type<EntityTarget>()
+			// Disabled for now.
+			//.data<&EntityTarget::type>("type"_hs)
 
-            .data<nullptr, &EntityTarget::is_self_targeted>("is_self_targeted"_hs)
-            .data<nullptr, &EntityTarget::is_parent_target>("is_parent_target"_hs)
-            .data<nullptr, &EntityTarget::is_exact_entity_target>("is_exact_entity_target"_hs)
-            .data<nullptr, &EntityTarget::is_entity_name_target>("is_entity_name_target"_hs)
-            .data<nullptr, &EntityTarget::is_child_target>("is_child_target"_hs)
-            .data<nullptr, &EntityTarget::is_player_target>("is_player_target"_hs)
-            .data<nullptr, &EntityTarget::is_null_target>("is_null_target"_hs)
-            
-            .func<&EntityTarget::get>("resolve"_hs)
+			.data<nullptr, &EntityTarget::target_index>("target_index"_hs)
 
-            // NOTE: Alias to `resolve`.
-            .func<&EntityTarget::get>("get"_hs)
+			.data<nullptr, &EntityTarget::is_self_targeted>("is_self_targeted"_hs)
+			.data<nullptr, &EntityTarget::is_parent_target>("is_parent_target"_hs)
+			.data<nullptr, &EntityTarget::is_exact_entity_target>("is_exact_entity_target"_hs)
+			.data<nullptr, &EntityTarget::is_entity_name_target>("is_entity_name_target"_hs)
+			.data<nullptr, &EntityTarget::is_child_target>("is_child_target"_hs)
+			.data<nullptr, &EntityTarget::is_player_target>("is_player_target"_hs)
+			.data<nullptr, &EntityTarget::is_null_target>("is_null_target"_hs)
 
-            //.func<&EntityTarget::parse_type>("parse_type"_hs)
+			// Disabled for now:
+			//.ctor<EntityTarget::TargetType>()
+			//.ctor<&EntityTarget::from_target_type<EntityTarget::IndirectTarget>>()
+
+			.ctor<&EntityTarget::from_target_type<EntityTarget::SelfTarget>>()
+			.ctor<&EntityTarget::from_target_type<EntityTarget::ParentTarget>>()
+			.ctor<&EntityTarget::from_target_type<EntityTarget::ExactEntityTarget>>()
+			.ctor<&EntityTarget::from_target_type<EntityTarget::EntityNameTarget>>()
+			.ctor<&EntityTarget::from_target_type<EntityTarget::ChildTarget>>()
+			.ctor<&EntityTarget::from_target_type<EntityTarget::PlayerTarget>>()
+			.ctor<&EntityTarget::from_target_type<EntityTarget::NullTarget>>()
+
+			.ctor<&EntityTarget::from_entity>()
+
+			.ctor<static_cast<EntityTarget(*)(const std::string&)>(&EntityTarget::from_string)>()
+			.ctor<static_cast<EntityTarget(*)(std::string_view)>(&EntityTarget::from_string)>()
         ;
+
+		// Disabled for now:
+		//engine_meta_type<EntityTarget::TargetType>();
+		//engine_meta_type<EntityTarget::IndirectTarget>();
+
+		engine_meta_type<EntityTarget::ParentTarget>();
+		
+		// NOTE: `entity` field implicitly reflected.
+		engine_meta_type<EntityTarget::ExactEntityTarget>();
+
+		engine_meta_type<EntityTarget::EntityNameTarget>()
+			.data<&EntityTarget::EntityNameTarget::entity_name>("entity_name"_hs)
+			.data<&EntityTarget::EntityNameTarget::search_children_first>("search_children_first"_hs)
+			.ctor<decltype(EntityTarget::EntityNameTarget::entity_name)>()
+			.ctor<decltype(EntityTarget::EntityNameTarget::entity_name), decltype(EntityTarget::EntityNameTarget::search_children_first)>()
+			.ctor<static_cast<EntityTarget::EntityNameTarget(*)(const std::string&)>(&EntityTarget::EntityNameTarget::from_string)>()
+			.ctor<static_cast<EntityTarget::EntityNameTarget(*)(std::string_view)>(&EntityTarget::EntityNameTarget::from_string)>()
+		;
+
+		engine_meta_type<EntityTarget::ChildTarget>()
+			.data<&EntityTarget::ChildTarget::child_name>("child_name"_hs)
+			
+			.ctor<decltype(EntityTarget::ChildTarget::child_name)>()
+			
+			.ctor<static_cast<EntityTarget::ChildTarget(*)(std::string_view, bool)>(&EntityTarget::ChildTarget::from_string)>()
+			.ctor<static_cast<EntityTarget::ChildTarget(*)(std::string_view)>(&EntityTarget::ChildTarget::from_string)>()
+
+			.ctor<static_cast<EntityTarget::ChildTarget(*)(const std::string&, bool)>(&EntityTarget::ChildTarget::from_string)>()
+			.ctor<static_cast<EntityTarget::ChildTarget(*)(const std::string&)>(&EntityTarget::ChildTarget::from_string)>()
+		;
+
+		// NOTE: `player_index` field implicitly reflected.
+		// 
+		// TODO: Look into adding name-based constructor.
+		engine_meta_type<EntityTarget::PlayerTarget>();
+
+		engine_meta_type<EntityTarget::NullTarget>();
     }
 
 	template <>
@@ -298,6 +356,17 @@ namespace engine
 	GENERATE_EMPTY_DERIVED_TYPE_REFLECTION(OnThreadUnlink, ThreadEvent);
 
 	template <>
+	void reflect<OnThreadVariableUpdate>()
+	{
+		engine_meta_type<OnThreadVariableUpdate>()
+			.base<ThreadEvent>()
+			.data<&OnThreadVariableUpdate::resolved_variable_name>("resolved_variable_name"_hs)
+			.data<&OnThreadVariableUpdate::variable_scope>("variable_scope"_hs)
+			.data<&OnThreadVariableUpdate::variable_update_result>("variable_update_result"_hs)
+		;
+	}
+
+	template <>
 	void reflect<StateChangeCommand>()
 	{
 		engine_command_type<StateChangeCommand>()
@@ -451,10 +520,148 @@ namespace engine
 			>()
 		;
 	}
+	
+	template <>
+	void reflect<EntityInstruction>()
+	{
+		auto type = engine_meta_type<EntityInstruction>()
+			//.data<&EntityInstruction::value>("value"_hs)
+			//.data<nullptr, &EntityInstruction::type_index>("type_index"_hs)
+
+			//.ctor<MetaAny>()
+			.ctor<&EntityInstruction::from_meta_any>()
+		;
+
+		/*
+		util::for_each_variant_type<decltype(EntityInstruction::value)>
+		(
+			[&type]<typename T>()
+			{
+				type = type.ctor<&EntityInstruction::from_type<T>>();
+				//type = type.ctor<T>();
+			}
+		);
+		*/
+	}
+
+	template <>
+	void reflect<EntityThreadInstruction>()
+	{
+		engine_meta_type<EntityThreadInstruction>()
+			.data<&EntityThreadInstruction::target_entity>("target_entity"_hs)
+			.data<&EntityThreadInstruction::thread_id>("thread_id"_hs)
+			
+			.ctor
+			<
+				decltype(EntityThreadInstruction::target_entity),
+				decltype(EntityThreadInstruction::thread_id)
+			>()
+
+			.ctor
+			<
+				decltype(EntityThreadInstruction::target_entity),
+				typename decltype(EntityThreadInstruction::thread_id)::value_type
+			>()
+		;
+	}
+
+	template <>
+	void reflect<EntityInstructionDescriptor>()
+	{
+		engine_meta_type<EntityInstructionDescriptor>()
+			.data<&EntityInstructionDescriptor::instruction>("instruction"_hs)
+			.ctor<decltype(EntityInstructionDescriptor::instruction)>()
+		;
+	}
+
+	template <>
+	void reflect<instructions::LocalConditionControlBlock>()
+	{
+		engine_meta_type<instructions::LocalConditionControlBlock>()
+			.data<&instructions::LocalConditionControlBlock::condition>("condition"_hs)
+			.data<&instructions::LocalConditionControlBlock::execution_range>("execution_range"_hs)
+			.ctor
+			<
+				decltype(instructions::LocalConditionControlBlock::condition),
+				decltype(instructions::LocalConditionControlBlock::execution_range)
+			>()
+		;
+	}
+
+	template <>
+	void reflect<instructions::Attach>()
+	{
+		engine_meta_type<instructions::Attach>()
+			.base<instructions::Thread>()
+			.data<&instructions::Attach::state_id>("state_id"_hs)
+			.data<&instructions::Attach::check_linked>("check_linked"_hs)
+		;
+	}
+
+	template <>
+	void reflect<instructions::Sleep>()
+	{
+		engine_meta_type<instructions::Sleep>()
+			.base<instructions::Thread>()
+			.data<&instructions::Sleep::duration>("duration"_hs)
+			.data<&instructions::Sleep::check_linked>("check_linked"_hs)
+		;
+	}
+
+	template <>
+	void reflect<instructions::Skip>()
+	{
+		engine_meta_type<instructions::Skip>()
+			.base<instructions::Thread>()
+			.data<&instructions::Skip::instructions_skipped>("instructions_skipped"_hs)
+			.data<&instructions::Skip::check_linked>("check_linked"_hs)
+		;
+	}
+
+	template <>
+	void reflect<instructions::Rewind>()
+	{
+		engine_meta_type<instructions::Rewind>()
+			.base<instructions::Thread>()
+			.data<&instructions::Rewind::instructions_rewound>("instructions_rewound"_hs)
+			.data<&instructions::Rewind::check_linked>("check_linked"_hs)
+		;
+	}
+
+	GENERATE_SINGLE_FIELD_TYPE_REFLECTION(instructions::ControlBlock, size);
+	GENERATE_SINGLE_FIELD_TYPE_REFLECTION(instructions::MultiControlBlock, included_instructions);
+	GENERATE_SINGLE_FIELD_DERIVED_TYPE_REFLECTION(instructions::Start, instructions::Thread, restart_existing);
+	GENERATE_SINGLE_FIELD_DERIVED_TYPE_REFLECTION(instructions::Stop, instructions::Thread, check_linked);
+	GENERATE_EMPTY_DERIVED_TYPE_REFLECTION(instructions::Restart, instructions::Thread);
+	GENERATE_SINGLE_FIELD_DERIVED_TYPE_REFLECTION(instructions::Pause, instructions::Thread, check_linked);
+	GENERATE_SINGLE_FIELD_DERIVED_TYPE_REFLECTION(instructions::Resume, instructions::Thread, check_linked);
+	//GENERATE_EMPTY_TYPE_REFLECTION(instructions::Link);
+	GENERATE_EMPTY_DERIVED_TYPE_REFLECTION(instructions::Unlink, instructions::Thread);
+	GENERATE_SINGLE_FIELD_DERIVED_TYPE_REFLECTION(instructions::Detach, instructions::Thread, check_linked);
+	GENERATE_SINGLE_FIELD_DERIVED_TYPE_REFLECTION(instructions::Yield, instructions::Thread, condition);
+	GENERATE_EMPTY_DERIVED_TYPE_REFLECTION(instructions::IfControlBlock, instructions::LocalConditionControlBlock);
+	GENERATE_SINGLE_FIELD_TYPE_REFLECTION(instructions::FunctionCall, function);
+	GENERATE_SINGLE_FIELD_TYPE_REFLECTION(instructions::VariableDeclaration, variable_details);
+
+	template <>
+	void reflect<instructions::VariableAssignment>()
+	{
+		engine_meta_type<instructions::VariableAssignment>()
+			.base<instructions::Thread>()
+			.data<&instructions::VariableAssignment::assignment>("assignment"_hs)
+			.data<&instructions::VariableAssignment::variable_details>("variable_details"_hs)
+			.data<&instructions::VariableAssignment::ignore_if_already_assigned>("ignore_if_already_assigned"_hs)
+			.data<&instructions::VariableAssignment::ignore_if_not_declared>("ignore_if_not_declared"_hs)
+		;
+	}
 
     template <>
 	void reflect<EntitySystem>()
 	{
+		static_engine_meta_type<EntitySystem>()
+			//.func<&EntitySystem::resolve_variable_context>("resolve_variable_context"_hs)
+		;
+
 		// General:
 		reflect<EntityThreadRange>();
 		reflect<EntityTarget>();
@@ -485,6 +692,7 @@ namespace engine
 		reflect<OnThreadAttach>();
 		reflect<OnThreadDetach>();
 		reflect<OnThreadUnlink>();
+		reflect<OnThreadVariableUpdate>();
 
 		// Commands:
 		reflect<StateChangeCommand>();
@@ -499,5 +707,32 @@ namespace engine
 		reflect<EntityThreadUnlinkCommand>();
 		reflect<EntityThreadSkipCommand>();
 		reflect<EntityThreadRewindCommand>();
+
+		// Instructions:
+		reflect<EntityInstruction>();
+		reflect<EntityThreadInstruction>();
+		reflect<EntityInstructionDescriptor>();
+
+		reflect<instructions::ControlBlock>();
+		reflect<instructions::LocalConditionControlBlock>();
+
+		reflect<instructions::Start>();
+		reflect<instructions::Restart>();
+		reflect<instructions::Stop>();
+		reflect<instructions::Pause>();
+		reflect<instructions::Resume>();
+		//reflect<instructions::Link>();
+		reflect<instructions::Unlink>();
+		reflect<instructions::Attach>();
+		reflect<instructions::Detach>();
+		reflect<instructions::Sleep>();
+		reflect<instructions::Yield>();
+		reflect<instructions::Skip>();
+		reflect<instructions::Rewind>();
+		reflect<instructions::MultiControlBlock>();
+		reflect<instructions::IfControlBlock>();
+		reflect<instructions::FunctionCall>();
+		reflect<instructions::VariableDeclaration>();
+		reflect<instructions::VariableAssignment>();
 	}
 }

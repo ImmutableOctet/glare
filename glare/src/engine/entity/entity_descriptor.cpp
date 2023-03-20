@@ -1,13 +1,26 @@
 #include "entity_descriptor.hpp"
+#include "entity_factory_context.hpp"
 
 #include <engine/meta/meta.hpp>
 
 namespace engine
 {
-	// EntityDescriptor:
+	EntityDescriptor::EntityDescriptor(std::string_view path)
+		: shared_storage
+		(
+			(path.empty())
+			? MetaSymbolID {}
+			: static_cast<MetaSymbolID>(hash(path).value())
+		)
+	{}
+
+	EntityDescriptor::EntityDescriptor(const EntityFactoryContext& factory_context)
+		: EntityDescriptor(factory_context.paths.instance_path.string())
+	{}
+
 	MetaTypeDescriptor& EntityDescriptor::generate_empty_command(const MetaType& command_type, Entity source, Entity target)
 	{
-		using namespace entt::literals;
+		using namespace engine::literals;
 
 		//auto command_content = CommandContent(command_type);
 		auto& command_content = shared_storage.allocate<MetaTypeDescriptor>(command_type);
@@ -18,93 +31,12 @@ namespace engine
 		return command_content;
 	}
 
-	const EntityState* EntityDescriptor::get_state(StringHash name) const
-	{
-		for (const auto& state : states)
-		{
-			if (!state->name)
-			{
-				continue;
-			}
-
-			if ((*state->name) == name)
-			{
-				//return &state;
-				return state.get();
-			}
-		}
-
-		return nullptr;
-	}
-
-	EntityState* EntityDescriptor::get_state(StringHash name)
-	{
-		return const_cast<EntityState*>(const_cast<const EntityDescriptor*>(this)->get_state(name));
-	}
-
-	const EntityState* EntityDescriptor::get_state(std::optional<StringHash> name) const
-	{
-		if (!name)
-		{
-			return {};
-		}
-
-		return get_state(*name);
-	}
-
-	EntityState* EntityDescriptor::get_state(std::optional<StringHash> name)
-	{
-		if (!name)
-		{
-			return {};
-		}
-
-		return get_state(*name);
-	}
-
-	std::optional<EntityStateIndex> EntityDescriptor::get_state_index(EntityStateID name) const // std::size_t
-	{
-		for (EntityStateIndex i = 0; i < states.size(); i++)
-		{
-			const auto& state = states[i];
-
-			if (!state->name)
-			{
-				continue;
-			}
-
-			if ((*state->name) == name)
-			{
-				return i;
-			}
-		}
-
-		return std::nullopt;
-	}
-
-	const EntityState* EntityDescriptor::get_state_by_index(EntityStateIndex state_index) const
-	{
-		const auto state_index_promoted = static_cast<std::size_t>(state_index);
-
-		assert(state_index_promoted < states.size());
-
-		if (const auto& state = states[state_index_promoted])
-		{
-			if (state)
-			{
-				return state.get();
-			}
-		}
-
-		return {};
-	}
-
 	bool EntityDescriptor::set_state(Registry& registry, Entity entity, std::optional<EntityStateIndex> previous_state, std::string_view state_name) const
 	{
 		return set_state_by_id(registry, entity, previous_state, hash(state_name));
 	}
 
-	bool EntityDescriptor::set_state_by_id(Registry& registry, Entity entity, std::optional<EntityStateIndex> previous_state, StringHash state_id) const
+	bool EntityDescriptor::set_state_by_id(Registry& registry, Entity entity, std::optional<EntityStateIndex> previous_state, EntityStateID state_id) const
 	{
 		auto state_index = get_state_index(state_id);
 
@@ -132,12 +64,12 @@ namespace engine
 				return false;
 			}
 
-			from = (states[*previous_state].get()); // &(states[*previous_state]);
+			from = &(states[*previous_state].get(*this));
 		}
 
-		const auto& to = states[state_index];
+		const auto& to = states[state_index].get(*this);
 
-		to->update(*this, registry, entity, state_index, from, previous_state);
+		to.update(*this, registry, entity, state_index, from, previous_state);
 
 		return true;
 	}

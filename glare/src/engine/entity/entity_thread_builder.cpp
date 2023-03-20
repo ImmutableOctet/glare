@@ -2,6 +2,7 @@
 #include "entity_thread_description.hpp"
 #include "entity_factory_context.hpp"
 #include "entity_descriptor.hpp"
+#include "entity_descriptor_shared.hpp"
 
 #include "serial.hpp"
 #include "serial_impl.hpp"
@@ -10,8 +11,14 @@
 
 #include <engine/meta/meta.hpp>
 #include <engine/meta/serial.hpp>
-#include <engine/meta/parsing_context.hpp>
+#include <engine/meta/meta_type_resolution_context.hpp>
 #include <engine/meta/meta_type_descriptor.hpp>
+#include <engine/meta/meta_value_operation.hpp>
+#include <engine/meta/meta_value_operator.hpp>
+#include <engine/meta/indirect_meta_any.hpp>
+#include <engine/meta/indirect_meta_variable_target.hpp>
+#include <engine/meta/meta_variable_context.hpp>
+#include <engine/meta/meta_variable_target.hpp>
 
 #include <tuple>
 
@@ -25,6 +32,8 @@
 
 namespace engine
 {
+	struct OnThreadSpawn;
+
 	// EntityThreadBuilderContext:
 	EntityThreadBuilderContext::EntityThreadBuilderContext
 	(
@@ -32,14 +41,24 @@ namespace engine
 		ThreadDescriptor thread,
 		const EntityFactoryContext* opt_factory_context,
 		const std::filesystem::path* opt_base_path,
-		const ParsingContext* opt_parsing_context
+		const MetaParsingContext& parsing_context
 	) :
 		descriptor(descriptor),
-		thread(thread),
 		opt_factory_context(opt_factory_context),
 		opt_base_path(opt_base_path),
-		opt_parsing_context(opt_parsing_context)
+		parsing_context(parsing_context),
+		thread(thread)
 	{}
+
+	EntityThreadBuilderContext::EntityThreadBuilderContext
+	(
+		const EntityThreadBuilderContext& parent_context,
+		const MetaParsingContext& parsing_context
+	) :
+		EntityThreadBuilderContext(parent_context)
+	{
+		this->parsing_context = parsing_context;
+	}
 
 	EntityThreadIndex EntityThreadBuilderContext::thread_index() const
 	{
@@ -66,7 +85,7 @@ namespace engine
 		std::string_view opt_thread_name,
 		const EntityFactoryContext* opt_factory_context,
 		const std::filesystem::path* opt_base_path,
-		const ParsingContext* opt_parsing_context
+		const MetaParsingContext& parsing_context
 	)
 		: EntityThreadBuilder
 		(
@@ -76,7 +95,7 @@ namespace engine
 				thread,
 				opt_factory_context,
 				opt_base_path,
-				opt_parsing_context
+				parsing_context
 			),
 
 			opt_thread_name
@@ -89,7 +108,7 @@ namespace engine
 		std::string_view opt_thread_name,
 		const EntityFactoryContext* opt_factory_context,
 		const std::filesystem::path* opt_base_path,
-		const ParsingContext* opt_parsing_context
+		const MetaParsingContext& parsing_context
 	)
 		: EntityThreadBuilder
 		(
@@ -104,7 +123,7 @@ namespace engine
 			opt_thread_name,
 			opt_factory_context,
 			opt_base_path,
-			opt_parsing_context
+			parsing_context
 		)
 	{}
 
@@ -147,14 +166,18 @@ namespace engine
 					.resolve_symbol = true,
 
 					// Already handled in previous step.
-					.strip_quotes = false,
+					.strip_quotes   = false,
 
 					// Allows fallthrough to non-resolution path below.
-					.fallback_to_string = false,
+					.fallback_to_string               = false,
+					.fallback_to_component_reference  = false,
+					.fallback_to_entity_reference     = false,
 
 					// We determine thread names during the initial processing phase,
-					// and will therefore have no use for runtime name resolution.
-					.resolve_component_member_references = false
+					// and will therefore have no use for runtime name resolution:
+					.allow_member_references          = false,
+					.allow_entity_indirection         = false,
+					.allow_remote_variable_references = false // true
 				}
 			);
 		}
@@ -177,7 +200,15 @@ namespace engine
 		}
 		//else
 		{
-			thread.thread_id = thread_id_out;
+			if (thread_id_out)
+			{
+				thread.thread_id = thread_id_out;
+
+				if (auto opt_variable_context = parsing_context.get_variable_context())
+				{
+					opt_variable_context->set_name(*thread_id_out);
+				}
+			}
 		}
 
 		//return thread_id_out;
@@ -204,9 +235,10 @@ namespace engine
 		// Check if we're already building an update instruction:
 		if (current_update_instruction)
 		{
-			// Determine if the target entity is different:
+			// Determine if we're still targeting the same entity:
 			if (current_update_instruction->target_entity == target)
 			{
+				// Keep using the current update instruction.
 				return *current_update_instruction;
 			}
 			
@@ -215,11 +247,12 @@ namespace engine
 			flush_update_instruction();
 		}
 
-		current_update_instruction = EntityStateUpdateAction
-		{
-			std::make_unique<EntityStateUpdateAction::ComponentStore>(),
-			target
-		};
+		return construct_update_instruction(target);
+	}
+
+	EntityStateUpdateAction& EntityThreadBuilder::construct_update_instruction(EntityTarget target)
+	{
+		current_update_instruction = EntityStateUpdateAction { target };
 
 		return *current_update_instruction;
 	}
@@ -236,6 +269,18 @@ namespace engine
 		current_update_instruction = std::nullopt;
 
 		return true;
+	}
+
+	EntityStateUpdateAction& EntityThreadBuilder::new_update_instruction(EntityTarget target)
+	{
+		if (current_update_instruction)
+		{
+			auto flush_result = flush_update_instruction();
+
+			assert(flush_result);
+		}
+
+		return construct_update_instruction(target);
 	}
 
 	bool EntityThreadBuilder::on_update_instruction(const util::json& update_entry)
@@ -270,12 +315,12 @@ namespace engine
 
 		auto& update_instruction = get_update_instruction();
 
-		return (process_update_action(update_instruction, update_entry, opt_parsing_context) > 0);
+		return (process_update_action(descriptor, update_instruction, update_entry, parsing_context) > 0);
 	}
 
 	bool EntityThreadBuilder::on_instruction_change(InstructionID instruction_id, InstructionID prev_instruction_id)
 	{
-		using namespace entt::literals;
+		using namespace engine::literals;
 
 		this->prev_instruction_id = instruction_id;
 
@@ -288,14 +333,17 @@ namespace engine
 		return false;
 	};
 
-	MetaTypeDescriptor* EntityThreadBuilder::process_update_instruction_from_values
+	bool EntityThreadBuilder::process_update_instruction_from_values
 	(
 		std::string_view type_name,
 		std::string_view member_name,
-		std::string_view value_raw,
-		std::string_view entity_ref_expr
+		std::string_view assignment_value_raw,
+		std::string_view entity_ref_expr,
+		std::string_view operator_symbol
 	)
 	{
+		using namespace engine::literals;
+
 		if (type_name.empty())
 		{
 			//print_error("Missing type-name detected.");
@@ -303,40 +351,185 @@ namespace engine
 			return {};
 		}
 
-		auto target = EntityTarget::parse(entity_ref_expr);
+		const auto opt_type_context = get_type_context();
 
-		if (!target)
-		{
-			target = { EntityTarget::SelfTarget {} };
-		}
-
-		// Retrieve the current update instruction, or
-		// initialize a new one if one doesn't exist yet.
-		auto& update_instruction = get_update_instruction(*target);
-
-		auto type_id = hash(type_name);
-		auto type = resolve(type_id);
+		const auto type = (opt_type_context)
+			? opt_type_context->get_component_type(type_name)
+			: resolve(hash(type_name))
+		;
 
 		if (!type)
 		{
-			print_error("Unable to resolve type: {} (#{})", type_name, type_id.value());
+			//print_error("Unable to resolve type: {} (#{})", type_name, type.id());
 
 			return {};
 		}
 
-		auto* target_descriptor = update_instruction.updated_components->get_definition(type_id);
+		const auto type_id = type.id();
 
-		if (!target_descriptor)
+		const auto assignment_symbol_index = operator_symbol.find_last_of('=');
+
+		if (assignment_symbol_index == std::string_view::npos)
 		{
-			target_descriptor = &(update_instruction.updated_components->type_definitions.emplace_back(type));
+			return {};
 		}
 
-		target_descriptor->set_variable(MetaVariable { member_name, meta_any_from_string(value_raw) });
+		auto target = (entity_ref_expr.empty())
+			? EntityTarget { EntityTarget::SelfTarget {} }
+			: EntityTarget::from_string(entity_ref_expr)
+		;
 
-		return target_descriptor;
+		// Retrieve the current update instruction, or
+		// initialize a new one if one doesn't exist yet.
+		auto& update_instruction = get_update_instruction(target);
+
+		auto* target_descriptor = update_instruction.updated_components.get_definition(descriptor, type_id);
+
+		const auto member_id = (member_name.empty())
+			? MetaTypeID {}
+			: hash(member_name).value()
+		;
+
+		if (target_descriptor)
+		{
+			bool force_flush = !(static_cast<bool>(member_id));
+
+			if (!force_flush)
+			{
+				if (target_descriptor->has_anonymous_field_name() || target_descriptor->get_variable(member_id))
+				{
+					force_flush = true;
+				}
+			}
+
+			if (force_flush)
+			{
+				// Since we've already assigned `member_name`, we'll need to
+				// flush the current update instruction and start a new one:
+
+				// NOTE: There's no need to re-assign `update_instruction` here,
+				// since the new instance should be in the same memory location.
+				new_update_instruction(target);
+
+				// Ensure a new descriptor is allocated. (see below)
+				target_descriptor = nullptr;
+			}
+		}
+		
+		if (!target_descriptor)
+		{
+			target_descriptor = &
+			(
+				update_instruction.updated_components.type_definitions.emplace_back
+				(
+					descriptor.allocate<MetaTypeDescriptor>
+					(
+						type,
+						std::optional<MetaTypeDescriptor::SmallSize>(std::nullopt),
+
+						MetaTypeDescriptorFlags
+						{
+							// Force field assignment for member-based inline update instructions.
+							.force_field_assignment = static_cast<bool>(member_id)
+						}
+					)
+				).get(descriptor)
+			);
+		}
+
+		const auto operator_type_raw = operator_symbol.substr(0, assignment_symbol_index);
+		const auto operator_info = MetaValueOperation::get_operation(operator_type_raw);
+
+		auto member = (member_id)
+			? resolve_data_member_by_id(type, true, member_id)
+			: entt::meta_data {}
+		;
+
+		//assert(member);
+
+		if ((member_id) && (!member))
+		{
+			return false;
+		}
+
+		auto assignment_value = meta_any_from_string
+		(
+			assignment_value_raw,
+
+			{
+				.context = parsing_context,
+				.storage = &(descriptor.get_shared_storage()),
+
+				// TODO: Add support for direct component assignment/copying.
+				.fallback_to_component_reference  = true,
+				.fallback_to_entity_reference     = true,
+
+				.allow_member_references          = true,
+				.allow_entity_indirection         = true,
+				.allow_function_call_semantics    = true,
+				.allow_value_resolution_commands  = true,
+				.allow_remote_variable_references = true,
+				.resolve_value_operations         = true,
+			},
+
+			(member)
+				? member.type()
+				: type // MetaType {} 
+		);
+
+		if (operator_info)
+		{
+			const auto& operator_type = std::get<0>(*operator_info);
+
+			auto& operation = descriptor.get_shared_storage().allocate<MetaValueOperation>();
+
+			operation.segments.emplace_back
+			(
+				IndirectMetaDataMember
+				{
+					target,
+
+					MetaDataMember
+					{
+						type_id,
+
+						member_id
+					}
+				},
+
+				operator_type
+			);
+
+			operation.segments.emplace_back
+			(
+				std::move(assignment_value),
+
+				operator_type
+			);
+
+			target_descriptor->set_variable
+			(
+				MetaVariable
+				{
+					member_id,
+
+					IndirectMetaAny
+					{
+						descriptor.get_shared_storage(),
+						operation
+					}
+				}
+			);
+		}
+		else
+		{
+			target_descriptor->set_variable(MetaVariable { member_id, std::move(assignment_value) });
+		}
+
+		return static_cast<bool>(target_descriptor);
 	}
 
-	MetaTypeDescriptor* EntityThreadBuilder::process_update_instruction_from_csv(std::string_view instruction_separated, std::string_view separator)
+	bool EntityThreadBuilder::process_update_instruction_from_csv(std::string_view instruction_separated, std::string_view separator)
 	{
 		if (auto values = util::split_from<4>(instruction_separated, separator, 3))
 		{
@@ -354,35 +547,283 @@ namespace engine
 		return {};
 	}
 
-	MetaTypeDescriptor* EntityThreadBuilder::process_inline_update_instruction(std::string_view instruction)
+	bool EntityThreadBuilder::process_inline_update_instruction(std::string_view instruction)
 	{
 		auto
 		[
 			entity_ref_expr,
 			type_name, member_name,
-			operator_symbol, value_raw,
+			operator_symbol, assignment_value_raw,
 			updated_offset
-		] = util::parse_qualified_assignment_or_comparison(instruction);
+		] = parse_qualified_assignment_or_comparison(instruction);
 
-		return process_update_instruction_from_values(type_name, member_name, value_raw, entity_ref_expr);
+		return process_update_instruction_from_values(type_name, member_name, assignment_value_raw, entity_ref_expr, operator_symbol);
 	};
+
+	EntityInstructionCount EntityThreadBuilder::process_meta_expression_instruction(std::string_view instruction)
+	{
+		using namespace engine::literals;
+		using namespace engine::instructions;
+
+		auto& storage = descriptor.get_shared_storage();
+
+		auto deferred_operation = meta_any_from_string
+		(
+			instruction,
+
+			{
+				.context = parsing_context,
+				.storage = &storage,
+
+				.fallback_to_component_reference  = true,
+				.fallback_to_entity_reference     = true,
+
+				.allow_member_references          = true,
+				.allow_entity_indirection         = true,
+				.allow_function_call_semantics    = true,
+				.allow_value_resolution_commands  = true,
+				.allow_remote_variable_references = true,
+				.resolve_value_operations         = true
+			},
+
+			{},
+
+			// Disabled so that we fail on unresolved symbols.
+			false, // allow_string_fallback
+			
+			// TODO: Determine if these should be disabled for the initial value as well.
+			true, // allow_numeric_literals
+			true, // allow_boolean_literals
+			
+			// Disabled for initial value to allow for fallthrough to thread operations.
+			// (Similar to reasoning for `allow_string_fallback`)
+			false, // allow_entity_fallback
+			false  // allow_component_fallback
+		);
+
+		if (!deferred_operation)
+		{
+			return 0;
+		}
+
+		const MetaVariableDescription* assignment_variable = {};
+
+		if (auto opt_variable_context = parsing_context.get_variable_context())
+		{
+			auto [assignment_operator_index, assignment_operator] = util::find_assignment_operator(instruction);
+
+			if (!assignment_operator.empty())
+			{
+				auto unresolved_variable_name = instruction.substr(0, assignment_operator_index);
+
+				if (auto type_operator = unresolved_variable_name.find_last_of(':'); type_operator != std::string_view::npos)
+				{
+					bool type_operator_is_valid = true;
+
+					if (auto scope_end = unresolved_variable_name.find_last_of(')'); scope_end != std::string_view::npos)
+					{
+						if (scope_end > type_operator)
+						{
+							type_operator_is_valid = false;
+						}
+					}
+
+					if (type_operator_is_valid)
+					{
+						unresolved_variable_name = unresolved_variable_name.substr(0, type_operator);
+					}
+				}
+
+				unresolved_variable_name = util::trim(unresolved_variable_name);
+
+				assignment_variable = opt_variable_context->retrieve_variable(unresolved_variable_name);
+			}
+		}
+
+		auto* as_indirect = deferred_operation.try_cast<IndirectMetaAny>();
+
+		if (!as_indirect)
+		{
+			return 0;
+		}
+
+		auto remote_instance = as_indirect->get(storage);
+
+		if (!remote_instance)
+		{
+			return 0;
+		}
+
+		if (assignment_variable)
+		{
+			return instruct_thread<VariableAssignment>
+			(
+				std::nullopt,
+				std::move(*as_indirect),
+
+				MetaVariableTarget
+				{
+					assignment_variable->resolved_name,
+					assignment_variable->scope
+				}
+			);
+		}
+		else
+		{
+			if (const auto* as_operation = remote_instance.try_cast<MetaValueOperation>())
+			{
+				if (!as_operation->contains_function_call(storage, true))
+				{
+					// TODO: Add deallocation routine.
+
+					return 0;
+				}
+			}
+
+			return instruct<FunctionCall>(std::move(*as_indirect));
+		}
+	}
+
+	EntityInstructionCount EntityThreadBuilder::process_remote_variable_assignment
+	(
+		const EntityThreadInstruction& thread_instruction,
+
+		std::string_view thread_name,
+		std::string_view thread_local_variable_name,
+		std::string_view assignment_value_raw,
+		std::string_view operator_symbol,
+		std::string_view opt_entity_ref_expr
+	)
+	{
+		using namespace engine::instructions;
+
+		// NOTE: May change this logic later. (see also: `process_trigger_expression`)
+		auto thread_local_variable_scope = (thread_instruction.thread_id || thread_instruction.target_entity.is_self_targeted())
+			? MetaVariableScope::Local
+			: MetaVariableScope::Global
+		;
+
+		const auto thread_local_variable_target = MetaVariableTarget
+		{
+			MetaVariableContext::resolve_path
+			(
+				(thread_instruction.thread_id)
+					? (*thread_instruction.thread_id)
+					: (MetaSymbolID {})
+				,
+
+				thread_local_variable_name,
+				thread_local_variable_scope
+			),
+
+			thread_local_variable_scope
+		};
+
+		auto& storage = descriptor.get_shared_storage();
+
+		auto assignment_value = meta_any_from_string
+		(
+			assignment_value_raw,
+
+			{
+				.context = parsing_context,
+				.storage = &storage,
+
+				.fallback_to_component_reference  = true,
+				.fallback_to_entity_reference     = true,
+				.allow_member_references          = true,
+				.allow_entity_indirection         = true,
+				.allow_function_call_semantics    = true,
+				.allow_value_resolution_commands  = true,
+				.allow_remote_variable_references = true,
+				.resolve_value_operations         = true
+			},
+
+			{}, false
+		);
+
+		if (!assignment_value)
+		{
+			return 0;
+		}
+
+		const auto operator_parse_result = parse_value_operator(operator_symbol);
+
+		if (!operator_parse_result)
+		{
+			return 0;
+		}
+
+		const auto& operator_value = std::get<0>(*operator_parse_result);
+
+		if (!is_assignment_operation(operator_value))
+		{
+			return 0;
+		}
+
+		auto operation_out = MetaValueOperation {};
+
+		operation_out.segments.emplace_back
+		(
+			allocate_meta_any
+			(
+				IndirectMetaVariableTarget
+				{
+					thread_instruction.target_entity,
+					
+					thread_local_variable_target,
+
+					(thread_instruction.thread_id)
+						? EntityThreadTarget { *thread_instruction.thread_id }
+						: EntityThreadTarget {}
+				},
+
+				&storage
+			),
+
+			operator_value
+		);
+
+		operation_out.segments.emplace_back(std::move(assignment_value), operator_value);
+
+		auto allocation_result = allocate_meta_any(std::move(operation_out), &storage);
+
+		if (!allocation_result)
+		{
+			return 0;
+		}
+
+		auto* as_indirect = allocation_result.try_cast<IndirectMetaAny>();
+
+		if (!as_indirect)
+		{
+			return 0;
+		}
+
+		return instruct_thread<VariableAssignment>
+		(
+			thread_instruction,
+			std::move(*as_indirect),
+			thread_local_variable_target
+		);
+	}
 
 	EntityInstructionCount EntityThreadBuilder::process_command_instruction
 	(
 		InstructionID instruction_id,
 		std::string_view instruction_name,
 		std::string_view instruction_content,
-		bool resolve_values,
-		std::string_view separator
+
+		bool resolve_values
 	)
 	{
 		auto command_type = resolve(instruction_id);
 
 		if (!command_type)
 		{
-			if (opt_parsing_context)
+			if (const auto opt_type_context = get_type_context())
 			{
-				command_type = opt_parsing_context->get_command_type_from_alias(instruction_name);
+				command_type = opt_type_context->get_command_type_from_alias(instruction_name);
 
 				if (!command_type)
 				{
@@ -402,11 +843,20 @@ namespace engine
 			instruction_content,
 				
 			{
-				.resolve_symbol=resolve_values,
-				.resolve_component_member_references=resolve_values
+				.context = parsing_context,
+				.storage = &(descriptor.get_shared_storage()),
+
+				.resolve_symbol = resolve_values,
+
+				.fallback_to_component_reference = true,
+				.fallback_to_entity_reference    = true,
+
+				.allow_member_references          = resolve_values,
+				.allow_entity_indirection         = resolve_values,
+				.allow_remote_variable_references = resolve_values
 			},
 			
-			separator, command_arg_offset
+			command_arg_offset
 		);
 
 		return instruct
@@ -428,7 +878,22 @@ namespace engine
 		std::string_view directive
 	)
 	{
-		auto directive_id = hash(directive).value();
+		directive = util::trim(directive);
+
+		auto directive_id = StringHash {};
+		auto directive_content = std::string_view {};
+
+		if (auto whitespace = directive.find_first_of(util::whitespace_symbols); whitespace != std::string_view::npos)
+		{
+			const auto directive_name = directive.substr(0, whitespace);
+
+			directive_id = hash(directive_name).value();
+			directive_content = util::trim(directive.substr(whitespace));
+		}
+		else
+		{
+			directive_id = hash(directive).value();
+		}
 
 		return process_directive_impl
 		(
@@ -437,7 +902,239 @@ namespace engine
 
 			thread_details,
 
-			directive_id
+			directive,
+			directive_id,
+			directive_content
+		);
+	}
+
+	std::optional<EventTriggerCondition> EntityThreadBuilder::process_immediate_trigger_condition(std::string_view trigger_condition_expr)
+	{
+		if (auto condition = process_unified_condition_block(descriptor, trigger_condition_expr, parsing_context))
+		{
+			return condition;
+		}
+
+		auto& shared_storage = descriptor.get_shared_storage();
+
+		auto as_embedded_expr = meta_any_from_string
+		(
+			trigger_condition_expr,
+
+			{
+				.context = parsing_context,
+				.storage = &shared_storage,
+
+				//.fallback_to_component_reference = false,
+
+				// TODO: Determine if these should be disabled:
+				.fallback_to_component_reference  = true, // false,
+				.fallback_to_entity_reference     = true, // false,
+
+				.allow_member_references          = true,
+				.allow_entity_indirection         = true,
+				.allow_remote_variable_references = true
+			}
+			//, resolve<bool>()
+		);
+
+		if (as_embedded_expr)
+		{
+			return EventTriggerCondition
+			{
+				EventTriggerSingleCondition
+				{
+					std::move(as_embedded_expr)
+				}
+			};
+		}
+
+		return std::nullopt;
+	}
+
+	EntityInstructionCount EntityThreadBuilder::process_variable_declaration(std::string_view declaration)
+	{
+		using namespace engine::instructions;
+
+		auto variable_context = get_variable_context();
+
+		if (!variable_context)
+		{
+			return 0;
+		}
+
+		auto
+		[
+			scope_qualifier,
+			variable_name,
+			variable_type_specification,
+			assignment_expr,
+			trailing_expr
+		] = util::parse_variable_declaration(declaration);
+
+		if (variable_name.empty())
+		{
+			return 0;
+		}
+
+		const auto variable_scope = parse_variable_scope(scope_qualifier);
+
+		if (!variable_scope)
+		{
+			return 0;
+		}
+
+		const auto opt_type_context = get_type_context();
+
+		MetaType variable_type;
+
+		if (!variable_type_specification.empty())
+		{
+			variable_type = (opt_type_context)
+				? opt_type_context->get_type(variable_type_specification)
+				: resolve(hash(variable_type_specification))
+			;
+
+			if (!variable_type)
+			{
+				return 0;
+			}
+		}
+
+		const bool is_shared_variable = (*variable_scope != MetaVariableScope::Local);
+
+		auto [variable_description, variable_defined] = variable_context->define_or_retrieve_variable
+		(
+			*variable_scope,
+			variable_name,
+			((variable_type) ? variable_type.id() : MetaTypeID {}),
+			is_shared_variable
+		);
+
+		if (!variable_description)
+		{
+			return 0;
+		}
+
+		if (is_shared_variable || variable_defined)
+		{
+			if (assignment_expr.empty())
+			{
+				return instruct<VariableDeclaration>
+				(
+					MetaVariableTarget
+					{
+						variable_description->resolved_name,
+						variable_description->scope
+					}
+				);
+			}
+			else
+			{
+				return multi_control_block
+				(
+					[this, &variable_name, &assignment_expr, &variable_type, &variable_description]() -> EntityInstructionCount
+					{
+						instruct<VariableDeclaration>
+						(
+							MetaVariableTarget
+							{
+								variable_description->resolved_name,
+								variable_description->scope
+							}
+						);
+
+						const auto full_assignment_expr_begin = variable_name.data();
+						const auto full_assignment_expr_end = (assignment_expr.data() + assignment_expr.length());
+
+						assert(full_assignment_expr_end > full_assignment_expr_begin);
+
+						const auto full_assignment_expr_length = static_cast<std::size_t>(full_assignment_expr_end - full_assignment_expr_begin);
+						const auto full_assignment_expr = std::string_view{ full_assignment_expr_begin, full_assignment_expr_length };
+
+						process_variable_assignment(variable_description->resolved_name, variable_description->scope, full_assignment_expr, variable_type, true);
+
+						// Only one instruction processed, but several produced.
+						return 1;
+					}
+				);
+			}
+
+			return 1;
+		}
+
+		return 0; // 1;
+	}
+
+	EntityInstructionCount EntityThreadBuilder::process_variable_assignment
+	(
+		MetaSymbolID resolved_variable_name,
+		MetaVariableScope variable_scope,
+		std::string_view full_assignment_expr,
+		
+		const MetaType& variable_type,
+
+		bool ignore_if_already_assigned,
+		bool ignore_if_not_declared
+	)
+	{
+		using namespace engine::instructions;
+
+		auto& storage = descriptor.get_shared_storage();
+
+		auto assignment = meta_any_from_string
+		(
+			full_assignment_expr,
+
+			{
+				.context = parsing_context,
+				.storage = &storage,
+
+				.fallback_to_component_reference    = true,
+				.fallback_to_entity_reference       = true,
+
+				.allow_member_references            = true,
+				.allow_entity_indirection           = true,
+				.allow_remote_variable_references   = true
+
+				//.allow_implicit_type_construction = true
+			},
+
+			variable_type
+		);
+
+		auto* as_indirect = assignment.try_cast<IndirectMetaAny>();
+
+		if (!as_indirect)
+		{
+			return false;
+		}
+
+		bool underlying_has_indirection = type_has_indirection(as_indirect->get_type());
+
+		assert(underlying_has_indirection);
+
+		if (!underlying_has_indirection)
+		{
+			return false;
+		}
+
+		auto remote_instance = as_indirect->get(storage);
+
+		if (!remote_instance)
+		{
+			return false;
+		}
+
+		return instruct_thread<VariableAssignment>
+		(
+			std::nullopt,
+			std::move(*as_indirect),
+
+			MetaVariableTarget { resolved_variable_name, variable_scope },
+
+			ignore_if_already_assigned,
+			ignore_if_not_declared
 		);
 	}
 
@@ -448,14 +1145,20 @@ namespace engine
 
 		const std::optional<EntityThreadInstruction>& thread_details,
 
-		StringHash directive_id
+		std::string_view instruction_raw,
+		StringHash directive_id,
+		std::string_view directive_content
 	)
 	{
 		using namespace engine::instructions;
-		using namespace entt::literals;
+		using namespace engine::literals;
 
 		switch (directive_id)
 		{
+			case "thread"_hs:
+			case "begin"_hs:
+				return generate_sub_thread(content_source, content_index, {}, true);
+
 			case "end"_hs:
 				// Stop processing.
 				return std::nullopt;
@@ -480,6 +1183,19 @@ namespace engine
 			case "stop"_hs:
 			case "terminate"_hs:
 				return instruct_thread<Stop>(thread_details);
+
+			// Handles `scope`-prefix for variable declaration (e.g. `scope local`)
+			case "scope"_hs:
+				return process_variable_declaration(directive_content);
+
+			case "var"_hs:
+			case "auto"_hs:
+			case "field"_hs:
+			case "local"_hs:
+			case "global"_hs:
+			case "context"_hs:
+			case "shared"_hs:
+				return process_variable_declaration(instruction_raw);
 		}
 
 		return 0;
@@ -501,12 +1217,139 @@ namespace engine
 		return launch(context.thread_index());
 	}
 
-	const EntityThreadBuilderContext& EntityThreadBuilder::context() const
+	EntityInstructionCount EntityThreadBuilder::yield_thread_event
+	(
+		MetaTypeID event_type_id,
+
+		const std::optional<EntityThreadInstruction>& event_thread_details,
+		const std::optional<EntityThreadInstruction>& thread_details
+	)
 	{
-		return *this;
+		using namespace engine::literals;
+		using namespace engine::instructions;
+
+		auto fallback = [&]()
+		{
+			return instruct_thread<Yield>
+			(
+				thread_details,
+
+				descriptor.allocate<EventTriggerCondition>
+				(
+					EventTriggerSingleCondition
+					{
+						MetaAny {}, // MetaAny { true },
+						EventTriggerComparisonMethod::Equal,
+						event_type_id
+					}
+				)
+			);
+		};
+
+		if (!event_thread_details)
+		{
+			return fallback();
+		}
+
+		auto condition = EventTriggerAndCondition {};
+
+		auto& storage = descriptor.get_shared_storage();
+
+		condition.add_condition
+		(
+			descriptor.allocate<EventTriggerCondition>
+			(
+				EventTriggerSingleCondition
+				{
+					"entity"_hs,
+					allocate_meta_any(event_thread_details->target_entity, &storage),
+					EventTriggerComparisonMethod::Equal,
+					event_type_id
+				}
+			)
+		);
+
+		if (event_thread_details->thread_id)
+		{
+			condition.add_condition
+			(
+				descriptor.allocate<EventTriggerCondition>
+				(
+					EventTriggerSingleCondition
+					{
+						"thread_id"_hs,
+						allocate_meta_any(event_thread_details->thread_id, &storage),
+						EventTriggerComparisonMethod::Equal,
+						event_type_id
+					}
+				)
+			);
+		}
+
+		return instruct_thread<Yield>
+		(
+			thread_details,
+
+			descriptor.allocate<EventTriggerCondition>
+			(
+				std::move(condition)
+			)
+		);
 	}
 
-	EntityThreadBuilderContext EntityThreadBuilder::sub_context(ThreadDescriptor target_sub_thread) const
+	EntityThreadBuilderContext EntityThreadBuilder::scope_context(MetaVariableContext& scope_local_variables) const
+	{
+		return EntityThreadBuilderContext
+		{
+			scope_context(),
+			{
+				get_type_context(),
+				&scope_local_variables
+			}
+		};
+	}
+
+	const EntityThreadBuilderContext& EntityThreadBuilder::scope_context() const
+	{
+		return *(static_cast<const EntityThreadBuilderContext*>(this)); // *this;
+	}
+
+	MetaVariableContext EntityThreadBuilder::scope_variable_store(MetaSymbolID name)
+	{
+		return MetaVariableContext { get_variable_context(), name };
+	}
+
+	MetaVariableContext EntityThreadBuilder::scope_variable_store()
+	{
+		return scope_variable_store(static_cast<MetaSymbolID>(++scope_variable_context_count));
+	}
+
+	MetaVariableContext EntityThreadBuilder::sub_thread_variable_store(MetaSymbolID thread_id)
+	{
+		auto active_variable_context = parsing_context.get_variable_context();
+
+		return MetaVariableContext
+		{
+			(active_variable_context)
+				? active_variable_context->get_parent()
+				: nullptr
+			,
+
+			thread_id
+		};
+	}
+
+	MetaVariableContext EntityThreadBuilder::sub_thread_variable_store(std::string_view thread_name)
+	{
+		return sub_thread_variable_store
+		(
+			(thread_name.empty())
+				? static_cast<MetaSymbolID>(descriptor.get_threads().size()) // MetaSymbolID {}
+				: hash(thread_name).value()
+		);
+	}
+
+	EntityThreadBuilderContext EntityThreadBuilder::sub_thread_context(ThreadDescriptor target_sub_thread, std::optional<MetaParsingContext> opt_parsing_context) const
 	{
 		return EntityThreadBuilderContext
 		{
@@ -514,28 +1357,33 @@ namespace engine
 			target_sub_thread,
 			opt_factory_context,
 			opt_base_path,
-			opt_parsing_context
+
+			(opt_parsing_context)
+				? *opt_parsing_context
+				: parsing_context
 		};
 	}
 
-	EntityThreadBuilderContext EntityThreadBuilder::sub_context() const
+	EntityThreadBuilderContext EntityThreadBuilder::sub_thread_context(std::optional<MetaParsingContext> opt_parsing_context) const
 	{
-		return sub_context
+		return sub_thread_context
 		(
 			ThreadDescriptor
 			(
 				descriptor,
 
 				descriptor.shared_storage.allocate<EntityThreadDescription>()
-			)
+			),
+
+			opt_parsing_context
 		);
 	}
 
-	EntityThreadBuilder EntityThreadBuilder::sub_thread(std::string_view thread_name)
+	EntityThreadBuilder EntityThreadBuilder::sub_thread(std::string_view thread_name, std::optional<MetaParsingContext> opt_parsing_context)
 	{
 		return EntityThreadBuilder
 		{
-			sub_context(),
+			sub_thread_context(opt_parsing_context),
 			thread_name
 		};
 	}
@@ -559,7 +1407,8 @@ namespace engine
 			ControlBlock { 0 }
 		);
 
-		auto if_builder = EntityThreadIfBuilder { context() };
+		auto scope_local_variables = scope_variable_store();
+		auto if_builder = EntityThreadIfBuilder { scope_context(scope_local_variables) };
 
 		// NOTE: We add one to the initial content-index to
 		// account for the `if` command we just processed.
@@ -650,7 +1499,8 @@ namespace engine
 			{
 				const auto instruction_index = get_instruction_index();
 
-				auto while_builder = EntityThreadWhileBuilder { context() };
+				auto scope_local_variables = scope_variable_store();
+				auto while_builder = EntityThreadWhileBuilder { scope_context(scope_local_variables) };
 				
 				const auto scope_result = while_builder.process(content_source, (content_index + 1));
 
@@ -686,7 +1536,7 @@ namespace engine
 	{
 		return generate_while_block
 		(
-			EventTriggerTrueCondition {},
+			{ EventTriggerTrueCondition {} },
 
 			content_source,
 			content_index
@@ -703,8 +1553,19 @@ namespace engine
 	{
 		using namespace engine::instructions;
 
+		auto when_variable_context = sub_thread_variable_store();
+
 		// Start building a new (sub) thread for this `when` block.
-		auto when_builder = sub_thread();
+		auto when_builder = sub_thread
+		(
+			{},
+
+			MetaParsingContext
+			{
+				parsing_context.get_type_context(),
+				&when_variable_context
+			}
+		);
 
 		// Move the input-condition into a new location owned by the entity-descriptor.
 		auto condition_ref = descriptor.allocate<EventTriggerCondition>(std::move(condition));
@@ -718,9 +1579,9 @@ namespace engine
 			condition_ref
 		);
 
+		// NOTE: We offset by one here to account for the `when` instruction we're currently processing.
 		const auto result = when_builder.process(content_source, (content_index + 1));
 
-		// NOTE: We offset by one here to account for the `when` instruction we're currently processing.
 		if (result)
 		{
 			// On the main thread, emit a thread-spawn action so that
@@ -733,6 +1594,81 @@ namespace engine
 		}
 
 		return result; // 0;
+	}
+
+	EntityInstructionCount EntityThreadBuilder::generate_sub_thread
+	(
+		const ContentSource& content_source,
+		EntityInstructionCount content_index,
+
+		std::string_view thread_name,
+		bool launch_immediately
+	)
+	{
+		using namespace engine::instructions;
+
+		auto sub_thread_variable_context = sub_thread_variable_store(thread_name);
+
+		// Start building a sub-thread until a corresponding `end` directive is reached.
+		auto sub_thread_builder = sub_thread
+		(
+			thread_name,
+
+			MetaParsingContext
+			{
+				parsing_context.get_type_context(),
+				&sub_thread_variable_context
+			}
+		);
+
+		// NOTE: We offset by one here to account for the `begin`/`thread` instruction we're currently processing.
+		const auto result = sub_thread_builder.process(content_source, (content_index + 1));
+
+		if (result)
+		{
+			if (launch_immediately)
+			{
+				// On the main thread, emit a thread-spawn action so that
+				// our sub-thread is launched when this point is reached.
+				launch(sub_thread_builder);
+			}
+
+			// NOTE: We add two here to account for the `begin`/`thread` instruction and
+			// the corresponding `end` that `sub_thread_builder` reached before exiting.
+			return (result + 2);
+		}
+
+		return result; // 0;
+	}
+
+	EntityInstructionCount EntityThreadBuilder::generate_sub_thread
+	(
+		const std::filesystem::path& path,
+		std::string_view thread_name,
+		bool launch_immediately
+	)
+	{
+		auto imported_thread_variable_context = sub_thread_variable_store(thread_name);
+
+		auto imported_thread = sub_thread
+		(
+			thread_name,
+
+			MetaParsingContext
+			{
+				parsing_context.get_type_context(),
+				&imported_thread_variable_context
+			}
+		);
+
+		imported_thread.from_file(path);
+
+		if (launch_immediately)
+		{
+			launch(imported_thread);
+		}
+
+		return 1;
 	}
 
 	EntityInstructionCount EntityThreadBuilder::generate_multi_block
@@ -754,7 +1690,8 @@ namespace engine
 
 			[this, &content_source, content_index]()
 			{
-				auto multi_builder = EntityThreadMultiBuilder { context() };
+				auto scope_local_variables = scope_variable_store();
+				auto multi_builder = EntityThreadMultiBuilder { scope_context(scope_local_variables) };
 				
 				return multi_builder.process(content_source, (content_index + 1));
 			}
@@ -769,7 +1706,7 @@ namespace engine
 	)
 	{
 		using namespace engine::instructions;
-		using namespace entt::literals;
+		using namespace engine::literals;
 
 		auto [instruction, thread_details] = parse_instruction_header(instruction_raw, &descriptor);
 
@@ -782,40 +1719,134 @@ namespace engine
 			instruction_name,
 			instruction_content,
 			trailing_expr,
-			is_string_content
-		] = util::parse_single_argument_command(instruction);
+			is_string_content,
+			instruction_parsed_length
+		] = util::parse_command(instruction);
 
 		if (instruction_name.empty())
 		{
-			// Try to process the raw instruction as an inline-update.
-			if (process_inline_update_instruction(instruction_raw))
-			{
-				// Update the previous-instruction ID to reflect
-				// the inline-update operation we just processed.
-				this->prev_instruction_id = "update"_hs;
+			auto
+			[
+				entity_ref_expr,
+				type_or_variable_name, member_name,
+				operator_symbol, assignment_value_raw,
+				updated_offset
+			] = parse_qualified_assignment_or_comparison(instruction_raw);
 
+			if (!type_or_variable_name.empty())
+			{
+				// Try to process the raw instruction as an inline-update.
+				const auto initial_update_instruction_result = process_update_instruction_from_values
+				(
+					type_or_variable_name,
+					member_name,
+					assignment_value_raw,
+					entity_ref_expr,
+					operator_symbol
+				);
+
+				if (initial_update_instruction_result)
+				{
+					// Update the previous-instruction ID to reflect
+					// the inline-update operation we just processed.
+					this->prev_instruction_id = "update"_hs;
+
+					// No further processing needed.
+					return 1;
+				}
+				// Workaround for informal entity syntax:
+				else if (entity_ref_expr.empty())
+				{
+					const auto opt_type_context = get_type_context();
+
+					const auto& member_as_type_name = member_name;
+
+					const auto member_as_type = (opt_type_context)
+						? opt_type_context->get_component_type(member_as_type_name)
+						: resolve(hash(member_as_type_name))
+					;
+
+					if (member_as_type)
+					{
+						const auto& uncaptured_entity_ref = type_or_variable_name;
+
+						const auto corrected_instruction_subset_offset = static_cast<std::size_t>((member_as_type_name.data() - instruction_raw.data()));
+						const auto corrected_instruction_subset = instruction_raw.substr(corrected_instruction_subset_offset);
+
+						auto
+						[
+							unlikely_nested_entity_ref_expr,
+							intended_type_name, actual_member_name,
+							intended_operator_symbol, intended_assignment_value_raw,
+							intended_updated_offset
+						] = parse_qualified_assignment_or_comparison(corrected_instruction_subset);
+
+						if (!intended_type_name.empty())
+						{
+							//assert(unlikely_nested_entity_ref_expr.empty());
+
+							const auto corrected_update_instruction_result = process_update_instruction_from_values
+							(
+								intended_type_name,
+								actual_member_name,
+								intended_assignment_value_raw,
+								
+								(unlikely_nested_entity_ref_expr.empty())
+									? uncaptured_entity_ref
+									: unlikely_nested_entity_ref_expr
+								,
+
+								intended_operator_symbol
+							);
+
+							if (corrected_update_instruction_result)
+							{
+								// Update the previous-instruction ID to reflect
+								// the inline-update operation we just processed.
+								this->prev_instruction_id = "update"_hs;
+
+								// No further processing needed.
+								return 1;
+							}
+						}
+					}
+				}
+			}
+
+			// Fallback to treating the 'headerless' instruction as a directive:
+			auto directive_result = process_directive(content_source, content_index, thread_details, instruction);
+
+			if (!directive_result.has_value() || (*directive_result > 0))
+			{
 				// No further processing needed.
-				return 1;
+				return directive_result;
+			}
+			else if (auto result = process_meta_expression_instruction(instruction_raw))
+			{
+				return result;
+			}
+			else if (thread_details && !type_or_variable_name.empty()) // && (thread_details.target_entity.is_self_targeted() || thread_details.thread_id)
+			{
+				const auto& thread_name = type_or_variable_name;
+				const auto& thread_local_variable_name = member_name;
+
+				if (auto result = process_remote_variable_assignment(*thread_details, thread_name, thread_local_variable_name, assignment_value_raw, operator_symbol, entity_ref_expr))
+				{
+					return result;
+				}
 			}
 			else
 			{
-				// Fallback to treating the 'headerless' instruction as a directive:
-				auto directive_result = process_directive(content_source, content_index, thread_details, instruction);
+				// All other resolution methods have been exhausted,
+				// log that we weren't able to handle the instruction.
+				print_warn("Failed to process instruction: {}", instruction);
 
-				if (!directive_result.has_value() || (*directive_result > 0))
-				{
-					// No further processing needed.
-					return directive_result;
-				}
-				else
-				{
-					// All other resolution methods have been exhausted,
-					// log that we weren't able to handle the instruction.
-					print_warn("Failed to process instruction: {}", instruction);
-
-					return 1; // std::nullopt;
-				}
+				return 1; // std::nullopt;
 			}
+		}
+		else if (auto result = process_meta_expression_instruction(instruction_raw))
+		{
+			return result;
 		}
 
 		const auto instruction_id = hash(instruction_name).value();
@@ -827,6 +1858,7 @@ namespace engine
 			on_instruction_change(instruction_id, prev_instruction_id);
 		}
 
+		// TODO: Reimplement part of this routine to utilize `MetaParsingContext::instruction_aliases` automatically.
 		auto handle_instruction = [&](auto instruction_id, std::string_view instruction_name) -> EntityInstructionCount // std::opitonal<EntityInstructionCount>
 		{
 			auto error = [&instruction_id, &instruction_name, &instruction_content, content_index](std::string_view message)
@@ -834,9 +1866,109 @@ namespace engine
 				throw std::runtime_error(util::format("[Instruction #{} ({}) @ Line #{}]: {} | \"{}\"", instruction_id, instruction_name, content_index, message, instruction_content));
 			};
 
+			auto resolve_instruction = [this, &instruction_content]<typename InstructionType>
+			(const std::optional<EntityThreadInstruction>& opt_thread_instruction) -> std::optional<IndirectMetaAny> // std::optional<EntityDescriptorShared<MetaTypeDescriptor>>
+			{
+				auto type = resolve<InstructionType>();
+
+				if (!type)
+				{
+					return std::nullopt;
+				}
+
+				auto type_desc = MetaTypeDescriptor { type };
+
+				std::size_t argument_offset = 0;
+
+				if constexpr (std::is_base_of_v<EntityThreadInstruction, InstructionType>)
+				{
+					//if (opt_thread_instruction)
+					{
+						type_desc.set_variable
+						(
+							MetaVariable
+							{
+								"target_entity"_hs,
+
+								(opt_thread_instruction)
+									? opt_thread_instruction->target_entity
+									: EntityTarget {}
+								
+								//opt_thread_instruction->target_entity
+							}
+						);
+
+						type_desc.set_variable
+						(
+							MetaVariable
+							{
+								"thread_id"_hs,
+
+								(opt_thread_instruction)
+									? opt_thread_instruction->thread_id
+									: std::optional<EntityThreadID>(std::nullopt)
+
+								//opt_thread_instruction->thread_id
+							}
+						);
+					}
+
+					argument_offset = 2;
+				}
+
+				type_desc.set_variables
+				(
+					instruction_content,
+
+					MetaParsingInstructions
+					{
+						.context = parsing_context,
+						.storage = &(descriptor.get_shared_storage()),
+
+						.fallback_to_string               = false,
+						.fallback_to_component_reference  = true,
+						.fallback_to_entity_reference     = true,
+
+						.allow_member_references          = true,
+						.allow_entity_indirection         = true,
+						.allow_implicit_type_construction = true, // false,
+						.allow_explicit_type_construction = true,
+						.allow_numeric_literals           = false,
+						.allow_function_call_semantics    = true,
+						.allow_value_resolution_commands  = true,
+						.allow_remote_variable_references = true,
+
+						.resolve_component_aliases        = true,
+						.resolve_command_aliases          = false, // true,
+						.resolve_instruction_aliases      = true
+					},
+
+					argument_offset
+				);
+
+				if (type_desc.has_indirection(true))
+				{
+					auto resource = descriptor.allocate(std::move(type_desc));
+
+					//const auto descriptor_type = resolve<MetaTypeDescriptor>();
+					const auto descriptor_type_id = hash("MetaTypeDescriptor").value(); // descriptor_type.id();
+
+					const auto checksum = descriptor.get_shared_storage().get_checksum(descriptor_type_id);
+
+					return IndirectMetaAny
+					(
+						static_cast<const util::SharedStorageRef<MetaTypeDescriptor, SharedStorageIndex>&>(resource),
+						descriptor_type_id,
+						checksum
+					);
+				}
+
+				return std::nullopt;
+			};
+			
 			switch (instruction_id)
 			{
-				// NOTE: `name` directive only works for unnamed threads.
+				// NOTE: The `name` instruction only works for unnamed threads, and does not allow for dynamic input.
 				case "name"_hs:
 				{
 					if (instruction_content.empty())
@@ -851,22 +1983,43 @@ namespace engine
 					return 1;
 				}
 
+				// NOTE: The content passed to this instruction does not allow for dynamic input.
+				// The value may be left blank, if an anonymous thread is preferred.
+				case "thread"_hs:
+				case "begin"_hs:
+					if (auto instruction_args = util::split_from<2>(instruction_content, ",", 0))
+					{
+						const auto& thread_name = std::get<0>(*instruction_args);
+						const auto& launch_immediately_substr = std::get<1>(*instruction_args);
+
+						const auto launch_immediately = util::from_string<bool>(launch_immediately_substr);
+
+						return generate_sub_thread(content_source, content_index, thread_name, launch_immediately.value_or(true));
+					}
+
+					break;
+
 				case "update"_hs:
 				{
+					// TODO: Revisit idea of comma-separated input for `update` instruction.
+					// (Possible conflicts with inner expressions using this direct CSV method)
+					/*
 					// Check if the input was comma-separated vs. standard assignment:
 					if (instruction_content.contains(','))
 					{
 						process_update_instruction_from_csv(instruction_content);
+
+						return 1;
 					}
-					else
-					{
-						process_inline_update_instruction(instruction_content);
-					}
+					*/
+
+					process_inline_update_instruction(instruction_content);
 
 					return 1;
 				}
 
-				// Similar to a standard `when` block, but allows for multiple instances corresponding to each condition-block/event-type.
+				// Similar to a standard `when` block, but allows for generation of
+				// multiple thread instances corresponding to each condition-block/event-type.
 				case "when_each"_hs:
 				{
 					EntityInstructionCount instructions_processed = 0;
@@ -874,8 +2027,9 @@ namespace engine
 					// Process this sub-thread on each condition-block.
 					process_trigger_expression
 					(
-						// TODO: Optimize. (Temporary string generated due to limitation of `std::regex`)
-						std::string(instruction_content),
+						descriptor,
+
+						instruction_content,
 
 						[this, &content_source, content_index, &instructions_processed]
 						(MetaTypeID type_id, std::optional<EventTriggerCondition> condition)
@@ -899,7 +2053,7 @@ namespace engine
 						},
 
 						false, // true,
-						opt_parsing_context
+						parsing_context
 					);
 
 					if (instructions_processed)
@@ -918,7 +2072,7 @@ namespace engine
 				case "when_any"_hs:
 				case "when"_hs:
 				{
-					auto condition = process_unified_condition_block(instruction_content, opt_parsing_context);
+					auto condition = process_unified_condition_block(descriptor, instruction_content, parsing_context);
 
 					if (condition)
 					{
@@ -934,9 +2088,7 @@ namespace engine
 
 				case "if"_hs:
 				{
-					auto condition = process_unified_condition_block(instruction_content, opt_parsing_context);
-
-					if (condition)
+					if (auto condition = process_immediate_trigger_condition(instruction_content))
 					{
 						return generate_if_block(std::move(*condition), content_source, content_index);
 					}
@@ -950,9 +2102,7 @@ namespace engine
 
 				case "while"_hs:
 				{
-					auto condition = process_unified_condition_block(instruction_content, opt_parsing_context);
-
-					if (condition)
+					if (auto condition = process_immediate_trigger_condition(instruction_content))
 					{
 						return generate_while_block(std::move(*condition), content_source, content_index);
 					}
@@ -1030,22 +2180,116 @@ namespace engine
 				// as well as the alternate thread-designation syntax.
 				case "start"_hs:
 				{
-					if (const auto restart_existing = util::from_string<bool>(instruction_content))
+					std::optional<EntityThreadInstruction> target_thread_details = std::nullopt;
+
+					bool restart_existing = false;
+					bool yield_result = true;
+
+					if (auto instruction_parse_result = util::split_from_ex<3>(instruction_content, ",", 1))
 					{
-						return instruct_thread<Start>(thread_details, *restart_existing);
+						const auto& instruction_args = std::get<0>(*instruction_parse_result);
+
+						auto restart_existing_as_first_parameter = util::from_string<bool>(instruction_args[0]);
+
+						const std::size_t trailing_argument_offset = ((restart_existing_as_first_parameter) ? 1 : 2);
+
+						target_thread_details = (restart_existing_as_first_parameter)
+							? thread_details
+							: util::optional_or(parse_thread_details(instruction_args[0]), thread_details)
+						;
+						
+						restart_existing = (restart_existing_as_first_parameter)
+							? *restart_existing_as_first_parameter
+							: util::from_string<bool>(instruction_args[1]).value_or(restart_existing)
+						;
+
+						yield_result = util::from_string<bool>(instruction_args[trailing_argument_offset]).value_or(true);
+					}
+					else
+					{
+						target_thread_details = thread_details;
 					}
 
-					return instruct_thread<Start>
+					// NOTE: This condition may be changed or removed at a later date.
+					if (target_thread_details)
+					{
+						if (yield_result)
+						{
+							if (const auto thread_start_event_type = resolve<OnThreadSpawn>())
+							{
+								return multi_control_block
+								(
+									[&]()
+									{
+										instruct_thread<Start>
+										(
+											target_thread_details,
+											restart_existing
+										);
+
+										yield_thread_event(thread_start_event_type.id(), target_thread_details, thread_details);
+
+										// Multiple instructions generated, but only one item processed. (i.e. `start`)
+										return 1;
+									}
+								);
+							}
+						}
+					}
+
+					instruct_thread<Start>
 					(
-						util::optional_or(parse_thread_details(instruction_content), thread_details),
-						true
+						target_thread_details,
+						restart_existing
 					);
+
+					return 1;
 				}
 
 				case "restart"_hs:
-				{
-					return instruct_thread<Restart>(util::optional_or(parse_thread_details(instruction_content), thread_details));
-				}
+					if (auto instruction_parse_result = util::split_from_ex<2>(instruction_content, ",", 0))
+					{
+						const auto& instruction_args = std::get<0>(*instruction_parse_result);
+
+						auto yield_result_as_first_parameter = util::from_string<bool>(instruction_args[0]);
+
+						auto target_thread_details = (yield_result_as_first_parameter)
+							? thread_details
+							: util::optional_or(parse_thread_details(instruction_args[0]), thread_details)
+						;
+
+						// NOTE: This condition may be changed or removed at a later date.
+						if (target_thread_details)
+						{
+							const auto yield_result = (yield_result_as_first_parameter)
+								? *yield_result_as_first_parameter
+								: util::from_string<bool>(instruction_args[1]).value_or(true)
+							;
+
+							if (yield_result)
+							{
+								if (const auto thread_start_event_type = resolve<OnThreadSpawn>())
+								{
+									return multi_control_block
+									(
+										[&]()
+										{
+											instruct_thread<Restart>(target_thread_details);
+
+											yield_thread_event(thread_start_event_type.id(), target_thread_details, thread_details);
+
+											// Multiple instructions generated, but only one item processed. (i.e. `restart`)
+											return 1;
+										}
+									);
+								}
+							}
+						}
+
+						return instruct_thread<Restart>(target_thread_details);
+					}
+
+					return instruct_thread<Restart>(thread_details);
 
 				// NOTE: We don't currently handle the `check_linked` field for `Stop`.
 				case "terminate"_hs:
@@ -1071,11 +2315,15 @@ namespace engine
 						{
 							return instruct_thread<Sleep>(thread_details, std::move(*sleep_duration));
 						}
-						else if (auto condition = process_unified_condition_block(instruction_content, opt_parsing_context))
+						else if (auto condition = process_unified_condition_block(descriptor, instruction_content, parsing_context))
 						{
 							auto condition_ref = descriptor.allocate<EventTriggerCondition>(std::move(*condition));
 
 							return instruct_thread<Yield>(thread_details, std::move(condition_ref));
+						}
+						else if (auto remote_instruction = resolve_instruction.operator()<Sleep>(thread_details))
+						{
+							return instruct<InstructionDescriptor>(std::move(*remote_instruction));
 						}
 						else
 						{
@@ -1109,13 +2357,7 @@ namespace engine
 					return from_lines(instruction_content);
 
 				case "import"_hs:
-				{
-					auto imported_thread = sub_thread();
-
-					imported_thread.from_file(instruction_content);
-
-					return launch(imported_thread);
-				}
+					return generate_sub_thread(std::filesystem::path { instruction_content });
 
 				default:
 				{
@@ -1125,13 +2367,7 @@ namespace engine
 						instruction_id, instruction_name,
 						instruction_content,
 						
-						!is_string_content,
-
-						(
-							(is_string_content)
-							? std::string_view {}      // No separation.
-							: std::string_view { "," } // Comma separation.
-						)
+						!is_string_content
 					);
 				}
 			}
@@ -1434,10 +2670,12 @@ namespace engine
 
 		const std::optional<EntityThreadInstruction>& thread_details,
 
-		StringHash directive_id
+		std::string_view instruction_raw,
+		StringHash directive_id,
+		std::string_view directive_content
 	)
 	{
-		using namespace entt::literals;
+		using namespace engine::literals;
 
 		switch (directive_id)
 		{
@@ -1460,7 +2698,9 @@ namespace engine
 
 			thread_details,
 
-			directive_id
+			instruction_raw,
+			directive_id,
+			directive_content
 		);
 	}
 
@@ -1479,10 +2719,12 @@ namespace engine
 
 		const std::optional<EntityThreadInstruction>& thread_details,
 
-		StringHash directive_id
+		std::string_view instruction_raw,
+		StringHash directive_id,
+		std::string_view directive_content
 	)
 	{
-		using namespace entt::literals;
+		using namespace engine::literals;
 
 		switch (directive_id)
 		{
@@ -1500,7 +2742,9 @@ namespace engine
 
 			thread_details,
 
-			directive_id
+			instruction_raw,
+			directive_id,
+			directive_content
 		);
 	}
 
@@ -1512,10 +2756,12 @@ namespace engine
 
 		const std::optional<EntityThreadInstruction>& thread_details,
 
-		StringHash directive_id
+		std::string_view instruction_raw,
+		StringHash directive_id,
+		std::string_view directive_content
 	)
 	{
-		using namespace entt::literals;
+		using namespace engine::literals;
 
 		switch (directive_id)
 		{
@@ -1531,7 +2777,9 @@ namespace engine
 
 			thread_details,
 
-			directive_id
+			instruction_raw,
+			directive_id,
+			directive_content
 		);
 	}
 }

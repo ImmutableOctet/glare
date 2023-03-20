@@ -19,12 +19,13 @@ namespace engine
 	class EntityListener : public MetaEventListener
 	{
 		public:
+			using ReferenceCount = std::uint16_t;
 			using RuleCollection = EntityStateRuleCollection;
 
 			EntityListener(Service* service=nullptr);
 
 			bool add_entity(Entity entity);
-			bool remove_entity(Entity entity, bool force=false);
+			bool remove_entity(Entity entity, ReferenceCount references_to_remove=1, bool force=false);
 
 			bool contains(Entity entity) const;
 
@@ -33,7 +34,7 @@ namespace engine
 			struct Reference
 			{
 				Entity entity = null;
-				std::uint16_t reference_count = 1;
+				ReferenceCount reference_count = 1;
 			};
 
 			bool has_listening_entity() const;

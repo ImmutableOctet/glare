@@ -1,7 +1,5 @@
 #pragma once
 
-#include <types.hpp>
-
 // Graphics Drivers:
 #include "opengl/gl_driver.hpp"
 

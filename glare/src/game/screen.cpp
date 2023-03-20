@@ -9,7 +9,7 @@
 
 namespace game
 {
-	Screen::Screen(const ref<graphics::Context>& ctx, const Size& screen_size, const ref<graphics::Shader>& display_shader):
+	Screen::Screen(const std::shared_ptr<graphics::Context>& ctx, const Size& screen_size, const std::shared_ptr<graphics::Shader>& display_shader):
 		context(ctx),
 		gbuffer(ctx, screen_size),
 		display_shader(display_shader),
@@ -17,7 +17,7 @@ namespace game
 	{
 		if (!display_shader)
 		{
-			this->display_shader = memory::allocate<graphics::Shader>
+			this->display_shader = std::make_shared<graphics::Shader>
 			(
 				ctx,
 

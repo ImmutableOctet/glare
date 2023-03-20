@@ -24,7 +24,12 @@ target_sources(
     "state_storage_manager.cpp"
 
     "reflection.cpp"
- "entity_factory_context.cpp" "serial.cpp" "entity_state_action.cpp" "entity_thread_target.cpp")
+    "entity_factory_context.cpp"
+    "serial.cpp"
+    "entity_state_action.cpp"
+    "entity_thread_target.cpp"
+    "meta_description.cpp"
+  "components/instance_component.cpp" "components/entity_context_component.cpp" "entity_context.cpp"  "parse.cpp")
 
 #target_link_libraries(
 #    glare_engine_entity

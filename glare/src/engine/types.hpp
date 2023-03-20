@@ -1,11 +1,16 @@
 #pragma once
 
-#include <types.hpp>
+#include <cstdint>
+
 #include <graphics/types.hpp>
 
-#include <entt/entt.hpp>
+#include <util/enum_operators.hpp>
 
-#include <string>
+//#include <entt/entt.hpp>
+//#include <entt/entity/fwd.hpp>
+#include <entt/entity/entity.hpp>
+
+//#include <string>
 
 // TODO: Look into removing this from the main 'types' header.
 namespace graphics
@@ -27,7 +32,6 @@ namespace engine
 	using Registry     = entt::registry;
 	using Entity       = entt::entity;
 	using EntityIDType = entt::id_type;
-	using EventHandler = entt::dispatcher;
 
 	using StringHash = entt::id_type; // entt::hashed_string;
 
@@ -103,7 +107,7 @@ namespace engine
 		Other = Default
 	};
 
-	constexpr auto& null = entt::null;
+	inline constexpr auto& null = entt::null;
 
 	inline constexpr PlayerIndex PRIMARY_LOCAL_PLAYER = 1;
 	inline constexpr PlayerIndex NO_PLAYER            = 0;

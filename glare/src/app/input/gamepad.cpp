@@ -7,8 +7,11 @@
 
 #include <math/math.hpp>
 
-#include <sdl2/SDL_joystick.h>
 #include <util/magic_enum.hpp>
+
+#include <entt/signal/dispatcher.hpp>
+
+#include <sdl2/SDL_joystick.h>
 
 #include <optional>
 

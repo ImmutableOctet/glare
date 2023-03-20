@@ -53,7 +53,7 @@ namespace graphics
 		return Load(path.c_str(), desired_channels);
 	}
 
-	PixelMap PixelMap::Load(raw_string path, int desired_channels)
+	PixelMap PixelMap::Load(const char* path, int desired_channels)
 	{
 		int width, height, color_channels;
 
