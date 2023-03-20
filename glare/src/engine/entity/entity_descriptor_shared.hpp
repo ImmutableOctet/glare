@@ -2,37 +2,70 @@
 
 #include "types.hpp"
 
+#include <util/shared_storage_ref.hpp>
+
 namespace engine
 {
 	// Type-safe reference to a shared object stored in an `EntityDescriptor`.
 	template <typename ResourceType, typename IndexType=SharedStorageIndex>
-	class EntityDescriptorShared
+	class EntityDescriptorShared : public util::SharedStorageRef<ResourceType, IndexType>
 	{
 		public:
+			using SharedStorageRef = util::SharedStorageRef<ResourceType, IndexType>;
+
+			using resource_type = SharedStorageRef::resource_type;
+			using index_type    = SharedStorageRef::index_type;
+
+			template <typename SharedStorageType>
+			inline const ResourceType& get_from_storage(const SharedStorageType& shared_storage) const
+			{
+				return SharedStorageRef::get(shared_storage);
+			}
+
+			template <typename SharedStorageType>
+			inline ResourceType& get_from_storage(SharedStorageType& shared_storage)
+			{
+				return SharedStorageRef::get(shared_storage);
+			}
+
 			template <typename EntityDescriptorType>
 			inline const ResourceType& get(const EntityDescriptorType& descriptor) const
 			{
-				return descriptor.get_shared_storage().get<ResourceType>(index);
+				return get_from_storage(descriptor.get_shared_storage());
 			}
 
 			template <typename EntityDescriptorType>
 			inline ResourceType& get(EntityDescriptorType& descriptor)
 			{
-				return descriptor.get_shared_storage().get<ResourceType>(index);
+				return get_from_storage(descriptor.get_shared_storage());
 			}
 
 			EntityDescriptorShared(IndexType index)
-				: index(index) {}
+				: SharedStorageRef(index) {}
 
 			template <typename EntityDescriptorType, typename Instance>
 			EntityDescriptorShared(const EntityDescriptorType& descriptor, const Instance& instance)
-				: index(descriptor.shared_storage.get_index_safe(instance)) {}
+				: SharedStorageRef(descriptor.get_shared_storage(), instance) {}
 
-			inline IndexType get_index() const
+			EntityDescriptorShared(const EntityDescriptorShared&) = default;
+			EntityDescriptorShared(EntityDescriptorShared&&) noexcept = default;
+
+			EntityDescriptorShared& operator=(const EntityDescriptorShared&) = default;
+			EntityDescriptorShared& operator=(EntityDescriptorShared&&) noexcept = default;
+
+			bool operator==(const EntityDescriptorShared& value_in) const noexcept = default;
+			bool operator!=(const EntityDescriptorShared& value_in) const noexcept = default;
+
+			/*
+			operator SharedStorageRef() const
 			{
-				return index;
+				return SharedStorageRef { this->index };
 			}
-		protected:
-			IndexType index;
+
+			operator const SharedStorageRef&() const
+			{
+				return *this;
+			}
+			*/
 	};
 }
