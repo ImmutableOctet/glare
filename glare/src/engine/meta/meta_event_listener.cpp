@@ -19,7 +19,7 @@ namespace engine
 
 	bool MetaEventListener::unregister()
 	{
-		using namespace entt::literals;
+		using namespace engine::literals;
 
 		if (!service)
 		{
