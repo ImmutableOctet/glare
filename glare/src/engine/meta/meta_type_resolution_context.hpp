@@ -12,16 +12,19 @@
 
 namespace engine
 {
-	struct ParsingContext
+	struct MetaParsingInstructions;
+
+	struct MetaTypeResolutionContext
 	{
 		// Maps aliases (`std::string`) to statically defined `std::string_view` objects queryable from `entt`.
 		using AliasContainer = util::hash_map<std::string_view>; // std::string
 
-		static ParsingContext generate(bool standard_mapping=true, bool reverse_mapping=true);
+		static MetaTypeResolutionContext generate(bool standard_mapping=true, bool reverse_mapping=true);
 		
 		static std::size_t generate_aliases
 		(
 			AliasContainer& container_out,
+			std::string_view prefix,
 			std::string_view suffix,
 			bool standard_mapping=true, bool reverse_mapping=true,
 			std::string_view opt_snake_prefix={}
@@ -81,13 +84,40 @@ namespace engine
 			return get_type_from_alias(component_aliases, component_alias);
 		}
 
-		MetaType get_type(std::string_view name) const;
-		MetaTypeID get_type_id(std::string_view name) const;
+		// Attempts to resolve the input as an instruction alias.
+		// If the input is not a valid instruction alias, this will return an empty `std::string_view` instance.
+		inline std::string_view resolve_instruction_alias(std::string_view instruction_alias) const
+		{
+			return resolve_alias(instruction_aliases, instruction_alias);
+		}
+
+		// Attempts to resolve the type referenced by `instruction_name`.
+		// The `instruction_name` argument can be either an alias or a regular instruction name.
+		inline MetaType get_instruction_type(std::string_view instruction_name, bool is_known_alias=false) const
+		{
+			return get_type(instruction_aliases, instruction_name, is_known_alias);
+		}
+
+		// Attempts to resolve the underlying type for the instruction alias specified.
+		// If `instruction_alias` is not a registered alias, this will return an empty/invalid `MetaType` instance.
+		inline MetaType get_instruction_type_from_alias(std::string_view instruction_alias) const
+		{
+			return get_type_from_alias(instruction_aliases, instruction_alias);
+		}
+
+		MetaType get_type(std::string_view name, bool resolve_components=true, bool resolve_commands=true, bool resolve_instructions=false) const;
+		MetaTypeID get_type_id(std::string_view name, bool resolve_components=true, bool resolve_commands=true, bool resolve_instructions=false) const;
+
+		MetaType get_type(std::string_view name, const MetaParsingInstructions& instructions) const;
+		MetaTypeID get_type_id(std::string_view name, const MetaParsingInstructions& instructions) const;
 
 		// Map of component aliases to their underlying type name.
 		AliasContainer component_aliases;
 
 		// Map of command aliases to their underlying type name.
 		AliasContainer command_aliases;
+
+		// Map of entity instruction aliases to their underlying type name.
+		AliasContainer instruction_aliases;
 	};
 }
