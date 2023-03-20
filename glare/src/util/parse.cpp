@@ -27,7 +27,8 @@ namespace util
 		
 		bool allow_trailing_expr,
 		bool allow_empty_command_name,
-		bool allow_operator_symbol_in_command_name
+		bool allow_operator_symbol_in_command_name,
+		bool remove_quotes_in_string_content
 	)
 	{
 		auto [begin_scope, end_scope] = find_parentheses(command);
@@ -76,7 +77,10 @@ namespace util
 
 		if (is_quoted(command_content))
 		{
-			command_content = unquote(command_content);
+			if (remove_quotes_in_string_content)
+			{
+				command_content = unquote(command_content);
+			}
 
 			is_string_content = true;
 		}
@@ -91,7 +95,8 @@ namespace util
 
 		bool allow_trailing_expr,
 		bool truncate_value_at_first_accessor,
-		bool truncate_value_at_operator_symbol
+		bool truncate_value_at_operator_symbol,
+		bool remove_quotes_in_string_content
 	)
 	{
 		auto content = trim(value);
@@ -115,7 +120,17 @@ namespace util
 			{
 				parsed_length = (end_quote + 1);
 				trailing_expr = trim(content.substr(parsed_length));
-				content = content.substr(1, (end_quote - 1));
+
+				if (remove_quotes_in_string_content)
+				{
+					// NOTE: No need for `unquote` here, since we already know
+					// the 'beginning' and 'end' quote locations.
+					content = content.substr(1, (end_quote - 1));
+				}
+				else
+				{
+					content = content.substr(0, end_quote);
+				}
 
 				is_string_content = true;
 			}
@@ -198,7 +213,8 @@ namespace util
 		bool truncate_value_at_first_accessor,
 		bool truncate_command_name_at_first_accessor,
 		bool allow_operator_symbol_in_command_name,
-		bool truncate_value_at_operator_symbol
+		bool truncate_value_at_operator_symbol,
+		bool remove_quotes_in_string_content
 	)
 	{
 		if (command_or_value.empty())
@@ -206,7 +222,7 @@ namespace util
 			return {};
 		}
 
-		if (auto [command_name, command_content, trailing_expr, is_string_content, parsed_length] = parse_command(command_or_value, allow_trailing_expr, allow_empty_command_name, allow_operator_symbol_in_command_name); !command_name.empty())
+		if (auto [command_name, command_content, trailing_expr, is_string_content, parsed_length] = parse_command(command_or_value, allow_trailing_expr, allow_empty_command_name, allow_operator_symbol_in_command_name, remove_quotes_in_string_content); !command_name.empty())
 		{
 			if (truncate_command_name_at_first_accessor)
 			{
@@ -227,7 +243,7 @@ namespace util
 			return { command_name, command_content, trailing_expr, is_string_content, true, parsed_length };
 		}
 
-		auto [content, trailing_expr, is_string_content, parsed_length] = parse_value(command_or_value, allow_trailing_expr, truncate_value_at_first_accessor, truncate_value_at_operator_symbol);
+		auto [content, trailing_expr, is_string_content, parsed_length] = parse_value(command_or_value, allow_trailing_expr, truncate_value_at_first_accessor, truncate_value_at_operator_symbol, remove_quotes_in_string_content);
 
 		return { content, content, trailing_expr, is_string_content, false, parsed_length };
 	}

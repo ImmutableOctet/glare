@@ -182,6 +182,27 @@ TEST_CASE("util::parse_variable_declaration", "[util:parse]")
 
 TEST_CASE("util::parse_command", "[util:parse]")
 {
+	SECTION("Keep string content quoted")
+	{
+		auto command_expr = std::string_view("command_name(\"Quoted string content\")");
+
+		auto [command_name, command_content, trailing_expr, is_string_content, parsed_length] = util::parse_command
+		(
+			command_expr,
+			true, false, false,
+
+			// Ensure quotes are preserved.
+			false
+		);
+
+		REQUIRE(command_name == "command_name");
+		REQUIRE(!command_content.empty());
+		REQUIRE(util::is_quoted(command_content));
+		REQUIRE(trailing_expr.empty());
+		REQUIRE(is_string_content);
+		REQUIRE(parsed_length == command_expr.length());
+	}
+
 	SECTION("`if` condition treated as command")
 	{
 		auto [command_name, command_content, trailing_expr, is_string_content, parsed_length] = util::parse_command

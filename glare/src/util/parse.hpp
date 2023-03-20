@@ -32,7 +32,8 @@ namespace util
 		
 		bool allow_trailing_expr=true,
 		bool allow_empty_command_name=false,
-		bool allow_operator_symbol_in_command_name=false
+		bool allow_operator_symbol_in_command_name=false,
+		bool remove_quotes_in_string_content=true
 	);
 
 	std::tuple
@@ -48,7 +49,8 @@ namespace util
 		
 		bool allow_trailing_expr,
 		bool truncate_value_at_first_accessor=false,
-		bool truncate_value_at_operator_symbol=false // true
+		bool truncate_value_at_operator_symbol=false, // true,
+		bool remove_quotes_in_string_content=true
 	);
 
 	std::tuple
@@ -69,7 +71,8 @@ namespace util
 		bool truncate_value_at_first_accessor=false,
 		bool truncate_command_name_at_first_accessor=false,
 		bool allow_operator_symbol_in_command_name=false,
-		bool truncate_value_at_operator_symbol=false // true
+		bool truncate_value_at_operator_symbol=false, // true,
+		bool remove_quotes_in_string_content=true
 	);
 
 	std::tuple
