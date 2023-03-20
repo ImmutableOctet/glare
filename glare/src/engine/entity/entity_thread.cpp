@@ -79,6 +79,16 @@ namespace engine
 		return !was_detached;
 	}
 
+	EntityThread::ThreadLocalVariables* EntityThread::get_variables()
+	{
+		if (!variables)
+		{
+			variables = std::make_shared<ThreadLocalVariables>();
+		}
+
+		return variables.get();
+	}
+
 	EntityInstructionCount EntityThread::skip(EntityInstructionCount forward_stride)
 	{
 		next_instruction += forward_stride;

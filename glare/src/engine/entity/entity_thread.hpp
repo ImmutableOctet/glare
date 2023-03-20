@@ -2,8 +2,10 @@
 
 #include "types.hpp"
 #include "event_trigger_condition.hpp"
+#include "entity_variables.hpp"
 
 #include <optional>
+#include <memory>
 
 namespace engine
 {
@@ -63,6 +65,8 @@ namespace engine
 		public:
 			using InstructionIndex = EntityInstructionIndex;
 
+			using ThreadLocalVariables = EntityVariables<8>;
+
 			EntityThread
 			(
 				const EntityThreadFlags& flags,
@@ -79,6 +83,11 @@ namespace engine
 			bool attach(std::optional<EntityStateIndex> state_index=std::nullopt, bool keep_existing_state=false);
 			bool detach();
 
+			// Attempts to allocate a `ThreadLocalVariables` object, managed internally.
+			// If a `ThreadLocalVariables` object has already been allocated, this will return a pointer to the existing instance.
+			// The value returned is a non-owning pointer to the remote object. (see `variables`)
+			ThreadLocalVariables* get_variables();
+
 			EntityInstructionCount skip(EntityInstructionCount forward_stride);
 			EntityInstructionCount rewind(EntityInstructionCount backward_stride);
 
@@ -92,5 +101,8 @@ namespace engine
 
 			// An index representing the state this thread was instantiated from.
 			std::optional<EntityStateIndex> state_index;
+
+			// Optional pointer to a container of thread-local variables.
+			std::shared_ptr<ThreadLocalVariables> variables;
 	};
 }
