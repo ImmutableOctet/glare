@@ -1,9 +1,11 @@
 #pragma once
 
 #include "types.hpp"
+#include "meta_parsing_instructions.hpp"
 #include "meta_data_member.hpp"
 #include "indirect_meta_data_member.hpp"
 #include "meta_type_descriptor_flags.hpp"
+#include "meta_variable_scope.hpp"
 
 #include <engine/entity/entity_target.hpp>
 
@@ -25,13 +27,46 @@
 
 namespace engine
 {
-	struct ParsingContext;
-
 	// JSON-shorthand overload for string-to-any resolution function.
-	MetaAny meta_any_from_string(const util::json& value, const MetaAnyParseInstructions& instructions={}, MetaType type={});
+	MetaAny meta_any_from_string(const util::json& value, const MetaParsingInstructions& instructions={}, MetaType type={}, bool allow_string_fallback=true, bool allow_numeric_literals=true, bool allow_boolean_literals=true);
 
 	// Attempts to resolve a native value from a raw string value, using reflection.
-	MetaAny meta_any_from_string(std::string_view value, const MetaAnyParseInstructions& instructions={}, MetaType type={});
+	MetaAny meta_any_from_string
+	(
+		std::string_view value,
+		
+		const MetaParsingInstructions& instructions={},
+		
+		MetaType type={},
+
+		bool allow_string_fallback=true,
+		bool allow_numeric_literals=true,
+		bool allow_boolean_literals=true,
+		bool allow_entity_fallback=true,
+		bool allow_component_fallback=true
+	);
+
+	// Internal subroutine of `meta_any_from_string`.
+	std::tuple
+	<
+		MetaAny,    // result
+		std::size_t // length_processed
+	>
+	meta_any_from_string_compound_expr_impl
+	(
+		std::string_view expr,
+		
+		const MetaParsingInstructions& instructions,
+		MetaType type={},
+		
+		bool try_arithmetic=true,
+		bool try_string_fallback=true,
+		bool try_boolean=true,
+		bool allow_entity_fallback=true,
+		bool allow_component_fallback=true,
+
+		bool assume_static_type=false
+	);
 
 	// Attempts to resolve the value indicated by `string_reference` as a string.
 	// 
@@ -42,7 +77,7 @@ namespace engine
 	// `non_string_callback` is used to determine if the `MetaAny` instance
 	// retrieved should be returned back to the initial caller.
 	template <typename StringCallback, typename NonStringCallback>
-	inline MetaAny peek_string_value(std::string_view string_reference, StringCallback&& string_callback, NonStringCallback&& non_string_callback, const MetaAnyParseInstructions& instructions={}, MetaType type={}) // { .fallback_to_string=true }
+	inline MetaAny peek_string_value(std::string_view string_reference, StringCallback&& string_callback, NonStringCallback&& non_string_callback, const MetaParsingInstructions& instructions={}, MetaType type={}) // { .fallback_to_string=true }
 	{
 		const auto resolved_value = meta_any_from_string(string_reference, instructions, type);
 
@@ -71,7 +106,7 @@ namespace engine
 
 	// Convenience overload for `peek_string_value` without the need to specify a non-string callback.
 	template <typename Callback>
-	inline bool peek_string_value(std::string_view string_reference, Callback&& callback, const MetaAnyParseInstructions& instructions={}) // { .fallback_to_string=true }
+	inline bool peek_string_value(std::string_view string_reference, Callback&& callback, const MetaParsingInstructions& instructions={}) // { .fallback_to_string=true }
 	{
 		auto result = peek_string_value
 		(
@@ -93,16 +128,14 @@ namespace engine
 	(
 		const util::json& value,
 		MetaTypeID type_id,
-		const MetaAnyParseInstructions& instructions={},
-		const ParsingContext* opt_parsing_context=nullptr
+		const MetaParsingInstructions& instructions={}
 	);
 
 	MetaAny resolve_meta_any
 	(
 		const util::json& value,
 		MetaType type,
-		const MetaAnyParseInstructions& instructions={},
-		const ParsingContext* opt_parsing_context=nullptr
+		const MetaParsingInstructions& instructions={}
 	);
 
 	// NOTE: This overload cannot handle non-primitive values.
@@ -110,13 +143,8 @@ namespace engine
 	MetaAny resolve_meta_any
 	(
 		const util::json& value,
-		const MetaAnyParseInstructions& instructions={},
-		const ParsingContext* opt_parsing_context=nullptr
+		const MetaParsingInstructions& instructions={}
 	);
-
-	// Attempts to resolve a `MetaDataMember` from `value`.
-	// NOTE: Does not support indirection. (i.e. other entities from the initial source)
-	std::optional<MetaDataMember> meta_data_member_from_string(const std::string& value);
 
 	// Attempts to resolve a `MetaDataMember` from `value`.
 	// NOTE: Does not support indirection. (i.e. other entities from the initial source)
@@ -127,14 +155,13 @@ namespace engine
 	std::optional<MetaDataMember> process_meta_data_member(std::string_view type_name, std::string_view data_member_name);
 
 	// Attempts to resolve an `IndirectMetaDataMember` from `value`.
-	std::optional<IndirectMetaDataMember> indirect_meta_data_member_from_string(std::string_view value, EntityTarget target = { EntityTarget::SelfTarget{} });
-
-	// Attempts to resolve an `IndirectMetaDataMember` from `value`.
-	std::optional<IndirectMetaDataMember> indirect_meta_data_member_from_string(const std::string& value, EntityTarget target = { EntityTarget::SelfTarget{} });
+	std::optional<IndirectMetaDataMember> indirect_meta_data_member_from_string(std::string_view value, EntityTarget target = { EntityTarget::SelfTarget {} });
 
 	EntityTarget::TargetType parse_target_type(const util::json& target_data);
 
-	void read_parsing_context(ParsingContext& context, const util::json& data);
+	std::optional<MetaVariableScope> parse_variable_scope(std::string_view scope_qualifier);
+
+	void read_type_context(MetaTypeResolutionContext& context, const util::json& data);
 
 	MetaAny load
 	(
@@ -143,9 +170,8 @@ namespace engine
 		const util::json& data,
 		bool use_assignment=true,
 
-		const MetaAnyParseInstructions& parse_instructions={},
-		const MetaTypeDescriptorFlags& descriptor_flags={},
-		const ParsingContext* opt_parsing_context=nullptr
+		const MetaParsingInstructions& parse_instructions={},
+		const MetaTypeDescriptorFlags& descriptor_flags={}
 	);
 
 	MetaAny load
@@ -153,9 +179,8 @@ namespace engine
 		MetaType type,
 		const util::json& data,
 
-		const MetaAnyParseInstructions& parse_instructions={},
-		const MetaTypeDescriptorFlags& descriptor_flags={},
-		const ParsingContext* opt_parsing_context=nullptr
+		const MetaParsingInstructions& parse_instructions={},
+		const MetaTypeDescriptorFlags& descriptor_flags={}
 	);
 
 	template <typename T>
@@ -166,9 +191,8 @@ namespace engine
 		const util::json& data,
 		bool use_assignment=true,
 
-		const MetaAnyParseInstructions& parse_instructions={},
+		const MetaParsingInstructions& parse_instructions={},
 		const MetaTypeDescriptorFlags& descriptor_flags={},
-		const ParsingContext* opt_parsing_context=nullptr,
 
 		bool fallback_to_default_construction=std::is_default_constructible_v<T>
 	)
@@ -182,8 +206,7 @@ namespace engine
 			use_assignment,
 
 			parse_instructions,
-			descriptor_flags,
-			opt_parsing_context
+			descriptor_flags
 		);
 
 		if (use_assignment)
@@ -233,9 +256,8 @@ namespace engine
 	(
 		const util::json& data,
 
-		const MetaAnyParseInstructions& parse_instructions={},
+		const MetaParsingInstructions& parse_instructions={},
 		const MetaTypeDescriptorFlags& descriptor_flags={},
-		const ParsingContext* opt_parsing_context=nullptr,
 
 		bool fallback_to_default_construction=std::is_default_constructible_v<T>
 	)
@@ -250,8 +272,7 @@ namespace engine
 			data,
 
 			parse_instructions,
-			descriptor_flags,
-			opt_parsing_context
+			descriptor_flags
 		);
 
 		if (!instance)
@@ -287,9 +308,8 @@ namespace engine
 		const std::filesystem::path& path,
 		bool use_assignment=true,
 
-		const MetaAnyParseInstructions& parse_instructions={},
+		const MetaParsingInstructions& parse_instructions={},
 		const MetaTypeDescriptorFlags& descriptor_flags={},
-		const ParsingContext* opt_parsing_context=nullptr,
 
 		bool fallback_to_default_construction=std::is_default_constructible_v<T>
 	)
@@ -304,7 +324,6 @@ namespace engine
 
 			parse_instructions,
 			descriptor_flags,
-			opt_parsing_context,
 
 			fallback_to_default_construction
 		);
@@ -315,9 +334,8 @@ namespace engine
 	(
 		const std::filesystem::path& path,
 
-		const MetaAnyParseInstructions& parse_instructions={},
+		const MetaParsingInstructions& parse_instructions={},
 		const MetaTypeDescriptorFlags& descriptor_flags={},
-		const ParsingContext* opt_parsing_context=nullptr,
 
 		bool fallback_to_default_construction=std::is_default_constructible_v<T>
 	)
@@ -328,7 +346,6 @@ namespace engine
 
 			parse_instructions,
 			descriptor_flags,
-			opt_parsing_context,
 
 			fallback_to_default_construction
 		);
@@ -339,9 +356,8 @@ namespace engine
 	(
 		std::string_view path,
 
-		const MetaAnyParseInstructions& parse_instructions={},
+		const MetaParsingInstructions& parse_instructions={},
 		const MetaTypeDescriptorFlags& descriptor_flags={},
-		const ParsingContext* opt_parsing_context=nullptr,
 
 		bool fallback_to_default_construction=std::is_default_constructible_v<T>
 	)
@@ -352,7 +368,6 @@ namespace engine
 
 			parse_instructions,
 			descriptor_flags,
-			opt_parsing_context,
 
 			fallback_to_default_construction
 		);
