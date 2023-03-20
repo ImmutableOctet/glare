@@ -7,6 +7,9 @@
 #include "entity_thread_description.hpp"
 #include "entity_descriptor_shared.hpp"
 
+#include <engine/meta/meta_variable_scope.hpp>
+#include <engine/meta/meta_parsing_context.hpp>
+
 #include <util/json.hpp>
 
 #include <filesystem>
@@ -20,8 +23,7 @@
 namespace engine
 {
 	class EntityDescriptor;
-
-	struct ParsingContext;
+	class MetaParsingContext;
 	struct EntityThreadDescription;
 	struct MetaTypeDescriptor;
 	struct EntityFactoryContext;
@@ -35,10 +37,22 @@ namespace engine
 			(
 				EntityDescriptor& descriptor,
 				ThreadDescriptor thread,
-				const EntityFactoryContext* opt_factory_context = nullptr,
+				const EntityFactoryContext* opt_factory_context=nullptr,
 				const std::filesystem::path* opt_base_path = nullptr,
-				const ParsingContext* opt_parsing_context = nullptr
+				const MetaParsingContext& parsing_context={}
 			);
+
+			EntityThreadBuilderContext(const EntityThreadBuilderContext&) = default;
+			EntityThreadBuilderContext(EntityThreadBuilderContext&&) noexcept = default;
+
+			EntityThreadBuilderContext
+			(
+				const EntityThreadBuilderContext& parent_context,
+				const MetaParsingContext& parsing_context
+			);
+
+			EntityThreadBuilderContext& operator=(const EntityThreadBuilderContext&) = default;
+			EntityThreadBuilderContext& operator=(EntityThreadBuilderContext&&) noexcept = default;
 
 			EntityThreadIndex thread_index() const;
 
@@ -66,12 +80,21 @@ namespace engine
 				return descriptor;
 			}
 
+			inline const MetaTypeResolutionContext* get_type_context() const
+			{
+				return parsing_context.get_type_context();
+			}
+
+			inline MetaVariableContext* get_variable_context() const
+			{
+				return parsing_context.get_variable_context();
+			}
 		protected:
 			EntityDescriptor& descriptor;
 
 			const EntityFactoryContext* opt_factory_context = nullptr;
 			const std::filesystem::path* opt_base_path = nullptr;
-			const ParsingContext* opt_parsing_context = nullptr;
+			MetaParsingContext parsing_context = {};
 
 		private:
 			ThreadDescriptor thread; // EntityThreadDescription&
@@ -104,7 +127,7 @@ namespace engine
 				std::string_view opt_thread_name={},
 				const EntityFactoryContext* opt_factory_context=nullptr,
 				const std::filesystem::path* opt_base_path=nullptr,
-				const ParsingContext* opt_parsing_context=nullptr
+				const MetaParsingContext& parsing_context={}
 			);
 
 			EntityThreadBuilder
@@ -113,7 +136,7 @@ namespace engine
 				std::string_view opt_thread_name={},
 				const EntityFactoryContext* opt_factory_context=nullptr,
 				const std::filesystem::path* opt_base_path=nullptr,
-				const ParsingContext* opt_parsing_context=nullptr
+				const MetaParsingContext& parsing_context={}
 			);
 
 			virtual ~EntityThreadBuilder();
@@ -123,19 +146,20 @@ namespace engine
 			EntityInstructionCount process(const ContentSource& content, EntityInstructionCount skip=0);
 
 			// NOTE: The return-value of this function is a non-owning pointer to the affected descriptor.
-			MetaTypeDescriptor* process_update_instruction_from_values
+			bool process_update_instruction_from_values
 			(
 				std::string_view type_name,
 				std::string_view member_name,
-				std::string_view value_raw,
-				std::string_view entity_ref_expr
+				std::string_view assignment_value_raw,
+				std::string_view entity_ref_expr,
+				std::string_view operator_symbol="="
 			);
 
 			// NOTE: The return-value of this function is a non-owning pointer to the affected descriptor.
-			MetaTypeDescriptor* process_update_instruction_from_csv(std::string_view instruction_separated, std::string_view separator=",");
+			bool process_update_instruction_from_csv(std::string_view instruction_separated, std::string_view separator=",");
 
 			// NOTE: The return-value of this function is a non-owning pointer to the affected descriptor.
-			MetaTypeDescriptor* process_inline_update_instruction(std::string_view instruction);
+			bool process_inline_update_instruction(std::string_view instruction);
 
 			// Attempts to process one or more instructions.
 			// 
@@ -157,14 +181,27 @@ namespace engine
 				std::string_view instruction_raw
 			);
 
+			EntityInstructionCount process_meta_expression_instruction(std::string_view instruction);
+
+			EntityInstructionCount process_remote_variable_assignment
+			(
+				const EntityThreadInstruction& thread_instruction,
+
+				std::string_view thread_name,
+				std::string_view thread_local_variable_name,
+				std::string_view assignment_value_raw,
+				std::string_view operator_symbol,
+				std::string_view opt_entity_ref_expr={}
+			);
+
 			// Attempts to emit a command instruction from the input given.
 			EntityInstructionCount process_command_instruction
 			(
 				InstructionID instruction_id,
 				std::string_view instruction_name,
 				std::string_view instruction_content,
-				bool resolve_values,
-				std::string_view separator=","
+
+				bool resolve_values
 			);
 
 			// Attempts to handle the input provided as a standalone directive.
@@ -178,6 +215,8 @@ namespace engine
 
 				std::string_view directive
 			);
+
+			std::optional<EventTriggerCondition> process_immediate_trigger_condition(std::string_view trigger_condition_expr);
 
 			// Attempts to assign the name of the targeted `thread`.
 			// 
@@ -310,17 +349,39 @@ namespace engine
 			// Emits an instruction to launch the thread referenced by `context`.
 			EntityInstructionCount launch(const EntityThreadBuilderContext& context);
 
-			// Returns a reference to the context this builder was created with.
-			const EntityThreadBuilderContext& context() const;
+			// Generates a yield instruction (for `thread_details`) on the event-type
+			// identified by `event_type_id`, based on the contents of `event_thread_details`.
+			EntityInstructionCount yield_thread_event
+			(
+				MetaTypeID event_type_id,
+
+				const std::optional<EntityThreadInstruction>& event_thread_details,
+				const std::optional<EntityThreadInstruction>& thread_details=std::nullopt
+			);
+
+			// Returns a new `EntityThreadBuilderContext` derived from this builder's context.
+			EntityThreadBuilderContext scope_context(MetaVariableContext& scope_local_variables) const;
+
+			// Returns a new `EntityThreadBuilderContext` derived from this builder's context.
+			const EntityThreadBuilderContext& scope_context() const;
+
+			// Generates a variable context for use with `scope_context`.
+			MetaVariableContext scope_variable_store(MetaSymbolID name);
+
+			// Generates a variable context for use with `scope_context`.
+			MetaVariableContext scope_variable_store();
+
+			MetaVariableContext sub_thread_variable_store(MetaSymbolID thread_id);
+			MetaVariableContext sub_thread_variable_store(std::string_view thread_name={});
 
 			// Generates a sub-context for a given `target_sub_thread`.
-			EntityThreadBuilderContext sub_context(ThreadDescriptor target_sub_thread) const;
+			EntityThreadBuilderContext sub_thread_context(ThreadDescriptor target_sub_thread, std::optional<MetaParsingContext> opt_parsing_context=std::nullopt) const;
 
 			// Generates a sub-context and allocates a new thread to be associated.
-			EntityThreadBuilderContext sub_context() const;
+			EntityThreadBuilderContext sub_thread_context(std::optional<MetaParsingContext> opt_parsing_context=std::nullopt) const;
 
 			// Generates a new thread-builder using this builder's targeted `descriptor`.
-			EntityThreadBuilder sub_thread(std::string_view thread_name={});
+			EntityThreadBuilder sub_thread(std::string_view thread_name={}, std::optional<MetaParsingContext> opt_parsing_context=std::nullopt);
 
 			// Loads instruction content from a file located at `script_path`.
 			// NOTE: This uses the `opt_base_path` field to better resolve the path specified.
@@ -334,6 +395,14 @@ namespace engine
 
 			// Flushes the current multi-line update instruction to `thread`.
 			bool flush_update_instruction();
+
+			// Convenience function for beginning a new update-instruction;
+			// executes `flush_update_instruction` then `construct_update_instruction`.
+			EntityStateUpdateAction& new_update_instruction(EntityTarget target);
+
+			// Forces (re-)construction of the active multi-line update instruction.
+			// For general usage, see `get_update_instruction` and `flush_update_instruction`.
+			EntityStateUpdateAction& construct_update_instruction(EntityTarget target);
 
 			// Handles processing of a standalone entity-update block. (JSON `object`)
 			bool on_update_instruction(const util::json& update_entry);
@@ -374,6 +443,37 @@ namespace engine
 				return (result + scope_offset);
 			}
 
+			// Utility function that wraps `callback` in an automatically
+			// generated multi-instruction control-block.
+			// (i.e. no user-defined begin/end points)
+			// 
+			// This allows for `callback` to emit several instructions that
+			// are intended to be executed in one thread-cycle.
+			// 
+			// See also: `control_block`
+			template <typename Callback>
+			EntityInstructionCount multi_control_block(Callback&& callback)
+			{
+				using namespace engine::instructions;
+
+				auto& combined_variable_instruction = emit<MultiControlBlock>
+				(
+					ControlBlock { 0 }
+				);
+
+				return control_block
+				(
+					combined_variable_instruction.included_instructions,
+
+					std::forward<Callback>(callback),
+
+					// Since this is an automatically generated multi-instruction,
+					// there's no processing offset needed here.
+					// (i.e. we don't need to account for scope-bounds instructions from the user)
+					0
+				);
+			}
+
 			EntityInstructionCount from_array(const util::json& thread_content, EntityInstructionCount skip=0);
 			EntityInstructionCount from_object(const util::json& thread_content, bool flush=true);
 			EntityInstructionCount from_lines(std::string_view lines, std::string_view separator="\n", EntityInstructionCount skip=0);
@@ -408,10 +508,40 @@ namespace engine
 				EntityInstructionCount content_index
 			);
 
+			EntityInstructionCount generate_sub_thread
+			(
+				const ContentSource& content_source,
+				EntityInstructionCount content_index,
+
+				std::string_view thread_name={},
+				bool launch_immediately=true
+			);
+
+			EntityInstructionCount generate_sub_thread
+			(
+				const std::filesystem::path& path,
+				std::string_view thread_name={},
+				bool launch_immediately=true
+			);
+
 			EntityInstructionCount generate_multi_block
 			(
 				const ContentSource& content_source,
 				EntityInstructionCount content_index
+			);
+
+			EntityInstructionCount process_variable_declaration(std::string_view declaration);
+
+			EntityInstructionCount process_variable_assignment
+			(
+				MetaSymbolID resolved_variable_name,
+				MetaVariableScope variable_scope,
+				std::string_view full_assignment_expr,
+				
+				const MetaType& variable_type={},
+
+				bool ignore_if_already_assigned=false,
+				bool ignore_if_not_declared=false
 			);
 
 			virtual std::optional<EntityInstructionCount> process_directive_impl
@@ -421,11 +551,15 @@ namespace engine
 
 				const std::optional<EntityThreadInstruction>& thread_details,
 
-				StringHash directive_id
+				std::string_view instruction_raw,
+				StringHash directive_id,
+				std::string_view directive_content
 			);
 
 			InstructionID prev_instruction_id = 0;
 			std::optional<EntityStateUpdateAction> current_update_instruction = std::nullopt;
+
+			std::uint16_t scope_variable_context_count = 0; // std::uint8_t // std::size_t
 	};
 
 	// Builds a `when` block.
@@ -453,7 +587,9 @@ namespace engine
 
 				const std::optional<EntityThreadInstruction>& thread_details,
 
-				StringHash directive
+				std::string_view instruction_raw,
+				StringHash directive_id,
+				std::string_view directive_content
 			) override;
 
 			bool exited_on_else = false;
@@ -475,7 +611,9 @@ namespace engine
 
 				const std::optional<EntityThreadInstruction>& thread_details,
 
-				StringHash directive
+				std::string_view instruction_raw,
+				StringHash directive_id,
+				std::string_view directive_content
 			) override;
 	};
 
@@ -493,7 +631,9 @@ namespace engine
 
 				const std::optional<EntityThreadInstruction>& thread_details,
 
-				StringHash directive
+				std::string_view instruction_raw,
+				StringHash directive_id,
+				std::string_view directive_content
 			) override;
 	};
 }
