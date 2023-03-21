@@ -3,6 +3,7 @@
 // General-purpose utilities for working with reflection.
 
 #include "format.hpp"
+#include "small_vector.hpp"
 
 //#include <entt/meta/meta.hpp>
 #include <entt/entt.hpp>
@@ -15,6 +16,14 @@
 #include <array>
 #include <tuple>
 #include <utility>
+
+namespace entt
+{
+    // NOTE: This template specialization uses an internal/partially-documented portion of EnTT's API.
+    template<typename... Args>
+    struct meta_sequence_container_traits<util::small_vector<Args...>>
+        : internal::basic_meta_sequence_container_traits<util::small_vector<Args...>> {};
+}
 
 namespace util
 {
