@@ -324,6 +324,67 @@ namespace engine
         ;
     }
 
+    template <>
+    void reflect<entt::meta_sequence_container>()
+    {
+        auto type = entt::meta<entt::meta_sequence_container>()
+            .data<nullptr, &entt::meta_sequence_container::value_type>("value_type"_hs)
+            .data<&entt::meta_sequence_container::resize, &entt::meta_sequence_container::size>("size"_hs)
+
+            //.data<nullptr, &entt::meta_sequence_container::begin>("begin"_hs)
+            //.data<nullptr, &entt::meta_sequence_container::end>("end"_hs)
+
+            .func<&entt::meta_sequence_container::clear>("clear"_hs)
+            .func<&entt::meta_sequence_container::begin>("begin"_hs)
+            .func<&entt::meta_sequence_container::end>("end"_hs)
+
+            // NOTE: May need to make a wrapper function for this.
+            .func<&entt::meta_sequence_container::insert>("insert"_hs)
+
+            .func<&entt::meta_sequence_container::erase>("erase"_hs)
+            .func<&entt::meta_sequence_container::operator[]>("operator[]"_hs)
+            .func<&entt::meta_sequence_container::operator bool>("operator bool"_hs)
+
+            // TODO: Add custom `find` member-function.
+        ;
+    }
+
+    template <>
+    void reflect<entt::meta_associative_container>()
+    {
+        auto type = entt::meta<entt::meta_associative_container>()
+            .data<nullptr, &entt::meta_associative_container::key_only>("key_only"_hs)
+            .data<nullptr, &entt::meta_associative_container::key_type>("key_type"_hs)
+            .data<nullptr, &entt::meta_associative_container::mapped_type>("mapped_type"_hs)
+            .data<nullptr, &entt::meta_associative_container::value_type>("value_type"_hs)
+            .data<nullptr, &entt::meta_associative_container::size>("size"_hs)
+            
+            //.data<nullptr, &entt::meta_associative_container::begin>("begin"_hs)
+            //.data<nullptr, &entt::meta_associative_container::end>("end"_hs)
+
+            .func<&entt::meta_associative_container::clear>("clear"_hs)
+            .func<&entt::meta_associative_container::begin>("begin"_hs)
+            .func<&entt::meta_associative_container::end>("end"_hs)
+
+            .func
+            <
+                static_cast<bool(entt::meta_associative_container::*)(entt::meta_any)>
+                (&entt::meta_associative_container::insert)
+            >("insert"_hs)
+
+            .func
+            <
+                static_cast<bool(entt::meta_associative_container::*)(entt::meta_any, entt::meta_any)>
+                (&entt::meta_associative_container::insert)
+            >("insert"_hs)
+
+            .func<&entt::meta_associative_container::erase>("erase"_hs)
+            .func<&entt::meta_associative_container::find>("find"_hs)
+
+            .func<&entt::meta_sequence_container::operator bool>("operator bool"_hs)
+        ;
+    }
+
     // TODO: Implement reflection for matrix types.
     void reflect_math()
     {
@@ -336,8 +397,15 @@ namespace engine
         // ...
     }
 
+    void reflect_entt()
+    {
+        reflect<entt::meta_sequence_container>();
+        reflect<entt::meta_associative_container>();
+    }
+
     void reflect_dependencies()
     {
+        reflect_entt();
         reflect_stl();
         reflect_math();
     }
