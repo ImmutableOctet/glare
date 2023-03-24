@@ -334,7 +334,7 @@ namespace engine
 					if (has_indirection(constructor_args_count))
 					{
 						// TODO: Look into whether there's any room to optimize via
-						// use of 'handles' rather than full `entt::meta_any` instances.
+						// use of 'handles' rather than full `MetaAny` instances.
 						MetaTypeDescriptor::Values rebuilt_constructor_values;
 
 						rebuilt_constructor_values.reserve(constructor_args_count);

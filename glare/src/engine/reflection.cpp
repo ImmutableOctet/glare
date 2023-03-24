@@ -28,6 +28,7 @@
 #include <string>
 #include <cstdint>
 #include <type_traits>
+#include <algorithm>
 
 //#include <entt/meta/meta.hpp>
 //#include <entt/entt.hpp>
@@ -47,6 +48,52 @@ namespace engine
         reflect<World>();
 
         // ...
+    }
+
+    static entt::meta_sequence_container::iterator meta_sequence_container_push_back_impl(entt::meta_sequence_container& container, MetaAny value) // const MetaAny&
+    {
+        /*
+        // Alternative implementation:
+        auto it = (container.begin());
+
+        for (std::size_t i = 0; i < (container.size() - 1); i++)
+        {
+            it = it++;
+        }
+        */
+
+        /*
+        // Alternative implementation:
+        auto it = (container.begin());
+
+        const auto current_container_size = container.size();
+
+        if (current_container_size > 0)
+        {
+            it.operator++(static_cast<int>(current_container_size - 1));
+        }
+        */
+
+        auto it = container.end();
+
+        return container.insert(it, std::move(value));
+    }
+
+    static entt::meta_sequence_container::iterator meta_sequence_container_at_impl(entt::meta_sequence_container& container, std::int32_t index) // std::size_t // const
+    {
+        auto it = container.begin();
+
+        if (index > 0)
+        {
+            it.operator++((index - 1));
+        }
+
+        return it;
+    }
+
+    static entt::meta_sequence_container::iterator meta_sequence_container_find_impl(entt::meta_sequence_container& container, const MetaAny& value) // const
+    {
+        return std::find(container.begin(), container.end(), value);
     }
 
     static std::string add_strings(const std::string& a, const std::string& b)
@@ -327,7 +374,7 @@ namespace engine
     template <>
     void reflect<entt::meta_sequence_container>()
     {
-        auto type = entt::meta<entt::meta_sequence_container>()
+        entt::meta<entt::meta_sequence_container>()
             .data<nullptr, &entt::meta_sequence_container::value_type>("value_type"_hs)
             .data<&entt::meta_sequence_container::resize, &entt::meta_sequence_container::size>("size"_hs)
 
@@ -335,8 +382,12 @@ namespace engine
             //.data<nullptr, &entt::meta_sequence_container::end>("end"_hs)
 
             .func<&entt::meta_sequence_container::clear>("clear"_hs)
+
             .func<&entt::meta_sequence_container::begin>("begin"_hs)
             .func<&entt::meta_sequence_container::end>("end"_hs)
+            
+            .func<&meta_sequence_container_at_impl>("at"_hs)
+            .func<&meta_sequence_container_at_impl>("index"_hs)
 
             // NOTE: May need to make a wrapper function for this.
             .func<&entt::meta_sequence_container::insert>("insert"_hs)
@@ -345,7 +396,30 @@ namespace engine
             .func<&entt::meta_sequence_container::operator[]>("operator[]"_hs)
             .func<&entt::meta_sequence_container::operator bool>("operator bool"_hs)
 
-            // TODO: Add custom `find` member-function.
+            .func<&meta_sequence_container_push_back_impl>("push_back"_hs)
+            .func<&meta_sequence_container_push_back_impl>("emplace_back"_hs)
+
+            .func<&meta_sequence_container_find_impl>("find"_hs)
+        ;
+    }
+
+    template <>
+    void reflect<entt::meta_sequence_container::iterator>()
+    {
+        entt::meta<entt::meta_sequence_container::iterator>()
+            .func<static_cast<entt::meta_sequence_container::iterator&(entt::meta_sequence_container::iterator::*)()>(&entt::meta_sequence_container::iterator::operator++)>("operator++"_hs)
+            .func<static_cast<entt::meta_sequence_container::iterator(entt::meta_sequence_container::iterator::*)(int)>(&entt::meta_sequence_container::iterator::operator++)>("operator++"_hs)
+
+            .func<static_cast<entt::meta_sequence_container::iterator& (entt::meta_sequence_container::iterator::*)()>(&entt::meta_sequence_container::iterator::operator--)>("operator--"_hs)
+            .func<static_cast<entt::meta_sequence_container::iterator(entt::meta_sequence_container::iterator::*)(int)>(&entt::meta_sequence_container::iterator::operator--)>("operator--"_hs)
+
+            /*
+            .func<&entt::meta_sequence_container::iterator::operator bool>("operator bool"_hs)
+            .func<&entt::meta_sequence_container::iterator::operator==>("operator=="_hs)
+            .func<&entt::meta_sequence_container::iterator::operator!=>("operator!="_hs)
+            */
+
+            .func<&entt::meta_sequence_container::iterator::operator*>("*operator"_hs)
         ;
     }
 
@@ -368,20 +442,42 @@ namespace engine
 
             .func
             <
-                static_cast<bool(entt::meta_associative_container::*)(entt::meta_any)>
+                static_cast<bool(entt::meta_associative_container::*)(MetaAny)>
                 (&entt::meta_associative_container::insert)
             >("insert"_hs)
 
             .func
             <
-                static_cast<bool(entt::meta_associative_container::*)(entt::meta_any, entt::meta_any)>
+                static_cast<bool(entt::meta_associative_container::*)(MetaAny, MetaAny)>
                 (&entt::meta_associative_container::insert)
             >("insert"_hs)
 
             .func<&entt::meta_associative_container::erase>("erase"_hs)
             .func<&entt::meta_associative_container::find>("find"_hs)
 
-            .func<&entt::meta_sequence_container::operator bool>("operator bool"_hs)
+            .func<&entt::meta_associative_container::operator bool>("operator bool"_hs)
+        ;
+    }
+
+    template <>
+    void reflect<entt::meta_associative_container::iterator>()
+    {
+        entt::meta<entt::meta_associative_container::iterator>()
+            .func<static_cast<entt::meta_associative_container::iterator&(entt::meta_associative_container::iterator::*)()>(&entt::meta_associative_container::iterator::operator++)>("operator++"_hs)
+            .func<static_cast<entt::meta_associative_container::iterator(entt::meta_associative_container::iterator::*)(int)>(&entt::meta_associative_container::iterator::operator++)>("operator++"_hs)
+
+            /*
+
+            .func<&entt::meta_associative_container::iterator::operator bool>("operator bool"_hs)
+            .func<&entt::meta_associative_container::iterator::operator==>("operator=="_hs)
+            .func<&entt::meta_associative_container::iterator::operator!=>("operator!="_hs)
+            */
+
+            .func<&entt::meta_associative_container::iterator::operator*>("*operator"_hs)
+
+            // Currently unsupported:
+            //.func<static_cast<entt::meta_associative_container::iterator& (entt::meta_associative_container::iterator::*)()>(&entt::meta_associative_container::iterator::operator--)>("operator--"_hs)
+            //.func<static_cast<entt::meta_associative_container::iterator(entt::meta_associative_container::iterator::*)(int)>(&entt::meta_associative_container::iterator::operator--)>("operator--"_hs)
         ;
     }
 
@@ -400,7 +496,9 @@ namespace engine
     void reflect_entt()
     {
         reflect<entt::meta_sequence_container>();
+        reflect<entt::meta_sequence_container::iterator>();
         reflect<entt::meta_associative_container>();
+        reflect<entt::meta_associative_container::iterator>();
     }
 
     void reflect_dependencies()

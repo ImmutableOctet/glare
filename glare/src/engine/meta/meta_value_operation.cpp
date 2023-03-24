@@ -36,7 +36,7 @@ namespace engine
 		return (std::get<0>(find_operator(expr)) != std::string_view::npos);
 	}
 
-	std::optional<std::tuple<MetaValueOperation::Operation, MetaValueOperation::OperationPrecedence>>
+	std::optional<std::tuple<MetaValueOperator, MetaOperatorPrecedence>>
 	MetaValueOperation::get_operation(std::string_view symbol, bool symbol_is_leading, bool resolve_non_standard_symbols)
 	{
 		return parse_value_operator(symbol, symbol_is_leading, resolve_non_standard_symbols);
@@ -303,26 +303,57 @@ namespace engine
 
 		auto& first = self.segments[offset];
 
+		std::size_t concatenation_offset = 1;
+
 		std::size_t segments_processed = 1;
 
 		if (remaining_entries == 1)
 		{
-			if (auto underlying = try_get_underlying_value(first.value, std::forward<Args>(args)...))
+			if (is_unary_operation(first.operation))
 			{
-				return { std::move(underlying), segments_processed };
+				result = { {}, first.operation };
+				concatenation_offset = 0;
 			}
-
-			if (allow_ref_as_return_value)
+			else if (first.operation == MetaValueOperator::Subscript)
 			{
-				return { first.value.as_ref(), segments_processed };
+				if constexpr (sizeof...(args) > 0)
+				{
+					if constexpr (std::is_same_v<std::decay_t<util::get_first_type<Args...>>, MetaAny>)
+					{
+						result = { util::get_first(args...).as_ref(), first.operation};
+						concatenation_offset = 0;
+					}
+					else
+					{
+						return { {}, 0 }; // segments_processed
+					}
+				}
+				else
+				{
+					return { {}, 0 }; // segments_processed
+				}
 			}
+			else
+			{
+				if (auto underlying = try_get_underlying_value(first.value, std::forward<Args>(args)...))
+				{
+					return { std::move(underlying), segments_processed };
+				}
 
-			return { first.value, segments_processed };
+				if (allow_ref_as_return_value)
+				{
+					return { first.value.as_ref(), segments_processed };
+				}
+
+				return { first.value, segments_processed };
+			}
+		}
+		else
+		{
+			result = { first.value.as_ref(), first.operation};
 		}
 
-		result = { first.value.as_ref(), first.operation};
-
-		for (std::size_t i = (offset + 1); i < self.segments.size(); i++)
+		for (std::size_t i = (offset + concatenation_offset); i < self.segments.size(); i++)
 		{
 			auto& next_segment = self.segments[i];
 
@@ -336,7 +367,7 @@ namespace engine
 
 			if (!next_segment.value)
 			{
-				if ((result.operation == Operation::Get) && (next_segment.operation == Operation::Get))
+				if ((result.operation == MetaValueOperator::Get) && (next_segment.operation == MetaValueOperator::Get))
 				{
 					continue;
 				}

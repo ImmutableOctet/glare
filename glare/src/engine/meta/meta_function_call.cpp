@@ -48,7 +48,7 @@ namespace engine
 				if (!function.is_static())
 				{
 					// NOTE: Const-cast needed due to limitations of EnTT's API.
-					if (auto result = invoke_any_overload(function, self, const_cast<MetaAny* const>(function_arguments.data()), function_arguments.size()))
+					if (auto result = invoke_any_overload_with_automatic_meta_forwarding(function, self, const_cast<MetaAny* const>(function_arguments.data()), function_arguments.size()))
 					{
 						return result;
 					}
@@ -65,7 +65,7 @@ namespace engine
 
 		if (function_arguments_out.size() > 0)
 		{
-			if (auto result = invoke_any_overload(function, self, function_arguments_out.data(), function_arguments_out.size()))
+			if (auto result = invoke_any_overload_with_automatic_meta_forwarding(function, self, function_arguments_out.data(), function_arguments_out.size()))
 			{
 				return result;
 			}
@@ -86,7 +86,7 @@ namespace engine
 
 				for (std::size_t i = sizeof...(args); i-- > 0; )
 				{
-					if (auto result = invoke_any_overload(function, self, function_arguments_out.data(), function_arguments_out.size()))
+					if (auto result = invoke_any_overload_with_automatic_meta_forwarding(function, self, function_arguments_out.data(), function_arguments_out.size())) // invoke_any_overload
 					{
 						return result;
 					}
@@ -99,18 +99,75 @@ namespace engine
 		return {};
 	}
 
-	MetaAny MetaFunctionCall::get(MetaAny self, bool resolve_indirection) const
+	template <typename ...Args>
+	MetaAny MetaFunctionCall::get_self_impl(bool resolve_as_container, bool resolve_underlying, Args&&... args) const
 	{
-		if (resolve_indirection)
+		auto& self = const_cast<MetaFunctionCall*>(this)->self;
+
+		if (!self)
 		{
-			resolve_indirection = has_indirection();
+			return {};
 		}
 
+		// NOTE: We const-cast here since `self` may need to refer to a non-const `MetaAny`.
+		// (Transitive `const` forwarding from EnTT's API is not always wanted here)
+		// 
+		// This does not change the originating policy of `MetaFunctionCall::self`;
+		// if it was `policy::cref` before, it still will be, even in a non-const calling context.
+
+		if (resolve_as_container)
+		{
+			if (auto as_container = try_get_container_wrapper(self)) // self_ref
+			{
+				return as_container;
+			}
+		}
+
+		auto self_ref = self.as_ref();
+
+		if (resolve_underlying)
+		{
+			if (auto self_resolved = try_get_underlying_value(self_ref, std::forward<Args>(args)...))
+			{
+				return self_resolved;
+			}
+		}
+
+		return self_ref;
+	}
+
+	template <typename ...Args>
+	MetaAny MetaFunctionCall::get_self(bool resolve_as_container, bool resolve_underlying, Args&&... args) const
+	{
+		return get_self_impl(resolve_as_container, resolve_underlying, std::forward<Args>(args)...);
+	}
+
+	MetaAny MetaFunctionCall::get_self(bool resolve_as_container, bool resolve_underlying) const
+	{
+		return get_self_impl(resolve_as_container, resolve_underlying);
+	}
+
+	MetaAny MetaFunctionCall::get(MetaAny self, bool resolve_indirection) const
+	{
+		const bool resolve_argument_indirection = (resolve_indirection)
+			? has_indirection()
+			: false
+		;
+
 		auto target_fn = MetaFunction {};
+		auto self_type = MetaType {};
 
 		if (self)
 		{
-			const auto self_type = self.type();
+			if (resolve_indirection)
+			{
+				if (auto self_resolved = try_get_underlying_value(self))
+				{
+					self = std::move(self_resolved);
+				}
+			}
+
+			self_type = self.type();
 
 			if (has_type())
 			{
@@ -119,32 +176,90 @@ namespace engine
 					return {};
 				}
 			}
-
-			target_fn = get_function(self_type);
 		}
 		else
 		{
-			target_fn = get_function();
+			self = get_self(false, resolve_indirection);
+
+			if (has_type())
+			{
+				self_type = get_type();
+			}
+			else
+			{
+				self_type = self.type();
+			}
 		}
 
-		// NOTE: We const-cast here since `self` may need to refer to a non-const `MetaAny`.
-		// (Transitive `const` forwarding from EnTT's API is not always wanted here)
-		// 
-		// This does not change the originating policy of `MetaFunctionCall::self`;
-		// if it was policy::cref before, it still will be, even in a non-const calling context.
-		return get_impl
-		(
-			target_fn,
+		if (!self_type)
+		{
+			return {};
+		}
 
+		target_fn = get_function(self_type);
+
+		if ((!target_fn) && (self))
+		{
+			if (auto as_container = try_get_container_wrapper(self))
+			{
+				const auto container_type = as_container.type();
+
+				target_fn = get_function(container_type);
+
+				if (target_fn)
+				{
+					self = std::move(as_container);
+				}
+			}
+		}
+
+		if (resolve_indirection)
+		{
+			if (self)
+			{
+				return get_impl
+				(
+					target_fn,
+				
+					(self)
+						? self.as_ref() // std::move(self),
+						: MetaAny {}
+					,
+
+					arguments,
+					resolve_argument_indirection,
+					false, // true,
+
+					self // self.as_ref()
+				);
+			}
+			else
+			{
+				return get_impl
+				(
+					target_fn,
+				
+					std::move(self), // MetaAny {},
+
+					arguments,
+					resolve_argument_indirection,
+					false // true
+				);
+			}
+		}
+		else
+		{
+			return get_impl
 			(
-				(self)
-				? std::move(self)
-				: const_cast<MetaFunctionCall*>(this)->self.as_ref()
-			),
-			arguments,
-			resolve_indirection,
-			false
-		);
+				target_fn,
+
+				std::move(self), // self.as_ref(),
+
+				arguments,
+				resolve_argument_indirection,
+				false
+			);
+		}
 	}
 
 	MetaAny MetaFunctionCall::get(Registry& registry, Entity entity, bool resolve_indirection, MetaAny self, const MetaEvaluationContext* opt_evaluation_context) const
@@ -152,11 +267,65 @@ namespace engine
 		using namespace engine::literals;
 
 		auto target_fn = MetaFunction {};
+		auto self_type = MetaType {};
 
 		if (self)
 		{
-			auto self_type = self.type();
+			if (resolve_indirection)
+			{
+				if (opt_evaluation_context)
+				{
+					if (auto self_resolved = try_get_underlying_value(self, registry, entity, *opt_evaluation_context))
+					{
+						self = std::move(self_resolved);
+					}
+				}
+				else
+				{
+					if (auto self_resolved = try_get_underlying_value(self, registry, entity))
+					{
+						self = std::move(self_resolved);
+					}
+				}
+			}
 
+			self_type = self.type();
+		}
+		else
+		{
+			if (has_type())
+			{
+				self = get_component_ref(registry, entity, type_id);
+			}
+
+			if (self)
+			{
+				self_type = self.type();
+			}
+			else
+			{
+				if (opt_evaluation_context)
+				{
+					self = get_self(false, resolve_indirection, registry, entity, *opt_evaluation_context);
+				}
+				else
+				{
+					self = get_self(false, resolve_indirection, registry, entity);
+				}
+
+				if (has_type())
+				{
+					self_type = get_type();
+				}
+				else
+				{
+					self_type = self.type();
+				}
+			}
+		}
+
+		if (self)
+		{
 			if (has_type())
 			{
 				const auto self_type_id = self_type.id();
@@ -166,47 +335,52 @@ namespace engine
 					if (auto target_entity = self.try_cast<Entity>())
 					{
 						self = get_component_ref(registry, *target_entity, type_id);
-					}
 
-					self_type = get_type();
+						self_type = get_type();
+					}
 				}
 				else if (self_type_id != type_id)
 				{
 					return {};
 				}
 			}
-
-			target_fn = get_function(self_type);
 		}
-		else
+
+		if (!self_type)
 		{
-			if (has_type())
+			return {};
+		}
+
+		target_fn = get_function(self_type);
+
+		if ((!target_fn) && (self))
+		{
+			if (auto as_container = try_get_container_wrapper(self))
 			{
-				self = get_component_ref(registry, entity, type_id);
+				const auto container_type = as_container.type();
+
+				target_fn = get_function(container_type);
+
+				if (target_fn)
+				{
+					self = std::move(as_container);
+				}
 			}
-
-			target_fn = get_function();
 		}
 
-		if (resolve_indirection)
-		{
-			resolve_indirection = has_indirection();
-		}
+		const bool resolve_argument_indirection = (resolve_indirection)
+			? has_indirection()
+			: false
+		;
 
-		// NOTE: We const-cast here since `self` may need to refer to a non-const `MetaAny`.
-		// (See other overload of `get` for details)
 		if (opt_evaluation_context)
 		{
 			return get_impl
 			(
 				target_fn,
-				(
-					(self)
-					? std::move(self)
-					: const_cast<MetaFunctionCall*>(this)->self.as_ref()
-				),
+				std::move(self),
 				arguments,
-				resolve_indirection,
+				resolve_argument_indirection,
 				true,
 				registry, entity,
 				*opt_evaluation_context
@@ -217,13 +391,9 @@ namespace engine
 			return get_impl
 			(
 				target_fn,
-				(
-					(self)
-					? std::move(self)
-					: const_cast<MetaFunctionCall*>(this)->self.as_ref()
-				),
+				std::move(self),
 				arguments,
-				resolve_indirection,
+				resolve_argument_indirection,
 				true,
 				registry, entity
 			);

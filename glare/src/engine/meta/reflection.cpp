@@ -46,7 +46,7 @@ namespace engine
 	void reflect<MetaVariable>()
 	{
 		engine_meta_type<MetaVariable>()
-			.ctor<MetaSymbolID, entt::meta_any&&>()
+			.ctor<MetaSymbolID, MetaAny&&>()
 			
 			.ctor<MetaSymbolID, const util::json&>()
 			.ctor<MetaSymbolID, const util::json&, MetaType>()

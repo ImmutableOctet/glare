@@ -14,6 +14,8 @@ namespace engine
 	enum class MetaValueOperator : std::uint8_t
 	{
 		Get,
+		Subscript,
+		Dereference,
 
 		UnaryPlus,
 		UnaryMinus,

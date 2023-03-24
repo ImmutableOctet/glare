@@ -64,6 +64,9 @@ namespace engine
 		// Controls whether an expression can encode a deferred function or method call operation.
 		bool allow_function_call_semantics    : 1 = true;
 
+		// Controls whether an expression can encode a subscript operation.
+		bool allow_subscript_semantics        : 1 = true;
+
 		// Controls whether top-level value commands can be used. (e.g. `hash`)
 		bool allow_value_resolution_commands  : 1 = true;
 
