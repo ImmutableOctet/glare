@@ -244,7 +244,7 @@ namespace util
 		bool is_first_symbol = true;
 
 		// Separator not found (End-of-string):
-		while (current_position != std::string_view::npos)
+		while (current_position < str.length()) // && (current_position != std::string_view::npos)
 		{
 			std::size_t find_result = std::string_view::npos;
 
@@ -265,36 +265,18 @@ namespace util
 				}
 			}
 
-			if (find_result == std::string_view::npos)
+			auto substr = std::string_view {};
+
+			const bool is_last_symbol = (find_result == std::string_view::npos);
+
+			if (is_last_symbol)
 			{
 				if (separator_required && !separator_found)
 				{
 					break;
 				}
 
-				auto substr = trim(str.substr(current_position), trim_values);
-
-				if (substr.empty())
-				{
-					break;
-				}
-
-				constexpr bool is_last_symbol = true;
-
-				if constexpr (std::is_invocable_v<Callback, std::string_view, bool, bool> || std::is_invocable_v<Callback, std::string_view&, bool, bool>)
-				{
-					callback(substr, is_first_symbol, is_last_symbol);
-				}
-				else if constexpr (std::is_invocable_v<Callback, std::string_view, bool> || std::is_invocable_v<Callback, std::string_view&, bool>)
-				{
-					callback(substr, is_last_symbol);
-				}
-				else if constexpr (std::is_invocable_v<Callback, std::string_view>)
-				{
-					callback(substr);
-				}
-
-				break;
+				substr = trim(str.substr(current_position), trim_values);
 			}
 			// Separator found with no content between, skip forward:
 			else if ((find_result - current_position) == 0)
@@ -303,22 +285,34 @@ namespace util
 
 				if (separator)
 				{
-					current_position = find_result + separator->length(); // +=
+					current_position = (find_result + separator->length()); // +=
 				}
 				else
 				{
 					current_position++;
 				}
+
+				continue;
 			}
 			// Separator found as expected:
 			else
 			{
-				auto substr = trim(str.substr(current_position, (find_result - current_position)), trim_values);
+				substr = trim(str.substr(current_position, (find_result - current_position)), trim_values);
 
 				separator_found = true;
+			}
 
-				constexpr bool is_last_symbol = false;
+			const auto initial_substr_length = substr.length();
 
+			if (initial_substr_length == 0) // substr.empty()
+			{
+				if (!separator)
+				{
+					break;
+				}
+			}
+			else
+			{
 				if constexpr (std::is_invocable_r_v<bool, Callback, std::string_view, bool, bool> || std::is_invocable_r_v<bool, Callback, std::string_view&, bool, bool>)
 				{
 					if (!callback(substr, is_first_symbol, is_last_symbol))
@@ -353,19 +347,27 @@ namespace util
 					callback(substr);
 				}
 
-				const auto substr_end_point = (substr.data() + substr.length());
-
-				current_position = static_cast<std::size_t>(substr_end_point - str.data());
-
-				assert(separator);
+				is_first_symbol = false;
 
 				// Additional check added due to `callback`'s ability to change the size of `substr`:
-				if (substr_end_point == (str.data() + find_result))
+				if ((!substr.empty()) && (substr.length() != initial_substr_length))
 				{
-					current_position += separator->length();
-				}
+					assert(substr.data() >= str.data());
+					assert(substr.data() < (str.data() + str.length()));
 
-				is_first_symbol = false;
+					const auto substr_end_point = (substr.data() + substr.length());
+
+					current_position = static_cast<std::size_t>(substr_end_point - str.data());
+
+					continue;
+				}
+			}
+
+			current_position += initial_substr_length;
+
+			if (separator)
+			{
+				current_position += separator->length();
 			}
 		}
 
