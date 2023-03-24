@@ -832,4 +832,28 @@ namespace util
 			return result;
 		}
 	}
+
+	template <std::size_t index, typename ...Args>
+	auto&& get(Args&&... args)
+	{
+		return std::get<index>(std::forward_as_tuple<Args...>(std::forward<Args>(args)...));
+	}
+
+	template <typename ...Args>
+	auto&& get_first(Args&&... args)
+	{
+		//if constexpr (sizeof...(args) > 0)
+		{
+			return get<0>(std::forward<Args>(args)...);
+		}
+	}
+
+	template <typename ...Args>
+	auto&& get_last(Args&&... args)
+	{
+		//if constexpr (sizeof...(args) > 0)
+		{
+			return get<(sizeof...(args) - 1)>(std::forward<Args>(args)...);
+		}
+	}
 }
