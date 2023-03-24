@@ -297,6 +297,126 @@ TEST_CASE("engine::meta_any_from_string", "[engine:meta]")
 	engine::reflect_all();
 	engine::reflect<engine::ReflectionTest>();
 
+	SECTION("Subscript operator")
+	{
+		util::small_vector<std::int32_t, 3> vec;
+
+		vec.push_back(10);
+		vec.push_back(20);
+		vec.push_back(30);
+
+		auto subscript_expr = engine::meta_any_from_string
+		(
+			std::string_view("[2]"),
+			{
+				.allow_subscript_semantics = true
+			}
+		);
+
+		REQUIRE(subscript_expr);
+
+		auto subscript_result = engine::try_get_underlying_value(subscript_expr, vec);
+
+		REQUIRE(subscript_result);
+
+		auto as_integer = subscript_result.try_cast<std::int32_t>();
+
+		REQUIRE(as_integer);
+		REQUIRE((*as_integer) == vec[2]);
+	}
+
+	SECTION("Opaque vector push_back")
+	{
+		util::small_vector<std::int32_t, 3> vec;
+
+		vec.push_back(1);
+		vec.push_back(10);
+
+		auto push_back_expr = engine::meta_any_from_string
+		(
+			std::string_view("push_back(100)"),
+			{
+				.allow_function_call_semantics = true,
+				.allow_opaque_function_references = true
+			}
+		);
+
+		REQUIRE(push_back_expr);
+
+		auto push_back_result = engine::try_get_underlying_value(push_back_expr, vec);
+
+		REQUIRE(push_back_result);
+		REQUIRE(vec.size() == 3);
+		REQUIRE(vec[2] == 100);
+
+		auto as_iterator = push_back_result.try_cast<entt::meta_sequence_container::iterator>();
+
+		REQUIRE(as_iterator);
+		REQUIRE((*(*as_iterator)) == vec[2]);
+	}
+
+	SECTION("Opaque vector `at` function")
+	{
+		util::small_vector<std::int32_t, 5> vec;
+
+		vec.push_back(2);
+		vec.push_back(3);
+		vec.push_back(5);
+		vec.push_back(7);
+		vec.push_back(11);
+
+		auto at_expr = engine::meta_any_from_string
+		(
+			std::string_view("at(2)"),
+			{
+				.allow_function_call_semantics = true,
+				.allow_opaque_function_references = true
+			}
+		);
+
+		REQUIRE(at_expr);
+
+		auto at_result = engine::try_get_underlying_value(at_expr, vec);
+
+		REQUIRE(at_result);
+
+		auto as_iterator = at_result.try_cast<entt::meta_sequence_container::iterator>();
+
+		REQUIRE(as_iterator);
+		REQUIRE((*(*as_iterator)) == vec[2]);
+	}
+
+	SECTION("Opaque vector insert")
+	{
+		util::small_vector<std::int32_t, 4> vec;
+
+		vec.push_back(10);
+		vec.push_back(1000);
+		vec.push_back(10000);
+
+		auto insert_expr = engine::meta_any_from_string
+		(
+			std::string_view("insert(at(1), 100)"),
+			{
+				.allow_function_call_semantics = true,
+				.allow_opaque_function_references = true
+			}
+		);
+
+		REQUIRE(insert_expr);
+
+		auto insert_result = engine::try_get_underlying_value(insert_expr, vec);
+
+		REQUIRE(insert_result);
+		REQUIRE(vec.size() == 4);
+		REQUIRE(vec[1] == 100);
+
+		auto as_iterator = insert_result.try_cast<entt::meta_sequence_container::iterator>();
+
+		REQUIRE(as_iterator);
+		REQUIRE((*(*as_iterator)) == vec[1]);
+	}
+
 	SECTION("Method call with forwarded context")
 	{
 		engine::Registry registry;
@@ -1514,6 +1634,7 @@ TEST_CASE("engine::meta_any_from_string", "[engine:meta]")
 
 		REQUIRE(as_name_component->get_name() == "Name");
 	}
+	
 
 	SECTION("Command result + member access")
 	{
@@ -1681,7 +1802,7 @@ TEST_CASE("engine::meta_any_from_string", "[engine:meta]")
 
 		REQUIRE((*as_float) >= 27.0f);
 	}
-
+	
 	SECTION("Function call + member reference + math")
 	{
 		auto value = engine::meta_any_from_string
