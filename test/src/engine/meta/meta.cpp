@@ -204,6 +204,8 @@ TEST_CASE("engine::MetaValueOperator", "[engine:meta]")
 		REQUIRE(std::get<0>(*engine::parse_value_operator("!", true)) == engine::MetaValueOperator::LogicalNot);
 		REQUIRE(!engine::parse_value_operator("!", false));
 
+		REQUIRE(std::get<0>(*engine::parse_value_operator("*", true)) == engine::MetaValueOperator::Dereference);
+
 		REQUIRE(std::get<0>(*engine::parse_value_operator("*", false)) == engine::MetaValueOperator::Multiply);
 		REQUIRE(std::get<0>(*engine::parse_value_operator("/", false)) == engine::MetaValueOperator::Divide);
 		REQUIRE(std::get<0>(*engine::parse_value_operator("%", false)) == engine::MetaValueOperator::Modulus);
@@ -246,6 +248,10 @@ TEST_CASE("engine::MetaValueOperator", "[engine:meta]")
 		REQUIRE(std::get<0>(*engine::parse_value_operator("::", false, true)) == engine::MetaValueOperator::Get);
 		REQUIRE(std::get<0>(*engine::parse_value_operator(".", false, true)) == engine::MetaValueOperator::Get);
 		REQUIRE(std::get<0>(*engine::parse_value_operator("->", false, true)) == engine::MetaValueOperator::Get);
+
+		REQUIRE(std::get<0>(*engine::parse_value_operator("[", false, true)) == engine::MetaValueOperator::Subscript);
+		REQUIRE(std::get<0>(*engine::parse_value_operator("]", false, true)) == engine::MetaValueOperator::Subscript);
+		REQUIRE(std::get<0>(*engine::parse_value_operator("[]", false, true)) == engine::MetaValueOperator::Subscript);
 	}
 
 	SECTION("decay_operation")
