@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.hpp"
+#include "indirection.hpp"
 #include "meta_parsing_instructions.hpp"
 #include "meta_data_member.hpp"
 #include "indirect_meta_data_member.hpp"
@@ -13,6 +14,8 @@
 #include <util/json.hpp>
 
 #include <util/format.hpp>
+#include <util/type_traits.hpp>
+#include <util/reflection.hpp>
 
 #include <entt/meta/meta.hpp>
 //#include <entt/entt.hpp>
@@ -24,6 +27,7 @@
 #include <filesystem>
 #include <stdexcept>
 #include <tuple>
+#include <utility>
 
 namespace engine
 {
@@ -168,7 +172,7 @@ namespace engine
 		MetaAny out,
 		
 		const util::json& data,
-		bool use_assignment=true,
+		bool modify_in_place=true,
 
 		const MetaParsingInstructions& parse_instructions={},
 		const MetaTypeDescriptorFlags& descriptor_flags={}
@@ -183,13 +187,150 @@ namespace engine
 		const MetaTypeDescriptorFlags& descriptor_flags={}
 	);
 
+	namespace impl
+	{
+		template <typename ContainerType, typename ValueType=typename ContainerType::value_type>
+		void load_sequence_container_impl
+		(
+			ContainerType& out,
+			
+			const util::json& data,
+			const MetaParsingInstructions& parse_instructions={}
+		)
+		{
+			const auto element_type = resolve<ValueType>();
+
+			if (!element_type)
+			{
+				return;
+			}
+
+			// TODO: Better integrate EnTT's sequence container API, rather than using STL's interface.
+			util::json_for_each
+			(
+				data,
+
+				[&parse_instructions, &element_type, &out](const util::json& entry)
+				{
+					if (auto element = resolve_meta_any(entry, element_type, parse_instructions))
+					{
+						if (auto resolved = try_get_underlying_value(element)) // , args...
+						{
+							element = std::move(resolved);
+						}
+
+						if constexpr (std::is_same_v<std::decay_t<ValueType>, MetaAny>)
+						{
+							out.emplace_back(std::move(element));
+						}
+						else
+						{
+							if (auto raw_element = element.try_cast<ValueType>())
+							{
+								out.emplace_back(std::move(*raw_element));
+							}
+							else
+							{
+								if (element.allow_cast<ValueType>())
+								{
+									out.emplace_back(element.cast<ValueType>());
+								}
+							}
+						}
+					}
+				}
+			);
+		}
+
+		template <typename ContainerType, typename KeyType=typename ContainerType::key_type, typename ValueType=typename ContainerType::mapped_type, typename PairType=typename ContainerType::value_type>
+		void load_associative_container_impl
+		(
+			ContainerType& out,
+			
+			const util::json& data,
+			const MetaParsingInstructions& parse_instructions={}
+		)
+		{
+			const auto key_type = resolve<KeyType>();
+
+			if (!key_type)
+			{
+				return;
+			}
+
+			const auto value_type = resolve<ValueType>();
+
+			if (!value_type)
+			{
+				return;
+			}
+
+			auto try_get_native_instance = []<typename T>(MetaAny instance) -> std::optional<T>
+			{
+				if (auto resolved = try_get_underlying_value(instance)) // , args...
+				{
+					instance = std::move(resolved);
+				}
+
+				if (auto raw_instance = instance.try_cast<T>())
+				{
+					return std::move(*raw_instance);
+				}
+				else
+				{
+					if (instance.allow_cast<T>())
+					{
+						return instance.cast<T>();
+					}
+				}
+
+				return std::nullopt;
+			};
+
+			auto resolve_key = [&parse_instructions, &key_type, &try_get_native_instance](auto&& key_content) -> std::optional<KeyType>
+			{
+				if (auto key_instance = meta_any_from_string(key_content, parse_instructions, key_type))
+				{
+					return try_get_native_instance.operator()<KeyType>(std::move(key_instance));
+				}
+
+				return std::nullopt;
+			};
+
+			auto resolve_value = [&parse_instructions, &value_type, &try_get_native_instance](auto&& value_content) -> std::optional<ValueType>
+			{
+				if (auto value_instance = resolve_meta_any(value_content, value_type, parse_instructions))
+				{
+					return try_get_native_instance.operator()<ValueType>(std::move(value_instance));
+				}
+
+				return std::nullopt;
+			};
+
+			for (const auto& entry : data.items())
+			{
+				const auto& key_content = entry.key();
+
+				if (auto key_out = resolve_key(std::string_view { key_content }))
+				{
+					const auto& value_content = entry.value();
+
+					if (auto value_out = resolve_value(value_content))
+					{
+						out.insert_or_assign(std::move(*key_out), std::move(*value_out));
+					}
+				}
+			}
+		}
+	}
+
 	template <typename T>
 	void load
 	(
 		T& out,
 		
 		const util::json& data,
-		bool use_assignment=true,
+		bool modify_in_place=true,
 
 		const MetaParsingInstructions& parse_instructions={},
 		const MetaTypeDescriptorFlags& descriptor_flags={},
@@ -197,57 +338,84 @@ namespace engine
 		bool fallback_to_default_construction=std::is_default_constructible_v<T>
 	)
 	{
-		auto instance = load
-		(
-			entt::forward_as_meta(out),
-			
-			data,
-
-			use_assignment,
-
-			parse_instructions,
-			descriptor_flags
-		);
-
-		if (use_assignment)
+		if constexpr (util::is_complete_specialization_v<entt::meta_sequence_container_traits<T>>)
 		{
-			return;
+			if constexpr (std::is_default_constructible_v<T> && (std::is_move_assignable_v<T> || std::is_copy_assignable_v<T>))
+			{
+				if (!modify_in_place)
+				{
+					out = {};
+				}
+			}
+
+			impl::load_sequence_container_impl(out, data, parse_instructions);
 		}
-
-		if (!instance)
+		else if constexpr (util::is_complete_specialization_v<entt::meta_associative_container_traits<T>>)
 		{
-			if (fallback_to_default_construction)
+			if constexpr (std::is_default_constructible_v<T> && (std::is_move_assignable_v<T> || std::is_copy_assignable_v<T>))
+			{
+				if (!modify_in_place)
+				{
+					out = {};
+				}
+			}
+
+			impl::load_associative_container_impl(out, data, parse_instructions);
+		}
+		else
+		{
+			auto instance = load
+			(
+				entt::forward_as_meta(out),
+			
+				data,
+
+				modify_in_place,
+
+				parse_instructions,
+				descriptor_flags
+			);
+
+			if (modify_in_place)
+			{
+				// Object modified in-place, no additional steps needed.
+				return;
+			}
+
+			auto raw_instance_ptr = (instance)
+				? instance.try_cast<T>()
+				: nullptr
+			;
+
+			if (raw_instance_ptr)
+			{
+				if constexpr (std::is_move_assignable_v<T>)
+				{
+					out = std::move(*raw_instance_ptr);
+
+					return;
+				}
+				else if constexpr (std::is_copy_assignable_v<T>)
+				{
+					out = *raw_instance_ptr;
+
+					return;
+				}
+			}
+			else
 			{
 				if constexpr (std::is_default_constructible_v<T> && (std::is_move_assignable_v<T> || std::is_copy_assignable_v<T>))
 				{
-					out = T{};
+					if (fallback_to_default_construction)
+					{
+						out = T {};
+
+						return;
+					}
 				}
 			}
 
 			throw std::runtime_error(util::format("Unable to deserialize object of type: #{}", resolve<T>().id()));
-		}
-
-		auto raw_instance_ptr = instance.try_cast<T>();
-
-		if ((!raw_instance_ptr) && fallback_to_default_construction)
-		{
-			if constexpr (std::is_default_constructible_v<T> && (std::is_move_assignable_v<T> || std::is_copy_assignable_v<T>))
-			{
-				out = T {};
-			}
-
-			return;
-		}
-
-		assert(raw_instance_ptr);
-
-		if constexpr (std::is_move_assignable_v<T>)
-		{
-			out = std::move(*raw_instance_ptr);
-		}
-		else if constexpr (std::is_copy_assignable_v<T>)
-		{
-			out = *raw_instance_ptr;
 		}
 	}
 
@@ -306,7 +474,7 @@ namespace engine
 		T& out,
 		
 		const std::filesystem::path& path,
-		bool use_assignment=true,
+		bool modify_in_place=true,
 
 		const MetaParsingInstructions& parse_instructions={},
 		const MetaTypeDescriptorFlags& descriptor_flags={},
@@ -320,7 +488,7 @@ namespace engine
 
 			util::load_json(path),
 			
-			use_assignment,
+			modify_in_place,
 
 			parse_instructions,
 			descriptor_flags,

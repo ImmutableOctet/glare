@@ -110,4 +110,7 @@ namespace engine
 	GENERATE_HAS_METHOD_TRAIT_EX(has_method_operator_bitwise_xor_assign, operator^=);
 	//GENERATE_HAS_FUNCTION_TRAIT_EX(has_function_operator_bitwise_or_assign, operator|=);
 	GENERATE_HAS_METHOD_TRAIT_EX(has_method_operator_bitwise_or_assign, operator|=);
+
+	//GENERATE_HAS_FUNCTION_TRAIT_EX(has_function_operator_subscript, operator[]);
+	GENERATE_HAS_METHOD_TRAIT_EX(has_method_operator_subscript, operator[]);
 }

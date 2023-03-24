@@ -11,11 +11,13 @@ namespace engine
 				return true;
 			case MetaValueOperator::UnaryMinus:
 				return true;
-			case MetaValueOperator::BitwiseNot:
-				return true;
 			case MetaValueOperator::Boolean:
 				return true;
 			case MetaValueOperator::LogicalNot:
+				return true;
+			case MetaValueOperator::BitwiseNot:
+				return true;
+			case MetaValueOperator::Dereference:
 				return true;
 		}
 
@@ -84,6 +86,8 @@ namespace engine
 					return {{ MetaValueOperator::BitwiseNot, 3 }};
 				case "!"_hs:
 					return {{ MetaValueOperator::LogicalNot, 3 }};
+				case "*"_hs:
+					return {{ MetaValueOperator::Dereference, 3 }};
 			}
 		}
 		else
@@ -162,7 +166,7 @@ namespace engine
 			}
 		}
 
-		if (resolve_non_standard_symbols)
+		if (resolve_non_standard_symbols) // && !symbol_is_leading
 		{
 			switch (symbol_id)
 			{
@@ -172,6 +176,11 @@ namespace engine
 					return {{ MetaValueOperator::Get, 2 }};
 				case "->"_hs:
 					return {{ MetaValueOperator::Get, 2 }};
+
+				case "["_hs:
+				case "]"_hs:
+				case "[]"_hs:
+					return {{ MetaValueOperator::Subscript, 2 }};
 			}
 		}
 
@@ -224,6 +233,10 @@ namespace engine
 		{
 			case MetaValueOperator::Get:
 				return "operator()"_hs;
+			case MetaValueOperator::Subscript:
+				return "operator[]"_hs;
+			case MetaValueOperator::Dereference:
+				return "*operator"_hs; // "*operator->"_hs;
 
 			case MetaValueOperator::UnaryPlus:
 				return "+operator"_hs;

@@ -9,6 +9,8 @@
 #include <entt/meta/meta.hpp>
 #include <entt/core/type_info.hpp>
 
+#include <util/reflection.hpp>
+
 #include <math/comparison.hpp>
 
 #include <utility>
@@ -400,7 +402,24 @@ namespace engine
 	template <typename Left, typename Right, typename ...Args>
 	MetaAny apply_operation(Left&& left, Right&& right, MetaValueOperator operation, Args&&... args)
 	{
-		if (!right || (!left && !is_unary_operation(operation)))
+		if (right)
+		{
+			if (left)
+			{
+				if (operation == MetaValueOperator::Dereference)
+				{
+					operation = MetaValueOperator::Get;
+				}
+			}
+			else
+			{
+				if (!is_unary_operation(operation))
+				{
+					return {};
+				}
+			}
+		}
+		else
 		{
 			return {};
 		}
@@ -593,6 +612,80 @@ namespace engine
 			// Common operator fallbacks:
 			switch (operation)
 			{
+				case MetaValueOperator::Dereference:
+					if (auto dereferenced = *right)
+					{
+						return dereferenced;
+					}
+
+					if (right_type.is_sequence_container())
+					{
+						return right.as_sequence_container();
+					}
+					else if (right_type.is_associative_container())
+					{
+						return right.as_associative_container();
+					}
+
+					break;
+
+				case MetaValueOperator::Subscript:
+					if (left_type.is_sequence_container())
+					{
+						if (auto as_container = left.as_sequence_container())
+						{
+							if (auto it = right.try_cast<entt::meta_sequence_container::iterator>()) // (right_type.id() == entt::type_hash<entt::meta_sequence_container::iterator>::value())
+							{
+								// NOTE: There's no check here for relationship between iterator and source container.
+								// (Not currently supported by EnTT's API)
+								return *(*it);
+							}
+							else if (auto right_as_index_any = std::as_const(right).allow_cast<std::size_t>())
+							{
+								if (auto right_as_index = right_as_index_any.try_cast<std::size_t>())
+								{
+									if (auto result = as_container[*right_as_index])
+									{
+										return result;
+									}
+								}
+							}
+						}
+					}
+					else if (left_type.is_associative_container())
+					{
+						if (auto as_container = left.as_associative_container())
+						{
+							const auto key_type = as_container.key_type();
+
+							if (right_type == key_type)
+							{
+								if (auto it = as_container.find(right); it != as_container.end())
+								{
+									if (auto& result = it->second)
+									{
+										return result; // .as_ref();
+									}
+								}
+							}
+							else
+							{
+								if (auto right_as_key_any = std::as_const(right).allow_cast(key_type))
+								{
+									if (auto it = as_container.find(right_as_key_any); it != as_container.end())
+									{
+										if (auto& result = it->second)
+										{
+											return result; // .as_ref();
+										}
+									}
+								}
+							}
+						}
+					}
+
+					break;
+
 				// NOTE: For most scenarios we could probably fall through on these two
 				// operations, rather than using `MetaValueOperator::Equal` explicitly.
 				// 

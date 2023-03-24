@@ -8,8 +8,40 @@
 
 namespace util
 {
+	namespace impl
+	{
+		template <class T, std::size_t=sizeof(T)>
+		std::true_type is_complete_specialization_impl(T*);
+
+		std::false_type is_complete_specialization_impl(...);
+
+		template <typename T>
+		struct is_complete_specialization : decltype(is_complete_specialization_impl(std::declval<T*>())) {};
+
+		template <typename T> struct spec_test;
+		template <> struct spec_test<int> {};
+
+		static_assert(is_complete_specialization<spec_test<int>>::value);
+		static_assert(!is_complete_specialization<spec_test<float>>::value);
+	}
+
+	template <typename T>
+	using is_complete_specialization = impl::is_complete_specialization<T>;
+
+	template <typename T>
+	inline constexpr bool is_complete_specialization_v = is_complete_specialization<T>::value;
+
+	template <typename T, template <typename...> typename Template>
+	struct is_specialization : std::false_type {};
+
+	template <template <typename...> typename Template, typename ...Args>
+	struct is_specialization<Template<Args...>, Template> : std::true_type {};
+
+	template <typename T, template <typename...> typename Template>
+	inline constexpr bool is_specialization_v = is_specialization<T, Template>::value;
+
 	template <typename ReturnType, typename Callable, typename ...Args>
-	constexpr bool is_return_value = std::is_same_v<std::invoke_result_t<Callable, Args...>, ReturnType>;
+	inline constexpr bool is_return_value = std::is_same_v<std::invoke_result_t<Callable, Args...>, ReturnType>;
 
 	template<typename T>
 	struct parent_type_from_member_pointer;

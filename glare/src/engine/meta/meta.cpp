@@ -42,7 +42,7 @@ namespace engine
 		return std::nullopt;
 	}
 
-	bool meta_any_is_string(const entt::meta_any& value)
+	bool meta_any_is_string(const MetaAny& value)
 	{
 		using namespace engine::literals;
 
@@ -68,7 +68,7 @@ namespace engine
 		);
 	}
 
-	std::optional<StringHash> meta_any_to_string_hash(const entt::meta_any& value)
+	std::optional<StringHash> meta_any_to_string_hash(const MetaAny& value)
 	{
 		if (!value)
 		{
@@ -124,7 +124,7 @@ namespace engine
 		return hash_out; // std::nullopt;
 	}
 
-	bool meta_any_string_compare(const entt::meta_any& left, const entt::meta_any& right)
+	bool meta_any_string_compare(const MetaAny& left, const MetaAny& right)
 	{
 		auto left_hash = meta_any_to_string_hash(left);
 
@@ -264,154 +264,49 @@ namespace engine
 		return false;
 	}
 
-	bool value_has_indirection(const MetaAny& value, bool bypass_indirect_meta_any)
+	bool function_overload_has_meta_any_argument(const MetaFunction& function)
 	{
-		using namespace engine::literals;
-
-		if (!value)
-		{
-			return {};
-		}
-
-		auto type = value.type();
-
-		if (bypass_indirect_meta_any)
-		{
-			// TODO: Look into adding support for `MetaValueOperation` as well. (May need to be a shallow check)
-			if (type.id() == "IndirectMetaAny"_hs)
-			{
-				if (const auto* as_indirect = value.try_cast<IndirectMetaAny>())
-				{
-					return type_has_indirection(as_indirect->get_type());
-				}
-			}
-		}
-
-		return type_has_indirection(type);
-	}
-
-	bool type_has_indirection(const MetaType& type)
-	{
-		using namespace engine::literals;
-
-		if (!type)
+		if (!function)
 		{
 			return false;
 		}
 
-		if (type.func("operator()"_hs))
+		for (std::size_t i = 0; i < function.arity(); i++)
 		{
-			return true;
+			const auto arg_type = function.arg(i);
+
+			if (arg_type.id() == entt::type_hash<MetaAny>::value()) // resolve<MetaAny>().id()
+			{
+				return true;
+			}
+		}
+	}
+
+	bool function_has_meta_any_argument(const MetaFunction& function, bool check_overloads)
+	{
+		if (!check_overloads)
+		{
+			return function_overload_has_meta_any_argument(function);
 		}
 
-		if (type.func("operator="_hs))
+		if (!function)
 		{
-			return true;
+			return false;
 		}
+
+		auto target_overload = function;
+
+		do
+		{
+			if (function_overload_has_meta_any_argument(target_overload))
+			{
+				return true;
+			}
+
+			target_overload = target_overload.next();
+		} while (target_overload);
 
 		return false;
-	}
-
-	bool type_has_indirection(MetaTypeID type_id)
-	{
-		auto type = resolve(type_id);
-
-		if (!type)
-		{
-			return false;
-		}
-
-		return type_has_indirection(type);
-	}
-
-	template <typename ValueType, typename ...Args>
-	static MetaAny try_get_underlying_value_impl(const MetaFunction& resolution_fn, ValueType&& value, Args&&... args)
-	{
-		assert(value);
-		//assert(resolution_fn);
-
-		if (!resolution_fn)
-		{
-			return {};
-		}
-
-		auto fn = resolution_fn;
-
-		while (fn)
-		{
-			// NOTE: Possible recursion.
-			if (auto result = fn.invoke(value, entt::forward_as_meta<Args>(args)...))
-			{
-				return result;
-			}
-
-			fn = fn.next();
-		}
-
-		return {};
-	}
-
-	MetaAny try_get_underlying_value(const MetaAny& value)
-	{
-		using namespace engine::literals;
-
-		if (!value)
-		{
-			return {};
-		}
-
-		auto type = value.type();
-
-		auto get_fn = type.func("operator()"_hs);
-
-		return try_get_underlying_value_impl(get_fn, value);
-	}
-
-	MetaAny try_get_underlying_value(const MetaAny& value, Registry& registry, Entity entity)
-	{
-		using namespace engine::literals;
-
-		if (!value)
-		{
-			return {};
-		}
-
-		auto type = value.type();
-
-		auto get_fn = type.func("operator()"_hs);
-
-		if (auto result = try_get_underlying_value_impl(get_fn, value, registry, entity))
-		{
-			return result;
-		}
-
-		return try_get_underlying_value_impl(get_fn, value);
-	}
-
-	MetaAny try_get_underlying_value(const MetaAny& value, Registry& registry, Entity entity, const MetaEvaluationContext& context)
-	{
-		using namespace engine::literals;
-
-		if (!value)
-		{
-			return {};
-		}
-
-		auto type = value.type();
-
-		auto get_fn = type.func("operator()"_hs);
-
-		if (auto result = try_get_underlying_value_impl(get_fn, value, registry, entity, context))
-		{
-			return result;
-		}
-
-		if (auto result = try_get_underlying_value_impl(get_fn, value, registry, entity))
-		{
-			return result;
-		}
-		
-		return try_get_underlying_value_impl(get_fn, value);
 	}
 
 	MetaType try_get_underlying_type(const MetaAny& type_reference_value)

@@ -32,4 +32,7 @@ namespace engine
 	using MetaIDStorage = util::small_vector<MetaTypeID, 4>;
 	using MetaRemovalDescription = MetaIDStorage; // <MetaType>
 	using MetaStorageDescription = MetaIDStorage; // <MetaType>
+
+	// TODO: Find a better location for this.
+	using entt::resolve;
 }

@@ -158,7 +158,7 @@ namespace engine
     // If `value` holds a `T` instance, this will return a pointer as expected.
     // If `value` is empty, or if the value is of a different type, this will return `nullptr`.
     template <typename T>
-    T* from_meta(entt::meta_any& value)
+    T* from_meta(MetaAny& value)
     {
         if (!value)
         {
@@ -179,7 +179,7 @@ namespace engine
     }
 
     template <typename T>
-    T& emplace_meta_component(Registry& registry, Entity entity, entt::meta_any& value)
+    T& emplace_meta_component(Registry& registry, Entity entity, MetaAny& value)
     {
         if (auto raw_value = from_meta<T>(value))
         {
@@ -206,7 +206,7 @@ namespace engine
     }
 
     template <typename T>
-    T& get_or_emplace_component(Registry& registry, Entity entity, entt::meta_any& value)
+    T& get_or_emplace_component(Registry& registry, Entity entity, MetaAny& value)
     {
         if (auto raw_value = from_meta<T>(value))
         {
@@ -230,10 +230,10 @@ namespace engine
         return static_cast<bool>(get_component<T>(registry, entity));
     }
 
-    // Moves component `T` from `entity` into an `entt::meta_any` instance,
+    // Moves component `T` from `entity` into a `MetaAny` instance,
     // then removes the component-type from `entity`.
     template <typename T>
-    entt::meta_any store_meta_component(Registry& registry, Entity entity)
+    MetaAny store_meta_component(Registry& registry, Entity entity)
     {
         if constexpr (true) // (std::is_move_assignable_v<T>) // (std::is_move_constructible_v<T>)
         {
@@ -244,7 +244,7 @@ namespace engine
                 return {};
             }
 
-            entt::meta_any output = std::move(*instance);
+            MetaAny output = std::move(*instance);
 
             registry.erase<T>(entity);
 
@@ -259,10 +259,10 @@ namespace engine
         }
     }
 
-    // Generates a copy of component `T` from `entity` into an `entt::meta_any` instance.
+    // Generates a copy of component `T` from `entity` into a `MetaAny` instance.
     // the original component instance remains attached to `entity`.
     template <typename T>
-    entt::meta_any copy_meta_component(Registry& registry, Entity entity)
+    MetaAny copy_meta_component(Registry& registry, Entity entity)
     {
         if constexpr (std::is_copy_constructible_v<T>)
         {
@@ -331,7 +331,7 @@ namespace engine
     }
 
     template <typename EventType>
-    void trigger_event_from_meta_any(Service& service, entt::meta_any event_instance)
+    void trigger_event_from_meta_any(Service& service, MetaAny event_instance)
     {
         if (auto raw_value = from_meta<EventType>(event_instance))
         {
@@ -1200,6 +1200,10 @@ namespace engine
             type = define_meta_operator_method<has_method_operator_bitwise_and_assign,         T, T&, const T&, false>(type, "operator&="_hs);
             type = define_meta_operator_method<has_method_operator_bitwise_xor_assign,         T, T&, const T&, false>(type, "operator^="_hs);
             type = define_meta_operator_method<has_method_operator_bitwise_or_assign,          T, T&, const T&, false>(type, "operator|="_hs);
+
+            type = define_meta_operator_method<has_method_operator_subscript, T, MetaAny, const MetaAny&, true>(type, "operator[]"_hs);
+
+            // TODO: Determine if it makes sense to add support for custom dereference operators.
         }
 
         if (generate_indirect_getters)

@@ -687,6 +687,16 @@ namespace util
         return find_scope_symbols(expr, "(", ")", "\"", "\"");
     }
 
+	std::size_t find_closing_subscript(std::string_view expr, std::size_t position)
+	{
+		return find_scope_closing_symbol(expr, "[", "]", position, "\"", "\"");
+	}
+
+	std::tuple<std::size_t, std::size_t> find_subscript(std::string_view expr)
+	{
+		return find_scope_symbols(expr, "[", "]", "\"", "\"");
+	}
+
 	std::tuple<std::size_t, std::string_view>
 	find_assignment_operator(std::string_view expr, bool check_compound_operators, bool validate_scope_bounds, bool disallow_right_of_scope)
 	{

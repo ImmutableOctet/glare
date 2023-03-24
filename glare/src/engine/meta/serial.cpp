@@ -390,10 +390,9 @@ namespace engine
 			return true;
 		};
 
-		auto enqueue_raw = [&type, &output, &values_processed](MetaAny&& instance, bool update_type=true) -> bool
+		auto enqueue_raw = [&type, &output, &values_processed]
+		(MetaAny&& instance, bool update_type=true, MetaValueOperator operation=MetaValueOperator::Get) -> bool
 		{
-			constexpr auto operation = MetaValueOperation::Operation::Get;
-
 			if (!instance)
 			{
 				return false;
@@ -410,23 +409,37 @@ namespace engine
 				}
 			}
 
-			output.segments.insert
-			(
-				output.segments.begin(),
+			const bool apply_to_beginning = (operation == MetaValueOperator::Get);
 
-				MetaValueOperation::Segment
-				{
+			if (apply_to_beginning)
+			{
+				output.segments.insert
+				(
+					output.segments.begin(),
+
+					MetaValueOperation::Segment
+					{
+						std::move(instance),
+						operation
+					}
+				);
+			}
+			else
+			{
+				output.segments.emplace_back
+				(
 					std::move(instance),
 					operation
-				}
-			);
+				);
+			}
 
 			values_processed++;
 
 			return true;
 		};
 
-		auto enqueue = [&instructions, &enqueue_raw, &type](auto&& instance, bool update_type=true) -> bool
+		auto enqueue = [&instructions, &enqueue_raw, &type]
+		(auto&& instance, bool update_type=true, MetaValueOperator operation=MetaValueOperator::Get) -> bool
 		{
 			using instance_t = std::decay_t<decltype(instance)>;
 
@@ -473,14 +486,15 @@ namespace engine
 									}
 								},
 
-								false
+								false,
+								operation
 							);
 						}
 					}
 				}
 			}
 
-			return enqueue_raw(std::forward<decltype(instance)>(instance), update_type);
+			return enqueue_raw(std::forward<decltype(instance)>(instance), update_type, operation);
 		};
 
 		auto replace = [&enqueue, &clear](MetaAny&& instance) -> bool
@@ -533,10 +547,22 @@ namespace engine
 			[&instructions, allow_entity_fallback, allow_component_fallback, &type, &value, &initial_type, had_initial_type, &enqueue, &replace, &construct_type, &output]
 			(std::string_view& symbol, bool is_first_symbol, bool is_last_symbol) -> bool
 			{
+				//constexpr std::string_view call_begin_symbol = "(";
+				//constexpr std::string_view call_end_symbol = ")";
+
+				constexpr auto call_begin_symbol = '(';
+				constexpr auto call_end_symbol = ')';
+
+				constexpr std::string_view subscript_begin_symbol = "[";
+				constexpr std::string_view subscript_end_symbol = "]";
+
 				// This is a workaround for symbol collisions found within substrings.
 				// (e.g. `.` symbols found inside of function calls):
-				if (auto call_syntax_begin = symbol.find('('); call_syntax_begin != std::string_view::npos) // && !symbol.ends_with(')')
+				if (auto call_syntax_begin = symbol.find(call_begin_symbol); call_syntax_begin != std::string_view::npos) // && !symbol.ends_with(')')
 				{
+					// TODO: Determine if implementing 'subscript prior to call' makes sense. (e.g. `fn[2]()`)
+					// Trailing subscript is covered naturally via this truncation routine. (i.e. remainder of string prior to access operator)
+
 					const auto scope_begin = static_cast<std::size_t>((symbol.data() + call_syntax_begin) - value.data());
 					const auto remainder_of_value = value.substr((scope_begin + 1));
 
@@ -548,6 +574,43 @@ namespace engine
 						const auto scope_end = static_cast<std::size_t>((remainder_of_value.data() + call_syntax_end) - symbol.data());
 
 						symbol = value.substr(symbol_begin, (scope_end + 1));
+					}
+				}
+				else
+				{
+					const auto subscript_begin = symbol.find(subscript_begin_symbol);
+
+					if (subscript_begin != std::string_view::npos)
+					{
+						if (subscript_begin > 0)
+						{
+							symbol = symbol.substr(0, subscript_begin);
+						}
+						else
+						{
+							auto subscript_end = util::find_closing_subscript(symbol, (subscript_begin + 1)); // subscript_begin
+
+							if (subscript_end != std::string_view::npos) // (subscript_end < (symbol.length()-1))
+							{
+								const auto subscript_value_begin = (subscript_begin + subscript_begin_symbol.length());
+								const auto subscript_value_end = subscript_end;
+
+								const auto subscript_value = symbol.substr(subscript_value_begin, (subscript_value_end - subscript_value_begin));
+
+								return enqueue
+								(
+									meta_any_from_string // meta_any_from_string_compound_expr_impl
+									(
+										subscript_value,
+										instructions
+									),
+									
+									false,
+
+									MetaValueOperator::Subscript
+								);
+							}
+						}
 					}
 				}
 
@@ -687,13 +750,58 @@ namespace engine
 								}
 							}
 						}
+
+						if (instructions.allow_value_resolution_commands)
+						{
+							if (is_command)
+							{
+								// Non-string inputs are disabled for now; seems too costly for false-positives. (Subroutine probably needs to be refactored)
+								//if (is_string_content)
+								{
+									if (auto result = meta_any_from_string_execute_string_command(symbol_id, util::unquote_safe(content), symbol, instructions.allow_entity_indirection, instructions.context, instructions.storage); std::get<0>(result))
+									{
+										return replace(std::move(std::get<0>(result))); // enqueue
+									}
+								}
+								/*
+								else
+								{
+									// Disabled for now; seems too costly for false-positives.
+									if (auto resolved = meta_any_from_string(content, instructions)) // type
+									{
+										if (auto result = meta_any_from_string_execute_any_command(symbol_id, resolved, symbol, instructions.allow_entity_indirection, instructions.context, instructions.storage); std::get<0>(result))
+										{
+											return replace(std::move(std::get<0>(result))); // enqueue
+										}
+									}
+								}
+								*/
+							}
+							else
+							{
+								if (symbol.starts_with('$') || symbol.starts_with('#'))
+								{
+									const auto symbol_start_index = static_cast<std::size_t>(symbol.data() - value.data());
+
+									// Remove symbol prefix.
+									symbol = value.substr(symbol_start_index);
+
+									const auto sub_symbol = util::trim(util::unquote_safe(symbol.substr(1)));
+
+									if (auto result = meta_any_from_string_execute_string_command("hash"_hs, sub_symbol, symbol, instructions.allow_entity_indirection, instructions.context, instructions.storage); std::get<0>(result))
+									{
+										return replace(std::move(std::get<0>(result))); // enqueue
+									}
+								}
+							}
+						}
 					}
 
 					if (instructions.allow_function_call_semantics)
 					{
 						if (is_command)
 						{
-							if ((type) || (instructions.allow_opaque_function_references && !output.empty()))
+							if ((type) || (instructions.allow_opaque_function_references)) // || ( && !output.empty())
 							{
 								auto fn = MetaFunction {};
 
@@ -839,51 +947,6 @@ namespace engine
 				{
 					if (output.empty())
 					{
-						if (instructions.allow_value_resolution_commands)
-						{
-							if (is_command)
-							{
-								// Non-string inputs are disabled for now; seems too costly for false-positives. (Subroutine probably needs to be refactored)
-								//if (is_string_content)
-								{
-									if (auto result = meta_any_from_string_execute_string_command(symbol_id, util::unquote_safe(content), symbol, instructions.allow_entity_indirection, instructions.context, instructions.storage); std::get<0>(result))
-									{
-										return replace(std::move(std::get<0>(result))); // enqueue
-									}
-								}
-								/*
-								else
-								{
-									// Disabled for now; seems too costly for false-positives.
-									if (auto resolved = meta_any_from_string(content, instructions)) // type
-									{
-										if (auto result = meta_any_from_string_execute_any_command(symbol_id, resolved, symbol, instructions.allow_entity_indirection, instructions.context, instructions.storage); std::get<0>(result))
-										{
-											return replace(std::move(std::get<0>(result))); // enqueue
-										}
-									}
-								}
-								*/
-							}
-							else
-							{
-								if (symbol.starts_with('$') || symbol.starts_with('#'))
-								{
-									const auto symbol_start_index = static_cast<std::size_t>(symbol.data() - value.data());
-
-									// Remove symbol prefix.
-									symbol = value.substr(symbol_start_index);
-
-									const auto sub_symbol = util::trim(util::unquote_safe(symbol.substr(1)));
-
-									if (auto result = meta_any_from_string_execute_string_command("hash"_hs, sub_symbol, symbol, instructions.allow_entity_indirection, instructions.context, instructions.storage); std::get<0>(result))
-									{
-										return replace(std::move(std::get<0>(result))); // enqueue
-									}
-								}
-							}
-						}
-
 						if ((instructions.fallback_to_component_reference) && (allow_component_fallback))
 						{
 							if (is_last_symbol && !is_command)
@@ -1151,7 +1214,7 @@ namespace engine
 								instructions.storage
 							),
 
-							MetaValueOperation::Operation::Get
+							MetaValueOperator::Get
 						);
 
 						remainder_offset = updated_offset;
@@ -1161,7 +1224,7 @@ namespace engine
 					{
 						auto entity_target_parse_offset = std::get<1>(*entity_target_parse_result);
 
-						output.segments.emplace_back(allocate_meta_any(*target, instructions.storage), MetaValueOperation::Operation::Get);
+						output.segments.emplace_back(allocate_meta_any(*target, instructions.storage), MetaValueOperator::Get);
 
 						remainder_offset = entity_target_parse_offset;
 					}
@@ -1177,7 +1240,7 @@ namespace engine
 
 			if (!output.empty())
 			{
-				if (output.segments.size() == 1)
+				if ((output.segments.size() == 1) && (output.segments[0].operation == MetaValueOperator::Get))
 				{
 					return std::move(output.segments[0].value);
 				}
@@ -1281,7 +1344,7 @@ namespace engine
 			}
 		}
 
-		auto output = MetaValueOperation {{{ std::move(current_value), MetaValueOperation::Operation::Get }}};
+		auto output = MetaValueOperation {{{ std::move(current_value), MetaValueOperator::Get }}};
 
 		meta_any_from_string_resolve_expression_impl(output, trailing_expr, instructions, type);
 
@@ -1318,7 +1381,7 @@ namespace engine
 	{
 		using namespace engine::literals;
 
-		using OperatorType = std::optional<std::tuple<MetaValueOperation::Operation, MetaValueOperation::OperationPrecedence>>;
+		using OperatorType = std::optional<std::tuple<MetaValueOperator, MetaOperatorPrecedence>>;
 
 		if (!instructions.resolve_symbol)
 		{
@@ -1367,7 +1430,7 @@ namespace engine
 		// If this operation is successful, this will return true, the active
 		// `type` will be changed, and `cast_type` will be default constructed.
 		auto try_encode_cast_type = [&instructions, &cast_type, &type]
-		(MetaValueOperation& operation, MetaValueOperation::Operation next_operation=MetaValueOperation::Operation::Get, bool decay=true) -> bool
+		(MetaValueOperation& operation, MetaValueOperator next_operation=MetaValueOperator::Get, bool decay=true) -> bool
 		{
 			//assert(cast_type);
 
@@ -1916,12 +1979,12 @@ namespace engine
 				{
 					const auto current_operator_is_direct_comparison =
 					(
-						(current_operator_value == MetaValueOperation::Operation::Equal)
+						(current_operator_value == MetaValueOperator::Equal)
 						||
-						(current_operator_value == MetaValueOperation::Operation::NotEqual)
+						(current_operator_value == MetaValueOperator::NotEqual)
 					);
 
-					if (!current_operator_is_assignment && !current_operator_is_direct_comparison && (current_operator_value != MetaValueOperation::Operation::Add))
+					if (!current_operator_is_assignment && !current_operator_is_direct_comparison && (current_operator_value != MetaValueOperator::Add))
 					{
 						// Exit immediately; invalid operation.
 						return {};
@@ -2110,12 +2173,13 @@ namespace engine
 
 				if (current_value)
 				{
-					operation_out.segments.emplace_back(std::move(current_value), MetaValueOperation::Operation::Get);
+					operation_out.segments.emplace_back(std::move(current_value), MetaValueOperator::Get);
 
 					return { allocate_meta_any(std::move(operation_out), instructions.storage), offset };
 				}
 				else if (operation_out.segments.size() == 1)
 				{
+					// Cast encoded as the only entry.
 					return { std::move(operation_out.segments[0].value), offset };
 				}
 			}
@@ -2146,7 +2210,7 @@ namespace engine
 				);
 			}
 
-			if (operation_out.segments.size() == 1)
+			if ((operation_out.segments.size() == 1)) // && (operation_out.segments[0].operation == MetaValueOperator::Get)
 			{
 				return { std::move(operation_out.segments[0].value), offset };
 			}
@@ -2222,7 +2286,7 @@ namespace engine
 	{
 		auto string_value = value.get<engine::impl::StringType>();
 
-		return meta_any_from_string(std::string_view{ string_value }, instructions, type, allow_string_fallback, allow_numeric_literals, allow_boolean_literals);
+		return meta_any_from_string(std::string_view { string_value }, instructions, type, allow_string_fallback, allow_numeric_literals, allow_boolean_literals);
 	}
 
 	MetaAny resolve_meta_any
@@ -2252,12 +2316,17 @@ namespace engine
 			case jtype::object:
 				// NOTE: Nesting `MetaTypeDescriptor` objects within the any-chain
 				// implies recursion during object construction later on.
-				return MetaTypeDescriptor
+				return allocate_meta_any
 				(
-					type, value,
-					instructions,
-					std::nullopt,
-					{}
+					MetaTypeDescriptor
+					(
+						type, value,
+						instructions,
+						std::nullopt,
+						{}
+					),
+
+					instructions.storage
 				);
 
 			case jtype::string:
@@ -2513,7 +2582,7 @@ namespace engine
 		
 		const util::json& data,
 		
-		bool use_assignment,
+		bool modify_in_place,
 
 		const MetaParsingInstructions& parse_instructions,
 		const MetaTypeDescriptorFlags& descriptor_flags
@@ -2527,7 +2596,7 @@ namespace engine
 			descriptor_flags
 		);
 
-		if (use_assignment)
+		if (modify_in_place)
 		{
 			descriptor.apply_fields(out);
 		}
