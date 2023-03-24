@@ -122,9 +122,11 @@ namespace util
 	>
 	parse_variable_declaration(std::string_view var_decl);
 
+	// TODO: Add support for multiple ignored symbol pairs.
 	// Finds the first `end_symbol` that doesn't already satisfy a `begin_symbol`.
 	std::size_t find_scope_closing_symbol(std::string_view expr, std::string_view begin_symbol, std::string_view end_symbol, std::size_t position=0, std::string_view ignore_begin_symbol={}, std::string_view ignore_end_symbol={});
 
+	// TODO: Add support for multiple ignored symbol pairs.
 	// Finds the leading `begin_symbol` and trailing `end_symbol` of an expression.
 	std::tuple<std::size_t, std::size_t> find_scope_symbols(std::string_view expr, std::string_view begin_symbol, std::string_view end_symbol, std::string_view ignore_begin_symbol={}, std::string_view ignore_end_symbol={});
 
@@ -133,6 +135,12 @@ namespace util
 
 	// Finds the leading ('(') and trailing (')') parentheses in an expression.
     std::tuple<std::size_t, std::size_t> find_parentheses(std::string_view expr);
+
+	// Finds the first closing bracket (']') that doesn't already satisfy an enclosed expression.
+	std::size_t find_closing_subscript(std::string_view expr, std::size_t position=0);
+
+	// Finds the leading ('[') and trailing (']') subscript brackets in an expression.
+	std::tuple<std::size_t, std::size_t> find_subscript(std::string_view expr);
 
 	std::tuple<std::size_t, std::string_view>
 	find_assignment_operator(std::string_view expr, bool check_compound_operators=true, bool validate_scope_bounds=true, bool disallow_right_of_scope=false);
