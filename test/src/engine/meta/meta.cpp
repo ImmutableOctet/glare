@@ -33,6 +33,7 @@
 #include <string>
 #include <memory>
 #include <variant>
+#include <unordered_map>
 
 // Debugging related:
 #include <util/parse.hpp>
@@ -289,6 +290,122 @@ TEST_CASE("engine::MetaValueOperator", "[engine:meta]")
 
 		REQUIRE(engine::decay_operator_name(engine::MetaValueOperator::Add) == "operator+"_hs);
 		REQUIRE(engine::decay_operator_name(engine::MetaValueOperator::Assign) == "operator="_hs);
+	}
+}
+
+TEST_CASE("engine::resolve_meta_any", "[engine:meta]")
+{
+	engine::reflect_all();
+
+	SECTION("String Map population from object")
+	{
+		using native_map_type = std::unordered_map<std::string, std::string>;
+
+		auto map_instance = native_map_type{};
+		auto map_type = engine::resolve<native_map_type>();
+
+		REQUIRE(map_type);
+
+		auto store = engine::resolve_meta_any(util::json::parse("{ \"A\": \"B\", \"C\": \"D\" }"), map_type);
+
+		REQUIRE(store);
+		
+		auto result = engine::try_get_underlying_value(store, map_instance);
+
+		REQUIRE(result);
+
+		auto* as_map = result.try_cast<native_map_type>();
+
+		REQUIRE(as_map);
+		REQUIRE(as_map == &map_instance);
+		REQUIRE(as_map->size() == 2);
+
+		REQUIRE(map_instance["A"] == "B");
+		REQUIRE(map_instance["C"] == "D");
+	}
+
+	SECTION("String Map construction from object")
+	{
+		using native_map_type = std::unordered_map<std::string, std::string>;
+
+		auto vector_type_factory = entt::meta<native_map_type>();
+
+		auto map_type = engine::resolve<native_map_type>();
+
+		REQUIRE(map_type);
+
+		auto store = engine::resolve_meta_any(util::json::parse("{ \"First\": \"First Value\", \"Second\": \"Second Value\" }"), map_type);
+
+		REQUIRE(store);
+		
+		auto result = engine::try_get_underlying_value(store);
+
+		REQUIRE(result);
+
+		auto* as_map = result.try_cast<native_map_type>();
+
+		REQUIRE(as_map);
+		REQUIRE(as_map->size() == 2);
+
+		REQUIRE((*as_map)["First"] == "First Value");
+		REQUIRE((*as_map)["Second"] == "Second Value");
+	}
+
+	SECTION("Vector population from array")
+	{
+		using native_vector_type = util::small_vector<std::int32_t, 4>;
+
+		auto vector_instance = native_vector_type {};
+		auto vector_type = engine::resolve<native_vector_type>();
+
+		REQUIRE(vector_type);
+
+		auto store = engine::resolve_meta_any(util::json::parse("[10, 11, 12]"), vector_type);
+
+		REQUIRE(store);
+		
+		auto result = engine::try_get_underlying_value(store, vector_instance);
+
+		REQUIRE(result);
+
+		auto* as_vector = result.try_cast<native_vector_type>();
+
+		REQUIRE(as_vector);
+		REQUIRE(as_vector == &vector_instance);
+		REQUIRE(as_vector->size() == 3);
+
+		REQUIRE(vector_instance[0] == 10);
+		REQUIRE(vector_instance[1] == 11);
+		REQUIRE(vector_instance[2] == 12);
+	}
+
+	SECTION("Vector construction from array")
+	{
+		using native_vector_type = util::small_vector<std::int32_t, 4>;
+
+		auto vector_type_factory = entt::meta<native_vector_type>();
+
+		auto vector_type = engine::resolve<native_vector_type>();
+
+		REQUIRE(vector_type);
+
+		auto store = engine::resolve_meta_any(util::json::parse("[7, 5, 8, 3]"), vector_type);
+
+		REQUIRE(store);
+
+		auto result = engine::try_get_underlying_value(store);
+
+		REQUIRE(result);
+
+		auto* as_vector = result.try_cast<native_vector_type>();
+
+		REQUIRE(as_vector);
+		REQUIRE(as_vector->size() == 4);
+
+		REQUIRE((*as_vector)[0] == 7);
+		REQUIRE((*as_vector)[1] == 5);
+		REQUIRE((*as_vector)[2] == 8);
+		REQUIRE((*as_vector)[3] == 3);
 	}
 }
 
