@@ -276,7 +276,7 @@ namespace util
 					break;
 				}
 
-				substr = trim(str.substr(current_position), trim_values);
+				substr = str.substr(current_position);
 			}
 			// Separator found with no content between, skip forward:
 			else if ((find_result - current_position) == 0)
@@ -297,7 +297,7 @@ namespace util
 			// Separator found as expected:
 			else
 			{
-				substr = trim(str.substr(current_position, (find_result - current_position)), trim_values);
+				substr = str.substr(current_position, (find_result - current_position));
 
 				separator_found = true;
 			}
@@ -313,6 +313,10 @@ namespace util
 			}
 			else
 			{
+				substr = trim(substr, trim_values);
+
+				const auto trimmed_substr_length = substr.length();
+
 				if constexpr (std::is_invocable_r_v<bool, Callback, std::string_view, bool, bool> || std::is_invocable_r_v<bool, Callback, std::string_view&, bool, bool>)
 				{
 					if (!callback(substr, is_first_symbol, is_last_symbol))
@@ -350,7 +354,7 @@ namespace util
 				is_first_symbol = false;
 
 				// Additional check added due to `callback`'s ability to change the size of `substr`:
-				if ((!substr.empty()) && (substr.length() != initial_substr_length))
+				if ((!substr.empty()) && (substr.length() != trimmed_substr_length))
 				{
 					assert(substr.data() >= str.data());
 					assert(substr.data() < (str.data() + str.length()));
@@ -392,6 +396,11 @@ namespace util
 			
 			[&out, &count](std::string_view substr)
 			{
+				if (count >= out.size())
+				{
+					return;
+				}
+
 				out[count++] = substr;
 			},
 
