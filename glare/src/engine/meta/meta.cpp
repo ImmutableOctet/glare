@@ -44,14 +44,19 @@ namespace engine
 
 	bool meta_any_is_string(const MetaAny& value)
 	{
-		using namespace engine::literals;
-
 		if (!value)
 		{
 			return false;
 		}
 
-		auto type = value.type();
+		const auto type = value.type();
+
+		return meta_type_is_string(type);
+	}
+
+	bool meta_type_is_string(const MetaType& type)
+	{
+		//using namespace engine::literals;
 
 		if (!type)
 		{
@@ -64,7 +69,7 @@ namespace engine
 		(
 			(type_id == resolve<std::string>().id()) // "String"_hs // entt::type_id<std::string>().hash()
 			||
-			(type_id == entt::type_id<std::string_view>().hash())
+			(type_id == resolve<std::string_view>().id()) // entt::type_id<std::string_view>().hash()
 		);
 	}
 
@@ -280,6 +285,8 @@ namespace engine
 				return true;
 			}
 		}
+
+		return false;
 	}
 
 	bool function_has_meta_any_argument(const MetaFunction& function, bool check_overloads)

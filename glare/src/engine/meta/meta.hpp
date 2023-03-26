@@ -54,6 +54,7 @@ namespace engine
     std::optional<PlayerIndex> resolve_player_index(const MetaAny& instance);
 
     bool meta_any_is_string(const MetaAny& value);
+    bool meta_type_is_string(const MetaType& type);
 
 	// Attempts to compute a string hash for `value`.
 	std::optional<StringHash> meta_any_to_string_hash(const MetaAny& value);
