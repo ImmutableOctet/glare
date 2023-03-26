@@ -3,6 +3,8 @@
 #include "serial.hpp"
 #include "meta_type_resolution_context.hpp"
 #include "meta_value_operation.hpp"
+#include "meta_evaluation_context.hpp"
+#include "hash.hpp"
 
 #include <engine/entity/entity_target.hpp>
 
@@ -25,23 +27,21 @@ namespace engine
 	{
 		using namespace engine::literals;
 
-		if (!type)
+		if (type)
 		{
-			return type; // {};
-		}
-
-		if (flags.allow_type_aliasing)
-		{
-			if (auto real_type_fn = type.func("type_from_optional"_hs))
+			if (flags.allow_type_aliasing)
 			{
-				if (auto real_type_opaque = real_type_fn.invoke({}))
+				if (auto real_type_fn = type.func("type_from_optional"_hs))
 				{
-					if (auto real_type = real_type_opaque.try_cast<MetaType>())
+					if (auto real_type_opaque = real_type_fn.invoke({}))
 					{
-						// NOTE: Recursion.
-						if (auto real_type_out = resolve_type(*real_type, flags))
+						if (auto real_type = real_type_opaque.try_cast<MetaType>())
 						{
-							return real_type_out;
+							// NOTE: Recursion.
+							if (auto real_type_out = resolve_type(*real_type, flags))
+							{
+								return real_type_out;
+							}
 						}
 					}
 				}
@@ -53,7 +53,7 @@ namespace engine
 
 	MetaTypeID MetaTypeDescriptor::resolve_type_id(MetaTypeID type_id, const Flags& flags)
 	{
-		if (type_id == static_cast<MetaTypeID>(0))
+		if (!type_id)
 		{
 			return type_id; // 0;
 		}
@@ -103,10 +103,16 @@ namespace engine
 	}
 
 	MetaTypeDescriptor::MetaTypeDescriptor(const MetaType& type, std::optional<SmallSize> constructor_argument_count, const MetaTypeDescriptorFlags& flags)
-		: type_id(resolve_type(type, flags).id()), constructor_argument_count(constructor_argument_count), flags(flags) {}
+		: type_id(0), constructor_argument_count(constructor_argument_count), flags(flags) // type_id(resolve_type_id(type_id, flags))
+	{
+		set_type(type);
+	}
 
 	MetaTypeDescriptor::MetaTypeDescriptor(MetaTypeID type_id, std::optional<SmallSize> constructor_argument_count, const MetaTypeDescriptorFlags& flags)
-		: type_id(resolve_type_id(type_id, flags)), constructor_argument_count(constructor_argument_count), flags(flags) {}
+		: type_id(0), constructor_argument_count(constructor_argument_count), flags(flags) // type_id(resolve_type_id(type_id, flags))
+	{
+		set_type_id(type_id);
+	}
 
 	MetaTypeDescriptor::MetaTypeDescriptor
 	(
@@ -122,13 +128,19 @@ namespace engine
 
 		bool allow_nameless_fields
 	) :
-		type_id(resolve_type(type, flags).id()),
+		type_id(0),
 		constructor_argument_count(constructor_argument_count),
 		flags(flags)
 	{
-		assert(type);
+		//assert(type);
 
-		set_variables(content, instructions, argument_offset, allow_nameless_fields);
+		set_variables_impl
+		(
+			adopt_type(type),
+			content, instructions,
+			argument_offset,
+			allow_nameless_fields
+		);
 	}
 
 	MetaTypeDescriptor::MetaTypeDescriptor
@@ -142,34 +154,59 @@ namespace engine
 		const MetaTypeDescriptorFlags& flags,
 		bool allow_nameless_fields
 	) :
-		type_id((type) ? resolve_type(type, flags).id() : 0),
+		type_id(0),
 		constructor_argument_count(constructor_argument_count),
 		flags(flags)
 	{
 		//assert(type);
 
-		set_variables(content, instructions, 0, allow_nameless_fields);
+		set_variables_impl
+		(
+			adopt_type(type),
+			content,
+			instructions,
+			0,
+			allow_nameless_fields
+		);
+	}
+
+	MetaType MetaTypeDescriptor::adopt_type(const MetaType& type)
+	{
+		if (auto resolved_type = resolve_type(type, this->flags))
+		{
+			this->type_id = resolved_type.id();
+
+			const bool is_sequential_container  = resolved_type.is_sequence_container();
+			const bool is_associative_container = resolved_type.is_associative_container();
+
+			this->flags.is_container             = (is_sequential_container || is_associative_container);
+			this->flags.is_sequential_container  = is_sequential_container;
+			this->flags.is_associative_container = is_associative_container;
+
+			return resolved_type;
+		}
+
+		return type;
 	}
 
 	bool MetaTypeDescriptor::set_type(const MetaType& type)
 	{
-		using namespace engine::literals;
-
-		if (!type)
-		{
-			return false;
-		}
-
-		this->type_id = resolve_type(type, this->flags).id();
-
-		return true;
+		return static_cast<bool>(adopt_type(type));
 	}
 
 	bool MetaTypeDescriptor::set_type_id(MetaTypeID type_id)
 	{
+		if (type_id)
+		{
+			if (auto type = resolve(type_id))
+			{
+				return set_type(type);
+			}
+		}
+
 		this->type_id = resolve_type_id(type_id, this->flags);
 
-		return true;
+		return true; // static_cast<bool>(this->type_id);
 	}
 
 	MetaTypeID MetaTypeDescriptor::get_type_id() const
@@ -230,23 +267,27 @@ namespace engine
 			}
 		}
 
-		auto existing = get_variable(variable.name);
-
-		if (existing)
+		if (!this->flags.is_sequential_container)
 		{
-			if (!safe || variable.value)
+			if (auto existing = get_variable(variable.name))
 			{
-				*existing = std::move(variable.value);
+				if (!safe || variable.value)
+				{
+					*existing = std::move(variable.value);
 
-				return existing;
+					return existing;
+				}
+
+				return nullptr;
 			}
-
-			return nullptr;
 		}
 
 		if (!safe || variable.value)
 		{
-			field_names.emplace_back(variable.name);
+			if (!this->flags.is_sequential_container)
+			{
+				field_names.emplace_back(variable.name);
+			}
 
 			auto& value_out = field_values.emplace_back(std::move(variable.value));
 
@@ -260,7 +301,11 @@ namespace engine
 	{
 		for (std::size_t i = 0; i < variables.size(); i++)
 		{
-			const auto& field_name = variables.field_names[i];
+			const auto field_name = (variables.flags.is_sequential_container)
+				? MetaSymbolID {}
+				: variables.field_names[i]
+			;
+
 			auto& field_value = variables.field_values[i];
 
 			// TODO: Implement overload of `set_variable` that directly takes in field values.
@@ -308,6 +353,11 @@ namespace engine
 			return 0;
 		}
 
+		if (this->flags.is_sequential_container)
+		{
+			allow_nameless_fields = true;
+		}
+
 		std::size_t count = 0;
 		std::size_t variable_index = argument_offset;
 
@@ -326,6 +376,11 @@ namespace engine
 			
 			auto resolve_data_entry = [this, &type, &content, &variable_index, &var_name_hash]() mutable -> entt::meta_data
 			{
+				if (this->flags.is_container)
+				{
+					return {};
+				}
+
 				/*
 				// TODO: Determine if there's any benefit to keeping this check:
 				if (var_value.is_primitive())
@@ -356,8 +411,13 @@ namespace engine
 				return {};
 			};
 
-			auto resolve_variable_type = [&opt_type_context, &var_type_spec, &resolve_data_entry]() -> MetaType
+			auto resolve_variable_type = [this, &opt_type_context, &var_type_spec, &resolve_data_entry]() -> MetaType
 			{
+				if (this->flags.is_container)
+				{
+					return {};
+				}
+
 				if (var_type_spec.empty())
 				{
 					if (auto data_entry = resolve_data_entry())
@@ -695,6 +755,16 @@ namespace engine
 		return apply_fields_impl(instance, field_count, offset, registry, entity, context);
 	}
 
+	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance, const MetaEvaluationContext& context, std::size_t field_count, std::size_t offset) const
+	{
+		return apply_fields_impl(instance, field_count, offset, context);
+	}
+
+	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance, const MetaEvaluationContext& context) const
+	{
+		return apply_fields_impl(instance, size(), 0, context);
+	}
+
 	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance, Registry& registry, Entity entity) const
 	{
 		return apply_fields_impl(instance, size(), 0, registry, entity);
@@ -708,15 +778,32 @@ namespace engine
 	template <typename ...Args>
 	std::size_t MetaTypeDescriptor::apply_fields_impl(MetaAny& instance, std::size_t field_count, std::size_t offset, Args&&... args) const
 	{
+		if (flags.is_container)
+		{
+			if (flags.is_sequential_container)
+			{
+				return apply_fields_sequential_container_impl(instance, field_count, offset, std::forward<Args>(args)...);
+			}
+			else if (flags.is_associative_container)
+			{
+				return apply_fields_associative_container_impl(instance, field_count, offset, std::forward<Args>(args)...);
+			}
+		}
+
+		if (!instance)
+		{
+			return 0;
+		}
+
 		std::size_t fields_applied = 0;
 
 		const auto check_indirection = has_indirection(); // has_indirection(field_count, offset);
 
 		const auto type = instance.type(); // get_type();
 
-		for (std::size_t i = offset; i < (offset+field_count); i++)
+		for (std::size_t i = offset; i < (offset + field_count); i++)
 		{
-			const auto& field_name = field_names[i];
+			const auto& field_name  = field_names[i];
 			const auto& field_value = field_values[i];
 
 			if (!field_value)
@@ -781,24 +868,21 @@ namespace engine
 
 				if (check_indirection)
 				{
-					if (value_has_indirection(field_value))
-					{
-						const auto stored_field_type = field_value.type();
+					const auto stored_field_type = field_value.type();
 
-						if (stored_field_type != meta_field_type)
+					if (stored_field_type != meta_field_type)
+					{
+						if (auto resolved_value = try_get_underlying_value(field_value, args...))
 						{
-							if (auto resolved_value = get_indirect_value_or_ref(field_value, args...))
+							if (auto result = set(resolved_value))
 							{
-								if (auto result = set(resolved_value))
-								{
-									return result;
-								}
-								else
-								{
-									// Debugging related.
-									print_warn("Failed to assign resolved value, attempting original value as fallback.");
-									get_indirect_value_or_ref(field_value, args...);
-								}
+								return result;
+							}
+							else
+							{
+								// Debugging related.
+								print_warn("Failed to assign resolved value, attempting original value as fallback.");
+								//get_indirect_value_or_ref(field_value, args...);
 							}
 						}
 					}
@@ -821,6 +905,177 @@ namespace engine
 		}
 
 		return fields_applied;
+	}
+
+	template <typename ...Args>
+	std::size_t MetaTypeDescriptor::apply_fields_sequential_container_impl(MetaAny& instance, std::size_t field_count, std::size_t offset, Args&&... args) const
+	{
+		if (!instance)
+		{
+			return 0;
+		}
+
+		if (!flags.is_sequential_container)
+		{
+			return 0;
+		}
+
+		auto sequence_container = instance.as_sequence_container();
+
+		if (!sequence_container)
+		{
+			return 0;
+		}
+
+		const auto container_value_type = sequence_container.value_type();
+
+		const auto check_indirection = has_indirection(); // has_indirection(field_count, offset);
+
+		// TODO: Add checks for successful use of `insert`.
+		for (std::size_t i = offset; i < (offset + field_count); i++)
+		{
+			const auto& field_value = field_values[i];
+
+			auto field_value_type = MetaType {};
+
+			if (check_indirection) // (construction_flags.allow_indirection)
+			{
+				if (auto resolved_value = try_get_underlying_value(field_value, args...))
+				{
+					field_value_type = resolved_value.type();
+
+					if (field_value_type != container_value_type)
+					{
+						// Attempt in-place conversion:
+						if (!resolved_value.allow_cast(container_value_type))
+						{
+							continue;
+						}
+					}
+
+					sequence_container.insert(sequence_container.end(), std::move(resolved_value));
+
+					continue;
+				}
+			}
+
+			field_value_type = field_value.type();
+
+			if (field_value_type != container_value_type)
+			{
+				// Attempt conversion into new instance:
+				if (auto converted_field_value = field_value.allow_cast(container_value_type))
+				{
+					sequence_container.insert(sequence_container.end(), std::move(converted_field_value));
+
+					continue;
+				}
+			}
+
+			sequence_container.insert(sequence_container.end(), field_value);
+		}
+
+		return field_count;
+	}
+
+	template <typename ...Args>
+	std::size_t MetaTypeDescriptor::apply_fields_associative_container_impl(MetaAny& instance, std::size_t field_count, std::size_t offset, Args&&... args) const
+	{
+		if (!instance)
+		{
+			return 0;
+		}
+
+		if (!flags.is_associative_container)
+		{
+			return 0;
+		}
+
+		auto associative_container = instance.as_associative_container();
+
+		if (!associative_container)
+		{
+			return 0;
+		}
+
+		const auto container_key_type = associative_container.key_type();
+
+		const auto container_key_type_is_string = meta_type_is_string(container_key_type);
+
+		if ((container_key_type.id() != entt::type_hash<MetaSymbolID>::value()) && (!container_key_type_is_string))
+		{
+			return 0;
+		}
+
+		const auto container_value_type = associative_container.mapped_type(); // value_type();
+
+		const auto check_indirection = has_indirection(); // has_indirection(field_count, offset);
+
+		// TODO: Add checks for successful use of `insert`.
+		for (std::size_t i = offset; i < (offset + field_count); i++)
+		{
+			const auto& field_name_id  = field_names[i];
+			const auto& field_value    = field_values[i];
+
+			auto key = MetaAny {};
+
+			if (container_key_type_is_string)
+			{
+				if (auto field_name = get_known_string_from_hash(field_name_id); !field_name.empty())
+				{
+					key = container_key_type.construct(field_name);
+				}
+			}
+			else
+			{
+				key = field_name_id;
+			}
+
+			if (!key)
+			{
+				continue;
+			}
+
+			auto field_value_type = MetaType {};
+
+			if (check_indirection) // (construction_flags.allow_indirection)
+			{
+				if (auto resolved_value = try_get_underlying_value(field_value, args...))
+				{
+					field_value_type = resolved_value.type();
+
+					if (field_value_type != container_value_type)
+					{
+						// Attempt in-place conversion:
+						if (!resolved_value.allow_cast(container_value_type))
+						{
+							continue;
+						}
+					}
+
+					associative_container.insert(key, std::move(resolved_value));
+
+					continue;
+				}
+			}
+
+			field_value_type = field_value.type();
+
+			if (field_value_type != container_value_type)
+			{
+				// Attempt conversion into new instance:
+				if (auto converted_field_value = field_value.allow_cast(container_value_type))
+				{
+					associative_container.insert(key, std::move(converted_field_value));
+
+					continue;
+				}
+			}
+
+			associative_container.insert(key, field_value);
+		}
+
+		return field_count;
 	}
 
 	std::size_t MetaTypeDescriptor::resolve_values(Values& values_out, std::size_t constructor_args_count, std::size_t offset) const
