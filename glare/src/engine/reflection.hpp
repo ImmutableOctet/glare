@@ -1066,35 +1066,6 @@ namespace engine
                     has_method_set_indirect_value<T, ReturnType, MetaAny&>,
                     has_method_set<T, ReturnType, MetaAny&>
                 >(type, "operator="_hs, basic_setter_found);
-                
-                /*
-                if constexpr (has_method_set_indirect_value_v<T, ReturnType, MetaAny&>)
-                {
-                    if constexpr (std::is_lvalue_reference_v<ReturnType>)
-                    {
-                        type = type.func<static_cast<ReturnType(T::*)(MetaAny&)>(&T::set_indirect_value), entt::as_ref_t>("operator="_hs); // "set_indirect_value"_hs
-                    }
-                    else
-                    {
-                        type = type.func<static_cast<ReturnType(T::*)(MetaAny&)>(&T::set_indirect_value)>("operator="_hs); // "set_indirect_value"_hs
-                    }
-
-                    basic_setter_found = true;
-                }
-                else if constexpr (has_method_set_v<T, ReturnType, MetaAny&>)
-                {
-                    if constexpr (std::is_lvalue_reference_v<ReturnType>)
-                    {
-                        type = type.func<static_cast<ReturnType(T::*)(MetaAny&)>(&T::set), entt::as_ref_t>("operator="_hs); // "set_indirect_value"_hs
-                    }
-                    else
-                    {
-                        type = type.func<static_cast<ReturnType(T::*)(MetaAny&)>(&T::set)>("operator="_hs); // "set_indirect_value"_hs
-                    }
-
-                    basic_setter_found = true;
-                }
-                */
             }
 
             if (!basic_context_setter_found)
@@ -1107,35 +1078,6 @@ namespace engine
                     has_method_set_indirect_value<T, ReturnType, MetaAny&, const MetaEvaluationContext&>,
                     has_method_set<T, ReturnType, MetaAny&, const MetaEvaluationContext&>
                 >(type, "operator="_hs, basic_context_setter_found);
-
-                /*
-                if constexpr (has_method_set_indirect_value_v<T, ReturnType, MetaAny&, const MetaEvaluationContext&>)
-                {
-                    if constexpr (std::is_lvalue_reference_v<ReturnType>)
-                    {
-                        type = type.func<static_cast<ReturnType(T::*)(MetaAny&, const MetaEvaluationContext&)>(&T::set_indirect_value), entt::as_ref_t>("operator="_hs); // "set_indirect_value"_hs
-                    }
-                    else
-                    {
-                        type = type.func<static_cast<ReturnType(T::*)(MetaAny&, const MetaEvaluationContext&)>(&T::set_indirect_value)>("operator="_hs); // "set_indirect_value"_hs
-                    }
-
-                    basic_context_setter_found = true;
-                }
-                else if constexpr (has_method_set_v<T, ReturnType, MetaAny&, const MetaEvaluationContext&>)
-                {
-                    if constexpr (std::is_lvalue_reference_v<ReturnType>)
-                    {
-                        type = type.func<static_cast<ReturnType(T::*)(MetaAny&, const MetaEvaluationContext&)>(&T::set), entt::as_ref_t>("operator="_hs); // "set_indirect_value"_hs
-                    }
-                    else
-                    {
-                        type = type.func<static_cast<ReturnType(T::*)(MetaAny&, const MetaEvaluationContext&)>(&T::set)>("operator="_hs); // "set_indirect_value"_hs
-                    }
-
-                    basic_context_setter_found = true;
-                }
-                */
             }
 
             if (!exact_setter_found)
@@ -1150,35 +1092,6 @@ namespace engine
                     has_method_set<T, ReturnType, MetaAny&, Registry&, Entity, const MetaEvaluationContext&>
                 >(type, "operator="_hs, exact_setter_found);
 
-                /*
-                if constexpr (has_method_set_indirect_value_v<T, ReturnType, MetaAny&, Registry&, Entity, const MetaEvaluationContext&>)
-                {
-                    if constexpr (std::is_lvalue_reference_v<ReturnType>)
-                    {
-                        type = type.func<static_cast<ReturnType(T::*)(MetaAny&, Registry&, Entity, const MetaEvaluationContext&)>(&T::set_indirect_value), entt::as_ref_t>("operator="_hs); // "set_indirect_value_exact"_hs
-                    }
-                    else
-                    {
-                        type = type.func<static_cast<ReturnType(T::*)(MetaAny&, Registry&, Entity, const MetaEvaluationContext&)>(&T::set_indirect_value)>("operator="_hs); // "set_indirect_value_exact"_hs
-                    }
-
-                    exact_setter_found = true;
-                }
-                else if constexpr (has_method_set_v<T, ReturnType, MetaAny&, Registry&, Entity, const MetaEvaluationContext&>)
-                {
-                    if constexpr (std::is_lvalue_reference_v<ReturnType>)
-                    {
-                        type = type.func<static_cast<ReturnType(T::*)(MetaAny&, Registry&, Entity, const MetaEvaluationContext&)>(&T::set), entt::as_ref_t>("operator="_hs); // "set_indirect_value_exact"_hs
-                    }
-                    else
-                    {
-                        type = type.func<static_cast<ReturnType(T::*)(MetaAny&, Registry&, Entity, const MetaEvaluationContext&)>(&T::set)>("operator="_hs); // "set_indirect_value_exact"_hs
-                    }
-
-                    exact_setter_found = true;
-                }
-                */
-
                 // Standard overloads (no `MetaEvaluationContext`):
                 reflect_any_function
                 <
@@ -1188,35 +1101,6 @@ namespace engine
                     has_method_set_indirect_value<T, ReturnType, MetaAny&, Registry&, Entity>,
                     has_method_set<T, ReturnType, MetaAny&, Registry&, Entity>
                 >(type, "operator="_hs, exact_setter_found);
-
-                /*
-                if constexpr (has_method_set_indirect_value_v<T, ReturnType, MetaAny&, Registry&, Entity>)
-                {
-                    if constexpr (std::is_lvalue_reference_v<ReturnType>)
-                    {
-                        type = type.func<static_cast<ReturnType(T::*)(MetaAny&, Registry&, Entity)>(&T::set_indirect_value), entt::as_ref_t>("operator="_hs); // "set_indirect_value_exact"_hs
-                    }
-                    else
-                    {
-                        type = type.func<static_cast<ReturnType(T::*)(MetaAny&, Registry&, Entity)>(&T::set_indirect_value)>("operator="_hs); // "set_indirect_value_exact"_hs
-                    }
-
-                    exact_setter_found = true;
-                }
-                else if constexpr (has_method_set_v<T, ReturnType, MetaAny&, Registry&, Entity>)
-                {
-                    if constexpr (std::is_lvalue_reference_v<ReturnType>)
-                    {
-                        type = type.func<static_cast<ReturnType(T::*)(MetaAny&, Registry&, Entity)>(&T::set), entt::as_ref_t>("operator="_hs); // "set_indirect_value_exact"_hs
-                    }
-                    else
-                    {
-                        type = type.func<static_cast<ReturnType(T::*)(MetaAny&, Registry&, Entity)>(&T::set)>("operator="_hs); // "set_indirect_value_exact"_hs
-                    }
-
-                    exact_setter_found = true;
-                }
-                */
             }
         }
 
@@ -1231,21 +1115,6 @@ namespace engine
                     has_method_set_indirect_value<T, ReturnType, MetaAny&, MetaAny&>,
                     has_method_set<T, ReturnType, MetaAny&, MetaAny&>
                 >(type, "operator="_hs, basic_chain_setter_found);
-
-                /*
-                if constexpr (has_method_set_indirect_value_v<T, ReturnType, MetaAny&, MetaAny&>)
-                {
-                    type = type.func<static_cast<ReturnType(T::*)(MetaAny&, MetaAny&)>(&T::set_indirect_value)>("operator="_hs); // "set_indirect_value"_hs
-
-                    basic_chain_setter_found = true;
-                }
-                else if constexpr (has_method_set_v<T, ReturnType, MetaAny&, MetaAny&>)
-                {
-                    type = type.func<static_cast<ReturnType(T::*)(MetaAny&, MetaAny&)>(&T::set)>("operator="_hs); // "set_indirect_value"_hs
-
-                    basic_chain_setter_found = true;
-                }
-                */
             }
 
             if (!context_chain_setter_found)
@@ -1257,21 +1126,6 @@ namespace engine
                     has_method_set_indirect_value<T, ReturnType, MetaAny&, MetaAny&, const MetaEvaluationContext&>,
                     has_method_set<T, ReturnType, MetaAny&, MetaAny&, const MetaEvaluationContext&>
                 >(type, "operator="_hs, context_chain_setter_found);
-
-                /*
-                if constexpr (has_method_set_indirect_value_v<T, ReturnType, MetaAny&, MetaAny&, const MetaEvaluationContext&>)
-                {
-                    type = type.func<static_cast<ReturnType(T::*)(MetaAny&, MetaAny&, const MetaEvaluationContext&)>(&T::set_indirect_value)>("operator="_hs); // "set_indirect_value"_hs
-
-                    context_chain_setter_found = true;
-                }
-                else if constexpr (has_method_set_v<T, ReturnType, MetaAny&, MetaAny&, const MetaEvaluationContext&>)
-                {
-                    type = type.func<static_cast<ReturnType(T::*)(MetaAny&, MetaAny&, const MetaEvaluationContext&)>(&T::set)>("operator="_hs); // "set_indirect_value"_hs
-
-                    context_chain_setter_found = true;
-                }
-                */
             }
 
             if (!exact_chain_setter_found)
@@ -1285,21 +1139,6 @@ namespace engine
                     has_method_set<T, ReturnType, MetaAny&, MetaAny&, Registry&, Entity, const MetaEvaluationContext&>
                 >(type, "operator="_hs, exact_chain_setter_found);
 
-                /*
-                if constexpr (has_method_set_indirect_value_v<T, ReturnType, MetaAny&, MetaAny&, Registry&, Entity, const MetaEvaluationContext&>)
-                {
-                    type = type.func<static_cast<ReturnType(T::*)(MetaAny&, MetaAny&, Registry&, Entity, const MetaEvaluationContext&)>(&T::set_indirect_value)>("operator="_hs); // "set_indirect_value_exact"_hs
-
-                    exact_chain_setter_found = true;
-                }
-                else if constexpr (has_method_set_v<T, ReturnType, MetaAny&, MetaAny&, Registry&, Entity, const MetaEvaluationContext&>)
-                {
-                    type = type.func<static_cast<ReturnType(T::*)(MetaAny&, MetaAny&, Registry&, Entity, const MetaEvaluationContext&)>(&T::set)>("operator="_hs); // "set_indirect_value_exact"_hs
-
-                    exact_chain_setter_found = true;
-                }
-                */
-
                 // Standard overloads (no `MetaEvaluationContext`):
                 reflect_any_function
                 <
@@ -1308,21 +1147,6 @@ namespace engine
                     has_method_set_indirect_value<T, ReturnType, MetaAny&, MetaAny&, Registry&, Entity>,
                     has_method_set<T, ReturnType, MetaAny&, MetaAny&, Registry&, Entity>
                 >(type, "operator="_hs, exact_chain_setter_found);
-
-                /*
-                if constexpr (has_method_set_indirect_value_v<T, ReturnType, MetaAny&, MetaAny&, Registry&, Entity>)
-                {
-                    type = type.func<static_cast<ReturnType(T::*)(MetaAny&, MetaAny&, Registry&, Entity)>(&T::set_indirect_value)>("operator="_hs); // "set_indirect_value_exact"_hs
-
-                    exact_chain_setter_found = true;
-                }
-                else if constexpr (has_method_set_v<T, ReturnType, MetaAny&, MetaAny&, Registry&, Entity>)
-                {
-                    type = type.func<static_cast<ReturnType(T::*)(MetaAny&, MetaAny&, Registry&, Entity)>(&T::set)>("operator="_hs); // "set_indirect_value_exact"_hs
-
-                    exact_chain_setter_found = true;
-                }
-                */
             }
         }
 
@@ -1352,21 +1176,6 @@ namespace engine
                 has_method_get_indirect_value<T, ReturnType>,
                 has_method_get<T, ReturnType>
             >(type, "operator()"_hs, basic_getter_found);
-
-            /*
-            if constexpr (has_method_get_indirect_value_v<T, ReturnType>)
-            {
-                type = type.func<static_cast<ReturnType(T::*)() const>(&T::get_indirect_value)>("operator()"_hs);
-
-                basic_getter_found = true;
-            }
-            else if constexpr (has_method_get_v<T, ReturnType>)
-            {
-                type = type.func<static_cast<ReturnType(T::*)() const>(&T::get)>("operator()"_hs);
-
-                basic_getter_found = true;
-            }
-            */
         }
 
         if (!basic_context_getter_found)
@@ -1377,21 +1186,6 @@ namespace engine
                 has_method_get_indirect_value<T, ReturnType, const MetaEvaluationContext&>,
                 has_method_get<T, ReturnType, const MetaEvaluationContext&>
             >(type, "operator()"_hs, basic_context_getter_found);
-
-            /*
-            if constexpr (has_method_get_indirect_value_v<T, ReturnType, const MetaEvaluationContext&>)
-            {
-                type = type.func<static_cast<ReturnType(T::*)(const MetaEvaluationContext&) const>(&T::get_indirect_value)>("operator()"_hs);
-
-                basic_context_getter_found = true;
-            }
-            else if constexpr (has_method_get_v<T, ReturnType, const MetaEvaluationContext&>)
-            {
-                type = type.func<has_method_get<T, ReturnType(const MetaEvaluationContext&)>::ptr<true>>(&T::get)>("operator()"_hs); // static_cast<ReturnType(T::*)(const MetaEvaluationContext&) const
-
-                basic_context_getter_found = true;
-            }
-            */
         }
 
         if (!exact_getter_found)
@@ -1405,21 +1199,6 @@ namespace engine
                 has_method_get<T, ReturnType, Registry&, Entity, const MetaEvaluationContext&>
             >(type, "operator()"_hs, exact_getter_found);
 
-            /*
-            if constexpr (has_method_get_indirect_value_v<T, ReturnType, Registry&, Entity, const MetaEvaluationContext&>)
-            {
-                type = type.func<static_cast<ReturnType(T::*)(Registry&, Entity, const MetaEvaluationContext&) const>(&T::get_indirect_value)>("operator()"_hs);
-
-                exact_getter_found = true;
-            }
-            else if constexpr (has_method_get_v<T, ReturnType, Registry&, Entity, const MetaEvaluationContext&>)
-            {
-                type = type.func<static_cast<ReturnType(T::*)(Registry&, Entity, const MetaEvaluationContext&) const>(&T::get)>("operator()"_hs);
-
-                exact_getter_found = true;
-            }
-            */
-
             // Standard overloads (no `MetaEvaluationContext`):
             reflect_any_function
             <
@@ -1428,21 +1207,6 @@ namespace engine
                 has_method_get_indirect_value<T, ReturnType, Registry&, Entity>,
                 has_method_get<T, ReturnType, Registry&, Entity>
             >(type, "operator()"_hs, exact_getter_found);
-
-            /*
-            if constexpr (has_method_get_indirect_value_v<T, ReturnType, Registry&, Entity>)
-            {
-                type = type.func<static_cast<ReturnType(T::*)(Registry&, Entity) const>(&T::get_indirect_value)>("operator()"_hs);
-
-                exact_getter_found = true;
-            }
-            else if constexpr (has_method_get_v<T, ReturnType, Registry&, Entity>)
-            {
-                type = type.func<static_cast<ReturnType(T::*)(Registry&, Entity) const>(&T::get)>("operator()"_hs);
-
-                exact_getter_found = true;
-            }
-            */
         }
 
         if (!chain_getter_found)
@@ -1454,21 +1218,6 @@ namespace engine
                 has_method_get_indirect_value<T, ReturnType, const MetaAny&>,
                 has_method_get<T, ReturnType, const MetaAny&>
             >(type, "operator()"_hs, chain_getter_found);
-
-            /*
-            if constexpr (has_method_get_indirect_value_v<T, ReturnType, const MetaAny&>) // MetaAny&
-            {
-                type = type.func<static_cast<ReturnType(T::*)(const MetaAny&) const>(&T::get_indirect_value)>("operator()"_hs);
-
-                chain_getter_found = true;
-            }
-            else if constexpr (has_method_get_v<T, ReturnType, const MetaAny&>) // MetaAny&
-            {
-                type = type.func<static_cast<ReturnType(T::*)(const MetaAny&) const>(&T::get)>("operator()"_hs);
-
-                chain_getter_found = true;
-            }
-            */
         }
 
         if (!chain_context_getter_found)
@@ -1480,21 +1229,6 @@ namespace engine
                 has_method_get_indirect_value<T, ReturnType, const MetaAny&, const MetaEvaluationContext&>,
                 has_method_get<T, ReturnType, const MetaAny&, const MetaEvaluationContext&>
             >(type, "operator()"_hs, chain_context_getter_found);
-
-            /*
-            if constexpr (has_method_get_indirect_value_v<T, ReturnType, const MetaAny&, const MetaEvaluationContext&>) // MetaAny&
-            {
-                type = type.func<static_cast<ReturnType(T::*)(const MetaAny&, const MetaEvaluationContext&) const>(&T::get_indirect_value)>("operator()"_hs);
-
-                chain_context_getter_found = true;
-            }
-            else if constexpr (has_method_get_v<T, ReturnType, const MetaAny&, const MetaEvaluationContext&>) // MetaAny&
-            {
-                type = type.func<static_cast<ReturnType(T::*)(const MetaAny&, const MetaEvaluationContext&) const>(&T::get)>("operator()"_hs);
-
-                chain_context_getter_found = true;
-            }
-            */
         }
 
         if (!exact_chain_getter_found)
@@ -1513,36 +1247,6 @@ namespace engine
                 has_method_get<T, ReturnType, Entity, Registry&, Entity, const MetaEvaluationContext&>
             >(type, "operator()"_hs, exact_chain_getter_found);
 
-            /*
-            // From `MetaAny`:
-            if constexpr (has_method_get_indirect_value_v<T, ReturnType, const MetaAny&, Registry&, Entity, const MetaEvaluationContext&>) // MetaAny&
-            {
-                type = type.func<static_cast<ReturnType(T::*)(const MetaAny&, Registry&, Entity, const MetaEvaluationContext&) const>(&T::get_indirect_value)>("operator()"_hs);
-
-                exact_chain_getter_found = true;
-            }
-            else if constexpr (has_method_get_v<T, ReturnType, const MetaAny&, Registry&, Entity, const MetaEvaluationContext&>) // MetaAny&
-            {
-                type = type.func<static_cast<ReturnType(T::*)(const MetaAny&, Registry&, Entity, const MetaEvaluationContext&) const>(&T::get)>("operator()"_hs);
-
-                exact_chain_getter_found = true;
-            }
-
-            // From `Entity`:
-            else if constexpr (has_method_get_indirect_value_v<T, ReturnType, Entity, Registry&, Entity, const MetaEvaluationContext&>)
-            {
-                type = type.func<static_cast<ReturnType(T::*)(Entity, Registry&, Entity, const MetaEvaluationContext&) const>(&T::get_indirect_value)>("operator()"_hs);
-
-                exact_chain_getter_found = true;
-            }
-            else if constexpr (has_method_get_v<T, ReturnType, Entity, Registry&, Entity, const MetaEvaluationContext&>)
-            {
-                type = type.func<static_cast<ReturnType(T::*)(Entity, Registry&, Entity, const MetaEvaluationContext&) const>(&T::get)>("operator()"_hs);
-
-                exact_chain_getter_found = true;
-            }
-            */
-
             // Standard overloads (no `MetaEvaluationContext`):
 
             reflect_any_function
@@ -1557,36 +1261,6 @@ namespace engine
                 has_method_get_indirect_value<T, ReturnType, Entity, Registry&, Entity>,
                 has_method_get<T, ReturnType, Entity, Registry&, Entity>
             >(type, "operator()"_hs, exact_chain_getter_found);
-
-            /*
-            // From `MetaAny`:
-            if constexpr (has_method_get_indirect_value_v<T, ReturnType, const MetaAny&, Registry&, Entity>) // MetaAny&
-            {
-                type = type.func<static_cast<ReturnType(T::*)(const MetaAny&, Registry&, Entity) const>(&T::get_indirect_value)>("operator()"_hs);
-
-                exact_chain_getter_found = true;
-            }
-            else if constexpr (has_method_get_v<T, ReturnType, const MetaAny&, Registry&, Entity>) // MetaAny&
-            {
-                type = type.func<static_cast<ReturnType(T::*)(const MetaAny&, Registry&, Entity) const>(&T::get)>("operator()"_hs);
-
-                exact_chain_getter_found = true;
-            }
-
-            // From `Entity`:
-            else if constexpr (has_method_get_indirect_value_v<T, ReturnType, Entity, Registry&, Entity>)
-            {
-                type = type.func<static_cast<ReturnType(T::*)(Entity, Registry&, Entity) const>(&T::get_indirect_value)>("operator()"_hs);
-
-                exact_chain_getter_found = true;
-            }
-            else if constexpr (has_method_get_v<T, ReturnType, Entity, Registry&, Entity>)
-            {
-                type = type.func<static_cast<ReturnType(T::*)(Entity, Registry&, Entity) const>(&T::get)>("operator()"_hs);
-
-                exact_chain_getter_found = true;
-            }
-            */
         }
 
         return getters_found;
