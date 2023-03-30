@@ -24,14 +24,17 @@ namespace engine
 {
 	Service::Service
 	(
+		Registry& registry,
+
 		bool register_input_events,
 		bool register_timed_event_wrapper,
 		bool register_core_commands,
 		bool register_function_commands,
 		bool allocate_root_entity,
 		bool allocate_universal_variables
-	)
-		: active_event_handler(&standard_event_handler)
+	) :
+		registry(registry),
+		active_event_handler(&standard_event_handler)
 	{
 		if (register_input_events)
 		{
@@ -169,7 +172,7 @@ namespace engine
 		execute_opaque_function
 		(
 			function_command.function,
-			registry,
+			get_registry(),
 			function_command.source, // function_command.target
 			function_command.context.get_context()
 		);

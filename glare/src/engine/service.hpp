@@ -61,6 +61,8 @@ namespace engine
 
 			Service
 			(
+				Registry& registry,
+
 				bool register_input_events=true,
 				bool register_timed_event_wrapper=false,
 				bool register_core_commands=true,
@@ -69,7 +71,8 @@ namespace engine
 				bool allocate_universal_variables=false
 			);
 
-			Service(Service&&) noexcept = default;
+			Service(const Service&) = delete;
+			Service(Service&&) noexcept = delete;
 
 			virtual ~Service() {};
 
@@ -482,8 +485,7 @@ namespace engine
 
 			void handle_deferred_operations();
 
-			// TODO: Allow the user to specify a registry, rather than owning it outright.
-			mutable Registry registry;
+			Registry& registry; // std::reference_wrapper<Registry>
 
 			Entity root = null;
 
