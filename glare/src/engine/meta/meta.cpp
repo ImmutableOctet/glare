@@ -73,7 +73,14 @@ namespace engine
 		);
 	}
 
-	std::optional<StringHash> meta_any_to_string_hash(const MetaAny& value)
+	std::optional<StringHash> meta_any_to_string_hash
+	(
+		const MetaAny& value,
+
+		bool try_raw_hash_type,
+		bool try_conversion_to_raw_hash_type,
+		bool try_conversion_to_string
+	)
 	{
 		if (!value)
 		{
@@ -86,7 +93,9 @@ namespace engine
 		(
 			try_string_value
 			(
-				value, [&hash_out](const auto& str_value)
+				value,
+				
+				[&hash_out](const auto& str_value)
 				{
 					hash_out = hash(str_value);
 				}
@@ -96,34 +105,65 @@ namespace engine
 			return hash_out;
 		}
 
-		if
-		(
-			try_value<StringHash>
-			(
-				value,
-				[&hash_out](const auto& hash)
-				{
-					hash_out = hash;
-				}
-			)
-		)
+		if (try_raw_hash_type)
 		{
-			return hash_out;
+			if
+			(
+				try_value<StringHash>
+				(
+					value,
+				
+					[&hash_out](const auto& hash)
+					{
+						hash_out = hash;
+					}
+				)
+			)
+			{
+				return hash_out;
+			}
+
+			if
+			(
+				try_value<std::optional<StringHash>>
+				(
+					value,
+				
+					[&hash_out](const auto& opt_hash)
+					{
+						hash_out = opt_hash;
+					}
+				)
+			)
+			{
+				return hash_out;
+			}
 		}
 
-		if
-		(
-			try_value<std::optional<StringHash>>
-			(
-				value,
-				[&hash_out](const auto& opt_hash)
-				{
-					hash_out = opt_hash;
-				}
-			)
-		)
+		if (try_conversion_to_raw_hash_type)
 		{
-			return hash_out;
+			if (auto converted_to_hash_value = value.allow_cast<StringHash>())
+			{
+				return converted_to_hash_value.cast<StringHash>();
+			}
+
+			if (auto converted_to_hash_value = value.allow_cast<std::optional<StringHash>>())
+			{
+				return converted_to_hash_value.cast<std::optional<StringHash>>();
+			}
+		}
+
+		if (try_conversion_to_string)
+		{
+			if (auto converted_to_string = value.allow_cast<std::string_view>())
+			{
+				return hash(converted_to_string.cast<std::string_view>()).value();
+			}
+
+			if (auto converted_to_string = value.allow_cast<std::string>())
+			{
+				return hash(converted_to_string.cast<std::string>()).value();
+			}
 		}
 
 		return hash_out; // std::nullopt;
@@ -244,7 +284,7 @@ namespace engine
 	{
 		auto current_type = current_value.type();
 
-		if ((current_type == cast_type) && ignore_same_type)
+		if (ignore_same_type && (current_type == cast_type))
 		{
 			// No need to cast, the specified cast-type is the same.
 			return true;
