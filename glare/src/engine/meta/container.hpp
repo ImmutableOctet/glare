@@ -9,6 +9,33 @@
 
 namespace engine
 {
+    inline bool meta_type_is_container(const MetaType& container_type)
+    {
+        if (!container_type)
+        {
+            return false;
+        }
+
+        return (container_type.is_sequence_container() || container_type.is_associative_container());
+    }
+
+    inline bool meta_any_is_container(const MetaAny& container)
+    {
+        if (!container)
+        {
+            return false;
+        }
+
+        const auto container_type = container.type();
+
+        if (!container_type)
+        {
+            return false;
+        }
+
+        return meta_type_is_container(container_type);
+    }
+
 	template <typename ValueType>
     MetaAny try_get_container_wrapper(ValueType&& opaque_value)
     {
