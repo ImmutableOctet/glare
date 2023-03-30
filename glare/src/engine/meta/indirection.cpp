@@ -130,7 +130,7 @@ namespace engine
 		return try_get_underlying_value_impl(get_fn, value);
 	}
 
-	MetaAny try_get_underlying_value(const MetaAny& value, Registry& registry, Entity entity, const MetaEvaluationContext& context)
+	MetaAny try_get_underlying_value(const MetaAny& value, const MetaEvaluationContext& context)
 	{
 		using namespace engine::literals;
 
@@ -143,12 +143,38 @@ namespace engine
 
 		auto get_fn = type.func("operator()"_hs);
 
+		if (auto result = try_get_underlying_value_impl(get_fn, value, context))
+		{
+			return result;
+		}
+
+		return try_get_underlying_value_impl(get_fn, value);
+	}
+
+	MetaAny try_get_underlying_value(const MetaAny& value, Registry& registry, Entity entity, const MetaEvaluationContext& context)
+	{
+		using namespace engine::literals;
+
+		if (!value)
+		{
+			return {};
+		}
+		
+		auto type = value.type();
+
+		auto get_fn = type.func("operator()"_hs);
+
 		if (auto result = try_get_underlying_value_impl(get_fn, value, registry, entity, context))
 		{
 			return result;
 		}
 
 		if (auto result = try_get_underlying_value_impl(get_fn, value, registry, entity))
+		{
+			return result;
+		}
+
+		if (auto result = try_get_underlying_value_impl(get_fn, value, context))
 		{
 			return result;
 		}

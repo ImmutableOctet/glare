@@ -47,6 +47,7 @@ namespace engine
 {
 	class ResourceManager;
 
+	struct IndirectComponentPatchCommand;
 	struct ComponentPatchCommand;
 	struct ComponentReplaceCommand;
 	struct FunctionCommand;
@@ -61,6 +62,8 @@ namespace engine
 
 			Service
 			(
+				Registry& registry,
+
 				bool register_input_events=true,
 				bool register_timed_event_wrapper=false,
 				bool register_core_commands=true,
@@ -69,7 +72,8 @@ namespace engine
 				bool allocate_universal_variables=false
 			);
 
-			Service(Service&&) noexcept = default;
+			Service(const Service&) = delete;
+			Service(Service&&) noexcept = delete;
 
 			virtual ~Service() {};
 
@@ -468,12 +472,18 @@ namespace engine
 				);
 			}
 
-			void on_component_patch(const ComponentPatchCommand& component_patch);
+			void on_indirect_component_patch(const IndirectComponentPatchCommand& component_patch);
+
+			// NOTE: This does not take the event as const-reference since we would normally
+			// move from the enclosed `ComponentPatchCommand::component` object.
+			// 
+			// This, in turn, means that said object is in a moved-from state after this method executes.
+			void on_direct_component_patch(const ComponentPatchCommand& component_patch);
 
 			// NOTE: This does not take the event as const-reference since we would normally
 			// move from the enclosed `ComponentReplaceCommand::component` object.
 			// 
-			// This in turn means that said object is in a moved-from state after this method executes.
+			// This, in turn, means that said object is in a moved-from state after this method executes.
 			void on_component_replace(ComponentReplaceCommand& component_replace);
 
 			void opaque_function_handler(const FunctionCommand& function_command);
@@ -482,8 +492,7 @@ namespace engine
 
 			void handle_deferred_operations();
 
-			// TODO: Allow the user to specify a registry, rather than owning it outright.
-			mutable Registry registry;
+			Registry& registry; // std::reference_wrapper<Registry>
 
 			Entity root = null;
 

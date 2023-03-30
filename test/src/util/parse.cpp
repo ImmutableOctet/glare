@@ -6,6 +6,20 @@
 #include <util/parse.hpp>
 #include <util/algorithm.hpp>
 
+TEST_CASE("util::find_last_singular", "[util:parse]")
+{
+	REQUIRE(util::find_last_singular("::: ::: : :", ":") == 10);
+	REQUIRE(util::find_last_singular("some::key::name:: unrelated_expression", ":") == std::string_view::npos);
+	REQUIRE(util::find_last_singular("some::key:::name:type:", ":") == 21);
+}
+
+TEST_CASE("util::find_singular", "[util:parse]")
+{
+	REQUIRE(util::find_singular("::: ::: :", ":") == 8);
+	REQUIRE(util::find_singular("some::key::name unrelated_expression", ":") == std::string_view::npos);
+	REQUIRE(util::find_singular("some::key:::name:type", ":") == 16);
+}
+
 TEST_CASE("util::find_operator", "[util::parse]")
 {
 	SECTION("Regular operators")
@@ -177,6 +191,164 @@ TEST_CASE("util::parse_variable_declaration", "[util:parse]")
 		REQUIRE(variable_type == "int");
 		REQUIRE(assignment_expr == "100");
 		REQUIRE(trailing_expr.empty());
+	}
+}
+
+TEST_CASE("util::parse_key_expr_and_value_type", "[util:parse]")
+{
+	SECTION("Quoted key, no value-type specifier, no trailing expression")
+	{
+		auto [key_name, value_type, trailing_expr, expression_syntax_used] = util::parse_key_expr_and_value_type
+		(
+			"\"Some Key\"",
+			":", false, true, true
+		);
+
+		REQUIRE(key_name == "Some Key");
+		REQUIRE(value_type.empty());
+		REQUIRE(trailing_expr.empty());
+		REQUIRE(!expression_syntax_used);
+	}
+
+	SECTION("Quoted key with value-type specifier + trailing expression")
+	{
+		auto [key_name, value_type, trailing_expr, expression_syntax_used] = util::parse_key_expr_and_value_type
+		(
+			"\"Some Key\":some_type unrelated",
+			":", true, true, false
+		);
+
+		REQUIRE(key_name == "\"Some Key\"");
+		REQUIRE(value_type == "some_type");
+		REQUIRE(trailing_expr == "unrelated");
+		REQUIRE(!expression_syntax_used);
+	}
+
+	SECTION("Truncated key, no value-type specifier + trailing expression")
+	{
+		auto [key_name, value_type, trailing_expr, expression_syntax_used] = util::parse_key_expr_and_value_type
+		(
+			"some::key::name unrelated_expression",
+			":", true, true, true, true
+		);
+
+		REQUIRE(key_name == "some::key::name");
+		REQUIRE(value_type.empty());
+		REQUIRE(trailing_expr == "unrelated_expression");
+		REQUIRE(!expression_syntax_used);
+	}
+
+	SECTION("Regular key with value-type specifier")
+	{
+		auto [key_name, value_type, trailing_expr, expression_syntax_used] = util::parse_key_expr_and_value_type
+		(
+			"some::key:some_value_type unrelated trailing expression",
+			":", true
+		);
+
+		REQUIRE(key_name == "some::key");
+		REQUIRE(value_type == "some_value_type");
+		REQUIRE(trailing_expr == "unrelated trailing expression");
+		REQUIRE(!expression_syntax_used);
+	}
+
+	SECTION("Regular key with value-type specifier, no trailing expression allowed")
+	{
+		auto [key_name, value_type, trailing_expr, expression_syntax_used] = util::parse_key_expr_and_value_type
+		(
+			"some_key:some_value_type unrelated trailing expression",
+			":", false
+		);
+
+		REQUIRE(key_name.empty());
+		REQUIRE(value_type.empty());
+		REQUIRE(trailing_expr.empty());
+		REQUIRE(!expression_syntax_used);
+	}
+
+	SECTION("Truncated key, no value-type specifier, no trailing expression allowed")
+	{
+		auto [key_name, value_type, trailing_expr, expression_syntax_used] = util::parse_key_expr_and_value_type
+		(
+			"key_name unrelated expression",
+			"|", false, true, true, true
+		);
+
+		REQUIRE(key_name.empty());
+		REQUIRE(value_type.empty());
+		REQUIRE(trailing_expr.empty());
+		REQUIRE(!expression_syntax_used);
+	}
+
+
+	SECTION("Command as key, no value-type specifier + trailing expression")
+	{
+		auto [command_as_key, value_type, trailing_expr, command_syntax_used] = util::parse_key_expr_and_value_type
+		(
+			"command_name() trailing",
+			":", true
+		);
+
+		REQUIRE(command_as_key == "command_name()");
+		REQUIRE(value_type.empty());
+		REQUIRE(trailing_expr == "trailing");
+		REQUIRE(command_syntax_used);
+	}
+
+	SECTION("Command as key with value-type specifier + trailing expression")
+	{
+		auto [command_as_key, value_type, trailing_expr, command_syntax_used] = util::parse_key_expr_and_value_type
+		(
+			"command_name()|intended_value_type trailing expression",
+			"|", true
+		);
+
+		REQUIRE(command_as_key == "command_name()");
+		REQUIRE(value_type == "intended_value_type");
+		REQUIRE(trailing_expr == "trailing expression");
+		REQUIRE(command_syntax_used);
+	}
+
+	SECTION("Expression in parentheses as key with value-type specifier + trailing expression")
+	{
+		auto [key_name_expr, value_type, trailing_expr, expression_syntax_used] = util::parse_key_expr_and_value_type
+		(
+			"(some_expression:something else):value_type unrelated expression",
+			":", true
+		);
+
+		REQUIRE(key_name_expr == "(some_expression:something else)");
+		REQUIRE(value_type == "value_type");
+		REQUIRE(trailing_expr == "unrelated expression");
+		REQUIRE(expression_syntax_used);
+	}
+
+	SECTION("Expression in parentheses as key, no value-type specifier + trailing expression")
+	{
+		auto [key_name_expr, value_type, trailing_expr, expression_syntax_used] = util::parse_key_expr_and_value_type
+		(
+			"(test expression with : operator) unrelated",
+			":", true
+		);
+
+		REQUIRE(key_name_expr == "(test expression with : operator)");
+		REQUIRE(value_type.empty());
+		REQUIRE(trailing_expr == "unrelated");
+		REQUIRE(expression_syntax_used);
+	}
+
+	SECTION("Expression in parentheses as key, with value-type specifier, no trailing expression allowed")
+	{
+		auto [key_name_expr, value_type, trailing_expr, expression_syntax_used] = util::parse_key_expr_and_value_type
+		(
+			"(test expression with : operator):type unrelated",
+			":", false
+		);
+
+		REQUIRE(key_name_expr.empty());
+		REQUIRE(value_type.empty());
+		REQUIRE(trailing_expr.empty());
+		REQUIRE(!expression_syntax_used);
 	}
 }
 

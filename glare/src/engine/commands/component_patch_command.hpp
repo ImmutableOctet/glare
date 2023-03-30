@@ -1,27 +1,19 @@
 #pragma once
 
-#include <engine/types.hpp>
+#include <engine/meta/types.hpp>
 #include <engine/command.hpp>
-//#include <engine/meta/types.hpp>
-//#include <engine/meta/meta_type_descriptor.hpp>
-
-#include <engine/meta/meta_evaluation_context_store.hpp>
 
 namespace engine
 {
-	struct MetaTypeDescriptor;
-	struct MetaEvaluationContext;
-
-	// Updates the component-type described by `component` for `target`.
+	// Performs copy, move, or member-wise assignment of `component` to `target`'s attached instance of the same type.
+	// If `target` does not currently have an attached instance sharing the type of `component`, this will emplace a new instance.
 	struct ComponentPatchCommand : public Command
 	{
-		// NOTE: Use of raw pointer types.
-		using ComponentChanges = const MetaTypeDescriptor*;
-		using EvaluationContext = const MetaEvaluationContext*;
+		using Component = MetaAny;
 
-		ComponentChanges component = {};
-		
-		// Optional evaluation context used when resolving `component`.
-		MetaEvaluationContextStore context = {};
+		Component component;
+
+		// If enabled, meta data-member assignment is used over traditional assignment operators.
+		bool use_member_assignment = false; // true; // : 1 = ...
 	};
 }

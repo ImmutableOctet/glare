@@ -54,9 +54,17 @@ namespace engine
     std::optional<PlayerIndex> resolve_player_index(const MetaAny& instance);
 
     bool meta_any_is_string(const MetaAny& value);
+    bool meta_type_is_string(const MetaType& type);
 
 	// Attempts to compute a string hash for `value`.
-	std::optional<StringHash> meta_any_to_string_hash(const MetaAny& value);
+	std::optional<StringHash> meta_any_to_string_hash
+    (
+        const MetaAny& value,
+        
+        bool try_raw_hash_type=true,
+        bool try_conversion_to_raw_hash_type=false,
+        bool try_conversion_to_string=false
+    );
 
 	// Compares `left` and `right` to see if they both have the same string hash.
 	bool meta_any_string_compare(const MetaAny& left, const MetaAny& right);
@@ -253,6 +261,18 @@ namespace engine
         return *result;
     }
 
+    template <typename EnumType>
+    std::string_view enum_value_to_string_view(EnumType enum_value)
+    {
+        return magic_enum::enum_name(enum_value);
+    }
+
+    template <typename EnumType>
+    std::string enum_value_to_string(EnumType enum_value)
+    {
+        return std::string { enum_value_to_string_view(enum_value) };
+    }
+
 	// Retrieves the runtime (property-based) value associated to `id` in `meta_type_inst`.
     // If no value is associated, this will fail via assertion.
     template <typename EnumType>
@@ -419,6 +439,7 @@ namespace engine
 			return false;
 		}
 
+        /*
 		auto type = value.type();
 
 		if (!type)
@@ -427,9 +448,10 @@ namespace engine
 		}
 
 		const auto type_id = type.id();
+        */
 
 		//if (type_id == entt::type_id<Type>().hash())
-		if ((type_id == entt::type_id<Type>().hash()) || (type_id == resolve<Type>().id()))
+		//if ((type_id == entt::type_id<Type>().hash()) || (type_id == resolve<Type>().id()))
 		{
 			auto* value_raw = value.try_cast<Type>(); // const
 

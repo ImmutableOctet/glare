@@ -37,7 +37,7 @@ namespace behavior_impl                                                         
 // Generates a function trait for `behavior_function_name` that handles `behavior_event_type`,
 // taking in a `World` instance and a delta-time value as the only other parameters.
 #define GENERATE_SIMPLE_BEHAVIOR_BRIDGE(behavior_function_name, behavior_event_type)                                   \
-    GENERATE_EXACT_FUNCTION_TRAIT_SIMPLIFIED(behavior_function_name, void(World&, float, const behavior_event_type&)); \
+    GENERATE_EXACT_FUNCTION_TRAIT_SIMPLIFIED(behavior_function_name, void, World&, float, const behavior_event_type&); \
     GENERATE_BEHAVIOR_BRIDGE(behavior_function_name, behavior_event_type);
 
 namespace engine
@@ -75,11 +75,11 @@ namespace engine
     // See also: `SystemManager::register_behavior` and `SystemManager::unregister_behavior`
 
     // General purpose:
-    GENERATE_EXACT_FUNCTION_TRAIT_SIMPLIFIED(on_update,   void(engine::World&, float));
+    GENERATE_EXACT_FUNCTION_TRAIT_SIMPLIFIED(on_update,   void, engine::World&, float);
 
     // Raw input:
-    GENERATE_EXACT_FUNCTION_TRAIT_SIMPLIFIED(on_mouse,    void(World&, float, const app::input::MouseState&));
-    GENERATE_EXACT_FUNCTION_TRAIT_SIMPLIFIED(on_keyboard, void(World&, float, const app::input::KeyboardState&));
+    GENERATE_EXACT_FUNCTION_TRAIT_SIMPLIFIED(on_mouse,    void, World&, float, const app::input::MouseState&);
+    GENERATE_EXACT_FUNCTION_TRAIT_SIMPLIFIED(on_keyboard, void, World&, float, const app::input::KeyboardState&);
 
     // High-level input:
 

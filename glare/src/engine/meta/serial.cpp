@@ -40,24 +40,253 @@ namespace engine
 {
 	namespace impl
 	{
-		//using ArrayType = util::small_vector<MetaAny, 8>;
-		using ArrayType = std::vector<MetaAny>;
-
-		using StringType = util::json::string_t; // std::string;
-		
-		// Resolves primitive types from an array input.
-		static MetaAny resolve_array(const util::json& value, const MetaParsingInstructions& instructions={})
+		static std::size_t resolve_meta_any_sequence_container_impl
+		(
+			const util::json& content,
+			MetaAny& instance,
+			const MetaParsingInstructions& parse_instructions
+		)
 		{
-			ArrayType output;
-
-			output.reserve(value.size());
-
-			for (const auto& element : value)
+			if (!instance)
 			{
-				output.emplace_back(resolve_meta_any(element, instructions));
+				return 0;
 			}
 
-			return { std::move(output) }; // output;
+			assert(instance.type().is_sequence_container());
+
+			auto sequence_container = instance.as_sequence_container();
+
+			if (!sequence_container)
+			{
+				return 0;
+			}
+
+			const auto element_type = sequence_container.value_type();
+
+			if (!element_type)
+			{
+				return 0;
+			}
+
+			std::size_t elements_processed = 0;
+
+			util::json_for_each
+			(
+				content,
+
+				[&parse_instructions, &element_type, &sequence_container, &elements_processed](const util::json& entry)
+				{
+					if (auto element = resolve_meta_any(entry, element_type, parse_instructions))
+					{
+						if (auto resolved = try_get_underlying_value(element)) // , args...
+						{
+							element = std::move(resolved);
+						}
+
+						if (element.allow_cast(element_type))
+						{
+							if (sequence_container.insert(sequence_container.end(), std::move(element)))
+							{
+								elements_processed++;
+							}
+						}
+					}
+				}
+			);
+
+			return elements_processed;
+		}
+
+		static MetaAny resolve_meta_any_sequence_container_impl
+		(
+			const util::json& content,
+			MetaType type,
+			const MetaParsingInstructions& parse_instructions
+		)
+		{
+			if (!type)
+			{
+				return {};
+			}
+
+			if (!type.is_sequence_container())
+			{
+				return {};
+			}
+
+			auto container_out = type.construct();
+
+			if (!container_out)
+			{
+				return {};
+			}
+
+			if (resolve_meta_any_sequence_container_impl(content, container_out, parse_instructions))
+			{
+				return container_out;
+			}
+
+			return {};
+		}
+
+		static std::size_t resolve_meta_any_associative_container_impl
+		(
+			const util::json& content,
+			MetaAny& instance,
+			const MetaParsingInstructions& parse_instructions
+		)
+		{
+			if (!instance)
+			{
+				return 0;
+			}
+
+			assert(instance.type().is_associative_container());
+
+			auto associative_container = instance.as_associative_container();
+
+			if (!associative_container)
+			{
+				return 0;
+			}
+
+			const auto key_type = associative_container.key_type();
+
+			if (!key_type)
+			{
+				return 0;
+			}
+
+			const auto intended_value_type = associative_container.mapped_type(); // value_type();
+
+			if (!intended_value_type)
+			{
+				return 0;
+			}
+
+			// TODO: Look into possible performance benefits of manually
+			// checking against `intended_type` prior to resolution and cast steps.
+			auto try_get_instance = [](MetaAny instance, const MetaType& intended_type) -> MetaAny
+			{
+				if (!instance)
+				{
+					return {};
+				}
+
+				if (auto resolved = try_get_underlying_value(instance)) // , args...
+				{
+					instance = std::move(resolved);
+				}
+
+				if (try_direct_cast(instance, intended_type, true))
+				{
+					return instance;
+				}
+
+				return {};
+			};
+
+			auto resolve_key = [&parse_instructions, &key_type, &try_get_instance](auto&& key_name) -> MetaAny
+			{
+				if (auto key_instance = meta_any_from_string(key_name, parse_instructions, key_type))
+				{
+					return try_get_instance(std::move(key_instance), key_type);
+				}
+
+				return std::nullopt;
+			};
+
+			auto resolve_value = [&parse_instructions, &try_get_instance](auto&& value_content, const MetaType& value_type) -> MetaAny
+			{
+				if (auto value_instance = resolve_meta_any(value_content, value_type, parse_instructions))
+				{
+					return try_get_instance(std::move(value_instance), value_type);
+				}
+
+				return std::nullopt;
+			};
+
+			std::size_t elements_processed = 0;
+
+			for (const auto& entry : content.items())
+			{
+				const auto& key_raw = entry.key();
+
+				auto [key_name, value_type_spec, _unused_trailing, _unused_expr_syntax] = util::parse_key_expr_and_value_type
+				(
+					std::string_view { key_raw },
+					":", false
+				);
+
+				if (key_name.empty())
+				{
+					continue;
+				}
+
+				auto value_type = intended_value_type;
+
+				if (!value_type_spec.empty())
+				{
+					const auto opt_type_context = parse_instructions.context.get_type_context();
+
+					const auto manual_value_type = (opt_type_context)
+						? opt_type_context->get_type(value_type_spec, parse_instructions)
+						: resolve(hash(value_type_spec).value())
+					;
+
+					if (manual_value_type)
+					{
+						value_type = manual_value_type;
+					}
+				}
+
+				if (auto key_result = resolve_key(key_name))
+				{
+					const auto& value_content = entry.value();
+
+					if (auto value_out = resolve_value(value_content, value_type))
+					{
+						if (associative_container.insert(std::move(key_result), std::move(value_out)))
+						{
+							elements_processed++;
+						}
+					}
+				}
+			}
+
+			return elements_processed;
+		}
+
+		static MetaAny resolve_meta_any_associative_container_impl
+		(
+			const util::json& content,
+			MetaType type,
+			const MetaParsingInstructions& parse_instructions
+		)
+		{
+			if (!type)
+			{
+				return {};
+			}
+
+			if (!type.is_associative_container())
+			{
+				return {};
+			}
+
+			auto container_out = type.construct();
+
+			if (!container_out)
+			{
+				return {};
+			}
+
+			if (resolve_meta_any_associative_container_impl(content, container_out, parse_instructions))
+			{
+				return container_out;
+			}
+
+			return {};
 		}
 	};
 
@@ -2284,7 +2513,7 @@ namespace engine
 
 	MetaAny meta_any_from_string(const util::json& value, const MetaParsingInstructions& instructions, MetaType type, bool allow_string_fallback, bool allow_numeric_literals, bool allow_boolean_literals)
 	{
-		auto string_value = value.get<engine::impl::StringType>();
+		auto string_value = value.get<std::string>();
 
 		return meta_any_from_string(std::string_view { string_value }, instructions, type, allow_string_fallback, allow_numeric_literals, allow_boolean_literals);
 	}
@@ -2314,6 +2543,35 @@ namespace engine
 			// be immediately nested as a `MetaTypeDescriptor`:
 			case jtype::array:
 			case jtype::object:
+			{
+				if (type)
+				{
+					if (!instructions.defer_container_creation)
+					{
+						if (type.is_sequence_container())
+						{
+							if (auto result = impl::resolve_meta_any_sequence_container_impl(value, type, instructions))
+							{
+								return result;
+							}
+						}
+						else if (type.is_associative_container())
+						{
+							if (auto result = impl::resolve_meta_any_associative_container_impl(value, type, instructions))
+							{
+								return result;
+							}
+						}
+					}
+
+					/*
+					if (auto from_json = type.construct(value, instructions))
+					{
+						return from_json;
+					}
+					*/
+				}
+
 				// NOTE: Nesting `MetaTypeDescriptor` objects within the any-chain
 				// implies recursion during object construction later on.
 				return allocate_meta_any
@@ -2328,6 +2586,7 @@ namespace engine
 
 					instructions.storage
 				);
+			}
 
 			case jtype::string:
 				return meta_any_from_string(value, instructions, type);
@@ -2367,8 +2626,27 @@ namespace engine
 				// TODO: Maybe handle as array instead...?
 				return {};
 			}
+			
 			case jtype::array:
-				return impl::resolve_array(value, instructions);
+			{
+				// Completely opaque array detected.
+				//assert(false);
+
+				print_warn("Opaque JSON array detected (No type information): Opaque arrays are not currently supported.");
+
+				return {};
+			}
+
+			case jtype::binary:
+			{
+				// Binary data detected.
+				//assert(false);
+
+				print_warn("Binary detected: Not currently supported.");
+
+				return {};
+			}
+
 			case jtype::string:
 				return meta_any_from_string(value, instructions);
 			case jtype::boolean:
@@ -2379,8 +2657,6 @@ namespace engine
 				return value.get<std::uint32_t>(); // TODO: Handle larger integers, etc.
 			case jtype::number_float:
 				return value.get<float>(); // 32-bit floats are standard for this engine.
-			case jtype::binary:
-				return {}; // Currently unsupported.
 		}
 
 		return {};

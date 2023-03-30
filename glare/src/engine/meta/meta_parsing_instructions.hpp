@@ -106,5 +106,20 @@ namespace engine
 
 		// Instruction aliases are disabled by default, since they're not usually expected.
 		bool resolve_instruction_aliases      : 1 = false;
+
+		// If enabled, container creation will be deferred to the evaluation phase.
+		// 
+		// NOTE: Deferral of associative containers has the drawback that
+		// only string and string-hash based keys may be used.
+		// 
+		// Additionally, deferred containers may have an implied 'redundant' memory footprint.
+		// Standard behavior for container creation from a `MetaTypeDescriptor` is to perform a deep copy.
+		// 
+		// On the other hand, element values that are themselves evaluable may have little overhead compared to
+		// storing the final value, and are able to take advantage of shared-storage mechanics for better memory locality.
+		// 
+		// Deferral may be elided in the event that immediate evaluation of the container is known to take place.
+		// (This is usually the case with `engine::load`, as opposed to `resolve_meta_any`)
+		bool defer_container_creation : 1 = true; // false;
 	};
 }

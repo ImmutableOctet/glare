@@ -550,6 +550,195 @@ namespace util
 		return output;
 	}
 
+	std::tuple
+	<
+		std::string_view, // key_name
+		std::string_view, // value_type
+		std::string_view, // trailing_expr
+		bool              // expression_syntax_used
+	>
+	parse_key_expr_and_value_type
+	(
+		std::string_view key_expr,
+		
+		std::string_view type_specification_symbol,
+
+		bool allow_trailing_expr,
+		bool ensure_singular_type_specifier_symbol,
+		bool unquote_string_literal_as_key_name,
+		bool allow_key_truncation
+	)
+	{
+		if (key_expr.empty())
+		{
+			return {};
+		}
+
+		auto command_result = parse_command(key_expr, true, true, false, false);
+
+		const auto command_result_parsed_length = std::get<4>(command_result);
+
+		auto key_name  = std::string_view {};
+		auto remainder = std::string_view {};
+
+		auto value_type_symbol = std::string_view::npos;
+
+		const bool expression_syntax_used = (command_result_parsed_length > 0);
+
+		auto find_symbol = [type_specification_symbol, ensure_singular_type_specifier_symbol](std::string_view str, std::size_t offset=0) -> std::size_t
+		{
+			if (ensure_singular_type_specifier_symbol)
+			{
+				return find_last_singular(str, type_specification_symbol, offset);
+			}
+			
+			return str.find(type_specification_symbol, offset);
+		};
+
+		if (expression_syntax_used)
+		{
+			key_name = key_expr.substr(0, command_result_parsed_length); // std::get<1>(command_result);
+			remainder = std::get<2>(command_result);
+			value_type_symbol = find_symbol(remainder);
+		}
+		else
+		{
+			std::size_t type_specifier_offset = 0;
+
+			const auto [begin_quote, end_quote] = find_quotes(key_expr);
+
+			const auto is_quoted = (begin_quote == 0) && (end_quote != std::string_view::npos);
+
+			if (is_quoted)
+			{
+				type_specifier_offset = (end_quote + 1);
+
+				if (unquote_string_literal_as_key_name)
+				{
+					key_name = key_expr.substr((begin_quote + 1), (end_quote - 1));
+				}
+				else
+				{
+					key_name = key_expr.substr(begin_quote, (end_quote + 1));
+				}
+			}
+
+			const auto type_specifier_position = (type_specifier_offset < key_expr.length())
+				? find_symbol(key_expr, type_specifier_offset)
+				: std::string_view::npos
+			;
+
+			if (type_specifier_position != std::string_view::npos)
+			{
+				if (!is_quoted)
+				{
+					key_name = key_expr.substr(0, type_specifier_position);
+				}
+
+				const auto remainder_begin = (type_specifier_position + type_specification_symbol.length() + 1);
+
+				if (remainder_begin < key_expr.length())
+				{
+					remainder = key_expr.substr(type_specifier_position);
+
+					value_type_symbol = 0;
+				}
+			}
+			else if (is_quoted)
+			{
+				if (const auto remainder_begin = (end_quote + 1); remainder_begin < key_expr.length())
+				{
+					remainder = key_expr.substr(remainder_begin);
+				}
+			}
+			else
+			{
+				if (allow_key_truncation)
+				{
+					if (const auto key_trailing_expr_begin = key_expr.find_first_of(whitespace_symbols); key_trailing_expr_begin != std::string_view::npos)
+					{
+						key_name = key_expr.substr(0, key_trailing_expr_begin);
+						remainder = trim(key_expr.substr(key_trailing_expr_begin));
+					}
+					else
+					{
+						key_name = key_expr;
+					}
+				}
+				else
+				{
+					key_name = key_expr;
+				}
+			}
+		}
+
+		if (key_name.empty())
+		{
+			return {};
+		}
+
+		auto value_type = std::string_view {};
+		auto trailing_expr = std::string_view {};
+
+		if (value_type_symbol != std::string_view::npos)
+		{
+			if (const auto value_type_begin = (value_type_symbol + type_specification_symbol.length()); value_type_begin < remainder.length())
+			{
+				value_type = trim(remainder.substr(value_type_begin));
+
+				if (const auto key_trailing_expr_begin = value_type.find_first_of(whitespace_symbols); key_trailing_expr_begin != std::string_view::npos)
+				{
+					trailing_expr = trim(value_type.substr(key_trailing_expr_begin));
+					value_type = value_type.substr(0, key_trailing_expr_begin);
+				}
+			}
+		}
+		else
+		{
+			trailing_expr = remainder;
+		}
+
+		if (!allow_trailing_expr)
+		{
+			if (!trailing_expr.empty())
+			{
+				return {};
+			}
+		}
+
+		return { key_name, value_type, trailing_expr, expression_syntax_used };
+	}
+
+	std::size_t find_singular(std::string_view str, std::string_view symbol, std::size_t offset)
+	{
+		return find_singular<true>
+		(
+			str, symbol,
+			
+			[](std::string_view str, std::string_view symbol, std::size_t position)
+			{
+				return str.find(symbol, position);
+			},
+
+			offset
+		);
+	}
+
+	std::size_t find_last_singular(std::string_view str, std::string_view symbol, std::size_t offset)
+	{
+		return find_singular<false>
+		(
+			str, symbol,
+			
+			[](std::string_view str, std::string_view symbol, std::size_t position)
+			{
+				return str.find(symbol, position);
+			},
+
+			offset
+		);
+	}
+
 	std::size_t find_scope_closing_symbol(std::string_view expr, std::string_view begin_symbol, std::string_view end_symbol, std::size_t position, std::string_view ignore_begin_symbol, std::string_view ignore_end_symbol)
     {
 	    if (position == std::string_view::npos)

@@ -1,8 +1,12 @@
 #include <catch2/catch_test_macros.hpp>
+
 #include <util/string.hpp>
 
+#include <string>
+#include <string_view>
 #include <cstdint>
 #include <vector>
+#include <tuple>
 
 TEST_CASE("util::is_quoted", "[util:string]")
 {
@@ -32,6 +36,18 @@ TEST_CASE("util::trim", "[util:string]")
 	REQUIRE(util::trim("  ", util::whitespace_symbols, true).empty());
 	REQUIRE(!util::trim("  ", util::whitespace_symbols, false).empty());
 	REQUIRE(util::trim("some::values::etc") == "some::values::etc");
+}
+
+TEST_CASE("util::split_from", "[util:string]")
+{
+	std::string_view content = "sleep_test, false";
+
+	auto result = util::split_from<2>(content, ",", 0);
+
+	REQUIRE(result);
+
+	REQUIRE(std::get<0>(*result) == "sleep_test");
+	REQUIRE(std::get<1>(*result) == "false");
 }
 
 TEST_CASE("util::split", "[util:string]")

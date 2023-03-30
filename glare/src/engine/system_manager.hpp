@@ -25,16 +25,16 @@ namespace engine
 			template <typename SystemType>
 			inline static constexpr auto key() { return entt::type_hash<SystemType>::value(); }
 
-			template <template<typename, typename> typename TraitType, typename SystemType>
+			template <template<typename, typename, typename...> typename TraitType, typename SystemType>
 			inline static constexpr bool has_method()
 			{
 				using Type = std::decay_t<SystemType>;
 
-				if constexpr (TraitType<Type, bool(ServiceType&)>::value)
+				if constexpr (TraitType<Type, bool, ServiceType&>::value)
 				{
 					return true;
 				}
-				else if constexpr (TraitType<Type, bool(Service&)>::value)
+				else if constexpr (TraitType<Type, bool, Service&>::value)
 				{
 					return true;
 				}

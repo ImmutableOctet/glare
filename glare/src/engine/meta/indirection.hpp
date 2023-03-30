@@ -38,10 +38,10 @@ namespace engine
     MetaAny try_get_underlying_value(const MetaAny& value, Registry& registry, Entity entity);
 
     // Returns a new `MetaAny` instance if `value` could supply an enclosed (indirect) value.
-    MetaAny try_get_underlying_value(const MetaAny& value, Registry& registry, Entity entity, const MetaEvaluationContext& context);
+    MetaAny try_get_underlying_value(const MetaAny& value, const MetaEvaluationContext& context);
 
-    // TODO: Implement standalone overload for `MetaEvaluationContext`.
-    //MetaAny try_get_underlying_value(MetaAny& expr, const MetaEvaluationContext& context);
+    // Returns a new `MetaAny` instance if `value` could supply an enclosed (indirect) value.
+    MetaAny try_get_underlying_value(const MetaAny& value, Registry& registry, Entity entity, const MetaEvaluationContext& context);
 
     // Attempts to retrieve an inner `MetaType` from `type_reference_value`, if it holds one (or the ID of one) internally.
     MetaType try_get_underlying_type(const MetaAny& type_reference_value);

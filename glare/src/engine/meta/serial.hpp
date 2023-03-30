@@ -6,6 +6,7 @@
 #include "meta_data_member.hpp"
 #include "indirect_meta_data_member.hpp"
 #include "meta_type_descriptor_flags.hpp"
+#include "meta_type_resolution_context.hpp"
 #include "meta_variable_scope.hpp"
 
 #include <engine/entity/entity_target.hpp>
@@ -16,6 +17,7 @@
 #include <util/format.hpp>
 #include <util/type_traits.hpp>
 #include <util/reflection.hpp>
+#include <util/parse.hpp>
 
 #include <entt/meta/meta.hpp>
 //#include <entt/entt.hpp>
@@ -167,26 +169,6 @@ namespace engine
 
 	void read_type_context(MetaTypeResolutionContext& context, const util::json& data);
 
-	MetaAny load
-	(
-		MetaAny out,
-		
-		const util::json& data,
-		bool modify_in_place=true,
-
-		const MetaParsingInstructions& parse_instructions={},
-		const MetaTypeDescriptorFlags& descriptor_flags={}
-	);
-
-	MetaAny load
-	(
-		MetaType type,
-		const util::json& data,
-
-		const MetaParsingInstructions& parse_instructions={},
-		const MetaTypeDescriptorFlags& descriptor_flags={}
-	);
-
 	namespace impl
 	{
 		template <typename ContainerType, typename ValueType=typename ContainerType::value_type>
@@ -205,7 +187,6 @@ namespace engine
 				return;
 			}
 
-			// TODO: Better integrate EnTT's sequence container API, rather than using STL's interface.
 			util::json_for_each
 			(
 				data,
@@ -258,15 +239,20 @@ namespace engine
 				return;
 			}
 
-			const auto value_type = resolve<ValueType>();
+			const auto intended_value_type = resolve<ValueType>();
 
-			if (!value_type)
+			if (!intended_value_type)
 			{
 				return;
 			}
 
 			auto try_get_native_instance = []<typename T>(MetaAny instance) -> std::optional<T>
 			{
+				if (!instance)
+				{
+					return std::nullopt;
+				}
+
 				if (auto resolved = try_get_underlying_value(instance)) // , args...
 				{
 					instance = std::move(resolved);
@@ -287,9 +273,9 @@ namespace engine
 				return std::nullopt;
 			};
 
-			auto resolve_key = [&parse_instructions, &key_type, &try_get_native_instance](auto&& key_content) -> std::optional<KeyType>
+			auto resolve_key = [&parse_instructions, &key_type, &try_get_native_instance](auto&& key_name) -> std::optional<KeyType>
 			{
-				if (auto key_instance = meta_any_from_string(key_content, parse_instructions, key_type))
+				if (auto key_instance = meta_any_from_string(key_name, parse_instructions, key_type))
 				{
 					return try_get_native_instance.operator()<KeyType>(std::move(key_instance));
 				}
@@ -297,7 +283,7 @@ namespace engine
 				return std::nullopt;
 			};
 
-			auto resolve_value = [&parse_instructions, &value_type, &try_get_native_instance](auto&& value_content) -> std::optional<ValueType>
+			auto resolve_value = [&parse_instructions, &try_get_native_instance](auto&& value_content, const MetaType& value_type) -> std::optional<ValueType>
 			{
 				if (auto value_instance = resolve_meta_any(value_content, value_type, parse_instructions))
 				{
@@ -309,20 +295,68 @@ namespace engine
 
 			for (const auto& entry : data.items())
 			{
-				const auto& key_content = entry.key();
+				const auto& key_raw = entry.key();
 
-				if (auto key_out = resolve_key(std::string_view { key_content }))
+				auto [key_name, value_type_spec, _unused_trailing, _unused_expr_syntax] = util::parse_key_expr_and_value_type
+				(
+					std::string_view { key_raw },
+					":", false
+				);
+
+				if (key_name.empty())
+				{
+					continue;
+				}
+
+				auto value_type = intended_value_type;
+
+				if (!value_type_spec.empty())
+				{
+					const auto opt_type_context = parse_instructions.context.get_type_context();
+
+					const auto manual_value_type = (opt_type_context)
+						? opt_type_context->get_type(value_type_spec, parse_instructions)
+						: resolve(hash(value_type_spec).value())
+					;
+
+					if (manual_value_type)
+					{
+						value_type = manual_value_type;
+					}
+				}
+
+				if (auto key_result = resolve_key(key_name))
 				{
 					const auto& value_content = entry.value();
 
-					if (auto value_out = resolve_value(value_content))
+					if (auto value_out = resolve_value(value_content, value_type))
 					{
-						out.insert_or_assign(std::move(*key_out), std::move(*value_out));
+						out.insert_or_assign(std::move(*key_result), std::move(*value_out));
 					}
 				}
 			}
 		}
 	}
+
+	MetaAny load
+	(
+		MetaAny out,
+		
+		const util::json& data,
+		bool modify_in_place=true,
+
+		const MetaParsingInstructions& parse_instructions={},
+		const MetaTypeDescriptorFlags& descriptor_flags={}
+	);
+
+	MetaAny load
+	(
+		MetaType type,
+		const util::json& data,
+
+		const MetaParsingInstructions& parse_instructions={},
+		const MetaTypeDescriptorFlags& descriptor_flags={}
+	);
 
 	template <typename T>
 	void load

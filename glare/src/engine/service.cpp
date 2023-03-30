@@ -5,6 +5,7 @@
 #include "meta/meta_type_descriptor.hpp"
 #include "meta/meta_evaluation_context.hpp"
 
+#include "commands/indirect_component_patch_command.hpp"
 #include "commands/component_patch_command.hpp"
 #include "commands/component_replace_command.hpp"
 #include "commands/function_command.hpp"
@@ -24,14 +25,17 @@ namespace engine
 {
 	Service::Service
 	(
+		Registry& registry,
+
 		bool register_input_events,
 		bool register_timed_event_wrapper,
 		bool register_core_commands,
 		bool register_function_commands,
 		bool allocate_root_entity,
 		bool allocate_universal_variables
-	)
-		: active_event_handler(&standard_event_handler)
+	) :
+		registry(registry),
+		active_event_handler(&standard_event_handler)
 	{
 		if (register_input_events)
 		{
@@ -49,8 +53,9 @@ namespace engine
 
 		if (register_core_commands)
 		{
-			register_event<ComponentPatchCommand,   &Service::on_component_patch>(*this);
-			register_event<ComponentReplaceCommand, &Service::on_component_replace>(*this);
+			register_event<IndirectComponentPatchCommand, &Service::on_indirect_component_patch>(*this);
+			register_event<ComponentPatchCommand,         &Service::on_direct_component_patch>(*this);
+			register_event<ComponentReplaceCommand,       &Service::on_component_replace>(*this);
 		}
 
 		if (register_function_commands)
@@ -69,7 +74,7 @@ namespace engine
 		}
 	}
 
-	void Service::on_component_patch(const ComponentPatchCommand& component_patch)
+	void Service::on_indirect_component_patch(const IndirectComponentPatchCommand& component_patch)
 	{
 		using namespace engine::literals;
 
@@ -84,7 +89,7 @@ namespace engine
 
 		const auto type = component.get_type();
 
-		auto patch_fn = type.func("patch_meta_component"_hs);
+		auto patch_fn = type.func("indirect_patch_meta_component"_hs);
 
 		if (!patch_fn)
 		{
@@ -107,12 +112,57 @@ namespace engine
 			entt::forward_as_meta(component.size()),
 			entt::forward_as_meta(0),
 			entt::forward_as_meta(component_patch.source),
-			entt::forward_as_meta(const_cast<const MetaEvaluationContext*>(&opt_evaluation_context))
+			entt::forward_as_meta(const_cast<const MetaEvaluationContext*>(&opt_evaluation_context)),
+			entt::forward_as_meta(component_patch.event_instance.as_ref())
 		);
 
 		if (!result)
 		{
 			print_warn("Entity #{}: Failed to patch component type: {}", component_patch.target, type.id());
+		}
+	}
+
+	void Service::on_direct_component_patch(const ComponentPatchCommand& component_patch)
+	{
+		using namespace engine::literals;
+
+		auto& component = component_patch.component;
+
+		if (!component)
+		{
+			print_warn("Failed to patch component: Missing component instance.");
+
+			return;
+		}
+
+		const auto& entity = component_patch.target;
+
+		const auto type = component.type();
+
+		auto patch_fn = type.func("direct_patch_meta_component"_hs);
+
+		if (!patch_fn)
+		{
+			print_warn("Unable to resolve patch function for type: #{}", type.id());
+
+			return;
+		}
+
+		auto& registry = get_registry();
+
+		auto result = patch_fn.invoke
+		(
+			{},
+
+			entt::forward_as_meta(registry),
+			entt::forward_as_meta(entity),
+			entt::forward_as_meta(std::move(component)),
+			entt::forward_as_meta(component_patch.use_member_assignment)
+		);
+
+		if (!result)
+		{
+			print_warn("Entity #{}: Failed to patch component type: {}", entity, type.id());
 		}
 	}
 
@@ -169,7 +219,7 @@ namespace engine
 		execute_opaque_function
 		(
 			function_command.function,
-			registry,
+			get_registry(),
 			function_command.source, // function_command.target
 			function_command.context.get_context()
 		);

@@ -5,13 +5,6 @@ target_sources(
     
     PRIVATE
 
-    # Commands:
-    # Nothing so far.
-
-    # Components:
-    "components/entity_thread_component.cpp"
-
-    # Top-level:
     "entity_descriptor.cpp"
     "entity_factory.cpp"
     "entity_listener.cpp"
@@ -29,7 +22,12 @@ target_sources(
     "entity_state_action.cpp"
     "entity_thread_target.cpp"
     "meta_description.cpp"
-  "components/instance_component.cpp" "components/entity_context_component.cpp" "entity_context.cpp"  "parse.cpp")
+    "components/entity_thread_component.cpp"
+    "components/instance_component.cpp"
+    "components/entity_context_component.cpp"
+    "entity_context.cpp"
+    "parse.cpp"
+)
 
 #target_link_libraries(
 #    glare_engine_entity

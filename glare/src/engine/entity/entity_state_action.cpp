@@ -8,6 +8,7 @@
 //#include <engine/resource_manager/resource_manager.hpp>
 
 #include <engine/commands/component_patch_command.hpp>
+#include <engine/commands/indirect_component_patch_command.hpp>
 #include <engine/commands/component_replace_command.hpp>
 
 #include <engine/meta/meta.hpp>
@@ -25,7 +26,8 @@ namespace engine
 		const EntityStateTransitionAction& transition,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay,
-		const MetaEvaluationContext& context
+		const MetaEvaluationContext& context,
+		const MetaAny& event_instance
 	)
 	{
 		service.timed_event<StateChangeCommand>
@@ -44,13 +46,17 @@ namespace engine
 		const EntityStateCommandAction& command,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay,
-		const MetaEvaluationContext& context
+		const MetaEvaluationContext& context,
+		const MetaAny& event_instance
 	)
 	{
 		//const auto& command_descriptor = command.command;
 		const auto& command_descriptor = command.command.get(descriptor);
 
-		auto command_instance = command_descriptor.instance(true, registry, source, context);
+		auto command_instance = (event_instance)
+			? command_descriptor.instance(true, event_instance, registry, source, context)
+			: command_descriptor.instance(true, registry, source, context)
+		;
 
 		assert(command_instance);
 		assert(command_instance.type());
@@ -72,7 +78,11 @@ namespace engine
 		const EntityStateUpdateAction& update,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay,
-		const MetaEvaluationContext& context
+		const MetaEvaluationContext& context,
+		const MetaAny& event_instance,
+
+		bool defer_evaluation,
+		bool use_member_assignment_on_patch
 	)
 	{
 		if (auto redirected_target = update.target_entity.get(registry, ((target == null) ? source : target)); redirected_target != null)
@@ -84,37 +94,59 @@ namespace engine
 		{
 			const auto& component = component_entry.get(descriptor);
 
-			if (!component.forces_field_assignment())
+			if (defer_evaluation)
 			{
-				auto instance = component.instance(true, registry, source, context);
+				// Attempt to patch the component in-place, rather than reconstructing it.
+				// NOTE: Raw pointer type. (May replace with `std::shared_ptr` later)
+				service.timed_event<IndirectComponentPatchCommand>
+				(
+					delay,
+					source, target,
+					&component,
 
-				if (instance)
+					// NOTE: Technically unsafe due to usage of raw pointers with assumption of extended lifetime.
+					// (We aren't currently storing shared pointers internally)
+					MetaEvaluationContextStore { context },
+
+					// NOTE: Potentially unsafe due to implied copy of event-instance.
+					// (May reference stale data at time of execution)
+					event_instance // event_instance.as_ref()
+				);
+			}
+			else
+			{
+				auto instance = (event_instance)
+					? component.instance(true, event_instance, registry, source, context)
+					: component.instance(true, registry, source, context)
+				;
+
+				if (!instance)
 				{
-					// Replace/reconstruct the component according to the desired specifications.
-					service.timed_event<ComponentReplaceCommand>(delay, source, target, std::move(instance));
-
 					continue;
+				}
+
+				if (component.forces_field_assignment())
+				{
+					// Patch the component according to the desired specifications.
+					service.timed_event<ComponentPatchCommand>
+					(
+						delay,
+						source, target,
+						std::move(instance),
+						use_member_assignment_on_patch
+					);
 				}
 				else
 				{
-					//print_warn("Failed to instantiate component #{} during update procedure.", component.type.id());
-
-					// Continue to the 'patch' control-path instead.
+					// Replace/reconstruct the component according to the desired specifications.
+					service.timed_event<ComponentReplaceCommand>
+					(
+						delay,
+						source, target,
+						std::move(instance)
+					);
 				}
 			}
-
-			// Attempt to patch the component in-place, rather than reconstructing it.
-			// NOTE: Raw pointer type. (May replace with `std::shared_ptr` later)
-			service.timed_event<ComponentPatchCommand>
-			(
-				delay,
-				source, target,
-				&component,
-
-				// NOTE: Technically unsafe due to usage of raw pointers with assumption of extended lifetime.
-				// (i.e. we aren't currently storing shared pointers internally)
-				MetaEvaluationContextStore { context }
-			);
 		}
 	}
 
@@ -126,7 +158,8 @@ namespace engine
 		const EntityThreadSpawnAction& thread_spawn,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay,
-		const MetaEvaluationContext& context
+		const MetaEvaluationContext& context,
+		const MetaAny& event_instance
 	)
 	{
 		service.timed_event<EntityThreadSpawnCommand>
@@ -148,7 +181,8 @@ namespace engine
 		const EntityThreadStopAction& thread_stop,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay,
-		const MetaEvaluationContext& context
+		const MetaEvaluationContext& context,
+		const MetaAny& event_instance
 	)
 	{
 		service.timed_event<EntityThreadStopCommand>
@@ -170,7 +204,8 @@ namespace engine
 		const EntityThreadPauseAction& thread_pause,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay,
-		const MetaEvaluationContext& context
+		const MetaEvaluationContext& context,
+		const MetaAny& event_instance
 	)
 	{
 		service.timed_event<EntityThreadPauseCommand>
@@ -192,7 +227,8 @@ namespace engine
 		const EntityThreadResumeAction& thread_resume,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay,
-		const MetaEvaluationContext& context
+		const MetaEvaluationContext& context,
+		const MetaAny& event_instance
 	)
 	{
 		service.timed_event<EntityThreadResumeCommand>
@@ -214,7 +250,8 @@ namespace engine
 		const EntityThreadAttachAction& thread_attach,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay,
-		const MetaEvaluationContext& context
+		const MetaEvaluationContext& context,
+		const MetaAny& event_instance
 	)
 	{
 		service.timed_event<EntityThreadAttachCommand>
@@ -237,7 +274,8 @@ namespace engine
 		const EntityThreadDetachAction& thread_detach,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay,
-		const MetaEvaluationContext& context
+		const MetaEvaluationContext& context,
+		const MetaAny& event_instance
 	)
 	{
 		service.timed_event<EntityThreadDetachCommand>
@@ -259,7 +297,8 @@ namespace engine
 		const EntityThreadUnlinkAction& thread_detach,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay,
-		const MetaEvaluationContext& context
+		const MetaEvaluationContext& context,
+		const MetaAny& event_instance
 	)
 	{
 		service.timed_event<EntityThreadUnlinkCommand>
@@ -280,7 +319,8 @@ namespace engine
 		const EntityThreadSkipAction& thread_skip,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay,
-		const MetaEvaluationContext& context
+		const MetaEvaluationContext& context,
+		const MetaAny& event_instance
 	)
 	{
 		service.timed_event<EntityThreadSkipCommand>
@@ -303,7 +343,8 @@ namespace engine
 		const EntityThreadRewindAction& thread_rewind,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay,
-		const MetaEvaluationContext& context
+		const MetaEvaluationContext& context,
+		const MetaAny& event_instance
 	)
 	{
 		service.timed_event<EntityThreadRewindCommand>
@@ -326,7 +367,8 @@ namespace engine
 		const EntityStateAction& action,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay,
-		const MetaEvaluationContext& context
+		const MetaEvaluationContext& context,
+		const MetaAny& event_instance
 	)
 	{
 		std::visit
@@ -342,7 +384,8 @@ namespace engine
 					source,
 					target,
 					delay,
-					context
+					context,
+					event_instance
 				);
 			},
 
@@ -358,7 +401,8 @@ namespace engine
 		const EntityStateAction& action,
 		Entity source_entity, const EntityTarget& target,
 		std::optional<engine::Timer::Duration> delay,
-		const MetaEvaluationContext& context
+		const MetaEvaluationContext& context,
+		const MetaAny& event_instance
 	)
 	{
 		auto target_entity = target.get(registry, source_entity);
@@ -379,7 +423,8 @@ namespace engine
 			source_entity,
 			target_entity,
 			delay,
-			context
+			context,
+			event_instance
 		);
 	}
 
@@ -389,7 +434,8 @@ namespace engine
 		const EntityStateAction& action,
 		Entity source_entity, const EntityTarget& target,
 		std::optional<engine::Timer::Duration> delay,
-		const MetaEvaluationContext& context
+		const MetaEvaluationContext& context,
+		const MetaAny& event_instance
 	)
 	{
 		auto& registry = service.get_registry();
@@ -409,7 +455,8 @@ namespace engine
 			source_entity,
 			target,
 			delay,
-			context
+			context,
+			event_instance
 		);
 	}
 }

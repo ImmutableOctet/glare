@@ -20,6 +20,7 @@
 #include <engine/meta/meta_variable.hpp>
 #include <engine/meta/meta_variable_context.hpp>
 #include <engine/meta/meta_data_member.hpp>
+#include <engine/meta/meta_parsing_context.hpp>
 #include <engine/meta/indirect_meta_data_member.hpp>
 
 #include <util/algorithm.hpp>
@@ -364,8 +365,6 @@ namespace engine
 			}
 		}
 
-		const bool force_entry_update = ((!allow_new_entry) && (!allow_default_entries));
-
 		const auto opt_type_context = opt_parsing_context.get_type_context();
 
 		auto component_type = (opt_type_context)
@@ -379,6 +378,54 @@ namespace engine
 
 			return false;
 		}
+
+		return process_component
+		(
+			descriptor,
+			components_out, // EntityDescriptor::TypeInfo&
+
+			component_type,
+			allow_entry_update,
+			constructor_arg_count,
+
+			component_content,
+
+			component_flags,
+
+			opt_parsing_context,
+
+			allow_new_entry,
+			allow_default_entries,
+			forward_entry_update_condition_to_flags
+		);
+	}
+
+	bool process_component
+	(
+		EntityDescriptor& descriptor,
+		MetaDescription& components_out, // EntityDescriptor::TypeInfo&
+
+		const MetaType& component_type,
+		bool allow_entry_update,
+		std::optional<std::uint8_t> constructor_arg_count, // EntityFactory::SmallSize
+
+		const util::json* component_content,
+
+		const MetaTypeDescriptorFlags& component_flags,
+
+		const MetaParsingContext& opt_parsing_context,
+
+		bool allow_new_entry,
+		bool allow_default_entries,
+		bool forward_entry_update_condition_to_flags
+	)
+	{
+		if (!component_type)
+		{
+			return false;
+		}
+
+		const bool force_entry_update = ((!allow_new_entry) && (!allow_default_entries));
 
 		auto make_component = [&]()
 		{
@@ -1671,50 +1718,112 @@ namespace engine
 				if (auto command = util::find_any(content, "command", "commands", "generate"); command != content.end())
 				{
 					for_each_command(*command);
-
-					break;
 				}
-				else
-				{
-					util::enumerate_map_filtered_ex
-					(
-						content.items(),
+				
+				std::optional<EntityStateUpdateAction> update_action = std::nullopt;
 
-						[](auto&& value) { return hash(std::forward<decltype(value)>(value)); },
+				util::enumerate_map_filtered_ex
+				(
+					content.items(),
 
-						[&process_command_rule_from_object, &process_command_rule_from_csv](const auto& command_name, const auto& content)
+					[](auto&& value) { return hash(std::forward<decltype(value)>(value)); },
+
+					[&opt_parsing_context, &process_rule, &descriptor, &target, &process_command_rule_from_object, &process_command_rule_from_csv, &update_action](const auto& element_name, const auto& content)
+					{
+						if (auto [component_name, allow_entry_update, constructor_arg_count] = parse_component_declaration(element_name); !component_name.empty())
 						{
-							switch (content.type())
+							auto component_type = MetaType {};
+
+							if (const auto opt_type_context = opt_parsing_context.get_type_context())
 							{
-								case util::json::value_t::array:
-								case util::json::value_t::object:
+								if (component_name.ends_with("Component"))
 								{
-									process_command_rule_from_object(command_name, content);
-
-									break;
+									component_type = opt_type_context->get_component_type(component_name);
 								}
-
-								case util::json::value_t::string:
+								else
 								{
-									auto string_data = content.get<std::string>();
-
-									process_command_rule_from_csv(command_name, string_data);
-
-									break;
+									component_type = opt_type_context->get_component_type_from_alias(component_name);
 								}
 							}
-						},
+							else
+							{
+								if (component_name.ends_with("Component"))
+								{
+									component_type = resolve(hash(component_name).value());
+								}
+							}
 
-						// Ignore these keys (see above):
-						"trigger", "triggers", "condition", "conditions",
+							if (component_type)
+							{
+								if (!update_action)
+								{
+									update_action = EntityStateUpdateAction { target };
+								}
 
-						"target",
-						"timer", "wait", "delay",
-						"state", "next", "next_state",
-						"update", "updates", "components", "change",
-						"do", "threads", "execute",
-						"command", "commands", "generate"
-					);
+								auto result = process_component
+								(
+									descriptor,
+									update_action->updated_components,
+
+									component_type,
+									allow_entry_update,
+									constructor_arg_count,
+
+									&content,
+
+									{}, // { .force_field_assignment = true },
+									opt_parsing_context,
+
+									true, true, true
+								);
+
+								if (result)
+								{
+									return;
+								}
+							}
+						}
+
+						switch (content.type())
+						{
+							case util::json::value_t::array:
+							case util::json::value_t::object:
+							{
+								process_command_rule_from_object(element_name, content);
+
+								break;
+							}
+
+							case util::json::value_t::string:
+							{
+								auto string_data = content.get<std::string>();
+
+								process_command_rule_from_csv(element_name, string_data);
+
+								break;
+							}
+						}
+					},
+
+					// Ignore these keys (see above):
+					"trigger", "triggers", "condition", "conditions",
+
+					"target",
+					"timer", "wait", "delay",
+					"state", "next", "next_state",
+					"update", "updates", "components", "change",
+					"do", "threads", "execute",
+					"command", "commands", "generate"
+				);
+
+				if (update_action)
+				{
+					//assert(!update_action->updated_components.type_definitions.empty());
+
+					if (!update_action->updated_components.type_definitions.empty())
+					{
+						process_rule(std::move(*update_action));
+					}
 				}
 
 				break;

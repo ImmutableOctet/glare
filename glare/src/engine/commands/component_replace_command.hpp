@@ -7,7 +7,7 @@
 
 namespace engine
 {
-	// Replaces the component-type described by `component` for `target`.
+	// Performs copy or move construction of `component` to `target` via an 'emplace-or-replace' operation.
 	struct ComponentReplaceCommand : public Command
 	{
 		using Component = MetaAny;
