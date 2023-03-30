@@ -156,6 +156,27 @@ namespace engine
 		bool ignore_special_symbols=true
 	);
 
+	// See simplified overload for details.
+	bool process_component
+	(
+		EntityDescriptor& descriptor,
+		MetaDescription& components_out, // EntityDescriptor::TypeInfo&
+
+		const MetaType& component_type,
+		bool allow_entry_update=false,
+		std::optional<std::uint8_t> constructor_arg_count=std::nullopt, // EntityFactory::SmallSize
+
+		const util::json* component_content=nullptr,
+
+		const MetaTypeDescriptorFlags& component_flags={},
+
+		const MetaParsingContext& opt_parsing_context={},
+
+		bool allow_new_entry=true,
+		bool allow_default_entries=true,
+		bool forward_entry_update_condition_to_flags=false
+	);
+
 	// Same as the `MetaType` overload, but handles resolution of `component_name`.
 	std::optional<MetaTypeDescriptor> process_component
 	(
