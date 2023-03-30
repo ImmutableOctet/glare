@@ -12,6 +12,7 @@
 #include <string>
 
 #include <util/string.hpp>
+#include <util/parse.hpp>
 
 // Debugging related:
 #include <util/log.hpp>
@@ -72,28 +73,12 @@ namespace engine
 		return type_id;
 	}
 
-	std::tuple<std::string_view, std::string_view>
+	std::tuple<std::string_view, std::string_view, bool>
 	MetaTypeDescriptor::parse_variable_declaration(std::string_view var_decl, std::string_view type_specifier_symbol)
 	{
-		auto symbol_position = var_decl.find(type_specifier_symbol);
+		const auto result = util::parse_key_expr_and_value_type(var_decl, type_specifier_symbol, false, true);
 
-		if ((symbol_position == std::string_view::npos) || (symbol_position == (var_decl.length()-type_specifier_symbol.length())))
-		{
-			return { var_decl, {} };
-		}
-
-		auto var_name = var_decl.substr(0, symbol_position);
-    
-		auto var_type = var_decl.substr
-		(
-			(symbol_position + type_specifier_symbol.length()),
-			(var_decl.length() - symbol_position)
-		);
-
-		var_name = util::trim(var_name);
-		var_type = util::trim(var_type);
-
-		return { var_name, var_type };
+		return { std::get<0>(result), std::get<1>(result), std::get<3>(result) };
 	}
 
 	std::optional<std::pair<entt::id_type, entt::meta_data>>
@@ -363,16 +348,41 @@ namespace engine
 
 		const auto opt_type_context = instructions.context.get_type_context();
 
+		const auto var_name_expr_implied_type = MetaType {}; // resolve<std::string>();
+
 		for (const auto& var_proxy : content.items())
 		{
 			const auto& var_decl = var_proxy.key();
 			const auto& var_value = var_proxy.value();
 
-			auto [var_name, var_type_spec] = parse_variable_declaration(var_decl);
+			auto [var_name, var_type_spec, var_name_is_expression] = parse_variable_declaration(var_decl);
 
-			// TODO: Change to `std::optional<MetaSymbolID>`, where `std::nullopt` in case of `content.is_array()`.
-			MetaSymbolID var_name_hash = hash(var_name).value();
-			//process_value(var_name, var_value);
+			auto var_name_hash = MetaSymbolID {};
+
+			if (!this->flags.is_sequential_container)
+			{
+				if (var_name_is_expression)
+				{
+					// NOTE: Parsing instructions purposefully not forwarded here.
+					if (auto var_name_expr = meta_any_from_string(std::string_view { var_name }, {}, var_name_expr_implied_type, false))
+					{
+						if (auto var_name_resolved = try_get_underlying_value(var_name_expr))
+						{
+							var_name_expr = std::move(var_name_resolved);
+						}
+
+						if (auto var_name_expr_as_hash = meta_any_to_string_hash(var_name_expr, true, false, true))
+						{
+							var_name_hash = *var_name_expr_as_hash;
+						}
+					}
+				}
+
+				if (!var_name_hash)
+				{
+					var_name_hash = hash(var_name);
+				}
+			}
 			
 			auto resolve_data_entry = [this, &type, &content, &variable_index, &var_name_hash]() mutable -> entt::meta_data
 			{
@@ -449,7 +459,7 @@ namespace engine
 				{
 					return MetaVariable(var_name_hash, var_value, variable_type, instructions);
 				}
-				else if (var_name.empty() || content.is_array() || content.is_string())
+				else if (var_name.empty() || content.is_array() || content.is_string()) // || this->flags.is_container
 				{
 					if (allow_nameless_fields)
 					{
@@ -740,9 +750,19 @@ namespace engine
 		return apply_fields_impl(instance, field_count, offset);
 	}
 
+	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance, const MetaAny& source_value, std::size_t field_count, std::size_t offset) const
+	{
+		return apply_fields_impl(instance, field_count, offset, source_value);
+	}
+
 	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance) const
 	{
-		return apply_fields(instance, size());
+		return apply_fields_impl(instance, size(), 0);
+	}
+
+	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance, const MetaAny& source_value) const
+	{
+		return apply_fields_impl(instance, size(), 0, source_value);
 	}
 
 	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance, Registry& registry, Entity entity, std::size_t field_count, std::size_t offset) const
@@ -750,9 +770,19 @@ namespace engine
 		return apply_fields_impl(instance, field_count, offset, registry, entity);
 	}
 
+	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance, const MetaAny& source_value, Registry& registry, Entity entity, std::size_t field_count, std::size_t offset) const
+	{
+		return apply_fields_impl(instance, field_count, offset, source_value, registry, entity);
+	}
+
 	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance, Registry& registry, Entity entity, const MetaEvaluationContext& context, std::size_t field_count, std::size_t offset) const
 	{
 		return apply_fields_impl(instance, field_count, offset, registry, entity, context);
+	}
+
+	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance, const MetaAny& source_value, Registry& registry, Entity entity, const MetaEvaluationContext& context, std::size_t field_count, std::size_t offset) const
+	{
+		return apply_fields_impl(instance, field_count, offset, source_value, registry, entity, context);
 	}
 
 	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance, const MetaEvaluationContext& context, std::size_t field_count, std::size_t offset) const
@@ -760,9 +790,19 @@ namespace engine
 		return apply_fields_impl(instance, field_count, offset, context);
 	}
 
+	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance, const MetaAny& source_value, const MetaEvaluationContext& context, std::size_t field_count, std::size_t offset) const
+	{
+		return apply_fields_impl(instance, field_count, offset, source_value, context);
+	}
+
 	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance, const MetaEvaluationContext& context) const
 	{
 		return apply_fields_impl(instance, size(), 0, context);
+	}
+
+	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance, const MetaAny& source_value, const MetaEvaluationContext& context) const
+	{
+		return apply_fields_impl(instance, size(), 0, source_value, context);
 	}
 
 	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance, Registry& registry, Entity entity) const
@@ -770,9 +810,19 @@ namespace engine
 		return apply_fields_impl(instance, size(), 0, registry, entity);
 	}
 
+	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance, const MetaAny& source_value, Registry& registry, Entity entity) const
+	{
+		return apply_fields_impl(instance, size(), 0, source_value, registry, entity);
+	}
+
 	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance, Registry& registry, Entity entity, const MetaEvaluationContext& context) const
 	{
 		return apply_fields_impl(instance, size(), 0, registry, entity, context);
+	}
+
+	std::size_t MetaTypeDescriptor::apply_fields(MetaAny& instance, const MetaAny& source_value, Registry& registry, Entity entity, const MetaEvaluationContext& context) const
+	{
+		return apply_fields_impl(instance, size(), 0, source_value, registry, entity, context);
 	}
 
 	template <typename ...Args>
@@ -1083,14 +1133,39 @@ namespace engine
 		return resolve_values_impl(values_out, constructor_args_count, offset);
 	}
 
+	std::size_t MetaTypeDescriptor::resolve_values(Values& values_out, std::size_t constructor_args_count, const MetaAny& source_value, std::size_t offset) const
+	{
+		return resolve_values_impl(values_out, constructor_args_count, offset, source_value);
+	}
+
+	std::size_t MetaTypeDescriptor::resolve_values(Values& values_out, std::size_t constructor_args_count, const MetaEvaluationContext& context, std::size_t offset) const
+	{
+		return resolve_values_impl(values_out, constructor_args_count, offset, context);
+	}
+
+	std::size_t MetaTypeDescriptor::resolve_values(Values& values_out, std::size_t constructor_args_count, const MetaAny& source_value, const MetaEvaluationContext& context, std::size_t offset) const
+	{
+		return resolve_values_impl(values_out, constructor_args_count, offset, source_value, context);
+	}
+
 	std::size_t MetaTypeDescriptor::resolve_values(Values& values_out, std::size_t constructor_args_count, Registry& registry, Entity entity, std::size_t offset) const
 	{
 		return resolve_values_impl(values_out, constructor_args_count, offset, registry, entity);
 	}
 
+	std::size_t MetaTypeDescriptor::resolve_values(Values& values_out, std::size_t constructor_args_count, const MetaAny& source_value, Registry& registry, Entity entity, std::size_t offset) const
+	{
+		return resolve_values_impl(values_out, constructor_args_count, offset, source_value, registry, entity);
+	}
+
 	std::size_t MetaTypeDescriptor::resolve_values(Values& values_out, std::size_t constructor_args_count, Registry& registry, Entity entity, const MetaEvaluationContext& context, std::size_t offset) const
 	{
 		return resolve_values_impl(values_out, constructor_args_count, offset, registry, entity, context);
+	}
+
+	std::size_t MetaTypeDescriptor::resolve_values(Values& values_out, std::size_t constructor_args_count, const MetaAny& source_value, Registry& registry, Entity entity, const MetaEvaluationContext& context, std::size_t offset) const
+	{
+		return resolve_values_impl(values_out, constructor_args_count, offset, source_value, registry, entity, context);
 	}
 
 	template <typename ...Args>

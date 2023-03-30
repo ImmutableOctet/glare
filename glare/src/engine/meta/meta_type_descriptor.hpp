@@ -49,7 +49,8 @@ namespace engine
 			static std::tuple
 			<
 				std::string_view, // Name
-				std::string_view  // Type
+				std::string_view, // Type
+				bool              // expression_syntax_used
 			>
 			parse_variable_declaration(std::string_view var_decl, std::string_view type_specifier_symbol=":");
 
@@ -441,31 +442,67 @@ namespace engine
 				the field in question, it will be ignored.
 			*/
 			std::size_t apply_fields(MetaAny& instance, std::size_t field_count, std::size_t offset=0) const;
+			std::size_t apply_fields(MetaAny& instance, const MetaAny& source_value, std::size_t field_count, std::size_t offset = 0) const;
 
 			std::size_t apply_fields(MetaAny& instance) const;
+			std::size_t apply_fields(MetaAny& instance, const MetaAny& source_value) const;
 
 			// Updates each field of `instance`, defined by this descriptor.
 			// 
 			// This overload uses `registry` and `entity` to resolve source-indirection
 			// from the `field_values` container. (e.g. References to component member)
 			std::size_t apply_fields(MetaAny& instance, Registry& registry, Entity entity, std::size_t field_count, std::size_t offset=0) const;
+			std::size_t apply_fields(MetaAny& instance, const MetaAny& source_value, Registry& registry, Entity entity, std::size_t field_count, std::size_t offset = 0) const;
 
 			std::size_t apply_fields(MetaAny& instance, Registry& registry, Entity entity, const MetaEvaluationContext& context, std::size_t field_count, std::size_t offset=0) const;
+			std::size_t apply_fields(MetaAny& instance, const MetaAny& source_value, Registry& registry, Entity entity, const MetaEvaluationContext& context, std::size_t field_count, std::size_t offset = 0) const;
 			
 			std::size_t apply_fields(MetaAny& instance, const MetaEvaluationContext& context, std::size_t field_count, std::size_t offset=0) const;
+			std::size_t apply_fields(MetaAny& instance, const MetaAny& source_value, const MetaEvaluationContext& context, std::size_t field_count, std::size_t offset=0) const;
+			
 			std::size_t apply_fields(MetaAny& instance, const MetaEvaluationContext& context) const;
+			std::size_t apply_fields(MetaAny& instance, const MetaAny& source_value, const MetaEvaluationContext& context) const;
 
 			std::size_t apply_fields(MetaAny& instance, Registry& registry, Entity entity) const;
+			std::size_t apply_fields(MetaAny& instance, const MetaAny& source_value, Registry& registry, Entity entity) const;
+
 			std::size_t apply_fields(MetaAny& instance, Registry& registry, Entity entity, const MetaEvaluationContext& context) const;
+			std::size_t apply_fields(MetaAny& instance, const MetaAny& source_value, Registry& registry, Entity entity, const MetaEvaluationContext& context) const;
 
 			std::size_t resolve_values(Values& values_out, std::size_t constructor_args_count, std::size_t offset=0) const;
+			std::size_t resolve_values(Values& values_out, std::size_t constructor_args_count, const MetaAny& source_value, std::size_t offset=0) const;
+
+			std::size_t resolve_values(Values& values_out, std::size_t constructor_args_count, const MetaEvaluationContext& context, std::size_t offset=0) const;
+			std::size_t resolve_values(Values& values_out, std::size_t constructor_args_count, const MetaAny& source_value, const MetaEvaluationContext& context, std::size_t offset=0) const;
+			
 			std::size_t resolve_values(Values& values_out, std::size_t constructor_args_count, Registry& registry, Entity entity, std::size_t offset=0) const;
+			std::size_t resolve_values(Values& values_out, std::size_t constructor_args_count, const MetaAny& source_value, Registry& registry, Entity entity, std::size_t offset = 0) const;
+			
 			std::size_t resolve_values(Values& values_out, std::size_t constructor_args_count, Registry& registry, Entity entity, const MetaEvaluationContext& context, std::size_t offset=0) const;
+			std::size_t resolve_values(Values& values_out, std::size_t constructor_args_count, const MetaAny& source_value, Registry& registry, Entity entity, const MetaEvaluationContext& context, std::size_t offset=0) const;
 
 			// Alias to `instance` provided for reflection.
 			inline MetaAny get_indirect_value() const
 			{
 				return instance(true);
+			}
+
+			// Alias to `instance` provided for reflection.
+			inline MetaAny get_indirect_value(const MetaAny& source_value) const
+			{
+				return instance(true, source_value);
+			}
+
+			// Alias to `instance` provided for reflection.
+			inline MetaAny get_indirect_value(const MetaEvaluationContext& context) const
+			{
+				return instance(true, context);
+			}
+
+			// Alias to `instance` provided for reflection.
+			inline MetaAny get_indirect_value(const MetaAny& source_value, const MetaEvaluationContext& context) const
+			{
+				return instance(true, source_value, context);
 			}
 
 			// Alias to `instance` provided for reflection.
@@ -475,9 +512,21 @@ namespace engine
 			}
 
 			// Alias to `instance` provided for reflection.
+			inline MetaAny get_indirect_value(const MetaAny& source_value, Registry& registry, Entity entity) const
+			{
+				return instance(true, source_value, registry, entity);
+			}
+
+			// Alias to `instance` provided for reflection.
 			inline MetaAny get_indirect_value(Registry& registry, Entity entity, const MetaEvaluationContext& context) const
 			{
 				return instance(true, registry, entity, context);
+			}
+
+			// Alias to `instance` provided for reflection.
+			inline MetaAny get_indirect_value(const MetaAny& source_value, Registry& registry, Entity entity, const MetaEvaluationContext& context) const
+			{
+				return instance(true, source_value, registry, entity, context);
 			}
 
 			// Alias to `apply_fields` provided for reflection.
