@@ -7,6 +7,7 @@
 
 #include "print_command.hpp"
 #include "component_patch_command.hpp"
+#include "indirect_component_patch_command.hpp"
 #include "component_replace_command.hpp"
 
 #include <engine/meta/meta_evaluation_context.hpp>
@@ -16,7 +17,15 @@ namespace engine
 	template <>
     void reflect<Command>()
     {
-        engine_meta_type<Command>(false)
+        engine_meta_type
+		<
+			Command,
+
+			MetaTypeReflectionConfig
+			{
+				.capture_standard_data_members = false
+			}
+		>()
 			//.data<nullptr, &Command::entity>("entity"_hs)
             .data<&Command::source>("source"_hs)
             .data<&Command::target>("target"_hs)
@@ -34,11 +43,33 @@ namespace engine
     }
 
 	template <>
+	void reflect<IndirectComponentPatchCommand>()
+	{
+		engine_command_type<IndirectComponentPatchCommand>()
+			.data<&IndirectComponentPatchCommand::component>("component"_hs)
+			.data<&IndirectComponentPatchCommand::context>("context"_hs)
+			.ctor
+			<
+				decltype(IndirectComponentPatchCommand::source),
+				decltype(IndirectComponentPatchCommand::target),
+				decltype(IndirectComponentPatchCommand::component)
+			>()
+			.ctor
+			<
+				decltype(IndirectComponentPatchCommand::source),
+				decltype(IndirectComponentPatchCommand::target),
+				decltype(IndirectComponentPatchCommand::component),
+				decltype(IndirectComponentPatchCommand::context)
+			>()
+		;
+	}
+
+	template <>
 	void reflect<ComponentPatchCommand>()
 	{
 		engine_command_type<ComponentPatchCommand>()
 			.data<&ComponentPatchCommand::component>("component"_hs)
-			.data<&ComponentPatchCommand::context>("context"_hs)
+			.data<&ComponentPatchCommand::use_member_assignment>("use_member_assignment"_hs)
 			.ctor
 			<
 				decltype(ComponentPatchCommand::source),
@@ -50,7 +81,7 @@ namespace engine
 				decltype(ComponentPatchCommand::source),
 				decltype(ComponentPatchCommand::target),
 				decltype(ComponentPatchCommand::component),
-				decltype(ComponentPatchCommand::context)
+				decltype(ComponentPatchCommand::use_member_assignment)
 			>()
 		;
 	}
@@ -73,6 +104,7 @@ namespace engine
 	{
 		reflect<Command>();
 		reflect<PrintCommand>();
+		reflect<IndirectComponentPatchCommand>();
 		reflect<ComponentPatchCommand>();
 		reflect<ComponentReplaceCommand>();
 	}

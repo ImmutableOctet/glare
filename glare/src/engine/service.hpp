@@ -47,6 +47,7 @@ namespace engine
 {
 	class ResourceManager;
 
+	struct IndirectComponentPatchCommand;
 	struct ComponentPatchCommand;
 	struct ComponentReplaceCommand;
 	struct FunctionCommand;
@@ -471,12 +472,18 @@ namespace engine
 				);
 			}
 
-			void on_component_patch(const ComponentPatchCommand& component_patch);
+			void on_indirect_component_patch(const IndirectComponentPatchCommand& component_patch);
+
+			// NOTE: This does not take the event as const-reference since we would normally
+			// move from the enclosed `ComponentPatchCommand::component` object.
+			// 
+			// This, in turn, means that said object is in a moved-from state after this method executes.
+			void on_direct_component_patch(const ComponentPatchCommand& component_patch);
 
 			// NOTE: This does not take the event as const-reference since we would normally
 			// move from the enclosed `ComponentReplaceCommand::component` object.
 			// 
-			// This in turn means that said object is in a moved-from state after this method executes.
+			// This, in turn, means that said object is in a moved-from state after this method executes.
 			void on_component_replace(ComponentReplaceCommand& component_replace);
 
 			void opaque_function_handler(const FunctionCommand& function_command);

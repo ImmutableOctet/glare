@@ -76,7 +76,7 @@ namespace engine
 
 		if (value_assignment && (!direct_modify))
 		{
-			auto patch_fn = type.func("patch_meta_component"_hs);
+			auto patch_fn = type.func("indirect_patch_meta_component"_hs);
 
 			if (!patch_fn)
 			{
@@ -96,7 +96,8 @@ namespace engine
 					entt::forward_as_meta(component.size()),
 					entt::forward_as_meta(0),
 					entt::forward_as_meta(Entity(null)),
-					entt::forward_as_meta(opt_evaluation_context)
+					entt::forward_as_meta(opt_evaluation_context),
+					entt::forward_as_meta(MetaAny {})
 				);
 
 				if (result)

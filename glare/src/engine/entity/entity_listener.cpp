@@ -320,7 +320,9 @@ namespace engine
 				descriptor,
 				rule_entry.action,
 				entity, rule_entry.target,
-				delay
+				delay,
+				{},
+				event_instance
 			);
 		}
 	}

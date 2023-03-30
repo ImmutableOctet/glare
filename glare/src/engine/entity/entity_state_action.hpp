@@ -6,7 +6,7 @@
 
 #include <engine/timer.hpp>
 
-//#include <engine/meta/types.hpp>
+#include <engine/meta/types.hpp>
 #include <engine/meta/meta_evaluation_context.hpp>
 
 #include <variant>
@@ -41,7 +41,8 @@ namespace engine
 		const EntityStateTransitionAction& transition,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay=std::nullopt,
-		const MetaEvaluationContext& context={}
+		const MetaEvaluationContext& context={},
+		const MetaAny& event_instance={}
 	);
 
 	void execute_action
@@ -52,7 +53,8 @@ namespace engine
 		const EntityStateCommandAction& command,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay=std::nullopt,
-		const MetaEvaluationContext& context={}
+		const MetaEvaluationContext& context={},
+		const MetaAny& event_instance={}
 	);
 
 	void execute_action
@@ -63,7 +65,11 @@ namespace engine
 		const EntityStateUpdateAction& update,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay=std::nullopt,
-		const MetaEvaluationContext& context={}
+		const MetaEvaluationContext& context={},
+		const MetaAny& event_instance={},
+
+		bool defer_evaluation=false, // true
+		bool use_member_assignment_on_patch=false // true
 	);
 
 	void execute_action
@@ -74,7 +80,8 @@ namespace engine
 		const EntityThreadSpawnAction& thread_spawn,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay=std::nullopt,
-		const MetaEvaluationContext& context={}
+		const MetaEvaluationContext& context={},
+		const MetaAny& event_instance={}
 	);
 
 	void execute_action
@@ -85,7 +92,8 @@ namespace engine
 		const EntityThreadStopAction& thread_stop,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay=std::nullopt,
-		const MetaEvaluationContext& context={}
+		const MetaEvaluationContext& context={},
+		const MetaAny& event_instance={}
 	);
 
 	void execute_action
@@ -96,7 +104,8 @@ namespace engine
 		const EntityThreadPauseAction& thread_pause,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay=std::nullopt,
-		const MetaEvaluationContext& context={}
+		const MetaEvaluationContext& context={},
+		const MetaAny& event_instance={}
 	);
 
 	void execute_action
@@ -107,7 +116,8 @@ namespace engine
 		const EntityThreadResumeAction& thread_resume,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay=std::nullopt,
-		const MetaEvaluationContext& context={}
+		const MetaEvaluationContext& context={},
+		const MetaAny& event_instance={}
 	);
 
 	void execute_action
@@ -118,7 +128,8 @@ namespace engine
 		const EntityThreadAttachAction& thread_attach,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay=std::nullopt,
-		const MetaEvaluationContext& context={}
+		const MetaEvaluationContext& context={},
+		const MetaAny& event_instance={}
 	);
 
 	void execute_action
@@ -129,7 +140,8 @@ namespace engine
 		const EntityThreadDetachAction& thread_detach,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay=std::nullopt,
-		const MetaEvaluationContext& context={}
+		const MetaEvaluationContext& context={},
+		const MetaAny& event_instance={}
 	);
 
 	void execute_action
@@ -140,7 +152,8 @@ namespace engine
 		const EntityThreadUnlinkAction& thread_unlink,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay=std::nullopt,
-		const MetaEvaluationContext& context={}
+		const MetaEvaluationContext& context={},
+		const MetaAny& event_instance={}
 	);
 
 	void execute_action
@@ -151,7 +164,8 @@ namespace engine
 		const EntityThreadSkipAction& thread_skip,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay=std::nullopt,
-		const MetaEvaluationContext& context={}
+		const MetaEvaluationContext& context={},
+		const MetaAny& event_instance={}
 	);
 
 	void execute_action
@@ -162,7 +176,8 @@ namespace engine
 		const EntityThreadRewindAction& thread_rewind,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay=std::nullopt,
-		const MetaEvaluationContext& context={}
+		const MetaEvaluationContext& context={},
+		const MetaAny& event_instance={}
 	);
 
 	void execute_action
@@ -173,7 +188,8 @@ namespace engine
 		const EntityStateAction& action,
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay=std::nullopt,
-		const MetaEvaluationContext& context={}
+		const MetaEvaluationContext& context={},
+		const MetaAny& event_instance={}
 	);
 
 	void execute_action
@@ -184,7 +200,8 @@ namespace engine
 		const EntityStateAction& action,
 		Entity source_entity, const EntityTarget& target,
 		std::optional<engine::Timer::Duration> delay=std::nullopt,
-		const MetaEvaluationContext& context={}
+		const MetaEvaluationContext& context={},
+		const MetaAny& event_instance={}
 	);
 
 	void execute_action
@@ -193,6 +210,7 @@ namespace engine
 		const EntityStateAction& action,
 		Entity source_entity, const EntityTarget& target,
 		std::optional<engine::Timer::Duration> delay = std::nullopt,
-		const MetaEvaluationContext& context={}
+		const MetaEvaluationContext& context={},
+		const MetaAny& event_instance={}
 	);
 }
