@@ -190,15 +190,21 @@ namespace engine
     template <>
     void reflect<std::string>()
     {
-        custom_meta_type<std::string>
-        (
-            "string"_hs, // "std::string"_hs // "String"_hs
-            false, // Standard members not needed.
-            true,  // Optional reflection enabled.
-            true,  // TODO: Revisit operator bindings for strings.
-            false, // Indirection unsupported.
-            false  // Indirection unsupported.
-        )
+        custom_meta_type
+        <
+            std::string,
+
+            MetaTypeReflectionConfig
+            {
+                .capture_standard_data_members = false, // Standard members not needed.
+                .generate_optional_reflection  = true,  // Optional reflection enabled.
+                .generate_operator_wrappers    = true,  // TODO: Revisit operator bindings for strings.
+                .generate_indirect_getters     = false, // Indirection unsupported.
+                .generate_indirect_setters     = false, // Indirection unsupported.
+                .generate_json_constructor     = true   // May change this later.
+            }
+        >
+        ("string"_hs) // "std::string"_hs // "String"_hs
 
         //entt::meta<std::string>().type("string"_hs)
 
