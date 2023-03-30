@@ -8,6 +8,7 @@
 #include "types.hpp"
 
 #include "meta/meta.hpp"
+#include "meta/serial.hpp"
 #include "meta/traits.hpp"
 #include "meta/meta_type_descriptor.hpp"
 #include "meta/meta_event_listener.hpp"
@@ -17,6 +18,7 @@
 #include "command.hpp"
 
 #include <util/reflection.hpp>
+#include <util/json.hpp>
 
 #include <string_view>
 #include <type_traits>
@@ -85,6 +87,69 @@ namespace engine
 
     //struct MetaEvaluationContext;
 
+    struct MetaParsingInstructions;
+    struct MetaTypeDescriptorFlags;
+
+    struct MetaTypeReflectionConfig
+    {
+        bool capture_standard_data_members : 1 = true;
+        bool generate_optional_reflection  : 1 = true;
+        bool generate_operator_wrappers    : 1 = true;
+        bool generate_indirect_getters     : 1 = true;
+        bool generate_indirect_setters     : 1 = true;
+        bool generate_json_constructor     : 1 = true;
+    };
+
+    template
+    <
+        typename T, typename trait,
+        bool is_const=false, bool is_noexcept=false,
+        typename policy=entt::as_is_t
+    >
+    bool reflect_function(auto& type, auto function_id)
+    {
+        if constexpr (trait::value)
+        {
+            if constexpr (trait::template ptr<is_const, is_noexcept>)
+            {
+                type = type.template func
+                <
+                    trait::template ptr<is_const, is_noexcept>,
+                    policy
+                >(function_id);
+
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    template <typename T, bool is_const, bool is_noexcept, typename policy, typename ...traits>
+    auto& reflect_any_function(auto& type, auto function_id) // constexpr
+    {
+        (reflect_function<T, traits, is_const, is_noexcept, policy>(type, function_id) || ...);
+
+        return type;
+    }
+
+    template <typename T, bool is_const, bool is_noexcept, typename policy, typename ...traits>
+    auto& reflect_any_function(auto& type, auto function_id, bool& result_out) // constexpr
+    {
+        if ((reflect_function<T, traits, is_const, is_noexcept, policy>(type, function_id) || ...))
+        {
+            result_out = true;
+        }
+
+        return type;
+    }
+
     // NOTE: In the default case of `T=void`, the overridden version of this template is used.
     // TODO: Look into best way to handle multiple calls to reflect. (This is currently only managed in `reflect_all`)
     template <typename T=void>
@@ -94,11 +159,11 @@ namespace engine
         {
             reflect_enum<T>();
         }
-        else if constexpr (has_function_reflect<T, void()>)
+        else if constexpr (has_function_reflect<T, void>)
         {
             T::reflect();
         }
-        else if constexpr (has_function_reflect<T, entt::meta_factory<T>()>)
+        else if constexpr (has_function_reflect<T, entt::meta_factory<T>>)
         {
             // TODO: Determine if it makes sense to forward the return-value to the caller.
             T::reflect();
@@ -179,16 +244,114 @@ namespace engine
     }
 
     template <typename T>
-    T& emplace_meta_component(Registry& registry, Entity entity, MetaAny& value)
+	T from_json(const util::json& data)
+    {
+        return engine::load<T>(data);
+    }
+
+    // NOTE: Named differently from `from_json` due to ICE on latest MSVC compiler.
+    template <typename T>
+	T from_json_with_instructions
+	(
+		const util::json& data,
+        const MetaParsingInstructions& parse_instructions
+	)
+    {
+        return engine::load<T>(data, parse_instructions);
+    }
+
+    // NOTE: Named differently from `from_json` due to ICE on latest MSVC compiler.
+    template <typename T>
+	T from_json_with_instructions_and_descriptor_flags
+	(
+		const util::json& data,
+		const MetaParsingInstructions& parse_instructions,
+		const MetaTypeDescriptorFlags& descriptor_flags
+	)
+    {
+        return engine::load<T>(data, parse_instructions, descriptor_flags);
+    }
+
+    template <typename T>
+    T& emplace_meta_component(Registry& registry, Entity entity, MetaAny& value) // MetaAny&&
     {
         if (auto raw_value = from_meta<T>(value))
         {
-            return registry.emplace_or_replace<T>(entity, std::move(*raw_value)); // *raw_value
+            if constexpr (std::is_move_constructible_v<T>)
+            {
+                if constexpr (std::is_move_assignable_v<T>)
+                {
+                    return registry.emplace_or_replace<T>(entity, std::move(*raw_value)); // *raw_value
+                }
+                else if constexpr (std::is_copy_assignable_v<T>)
+                {
+                    auto active_instance = registry.try_get<T>(entity);
+
+                    if (active_instance)
+                    {
+                        *active_instance = *raw_value;
+
+                        // Mark this component as patched.
+                        registry.patch<T>(entity);
+
+                        return *active_instance;
+                    }
+                    else
+                    {
+                        return registry.emplace<T>(entity, std::move(*raw_value));
+                    }
+
+                    //return registry.emplace_or_replace<T>(entity, *raw_value); // std::move(*raw_value)
+                }
+                else
+                {
+                    if (registry.try_get<T>(entity))
+                    {
+                        registry.remove<T>(entity);
+                    }
+
+                    return registry.emplace<T>(entity, std::move(*raw_value)); // *raw_value
+                }
+            }
+            else if constexpr (std::is_copy_constructible_v<T>)
+            {
+                if constexpr (std::is_copy_assignable_v<T>)
+                {
+                    return registry.emplace_or_replace<T>(entity, *raw_value);
+                }
+                else if constexpr (std::is_move_assignable_v<T>)
+                {
+                    auto active_instance = registry.try_get<T>(entity);
+
+                    if (active_instance)
+                    {
+                        *active_instance = std::move(*raw_value);
+
+                        // Mark this component as patched.
+                        registry.patch<T>(entity);
+
+                        return *active_instance;
+                    }
+                    else
+                    {
+                        return registry.emplace<T>(entity, *raw_value);
+                    }
+
+                    //return registry.emplace_or_replace<T>(entity, std::move(*raw_value));
+                }
+                else
+                {
+                    if (registry.try_get<T>(entity))
+                    {
+                        registry.remove<T>(entity);
+                    }
+
+                    return registry.emplace<T>(entity, *raw_value);
+                }
+            }
         }
-        else
-        {
-            throw std::exception("Invalid value specified; unable to attach component.");
-        }
+
+        throw std::exception("Invalid value specified; unable to attach component.");
     }
 
     template <typename T>
@@ -284,7 +447,7 @@ namespace engine
     // Applies a patch to the component `T` attached to `target`, from the context of `source`.
     // If `source` is not specified, `target` will act as the `source` as well.
     template <typename T>
-    std::size_t patch_meta_component(Registry& registry, Entity target, const MetaTypeDescriptor& descriptor, std::size_t field_count, std::size_t offset, Entity source=null, const MetaEvaluationContext* opt_evaluation_context=nullptr)
+    std::size_t indirect_patch_meta_component(Registry& registry, Entity target, const MetaTypeDescriptor& descriptor, std::size_t field_count, std::size_t offset, Entity source=null, const MetaEvaluationContext* opt_evaluation_context=nullptr, const MetaAny& opt_context_value={})
     {
         assert
         (
@@ -306,21 +469,103 @@ namespace engine
             source = target;
         }
 
-        registry.patch<T>(target, [&registry, source, &descriptor, &field_count, &offset, &opt_evaluation_context, &count](T& instance)
+        registry.patch<T>(target, [&registry, source, &descriptor, &field_count, &offset, &opt_evaluation_context, &opt_context_value, &count](T& instance)
         {
             auto any_wrapper = entt::forward_as_meta(instance);
 
-            if (opt_evaluation_context)
+            if (opt_context_value)
             {
-                count = descriptor.apply_fields(any_wrapper, registry, source, *opt_evaluation_context, field_count, offset);
+                if (opt_evaluation_context)
+                {
+                    count = descriptor.apply_fields(any_wrapper, opt_context_value, registry, source, *opt_evaluation_context, field_count, offset);
+                }
+                else
+                {
+                    count = descriptor.apply_fields(any_wrapper, opt_context_value, registry, source, field_count, offset);
+                }
             }
             else
             {
-                count = descriptor.apply_fields(any_wrapper, registry, source, field_count, offset);
+                if (opt_evaluation_context)
+                {
+                    count = descriptor.apply_fields(any_wrapper, registry, source, *opt_evaluation_context, field_count, offset);
+                }
+                else
+                {
+                    count = descriptor.apply_fields(any_wrapper, registry, source, field_count, offset);
+                }
             }
         });
 
         return count;
+    }
+
+    // Applies a patch to the component `T` attached to `target`, from the context of `source`.
+    // If `source` is not specified, `target` will act as the `source` as well.
+    template <typename T>
+    T& direct_patch_meta_component(Registry& registry, Entity entity, MetaAny& value, bool perform_data_member_sweep=false)
+    {
+        auto active_component_instance = registry.try_get<T>(entity);
+
+        if (!active_component_instance)
+        {
+            return emplace_meta_component<T>(registry, entity, value); // std::move(value);
+        }
+
+        if (auto raw_value = from_meta<T>(value))
+        {
+            if constexpr (std::is_move_assignable_v<T>)
+            {
+                if (!perform_data_member_sweep)
+                {
+                    *active_component_instance = std::move(*raw_value); // *raw_value;
+                }
+            }
+            else if constexpr (std::is_copy_assignable_v<T>)
+            {
+                if (!perform_data_member_sweep)
+                {
+                    *active_component_instance = *raw_value;
+                }
+            }
+            else
+            {
+                if (!perform_data_member_sweep)
+                {
+                    throw std::exception("Patch attempted with unsupported component; unable to find assignment operator.");
+                }
+            }
+
+            if (perform_data_member_sweep)
+            {
+                auto component_type = value.type();
+
+                auto active_component_ref = entt::forward_as_meta(active_component_instance);
+                auto patch_component_ref  = entt::forward_as_meta(raw_value);
+
+                for (auto data_member_entry : component_type.data())
+                {
+                    auto& data_member = data_member_entry.second;
+
+                    if (data_member.is_const())
+                    {
+                        continue;
+                    }
+
+                    // TODO: Validate that this works as expected. (i.e. `MetaAny` inputs to `set`)
+                    data_member.set(active_component_ref, data_member.get(patch_component_ref));
+                }
+            }
+
+            // Mark the component as patched.
+            registry.patch<T>(entity);
+
+            return *active_component_instance;
+        }
+        else
+        {
+            throw std::exception("Invalid value specified; unable to patch component.");
+        }
     }
 
     // Notifies listeners that a component of type `T` has been patched.
@@ -446,7 +691,7 @@ namespace engine
 
     template
     <
-        template<typename, typename> typename MethodTrait,
+        template<typename, typename, typename...> typename MethodTrait,
 
         typename T,
 
@@ -458,11 +703,11 @@ namespace engine
     >
     constexpr bool has_meta_operator_method()
     {
-        using Method = MethodTrait<T, ReturnType(const OtherType&)>; // ReturnType, const OtherType&
+        using Method = MethodTrait<T, ReturnType, const OtherType&>;
 
         if constexpr (Method::value)
         {
-            constexpr auto ptr = Method::template ptr<method_is_const, method_is_noexcept>();
+            constexpr auto ptr = Method::template ptr<method_is_const, method_is_noexcept>;
 
             if constexpr (std::is_same_v<std::nullptr_t, decltype(ptr)>)
             {
@@ -481,7 +726,7 @@ namespace engine
 
     template
     <
-        template<typename, typename> typename FunctionTrait,
+        template<typename, typename, typename...> typename FunctionTrait,
 
         typename T,
 
@@ -490,11 +735,11 @@ namespace engine
     >
     constexpr bool has_meta_operator_function()
     {
-        using Function = FunctionTrait<T, ReturnType(const T&, const OtherType&)>; // ReturnType, const T&, const OtherType&
+        using Function = FunctionTrait<T, ReturnType, const T&, const OtherType&>;
 
         if constexpr (Function::value)
         {
-            constexpr auto ptr = Function::ptr();
+            constexpr auto ptr = Function::template ptr<>;
 
             if constexpr (std::is_same_v<std::nullptr_t, decltype(ptr)>)
             {
@@ -513,8 +758,8 @@ namespace engine
 
     template
     <
-        template<typename, typename> typename FunctionTrait,
-        template<typename, typename> typename MethodTrait,
+        template<typename, typename, typename...> typename FunctionTrait,
+        template<typename, typename, typename...> typename MethodTrait,
 
         typename T,
 
@@ -542,7 +787,7 @@ namespace engine
 
     template
     <
-        template<typename, typename> typename MethodTrait,
+        template<typename, typename, typename...> typename MethodTrait,
 
         typename T,
 
@@ -554,11 +799,11 @@ namespace engine
     >
     auto define_meta_operator_method(auto type, auto&& operator_id, bool* opt_success_flag=nullptr)
     {
-        using Method = MethodTrait<T, ReturnType(OtherType)>;
+        using Method = MethodTrait<T, ReturnType, OtherType>;
 
         if constexpr (Method::value)
         {
-            constexpr auto ptr = Method::template ptr<method_is_const, method_is_noexcept>();
+            constexpr auto ptr = Method::template ptr<method_is_const, method_is_noexcept>;
             
             static_assert(!std::is_same_v<std::nullptr_t, decltype(ptr)>, "Unable to resolve pointer to operator method.");
 
@@ -596,7 +841,7 @@ namespace engine
 
     template
     <
-        template<typename, typename> typename FunctionTrait,
+        template<typename, typename, typename...> typename FunctionTrait,
 
         typename T,
 
@@ -605,11 +850,11 @@ namespace engine
     >
     auto define_meta_operator_function(auto type, auto&& operator_id, bool* opt_success_flag=nullptr)
     {
-        using Function = FunctionTrait<T, ReturnType(const T&, OtherType)>;
+        using Function = FunctionTrait<T, ReturnType, const T&, OtherType>;
 
         if constexpr (Function::value)
         {
-            constexpr auto ptr = Function::ptr();
+            constexpr auto ptr = Function::template ptr<>;
 
             static_assert(!std::is_same_v<std::nullptr_t, decltype(ptr)>, "Unable to resolve pointer to operator function.");
 
@@ -647,8 +892,8 @@ namespace engine
 
     template
     <
-        template<typename, typename> typename FunctionTrait,
-        template<typename, typename> typename MethodTrait,
+        template<typename, typename, typename...> typename FunctionTrait,
+        template<typename, typename, typename...> typename MethodTrait,
 
         typename T,
 
@@ -734,7 +979,7 @@ namespace engine
 
     template
     <
-        template<typename, typename> typename FunctionTrait,
+        template<typename, typename, typename...> typename FunctionTrait,
 
         typename T,
 
@@ -743,11 +988,11 @@ namespace engine
     >
     constexpr bool has_unary_meta_operator(auto type, auto&& operator_id)
     {
-        using Function = FunctionTrait<T, ReturnType(const T&)>;
+        using Function = FunctionTrait<T, ReturnType, const T&>;
 
         if constexpr (Function::value)
         {
-            constexpr auto ptr = Function::ptr();
+            constexpr auto ptr = Function::template ptr<>;
 
             if constexpr (std::is_same_v<std::nullptr_t, decltype(ptr)>)
             {
@@ -766,7 +1011,7 @@ namespace engine
 
     template
     <
-        template<typename, typename> typename FunctionTrait,
+        template<typename, typename, typename...> typename FunctionTrait,
 
         typename T,
 
@@ -775,11 +1020,11 @@ namespace engine
     >
     auto define_unary_meta_operator(auto type, auto&& operator_id)
     {
-        using Function = FunctionTrait<T, ReturnType(const T&)>;
+        using Function = FunctionTrait<T, ReturnType, const T&>;
 
         if constexpr (Function::value)
         {
-            constexpr auto ptr = Function::ptr();
+            constexpr auto ptr = Function::template ptr<>;
 
             static_assert(!std::is_same_v<std::nullptr_t, decltype(ptr)>, "Unable to resolve pointer to unary operator function.");
 
@@ -796,23 +1041,33 @@ namespace engine
     // 
     // TODO: Look into changing last `MetaAny&` argument to `MetaAny&&`.
     template <typename T, typename ReturnType=T&> // MetaAny
-    std::tuple<bool, bool, bool, bool> define_indirect_setters
+    std::tuple<bool, bool, bool, bool, bool, bool> define_indirect_setters
     (
         auto& type,
-        std::tuple<bool, bool, bool, bool> setters_found = { false, false, false, false }
+        std::tuple<bool, bool, bool, bool, bool, bool> setters_found = { false, false, false, false, false, false }
     )
     {
-        auto& basic_setter_found = std::get<0>(setters_found);
-        auto& exact_setter_found = std::get<1>(setters_found);
-        auto& basic_chain_setter_found = std::get<2>(setters_found);
-        auto& exact_chain_setter_found = std::get<3>(setters_found);
-        //auto& context_only_setter_found = std::get<4>(setters_found);
-        //auto& context_only_chain_setter_found = std::get<5>(setters_found);
+        auto& basic_setter_found         = std::get<0>(setters_found);
+        auto& basic_context_setter_found = std::get<1>(setters_found);
+        auto& exact_setter_found         = std::get<2>(setters_found);
+        auto& basic_chain_setter_found   = std::get<3>(setters_found);
+        auto& context_chain_setter_found = std::get<4>(setters_found);
+        auto& exact_chain_setter_found   = std::get<5>(setters_found);
 
         if constexpr (std::is_same_v<ReturnType, T&> || std::is_same_v<ReturnType, MetaAny>)
         {
             if (!basic_setter_found)
             {
+                reflect_any_function
+                <
+                    T, false, false,
+                    std::conditional_t<std::is_lvalue_reference_v<ReturnType>, entt::as_ref_t, entt::as_is_t>,
+                    
+                    has_method_set_indirect_value<T, ReturnType, MetaAny&>,
+                    has_method_set<T, ReturnType, MetaAny&>
+                >(type, "operator="_hs, basic_setter_found);
+                
+                /*
                 if constexpr (has_method_set_indirect_value_v<T, ReturnType, MetaAny&>)
                 {
                     if constexpr (std::is_lvalue_reference_v<ReturnType>)
@@ -839,11 +1094,63 @@ namespace engine
 
                     basic_setter_found = true;
                 }
+                */
+            }
+
+            if (!basic_context_setter_found)
+            {
+                reflect_any_function
+                <
+                    T, false, false,
+                    std::conditional_t<std::is_lvalue_reference_v<ReturnType>, entt::as_ref_t, entt::as_is_t>,
+                    
+                    has_method_set_indirect_value<T, ReturnType, MetaAny&, const MetaEvaluationContext&>,
+                    has_method_set<T, ReturnType, MetaAny&, const MetaEvaluationContext&>
+                >(type, "operator="_hs, basic_context_setter_found);
+
+                /*
+                if constexpr (has_method_set_indirect_value_v<T, ReturnType, MetaAny&, const MetaEvaluationContext&>)
+                {
+                    if constexpr (std::is_lvalue_reference_v<ReturnType>)
+                    {
+                        type = type.func<static_cast<ReturnType(T::*)(MetaAny&, const MetaEvaluationContext&)>(&T::set_indirect_value), entt::as_ref_t>("operator="_hs); // "set_indirect_value"_hs
+                    }
+                    else
+                    {
+                        type = type.func<static_cast<ReturnType(T::*)(MetaAny&, const MetaEvaluationContext&)>(&T::set_indirect_value)>("operator="_hs); // "set_indirect_value"_hs
+                    }
+
+                    basic_context_setter_found = true;
+                }
+                else if constexpr (has_method_set_v<T, ReturnType, MetaAny&, const MetaEvaluationContext&>)
+                {
+                    if constexpr (std::is_lvalue_reference_v<ReturnType>)
+                    {
+                        type = type.func<static_cast<ReturnType(T::*)(MetaAny&, const MetaEvaluationContext&)>(&T::set), entt::as_ref_t>("operator="_hs); // "set_indirect_value"_hs
+                    }
+                    else
+                    {
+                        type = type.func<static_cast<ReturnType(T::*)(MetaAny&, const MetaEvaluationContext&)>(&T::set)>("operator="_hs); // "set_indirect_value"_hs
+                    }
+
+                    basic_context_setter_found = true;
+                }
+                */
             }
 
             if (!exact_setter_found)
             {
                 // `MetaEvaluationContext` overloads:
+                reflect_any_function
+                <
+                    T, false, false,
+                    std::conditional_t<std::is_lvalue_reference_v<ReturnType>, entt::as_ref_t, entt::as_is_t>,
+                    
+                    has_method_set_indirect_value<T, ReturnType, MetaAny&, Registry&, Entity, const MetaEvaluationContext&>,
+                    has_method_set<T, ReturnType, MetaAny&, Registry&, Entity, const MetaEvaluationContext&>
+                >(type, "operator="_hs, exact_setter_found);
+
+                /*
                 if constexpr (has_method_set_indirect_value_v<T, ReturnType, MetaAny&, Registry&, Entity, const MetaEvaluationContext&>)
                 {
                     if constexpr (std::is_lvalue_reference_v<ReturnType>)
@@ -870,8 +1177,19 @@ namespace engine
 
                     exact_setter_found = true;
                 }
+                */
 
                 // Standard overloads (no `MetaEvaluationContext`):
+                reflect_any_function
+                <
+                    T, false, false,
+                    std::conditional_t<std::is_lvalue_reference_v<ReturnType>, entt::as_ref_t, entt::as_is_t>,
+                    
+                    has_method_set_indirect_value<T, ReturnType, MetaAny&, Registry&, Entity>,
+                    has_method_set<T, ReturnType, MetaAny&, Registry&, Entity>
+                >(type, "operator="_hs, exact_setter_found);
+
+                /*
                 if constexpr (has_method_set_indirect_value_v<T, ReturnType, MetaAny&, Registry&, Entity>)
                 {
                     if constexpr (std::is_lvalue_reference_v<ReturnType>)
@@ -898,6 +1216,7 @@ namespace engine
 
                     exact_setter_found = true;
                 }
+                */
             }
         }
 
@@ -905,6 +1224,15 @@ namespace engine
         {
             if (!basic_chain_setter_found)
             {
+                reflect_any_function
+                <
+                    T, false, false, entt::as_is_t,
+                    
+                    has_method_set_indirect_value<T, ReturnType, MetaAny&, MetaAny&>,
+                    has_method_set<T, ReturnType, MetaAny&, MetaAny&>
+                >(type, "operator="_hs, basic_chain_setter_found);
+
+                /*
                 if constexpr (has_method_set_indirect_value_v<T, ReturnType, MetaAny&, MetaAny&>)
                 {
                     type = type.func<static_cast<ReturnType(T::*)(MetaAny&, MetaAny&)>(&T::set_indirect_value)>("operator="_hs); // "set_indirect_value"_hs
@@ -917,11 +1245,47 @@ namespace engine
 
                     basic_chain_setter_found = true;
                 }
+                */
+            }
+
+            if (!context_chain_setter_found)
+            {
+                reflect_any_function
+                <
+                    T, false, false, entt::as_is_t,
+                    
+                    has_method_set_indirect_value<T, ReturnType, MetaAny&, MetaAny&, const MetaEvaluationContext&>,
+                    has_method_set<T, ReturnType, MetaAny&, MetaAny&, const MetaEvaluationContext&>
+                >(type, "operator="_hs, context_chain_setter_found);
+
+                /*
+                if constexpr (has_method_set_indirect_value_v<T, ReturnType, MetaAny&, MetaAny&, const MetaEvaluationContext&>)
+                {
+                    type = type.func<static_cast<ReturnType(T::*)(MetaAny&, MetaAny&, const MetaEvaluationContext&)>(&T::set_indirect_value)>("operator="_hs); // "set_indirect_value"_hs
+
+                    context_chain_setter_found = true;
+                }
+                else if constexpr (has_method_set_v<T, ReturnType, MetaAny&, MetaAny&, const MetaEvaluationContext&>)
+                {
+                    type = type.func<static_cast<ReturnType(T::*)(MetaAny&, MetaAny&, const MetaEvaluationContext&)>(&T::set)>("operator="_hs); // "set_indirect_value"_hs
+
+                    context_chain_setter_found = true;
+                }
+                */
             }
 
             if (!exact_chain_setter_found)
             {
                 // `MetaEvaluationContext` overloads:
+                reflect_any_function
+                <
+                    T, false, false, entt::as_is_t,
+                    
+                    has_method_set_indirect_value<T, ReturnType, MetaAny&, MetaAny&, Registry&, Entity, const MetaEvaluationContext&>,
+                    has_method_set<T, ReturnType, MetaAny&, MetaAny&, Registry&, Entity, const MetaEvaluationContext&>
+                >(type, "operator="_hs, exact_chain_setter_found);
+
+                /*
                 if constexpr (has_method_set_indirect_value_v<T, ReturnType, MetaAny&, MetaAny&, Registry&, Entity, const MetaEvaluationContext&>)
                 {
                     type = type.func<static_cast<ReturnType(T::*)(MetaAny&, MetaAny&, Registry&, Entity, const MetaEvaluationContext&)>(&T::set_indirect_value)>("operator="_hs); // "set_indirect_value_exact"_hs
@@ -934,8 +1298,18 @@ namespace engine
 
                     exact_chain_setter_found = true;
                 }
+                */
 
                 // Standard overloads (no `MetaEvaluationContext`):
+                reflect_any_function
+                <
+                    T, false, false, entt::as_is_t,
+                    
+                    has_method_set_indirect_value<T, ReturnType, MetaAny&, MetaAny&, Registry&, Entity>,
+                    has_method_set<T, ReturnType, MetaAny&, MetaAny&, Registry&, Entity>
+                >(type, "operator="_hs, exact_chain_setter_found);
+
+                /*
                 if constexpr (has_method_set_indirect_value_v<T, ReturnType, MetaAny&, MetaAny&, Registry&, Entity>)
                 {
                     type = type.func<static_cast<ReturnType(T::*)(MetaAny&, MetaAny&, Registry&, Entity)>(&T::set_indirect_value)>("operator="_hs); // "set_indirect_value_exact"_hs
@@ -948,6 +1322,7 @@ namespace engine
 
                     exact_chain_setter_found = true;
                 }
+                */
             }
         }
 
@@ -955,20 +1330,30 @@ namespace engine
     }
 
     template <typename T, typename ReturnType>
-    std::tuple<bool, bool, bool, bool> define_indirect_getters
+    std::tuple<bool, bool, bool, bool, bool, bool> define_indirect_getters
     (
         auto& type,
 
-        std::tuple<bool, bool, bool, bool> getters_found = { false, false, false, false }
+        std::tuple<bool, bool, bool, bool, bool, bool> getters_found = { false, false, false, false, false, false }
     )
     {
-        auto& basic_getter_found       = std::get<0>(getters_found);
-        auto& exact_getter_found       = std::get<1>(getters_found);
-        auto& chain_getter_found       = std::get<2>(getters_found);
-        auto& exact_chain_getter_found = std::get<3>(getters_found);
+        auto& basic_getter_found         = std::get<0>(getters_found);
+        auto& basic_context_getter_found = std::get<1>(getters_found);
+        auto& exact_getter_found         = std::get<2>(getters_found);
+        auto& chain_getter_found         = std::get<3>(getters_found);
+        auto& chain_context_getter_found = std::get<4>(getters_found);
+        auto& exact_chain_getter_found   = std::get<5>(getters_found);
 
         if (!basic_getter_found)
         {
+            reflect_any_function
+            <
+                T, true, false, entt::as_is_t,
+                has_method_get_indirect_value<T, ReturnType>,
+                has_method_get<T, ReturnType>
+            >(type, "operator()"_hs, basic_getter_found);
+
+            /*
             if constexpr (has_method_get_indirect_value_v<T, ReturnType>)
             {
                 type = type.func<static_cast<ReturnType(T::*)() const>(&T::get_indirect_value)>("operator()"_hs);
@@ -981,11 +1366,46 @@ namespace engine
 
                 basic_getter_found = true;
             }
+            */
+        }
+
+        if (!basic_context_getter_found)
+        {
+            reflect_any_function
+            <
+                T, true, false, entt::as_is_t,
+                has_method_get_indirect_value<T, ReturnType, const MetaEvaluationContext&>,
+                has_method_get<T, ReturnType, const MetaEvaluationContext&>
+            >(type, "operator()"_hs, basic_context_getter_found);
+
+            /*
+            if constexpr (has_method_get_indirect_value_v<T, ReturnType, const MetaEvaluationContext&>)
+            {
+                type = type.func<static_cast<ReturnType(T::*)(const MetaEvaluationContext&) const>(&T::get_indirect_value)>("operator()"_hs);
+
+                basic_context_getter_found = true;
+            }
+            else if constexpr (has_method_get_v<T, ReturnType, const MetaEvaluationContext&>)
+            {
+                type = type.func<has_method_get<T, ReturnType(const MetaEvaluationContext&)>::ptr<true>>(&T::get)>("operator()"_hs); // static_cast<ReturnType(T::*)(const MetaEvaluationContext&) const
+
+                basic_context_getter_found = true;
+            }
+            */
         }
 
         if (!exact_getter_found)
         {
             // `MetaEvaluationContext` overloads:
+            reflect_any_function
+            <
+                T, true, false, entt::as_is_t,
+                
+                has_method_get_indirect_value<T, ReturnType, Registry&, Entity, const MetaEvaluationContext&>,
+                has_method_get<T, ReturnType, Registry&, Entity, const MetaEvaluationContext&>
+            >(type, "operator()"_hs, exact_getter_found);
+
+            /*
             if constexpr (has_method_get_indirect_value_v<T, ReturnType, Registry&, Entity, const MetaEvaluationContext&>)
             {
                 type = type.func<static_cast<ReturnType(T::*)(Registry&, Entity, const MetaEvaluationContext&) const>(&T::get_indirect_value)>("operator()"_hs);
@@ -998,8 +1418,18 @@ namespace engine
 
                 exact_getter_found = true;
             }
+            */
 
             // Standard overloads (no `MetaEvaluationContext`):
+            reflect_any_function
+            <
+                T, true, false, entt::as_is_t,
+                
+                has_method_get_indirect_value<T, ReturnType, Registry&, Entity>,
+                has_method_get<T, ReturnType, Registry&, Entity>
+            >(type, "operator()"_hs, exact_getter_found);
+
+            /*
             if constexpr (has_method_get_indirect_value_v<T, ReturnType, Registry&, Entity>)
             {
                 type = type.func<static_cast<ReturnType(T::*)(Registry&, Entity) const>(&T::get_indirect_value)>("operator()"_hs);
@@ -1012,10 +1442,20 @@ namespace engine
 
                 exact_getter_found = true;
             }
+            */
         }
 
         if (!chain_getter_found)
         {
+            reflect_any_function
+            <
+                T, true, false, entt::as_is_t,
+                
+                has_method_get_indirect_value<T, ReturnType, const MetaAny&>,
+                has_method_get<T, ReturnType, const MetaAny&>
+            >(type, "operator()"_hs, chain_getter_found);
+
+            /*
             if constexpr (has_method_get_indirect_value_v<T, ReturnType, const MetaAny&>) // MetaAny&
             {
                 type = type.func<static_cast<ReturnType(T::*)(const MetaAny&) const>(&T::get_indirect_value)>("operator()"_hs);
@@ -1028,12 +1468,52 @@ namespace engine
 
                 chain_getter_found = true;
             }
+            */
+        }
+
+        if (!chain_context_getter_found)
+        {
+            reflect_any_function
+            <
+                T, true, false, entt::as_is_t,
+                
+                has_method_get_indirect_value<T, ReturnType, const MetaAny&, const MetaEvaluationContext&>,
+                has_method_get<T, ReturnType, const MetaAny&, const MetaEvaluationContext&>
+            >(type, "operator()"_hs, chain_context_getter_found);
+
+            /*
+            if constexpr (has_method_get_indirect_value_v<T, ReturnType, const MetaAny&, const MetaEvaluationContext&>) // MetaAny&
+            {
+                type = type.func<static_cast<ReturnType(T::*)(const MetaAny&, const MetaEvaluationContext&) const>(&T::get_indirect_value)>("operator()"_hs);
+
+                chain_context_getter_found = true;
+            }
+            else if constexpr (has_method_get_v<T, ReturnType, const MetaAny&, const MetaEvaluationContext&>) // MetaAny&
+            {
+                type = type.func<static_cast<ReturnType(T::*)(const MetaAny&, const MetaEvaluationContext&) const>(&T::get)>("operator()"_hs);
+
+                chain_context_getter_found = true;
+            }
+            */
         }
 
         if (!exact_chain_getter_found)
         {
             // `MetaEvaluationContext` overloads:
+            reflect_any_function
+            <
+                T, true, false, entt::as_is_t,
+                
+                // From `MetaAny`:
+                has_method_get_indirect_value<T, ReturnType, const MetaAny&, Registry&, Entity, const MetaEvaluationContext&>,
+                has_method_get<T, ReturnType, const MetaAny&, Registry&, Entity, const MetaEvaluationContext&>,
 
+                // From `Entity`:
+                has_method_get_indirect_value<T, ReturnType, Entity, Registry&, Entity, const MetaEvaluationContext&>,
+                has_method_get<T, ReturnType, Entity, Registry&, Entity, const MetaEvaluationContext&>
+            >(type, "operator()"_hs, exact_chain_getter_found);
+
+            /*
             // From `MetaAny`:
             if constexpr (has_method_get_indirect_value_v<T, ReturnType, const MetaAny&, Registry&, Entity, const MetaEvaluationContext&>) // MetaAny&
             {
@@ -1061,9 +1541,24 @@ namespace engine
 
                 exact_chain_getter_found = true;
             }
+            */
 
             // Standard overloads (no `MetaEvaluationContext`):
 
+            reflect_any_function
+            <
+                T, true, false, entt::as_is_t,
+                
+                // From `MetaAny`:
+                has_method_get_indirect_value<T, ReturnType, const MetaAny&, Registry&, Entity>,
+                has_method_get<T, ReturnType, const MetaAny&, Registry&, Entity>,
+
+                // From `Entity`:
+                has_method_get_indirect_value<T, ReturnType, Entity, Registry&, Entity>,
+                has_method_get<T, ReturnType, Entity, Registry&, Entity>
+            >(type, "operator()"_hs, exact_chain_getter_found);
+
+            /*
             // From `MetaAny`:
             if constexpr (has_method_get_indirect_value_v<T, ReturnType, const MetaAny&, Registry&, Entity>) // MetaAny&
             {
@@ -1091,24 +1586,14 @@ namespace engine
 
                 exact_chain_getter_found = true;
             }
+            */
         }
 
         return getters_found;
     }
 
-    template <typename T>
-    auto define_standard_meta_type
-    (
-        auto type,
-
-        bool sync_context=true,
-
-        bool capture_standard_data_members=true,
-        bool generate_optional_reflection=true,
-        bool generate_operator_wrappers=true,
-        bool generate_indirect_getters=true,
-        bool generate_indirect_setters=true
-    )
+    template <typename T, MetaTypeReflectionConfig config={}>
+    auto define_standard_meta_type(auto type, bool sync_context=true)
     {
         if (sync_context)
         {
@@ -1145,7 +1630,8 @@ namespace engine
                 .template func<&copy_meta_component<T>>("copy_meta_component"_hs)
                 .template func<&remove_component<T>>("remove_component"_hs)
                 .template func<&get_or_emplace_component<T>, entt::as_ref_t>("get_or_emplace_component"_hs)
-                .template func<&patch_meta_component<T>>("patch_meta_component"_hs)
+                .template func<&direct_patch_meta_component<T>, entt::as_ref_t>("direct_patch_meta_component"_hs)
+                .template func<&indirect_patch_meta_component<T>>("indirect_patch_meta_component"_hs)
                 .template func<&mark_component_as_patched<T>>("mark_component_as_patched"_hs)
 			    .template func<&MetaEventListener::connect_component_listeners<T>>("connect_component_meta_events"_hs)
                 .template func<&MetaEventListener::disconnect_component_listeners<T>>("disconnect_component_meta_events"_hs)
@@ -1154,12 +1640,35 @@ namespace engine
             ;
         }
 
-        if (generate_optional_reflection)
+        if constexpr ((config.generate_json_constructor) && (std::is_default_constructible_v<T>))
+        {
+            type = type
+                .ctor
+                <
+                    static_cast<T (*)(const util::json&)>
+                    (&from_json<T>)
+                >()
+                    
+                .ctor
+                <
+                    static_cast<T (*)(const util::json&, const MetaParsingInstructions&)>
+                    (&from_json_with_instructions<T>) // from_json<T>
+                >()
+
+                .ctor
+                <
+                    static_cast<T (*)(const util::json&, const MetaParsingInstructions&, const MetaTypeDescriptorFlags&)>
+                    (&from_json_with_instructions_and_descriptor_flags<T>) // from_json<T>
+                >()
+            ;
+        }
+
+        if constexpr (config.generate_optional_reflection)
         {
             optional_engine_meta_type<T>();
         }
 
-        if (generate_operator_wrappers)
+        if constexpr (config.generate_operator_wrappers)
         {
             type = define_unary_meta_operator<has_function_operator_plus,        T>(type, "+operator"_hs);
             type = define_unary_meta_operator<has_function_operator_minus,       T>(type, "-operator"_hs);
@@ -1206,31 +1715,26 @@ namespace engine
             // TODO: Determine if it makes sense to add support for custom dereference operators.
         }
 
-        if (generate_indirect_getters)
+        if constexpr (config.generate_indirect_getters)
         {
             define_indirect_getters<T, MetaAny>(type);
             define_indirect_getters<T, Entity>(type);
         }
 
-        if (generate_indirect_setters)
+        if constexpr (config.generate_indirect_setters)
         {
             define_indirect_setters<T, MetaAny>(type);
             define_indirect_setters<T, T&>(type);
         }
 
-        if (!capture_standard_data_members)
-        {
-            return type;
-        }
-
-        if constexpr (!std::is_empty_v<T>)
+        if constexpr ((config.capture_standard_data_members) && (!std::is_empty_v<T>))
         {
             // `entity` data member:
-            if constexpr (has_method_entity<T, Entity()>::value) // std::decay_t<T>
+            if constexpr (has_method_entity<T, Entity>::value) // std::decay_t<T>
             {
                 type = type.data<nullptr, &T::entity>("entity"_hs);
             }
-            else if constexpr (has_method_get_entity<T, Entity()>::value) // std::decay_t<T>
+            else if constexpr (has_method_get_entity<T, Entity>::value) // std::decay_t<T>
             {
                 type = type.data<nullptr, &T::get_entity>("entity"_hs);
             }
@@ -1240,11 +1744,11 @@ namespace engine
             }
 
             // `player` data member:
-            if constexpr (has_method_player<T, Entity()>::value) // std::decay_t<T>
+            if constexpr (has_method_player<T, Entity>::value) // std::decay_t<T>
             {
                 type = type.data<nullptr, &T::player>("player"_hs);
             }
-            else if constexpr (has_method_get_player<T, Entity()>::value) // std::decay_t<T>
+            else if constexpr (has_method_get_player<T, Entity>::value) // std::decay_t<T>
             {
                 type = type.data<nullptr, &T::get_player>("player"_hs);
             }
@@ -1254,11 +1758,11 @@ namespace engine
             }
 
             // `player_index` data member:
-            if constexpr (has_method_player_index<T, PlayerIndex()>::value) // std::decay_t<T>
+            if constexpr (has_method_player_index<T, PlayerIndex>::value) // std::decay_t<T>
             {
                 type = type.data<nullptr, &T::player_index>("player_index"_hs);
             }
-            else if constexpr (has_method_get_player_index<T, PlayerIndex()>::value) // std::decay_t<T>
+            else if constexpr (has_method_get_player_index<T, PlayerIndex>::value) // std::decay_t<T>
             {
                 type = type.data<nullptr, &T::get_player_index>("player_index"_hs);
             }
@@ -1268,19 +1772,19 @@ namespace engine
             }
 
             // `service` data member:
-            if constexpr (has_method_service<T, Service*()>::value)
+            if constexpr (has_method_service<T, Service*>::value)
             {
                 type = type.data<nullptr, &T::service>("service"_hs);
             }
-            else if constexpr (has_method_service<T, Service&()>::value)
+            else if constexpr (has_method_service<T, Service&>::value)
             {
                 type = type.data<nullptr, &T::service>("service"_hs);
             }
-            else if constexpr (has_method_get_service<T, Service*()>::value)
+            else if constexpr (has_method_get_service<T, Service*>::value)
             {
                 type = type.data<nullptr, &T::get_service>("service"_hs);
             }
-            else if constexpr (has_method_get_service<T, Service&()>::value)
+            else if constexpr (has_method_get_service<T, Service&>::value)
             {
                 type = type.data<nullptr, &T::get_service>("service"_hs);
             }
@@ -1294,15 +1798,15 @@ namespace engine
         return type;
     }
 
-    template <typename T, typename ...Args>
-    auto custom_meta_type(auto type_id, Args&&... args)
+    template <typename T, MetaTypeReflectionConfig config={}>
+    auto custom_meta_type(auto type_id)
     {
         // Ensure that we're using the correct context.
         sync_reflection_context();
 
         auto type = entt::meta<T>().type(type_id);
 
-        return define_standard_meta_type<T>(type, false, std::forward<Args>(args)...);
+        return define_standard_meta_type<T, config>(type, false);
     }
 
     // Associates a stripped version of the type's name to its reflection metadata.
@@ -1310,13 +1814,13 @@ namespace engine
     // 
     // By default, `entt` uses a fully qualified name, along with a "struct" or "class" prefix, etc.
     // This allows you to simply refer to the type by its namespace-local name.
-    template <typename T, typename ...Args>
-    auto engine_meta_type(Args&&... args)
+    template <typename T, MetaTypeReflectionConfig config={}>
+    auto engine_meta_type()
     {
-        return custom_meta_type<T>(short_name_hash<T>(), std::forward<Args>(args)...);
+        return custom_meta_type<T, config>(short_name_hash<T>());
     }
 
-    template <typename T, typename ...Args>
+    template <typename T> // MetaTypeReflectionConfig config={}
     auto static_engine_meta_type()
     {
         // Ensure that we're using the correct context.
@@ -1327,10 +1831,10 @@ namespace engine
         return type;
     }
 
-    template <typename T, typename ...Args>
-    auto engine_command_type(bool capture_standard_data_members=false, Args&&... args) // true
+    template <typename T>
+    auto engine_command_type()
     {
-        return engine_meta_type<T>(capture_standard_data_members, std::forward<Args>(args)...)
+        return engine_meta_type<T, MetaTypeReflectionConfig { .capture_standard_data_members = false }>()
             .base<Command>()
         ;
     }
@@ -1344,8 +1848,10 @@ namespace engine
     {
         auto meta_obj = engine_meta_type<EnumType>()
             .template func<&string_to_enum_value<EnumType>>("string_to_value"_hs)
+            .ctor<&string_to_enum_value<EnumType>>()
+            .conv<&enum_value_to_string<EnumType>>()
         ;
-		
+
         if (values_as_properties)
         {
             magic_enum::enum_for_each<EnumType>([](EnumType enum_value)
