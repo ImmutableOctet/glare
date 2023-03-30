@@ -102,9 +102,22 @@ namespace engine
 		return components_removed;
 	}
 
-	World::World(Config& config, ResourceManager& resource_manager, UpdateRate update_rate)
-		: config(config), resource_manager(resource_manager), delta_time(update_rate), fixed_delta_time(update_rate)
+	World::World
+	(
+		Registry& registry,
+		Config& config,
+		ResourceManager& resource_manager,
+		UpdateRate update_rate
+	) :
+		Service(registry),
+		config(config),
+		resource_manager(resource_manager),
+		delta_time(update_rate),
+		fixed_delta_time(update_rate)
 	{
+		registry.emplace<TransformComponent>(root);
+		registry.emplace<NameComponent>(root, "Root");
+
 		register_event<OnTransformChanged, &World::on_transform_change>(*this);
 		register_event<OnEntityDestroyed, &World::on_entity_destroyed>(*this);
 
@@ -127,9 +140,6 @@ namespace engine
 		registry.on_destroy<SpotLightComponent>().connect<&World::on_spot_light_destroyed>(*this);
 
 		subscribe(resource_manager);
-
-		root = create_pivot(*this);
-		set_name(root, "Root");
 	}
 	
 	/*
@@ -146,8 +156,15 @@ namespace engine
 	}
 	*/
 
-	World::World(Config& config, ResourceManager& resource_manager, UpdateRate update_rate, const filesystem::path& path)
-		: World(config, resource_manager, update_rate)
+	World::World
+	(
+		Registry& registry,
+		Config& config,
+		ResourceManager& resource_manager,
+		UpdateRate update_rate,
+		const filesystem::path& path
+	) :
+		World(registry, config, resource_manager, update_rate)
 	{
 		load(path);
 	}

@@ -69,18 +69,28 @@ namespace engine
 			app::DeltaTime delta_time;
 			app::DeltaTime fixed_delta_time;
 
-			// Scene root-node; parent to all world-bound entities.
-			Entity root   = null;
-
 			// Currently-active/last-bound camera.
 			Entity camera = null;
 
 			WorldProperties properties;
 		public:
-			World(Config& config, ResourceManager& resource_manager, UpdateRate update_rate);
+			World
+			(
+				Registry& registry,
+				Config& config,
+				ResourceManager& resource_manager,
+				UpdateRate update_rate
+			);
 
 			// Constructs a 'World' object, then immediately loads a map from the 'path' specified.
-			World(Config& config, ResourceManager& resource_manager, UpdateRate update_rate, const filesystem::path& path);
+			World
+			(
+				Registry& registry,
+				Config& config,
+				ResourceManager& resource_manager,
+				UpdateRate update_rate,
+				const filesystem::path& path
+			);
 
 			virtual ~World();
 
