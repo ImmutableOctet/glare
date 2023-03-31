@@ -79,6 +79,29 @@ namespace engine
 		return !was_detached;
 	}
 
+	bool EntityThread::yield()
+	{
+		const auto was_yielding = is_yielding;
+
+		is_yielding = true;
+
+		return !was_yielding;
+	}
+
+	bool EntityThread::unyield(EntityInstructionCount instruction_advancement)
+	{
+		if (is_yielding)
+		{
+			is_yielding = false;
+
+			skip(instruction_advancement);
+
+			return true;
+		}
+
+		return false;
+	}
+
 	EntityThread::ThreadLocalVariables* EntityThread::get_variables()
 	{
 		if (!variables)

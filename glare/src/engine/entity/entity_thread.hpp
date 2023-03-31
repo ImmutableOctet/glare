@@ -82,6 +82,8 @@ namespace engine
 			bool unlink();
 			bool attach(std::optional<EntityStateIndex> state_index=std::nullopt, bool keep_existing_state=false);
 			bool detach();
+			bool yield();
+			bool unyield(EntityInstructionCount instruction_advancement=1);
 
 			// Attempts to allocate a `ThreadLocalVariables` object, managed internally.
 			// If a `ThreadLocalVariables` object has already been allocated, this will return a pointer to the existing instance.
