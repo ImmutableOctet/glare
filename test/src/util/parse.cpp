@@ -6,11 +6,14 @@
 #include <util/parse.hpp>
 #include <util/algorithm.hpp>
 
-TEST_CASE("util::find_last_singular", "[util:parse]")
+TEST_CASE("util::find_accessor", "[util:parse]")
 {
-	REQUIRE(util::find_last_singular("::: ::: : :", ":") == 10);
-	REQUIRE(util::find_last_singular("some::key::name:: unrelated_expression", ":") == std::string_view::npos);
-	REQUIRE(util::find_last_singular("some::key:::name:type:", ":") == 21);
+	REQUIRE(std::get<1>(util::find_accessor("A::B")) == "::");
+	REQUIRE(std::get<1>(util::find_accessor("A.B")) == ".");
+	REQUIRE(std::get<1>(util::find_accessor("A->B")) == "->");
+	REQUIRE(std::get<0>(util::find_accessor("A::B::C")) == 1);
+	REQUIRE(std::get<0>(util::find_accessor("First::Second")) == 5);
+	REQUIRE(std::get<0>(util::find_accessor("First.Second::Third")) == 5);
 }
 
 TEST_CASE("util::find_singular", "[util:parse]")
