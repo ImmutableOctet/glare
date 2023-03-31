@@ -600,7 +600,8 @@ namespace engine
 		const MetaParsingInstructions& instructions,
 		MetaType type={},
 		bool allow_entity_fallback=true,
-		bool allow_component_fallback=true
+		bool allow_component_fallback=true,
+		bool allow_standalone_opaque_function=true
 	)
 	{
 		using namespace engine::literals;
@@ -773,7 +774,10 @@ namespace engine
 				std::string_view { "->" }
 			},
 
-			[&instructions, allow_entity_fallback, allow_component_fallback, &type, &value, &initial_type, had_initial_type, &enqueue, &replace, &construct_type, &output]
+			[
+				&instructions, allow_entity_fallback, allow_component_fallback, allow_standalone_opaque_function, &type, &value,
+				&initial_type, had_initial_type, &enqueue, &replace, &construct_type, &output
+			]
 			(std::string_view& symbol, bool is_first_symbol, bool is_last_symbol) -> bool
 			{
 				//constexpr std::string_view call_begin_symbol = "(";
@@ -1030,7 +1034,7 @@ namespace engine
 					{
 						if (is_command)
 						{
-							if ((type) || (instructions.allow_opaque_function_references)) // || ( && !output.empty())
+							if ((type) || ((instructions.allow_opaque_function_references) && (allow_standalone_opaque_function || !output.empty())))
 							{
 								auto fn = MetaFunction {};
 
@@ -1039,7 +1043,7 @@ namespace engine
 									fn = type.func(symbol_id);
 								}
 
-								if ((fn) || (instructions.allow_opaque_function_references))
+								if ((fn) || (instructions.allow_opaque_function_references)) // ((instructions.allow_opaque_function_references) && (allow_standalone_opaque_function || !output.empty()))
 								{
 									auto function_out = MetaFunctionCall
 									{
@@ -1283,7 +1287,7 @@ namespace engine
 
 		if (validate_first_symbol)
 		{
-			if (!validate_symbol(first_symbol, (target && !target->is_self_targeted()), true))
+			if (!validate_symbol(first_symbol, (!target || !target->is_self_targeted()), true))
 			{
 				return std::nullopt;
 			}
@@ -1374,7 +1378,8 @@ namespace engine
 		bool try_string_fallback=true,
 		bool try_boolean=true,
 		bool allow_entity_fallback=true,
-		bool allow_component_fallback=true
+		bool allow_component_fallback=true,
+		bool allow_standalone_opaque_function=true
 	)
 	{
 		using namespace engine::literals;
@@ -1465,7 +1470,7 @@ namespace engine
 				}
 			}
 
-			meta_any_from_string_resolve_expression_impl(output, value, instructions, type, allow_entity_fallback, allow_component_fallback);
+			meta_any_from_string_resolve_expression_impl(output, value, instructions, type, allow_entity_fallback, allow_component_fallback, allow_standalone_opaque_function);
 
 			if (!output.empty())
 			{
@@ -1604,6 +1609,7 @@ namespace engine
 		bool try_boolean,
 		bool allow_entity_fallback,
 		bool allow_component_fallback,
+		bool allow_standalone_opaque_function,
 
 		bool assume_static_type
 	)
@@ -2039,7 +2045,8 @@ namespace engine
 						(!is_first_expr || try_string_fallback),
 						(!is_first_expr || try_boolean),
 						(!is_first_expr || allow_entity_fallback),
-						(!is_first_expr || allow_component_fallback)
+						(!is_first_expr || allow_component_fallback),
+						(!is_first_expr || allow_standalone_opaque_function)
 					);
 				}
 
@@ -2462,7 +2469,8 @@ namespace engine
 		bool allow_numeric_literals,
 		bool allow_boolean_literals,
 		bool allow_entity_fallback,
-		bool allow_component_fallback
+		bool allow_component_fallback,
+		bool allow_standalone_opaque_function
 	)
 	{
 		using namespace engine::literals;
@@ -2493,7 +2501,14 @@ namespace engine
 
 		if (instructions.resolve_symbol)
 		{
-			if (auto [result, length_processed] = meta_any_from_string_compound_expr_impl(value, instructions, type, allow_numeric_literals, allow_string_fallback, allow_boolean_literals, allow_entity_fallback, allow_component_fallback); result)
+			auto [result, length_processed] = meta_any_from_string_compound_expr_impl
+			(
+				value, instructions, type,
+				allow_numeric_literals, allow_string_fallback, allow_boolean_literals,
+				allow_entity_fallback, allow_component_fallback, allow_standalone_opaque_function
+			);
+
+			if (result)
 			{
 				//assert(length_processed == expr.length());
 
@@ -2511,11 +2526,39 @@ namespace engine
 		return {};
 	}
 
-	MetaAny meta_any_from_string(const util::json& value, const MetaParsingInstructions& instructions, MetaType type, bool allow_string_fallback, bool allow_numeric_literals, bool allow_boolean_literals)
+	MetaAny meta_any_from_string
+	(
+		const util::json& value,
+		
+		const MetaParsingInstructions& instructions,
+		
+		MetaType type,
+
+		bool allow_string_fallback,
+		bool allow_numeric_literals,
+		bool allow_boolean_literals,
+		bool allow_entity_fallback,
+		bool allow_component_fallback,
+		bool allow_standalone_opaque_function
+	)
 	{
 		auto string_value = value.get<std::string>();
 
-		return meta_any_from_string(std::string_view { string_value }, instructions, type, allow_string_fallback, allow_numeric_literals, allow_boolean_literals);
+		return meta_any_from_string
+		(
+			std::string_view { string_value },
+			
+			instructions,
+			
+			type,
+
+			allow_string_fallback,
+			allow_numeric_literals,
+			allow_boolean_literals,
+			allow_entity_fallback,
+			allow_component_fallback,
+			allow_standalone_opaque_function
+		);
 	}
 
 	MetaAny resolve_meta_any
@@ -2691,14 +2734,14 @@ namespace engine
 	// Overload added due to limitations of `std::regex`. (Shouldn't matter for most cases, thanks to SSO)
 	std::optional<MetaDataMember> meta_data_member_from_string(std::string_view value)
 	{
-		const auto [type_name, data_member_name] = util::parse_member_reference(value);
+		const auto [type_name, data_member_name, parsed_length] = util::parse_member_reference(value);
 
 		return process_meta_data_member(type_name, data_member_name);
 	}
 
 	std::optional<IndirectMetaDataMember> indirect_meta_data_member_from_string(std::string_view value, EntityTarget target)
 	{
-		const auto [type_name, data_member_name] = util::parse_member_reference(value);
+		const auto [type_name, data_member_name, parsed_length] = util::parse_member_reference(value);
 
 		if (type_name.empty())
 		{
