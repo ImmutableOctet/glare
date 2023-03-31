@@ -20,6 +20,18 @@ namespace util
 		);
 	}
 
+	std::tuple<std::size_t, std::string_view> find_last_accessor(std::string_view expr)
+	{
+		return find_last
+		(
+			expr,
+
+			std::string_view("::"),
+			std::string_view("."),
+			std::string_view("->")
+		);
+	}
+
 	std::tuple<std::string_view, std::string_view, std::string_view, bool, std::size_t>
 	parse_command
 	(
@@ -285,10 +297,33 @@ namespace util
 		};
 	}
 
-	std::tuple<std::string_view, std::string_view>
-	parse_member_reference(std::string_view value, bool allow_command_syntax, bool match_beginning_only, bool allow_trailing_command_syntax, bool truncate_at_first_member, bool truncate_value_at_first_accessor, bool truncate_command_name_at_first_accessor)
+	std::tuple<std::string_view, std::string_view, std::size_t>
+	parse_member_reference
+	(
+		std::string_view value,
+		
+		bool allow_command_syntax,
+		bool match_beginning_only,
+		bool allow_trailing_command_syntax,
+		bool truncate_at_first_member,
+		
+		bool truncate_value_at_first_accessor,
+		bool truncate_command_name_at_first_accessor
+	)
 	{
-		auto result = parse_command_or_value(value, true, false, truncate_value_at_first_accessor, truncate_command_name_at_first_accessor);
+		auto result = parse_command_or_value
+		(
+			value,
+			true,  // allow_trailing_expr
+			false, // allow_empty_command_name
+			truncate_value_at_first_accessor,
+			truncate_command_name_at_first_accessor,
+			false, // allow_operator_symbol_in_command_name
+			true,  // truncate_value_at_operator_symbol (Needed for operator-check below)
+
+			// TODO: Revisit whether this should be disabled.
+			false // true // remove_quotes_in_string_content
+		);
 
 		const auto& command_name_or_value = std::get<0>(result);
 
@@ -301,7 +336,7 @@ namespace util
 
 		if (match_beginning_only)
 		{
-			const auto first_non_whitespace = value.find_first_not_of(" \n\t");
+			const auto first_non_whitespace = value.find_first_not_of(whitespace_symbols);
 
 			if (first_non_whitespace == std::string_view::npos)
 			{
@@ -330,14 +365,59 @@ namespace util
 				return {};
 			}
 
-			trailing_expr_raw = command_name_or_value;
+			//trailing_expr_raw = command_name_or_value;
 		}
 
-		const auto [access_symbol_local_index, access_symbol] = find_accessor(trailing_expr_raw);
+		std::size_t access_symbol_local_index = std::string_view::npos;
+		std::string_view access_symbol = {};
+
+		//if ((!truncate_value_at_first_accessor) || (leading_expr_is_command))
+		{
+			auto trailing_accessor = find_accessor(trailing_expr_raw);
+
+			access_symbol_local_index = std::get<0>(trailing_accessor);
+			access_symbol = std::get<1>(trailing_accessor);
+		}
 
 		if (access_symbol.empty())
 		{
-			return {};
+			if (leading_expr_is_command)
+			{
+				if (truncate_command_name_at_first_accessor)
+				{
+					return {};
+				}
+			}
+			else
+			{
+				if (truncate_value_at_first_accessor)
+				{
+					return {};
+				}
+			}
+
+			auto [embedded_access_index, embedded_access_symbol] = find_last_accessor(command_name_or_value);
+				
+			if (embedded_access_index == std::string_view::npos)
+			{
+				return {};
+			}
+			
+			const auto command_name_or_value_offset = static_cast<std::size_t>(command_name_or_value.data() - value.data());
+			const auto translated_access_index = (command_name_or_value_offset + embedded_access_index);
+
+			trailing_expr_raw = value.substr(translated_access_index);
+
+			access_symbol_local_index = 0;
+			access_symbol = embedded_access_symbol;
+		}
+		else
+		{
+			// Ensure that we aren't processing an expression with operators:
+			if (const auto operator_index = std::get<0>(find_operator(trailing_expr_raw)); operator_index < access_symbol_local_index)
+			{
+				return {};
+			}
 		}
 
 		if (leading_expr_is_command)
@@ -348,39 +428,83 @@ namespace util
 			}
 		}
 
-		auto trailing_expr = trailing_expr_raw.substr(access_symbol_local_index + access_symbol.length());
+		auto trailing_expr = trim(trailing_expr_raw.substr(access_symbol_local_index + access_symbol.length()));
 
 		const auto access_symbol_value_index = static_cast<std::size_t>((trailing_expr_raw.data() + access_symbol_local_index) - value.data());
 
 		const auto leading_expr_length = (access_symbol_value_index - leading_expr_index);
 
-		const auto leading_expr = value.substr(leading_expr_index, leading_expr_length);
+		auto leading_expr = value.substr(leading_expr_index, leading_expr_length);
+
+		if (trailing_expr.empty())
+		{
+			return {};
+		}
+
+		std::size_t parsed_length = 0;
+
+		auto member_result = parse_command_or_value
+		(
+			trailing_expr,
+			true,  // allow_trailing_expr
+			false, // allow_empty_command_name
+			true,  // truncate_value_at_first_accessor,
+			false, // truncate_command_name_at_first_accessor,
+			false, // allow_operator_symbol_in_command_name
+			true,  // truncate_value_at_operator_symbol (Needed for operator-check below)
+			false // remove_quotes_in_string_content
+		);
+
+		const auto& member_length = std::get<5>(member_result);
+		const auto& member_is_command = std::get<4>(member_result);
 
 		if (truncate_at_first_member)
 		{
-			auto [next_accessor_index, next_accessor] = find_accessor(trailing_expr);
-
-			if (next_accessor_index != std::string_view::npos)
-			{
-				trailing_expr = trailing_expr.substr(0, next_accessor_index);
-			}
-		}
-
-		if (!allow_trailing_command_syntax)
-		{
-			const auto as_command = parse_command(trailing_expr, true, false);
-
-			const auto& command_name = std::get<0>(as_command);
-
-			if (!command_name.empty())
+			if (!member_length)
 			{
 				return {};
 			}
+
+			if (!allow_trailing_command_syntax)
+			{
+				if (member_is_command)
+				{
+					return {};
+				}
+			}
+
+			trailing_expr = trim(trailing_expr.substr(0, member_length));
+
+			// We can trust that `trailing_expr` contains an explicitly requested string,
+			// and can therefore include this expression in the reported length.
+			parsed_length = static_cast<std::size_t>((trailing_expr.data() + trailing_expr.length()) - value.data());
+		}
+		else if ((member_length) && (member_is_command))
+		{
+			if (!allow_trailing_command_syntax)
+			{
+				return {};
+			}
+
+			// TODO: Determine if we should keep this behavior.
+			// 
+			// Since the parsed member is a command, include it in
+			// the reported length, regardless of truncation configuration.
+			parsed_length = static_cast<std::size_t>((trailing_expr.data() + member_length) - value.data());
+		}
+		else
+		{
+			// `trailing_expr` is being used as a 'catch-all' for the remainder of the string;
+			// only include the explicitly parsed section in the reported length.
+			parsed_length = static_cast<std::size_t>((leading_expr.data() + leading_expr.length()) - value.data());
 		}
 
-		return { leading_expr, trailing_expr };
+		//assert(!trailing_expr.empty());
+
+		return { leading_expr, trailing_expr, parsed_length };
 	}
 
+	// TODO: Deprecate/replace.
 	std::tuple<std::string_view, std::string_view, std::string_view>
 	parse_trailing_reference(const std::string& value, bool match_beginning_only, bool allow_no_accessor, bool limit_trailing_by_whitespace)
 	{
@@ -707,36 +831,6 @@ namespace util
 		}
 
 		return { key_name, value_type, trailing_expr, expression_syntax_used };
-	}
-
-	std::size_t find_singular(std::string_view str, std::string_view symbol, std::size_t offset)
-	{
-		return find_singular<true>
-		(
-			str, symbol,
-			
-			[](std::string_view str, std::string_view symbol, std::size_t position)
-			{
-				return str.find(symbol, position);
-			},
-
-			offset
-		);
-	}
-
-	std::size_t find_last_singular(std::string_view str, std::string_view symbol, std::size_t offset)
-	{
-		return find_singular<false>
-		(
-			str, symbol,
-			
-			[](std::string_view str, std::string_view symbol, std::size_t position)
-			{
-				return str.find(symbol, position);
-			},
-
-			offset
-		);
 	}
 
 	std::size_t find_scope_closing_symbol(std::string_view expr, std::string_view begin_symbol, std::string_view end_symbol, std::size_t position, std::string_view ignore_begin_symbol, std::string_view ignore_end_symbol)

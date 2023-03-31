@@ -452,6 +452,90 @@ namespace util
 		return 0;
 	}
 
+	template <bool short_circuit, typename FindFn>
+	std::size_t find_singular(std::string_view str, std::string_view symbol, FindFn&& find_fn, std::size_t offset=0)
+	{
+		constexpr bool perform_look_ahead_on_early_symbol = true;
+
+		auto position = offset;
+
+		std::size_t cumulative_result = std::string_view::npos;
+
+		std::size_t prev_result = std::string_view::npos;
+
+		while (position < str.length())
+		{
+			auto result = find_fn(str, symbol, position);
+
+			if (result == std::string_view::npos)
+			{
+				break;
+			}
+
+			const auto is_new_result_chain = ((prev_result == std::string_view::npos) || (result != (prev_result + symbol.length())));
+
+			if (is_new_result_chain || (result <= symbol.length()))
+			{
+				const auto next_symbol_begin = (result + symbol.length());
+
+				bool match_found = true;
+
+				if constexpr (perform_look_ahead_on_early_symbol)
+				{
+					if (next_symbol_begin < str.length())
+					{
+						const auto next_symbol_area = str.substr(next_symbol_begin, symbol.length());
+
+						match_found = (next_symbol_area != symbol);
+					}
+				}
+
+				if (match_found)
+				{
+					if constexpr (short_circuit)
+					{
+						return result;
+					}
+					else
+					{
+						cumulative_result = result;
+					}
+				}
+				else
+				{
+					// Avoid re-checking the next symbol and this symbol.
+					result += symbol.length();
+				}
+			}
+			else
+			{
+				const auto prev_symbol_area = str.substr((result - symbol.length()), symbol.length());
+
+				if (prev_symbol_area != symbol)
+				{
+					// Immediate previous symbol not found.
+					if constexpr (short_circuit)
+					{
+						return result;
+					}
+					else
+					{
+						cumulative_result = result;
+					}
+				}
+			}
+
+			prev_result = result;
+
+			position = (result + symbol.length());
+		}
+
+		return cumulative_result;
+	}
+
+	std::size_t find_singular(std::string_view str, std::string_view symbol, std::size_t offset=0);
+	std::size_t find_last_singular(std::string_view str, std::string_view symbol, std::size_t offset=0);
+
 	// TODO: Move this to a different source file.
 	std::string_view to_string_view(const aiString& str);
 

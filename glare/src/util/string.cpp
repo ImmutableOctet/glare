@@ -397,4 +397,34 @@ namespace util
 
 		return false;
 	}
+
+    std::size_t find_singular(std::string_view str, std::string_view symbol, std::size_t offset)
+	{
+		return find_singular<true>
+		(
+			str, symbol,
+			
+			[](std::string_view str, std::string_view symbol, std::size_t position)
+			{
+				return str.find(symbol, position);
+			},
+
+			offset
+		);
+	}
+
+	std::size_t find_last_singular(std::string_view str, std::string_view symbol, std::size_t offset)
+	{
+		return find_singular<false>
+		(
+			str, symbol,
+			
+			[](std::string_view str, std::string_view symbol, std::size_t position)
+			{
+				return str.find(symbol, position);
+			},
+
+			offset
+		);
+	}
 }
