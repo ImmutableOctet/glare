@@ -243,6 +243,15 @@ namespace engine
 			bool operator!=(const VariableAssignment&) const noexcept = default;
 		};
 
+		struct EventCapture
+		{
+			MetaVariableTarget variable_details;
+			MetaTypeID intended_type = {};
+
+			bool operator==(const EventCapture&) const noexcept = default;
+			bool operator!=(const EventCapture&) const noexcept = default;
+		};
+
 		using Instruction = std::variant
 		<
 			NoOp,
@@ -284,6 +293,7 @@ namespace engine
 			FunctionCall,
 			VariableDeclaration,
 			VariableAssignment,
+			EventCapture,
 
 			InstructionDescriptor
 		>;

@@ -1942,6 +1942,45 @@ namespace engine
 						}
 					},
 
+					// NOTE: This instruction normally follows a yield instruction, and is skipped if an event has been provided.
+					// This implementation acts as a fallback in the case of forced continuation, or an incompatible event type.
+					[&get_variable_context](const EventCapture& event_capture)
+					{
+						// Implemented by external source. (e.g. `EntityListener`)
+						if (auto variable_context = get_variable_context(event_capture.variable_details.scope))
+						{
+							const auto& variable_scope = event_capture.variable_details.scope;
+							const auto& variable_name  = event_capture.variable_details.name;
+
+							MetaType intended_type = (event_capture.intended_type)
+								? resolve(event_capture.intended_type)
+								: MetaType {}
+							;
+
+							if (!intended_type)
+							{
+								if (auto existing = variable_context.get_ptr(variable_scope, variable_name))
+								{
+									intended_type = existing->type();
+								}
+							}
+
+							if (intended_type)
+							{
+								// Attempt to default-construct the intended type:
+								if (auto default_constructed = intended_type.construct())
+								{
+									variable_context.set(variable_scope, variable_name, std::move(default_constructed));
+
+									return;
+								}
+							}
+
+							// Fallback to assigning an empty value.
+							variable_context.set(variable_scope, variable_name, MetaAny{});
+						}
+					},
+
 					[&exec_impl_recursive, &registry, entity](const InstructionDescriptor& instruction_desc)
 					{
 						auto result = try_get_underlying_value(instruction_desc.instruction, registry, entity);

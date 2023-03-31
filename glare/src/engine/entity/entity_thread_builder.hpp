@@ -9,6 +9,7 @@
 
 #include <engine/meta/meta_variable_scope.hpp>
 #include <engine/meta/meta_parsing_context.hpp>
+//#include <engine/meta/indirect_meta_any.hpp>
 
 #include <util/json.hpp>
 
@@ -89,6 +90,11 @@ namespace engine
 			{
 				return parsing_context.get_variable_context();
 			}
+
+			MetaParsingContext get_parsing_context() const
+			{
+				return parsing_context;
+			}
 		protected:
 			EntityDescriptor& descriptor;
 
@@ -113,6 +119,9 @@ namespace engine
 				std::reference_wrapper<const util::json>,
 				std::string_view
 			>;
+
+			static bool is_yield_instruction(MetaSymbolID instruction_id);
+			static bool is_yield_instruction(std::string_view instruction_name);
 
 			EntityThreadBuilder
 			(
@@ -531,6 +540,7 @@ namespace engine
 			);
 
 			EntityInstructionCount process_variable_declaration(std::string_view declaration);
+			EntityInstructionCount process_inline_yield_instruction(std::string_view yield_instruction_content);
 
 			EntityInstructionCount process_variable_assignment
 			(

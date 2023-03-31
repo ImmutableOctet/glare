@@ -3,6 +3,8 @@
 #include "entity_instruction.hpp"
 #include "entity_descriptor.hpp"
 
+#include "entity_system.hpp"
+
 #include "components/instance_component.hpp"
 #include "components/state_component.hpp"
 #include "components/entity_thread_component.hpp"
@@ -21,6 +23,7 @@
 #include <util/variant.hpp>
 
 #include <algorithm>
+#include <variant>
 
 // Debugging related:
 #include <util/log.hpp>
@@ -275,9 +278,40 @@ namespace engine
 
 				if (yield_condition_met)
 				{
-					// TODO: Move to dedicated function.
+					// TODO: Move this routine to a dedicated function:
 					thread.is_yielding = false;
 					thread.next_instruction++;
+
+					if (event_instance)
+					{
+						if (thread.next_instruction < thread_data.size())
+						{
+							const auto& instruction_after_yield = thread_data.get_instruction(thread.next_instruction);
+
+							if (const auto* event_capture = std::get_if<instructions::EventCapture>(&instruction_after_yield.value))
+							{
+								if ((!event_capture->intended_type) || (event_capture->intended_type == event_instance.type().id()))
+								{
+									if (auto copy_of_event_instance = MetaAny { event_instance })
+									{
+										auto variable_context = EntitySystem::resolve_variable_context
+										(
+											{}, // Service unavailable for variable assignment operations at this time.
+											&registry, entity,
+											thread_comp, &thread,
+											{}, // Context to be retrieved automatically from `entity`.
+											event_capture->variable_details.scope
+										);
+
+										if (variable_context.set(event_capture->variable_details.scope, event_capture->variable_details.name, std::move(copy_of_event_instance)))
+										{
+											thread.next_instruction++;
+										}
+									}
+								}
+							}
+						}
+					}
 
 					// See `EntitySystem::step_thread` for corresponding `add_entity` usage prior.
 					remove_entity(entity, condition_reference_count);
