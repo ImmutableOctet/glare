@@ -7,6 +7,7 @@
 
 #include <optional>
 #include <memory>
+//#include <limits>
 
 namespace engine
 {
@@ -21,12 +22,12 @@ namespace engine
 		// NOTE: May move this to another location later. (e.g. handle via map)
 		std::optional<EntityThreadID> thread_id;
 
-		inline const auto& get_instruction(InstructionIndex index) const
+		inline const EntityInstruction& get_instruction(InstructionIndex index) const
 		{
 			return instructions[index]; // .at(index);
 		}
 
-		inline auto name() const
+		inline std::optional<EntityThreadID> name() const
 		{
 			return thread_id;
 		}
@@ -36,9 +37,11 @@ namespace engine
 			return instructions.empty();
 		}
 
-		inline std::size_t size() const
+		inline EntityInstructionCount size() const
 		{
-			return instructions.size();
+			//assert(instructions.size() < std::numeric_limits<EntityInstructionCount>::max());
+
+			return static_cast<EntityInstructionCount>(instructions.size());
 		}
 	};
 }
