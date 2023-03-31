@@ -1580,7 +1580,8 @@ namespace engine
 							return;
 						}
 
-						thread.is_yielding = true;
+						thread.yield();
+
 						step_stride = 0;
 					},
 
