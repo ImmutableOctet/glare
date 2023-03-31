@@ -35,5 +35,10 @@ namespace engine
 		{
 			return instructions.empty();
 		}
+
+		inline std::size_t size() const
+		{
+			return instructions.size();
+		}
 	};
 }
