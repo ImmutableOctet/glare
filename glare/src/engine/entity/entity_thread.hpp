@@ -58,6 +58,11 @@ namespace engine
 		{
 			return (is_paused || is_yielding || is_complete);
 		}
+
+		inline bool is_sleeping() const
+		{
+			return is_paused;
+		}
 	};
 
 	struct EntityThread : public EntityThreadFlags // protected
@@ -84,6 +89,21 @@ namespace engine
 			bool detach();
 			bool yield();
 			bool unyield(EntityInstructionCount instruction_advancement=1);
+
+			inline bool sleep()
+			{
+				return pause();
+			}
+
+			inline bool wake()
+			{
+				return resume();
+			}
+
+			inline bool play()
+			{
+				return resume();
+			}
 
 			// Attempts to allocate a `ThreadLocalVariables` object, managed internally.
 			// If a `ThreadLocalVariables` object has already been allocated, this will return a pointer to the existing instance.
