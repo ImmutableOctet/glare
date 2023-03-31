@@ -209,24 +209,6 @@ namespace engine
 	}
 }
 
-template
-<
-    typename T, typename trait,
-    bool is_const=false, bool is_noexcept=false,
-    typename policy=entt::as_is_t
->
-bool _reflect_function_impl(auto type, auto function_id)
-{
-	if constexpr (trait::template ptr<is_const, is_noexcept> != nullptr)
-	{
-		return true;
-	}
-	else
-	{
-		return false;
-	}
-}
-
 TEST_CASE("engine::MetaValueOperator", "[engine:meta]")
 {
 	SECTION("parse_value_operator")
