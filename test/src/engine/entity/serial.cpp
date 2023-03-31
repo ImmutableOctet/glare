@@ -6,6 +6,14 @@
 
 TEST_CASE("engine::parse_instruction_header", "[engine:entity]")
 {
+	SECTION("Thread variable assignment")
+	{
+		auto [instruction, opt_thread_details] = engine::parse_instruction_header(std::string_view("some_thread.thread_local_var = A::B"));
+
+		REQUIRE(instruction == "thread_local_var = A::B");
+		REQUIRE(opt_thread_details.has_value());
+	}
+
 	SECTION("Instruction + thread name as header")
 	{
 		auto [instruction, opt_thread_details] = engine::parse_instruction_header(std::string_view("some_thread.resume()"));
@@ -54,6 +62,16 @@ TEST_CASE("engine::parse_instruction_header", "[engine:entity]")
 		auto [instruction, opt_thread_details] = engine::parse_instruction_header(instruction_raw);
 
 		REQUIRE(instruction == instruction_raw);
+		REQUIRE(!opt_thread_details.has_value());
+	}
+
+	SECTION("Unintended yield expression")
+	{
+		std::string_view unintended = "local x:= yield(OnButtonPressed::button|Button::Jump)";
+
+		auto [instruction, opt_thread_details] = engine::parse_instruction_header(unintended);
+
+		REQUIRE(instruction == unintended);
 		REQUIRE(!opt_thread_details.has_value());
 	}
 }
