@@ -1,5 +1,6 @@
 #include "meta_data_member.hpp"
 #include "meta.hpp"
+#include "hash.hpp"
 
 namespace engine
 {
@@ -107,6 +108,8 @@ namespace engine
 
 	MetaAny MetaDataMember::get(const MetaAny& instance, Registry& registry, Entity context_entity) const
 	{
+		using namespace engine::literals;
+
 		if (!instance)
 		{
 			return {};
@@ -125,7 +128,7 @@ namespace engine
 			{
 				switch (type.id())
 				{
-					case entt::type_hash<Entity>::value(): // resolve<Entity>().id():
+					case "Entity"_hs: // entt::type_hash<Entity>::value(): // resolve<Entity>().id():
 					{
 						if (const auto* as_entity = instance.try_cast<Entity>())
 						{
@@ -214,9 +217,11 @@ namespace engine
 	
 	MetaAny MetaDataMember::set(MetaAny& value, Registry& registry, Entity entity)
 	{
+		using namespace engine::literals;
+
 		const auto type = value.type();
 
-		if (type.id() == entt::type_hash<Entity>::value())
+		if (type.id() == "Entity"_hs) // entt::type_hash<Entity>::value()
 		{
 			return {};
 		}

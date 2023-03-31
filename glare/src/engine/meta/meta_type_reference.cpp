@@ -1,6 +1,7 @@
 #include "meta_type_reference.hpp"
 
 #include "meta.hpp"
+#include "hash.hpp"
 #include "apply_operation.hpp"
 
 #include <utility>
@@ -114,6 +115,8 @@ namespace engine
 	template <typename SelfType, typename InstanceType, typename ...Args>
 	MetaAny MetaTypeReference::get_from_impl(SelfType&& self, InstanceType&& instance, Args&&... args)
 	{
+		using namespace engine::literals;
+
 		if (!instance)
 		{
 			return {}; // self.get(registry, entity);
@@ -130,7 +133,7 @@ namespace engine
 
 		switch (instance_type_id)
 		{
-			case entt::type_hash<Entity>::value(): // resolve<Entity>().id():
+			case "Entity"_hs: // entt::type_hash<Entity>::value(): // resolve<Entity>().id():
 				if (auto target_entity = instance.try_cast<Entity>())
 				{
 					return self.get(*target_entity, args...);
@@ -206,9 +209,11 @@ namespace engine
 
 	MetaAny MetaTypeReference::set(MetaAny& source, MetaAny& destination, Registry& registry, Entity entity)
 	{
+		using namespace engine::literals;
+
 		const auto source_type = source.type();
 
-		if (source_type.id() == entt::type_hash<Entity>::value())
+		if (source_type.id() == "Entity"_hs) // entt::type_hash<Entity>::value()
 		{
 			if (auto source_entity = source.try_cast<Entity>())
 			{
@@ -220,7 +225,7 @@ namespace engine
 
 		const auto destination_type = destination.type();
 
-		if (destination_type.id() == entt::type_hash<Entity>::value())
+		if (destination_type.id() == "Entity"_hs) // entt::type_hash<Entity>::value()
 		{
 			if (auto destination_entity = destination.try_cast<Entity>())
 			{

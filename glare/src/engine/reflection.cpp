@@ -117,6 +117,11 @@ namespace engine
         return util::format("Entity #{}", entity);
     }
 
+    static Entity entity_from_integer(std::underlying_type_t<Entity> value)
+    {
+        return static_cast<Entity>(value);
+    }
+
     template <typename ArithmeticType, typename=std::enable_if_t<std::is_arithmetic_v<ArithmeticType>>>
     static std::string arithmetic_to_string_impl(ArithmeticType value) // const ArithmeticType&
     {
@@ -185,6 +190,17 @@ namespace engine
         ;
 
         return type;
+    }
+
+    template <>
+    void reflect<Entity>()
+    {
+        entt::meta<Entity>()
+            .type("Entity"_hs)
+            .conv<&entity_to_string_impl>()
+            //.conv<std::underlying_type_t<Entity>>()
+            .ctor<&entity_from_integer>()
+        ;
     }
 
     template <>
@@ -546,6 +562,8 @@ namespace engine
 
     void reflect_primitives()
     {
+        reflect<Entity>();
+
         reflect<EntityType>();
         reflect<LightType>();
 

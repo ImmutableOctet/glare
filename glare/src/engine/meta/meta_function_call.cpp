@@ -330,7 +330,7 @@ namespace engine
 			{
 				const auto self_type_id = self_type.id();
 
-				if (self_type_id == entt::type_hash<Entity>::value())
+				if (self_type_id == "Entity"_hs) // entt::type_hash<Entity>::value()
 				{
 					if (auto target_entity = self.try_cast<Entity>())
 					{
