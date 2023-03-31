@@ -806,7 +806,7 @@ namespace engine
 		}
 
 		// Look for an initial level of indirection:
-		auto [initial_ref, remainder] = util::parse_member_reference(instruction_raw, true, true, true, false, true, true);
+		auto [initial_ref, remainder, initial_ref_length_parsed] = util::parse_member_reference(instruction_raw, true, true, true, false, true, true);
 
 		if (initial_ref.empty())
 		{
@@ -820,7 +820,7 @@ namespace engine
 		std::string_view instruction;
 
 		// Check for a second level of indirection.
-		if (auto [second_ref, sub_remainder] = util::parse_member_reference(remainder, true, false, true, false, true, true); !second_ref.empty())
+		if (auto [second_ref, sub_remainder, second_ref_length_parsed] = util::parse_member_reference(remainder, true, false, true, false, true, true); !second_ref.empty())
 		{
 			// Use the initial reference as an entity-target.
 			entity_ref  = initial_ref;
@@ -871,7 +871,7 @@ namespace engine
 			return std::nullopt;
 		}
 
-		if (auto [entity_ref, thread_ref] = util::parse_member_reference(combined_expr, true); !entity_ref.empty())
+		if (auto [entity_ref, thread_ref, entity_ref_length_parsed] = util::parse_member_reference(combined_expr, true); !entity_ref.empty())
 		{
 			return parse_thread_details(thread_ref, entity_ref, opt_descriptor);
 		}
