@@ -609,18 +609,26 @@ namespace util
             {
                 if constexpr (is_tuple_return_value)
                 {
-                    if (std::get<0>(current) > std::get<0>(next))
+					if (std::get<0>(next) != end_value)
                     {
-                        return current;
+						if (std::get<0>(next) > std::get<0>(current))
+						{
+							return next;
                     }
+                }
                 }
                 else
                 {
-                    if (current > next)
+					if (next != end_value)
                     {
-                        return current;
+						if (next > current)
+						{
+							return next;
                     }
                 }
+            }
+
+				return current;
             }
 
             return next;
