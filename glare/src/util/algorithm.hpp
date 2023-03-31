@@ -610,23 +610,23 @@ namespace util
                 if constexpr (is_tuple_return_value)
                 {
 					if (std::get<0>(next) != end_value)
-                    {
+					{
 						if (std::get<0>(next) > std::get<0>(current))
 						{
 							return next;
-                    }
-                }
+						}
+					}
                 }
                 else
                 {
 					if (next != end_value)
-                    {
+					{
 						if (next > current)
 						{
 							return next;
-                    }
+						}
+					}
                 }
-            }
 
 				return current;
             }
@@ -658,6 +658,78 @@ namespace util
 
         return std::get<0>(result);
     }
+
+	// TODO: Implement generic (non-string) versions of this algorithm.
+	// 
+	// Executes `find_fn` repeatedly until a match is no longer found.
+	// The newest match, if any, will be returned upon completion.
+	// 
+	// The `find_fn` callable takes in an `std::string_view` (representing a sub-string of `expr`),
+	// and is expected to return a `std::tuple<std::size_t, std::string_view>`.
+	template <typename FindFn>
+	std::tuple<std::size_t, std::string_view> find_last_ex(std::string_view expr, FindFn&& find_fn)
+	{
+		std::size_t latest_result = std::string_view::npos;
+		std::string_view latest_symbol = {};
+
+		std::size_t position = 0; // offset
+
+		while (position < expr.length())
+		{
+			auto result = find_fn(expr.substr(position));
+
+			const auto& sub_expr_symbol_position = std::get<0>(result);
+
+			if (sub_expr_symbol_position == std::string_view::npos)
+			{
+				break;
+			}
+
+			const auto& next_symbol = std::get<1>(result);
+
+			if (next_symbol.empty())
+			{
+				break;
+			}
+
+			const auto next_symbol_position = (sub_expr_symbol_position + position);
+
+			latest_result = next_symbol_position;
+			latest_symbol = next_symbol;
+
+			position = (next_symbol_position + next_symbol.length());
+		}
+
+		return { latest_result, latest_symbol };
+	}
+
+	// TODO: Implement generic (non-string) versions of this algorithm.
+	// 
+	// Executes `find_furthest_ex` on `keys` until a match can
+	// no longer be found, then returns the latest match.
+	template <typename ...Keys>
+	std::tuple<std::size_t, std::string_view> find_last(std::string_view expr, const Keys&... keys)
+	{
+		return find_last_ex
+		(
+			expr,
+
+			[&](std::string_view sub_expr) -> std::tuple<std::size_t, std::string_view>
+			{
+				//static_assert(find_returns_tuple_v<decltype(sub_expr)>);
+
+				return find_furthest_ex
+				(
+					sub_expr,
+
+					std::string_view::npos,
+
+					// NOTE: Forward considered safe due to const-reference requirement from `find_furthest_ex`.
+					keys...
+				);
+			}
+		);
+	}
 
 	// Compares `key` to each value in `compare`, returning true if a match is found.
 	template <typename ValueType, typename ...ComparisonValues>
