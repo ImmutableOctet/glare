@@ -17,16 +17,23 @@ namespace util
 	namespace impl
     {
         template <typename Key>
-        inline constexpr bool key_has_value_semantics_v = (std::is_copy_constructible_v<Key> || std::is_move_constructible_v<Key>);
+        inline constexpr bool key_has_value_semantics_v = (std::is_copy_constructible_v<std::decay_t<Key>> || std::is_move_constructible_v<std::decay_t<Key>>);
 
         template <typename Key>
-        inline constexpr bool is_regular_key_v = (std::is_default_constructible_v<Key> && key_has_value_semantics_v<Key>);
+        inline constexpr bool is_regular_key_v = (std::is_default_constructible_v<std::decay_t<Key>> && key_has_value_semantics_v<Key>);
 
         template <typename Key>
-        inline constexpr bool key_is_optional_compatible_v = ((!is_regular_key_v<Key>) && (key_has_value_semantics_v<Key>) && is_optional_compatible_v<Key>);
+        inline constexpr bool key_is_optional_compatible_v = ((!is_regular_key_v<Key>) && (key_has_value_semantics_v<Key>) && is_optional_compatible_v<std::decay_t<Key>>);
 
         template <typename Key>
-        inline constexpr bool find_returns_tuple_v = (is_regular_key_v<Key> || is_c_str_v<Key> || (key_has_value_semantics_v<Key> && key_is_optional_compatible_v<Key>));
+        inline constexpr bool find_returns_tuple_v =
+		(
+			is_regular_key_v<Key> // std::decay_t<Key>
+			||
+			(is_c_str_v<Key> || is_specialization_v<std::decay_t<Key>, std::basic_string> || is_specialization_v<std::decay_t<Key>, std::basic_string_view>)
+			||
+			(key_has_value_semantics_v<Key> && key_is_optional_compatible_v<Key>)
+		);
 
         // Slightly faster implementation for single return-value on string.
         template <typename ContainerType, typename ...Keys>
@@ -267,7 +274,7 @@ namespace util
             {
                 return std::tuple { std::move(it), std::forward<Key>(key) };
             }
-            else if constexpr (is_c_str_v<Key>)
+            else if constexpr (is_c_str_v<Key> || is_specialization_v<std::decay_t<Key>, std::basic_string> || is_specialization_v<std::decay_t<Key>, std::basic_string_view>)
             {
                 return std::tuple { std::move(it), key }; // std::forward<std::decay_t<Key>>(key)
             }
@@ -281,7 +288,7 @@ namespace util
         {
             return std::tuple { std::move(it), Key {} };
         }
-        else if constexpr (is_c_str_v<Key>)
+        else if constexpr (is_c_str_v<Key> || is_specialization_v<std::decay_t<Key>, std::basic_string> || is_specialization_v<std::decay_t<Key>, std::basic_string_view>)
         {
             return std::tuple { std::move(it), std::decay_t<Key> {} };
         }
