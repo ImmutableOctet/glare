@@ -229,3 +229,10 @@ TEST_CASE("util::find_last_singular", "[util:parse]")
 	REQUIRE(util::find_last_singular("some::key::name:: unrelated_expression", ":") == std::string_view::npos);
 	REQUIRE(util::find_last_singular("some::key:::name:type:", ":") == 21);
 }
+
+TEST_CASE("util::find_singular", "[util:parse]")
+{
+	REQUIRE(util::find_singular("::: ::: :", ":") == 8);
+	REQUIRE(util::find_singular("some::key::name unrelated_expression", ":") == std::string_view::npos);
+	REQUIRE(util::find_singular("some::key:::name:type", ":") == 16);
+}
