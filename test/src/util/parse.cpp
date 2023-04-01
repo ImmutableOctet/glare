@@ -26,8 +26,13 @@ TEST_CASE("util::find_last_accessor", "[util:parse]")
 	REQUIRE(std::get<0>(util::find_last_accessor("First.Second::Third::Fourth")) == 19);
 }
 
-TEST_CASE("util::find_operator", "[util::parse]")
+TEST_CASE("util::find_logic_operator", "[util:parse]")
 {
+	REQUIRE(std::get<0>(util::find_logic_operator("X || Y")) == 2);
+	REQUIRE(std::get<0>(util::find_logic_operator("X::value && Y::value")) == 9);
+	REQUIRE(std::get<0>(util::find_logic_operator("(X ^ some_value)", true)) == 3);
+	REQUIRE(std::get<0>(util::find_logic_operator("(X ^ Y)", false)) == std::string_view::npos);
+}
 	SECTION("Regular operators")
 	{
 		REQUIRE(std::get<1>(util::find_operator("+")) == "+");
