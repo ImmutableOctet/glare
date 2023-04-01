@@ -140,14 +140,16 @@ namespace engine
 		);
 
 		instructions["terminate"] = instructions["stop"];
-		instructions["wait"] = instructions["yield"];
-		instructions["wake"] = instructions["resume"];
+		instructions["wait"]      = instructions["yield"];
+		instructions["wake"]      = instructions["resume"];
+		instructions["event"]     = instructions["event_capture"];
+		instructions["capture"]   = instructions["event_capture"];
 
 		// May change this to its own instruction type later.
-		instructions["step"] = instructions["skip"];
+		instructions["step"]      = instructions["skip"];
 
 		// Already handled through different instruction type.
-		//instructions["sleep"] = instructions["yield"];
+		//instructions["sleep"]   = instructions["yield"];
 
 		return context;
 	}
