@@ -456,6 +456,32 @@ TEST_CASE("util::parse_command", "[util:parse]")
 
 TEST_CASE("util::parse_command_or_value", "[util:parse]")
 {
+	SECTION("Truncate at operator")
+	{
+		auto expr = std::string_view("button == Button::Jump || OnButtonPressed::button == Button::Shield");
+
+		auto
+		[
+			value, content,
+			trailing_expr,
+			is_string_content, is_command,
+			parsed_length
+		] = util::parse_command_or_value
+		(
+			expr,
+			true, true, true, true,
+			false,
+			true
+		);
+
+		REQUIRE(value == "button");
+		REQUIRE(content == value);
+		REQUIRE(trailing_expr == "== Button::Jump || OnButtonPressed::button == Button::Shield");
+		REQUIRE(!is_string_content);
+		REQUIRE(!is_command);
+		REQUIRE(parsed_length == value.length()+(sizeof(" ")-1));
+	}
+
 	SECTION("Empty command")
 	{
 		auto
