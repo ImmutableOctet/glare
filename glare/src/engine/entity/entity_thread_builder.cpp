@@ -27,6 +27,7 @@
 #include <util/parse.hpp>
 #include <util/io.hpp>
 #include <util/optional.hpp>
+#include <util/variant.hpp>
 
 // Debugging related:
 #include <util/log.hpp>
@@ -192,6 +193,26 @@ namespace engine
 			case "sleep"_hs:
 			case "wait"_hs:
 			case "yield"_hs:
+				return true;
+		}
+
+		return false;
+	}
+
+	bool EntityThreadBuilder::is_event_capture_instruction(std::string_view instruction_name)
+	{
+		return is_event_capture_instruction(hash(instruction_name).value());
+	}
+
+	bool EntityThreadBuilder::is_event_capture_instruction(MetaSymbolID instruction_id)
+	{
+		using namespace engine::literals;
+
+		switch (instruction_id)
+		{
+			case "capture"_hs:
+			case "event"_hs:
+			case "event_capture"_hs:
 				return true;
 		}
 
@@ -736,25 +757,80 @@ namespace engine
 					{
 						if (const auto& assignment_command_content = std::get<1>(assignment_value_as_command); !assignment_command_content.empty())
 						{
-							if (is_yield_instruction(assignment_command_name))
+							const auto instruction_id = hash(assignment_command_name).value();
+
+							auto event_type_id = assignment_variable->type_id;
+
+							bool variable_assignment_is_capture = false;
+
+							if (is_yield_instruction(instruction_id))
 							{
-								const auto yield_instruction_result = process_inline_yield_instruction(assignment_command_content);
+								const auto inline_yield_result = process_inline_yield_instruction(assignment_command_content);
 
-								assert(yield_instruction_result);
+								assert(inline_yield_result);
 
-								if (yield_instruction_result)
+								if (inline_yield_result)
 								{
-									instruct<EventCapture>
-									(
-										MetaVariableTarget
-										{
-											assignment_variable->resolved_name,
-											assignment_variable->scope
-										},
-
-										assignment_variable->type_id
-									);
+									variable_assignment_is_capture = true;
 								}
+							}
+							else if (is_event_capture_instruction(instruction_id))
+							{
+								const auto latest_instruction = get_latest_instruction();
+
+								constexpr auto yield_index = util::variant_index<EntityInstruction::InstructionType, engine::instructions::Yield>();
+								constexpr auto event_capture_index = util::variant_index<EntityInstruction::InstructionType, engine::instructions::EventCapture>();
+
+								switch (latest_instruction->type_index())
+								{
+									case yield_index:
+									case event_capture_index:
+										if (assignment_command_content.empty())
+										{
+											variable_assignment_is_capture = true;
+										}
+										else
+										{
+											const auto opt_type_context = parsing_context.get_type_context();
+
+											const auto event_type = (opt_type_context)
+												? opt_type_context->get_type(assignment_command_content)
+												: resolve(hash(assignment_command_content).value())
+											;
+
+											if (event_type)
+											{
+												event_type_id = event_type.id();
+
+												variable_assignment_is_capture = true;
+											}
+											else
+											{
+												print_warn("Event capture failed: Unable to resolve event type.");
+											}
+										}
+
+										break;
+
+									default:
+										print_warn("Event capture failed: Event capture instructions are only allowed immediately after a yield instruction. (Continuing as normal assignment)");
+
+										break;
+								}
+							}
+
+							if (variable_assignment_is_capture)
+							{
+								instruct<EventCapture>
+								(
+									MetaVariableTarget
+									{
+										assignment_variable->resolved_name,
+										assignment_variable->scope
+									},
+
+									event_type_id
+								);
 
 								// Only one instruction processed, but several produced.
 								return 1;
@@ -1222,24 +1298,93 @@ namespace engine
 				{
 					if (const auto& assignment_expr_content = std::get<1>(assignment_expr_as_command); !assignment_expr_content.empty())
 					{
-						if (is_yield_instruction(assignment_expr_command_name))
+						const auto instruction_id = hash(assignment_expr_command_name).value();
+
+						auto event_type_id = MetaTypeID {};
+
+						bool variable_assignment_is_capture = false;
+
+						if (is_yield_instruction(instruction_id))
 						{
-							const auto variable_target = MetaVariableTarget
+							instruct<VariableDeclaration>
+							(
+								MetaVariableTarget
+								{
+									variable_description->resolved_name,
+									variable_description->scope
+								}
+							);
+
+							const auto inline_yield_result = process_inline_yield_instruction(assignment_expr_content);
+
+							assert(inline_yield_result);
+
+							if (inline_yield_result)
 							{
-								variable_description->resolved_name,
-								variable_description->scope
-							};
+								event_type_id = variable_description->type_id;
 
-							instruct<VariableDeclaration>(variable_target);
-
-							const auto yield_instruction_result = process_inline_yield_instruction(assignment_expr_content);
-
-							assert(yield_instruction_result);
-
-							if (yield_instruction_result)
-							{
-								instruct<EventCapture>(variable_target, variable_description->type_id);
+								variable_assignment_is_capture = true;
 							}
+						}
+						else if (is_event_capture_instruction(instruction_id))
+						{
+							const auto latest_instruction = get_latest_instruction();
+
+							constexpr auto yield_index = util::variant_index<EntityInstruction::InstructionType, engine::instructions::Yield>();
+							constexpr auto event_capture_index = util::variant_index<EntityInstruction::InstructionType, engine::instructions::EventCapture>();
+
+							switch (latest_instruction->type_index())
+							{
+								case yield_index:
+								case event_capture_index:
+									if (assignment_expr_content.empty())
+									{
+										event_type_id = variable_description->type_id;
+
+										variable_assignment_is_capture = true;
+									}
+									else
+									{
+										const auto opt_type_context = parsing_context.get_type_context();
+
+										const auto event_type = (opt_type_context)
+											? opt_type_context->get_type(assignment_expr_content)
+											: resolve(hash(assignment_expr_content).value())
+										;
+
+										if (event_type)
+										{
+											event_type_id = event_type.id();
+
+											variable_assignment_is_capture = true;
+										}
+										else
+										{
+											print_warn("Event capture failed: Unable to resolve event type.");
+										}
+									}
+
+									break;
+
+								default:
+									print_warn("Event capture failed: Event capture instructions are only allowed immediately after a yield instruction. (Continuing as normal assignment)");
+
+									break;
+							}
+						}
+
+						if (variable_assignment_is_capture)
+						{
+							instruct<EventCapture>
+							(
+								MetaVariableTarget
+								{
+									variable_description->resolved_name,
+									variable_description->scope
+								},
+
+								event_type_id
+							);
 
 							// Only one instruction processed, but several produced.
 							return 1;
@@ -1415,6 +1560,20 @@ namespace engine
 		}
 
 		return 0;
+	}
+
+	const EntityInstruction* EntityThreadBuilder::get_latest_instruction() const
+	{
+		auto& thread = get_thread();
+
+		if (thread.empty())
+		{
+			return {};
+		}
+
+		const auto latest_instruction_index = (thread.size() - 1);
+
+		return &(thread.get_instruction(latest_instruction_index));
 	}
 
 	EntityInstructionCount EntityThreadBuilder::launch(EntityThreadIndex thread_index)

@@ -122,6 +122,8 @@ namespace engine
 
 			static bool is_yield_instruction(MetaSymbolID instruction_id);
 			static bool is_yield_instruction(std::string_view instruction_name);
+			static bool is_event_capture_instruction(MetaSymbolID instruction_id);
+			static bool is_event_capture_instruction(std::string_view instruction_name);
 
 			EntityThreadBuilder
 			(
@@ -351,6 +353,9 @@ namespace engine
 			{
 				return instruct(std::forward<InstructionType>(processed_instruction));
 			}
+
+			// Retrieves a non-owning pointer to the latest processed instruction.
+			const EntityInstruction* get_latest_instruction() const;
 
 			// Emits an instruction to launch `thread_index`.
 			EntityInstructionCount launch(EntityThreadIndex thread_index);
