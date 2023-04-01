@@ -282,7 +282,7 @@ namespace util
 		}
 
 		if (beginning_of_string_only)
-			{
+		{
 			if (operator_position != 0)
 			{
 				return {};
@@ -298,7 +298,7 @@ namespace util
 			if (!trailing_expr.empty())
 			{
 				return {};
-	}
+			}
 		}
 
 		return { operator_symbol, trailing_expr };
@@ -1078,6 +1078,44 @@ namespace util
 		return { last_included_char_index, expr.substr(last_included_char_index, assignment_symbol_length) };
 	}
 
+	std::tuple<std::size_t, std::string_view> find_logic_operator(std::string_view expr, bool include_xor)
+	{
+		if (include_xor)
+		{
+			return util::execute_as<std::string_view>
+			(
+				[&expr](auto&&... operator_symbols)
+				{
+					return find_first_of_ex
+					(
+						expr,
+						std::string_view::npos,
+						std::forward<decltype(operator_symbols)>(operator_symbols)...
+					);
+				},
+
+				"&&", "||", "^"
+			);
+		}
+		else
+		{
+			return util::execute_as<std::string_view>
+			(
+				[&expr](auto&&... operator_symbols)
+				{
+					return find_first_of_ex
+					(
+						expr,
+						std::string_view::npos,
+						std::forward<decltype(operator_symbols)>(operator_symbols)...
+					);
+				},
+
+				"&&", "||"
+			);
+		}
+	}
+
 	std::tuple<std::size_t, std::string_view> find_operator(std::string_view expr)
 	{
 		if (expr.empty())
@@ -1085,59 +1123,50 @@ namespace util
 			return { std::string_view::npos, {} };
 		}
 
-		auto expandable_result = [&expr](std::size_t result_index, std::size_t operator_length, auto&&... expansion_symbols) -> std::tuple<std::size_t, std::string_view>
+		auto [initial_result_index, initial_result_symbol] = util::execute_as<std::string_view>
+		(
+			[&expr](auto&&... operator_symbols)
+			{
+				return find_first_of_ex
+				(
+					expr,
+					std::string_view::npos,
+					std::forward<decltype(operator_symbols)>(operator_symbols)...
+				);
+			},
+
+			"&&", "||", "<<", ">>",
+			"==", "!=", "<>", "<", ">",
+			"+", "-", "~", "*", "/", "%", "&", "^", "|", "=", "!"
+		);
+
+		if (initial_result_index == std::string_view::npos)
 		{
-			//assert(result_index < std::numeric_limits<decltype(result_index)>::max());
+			return { initial_result_index, initial_result_symbol };
+		}
+
+		if ((initial_result_symbol.length() == 1) || (initial_result_symbol == "<<") || (initial_result_symbol == ">>"))
+		{
+			auto expandable_result = [&expr](std::size_t result_index, std::size_t operator_length, auto&&... expansion_symbols) -> std::tuple<std::size_t, std::string_view>
+			{
+				//assert(result_index < std::numeric_limits<decltype(result_index)>::max());
+
+				if (const auto next_index = (result_index + operator_length); next_index < expr.length())
+				{
+					if (((expr[next_index] == expansion_symbols) || ...))
+					{
+						operator_length++;
+					}
+				}
+
+				return { result_index, expr.substr(result_index, operator_length) };
+			};
 
 			// Check for assignment syntax (e.g. `+=`, `-=`):
-			if (const auto next_index = (result_index + operator_length); next_index < expr.length())
-			{
-				if (((expr[next_index] == expansion_symbols) || ...))
-				{
-					operator_length++;
-				}
-			}
-
-			return { result_index, expr.substr(result_index, operator_length) };
-		};
-
-		if (auto logical_and = expr.find("&&"); logical_and != std::string_view::npos)
-		{
-			return { logical_and, expr.substr(logical_and, 2) };
+			return expandable_result(initial_result_index, initial_result_symbol.length(), '=');
 		}
 
-		if (auto logical_or = expr.find("||"); logical_or != std::string_view::npos)
-		{
-			return { logical_or, expr.substr(logical_or, 2) };
-		}
-
-		if (auto shift_left = expr.find("<<"); shift_left != std::string_view::npos)
-		{
-			return expandable_result(shift_left, 2, '=');
-		}
-
-		if (auto shift_right = expr.find(">>"); shift_right != std::string_view::npos)
-		{
-			return expandable_result(shift_right, 2, '=');
-		}
-
-		if (auto less_than = expr.find('<'); less_than != std::string_view::npos)
-		{
-			// Handles `<`, `<=` and `<>` (alternative inequality syntax).
-			return expandable_result(less_than, 1, '=', '>');
-		}
-
-		if (auto greater_than = expr.find('>'); greater_than != std::string_view::npos)
-		{
-			return expandable_result(greater_than, 1, '=');
-		}
-
-		if (auto single_char_operator = expr.find_first_of("+-~*/%&^|=!"); single_char_operator != std::string_view::npos)
-		{
-			return expandable_result(single_char_operator, 1, '=');
-		}
-
-		return { std::string_view::npos, {} };
+		return { initial_result_index, initial_result_symbol };
 	}
 
 	std::tuple<std::size_t, std::size_t>

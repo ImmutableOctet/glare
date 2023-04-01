@@ -181,6 +181,10 @@ namespace util
 	std::tuple<std::size_t, std::string_view>
 	find_assignment_operator(std::string_view expr, bool check_compound_operators=true, bool validate_scope_bounds=true, bool disallow_right_of_scope=false);
 
+	// Attempts to find the first instance of a logical operator (`&&`, `||`, [`^`]) in `expr`.
+	std::tuple<std::size_t, std::string_view> find_logic_operator(std::string_view expr, bool include_xor=false);
+
+	// Attempts to find the first instance of an operator in `expr`. (Excludes accessors; e.g. `::`, `.`)
 	std::tuple<std::size_t, std::string_view> find_operator(std::string_view expr);
 
 	std::tuple<std::size_t, std::size_t>
