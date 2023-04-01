@@ -261,40 +261,47 @@ namespace util
 	}
 
 	std::tuple<std::string_view, std::string_view>
-	parse_standard_operator_segment(const std::string& operator_expr, bool allow_trailing_expr, bool beginning_of_string_only)
+	parse_standard_operator_segment
+	(
+		std::string_view operator_expr,
+		
+		bool allow_trailing_expr,
+		bool beginning_of_string_only
+	)
 	{
-		const auto operator_rgx = std::regex("\\s*([\\!\\|\\+\\-\\~\\*\\/\\%\\<\\>\\^\\=]+)\\s*(.*)");
-
-		auto flags = (beginning_of_string_only)
-			? std::regex_constants::match_continuous
-			: std::regex_constants::match_default
-		;
-
-		if (std::smatch rgx_match; std::regex_search(operator_expr.begin(), operator_expr.end(), rgx_match, operator_rgx, flags))
+		if (beginning_of_string_only)
 		{
-			auto operator_symbol = match_view(operator_expr, rgx_match, 1);
-			auto trailing_expr   = match_view(operator_expr, rgx_match, 2);
+			operator_expr = trim(operator_expr);
+		}
 
-			if (allow_trailing_expr || trailing_expr.empty())
+		const auto [operator_position, operator_symbol] = find_operator(operator_expr);
+
+		if (operator_position == std::string_view::npos)
+		{
+			return {};
+		}
+
+		if (beginning_of_string_only)
 			{
-				return { operator_symbol, trailing_expr };
+			if (operator_position != 0)
+			{
+				return {};
 			}
 		}
 
-		return { {}, {} };
-	}
+		assert(!operator_symbol.empty());
 
-	std::tuple<std::string_view, std::string_view>
-	parse_standard_operator_segment(std::string_view operator_expr, bool allow_trailing_expr, bool beginning_of_string_only)
-	{
-		const auto temp = std::string(operator_expr);
-		auto result = parse_standard_operator_segment(temp, allow_trailing_expr, beginning_of_string_only);
+		const auto trailing_expr = trim(operator_expr.substr(operator_position + operator_symbol.length()));
 
-		return
+		if (!allow_trailing_expr)
 		{
-			remap_string_view(temp, operator_expr, std::get<0>(result)),
-			remap_string_view(temp, operator_expr, std::get<1>(result))
-		};
+			if (!trailing_expr.empty())
+			{
+				return {};
+	}
+		}
+
+		return { operator_symbol, trailing_expr };
 	}
 
 	std::tuple<std::string_view, std::string_view, std::size_t>

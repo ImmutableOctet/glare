@@ -87,15 +87,13 @@ namespace util
 		std::string_view, // operator_symbol
 		std::string_view  // trailing_expr
 	>
-	parse_standard_operator_segment(const std::string& operator_expr, bool allow_trailing_expr=true, bool beginning_of_string_only=true);
+	parse_standard_operator_segment
+	(
+		std::string_view operator_expr,
 
-	// TODO: Remove/refactor. (`std::regex` doesn't (currently) support `std::string_view`.
-	std::tuple
-	<
-		std::string_view, // operator_symbol
-		std::string_view  // trailing_expr
-	>
-	parse_standard_operator_segment(std::string_view operator_expr, bool allow_trailing_expr=true, bool beginning_of_string_only=true);
+		bool allow_trailing_expr=true,
+		bool beginning_of_string_only=true
+	);
 
 	std::tuple
 	<
