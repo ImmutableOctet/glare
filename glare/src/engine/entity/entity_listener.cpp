@@ -283,9 +283,9 @@ namespace engine
 
 					if (event_instance)
 					{
-						bool event_captured = false;
-
 						auto projected_instruction_index = (thread.next_instruction + instruction_advance);
+
+						bool event_captured = false;
 
 						while (projected_instruction_index < thread_data.size())
 						{
