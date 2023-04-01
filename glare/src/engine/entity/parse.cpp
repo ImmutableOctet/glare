@@ -219,6 +219,7 @@ namespace engine
 		bool allow_missing_operator,
 		bool allow_empty_trailing_value,
 		bool allow_scope_as_implied_operator,
+		bool truncate_at_logical_operators,
 		const MetaParsingInstructions* opt_parsing_instructions
 	)
 	{
@@ -249,7 +250,28 @@ namespace engine
 
 		const bool is_enclosed_in_scope = (latest_scope_end != std::string_view::npos);
 
-		auto [entity_target_parse_result, first_symbol, second_symbol, access_operator, offset] = parse_qualified_reference(content, 0, opt_parsing_instructions);
+		std::size_t offset = 0;
+
+		if ((!is_enclosed_in_scope) && (truncate_at_logical_operators))
+		{
+			const auto first_non_whitespace = content.find_first_not_of(util::whitespace_symbols);
+
+			if (first_non_whitespace == std::string_view::npos)
+			{
+				return {};
+			}
+
+			const auto [leading_logic_operator_position, leading_logic_operator_symbol] = util::find_logic_operator(content, false);
+
+			if (leading_logic_operator_position == first_non_whitespace)
+			{
+				offset = (leading_logic_operator_position + leading_logic_operator_symbol.length());
+			}
+		}
+
+		auto [entity_target_parse_result, first_symbol, second_symbol, access_operator, qualified_reference_offset] = parse_qualified_reference(content, offset, opt_parsing_instructions);
+
+		offset = qualified_reference_offset;
 
 		auto entity_ref = std::string_view {};
 
@@ -328,6 +350,16 @@ namespace engine
 		}
 		else
 		{
+			if (truncate_at_logical_operators)
+			{
+				const auto [logic_operator_index, logic_operator] = util::find_logic_operator(compared_or_assigned_value, false);
+
+				if (logic_operator_index != std::string_view::npos)
+				{
+					compared_or_assigned_value = util::trim(compared_or_assigned_value.substr(0, logic_operator_index));
+				}
+			}
+
 			if (latest_scope_end == std::string_view::npos)
 			{
 				updated_offset = static_cast<std::size_t>((compared_or_assigned_value.data() + compared_or_assigned_value.length()) - condition_or_assignment.data());
