@@ -943,4 +943,116 @@ namespace util
 			return get<(sizeof...(args) - 1)>(std::forward<Args>(args)...);
 		}
 	}
+
+	template <typename T, typename Fn, typename... Args>
+	constexpr decltype(auto) execute_as(Fn&& fn, Args&&... args)
+	{
+		if constexpr (std::is_same_v<void, decltype(fn(T{std::forward<Args>(args)}...))>)
+		{
+			fn(T{std::forward<Args>(args)}...);
+		}
+		else
+		{
+			return fn(T{std::forward<Args>(args)}...);
+		}
+	}
+
+	template <typename T, typename Fn, typename... TupleArgs>
+	constexpr decltype(auto) execute_tuple_as(Fn&& fn, TupleArgs&&... args)
+	{
+		return std::apply
+		(
+			[&fn](auto&&... values)
+			{
+				if constexpr (std::is_same_v<void, decltype(execute_as<T>(fn, std::forward<decltype(values)>(values)...))>)
+				{
+					execute_as<T>(fn, std::forward<decltype(values)>(values)...);
+				}
+				else
+				{
+					return execute_as<T>(fn, std::forward<decltype(values)>(values)...);
+				}
+			},
+
+			std::forward<TupleArgs>(args)...
+		);
+	}
+
+	template <typename T, typename Fn, typename... Values>
+	constexpr bool inspect_as(Fn&& fn, Values&&... values)
+	{
+		bool result = true;
+
+		std::apply
+		(
+			[&fn, &result](auto&&... inputs)
+			{
+				if constexpr((is_convertible_to_bool<decltype(fn(T { std::forward<decltype(inputs)>(inputs) }))> && ...))
+				{
+					result = static_cast<bool>((fn(T { std::forward<decltype(inputs)>(inputs) }) && ...));
+				}
+				else
+				{
+					(
+						fn(T { std::forward<decltype(inputs)>(inputs) }),
+						...
+					);
+				}
+			},
+
+			std::forward_as_tuple<Values...>(std::forward<Values>(values)...)
+		);
+
+		return result;
+	}
+
+	template <typename T, typename Fn, typename... TupleArgs>
+	constexpr decltype(auto) inspect_tuple_as(Fn&& fn, TupleArgs&&... args)
+	{
+		return execute_tuple_as<T>
+		(
+			[&fn](auto&&... tuple_entries)
+			{
+				return (inspect_as<T>(fn, std::forward<decltype(tuple_entries)>(tuple_entries)) && ...);
+			},
+
+			std::forward<TupleArgs>(args)...
+		);
+	}
+
+	static_assert
+	(
+		inspect_as<int>
+		(
+			[](auto value) { return std::is_same_v<decltype(value), int>; },
+			static_cast<short>(0)
+		)
+	);
+
+	static_assert
+	(
+		inspect_tuple_as<int>
+		(
+			[](auto value) { return std::is_same_v<decltype(value), int>; },
+			std::make_tuple<short>(static_cast<short>(0))
+		)
+	);
+
+	static_assert
+	(
+		execute_as<int>
+		(
+			[](auto value) { return std::is_same_v<decltype(value), int>; },
+			static_cast<short>(0)
+		)
+	);
+
+	static_assert
+	(
+		execute_tuple_as<int>
+		(
+			[](auto value) { return (std::is_same_v<decltype(value), int>); },
+			std::make_tuple<short>(static_cast<short>(0))
+		)
+	);
 }
