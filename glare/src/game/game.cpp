@@ -50,7 +50,7 @@ namespace game
 		screen(graphics.context, window->get_size()),
 		
 		resource_manager(graphics.context),
-		world(cfg, resource_manager, update_rate),
+		world(registry, cfg, resource_manager, update_rate),
 		systems(world),
 
 		// May split this out in body of constructor. -- This would

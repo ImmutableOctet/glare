@@ -48,6 +48,8 @@ namespace game
 	class Game : public app::GraphicsApplication
 	{
 		protected:
+			engine::Registry registry;
+
 			engine::Config cfg;
 
 			Screen screen;
