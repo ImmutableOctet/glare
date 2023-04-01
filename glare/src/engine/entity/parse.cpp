@@ -80,9 +80,9 @@ namespace engine
 		bool disallow_command_as_symbol
 	)
 	{
-		auto remainder = content;
+		std::size_t offset = 0;
 
-		std::size_t offset = initial_offset;
+		auto remainder = std::string_view {}; // content;
 
 		auto seek_forward = [&content, &offset, &remainder](std::size_t characters_processed) -> std::string_view
 		{
@@ -91,6 +91,8 @@ namespace engine
 
 			return remainder;
 		};
+
+		seek_forward(initial_offset);
 
 		auto get_access_operator = [&remainder, &seek_forward]() -> std::string_view
 		{
