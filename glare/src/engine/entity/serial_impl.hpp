@@ -381,7 +381,7 @@ namespace engine
 		{
 			bool invert_condition = false;
 
-			if (auto [leading_operator, remainder] = util::parse_standard_operator_segment(trigger_condition_expr); ((!leading_operator.empty()) && leading_operator == "!"))
+			if (auto [leading_operator, remainder] = util::parse_standard_operator_segment(trigger_condition_expr); (leading_operator == "!"))
 			{
 				invert_condition = true;
 
@@ -399,7 +399,7 @@ namespace engine
 			] = parse_qualified_assignment_or_comparison
 			(
 				trigger_condition_expr, offset, {},
-				true, true, true
+				true, true, true, true
 			);
 
 			auto& type_name = first_symbol;
@@ -455,35 +455,29 @@ namespace engine
 					(expr_start_idx - offset)
 				};
 
-				auto local_combinator_symbol_idx = std::string_view::npos;
+				auto [local_combinator_symbol_idx, local_combinator_symbol] = util::find_logic_operator(expr_gap, false);
 
-				// Perform view-local lookup:
-				if (local_combinator_symbol_idx = expr_gap.find("&&"); local_combinator_symbol_idx != std::string_view::npos)
-				{
-					active_combinator = Combinator::And;
-				}
-				else if (local_combinator_symbol_idx = expr_gap.find("||"); local_combinator_symbol_idx != std::string_view::npos)
-				{
-					active_combinator = Combinator::Or;
-				}
-					
 				if (local_combinator_symbol_idx == std::string_view::npos)
 				{
 					print_warn("Missing combinator symbol in state-rule trigger expression; using last known combinator as fallback.");
 				}
-				/*
 				else
 				{
-					// Convert from view-local index to global index.
-					const auto combinator_symbol_idx = static_cast<std::size_t>((expr_gap.data() + local_combinator_symbol_idx) - trigger_condition_expr.data());
-
-					constexpr std::size_t combinator_symbol_size = 2;
-					if (trigger_condition_expr.find("(", (combinator_symbol_idx + combinator_symbol_size)) != std::string_view::npos)
+					// Perform view-local lookup:
+					if (local_combinator_symbol == "&&")
 					{
-						// ...
+						active_combinator = Combinator::And;
+					}
+					else if (local_combinator_symbol == "||")
+					{
+						active_combinator = Combinator::Or;
+					}
+					else
+					{
+						// Unsupported symbol.
+						//assert(false);
 					}
 				}
-				*/
 			}
 				
 			// Update the processing offset to the latest location reported by our parsing step.

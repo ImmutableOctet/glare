@@ -102,4 +102,7 @@ namespace util
     static_assert(is_c_str_v<decltype(const_cast<char*>(static_cast<const char*>(".")))>);
     static_assert(!is_c_str_v<decltype(100)>);
     static_assert(!is_c_str_v<decltype(nullptr)>);
+
+	template <typename T>
+    inline constexpr bool is_convertible_to_bool = (std::is_constructible_v<bool, decltype((std::declval<const T&>()))>); // (std::is_constructible_v<bool, const T&>) // (std::is_convertible_v<T, bool>);
 }

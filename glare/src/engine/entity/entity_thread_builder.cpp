@@ -10,6 +10,7 @@
 #include <engine/timer.hpp>
 
 #include <engine/meta/meta.hpp>
+#include <engine/meta/hash.hpp>
 #include <engine/meta/serial.hpp>
 #include <engine/meta/meta_type_resolution_context.hpp>
 #include <engine/meta/meta_type_descriptor.hpp>
@@ -26,6 +27,7 @@
 #include <util/parse.hpp>
 #include <util/io.hpp>
 #include <util/optional.hpp>
+#include <util/variant.hpp>
 
 // Debugging related:
 #include <util/log.hpp>
@@ -33,6 +35,115 @@
 namespace engine
 {
 	struct OnThreadSpawn;
+
+	template <typename InstructionType>
+	static std::optional<IndirectMetaAny> resolve_instruction_impl // std::optional<EntityDescriptorShared<MetaTypeDescriptor>>
+	(
+		EntityThreadBuilder& self,
+		const std::optional<EntityThreadInstruction>& opt_thread_instruction,
+		std::string_view instruction_content
+	)
+	{
+		using namespace engine::literals;
+
+		auto type = resolve<InstructionType>();
+
+		if (!type)
+		{
+			return std::nullopt;
+		}
+
+		auto type_desc = MetaTypeDescriptor { type };
+
+		std::size_t argument_offset = 0;
+
+		if constexpr (std::is_base_of_v<EntityThreadInstruction, InstructionType>)
+		{
+			//if (opt_thread_instruction)
+			{
+				type_desc.set_variable
+				(
+					MetaVariable
+					{
+						"target_entity"_hs,
+
+						(opt_thread_instruction)
+							? opt_thread_instruction->target_entity
+							: EntityTarget {}
+								
+						//opt_thread_instruction->target_entity
+					}
+				);
+
+				type_desc.set_variable
+				(
+					MetaVariable
+					{
+						"thread_id"_hs,
+
+						(opt_thread_instruction)
+							? opt_thread_instruction->thread_id
+							: std::optional<EntityThreadID>(std::nullopt)
+
+						//opt_thread_instruction->thread_id
+					}
+				);
+			}
+
+			argument_offset = 2;
+		}
+
+		auto& descriptor = self.get_descriptor();
+
+		type_desc.set_variables
+		(
+			instruction_content,
+
+			MetaParsingInstructions
+			{
+				.context = self.get_parsing_context(),
+				.storage = &(descriptor.get_shared_storage()),
+
+				.fallback_to_string               = false,
+				.fallback_to_component_reference  = true,
+				.fallback_to_entity_reference     = true,
+
+				.allow_member_references          = true,
+				.allow_entity_indirection         = true,
+				.allow_implicit_type_construction = true, // false,
+				.allow_explicit_type_construction = true,
+				.allow_numeric_literals           = false,
+				.allow_function_call_semantics    = true,
+				.allow_value_resolution_commands  = true,
+				.allow_remote_variable_references = true,
+
+				.resolve_component_aliases        = true,
+				.resolve_command_aliases          = false, // true,
+				.resolve_instruction_aliases      = true
+			},
+
+			argument_offset
+		);
+
+		if (type_desc.has_indirection(true))
+		{
+			auto resource = descriptor.allocate(std::move(type_desc));
+
+			//const auto descriptor_type = resolve<MetaTypeDescriptor>();
+			const auto descriptor_type_id = hash("MetaTypeDescriptor").value(); // descriptor_type.id();
+
+			const auto checksum = descriptor.get_shared_storage().get_checksum(descriptor_type_id);
+
+			return IndirectMetaAny
+			(
+				static_cast<const util::SharedStorageRef<MetaTypeDescriptor, SharedStorageIndex>&>(resource),
+				descriptor_type_id,
+				checksum
+			);
+		}
+
+		return std::nullopt;
+	}
 
 	// EntityThreadBuilderContext:
 	EntityThreadBuilderContext::EntityThreadBuilderContext
@@ -68,6 +179,46 @@ namespace engine
 	}
 
 	// EntityThreadBuilder:
+	bool EntityThreadBuilder::is_yield_instruction(std::string_view instruction_name)
+	{
+		return is_yield_instruction(hash(instruction_name).value());
+	}
+
+	bool EntityThreadBuilder::is_yield_instruction(MetaSymbolID instruction_id)
+	{
+		using namespace engine::literals;
+
+		switch (instruction_id)
+		{
+			case "sleep"_hs:
+			case "wait"_hs:
+			case "yield"_hs:
+				return true;
+		}
+
+		return false;
+	}
+
+	bool EntityThreadBuilder::is_event_capture_instruction(std::string_view instruction_name)
+	{
+		return is_event_capture_instruction(hash(instruction_name).value());
+	}
+
+	bool EntityThreadBuilder::is_event_capture_instruction(MetaSymbolID instruction_id)
+	{
+		using namespace engine::literals;
+
+		switch (instruction_id)
+		{
+			case "capture"_hs:
+			case "event"_hs:
+			case "event_capture"_hs:
+				return true;
+		}
+
+		return false;
+	}
+
 	EntityThreadBuilder::EntityThreadBuilder
 	(
 		const EntityThreadBuilderContext& context,
@@ -565,6 +716,131 @@ namespace engine
 		using namespace engine::literals;
 		using namespace engine::instructions;
 
+		const MetaVariableDescription* assignment_variable = {};
+
+		if (auto opt_variable_context = parsing_context.get_variable_context())
+		{
+			auto [assignment_operator_index, assignment_operator] = util::find_assignment_operator(instruction);
+
+			if (!assignment_operator.empty())
+			{
+				auto unresolved_variable_name = instruction.substr(0, assignment_operator_index);
+
+				if (auto type_operator = unresolved_variable_name.find_last_of(':'); type_operator != std::string_view::npos)
+				{
+					bool type_operator_is_valid = true;
+
+					if (auto scope_end = unresolved_variable_name.find_last_of(')'); scope_end != std::string_view::npos)
+					{
+						if (scope_end > type_operator)
+						{
+							type_operator_is_valid = false;
+						}
+					}
+
+					if (type_operator_is_valid)
+					{
+						unresolved_variable_name = unresolved_variable_name.substr(0, type_operator);
+					}
+				}
+
+				unresolved_variable_name = util::trim(unresolved_variable_name);
+
+				assignment_variable = opt_variable_context->retrieve_variable(unresolved_variable_name);
+
+				if (assignment_variable)
+				{
+					const auto assignment_value_raw = instruction.substr(assignment_operator_index + assignment_operator.length());
+					const auto assignment_value_as_command = util::parse_command(assignment_value_raw, false, false, false, false);
+
+					if (const auto& assignment_command_name = std::get<0>(assignment_value_as_command); !assignment_command_name.empty())
+					{
+						if (const auto& assignment_command_content = std::get<1>(assignment_value_as_command); !assignment_command_content.empty())
+						{
+							const auto instruction_id = hash(assignment_command_name).value();
+
+							auto event_type_id = assignment_variable->type_id;
+
+							bool variable_assignment_is_capture = false;
+
+							if (is_yield_instruction(instruction_id))
+							{
+								const auto inline_yield_result = process_inline_yield_instruction(assignment_command_content);
+
+								assert(inline_yield_result);
+
+								if (inline_yield_result)
+								{
+									variable_assignment_is_capture = true;
+								}
+							}
+							else if (is_event_capture_instruction(instruction_id))
+							{
+								const auto latest_instruction = get_latest_instruction();
+
+								constexpr auto yield_index = util::variant_index<EntityInstruction::InstructionType, engine::instructions::Yield>();
+								constexpr auto event_capture_index = util::variant_index<EntityInstruction::InstructionType, engine::instructions::EventCapture>();
+
+								switch (latest_instruction->type_index())
+								{
+									case yield_index:
+									case event_capture_index:
+										if (assignment_command_content.empty())
+										{
+											variable_assignment_is_capture = true;
+										}
+										else
+										{
+											const auto opt_type_context = parsing_context.get_type_context();
+
+											const auto event_type = (opt_type_context)
+												? opt_type_context->get_type(assignment_command_content)
+												: resolve(hash(assignment_command_content).value())
+											;
+
+											if (event_type)
+											{
+												event_type_id = event_type.id();
+
+												variable_assignment_is_capture = true;
+											}
+											else
+											{
+												print_warn("Event capture failed: Unable to resolve event type.");
+											}
+										}
+
+										break;
+
+									default:
+										print_warn("Event capture failed: Event capture instructions are only allowed immediately after a yield instruction. (Continuing as normal assignment)");
+
+										break;
+								}
+							}
+
+							if (variable_assignment_is_capture)
+							{
+								instruct<EventCapture>
+								(
+									MetaVariableTarget
+									{
+										assignment_variable->resolved_name,
+										assignment_variable->scope
+									},
+
+									event_type_id
+								);
+
+								// Only one instruction processed, but several produced.
+								return 1;
+							}
+						}
+					}
+				}
+			}
+		}
+
 		auto& storage = descriptor.get_shared_storage();
 
 		auto deferred_operation = meta_any_from_string
@@ -598,46 +874,13 @@ namespace engine
 			// Disabled for initial value to allow for fallthrough to thread operations.
 			// (Similar to reasoning for `allow_string_fallback`)
 			false, // allow_entity_fallback
-			false  // allow_component_fallback
+			false, // allow_component_fallback
+			false  // allow_standalone_opaque_function
 		);
 
 		if (!deferred_operation)
 		{
 			return 0;
-		}
-
-		const MetaVariableDescription* assignment_variable = {};
-
-		if (auto opt_variable_context = parsing_context.get_variable_context())
-		{
-			auto [assignment_operator_index, assignment_operator] = util::find_assignment_operator(instruction);
-
-			if (!assignment_operator.empty())
-			{
-				auto unresolved_variable_name = instruction.substr(0, assignment_operator_index);
-
-				if (auto type_operator = unresolved_variable_name.find_last_of(':'); type_operator != std::string_view::npos)
-				{
-					bool type_operator_is_valid = true;
-
-					if (auto scope_end = unresolved_variable_name.find_last_of(')'); scope_end != std::string_view::npos)
-					{
-						if (scope_end > type_operator)
-						{
-							type_operator_is_valid = false;
-						}
-					}
-
-					if (type_operator_is_valid)
-					{
-						unresolved_variable_name = unresolved_variable_name.substr(0, type_operator);
-					}
-				}
-
-				unresolved_variable_name = util::trim(unresolved_variable_name);
-
-				assignment_variable = opt_variable_context->retrieve_variable(unresolved_variable_name);
-			}
 		}
 
 		auto* as_indirect = deferred_operation.try_cast<IndirectMetaAny>();
@@ -952,6 +1195,24 @@ namespace engine
 		return std::nullopt;
 	}
 
+	EntityInstructionCount EntityThreadBuilder::process_inline_yield_instruction(std::string_view yield_instruction_content)
+	{
+		using namespace engine::instructions;
+
+		if (auto condition = process_unified_condition_block(descriptor, yield_instruction_content, parsing_context))
+		{
+			auto condition_ref = descriptor.allocate<EventTriggerCondition>(std::move(*condition));
+
+			return instruct_thread<Yield>(std::nullopt, std::move(condition_ref));
+		}
+		else if (auto remote_instruction = resolve_instruction_impl<Sleep>(*this, std::nullopt, yield_instruction_content))
+		{
+			return instruct<InstructionDescriptor>(std::move(*remote_instruction));
+		}
+
+		return 0;
+	}
+
 	EntityInstructionCount EntityThreadBuilder::process_variable_declaration(std::string_view declaration)
 	{
 		using namespace engine::instructions;
@@ -1031,6 +1292,106 @@ namespace engine
 			}
 			else
 			{
+				const auto assignment_expr_as_command = util::parse_command(assignment_expr, false, false, false, false);
+
+				if (const auto& assignment_expr_command_name = std::get<0>(assignment_expr_as_command); !assignment_expr_command_name.empty())
+				{
+					if (const auto& assignment_expr_content = std::get<1>(assignment_expr_as_command); !assignment_expr_content.empty())
+					{
+						const auto instruction_id = hash(assignment_expr_command_name).value();
+
+						auto event_type_id = MetaTypeID {};
+
+						bool variable_assignment_is_capture = false;
+
+						if (is_yield_instruction(instruction_id))
+						{
+							instruct<VariableDeclaration>
+							(
+								MetaVariableTarget
+								{
+									variable_description->resolved_name,
+									variable_description->scope
+								}
+							);
+
+							const auto inline_yield_result = process_inline_yield_instruction(assignment_expr_content);
+
+							assert(inline_yield_result);
+
+							if (inline_yield_result)
+							{
+								event_type_id = variable_description->type_id;
+
+								variable_assignment_is_capture = true;
+							}
+						}
+						else if (is_event_capture_instruction(instruction_id))
+						{
+							const auto latest_instruction = get_latest_instruction();
+
+							constexpr auto yield_index = util::variant_index<EntityInstruction::InstructionType, engine::instructions::Yield>();
+							constexpr auto event_capture_index = util::variant_index<EntityInstruction::InstructionType, engine::instructions::EventCapture>();
+
+							switch (latest_instruction->type_index())
+							{
+								case yield_index:
+								case event_capture_index:
+									if (assignment_expr_content.empty())
+									{
+										event_type_id = variable_description->type_id;
+
+										variable_assignment_is_capture = true;
+									}
+									else
+									{
+										const auto opt_type_context = parsing_context.get_type_context();
+
+										const auto event_type = (opt_type_context)
+											? opt_type_context->get_type(assignment_expr_content)
+											: resolve(hash(assignment_expr_content).value())
+										;
+
+										if (event_type)
+										{
+											event_type_id = event_type.id();
+
+											variable_assignment_is_capture = true;
+										}
+										else
+										{
+											print_warn("Event capture failed: Unable to resolve event type.");
+										}
+									}
+
+									break;
+
+								default:
+									print_warn("Event capture failed: Event capture instructions are only allowed immediately after a yield instruction. (Continuing as normal assignment)");
+
+									break;
+							}
+						}
+
+						if (variable_assignment_is_capture)
+						{
+							instruct<EventCapture>
+							(
+								MetaVariableTarget
+								{
+									variable_description->resolved_name,
+									variable_description->scope
+								},
+
+								event_type_id
+							);
+
+							// Only one instruction processed, but several produced.
+							return 1;
+						}
+					}
+				}
+
 				return multi_control_block
 				(
 					[this, &variable_name, &assignment_expr, &variable_type, &variable_description]() -> EntityInstructionCount
@@ -1050,7 +1411,7 @@ namespace engine
 						assert(full_assignment_expr_end > full_assignment_expr_begin);
 
 						const auto full_assignment_expr_length = static_cast<std::size_t>(full_assignment_expr_end - full_assignment_expr_begin);
-						const auto full_assignment_expr = std::string_view{ full_assignment_expr_begin, full_assignment_expr_length };
+						const auto full_assignment_expr = std::string_view { full_assignment_expr_begin, full_assignment_expr_length };
 
 						process_variable_assignment(variable_description->resolved_name, variable_description->scope, full_assignment_expr, variable_type, true);
 
@@ -1199,6 +1560,20 @@ namespace engine
 		}
 
 		return 0;
+	}
+
+	const EntityInstruction* EntityThreadBuilder::get_latest_instruction() const
+	{
+		auto& thread = get_thread();
+
+		if (thread.empty())
+		{
+			return {};
+		}
+
+		const auto latest_instruction_index = (thread.size() - 1);
+
+		return &(thread.get_instruction(latest_instruction_index));
 	}
 
 	EntityInstructionCount EntityThreadBuilder::launch(EntityThreadIndex thread_index)
@@ -1867,103 +2242,9 @@ namespace engine
 			};
 
 			auto resolve_instruction = [this, &instruction_content]<typename InstructionType>
-			(const std::optional<EntityThreadInstruction>& opt_thread_instruction) -> std::optional<IndirectMetaAny> // std::optional<EntityDescriptorShared<MetaTypeDescriptor>>
+			(const std::optional<EntityThreadInstruction>& opt_thread_instruction)
 			{
-				auto type = resolve<InstructionType>();
-
-				if (!type)
-				{
-					return std::nullopt;
-				}
-
-				auto type_desc = MetaTypeDescriptor { type };
-
-				std::size_t argument_offset = 0;
-
-				if constexpr (std::is_base_of_v<EntityThreadInstruction, InstructionType>)
-				{
-					//if (opt_thread_instruction)
-					{
-						type_desc.set_variable
-						(
-							MetaVariable
-							{
-								"target_entity"_hs,
-
-								(opt_thread_instruction)
-									? opt_thread_instruction->target_entity
-									: EntityTarget {}
-								
-								//opt_thread_instruction->target_entity
-							}
-						);
-
-						type_desc.set_variable
-						(
-							MetaVariable
-							{
-								"thread_id"_hs,
-
-								(opt_thread_instruction)
-									? opt_thread_instruction->thread_id
-									: std::optional<EntityThreadID>(std::nullopt)
-
-								//opt_thread_instruction->thread_id
-							}
-						);
-					}
-
-					argument_offset = 2;
-				}
-
-				type_desc.set_variables
-				(
-					instruction_content,
-
-					MetaParsingInstructions
-					{
-						.context = parsing_context,
-						.storage = &(descriptor.get_shared_storage()),
-
-						.fallback_to_string               = false,
-						.fallback_to_component_reference  = true,
-						.fallback_to_entity_reference     = true,
-
-						.allow_member_references          = true,
-						.allow_entity_indirection         = true,
-						.allow_implicit_type_construction = true, // false,
-						.allow_explicit_type_construction = true,
-						.allow_numeric_literals           = false,
-						.allow_function_call_semantics    = true,
-						.allow_value_resolution_commands  = true,
-						.allow_remote_variable_references = true,
-
-						.resolve_component_aliases        = true,
-						.resolve_command_aliases          = false, // true,
-						.resolve_instruction_aliases      = true
-					},
-
-					argument_offset
-				);
-
-				if (type_desc.has_indirection(true))
-				{
-					auto resource = descriptor.allocate(std::move(type_desc));
-
-					//const auto descriptor_type = resolve<MetaTypeDescriptor>();
-					const auto descriptor_type_id = hash("MetaTypeDescriptor").value(); // descriptor_type.id();
-
-					const auto checksum = descriptor.get_shared_storage().get_checksum(descriptor_type_id);
-
-					return IndirectMetaAny
-					(
-						static_cast<const util::SharedStorageRef<MetaTypeDescriptor, SharedStorageIndex>&>(resource),
-						descriptor_type_id,
-						checksum
-					);
-				}
-
-				return std::nullopt;
+				return resolve_instruction_impl<InstructionType>(*this, opt_thread_instruction, instruction_content);
 			};
 			
 			switch (instruction_id)

@@ -197,7 +197,7 @@ namespace engine
                             {
                                 case entt::type_hash<MetaAny>::value():
                                 case entt::type_hash<Registry>::value():
-                                case entt::type_hash<MetaEvaluationContext>::value():
+                                case entt::type_hash<MetaEvaluationContext>::value(): // "MetaEvaluationContext"_hs:
                                     break;
 
                                 default:

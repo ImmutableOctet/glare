@@ -3,6 +3,8 @@
 #include "entity_instruction.hpp"
 #include "entity_descriptor.hpp"
 
+#include "entity_system.hpp"
+
 #include "components/instance_component.hpp"
 #include "components/state_component.hpp"
 #include "components/entity_thread_component.hpp"
@@ -21,6 +23,7 @@
 #include <util/variant.hpp>
 
 #include <algorithm>
+#include <variant>
 
 // Debugging related:
 #include <util/log.hpp>
@@ -275,11 +278,70 @@ namespace engine
 
 				if (yield_condition_met)
 				{
-					// TODO: Move to dedicated function.
-					thread.is_yielding = false;
-					thread.next_instruction++;
+					// Advancement initially set to 1 to account for the active (yield) instruction.
+					EntityInstructionCount instruction_advance = 1;
 
-					// See `EntitySystem::step_thread` for corresponding `add_entity` usage prior.
+					if (event_instance)
+					{
+						auto projected_instruction_index = (thread.next_instruction + instruction_advance);
+
+						bool event_captured = false;
+
+						while (projected_instruction_index < thread_data.size())
+						{
+							const auto& instruction_after_yield = thread_data.get_instruction(projected_instruction_index);
+
+							if (const auto* event_capture = std::get_if<instructions::EventCapture>(&instruction_after_yield.value))
+							{
+								if ((!event_capture->intended_type) || (event_capture->intended_type == event_instance.type().id()))
+								{
+									if (auto copy_of_event_instance = MetaAny { event_instance })
+									{
+										auto variable_context = EntitySystem::resolve_variable_context
+										(
+											{}, // Service unavailable for variable assignment operations at this time.
+											&registry, entity,
+											thread_comp, &thread,
+											{}, // Context to be retrieved automatically from `entity`.
+											event_capture->variable_details.scope
+										);
+
+										if (variable_context.set(event_capture->variable_details.scope, event_capture->variable_details.name, std::move(copy_of_event_instance)))
+										{
+											event_captured = true;
+										}
+									}
+								}
+
+								projected_instruction_index++;
+							}
+							else
+							{
+								break;
+							}
+						}
+
+						// NOTE: We only bypass the subsequent series of `EventCapture` instructions if
+						// at least one of them is compatible and can be 'executed' above.
+						// 
+						// Otherwise, we simply move forward one instruction (the initial yield)
+						// to prevent blocking the thread indefinitely.
+						// 
+						// i.e. incompatible `EventCapture` instructions are only bypassed when a compatible one is found.
+						// See `EntitySystem::step_thread` for the fallback implementation of `EventCapture`.
+						if (event_captured)
+						{
+							const auto projected_advance = (projected_instruction_index - thread.next_instruction);
+
+							instruction_advance = projected_advance;
+						}
+					}
+
+					// Awaken the thread past the active yield instruction + any subsequent event captures (see above).
+					thread.unyield(instruction_advance);
+
+					// Remove a reference to this listener for `entity`.
+					// NOTE: See `EntitySystem::step_thread` for corresponding `add_entity` usage prior.
 					remove_entity(entity, condition_reference_count);
 				}
 			}

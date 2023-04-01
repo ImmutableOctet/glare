@@ -13,6 +13,54 @@
 
 TEST_CASE("engine::parse_qualified_assignment_or_comparison", "[engine:entity]")
 {
+	SECTION("Trigger condition after logical operator")
+	{
+		auto expr = std::string_view(" || OnButtonPressed::button == Button::Shield");
+
+		auto
+		[
+			entity_ref_expr,
+			first_symbol, second_symbol,
+			operator_symbol, value_raw,
+			updated_offset
+		] = engine::parse_qualified_assignment_or_comparison
+		(
+			expr, 0, {},
+			true, true, true, true
+		);
+
+		REQUIRE(entity_ref_expr.empty());
+		REQUIRE(first_symbol == "OnButtonPressed");
+		REQUIRE(second_symbol == "button");
+		REQUIRE(operator_symbol == "==");
+		REQUIRE(value_raw == "Button::Shield");
+		REQUIRE(updated_offset == expr.length());
+	}
+
+	SECTION("Get first trigger condition from multiple")
+	{
+		auto expr = std::string_view("OnButtonPressed::button == Button::Jump || OnButtonPressed::button == Button::Shield");
+
+		auto
+		[
+			entity_ref_expr,
+			first_symbol, second_symbol,
+			operator_symbol, value_raw,
+			updated_offset
+		] = engine::parse_qualified_assignment_or_comparison
+		(
+			expr, 0, {},
+			true, true, true, true
+		);
+
+		REQUIRE(entity_ref_expr.empty());
+		REQUIRE(first_symbol == "OnButtonPressed");
+		REQUIRE(second_symbol == "button");
+		REQUIRE(operator_symbol == "==");
+		REQUIRE(value_raw == "Button::Jump");
+		REQUIRE(updated_offset == (sizeof("OnButtonPressed::button == Button::Jump")-1));
+	}
+
 	SECTION("Event type + value without member")
 	{
 		auto expr = std::string_view("OnButtonPressed|Button::Pause");
@@ -26,7 +74,7 @@ TEST_CASE("engine::parse_qualified_assignment_or_comparison", "[engine:entity]")
 		] = engine::parse_qualified_assignment_or_comparison
 		(
 			expr, 0, {}, // 29
-			true, true, true
+			true, true, true, true
 		);
 
 		REQUIRE(entity_ref_expr.empty());
@@ -106,7 +154,11 @@ TEST_CASE("engine::parse_qualified_assignment_or_comparison", "[engine:entity]")
 			first_symbol, second_symbol,
 			operator_symbol, value_raw,
 			updated_offset
-		] = engine::parse_qualified_assignment_or_comparison(expr, 0, {}, true, true);
+		] = engine::parse_qualified_assignment_or_comparison
+		(
+			expr, 0, {},
+			true, true
+		);
 
 		REQUIRE(entity_ref_expr.empty());
 		REQUIRE(first_symbol == "x");
@@ -126,7 +178,11 @@ TEST_CASE("engine::parse_qualified_assignment_or_comparison", "[engine:entity]")
 			first_symbol, second_symbol,
 			operator_symbol, value_raw,
 			updated_offset
-		] = engine::parse_qualified_assignment_or_comparison(expr, 0, {}, true, false);
+		] = engine::parse_qualified_assignment_or_comparison
+		(
+			expr, 0, {},
+			true, false
+		);
 
 		REQUIRE(entity_ref_expr.empty());
 		REQUIRE(first_symbol == "x");
@@ -146,7 +202,11 @@ TEST_CASE("engine::parse_qualified_assignment_or_comparison", "[engine:entity]")
 			first_symbol, second_symbol,
 			operator_symbol, value_raw,
 			updated_offset
-		] = engine::parse_qualified_assignment_or_comparison(expr, 0, {}, true, false, false);
+		] = engine::parse_qualified_assignment_or_comparison
+		(
+			expr, 0, {},
+			true, false, false
+		);
 
 		REQUIRE(entity_ref_expr.empty());
 		REQUIRE(first_symbol.empty());

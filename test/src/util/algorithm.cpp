@@ -5,6 +5,20 @@
 #include <string>
 #include <tuple>
 
+// TODO: Implement generic version of `util::find_last` and associated tests.
+TEST_CASE("util::find_last", "[util:parse]")
+{
+	REQUIRE(std::get<0>(util::find_last("AAABBBAAAA", "A")) == 9);
+	REQUIRE(std::get<0>(util::find_last("AAABBBAAAA", "B")) == 5);
+	REQUIRE(std::get<1>(util::find_last("AAABBBAAAA", "A")) == "A");
+	REQUIRE(std::get<0>(util::find_last("CAABBBAAAD", "A", "B", "C")) == 8);
+	REQUIRE(std::get<0>(util::find_last("AAABDBAAAA", "A", "B", "C", "D")) == 9);
+	REQUIRE(std::get<1>(util::find_last("CAABDBAAAA", "A", "B", "C")) == "A");
+	REQUIRE(std::get<0>(util::find_last("AAABBBAAAA", "C")) == std::string_view::npos);
+	REQUIRE(std::get<1>(util::find_last("AAABBBAAAA", "A", "B")) == "A");
+	REQUIRE(std::get<1>(util::find_last("AAABBBAAAA", "B", "A")) == "A");
+}
+
 TEST_CASE("util::find_any", "[util:algorithm]")
 {
 	auto dict = std::unordered_map<std::string, std::string>{};

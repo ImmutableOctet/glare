@@ -34,7 +34,21 @@
 namespace engine
 {
 	// JSON-shorthand overload for string-to-any resolution function.
-	MetaAny meta_any_from_string(const util::json& value, const MetaParsingInstructions& instructions={}, MetaType type={}, bool allow_string_fallback=true, bool allow_numeric_literals=true, bool allow_boolean_literals=true);
+	MetaAny meta_any_from_string
+	(
+		const util::json& value,
+		
+		const MetaParsingInstructions& instructions={},
+		
+		MetaType type={},
+		
+		bool allow_string_fallback=true,
+		bool allow_numeric_literals=true,
+		bool allow_boolean_literals=true,
+		bool allow_entity_fallback=true,
+		bool allow_component_fallback=true,
+		bool allow_standalone_opaque_function=true
+	);
 
 	// Attempts to resolve a native value from a raw string value, using reflection.
 	MetaAny meta_any_from_string
@@ -49,7 +63,8 @@ namespace engine
 		bool allow_numeric_literals=true,
 		bool allow_boolean_literals=true,
 		bool allow_entity_fallback=true,
-		bool allow_component_fallback=true
+		bool allow_component_fallback=true,
+		bool allow_standalone_opaque_function=true
 	);
 
 	// Internal subroutine of `meta_any_from_string`.
@@ -70,6 +85,7 @@ namespace engine
 		bool try_boolean=true,
 		bool allow_entity_fallback=true,
 		bool allow_component_fallback=true,
+		bool allow_standalone_opaque_function=true,
 
 		bool assume_static_type=false
 	);

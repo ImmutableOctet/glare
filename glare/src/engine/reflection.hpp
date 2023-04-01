@@ -964,7 +964,7 @@ namespace engine
     auto define_boolean_operators(auto type)
     {
         // Check for contextual conversion to boolean.
-        if constexpr (std::is_constructible_v<bool, decltype((std::declval<const T&>()))>) // (std::is_constructible_v<bool, const T&>) // (std::is_convertible_v<T, bool>)
+        if constexpr (util::is_convertible_to_bool<T>)
         {
             return type
                 .template func<&operator_bool_impl<T>>("operator bool"_hs)

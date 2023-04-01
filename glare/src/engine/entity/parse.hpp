@@ -52,6 +52,7 @@ namespace engine
 		bool allow_missing_operator=false,
 		bool allow_empty_trailing_value=false,
 		bool allow_scope_as_implied_operator=true,
+		bool truncate_at_logical_operators=false,
 		const MetaParsingInstructions* opt_parsing_instructions={}
 	);
 }

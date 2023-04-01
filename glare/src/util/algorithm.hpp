@@ -17,16 +17,23 @@ namespace util
 	namespace impl
     {
         template <typename Key>
-        inline constexpr bool key_has_value_semantics_v = (std::is_copy_constructible_v<Key> || std::is_move_constructible_v<Key>);
+        inline constexpr bool key_has_value_semantics_v = (std::is_copy_constructible_v<std::decay_t<Key>> || std::is_move_constructible_v<std::decay_t<Key>>);
 
         template <typename Key>
-        inline constexpr bool is_regular_key_v = (std::is_default_constructible_v<Key> && key_has_value_semantics_v<Key>);
+        inline constexpr bool is_regular_key_v = (std::is_default_constructible_v<std::decay_t<Key>> && key_has_value_semantics_v<Key>);
 
         template <typename Key>
-        inline constexpr bool key_is_optional_compatible_v = ((!is_regular_key_v<Key>) && (key_has_value_semantics_v<Key>) && is_optional_compatible_v<Key>);
+        inline constexpr bool key_is_optional_compatible_v = ((!is_regular_key_v<Key>) && (key_has_value_semantics_v<Key>) && is_optional_compatible_v<std::decay_t<Key>>);
 
         template <typename Key>
-        inline constexpr bool find_returns_tuple_v = (is_regular_key_v<Key> || is_c_str_v<Key> || (key_has_value_semantics_v<Key> && key_is_optional_compatible_v<Key>));
+        inline constexpr bool find_returns_tuple_v =
+		(
+			is_regular_key_v<Key> // std::decay_t<Key>
+			||
+			(is_c_str_v<Key> || is_specialization_v<std::decay_t<Key>, std::basic_string> || is_specialization_v<std::decay_t<Key>, std::basic_string_view>)
+			||
+			(key_has_value_semantics_v<Key> && key_is_optional_compatible_v<Key>)
+		);
 
         // Slightly faster implementation for single return-value on string.
         template <typename ContainerType, typename ...Keys>
@@ -267,7 +274,7 @@ namespace util
             {
                 return std::tuple { std::move(it), std::forward<Key>(key) };
             }
-            else if constexpr (is_c_str_v<Key>)
+            else if constexpr (is_c_str_v<Key> || is_specialization_v<std::decay_t<Key>, std::basic_string> || is_specialization_v<std::decay_t<Key>, std::basic_string_view>)
             {
                 return std::tuple { std::move(it), key }; // std::forward<std::decay_t<Key>>(key)
             }
@@ -281,7 +288,7 @@ namespace util
         {
             return std::tuple { std::move(it), Key {} };
         }
-        else if constexpr (is_c_str_v<Key>)
+        else if constexpr (is_c_str_v<Key> || is_specialization_v<std::decay_t<Key>, std::basic_string> || is_specialization_v<std::decay_t<Key>, std::basic_string_view>)
         {
             return std::tuple { std::move(it), std::decay_t<Key> {} };
         }
@@ -602,18 +609,26 @@ namespace util
             {
                 if constexpr (is_tuple_return_value)
                 {
-                    if (std::get<0>(current) > std::get<0>(next))
-                    {
-                        return current;
-                    }
+					if (std::get<0>(next) != end_value)
+					{
+						if (std::get<0>(next) > std::get<0>(current))
+						{
+							return next;
+						}
+					}
                 }
                 else
                 {
-                    if (current > next)
-                    {
-                        return current;
-                    }
+					if (next != end_value)
+					{
+						if (next > current)
+						{
+							return next;
+						}
+					}
                 }
+
+				return current;
             }
 
             return next;
@@ -643,6 +658,78 @@ namespace util
 
         return std::get<0>(result);
     }
+
+	// TODO: Implement generic (non-string) versions of this algorithm.
+	// 
+	// Executes `find_fn` repeatedly until a match is no longer found.
+	// The newest match, if any, will be returned upon completion.
+	// 
+	// The `find_fn` callable takes in an `std::string_view` (representing a sub-string of `expr`),
+	// and is expected to return a `std::tuple<std::size_t, std::string_view>`.
+	template <typename FindFn>
+	std::tuple<std::size_t, std::string_view> find_last_ex(std::string_view expr, FindFn&& find_fn)
+	{
+		std::size_t latest_result = std::string_view::npos;
+		std::string_view latest_symbol = {};
+
+		std::size_t position = 0; // offset
+
+		while (position < expr.length())
+		{
+			auto result = find_fn(expr.substr(position));
+
+			const auto& sub_expr_symbol_position = std::get<0>(result);
+
+			if (sub_expr_symbol_position == std::string_view::npos)
+			{
+				break;
+			}
+
+			const auto& next_symbol = std::get<1>(result);
+
+			if (next_symbol.empty())
+			{
+				break;
+			}
+
+			const auto next_symbol_position = (sub_expr_symbol_position + position);
+
+			latest_result = next_symbol_position;
+			latest_symbol = next_symbol;
+
+			position = (next_symbol_position + next_symbol.length());
+		}
+
+		return { latest_result, latest_symbol };
+	}
+
+	// TODO: Implement generic (non-string) versions of this algorithm.
+	// 
+	// Executes `find_furthest_ex` on `keys` until a match can
+	// no longer be found, then returns the latest match.
+	template <typename ...Keys>
+	std::tuple<std::size_t, std::string_view> find_last(std::string_view expr, const Keys&... keys)
+	{
+		return find_last_ex
+		(
+			expr,
+
+			[&](std::string_view sub_expr) -> std::tuple<std::size_t, std::string_view>
+			{
+				//static_assert(find_returns_tuple_v<decltype(sub_expr)>);
+
+				return find_furthest_ex
+				(
+					sub_expr,
+
+					std::string_view::npos,
+
+					// NOTE: Forward considered safe due to const-reference requirement from `find_furthest_ex`.
+					keys...
+				);
+			}
+		);
+	}
 
 	// Compares `key` to each value in `compare`, returning true if a match is found.
 	template <typename ValueType, typename ...ComparisonValues>
@@ -856,4 +943,116 @@ namespace util
 			return get<(sizeof...(args) - 1)>(std::forward<Args>(args)...);
 		}
 	}
+
+	template <typename T, typename Fn, typename... Args>
+	constexpr decltype(auto) execute_as(Fn&& fn, Args&&... args)
+	{
+		if constexpr (std::is_same_v<void, decltype(fn(T{std::forward<Args>(args)}...))>)
+		{
+			fn(T{std::forward<Args>(args)}...);
+		}
+		else
+		{
+			return fn(T{std::forward<Args>(args)}...);
+		}
+	}
+
+	template <typename T, typename Fn, typename... TupleArgs>
+	constexpr decltype(auto) execute_tuple_as(Fn&& fn, TupleArgs&&... args)
+	{
+		return std::apply
+		(
+			[&fn](auto&&... values)
+			{
+				if constexpr (std::is_same_v<void, decltype(execute_as<T>(fn, std::forward<decltype(values)>(values)...))>)
+				{
+					execute_as<T>(fn, std::forward<decltype(values)>(values)...);
+				}
+				else
+				{
+					return execute_as<T>(fn, std::forward<decltype(values)>(values)...);
+				}
+			},
+
+			std::forward<TupleArgs>(args)...
+		);
+	}
+
+	template <typename T, typename Fn, typename... Values>
+	constexpr bool inspect_as(Fn&& fn, Values&&... values)
+	{
+		bool result = true;
+
+		std::apply
+		(
+			[&fn, &result](auto&&... inputs)
+			{
+				if constexpr((is_convertible_to_bool<decltype(fn(T { std::forward<decltype(inputs)>(inputs) }))> && ...))
+				{
+					result = static_cast<bool>((fn(T { std::forward<decltype(inputs)>(inputs) }) && ...));
+				}
+				else
+				{
+					(
+						fn(T { std::forward<decltype(inputs)>(inputs) }),
+						...
+					);
+				}
+			},
+
+			std::forward_as_tuple<Values...>(std::forward<Values>(values)...)
+		);
+
+		return result;
+	}
+
+	template <typename T, typename Fn, typename... TupleArgs>
+	constexpr decltype(auto) inspect_tuple_as(Fn&& fn, TupleArgs&&... args)
+	{
+		return execute_tuple_as<T>
+		(
+			[&fn](auto&&... tuple_entries)
+			{
+				return (inspect_as<T>(fn, std::forward<decltype(tuple_entries)>(tuple_entries)) && ...);
+			},
+
+			std::forward<TupleArgs>(args)...
+		);
+	}
+
+	static_assert
+	(
+		inspect_as<int>
+		(
+			[](auto value) { return std::is_same_v<decltype(value), int>; },
+			static_cast<short>(0)
+		)
+	);
+
+	static_assert
+	(
+		inspect_tuple_as<int>
+		(
+			[](auto value) { return std::is_same_v<decltype(value), int>; },
+			std::make_tuple<short>(static_cast<short>(0))
+		)
+	);
+
+	static_assert
+	(
+		execute_as<int>
+		(
+			[](auto value) { return std::is_same_v<decltype(value), int>; },
+			static_cast<short>(0)
+		)
+	);
+
+	static_assert
+	(
+		execute_tuple_as<int>
+		(
+			[](auto value) { return (std::is_same_v<decltype(value), int>); },
+			std::make_tuple<short>(static_cast<short>(0))
+		)
+	);
 }

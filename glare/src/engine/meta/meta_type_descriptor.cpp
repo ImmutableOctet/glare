@@ -828,6 +828,8 @@ namespace engine
 	template <typename ...Args>
 	std::size_t MetaTypeDescriptor::apply_fields_impl(MetaAny& instance, std::size_t field_count, std::size_t offset, Args&&... args) const
 	{
+		using namespace engine::literals;
+
 		if (flags.is_container)
 		{
 			if (flags.is_sequential_container)
@@ -899,7 +901,7 @@ namespace engine
 						}
 					}
 
-					if ((!meta_field_type) || (meta_field_type.id() != entt::type_hash<Entity>::value()))
+					if ((!meta_field_type) || (meta_field_type.id() != "Entity"_hs)) // entt::type_hash<Entity>::value()
 					{
 						// Fallbacks for string-to-hash conversion scenarios:
 						if (const auto as_str_view = value.try_cast<std::string_view>())

@@ -34,6 +34,17 @@ target_sources(
     "glare/game.cpp"
 )
 
+target_link_libraries(
+    glare # glare_exe
+    
+    PUBLIC
+    
+    glare_engine
+    
+    #glare_common
+    #glare_util
+)
+
 add_executable(glare::exe ALIAS glare) # glare_exe
 
 set_property(TARGET glare PROPERTY OUTPUT_NAME glare) # glare_exe

@@ -655,6 +655,15 @@ namespace engine
 		;
 	}
 
+	template <>
+	void reflect<instructions::EventCapture>()
+	{
+		engine_meta_type<instructions::EventCapture>()
+			.data<&instructions::EventCapture::variable_details>("variable_details"_hs)
+			.data<&instructions::EventCapture::intended_type>("intended_type"_hs)
+		;
+	}
+
     template <>
 	void reflect<EntitySystem>()
 	{
@@ -734,5 +743,6 @@ namespace engine
 		reflect<instructions::FunctionCall>();
 		reflect<instructions::VariableDeclaration>();
 		reflect<instructions::VariableAssignment>();
+		reflect<instructions::EventCapture>();
 	}
 }
