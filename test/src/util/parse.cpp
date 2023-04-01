@@ -33,6 +33,17 @@ TEST_CASE("util::find_logic_operator", "[util:parse]")
 	REQUIRE(std::get<0>(util::find_logic_operator("(X ^ some_value)", true)) == 3);
 	REQUIRE(std::get<0>(util::find_logic_operator("(X ^ Y)", false)) == std::string_view::npos);
 }
+
+TEST_CASE("util::find_operator", "[util:parse]")
+{
+	SECTION("Ensure earliest operator")
+	{
+		REQUIRE(std::get<1>(util::find_operator("+=-||")) == "+=");
+		REQUIRE(std::get<1>(util::find_operator("|||")) == "||");
+		REQUIRE(std::get<1>(util::find_operator("||&&")) == "||");
+		REQUIRE(std::get<1>(util::find_operator("/&&")) == "/");
+	}
+
 	SECTION("Regular operators")
 	{
 		REQUIRE(std::get<1>(util::find_operator("+")) == "+");
