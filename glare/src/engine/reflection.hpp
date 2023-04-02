@@ -1473,7 +1473,7 @@ namespace engine
     }
 
     template <typename T, MetaTypeReflectionConfig config={}>
-    auto custom_meta_type(auto type_id)
+    auto custom_meta_type(MetaTypeID type_id)
     {
         // Ensure that we're using the correct context.
         sync_reflection_context();
@@ -1513,14 +1513,12 @@ namespace engine
         ;
     }
 
-    // NOTE: This is called automatically via `reflect` when `T` is an enumeration type.
-    //
     // TODO: Look into this implementation again.
     // (Probably not very efficient to use properties for this)
     template <typename EnumType>
-    void reflect_enum(bool values_as_properties=false)
+    void reflect_enum(MetaTypeID type_id, bool values_as_properties=false)
     {
-        auto meta_obj = engine_meta_type<EnumType>()
+        auto meta_obj = custom_meta_type<EnumType>(type_id)
             .template func<&string_to_enum_value<EnumType>>("string_to_value"_hs)
             .ctor<&string_to_enum_value<EnumType>>()
             .conv<&enum_value_to_string<EnumType>>()
@@ -1536,5 +1534,12 @@ namespace engine
                 entt::meta<EnumType>().prop(enum_value_id, enum_value);
             });
         }
+    }
+
+    // NOTE: This is called automatically via `reflect` when `T` is an enumeration type.
+    template <typename EnumType>
+    void reflect_enum(bool values_as_properties=false)
+    {
+        reflect_enum<EnumType>(short_name_hash<EnumType>(), values_as_properties);
     }
 }
