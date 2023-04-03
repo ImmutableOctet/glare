@@ -1229,7 +1229,7 @@ namespace engine
 		};
 
 		// Forwards `action` to `execute_action` with the appropriate parameters.
-		auto on_action = [&registry, &service, entity, &descriptor, &get_variable_context](const auto& action)
+		auto on_action = [&registry, &service, entity, &descriptor, &get_variable_context](const auto& action, auto&&... args)
 		{
 			Entity target = null;
 
@@ -1254,7 +1254,9 @@ namespace engine
 				MetaEvaluationContext
 				{
 					&variable_context
-				}
+				},
+
+				std::forward<decltype(args)>(args)...
 			);
 		};
 
@@ -1424,7 +1426,6 @@ namespace engine
 					[&on_action](const EntityStateTransitionAction& action) { on_action(action); },
 					[&on_action](const EntityStateCommandAction& action)    { on_action(action); },
 					[&on_action](const EntityStateUpdateAction& action)     { on_action(action); },
-					[&on_action](const EntityThreadSpawnAction& action)     { on_action(action); },
 					[&on_action](const EntityThreadStopAction& action)      { on_action(action); },
 					[&on_action](const EntityThreadPauseAction& action)     { on_action(action); },
 					[&on_action](const EntityThreadResumeAction& action)    { on_action(action); },
@@ -1433,6 +1434,21 @@ namespace engine
 					[&on_action](const EntityThreadUnlinkAction& action)    { on_action(action); },
 					[&on_action](const EntityThreadSkipAction& action)      { on_action(action); },
 					[&on_action](const EntityThreadRewindAction& action)    { on_action(action); },
+
+					[&thread, &on_action](const EntityThreadSpawnAction& action)
+					{
+						on_action
+						(
+							// Thread spawn action.
+							action,
+							
+							// Unused event object.
+							MetaAny {},
+
+							// The state the active `thread` is connected to. (If any)
+							thread.state_index
+						);
+					},
 
 					[&launch_thread](const Start& start) { launch_thread(start, start.restart_existing); },
 					[&launch_thread](const Restart& restart) { launch_thread(restart, true); },

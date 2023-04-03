@@ -159,7 +159,9 @@ namespace engine
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay,
 		const MetaEvaluationContext& context,
-		const MetaAny& event_instance
+		const MetaAny& event_instance,
+
+		std::optional<EntityStateIndex> state_index
 	)
 	{
 		service.timed_event<EntityThreadSpawnCommand>

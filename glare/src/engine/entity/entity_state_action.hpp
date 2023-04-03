@@ -81,7 +81,9 @@ namespace engine
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay=std::nullopt,
 		const MetaEvaluationContext& context={},
-		const MetaAny& event_instance={}
+		const MetaAny& event_instance={},
+
+		std::optional<EntityStateIndex> state_index=std::nullopt
 	);
 
 	void execute_action
