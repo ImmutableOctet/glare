@@ -213,7 +213,8 @@ namespace engine
 		std::string_view state_path_raw, // const std::string&
 		const std::filesystem::path& base_path,
 		const MetaParsingContext& opt_parsing_context={},
-		const EntityFactoryContext* opt_factory_context=nullptr
+		const EntityFactoryContext* opt_factory_context=nullptr,
+		std::string_view state_name={}
 	);
 
 	// This overload acts as a utility function that automatically handles

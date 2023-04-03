@@ -964,21 +964,28 @@ namespace engine
 		std::string_view state_path_raw, // const std::string&
 		const std::filesystem::path& base_path,
 		const MetaParsingContext& opt_parsing_context,
-		const EntityFactoryContext* opt_factory_context
+		const EntityFactoryContext* opt_factory_context,
+		std::string_view state_name
 	)
 	{
 		auto [state_base_path, state_path, state_data] = load_state_data(state_path_raw, base_path, opt_factory_context);
 
-		auto state_name = resolve_state_name(state_data, state_path);
+		std::string state_name_from_path;
 
-		if (const auto state = process_state(descriptor, states_out, state_data, state_name, state_base_path, opt_parsing_context, opt_factory_context))
+		const EntityState* state_out = nullptr;
+
+		if (state_name.empty())
 		{
-			assert(state->name.has_value());
+			state_name_from_path = resolve_state_name(state_data, state_path);
 
-			return state;
+			state_name = state_name_from_path;
 		}
 
-		return nullptr;
+		state_out = process_state(descriptor, states_out, state_data, state_name, state_base_path, opt_parsing_context, opt_factory_context);
+
+		assert((!state_out) || (state_out->name.has_value()));
+
+		return state_out;
 	}
 
 	std::size_t merge_state_list
@@ -1258,9 +1265,28 @@ namespace engine
 			{
 				for (const auto& [state_name, state_entry] : data.items())
 				{
-					if (process_state(descriptor, states_out, state_entry, state_name, base_path, opt_parsing_context, opt_factory_context))
+					switch (state_entry.type())
 					{
-						count++;
+						case util::json::value_t::object:
+						{
+							if (process_state(descriptor, states_out, state_entry, state_name, base_path, opt_parsing_context, opt_factory_context))
+							{
+								count++;
+							}
+
+							break;
+						}
+						case util::json::value_t::string:
+						{
+							const auto state_path_raw = state_entry.get<std::string>();
+
+							if (process_state(descriptor, states_out, state_path_raw, base_path, opt_parsing_context, opt_factory_context, state_name))
+							{
+								count++;
+							}
+
+							break;
+						}
 					}
 				}
 
