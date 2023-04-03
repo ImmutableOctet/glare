@@ -1835,7 +1835,7 @@ namespace engine
 
 				while (type_cast_operator_offset < current_expr.length())
 				{
-					const auto type_cast_operator_position = current_expr.find(type_cast_operator, type_cast_operator_offset);
+					const auto type_cast_operator_position = util::find_singular(current_expr, type_cast_operator, type_cast_operator_offset);
 
 					if (type_cast_operator_position == std::string_view::npos)
 					{
@@ -1862,16 +1862,6 @@ namespace engine
 					if ((projected_operator_position != std::string_view::npos) && (type_cast_operator_position >= projected_operator_position))
 					{
 						break;
-					}
-
-					// This is a workaround for conflicts between `:` (cast) and `::` (access) operators.
-					if (current_expr[type_cast_operator_position + 1] == ':')
-					{
-						// Since we've concluded that this is a false-positive
-						// (i.e. `::` operator), continue searching for a type-cast operator.
-						type_cast_operator_offset = (type_cast_operator_position + 2); // + std::string_view("::").length();
-
-						continue;
 					}
 
 					const auto cast_type_area_raw = current_expr.substr((type_cast_operator_position + type_cast_operator.length()));
@@ -1959,11 +1949,15 @@ namespace engine
 				{
 					if (!cast_type_raw.empty())
 					{
-						remainder = current_expr.substr(current_expr_cutoff);
+						//remainder = current_expr.substr(current_expr_cutoff);
+
+						const auto cast_type_raw_trailing_offset = ((cast_type_raw.data() + cast_type_raw.length()) - current_expr.data());
+
+						remainder = current_expr.substr(cast_type_raw_trailing_offset);
 					}
-					else if ((scope_end + 1) < current_expr.length())
+					else if (const auto after_scope_end = (scope_end + 1); after_scope_end < current_expr.length())
 					{
-						remainder = current_expr.substr((scope_end + 1));
+						remainder = current_expr.substr(after_scope_end);
 					}
 					else
 					{
