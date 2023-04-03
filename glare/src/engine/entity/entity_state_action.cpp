@@ -171,7 +171,9 @@ namespace engine
 			source, target,
 			
 			thread_spawn.threads,
-			thread_spawn.restart_existing
+			thread_spawn.restart_existing,
+
+			state_index
 		);
 	}
 
