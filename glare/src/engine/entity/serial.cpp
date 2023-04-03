@@ -615,11 +615,12 @@ namespace engine
 					.fallback_to_string       = false,
 					
 					// TODO: Look into direct component comparison.
-					.fallback_to_component_reference = false,
+					.fallback_to_component_reference  = false,
 
-					.allow_member_references  = true, // false
-					.allow_entity_indirection = true,
-					.allow_remote_variable_references = true
+					.allow_member_references          = true, // false
+					.allow_entity_indirection         = true,
+					.allow_remote_variable_references = true,
+					.resolve_command_aliases          = true
 				}
 			);
 
@@ -1571,7 +1572,9 @@ namespace engine
 						.fallback_to_component_reference  = false,
 
 						.allow_member_references          = true,
-						.allow_entity_indirection         = true
+						.allow_entity_indirection         = true,
+
+						.resolve_command_aliases          = true
 					},
 
 					command_arg_offset
