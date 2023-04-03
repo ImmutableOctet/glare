@@ -310,198 +310,37 @@ TEST_CASE("engine::MetaValueOperator", "[engine:meta]")
 	}
 }
 
-TEST_CASE("engine::resolve_meta_any", "[engine:meta]")
-{
-	engine::reflect_all();
-
-	SECTION("Deferred String Map population from object")
-	{
-		using native_map_type = std::unordered_map<std::string, std::string>;
-
-		auto map_instance = native_map_type{};
-		auto map_type = engine::resolve<native_map_type>();
-
-		REQUIRE(map_type);
-
-		auto store = engine::resolve_meta_any
-		(
-			util::json::parse("{ \"A\": \"B\", \"C\": \"D\" }"),
-			map_type, { .defer_container_creation = true }
-		);
-
-		REQUIRE(store);
-		
-		auto result = engine::try_get_underlying_value(store, map_instance);
-
-		REQUIRE(result);
-
-		auto* as_map = result.try_cast<native_map_type>();
-
-		REQUIRE(as_map);
-		REQUIRE(as_map == &map_instance);
-		REQUIRE(as_map->size() == 2);
-
-		REQUIRE(map_instance["A"] == "B");
-		REQUIRE(map_instance["C"] == "D");
-	}
-
-	SECTION("Deferred String Map construction from object")
-	{
-		using native_map_type = std::unordered_map<std::string, std::string>;
-
-		auto vector_type_factory = entt::meta<native_map_type>();
-
-		auto map_type = engine::resolve<native_map_type>();
-
-		REQUIRE(map_type);
-
-		auto store = engine::resolve_meta_any
-		(
-			util::json::parse("{ \"First\": \"First Value\", \"Second\": \"Second Value\" }"),
-			map_type, { .defer_container_creation = true }
-		);
-
-		REQUIRE(store);
-		
-		auto result = engine::try_get_underlying_value(store);
-
-		REQUIRE(result);
-
-		auto* as_map = result.try_cast<native_map_type>();
-
-		REQUIRE(as_map);
-		REQUIRE(as_map->size() == 2);
-
-		REQUIRE((*as_map)["First"] == "First Value");
-		REQUIRE((*as_map)["Second"] == "Second Value");
-	}
-
-	SECTION("Immediate String Map construction from object")
-	{
-		using native_map_type = std::unordered_map<std::string, std::string>;
-
-		auto vector_type_factory = entt::meta<native_map_type>();
-
-		auto map_type = engine::resolve<native_map_type>();
-
-		REQUIRE(map_type);
-
-		auto result = engine::resolve_meta_any
-		(
-			util::json::parse("{ \"Some Key\": \"Some Value\", \"Another Key\": \"Another Value\" }"),
-			map_type, { .defer_container_creation = false }
-		);
-
-		REQUIRE(result);
-
-		auto* as_map = result.try_cast<native_map_type>();
-
-		REQUIRE(as_map);
-		REQUIRE(as_map->size() == 2);
-
-		REQUIRE((*as_map)["Some Key"] == "Some Value");
-		REQUIRE((*as_map)["Another Key"] == "Another Value");
-	}
-
-	SECTION("Deferred Vector population from array")
-	{
-		using native_vector_type = util::small_vector<std::int32_t, 4>;
-
-		auto vector_instance = native_vector_type {};
-		auto vector_type = engine::resolve<native_vector_type>();
-
-		REQUIRE(vector_type);
-
-		auto store = engine::resolve_meta_any
-		(
-			util::json::parse("[10, 11, 12]"),
-			vector_type, { .defer_container_creation = true }
-		);
-
-		REQUIRE(store);
-		
-		auto result = engine::try_get_underlying_value(store, vector_instance);
-
-		REQUIRE(result);
-
-		auto* as_vector = result.try_cast<native_vector_type>();
-
-		REQUIRE(as_vector);
-		REQUIRE(as_vector == &vector_instance);
-		REQUIRE(as_vector->size() == 3);
-
-		REQUIRE(vector_instance[0] == 10);
-		REQUIRE(vector_instance[1] == 11);
-		REQUIRE(vector_instance[2] == 12);
-	}
-
-	SECTION("Deferred Vector construction from array")
-	{
-		using native_vector_type = util::small_vector<std::int32_t, 4>;
-
-		auto vector_type_factory = entt::meta<native_vector_type>();
-
-		auto vector_type = engine::resolve<native_vector_type>();
-
-		REQUIRE(vector_type);
-
-		auto store = engine::resolve_meta_any
-		(
-			util::json::parse("[7, 5, 8, 3]"),
-			vector_type, { .defer_container_creation = true }
-		);
-
-		REQUIRE(store);
-
-		auto result = engine::try_get_underlying_value(store);
-
-		REQUIRE(result);
-
-		auto* as_vector = result.try_cast<native_vector_type>();
-
-		REQUIRE(as_vector);
-		REQUIRE(as_vector->size() == 4);
-
-		REQUIRE((*as_vector)[0] == 7);
-		REQUIRE((*as_vector)[1] == 5);
-		REQUIRE((*as_vector)[2] == 8);
-		REQUIRE((*as_vector)[3] == 3);
-	}
-
-	SECTION("Immediate Vector construction from array")
-	{
-		using native_vector_type = util::small_vector<std::int32_t, 4>;
-
-		auto vector_type_factory = entt::meta<native_vector_type>();
-
-		auto vector_type = engine::resolve<native_vector_type>();
-
-		REQUIRE(vector_type);
-
-		auto result = engine::resolve_meta_any
-		(
-			util::json::parse("[1, 3, 5, 7]"),
-			vector_type, { .defer_container_creation = false }
-		);
-
-		REQUIRE(result);
-
-		auto* as_vector = result.try_cast<native_vector_type>();
-
-		REQUIRE(as_vector);
-		REQUIRE(as_vector->size() == 4);
-
-		REQUIRE((*as_vector)[0] == 1);
-		REQUIRE((*as_vector)[1] == 3);
-		REQUIRE((*as_vector)[2] == 5);
-		REQUIRE((*as_vector)[3] == 7);
-	}
-}
-
 TEST_CASE("engine::meta_any_from_string", "[engine:meta]")
 {
 	engine::reflect_all();
 	engine::reflect<engine::ReflectionTest>();
+
+	SECTION("Concatenate values casted as strings")
+	{
+		auto concat_expr = engine::meta_any_from_string
+		(
+			std::string_view("(ReflectionTest::x):string + \", \" + (ReflectionTest::y):string"),
+			{ .allow_member_references = true }
+		);
+
+		REQUIRE(concat_expr);
+
+		auto concat_expr_as_operation = concat_expr.try_cast<engine::MetaValueOperation>();
+
+		REQUIRE(concat_expr_as_operation);
+
+		auto value = engine::ReflectionTest { 5, 2, 0 };
+
+		auto result = engine::try_get_underlying_value(concat_expr, value);
+
+		REQUIRE(result);
+
+		auto result_as_string = result.try_cast<std::string>();
+
+		REQUIRE(result_as_string);
+
+		REQUIRE((*result_as_string) == "5, 2");
+	}
 
 	SECTION("Subscript operator")
 	{
@@ -2378,5 +2217,193 @@ TEST_CASE("engine::MetaValueOperation", "[engine:meta]")
 		auto result = result_raw.cast<std::int32_t>();
 
 		REQUIRE(result == 39);
+	}
+}
+
+TEST_CASE("engine::resolve_meta_any", "[engine:meta]")
+{
+	engine::reflect_all();
+
+	SECTION("Deferred String Map population from object")
+	{
+		using native_map_type = std::unordered_map<std::string, std::string>;
+
+		auto map_instance = native_map_type{};
+		auto map_type = engine::resolve<native_map_type>();
+
+		REQUIRE(map_type);
+
+		auto store = engine::resolve_meta_any
+		(
+			util::json::parse("{ \"A\": \"B\", \"C\": \"D\" }"),
+			map_type, { .defer_container_creation = true }
+		);
+
+		REQUIRE(store);
+		
+		auto result = engine::try_get_underlying_value(store, map_instance);
+
+		REQUIRE(result);
+
+		auto* as_map = result.try_cast<native_map_type>();
+
+		REQUIRE(as_map);
+		REQUIRE(as_map == &map_instance);
+		REQUIRE(as_map->size() == 2);
+
+		REQUIRE(map_instance["A"] == "B");
+		REQUIRE(map_instance["C"] == "D");
+	}
+
+	SECTION("Deferred String Map construction from object")
+	{
+		using native_map_type = std::unordered_map<std::string, std::string>;
+
+		auto vector_type_factory = entt::meta<native_map_type>();
+
+		auto map_type = engine::resolve<native_map_type>();
+
+		REQUIRE(map_type);
+
+		auto store = engine::resolve_meta_any
+		(
+			util::json::parse("{ \"First\": \"First Value\", \"Second\": \"Second Value\" }"),
+			map_type, { .defer_container_creation = true }
+		);
+
+		REQUIRE(store);
+		
+		auto result = engine::try_get_underlying_value(store);
+
+		REQUIRE(result);
+
+		auto* as_map = result.try_cast<native_map_type>();
+
+		REQUIRE(as_map);
+		REQUIRE(as_map->size() == 2);
+
+		REQUIRE((*as_map)["First"] == "First Value");
+		REQUIRE((*as_map)["Second"] == "Second Value");
+	}
+
+	SECTION("Immediate String Map construction from object")
+	{
+		using native_map_type = std::unordered_map<std::string, std::string>;
+
+		auto vector_type_factory = entt::meta<native_map_type>();
+
+		auto map_type = engine::resolve<native_map_type>();
+
+		REQUIRE(map_type);
+
+		auto result = engine::resolve_meta_any
+		(
+			util::json::parse("{ \"Some Key\": \"Some Value\", \"Another Key\": \"Another Value\" }"),
+			map_type, { .defer_container_creation = false }
+		);
+
+		REQUIRE(result);
+
+		auto* as_map = result.try_cast<native_map_type>();
+
+		REQUIRE(as_map);
+		REQUIRE(as_map->size() == 2);
+
+		REQUIRE((*as_map)["Some Key"] == "Some Value");
+		REQUIRE((*as_map)["Another Key"] == "Another Value");
+	}
+
+	SECTION("Deferred Vector population from array")
+	{
+		using native_vector_type = util::small_vector<std::int32_t, 4>;
+
+		auto vector_instance = native_vector_type {};
+		auto vector_type = engine::resolve<native_vector_type>();
+
+		REQUIRE(vector_type);
+
+		auto store = engine::resolve_meta_any
+		(
+			util::json::parse("[10, 11, 12]"),
+			vector_type, { .defer_container_creation = true }
+		);
+
+		REQUIRE(store);
+		
+		auto result = engine::try_get_underlying_value(store, vector_instance);
+
+		REQUIRE(result);
+
+		auto* as_vector = result.try_cast<native_vector_type>();
+
+		REQUIRE(as_vector);
+		REQUIRE(as_vector == &vector_instance);
+		REQUIRE(as_vector->size() == 3);
+
+		REQUIRE(vector_instance[0] == 10);
+		REQUIRE(vector_instance[1] == 11);
+		REQUIRE(vector_instance[2] == 12);
+	}
+
+	SECTION("Deferred Vector construction from array")
+	{
+		using native_vector_type = util::small_vector<std::int32_t, 4>;
+
+		auto vector_type_factory = entt::meta<native_vector_type>();
+
+		auto vector_type = engine::resolve<native_vector_type>();
+
+		REQUIRE(vector_type);
+
+		auto store = engine::resolve_meta_any
+		(
+			util::json::parse("[7, 5, 8, 3]"),
+			vector_type, { .defer_container_creation = true }
+		);
+
+		REQUIRE(store);
+
+		auto result = engine::try_get_underlying_value(store);
+
+		REQUIRE(result);
+
+		auto* as_vector = result.try_cast<native_vector_type>();
+
+		REQUIRE(as_vector);
+		REQUIRE(as_vector->size() == 4);
+
+		REQUIRE((*as_vector)[0] == 7);
+		REQUIRE((*as_vector)[1] == 5);
+		REQUIRE((*as_vector)[2] == 8);
+		REQUIRE((*as_vector)[3] == 3);
+	}
+
+	SECTION("Immediate Vector construction from array")
+	{
+		using native_vector_type = util::small_vector<std::int32_t, 4>;
+
+		auto vector_type_factory = entt::meta<native_vector_type>();
+
+		auto vector_type = engine::resolve<native_vector_type>();
+
+		REQUIRE(vector_type);
+
+		auto result = engine::resolve_meta_any
+		(
+			util::json::parse("[1, 3, 5, 7]"),
+			vector_type, { .defer_container_creation = false }
+		);
+
+		REQUIRE(result);
+
+		auto* as_vector = result.try_cast<native_vector_type>();
+
+		REQUIRE(as_vector);
+		REQUIRE(as_vector->size() == 4);
+
+		REQUIRE((*as_vector)[0] == 1);
+		REQUIRE((*as_vector)[1] == 3);
+		REQUIRE((*as_vector)[2] == 5);
+		REQUIRE((*as_vector)[3] == 7);
 	}
 }
