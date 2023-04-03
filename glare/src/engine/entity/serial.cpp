@@ -1252,35 +1252,55 @@ namespace engine
 	{
 		std::size_t count = 0;
 
-		util::json_for_each(data, [&base_path, &states_out, opt_parsing_context, opt_factory_context, &descriptor, &count](const util::json& state_entry)
+		switch (data.type())
 		{
-			switch (state_entry.type())
+			case util::json::value_t::object:
 			{
-				case util::json::value_t::object:
+				for (const auto& [state_name, state_entry] : data.items())
 				{
-					// NOTE: Embedded state definitions must have a `name` field.
-					const auto state_name = util::get_value<std::string>(state_entry, "name");
-
 					if (process_state(descriptor, states_out, state_entry, state_name, base_path, opt_parsing_context, opt_factory_context))
 					{
 						count++;
 					}
-
-					break;
 				}
-				case util::json::value_t::string:
-				{
-					const auto state_path_raw = state_entry.get<std::string>();
 
-					if (process_state(descriptor, states_out, state_path_raw, base_path, opt_parsing_context, opt_factory_context))
-					{
-						count++;
-					}
-
-					break;
-				}
+				break;
 			}
-		});
+			default:
+			{
+				util::json_for_each(data, [&base_path, &states_out, opt_parsing_context, opt_factory_context, &descriptor, &count](const util::json& state_entry)
+				{
+					switch (state_entry.type())
+					{
+						case util::json::value_t::object:
+						{
+							// NOTE: Embedded state definitions must have a `name` field.
+							const auto state_name = util::get_value<std::string>(state_entry, "name");
+
+							if (process_state(descriptor, states_out, state_entry, state_name, base_path, opt_parsing_context, opt_factory_context))
+							{
+								count++;
+							}
+
+							break;
+						}
+						case util::json::value_t::string:
+						{
+							const auto state_path_raw = state_entry.get<std::string>();
+
+							if (process_state(descriptor, states_out, state_path_raw, base_path, opt_parsing_context, opt_factory_context))
+							{
+								count++;
+							}
+
+							break;
+						}
+					}
+				});
+
+				break;
+			}
+		}
 
 		return count;
 	}
@@ -2132,7 +2152,7 @@ namespace engine
 	{
 		if (resolve_external_modules)
 		{
-			// Handles the following: "archetypes", "import", "imports", "modules"
+			// Handles the following: "archetypes", "import", "imports", "modules", "merge", "children"
 			resolve_archetypes(descriptor, data, base_path, opt_parsing_context, opt_factory_context, opt_default_state_index_out);
 		}
 
@@ -2156,6 +2176,7 @@ namespace engine
 
 		if (opt_default_state_index_out)
 		{
+			// Handles the "default_state" key.
 			if (auto default_state_index = get_default_state_index(descriptor, data))
 			{
 				*opt_default_state_index_out = default_state_index;
@@ -2186,7 +2207,7 @@ namespace engine
 			// Ignore these keys:
 
 			// Handled in `resolve_archetypes` routine.
-			"archetypes", "import", "imports", "modules",
+			"archetypes", "import", "imports", "modules", "merge",
 
 			// Handled in this function (see above):
 			"component", "components",
