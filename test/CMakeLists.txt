@@ -16,7 +16,7 @@ add_executable(
     "src/util/parse.cpp"
     "src/util/algorithm.cpp"
     "src/engine/entity/parse.cpp"
-)
+ "src/engine/meta/variant_wrapper.cpp")
 
 target_compile_features(glare_test PRIVATE cxx_std_23)
 
