@@ -99,15 +99,35 @@ namespace util
 	}
 
 	template <typename T, typename variant_type>
-	struct variant_contains;
+	struct variant_contains : std::false_type
+	{
+		static_assert(std::integral_constant<T, false>::value, "`variant_type` must be a valid instantiation of `std::variant`.");
+	};
 
-	template<typename T, typename... variant_type_list>
+	template <typename T, typename... variant_type_list>
 	struct variant_contains<T, std::variant<variant_type_list...>>
 		: std::disjunction<std::is_same<T, variant_type_list>...>
 	{};
 
-	template<typename T, typename... variant_type_list>
-	inline constexpr bool variant_contains_v = variant_contains<T, variant_type_list...>::value;
+	template <typename variant_type, typename ...Ts>
+	struct variant_contains_all_of : std::conjunction<variant_contains<Ts, variant_type>...> {};
+
+	template <typename variant_type, typename ...Ts>
+	struct variant_contains_any_of : std::disjunction<variant_contains<Ts, variant_type>...> {};
+
+	template <typename variant_type, typename ...Ts>
+	inline constexpr bool variant_contains_all_of_v = variant_contains_all_of<variant_type, Ts...>::value; // (variant_contains<Ts, variant_type>::value && ...);
+
+	template <typename variant_type, typename ...Ts>
+	inline constexpr bool variant_contains_any_of_v = variant_contains_any_of<variant_type, Ts...>::value; // (variant_contains<Ts, variant_type>::value || ...);
+
+	// NOTE: Follows typename parameters in reverse order to allow for variadics.
+	template <typename variant_type, typename ...Ts>
+	inline constexpr bool variant_contains_v = variant_contains_all_of_v<variant_type, Ts...>; // (variant_contains<Ts, variant_type>::value && ...);
+
+	static_assert(variant_contains_all_of_v<std::variant<int, short, float>, int, short, float>);
+	static_assert(variant_contains_any_of_v<std::variant<int, float>, short, float>);
+	static_assert(variant_contains_v<std::variant<int, float>, int, float>);
 
 	template <typename variant_t>
 	struct for_each_variant_type_impl;
