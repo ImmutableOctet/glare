@@ -17,6 +17,45 @@
 namespace engine
 {
 	template <>
+	void reflect<CollisionCastResult>()
+	{
+		using native_t = decltype(CollisionCastResult::native);
+
+		engine_meta_type<CollisionCastResult>()
+			.data<&CollisionCastResult::cast_entity>("cast_entity"_hs)
+			.data<&CollisionCastResult::hit_entity>("hit_entity"_hs)
+			.data<&CollisionCastResult::hit_position>("hit_position"_hs)
+			.data<&CollisionCastResult::hit_normal>("hit_normal"_hs)
+			.data<&CollisionCastResult::closest_hit_fraction>("closest_hit_fraction"_hs)
+
+			.data<&CollisionCastResult::native>("native"_hs)
+
+			//.data<&CollisionCastResult::hit_entity>("entity"_hs) // cast_entity
+		;
+
+		engine_meta_type<native_t>()
+			.data<&native_t::cast_object>("cast_object"_hs)
+			.data<&native_t::hit_object>("hit_object"_hs)
+		;
+	}
+
+	template <>
+	void reflect<ConvexCastResult>()
+	{
+		engine_meta_type<ConvexCastResult>()
+			.base<CollisionCastResult>()
+		;
+	}
+
+	template <>
+	void reflect<RayCastResult>()
+	{
+		engine_meta_type<RayCastResult>()
+			.base<CollisionCastResult>()
+		;
+	}
+
+	template <>
 	void reflect<Ground>()
 	{
 		engine_meta_type<Ground>()
@@ -256,6 +295,10 @@ namespace engine
 	{
 		reflect<CollisionShapePrimitive>();
 		reflect<CollisionCastMethod>();
+
+		reflect<CollisionCastResult>();
+		reflect<ConvexCastResult>();
+		reflect<RayCastResult>();
 
 		reflect<CollisionShapeDescription>();
 		reflect<KinematicResolutionConfig>();
