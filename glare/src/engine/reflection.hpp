@@ -1506,6 +1506,12 @@ namespace engine
     }
 
     template <typename T>
+    auto system_engine_meta_type()
+    {
+        return static_engine_meta_type<T>();
+    }
+
+    template <typename T>
     auto engine_command_type()
     {
         return engine_meta_type<T, MetaTypeReflectionConfig { .capture_standard_data_members = false }>()
