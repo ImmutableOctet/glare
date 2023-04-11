@@ -13,6 +13,9 @@
 #include <engine/meta/meta_variable_scope.hpp>
 #include <engine/meta/indirect_meta_any.hpp>
 #include <engine/meta/indirect_meta_variable_target.hpp>
+#include <engine/meta/meta_parsing_context.hpp>
+#include <engine/meta/meta_parsing_instructions.hpp>
+#include <engine/meta/meta_type_resolution_context.hpp>
 
 #include <engine/entity/entity_shared_storage.hpp>
 #include <engine/entity/entity_descriptor.hpp>
@@ -26,6 +29,7 @@
 
 #include <engine/types.hpp>
 #include <engine/reflection.hpp>
+#include <engine/system_manager_interface.hpp>
 
 #include <engine/input/buttons.hpp>
 
@@ -34,6 +38,7 @@
 #include <memory>
 #include <variant>
 #include <unordered_map>
+#include <optional>
 
 // Debugging related:
 #include <util/parse.hpp>
@@ -145,6 +150,26 @@ namespace engine
 		}
 
 		Nested& get_nested() { return nested_value; }
+
+		static std::optional<ReflectionTest> get_optional_value(bool provide_value)
+		{
+			if (provide_value)
+			{
+				return ReflectionTest { 10, 20, 30, { 40.0f  } };
+			}
+
+			return std::nullopt;
+		}
+	};
+
+	struct TestSystem
+	{
+		bool value = false;
+
+		bool test_method()
+		{
+			return value;
+		}
 	};
 
 	std::int32_t free_function_as_member(const ReflectionTest& instance)
@@ -198,6 +223,7 @@ namespace engine
 			.func<&ReflectionTest::non_const_opaque_method>("non_const_opaque_method"_hs)
 			.func<&ReflectionTest::method_with_context>("method_with_context"_hs)
 			.func<&ReflectionTest::function_with_context>("function_with_context"_hs)
+			.func<&ReflectionTest::get_optional_value>("get_optional_value"_hs)
 		;
 
 		engine_meta_type<ReflectionTest::Nested>()
@@ -205,6 +231,14 @@ namespace engine
 			.func<&ReflectionTest::Nested::make_nested>("make_nested"_hs)
 			.func<&ReflectionTest::Nested::get>("get"_hs)
 			.ctor<decltype(ReflectionTest::Nested::value)>()
+		;
+	}
+
+	template <>
+	void reflect<TestSystem>()
+	{
+		engine_system_type<TestSystem>()
+			.func<&TestSystem::test_method>("test_method"_hs)
 		;
 	}
 }
@@ -313,7 +347,184 @@ TEST_CASE("engine::MetaValueOperator", "[engine:meta]")
 TEST_CASE("engine::meta_any_from_string", "[engine:meta]")
 {
 	engine::reflect_all();
+
 	engine::reflect<engine::ReflectionTest>();
+	engine::reflect<engine::TestSystem>();
+
+	SECTION("Existing optional value")
+	{
+		auto optional_expr = engine::meta_any_from_string
+		(
+			std::string_view("ReflectionTest::get_optional_value(true)"),
+			{ .allow_function_call_semantics = true }
+		);
+
+		REQUIRE(optional_expr);
+
+		auto optional_expr_result = engine::try_get_underlying_value(optional_expr);
+
+		REQUIRE(optional_expr_result);
+
+		auto optional_resolution_result = engine::try_get_underlying_value(optional_expr_result);
+
+		REQUIRE(optional_resolution_result);
+
+		auto as_test_object = optional_resolution_result.try_cast<const engine::ReflectionTest>();
+
+		REQUIRE(as_test_object);
+
+		REQUIRE(as_test_object->x == 10);
+		REQUIRE(as_test_object->y == 20);
+		REQUIRE(as_test_object->z == 30);
+		REQUIRE(as_test_object->nested_value.value >= 40.0f);
+	}
+
+	SECTION("Null optional value")
+	{
+		auto optional_expr = engine::meta_any_from_string
+		(
+			std::string_view("ReflectionTest::get_optional_value(false)"),
+			{ .allow_function_call_semantics = true }
+		);
+
+		REQUIRE(optional_expr);
+
+		auto optional_expr_result = engine::try_get_underlying_value(optional_expr);
+
+		REQUIRE(optional_expr_result);
+
+		auto optional_resolution_result = engine::try_get_underlying_value(optional_expr_result);
+
+		REQUIRE(!optional_resolution_result);
+	}
+
+	SECTION("Nested access of existing optional value")
+	{
+		auto optional_access_expr = engine::meta_any_from_string
+		(
+			std::string_view("ReflectionTest::get_optional_value(true).nested_value.value"),
+			{
+				.allow_member_references = true,
+				.allow_function_call_semantics = true
+			}
+		);
+
+		REQUIRE(optional_access_expr);
+
+		auto optional_access_result = engine::try_get_underlying_value(optional_access_expr);
+
+		REQUIRE(optional_access_result);
+
+		auto as_nested_value = optional_access_result.try_cast<decltype(engine::ReflectionTest::Nested::value)>();
+
+		REQUIRE(as_nested_value);
+
+		REQUIRE((*as_nested_value) >= 40.0f);
+	}
+
+	SECTION("Nested access of null optional value")
+	{
+		auto optional_access_expr = engine::meta_any_from_string
+		(
+			std::string_view("ReflectionTest::get_optional_value(false).nested_value.value"),
+			{
+				.allow_member_references = true,
+				.allow_function_call_semantics = true
+			}
+		);
+
+		REQUIRE(optional_access_expr);
+
+		auto optional_access_result = engine::try_get_underlying_value(optional_access_expr);
+
+		REQUIRE(!optional_access_result);
+	}
+
+	SECTION("Method call from system reference")
+	{
+		auto type_context = engine::MetaTypeResolutionContext::generate();
+
+		auto system_manager = engine::SystemManagerInterface {};
+
+		system_manager.add_system(engine::TestSystem { true });
+
+		auto system_expr = engine::meta_any_from_string
+		(
+			std::string_view("test::test_method()"),
+			
+			engine::MetaParsingInstructions
+			{
+				.context = engine::MetaParsingContext
+				{
+					&type_context
+				},
+
+				.allow_function_call_semantics = true,
+				.resolve_system_references = true
+			}
+		);
+
+		REQUIRE(system_expr);
+
+		auto result = engine::try_get_underlying_value
+		(
+			system_expr,
+
+			engine::MetaEvaluationContext
+			{
+				.system_manager = &system_manager
+			}
+		);
+
+		REQUIRE(result);
+
+		auto as_bool = result.try_cast<bool>();
+
+		REQUIRE(as_bool);
+		REQUIRE((*as_bool) == true);
+	}
+
+	SECTION("System reference")
+	{
+		auto type_context = engine::MetaTypeResolutionContext::generate();
+
+		auto system_manager = engine::SystemManagerInterface {};
+
+		system_manager.add_system(engine::TestSystem { true });
+
+		auto system_expr = engine::meta_any_from_string
+		(
+			std::string_view("test"), // std::string_view("TestSystem"),
+			
+			engine::MetaParsingInstructions
+			{
+				.context = engine::MetaParsingContext
+				{
+					&type_context
+				},
+
+				.resolve_system_references = true
+			}
+		);
+
+		REQUIRE(system_expr);
+
+		auto result = engine::try_get_underlying_value
+		(
+			system_expr,
+
+			engine::MetaEvaluationContext
+			{
+				.system_manager = &system_manager
+			}
+		);
+
+		REQUIRE(result);
+
+		auto as_test_system = result.try_cast<engine::TestSystem>();
+
+		REQUIRE(as_test_system);
+	}
 
 	SECTION("Concatenate values casted as strings")
 	{
