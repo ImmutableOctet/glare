@@ -334,11 +334,11 @@ namespace engine
 
 			if (component.forces_field_assignment() || components.persist.get_definition(descriptor, type_id))
 			{
-				EntityFactory::update_component_fields(registry, entity, component);
+				update_component_fields(registry, entity, component);
 			}
 			else
 			{
-				EntityFactory::emplace_component(registry, entity, component);
+				emplace_component(registry, entity, component);
 			}
 		}
 	}
@@ -366,9 +366,9 @@ namespace engine
 		{
 			const auto& component = component_entry.get(descriptor);
 
-			if (!EntityFactory::update_component_fields(registry, entity, component, value_assignment))
+			if (!update_component_fields(registry, entity, component, value_assignment))
 			{
-				EntityFactory::emplace_component(registry, entity, component);
+				emplace_component(registry, entity, component);
 			}
 		}
 	}
