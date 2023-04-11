@@ -70,13 +70,26 @@ namespace engine
 				std::optional<MetaVariableScope> referenced_scope=std::nullopt
 			);
 
-			EntitySystem(Service& service, bool subscribe_immediately=false);
+			EntitySystem
+			(
+				Service& service,
+				SystemManagerInterface& system_manager,
+				bool subscribe_immediately=false
+			);
+
+			EntitySystem
+			(
+				Service& service,
+				bool subscribe_immediately=false
+			);
 
 			bool set_state(Entity entity, std::string_view state_name) const;
 			bool set_state(Entity entity, StringHash state_name) const;
 			bool set_state_by_id(Entity entity, StringHash state_id) const;
 		protected:
 			std::unordered_map<MetaTypeID, EntityListener> listeners;
+
+			SystemManagerInterface* system_manager = nullptr;
 
 			// Used internally by `on_state_activation_command` for 'delayed activation' behavior.
 			bool activate_state(Entity entity, StringHash state_id) const;

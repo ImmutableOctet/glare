@@ -17,14 +17,20 @@
 #include "commands/commands.hpp"
 
 #include <engine/service.hpp>
+#include <engine/system_manager_interface.hpp>
+
 #include <engine/service_events.hpp>
 #include <engine/events.hpp>
 
 #include <engine/components/relationship_component.hpp>
 
-#include <engine/meta/meta.hpp>
+//#include <engine/meta/meta.hpp>
+#include <engine/meta/types.hpp>
+#include <engine/meta/hash.hpp>
 #include <engine/meta/events.hpp>
 #include <engine/meta/traits.hpp>
+#include <engine/meta/indirection.hpp>
+
 #include <engine/meta/meta_evaluation_context.hpp>
 #include <engine/meta/meta_evaluation_context_store.hpp>
 #include <engine/meta/meta_variable_target.hpp>
@@ -137,8 +143,28 @@ namespace engine
 		};
 	}
 
-	EntitySystem::EntitySystem(Service& service, bool subscribe_immediately)
-		: BasicSystem(service)
+	EntitySystem::EntitySystem
+	(
+		Service& service,
+		SystemManagerInterface& system_manager,
+		bool subscribe_immediately
+	) :
+		BasicSystem(service),
+		system_manager(&system_manager)
+	{
+		if (subscribe_immediately)
+		{
+			subscribe();
+		}
+	}
+
+	EntitySystem::EntitySystem
+	(
+		Service& service,
+		bool subscribe_immediately
+	) :
+		BasicSystem(service),
+		system_manager(nullptr)
 	{
 		if (subscribe_immediately)
 		{
@@ -1205,6 +1231,8 @@ namespace engine
 	{
 		using namespace instructions;
 
+		auto& system_manager = this->system_manager;
+
 		if (thread.next_instruction >= source.instructions.size())
 		{
 			// We've stepped beyond the scope of this thread; mark this thread as complete.
@@ -1229,7 +1257,7 @@ namespace engine
 		};
 
 		// Forwards `action` to `execute_action` with the appropriate parameters.
-		auto on_action = [&registry, &service, entity, &descriptor, &get_variable_context](const auto& action, auto&&... args)
+		auto on_action = [&registry, &service, &system_manager, entity, &descriptor, &get_variable_context](const auto& action, auto&&... args)
 		{
 			Entity target = null;
 
@@ -1253,7 +1281,9 @@ namespace engine
 
 				MetaEvaluationContext
 				{
-					&variable_context
+					.variable_context = &variable_context,
+					.service = &service,
+					.system_manager = system_manager
 				},
 
 				std::forward<decltype(args)>(args)...
@@ -1392,7 +1422,7 @@ namespace engine
 			);
 		};
 
-		auto condition_met = [&registry, entity, &get_variable_context](auto&& condition)
+		auto condition_met = [&registry, &service, &system_manager, entity, &get_variable_context](auto&& condition)
 		{
 			auto variable_context = get_variable_context();
 
@@ -1403,9 +1433,12 @@ namespace engine
 				MetaAny {},
 
 				registry, entity,
+
 				MetaEvaluationContext
 				{
-					&variable_context
+					.variable_context = &variable_context,
+					.service = &service,
+					.system_manager = system_manager
 				}
 			);
 		};
@@ -1717,11 +1750,11 @@ namespace engine
 						}
 					},
 
-					[&registry, &service, entity, &descriptor, &thread, &thread_comp, thread_index, &get_variable_context](const VariableAssignment& variable_assignment)
+					[&registry, &service, &system_manager, entity, &descriptor, &thread, &thread_comp, thread_index, &get_variable_context](const VariableAssignment& variable_assignment)
 					{
 						auto& source_descriptor = descriptor;
 
-						auto as_remote_variable = [source=entity, &service, &registry, &variable_assignment, &source_descriptor, &get_variable_context]()
+						auto as_remote_variable = [source=entity, &service, &system_manager, &registry, &variable_assignment, &source_descriptor, &get_variable_context]()
 						{
 							const auto& target = variable_assignment.target_entity.resolve(registry, source);
 
@@ -1804,7 +1837,9 @@ namespace engine
 
 							auto source_evaluation_context = MetaEvaluationContext
 							{
-								&source_variable_context
+								.variable_context = &source_variable_context,
+								.service = &service,
+								.system_manager = system_manager
 							};
 
 							auto assignment_expr = variable_assignment.assignment.get(source_descriptor.get_shared_storage());
@@ -1832,7 +1867,9 @@ namespace engine
 
 								auto target_evaluation_context = MetaEvaluationContext
 								{
-									&target_variable_context
+									.variable_context = &target_variable_context,
+									.service = &service,
+									.system_manager = system_manager
 								};
 
 								// TODO: Look into making some of these fields optional.
@@ -1884,14 +1921,15 @@ namespace engine
 									{
 										return;
 									}
-
 								}
 
 								auto assignment_expr = variable_assignment.assignment.get(descriptor.get_shared_storage());
 
 								auto evaluation_context = MetaEvaluationContext
 								{
-									&variable_context
+									.variable_context = &variable_context,
+									.service = &service,
+									.system_manager = system_manager
 								};
 
 								auto result = execute_opaque_expression
@@ -2049,6 +2087,8 @@ namespace engine
 
 	EntityListener* EntitySystem::listen(MetaTypeID event_type_id)
 	{
+		using namespace engine::literals;
+
 		if (!event_type_id)
 		{
 			return nullptr;
@@ -2070,7 +2110,7 @@ namespace engine
 			return nullptr;
 		}
 
-		auto connect_fn = event_type.func(hash("connect_meta_event"));
+		auto connect_fn = event_type.func("connect_meta_event"_hs);
 
 		if (!connect_fn)
 		{
@@ -2087,6 +2127,7 @@ namespace engine
 
 			entt::forward_as_meta(listener_ref),
 			entt::forward_as_meta(this->service),
+			entt::forward_as_meta(this->system_manager),
 
 			// NOTE: We need to manually specify a type-qualified `std::nullopt`
 			// to handle the (normally defaulted) `flags` parameter.
