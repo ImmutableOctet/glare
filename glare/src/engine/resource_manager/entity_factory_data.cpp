@@ -5,6 +5,9 @@
 #include <engine/entity/components/instance_component.hpp>
 #include <engine/entity/components/entity_thread_component.hpp>
 
+#include <engine/meta/component.hpp>
+#include <engine/meta/meta_evaluation_context.hpp>
+
 // Debugging related:
 #include <util/log.hpp>
 

@@ -1,7 +1,8 @@
 #include "service.hpp"
 #include "input/raw_input_events.hpp"
 
-#include "meta/meta.hpp"
+#include "meta/indirection.hpp"
+
 #include "meta/meta_type_descriptor.hpp"
 #include "meta/meta_evaluation_context.hpp"
 

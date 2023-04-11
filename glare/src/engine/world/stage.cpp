@@ -13,8 +13,11 @@
 #include "behaviors/debug_move_behavior.hpp"
 
 #include <engine/config.hpp>
-#include <engine/meta/meta.hpp>
+
+#include <engine/meta/hash.hpp>
 #include <engine/meta/serial.hpp>
+#include <engine/meta/component.hpp>
+#include <engine/meta/meta_evaluation_context.hpp>
 
 #include <engine/resource_manager/resource_manager.hpp>
 
