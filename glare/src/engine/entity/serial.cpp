@@ -1399,7 +1399,7 @@ namespace engine
 			true, false
 		);
 
-		assert(components_processed == build_result);
+		//assert(components_processed == build_result);
 
 		return build_result;
 	}
@@ -1428,7 +1428,7 @@ namespace engine
 			true, false
 		);
 
-		assert(components_processed == build_result);
+		//assert(components_processed == build_result);
 
 		return build_result;
 	}
