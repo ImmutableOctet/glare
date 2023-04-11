@@ -12,8 +12,12 @@
 #include "event_trigger_condition.hpp"
 #include "meta_description.hpp"
 
-#include <engine/meta/meta.hpp>
+//#include <engine/meta/meta.hpp>
+#include <engine/meta/types.hpp>
 #include <engine/meta/serial.hpp>
+#include <engine/meta/data_member.hpp>
+#include <engine/meta/short_name.hpp>
+
 #include <engine/meta/meta_type_descriptor.hpp>
 #include <engine/meta/meta_type_descriptor_flags.hpp>
 #include <engine/meta/meta_type_resolution_context.hpp>
