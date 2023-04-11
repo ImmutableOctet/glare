@@ -7,14 +7,22 @@
 
 #include "types.hpp"
 
-#include "meta/meta.hpp"
+//#include "meta/meta.hpp"
+#include "meta/enum.hpp"
+#include "meta/hash.hpp"
+#include "meta/indirection.hpp"
 #include "meta/serial.hpp"
 #include "meta/traits.hpp"
+#include "meta/short_name.hpp"
+
+#include "meta/reflect_all.hpp"
+
 #include "meta/meta_type_descriptor.hpp"
 #include "meta/meta_event_listener.hpp"
 #include "meta/meta_evaluation_context.hpp"
 
 #include "service.hpp"
+#include "system_manager_interface.hpp"
 #include "command.hpp"
 
 #include <util/reflection.hpp>
@@ -100,6 +108,125 @@ namespace engine
         bool generate_json_constructor     : 1 = true;
     };
 
+    namespace impl
+    {
+        template <typename T>
+        inline MetaAny optional_value_or_impl(std::optional<T>& self, MetaAny& value) // const MetaAny&
+        {
+            if (self)
+            {
+                return entt::forward_as_meta(self.value());
+            }
+
+            return value.as_ref();
+        }
+
+        template <typename T>
+        const T& optional_to_const_ref(const std::optional<T>& self)
+        {
+            if (!self)
+            {
+                //assert(false);
+                throw std::runtime_error("Attempted to access empty optional.");
+            }
+
+            return self.value();
+        }
+
+        template <typename T>
+        T& optional_to_ref(std::optional<T>& self)
+        {
+            if (!self)
+            {
+                //assert(false);
+                throw std::runtime_error("Attempted to access empty optional.");
+            }
+
+            return self.value();
+        }
+
+        template <typename T>
+        T optional_to_value(const std::optional<T>& self)
+        {
+            return optional_to_const_ref<T>(self);
+        }
+
+        template <typename T>
+        MetaAny optional_resolve_impl(const std::optional<T>& self)
+        {
+            if (self)
+            {
+                return entt::forward_as_meta(self.value()); // self.value();
+            }
+
+            return {};
+        }
+
+        template <typename T>
+        MetaTypeID type_id_from_optional()
+        {
+            //return short_name_hash<T>();
+
+            auto type = resolve<T>();
+
+            if (!type)
+            {
+                return {};
+            }
+
+            return type.id();
+        }
+
+        template <typename T>
+        MetaType type_from_optional()
+        {
+            //return resolve(type_id_from_optional<T>());
+
+            return resolve<T>();
+        }
+
+        template <typename T>
+        MetaType optional_get_type_impl(const std::optional<T>& self)
+        {
+            return type_from_optional<T>();
+        }
+
+        template <typename T>
+        bool operator_bool_impl(const T& value)
+        {
+            //return static_cast<bool>(value);
+
+            ///*
+            if (value)
+            {
+                return true;
+            }
+
+            return false;
+            //*/
+        }
+
+        template <typename T>
+        bool operator_logical_not_impl(const T& value)
+        {
+            return !operator_bool_impl<T>(value);
+        }
+
+        // Implements the inequality operator using the equality operator.
+        template <typename TypeA, typename TypeB>
+        bool inequality_operator_fallback_impl(const TypeA& a, const TypeB& b)
+        {
+            return !(a == b);
+        }
+
+        // Implements the equality operator using the inequality operator.
+        template <typename TypeA, typename TypeB>
+        bool equality_operator_fallback_impl(const TypeA& a, const TypeB& b)
+        {
+            return !(a != b);
+        }
+    }
+
     template
     <
         typename T, typename trait,
@@ -183,41 +310,6 @@ namespace engine
         reflect_all();
     }
 
-    template <typename T>
-    bool operator_bool_impl(const T& value)
-    {
-        //return static_cast<bool>(value);
-
-        ///*
-        if (value)
-        {
-            return true;
-        }
-
-        return false;
-        //*/
-    }
-
-    template <typename T>
-    bool operator_logical_not_impl(const T& value)
-    {
-        return !operator_bool_impl<T>(value);
-    }
-
-    // Implements the inequality operator using the equality operator.
-    template <typename TypeA, typename TypeB>
-    bool inequality_operator_fallback_impl(const TypeA& a, const TypeB& b)
-    {
-        return !(a == b);
-    }
-
-    // Implements the equality operator using the inequality operator.
-    template <typename TypeA, typename TypeB>
-    bool equality_operator_fallback_impl(const TypeA& a, const TypeB& b)
-    {
-        return !(a != b);
-    }
-
     // Retrieves a pointer to `T` from `value`.
     // 
     // If `value` holds a `T` instance, this will return a pointer as expected.
@@ -230,6 +322,7 @@ namespace engine
             return nullptr;
         }
 
+        /*
         if
         (
             (value.type().id() == short_name_hash<T>().value())
@@ -241,6 +334,9 @@ namespace engine
         }
 
         return nullptr;
+        */
+
+        return value.try_cast<T>();
     }
 
     template <typename T>
@@ -588,37 +684,6 @@ namespace engine
         }
     }
 
-    template <typename T>
-    T& from_optional(std::optional<T>& opt)
-    {
-        assert(opt);
-
-        return *opt;
-    }
-
-    template <typename T>
-    MetaTypeID type_id_from_optional()
-    {
-        //return short_name_hash<T>();
-
-        auto type = resolve<T>();
-
-        if (!type)
-        {
-            return MetaTypeID(0);
-        }
-
-        return type.id();
-    }
-
-    template <typename T>
-    MetaType type_from_optional()
-    {
-        //return resolve(type_id_from_optional<T>());
-
-        return resolve<T>();
-    }
-
     // Retrieves a handle to the shared entt meta-context.
     entt::locator<entt::meta_ctx>::node_type get_shared_reflection_handle();
     
@@ -630,7 +695,8 @@ namespace engine
         entt::locator<entt::meta_ctx>::reset(handle);
     }
 
-    // Synchronizes the reflection context across boundaries. (used for DLL interop)
+    // Synchronizes the reflection context across boundaries.
+    // (Used for interop with dynamically linked modules)
     inline bool sync_reflection_context()
     {
         static bool is_synchronized = false;
@@ -662,21 +728,45 @@ namespace engine
     }
 
     template <typename T>
-    auto optional_engine_meta_type()
+    auto optional_meta_type(auto opt_type, bool sync_context=true)
     {
-        auto opt_type = entt::meta<std::optional<T>>()
-            .type(optional_short_name_hash<T>())
-            //.template func<&from_optional<T>>("from_optional"_hs)
-            .template func<&type_id_from_optional<T>>("type_id_from_optional"_hs)
-            .template func<&type_from_optional<T>>("type_from_optional"_hs)
+        if (sync_context)
+        {
+            // Ensure that we're using the correct context.
+            sync_reflection_context();
+        }
 
-            //.base<T>()
-            //.conv<T>()
+        using optional_t = std::optional<T>;
+
+        opt_type = opt_type
+            .prop("optional"_hs)
+
+            // NOTE: Added as both a function and data-member.
+            .data<nullptr, &optional_t::has_value>("has_value"_hs)
+
+            .data<nullptr, &impl::optional_to_ref<T>, entt::as_ref_t>("value"_hs) // entt::as_cref_t
+
+            .func<&impl::type_id_from_optional<T>>("type_id_from_optional"_hs)
+            .func<&impl::type_from_optional<T>>("type_from_optional"_hs)
+            .func<&impl::optional_get_type_impl<T>>("get_type"_hs)
+            .func<&impl::optional_value_or_impl<T>>("value_or"_hs)
+
+            // NOTE: Added as both a function and data-member.
+            .func<&optional_t::has_value>("has_value"_hs)
+
+            .func<&try_get_underlying_type<optional_t>>("try_get_underlying_type"_hs)
+
+            .func<&impl::optional_to_const_ref<T>, entt::as_cref_t>("*operator"_hs)
+
+            .func<&impl::optional_resolve_impl<T>>("operator()"_hs)
         ;
 
         if constexpr (std::is_copy_constructible_v<T>)
         {
-            opt_type = opt_type.ctor<T>(); // const T&
+            opt_type = opt_type
+                .conv<&impl::optional_to_value<T>>()
+                .ctor<T>(); // const T&
+            ;
         }
 
         /*
@@ -686,7 +776,53 @@ namespace engine
         }
         */
 
+        opt_type = define_boolean_operators<optional_t>(opt_type);
+
         return opt_type;
+    }
+
+    template <typename T>
+    auto optional_engine_meta_type(bool sync_context=true)
+    {
+        using optional_t = std::optional<T>;
+
+        if (sync_context)
+        {
+            // Ensure that we're using the correct context.
+            sync_reflection_context();
+        }
+
+        auto opt_type = entt::meta<optional_t>()
+            .type(optional_short_name_hash<T>())
+        ;
+
+        return optional_meta_type<T>(opt_type, false);
+    }
+
+    template <typename T>
+    auto optional_custom_meta_type(MetaTypeID type_id, bool sync_context=true)
+    {
+        using optional_t = std::optional<T>;
+
+        if (sync_context)
+        {
+            // Ensure that we're using the correct context.
+            sync_reflection_context();
+        }
+
+        auto opt_type = entt::meta<optional_t>()
+            .type(type_id)
+        ;
+
+        return optional_meta_type<T>(opt_type, false);
+    }
+
+    template <typename T>
+    auto optional_custom_meta_type(std::string_view underlying_type_name, bool sync_context=true)
+    {
+        const auto opt_type_id = hash(optional_name(underlying_type_name));
+
+        return optional_custom_meta_type<T>(opt_type_id.value(), sync_context);
     }
 
     template
@@ -943,7 +1079,7 @@ namespace engine
 
             if constexpr (!has_inequality_operator)
             {
-                type = type.template func<&inequality_operator_fallback_impl<T, OtherType>>("operator!="_hs);
+                type = type.template func<&impl::inequality_operator_fallback_impl<T, OtherType>>("operator!="_hs);
             }
         }
         
@@ -953,7 +1089,7 @@ namespace engine
 
             if constexpr (!has_equality_operator)
             {
-                type = type.template func<&equality_operator_fallback_impl<T, OtherType>>("operator=="_hs);
+                type = type.template func<&impl::equality_operator_fallback_impl<T, OtherType>>("operator=="_hs);
             }
         }
 
@@ -967,8 +1103,8 @@ namespace engine
         if constexpr (util::is_convertible_to_bool<T>)
         {
             return type
-                .template func<&operator_bool_impl<T>>("operator bool"_hs)
-                .template func<&operator_logical_not_impl<T>>("!operator"_hs)
+                .func<&impl::operator_bool_impl<T>>("operator bool"_hs)
+                .func<&impl::operator_logical_not_impl<T>>("!operator"_hs)
             ;
         }
         else
@@ -1339,7 +1475,7 @@ namespace engine
 
         if constexpr (config.generate_optional_reflection)
         {
-            optional_engine_meta_type<T>();
+            optional_engine_meta_type<T>(false);
         }
 
         if constexpr (config.generate_operator_wrappers)
@@ -1473,12 +1609,17 @@ namespace engine
     }
 
     template <typename T, MetaTypeReflectionConfig config={}>
-    auto custom_meta_type(MetaTypeID type_id)
+    auto custom_meta_type(MetaTypeID type_id, bool sync_context=true)
     {
-        // Ensure that we're using the correct context.
-        sync_reflection_context();
+        if (sync_context)
+        {
+            // Ensure that we're using the correct context.
+            sync_reflection_context();
+        }
 
-        auto type = entt::meta<T>().type(type_id);
+        auto type = entt::meta<T>()
+            .type(type_id)
+        ;
 
         return define_standard_meta_type<T, config>(type, false);
     }
@@ -1489,32 +1630,47 @@ namespace engine
     // By default, `entt` uses a fully qualified name, along with a "struct" or "class" prefix, etc.
     // This allows you to simply refer to the type by its namespace-local name.
     template <typename T, MetaTypeReflectionConfig config={}>
-    auto engine_meta_type()
+    auto engine_meta_type(bool sync_context=true)
     {
-        return custom_meta_type<T, config>(short_name_hash<T>());
+        return custom_meta_type<T, config>(short_name_hash<T>(), sync_context);
     }
 
     template <typename T> // MetaTypeReflectionConfig config={}
-    auto static_engine_meta_type()
+    auto static_engine_meta_type(bool sync_context=true)
     {
-        // Ensure that we're using the correct context.
-        sync_reflection_context();
+        if (sync_context)
+        {
+            // Ensure that we're using the correct context.
+            sync_reflection_context();
+        }
 
-        auto type = entt::meta<T>().type(short_name_hash<T>());
+        auto type = entt::meta<T>()
+            .type(short_name_hash<T>())
+        ;
 
         return type;
     }
 
     template <typename T>
-    auto system_engine_meta_type()
+    auto engine_system_type(bool sync_context=true)
     {
-        return static_engine_meta_type<T>();
+        return static_engine_meta_type<T>(sync_context)
+            .prop("system"_hs)
+        ;
     }
 
     template <typename T>
-    auto engine_command_type()
+    auto engine_command_type(bool sync_context=true)
     {
-        return engine_meta_type<T, MetaTypeReflectionConfig { .capture_standard_data_members = false }>()
+        return engine_meta_type
+        <
+            T,
+            
+            MetaTypeReflectionConfig
+            {
+                .capture_standard_data_members = false
+            }
+        >(sync_context)
             .base<Command>()
         ;
     }
@@ -1532,13 +1688,16 @@ namespace engine
 
         if (values_as_properties)
         {
-            magic_enum::enum_for_each<EnumType>([](EnumType enum_value)
-            {
-                const auto enum_name = magic_enum::enum_name<EnumType>(enum_value);
-                const auto enum_value_id = hash(enum_name);
+            magic_enum::enum_for_each<EnumType>
+            (
+                [](EnumType enum_value)
+                {
+                    const auto enum_name = magic_enum::enum_name<EnumType>(enum_value);
+                    const auto enum_value_id = hash(enum_name);
 
-                entt::meta<EnumType>().prop(enum_value_id, enum_value);
-            });
+                    entt::meta<EnumType>().prop(enum_value_id, enum_value);
+                }
+            );
         }
     }
 
