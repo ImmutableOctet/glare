@@ -4,7 +4,8 @@
 
 #include <engine/timer.hpp>
 #include <engine/entity/parse.hpp>
-#include <engine/meta/meta.hpp>
+
+//#include <engine/meta/indirection.hpp>
 #include <engine/meta/hash.hpp>
 
 #include <engine/entity/entity_target.hpp>
