@@ -35,4 +35,45 @@ namespace engine
 
 	// TODO: Find a better location for this.
 	using entt::resolve;
+
+	// TODO: Move to a different source location.
+	// Attempts to retrieve an instance of `Type` from `value`, passing it to `callback` if successful.
+	template <typename Type, typename Callback>
+	inline bool try_value(const MetaAny& value, Callback&& callback)
+	{
+		if (!value)
+		{
+			return false;
+		}
+
+        /*
+		auto type = value.type();
+
+		if (!type)
+		{
+			return false;
+		}
+
+		const auto type_id = type.id();
+        */
+
+		//if (type_id == entt::type_id<Type>().hash())
+		//if ((type_id == entt::type_id<Type>().hash()) || (type_id == resolve<Type>().id()))
+		{
+			auto* value_raw = value.try_cast<Type>(); // const
+
+			//assert(value_raw);
+
+			if (!value_raw)
+			{
+				return false;
+			}
+
+			callback(*value_raw);
+
+			return true;
+		}
+
+		return false;
+	}
 }
