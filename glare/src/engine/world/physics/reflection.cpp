@@ -295,7 +295,7 @@ namespace engine
 	template <>
 	void reflect<PhysicsSystem>()
 	{
-		system_engine_meta_type<PhysicsSystem>()
+		engine_system_type<PhysicsSystem>()
 			.func<&PhysicsSystem::cast_to<btCollisionObject>>("cast_to"_hs)
 			.func<&PhysicsSystem::cast_to<Entity>>("cast_to"_hs)
 			
