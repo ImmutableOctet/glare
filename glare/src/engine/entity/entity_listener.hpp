@@ -3,6 +3,7 @@
 #include "entity_state_rule.hpp"
 
 #include <engine/meta/meta_event_listener.hpp>
+#include <engine/meta/meta_evaluation_context.hpp>
 
 #include <util/small_vector.hpp>
 
@@ -22,7 +23,7 @@ namespace engine
 			using ReferenceCount = std::uint16_t;
 			using RuleCollection = EntityStateRuleCollection;
 
-			EntityListener(Service* service=nullptr);
+			EntityListener(Service* service=nullptr, SystemManagerInterface* system_manager=nullptr);
 
 			bool add_entity(Entity entity);
 			bool remove_entity(Entity entity, ReferenceCount references_to_remove=1, bool force=false);
@@ -61,7 +62,8 @@ namespace engine
 				Registry& registry, Entity entity,
 				const EntityDescriptor& descriptor,
 				const EntityStateRuleCollection& rules,
-				const MetaAny& event_instance
+				const MetaAny& event_instance,
+				const MetaEvaluationContext& evaluation_context={}
 			);
 	};
 }
