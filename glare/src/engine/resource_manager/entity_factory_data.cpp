@@ -41,10 +41,15 @@ namespace engine
 			// Allocate and construct children:
 			auto child_context = EntityConstructionContext
 			{
-				.registry = context.registry,
-				.resource_manager = context.resource_manager,
+				.registry           = context.registry,
+				.resource_manager   = context.resource_manager,
 
-				.parent = entity
+				.parent             = entity,
+
+				.opt_entity_out     = null,
+
+				.opt_service        = context.opt_service,
+				.opt_system_manager = context.opt_system_manager
 			};
 
 			// NOTE: Recursion.
@@ -63,6 +68,13 @@ namespace engine
 		const auto& descriptor = factory.get_descriptor();
 		const auto& default_state_index = factory.get_default_state_index();
 
+		auto evaluation_context = MetaEvaluationContext
+		{
+			.variable_context = {},
+			.service          = context.opt_service,
+			.system_manager   = context.opt_system_manager
+		};
+
 		// Instantiate remaining (indirection-dependent) components:
 		for (const auto& component_entry : descriptor.components.type_definitions)
 		{
@@ -70,7 +82,7 @@ namespace engine
 
 			if (component.has_indirection())
 			{
-				EntityFactory::emplace_component(context.registry, entity, component);
+				emplace_component(context.registry, entity, component, &evaluation_context);
 			}
 		}
 
