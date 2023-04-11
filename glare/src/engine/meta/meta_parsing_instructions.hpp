@@ -41,7 +41,7 @@ namespace engine
 
 		// Controls whether references to type data-members
 		// can be encoded into the expression.
-		bool allow_member_references          : 1 = false;
+		bool allow_member_references          : 1 = true; // false;
 
 		// Controls whether entity indirection statements
 		// (targets) can be encoded into the expression.
