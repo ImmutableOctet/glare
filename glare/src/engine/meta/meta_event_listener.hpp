@@ -1,7 +1,5 @@
 #pragma once
 
-//#include "meta.hpp"
-
 #include "types.hpp"
 //#include <engine/types.hpp>
 
@@ -16,7 +14,8 @@
 
 namespace engine
 {
-	//class Service;
+	class Service;
+	class SystemManagerInterface;
 
 	struct MetaEventListenerFlags
 	{
@@ -83,15 +82,18 @@ namespace engine
 			}
 
 			template <typename EventType>
-			static void connect(MetaEventListener& listener, Service* service, std::optional<Flags> flags=std::nullopt) // const MetaEventListener&
+			static void connect
+			(
+				MetaEventListener& listener,
+				Service* service,
+				SystemManagerInterface* system_manager=nullptr,
+				std::optional<Flags> flags=std::nullopt
+			)
 			{
 				if (!service)
 				{
 					return;
 				}
-
-				// Debugging related:
-				//EventType* _test = nullptr;
 
 				auto type = entt::resolve<EventType>();
 
@@ -102,6 +104,11 @@ namespace engine
 						if (!listener.service)
 						{
 							listener.service = service;
+						}
+
+						if (!listener.system_manager)
+						{
+							listener.system_manager = system_manager;
 						}
 
 						if (!listener.type_id)
@@ -127,7 +134,13 @@ namespace engine
 			}
 
 			template <typename EventType>
-			static void disconnect(MetaEventListener& listener, Service* service, std::optional<Flags> flags=std::nullopt) // const MetaEventListener&
+			static void disconnect
+			(
+				MetaEventListener& listener,
+				Service* service,
+				SystemManagerInterface* system_manager=nullptr,
+				std::optional<Flags> flags=std::nullopt
+			) // const MetaEventListener&
 			{
 				if (!service) // (!listener.service)
 				{
@@ -166,6 +179,11 @@ namespace engine
 							listener.service = nullptr;
 						}
 
+						if ((!system_manager) || (system_manager == listener.system_manager))
+						{
+							listener.system_manager = nullptr;
+						}
+
 						listener.type_id = {};
 					}
 				}
@@ -174,7 +192,7 @@ namespace engine
 			template <typename EventType>
 			static void disconnect_existing(MetaEventListener& listener) // const MetaEventListener&
 			{
-				disconnect_from<EventType>(listener, listener.service);
+				disconnect_from<EventType>(listener, listener.service, listener.system_manager);
 			}
 
 			virtual ~MetaEventListener();
@@ -184,17 +202,39 @@ namespace engine
 				return static_cast<bool>(service);
 			}
 
+			inline bool has_system_manager() const
+			{
+				return static_cast<bool>(system_manager);
+			}
+
 			inline Flags get_flags() const
 			{
 				return flags;
 			}
 		protected:
+			// Weak pointer to the service owning this event listener.
 			Service* service = nullptr;
+
+			// Optional weak pointer to the system manager tied to `service`.
+			SystemManagerInterface* system_manager = nullptr;
+			
+			// The ID of the type this event is listening for, if any.
 			MetaTypeID type_id = {};
+
+			// Flags indicating which events are to be listened for.
 			Flags flags;
 
-			MetaEventListener(Service* service, Flags flags, MetaType type);
-			MetaEventListener(Service* service=nullptr, Flags flags={}, MetaTypeID type_id={});
+			MetaEventListener
+			(
+				Service* service, SystemManagerInterface* system_manager,
+				Flags flags, MetaType type
+			);
+			
+			MetaEventListener
+			(
+				Service* service=nullptr, SystemManagerInterface* system_manager=nullptr,
+				Flags flags={}, MetaTypeID type_id={}
+			);
 
 			MetaType type() const;
 
