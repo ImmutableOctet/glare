@@ -367,7 +367,9 @@ namespace engine
 			virtual bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const = 0;
 			virtual bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const = 0;
 			virtual bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const = 0;
+			virtual bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, const MetaEvaluationContext& context) const = 0;
 			virtual bool condition_met(const MetaAny& event_instance) const = 0;
+			virtual bool condition_met(const MetaAny& event_instance, const MetaEvaluationContext& context) const = 0;
 
 			virtual bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity, const MetaEvaluationContext& context) const = 0;
 			virtual bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity, const MetaEvaluationContext& context) const = 0;
@@ -453,11 +455,14 @@ namespace engine
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity, const MetaEvaluationContext& context) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, const MetaEvaluationContext& context) const override;
 			bool condition_met(const MetaAny& event_instance) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaEvaluationContext& context) const override;
 
 			EventTriggerCompoundMethod compound_method() const override;
 
 			MetaAny get_member_value(const MetaAny& event_instance, bool resolve_underlying=true) const;
+			MetaAny get_member_value(const MetaAny& event_instance, const MetaEvaluationContext& context, bool resolve_underlying=true) const;
 			MetaAny get_member_value(const MetaAny& event_instance, Registry& registry, Entity entity, bool resolve_underlying=true) const;
 			MetaAny get_member_value(const MetaAny& event_instance, Registry& registry, Entity entity, const MetaEvaluationContext& context, bool resolve_underlying=true) const;
 
@@ -591,6 +596,9 @@ namespace engine
 			bool condition_met_as_component(const MetaType& component_type, const MetaAny& comparison_value, Args&&... args) const;
 
 			template <typename ...Args>
+			MetaAny get_member_value_basic_impl(const MetaAny& event_instance, bool resolve_underlying, Args&&... args) const;
+
+			template <typename ...Args>
 			MetaAny get_indirect_member_value_impl(const MetaAny& event_instance, bool resolve_underlying, Args&&... args) const;
 
 			// Default implementation of most explicit form of `condition_met`.
@@ -632,9 +640,12 @@ namespace engine
 			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity) const override;
 			bool condition_met(const MetaAny& event_instance, Registry& registry, Entity entity, const MetaEvaluationContext& context) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, const MetaEvaluationContext& context) const override;
 			bool condition_met(const MetaAny& event_instance) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaEvaluationContext& context) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity, const MetaEvaluationContext& context) const override;
+
 
 			EventTriggerCompoundMethod compound_method() const override;
 
@@ -702,7 +713,9 @@ namespace engine
 			}
 
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, const MetaEvaluationContext& context) const override;
 			bool condition_met(const MetaAny& event_instance) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaEvaluationContext& context) const override;
 
 			std::size_t add_condition(RemoteConditionType&& condition_in);
 
@@ -951,7 +964,9 @@ namespace engine
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity, const MetaEvaluationContext& context) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, const MetaEvaluationContext& context) const override;
 			bool condition_met(const MetaAny& event_instance) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaEvaluationContext& context) const override;
 
 			EventTriggerCompoundMethod compound_method() const override;
 	};
@@ -970,7 +985,9 @@ namespace engine
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity, const MetaEvaluationContext& context) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, const MetaEvaluationContext& context) const override;
 			bool condition_met(const MetaAny& event_instance) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaEvaluationContext& context) const override;
 
 			EventTriggerCompoundMethod compound_method() const override;
 	};
@@ -989,7 +1006,9 @@ namespace engine
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity, const MetaEvaluationContext& context) const override;
 			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, const MetaEvaluationContext& context) const override;
 			bool condition_met(const MetaAny& event_instance) const override;
+			bool condition_met(const MetaAny& event_instance, const MetaEvaluationContext& context) const override;
 
 			EventTriggerCompoundMethod compound_method() const override;
 
