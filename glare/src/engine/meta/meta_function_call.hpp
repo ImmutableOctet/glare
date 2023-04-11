@@ -42,6 +42,12 @@ namespace engine
 			}
 
 			// Wrapper for `get`; added for reflection purposes.
+			inline MetaAny get_indirect_value(const MetaEvaluationContext& context) const
+			{
+				return get(context);
+			}
+
+			// Wrapper for `get`; added for reflection purposes.
 			inline MetaAny get_indirect_value(const MetaAny& self) const
 			{
 				// NOTE: Const-cast needed here to allow for non-const member-function calls.

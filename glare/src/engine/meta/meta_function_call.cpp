@@ -1,6 +1,11 @@
 #include "meta_function_call.hpp"
+
 #include "meta_evaluation_context.hpp"
-#include "meta.hpp"
+#include "function.hpp"
+#include "indirection.hpp"
+#include "container.hpp"
+#include "component.hpp"
+//#include "data_member.hpp"
 
 #include <util/algorithm.hpp>
 
