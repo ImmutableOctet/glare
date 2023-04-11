@@ -1,10 +1,15 @@
 #include "meta_type_descriptor.hpp"
-#include "meta.hpp"
-#include "serial.hpp"
+
 #include "meta_type_resolution_context.hpp"
 #include "meta_value_operation.hpp"
 #include "meta_evaluation_context.hpp"
+
+#include "serial.hpp"
 #include "hash.hpp"
+#include "string.hpp"
+#include "function.hpp"
+#include "indirection.hpp"
+#include "data_member.hpp"
 
 #include <engine/entity/entity_target.hpp>
 
@@ -24,6 +29,7 @@ namespace engine
 		return resolve<MetaTypeDescriptor>();
 	}
 
+	// TODO: Look into whether we should use `try_get_underlying_type` here.
 	MetaType MetaTypeDescriptor::resolve_type(const MetaType& type, const Flags& flags)
 	{
 		using namespace engine::literals;
@@ -32,7 +38,7 @@ namespace engine
 		{
 			if (flags.allow_type_aliasing)
 			{
-				if (auto real_type_fn = type.func("type_from_optional"_hs))
+				if (auto real_type_fn = type.func("type_from_optional"_hs)) // "get_type"_hs
 				{
 					if (auto real_type_opaque = real_type_fn.invoke({}))
 					{

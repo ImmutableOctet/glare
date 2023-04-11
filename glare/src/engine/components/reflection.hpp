@@ -14,6 +14,8 @@
 
 #include <graphics/model.hpp>
 
+#include <memory>
+
 namespace engine
 {
 	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(TypeComponent, type);

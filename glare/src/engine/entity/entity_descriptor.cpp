@@ -1,7 +1,7 @@
 #include "entity_descriptor.hpp"
 #include "entity_factory_context.hpp"
 
-#include <engine/meta/meta.hpp>
+#include <engine/meta/hash.hpp>
 
 namespace engine
 {

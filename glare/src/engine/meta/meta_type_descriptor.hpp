@@ -4,6 +4,7 @@
 #include "meta_variable.hpp"
 #include "meta_type_descriptor_flags.hpp"
 #include "meta_parsing_instructions.hpp"
+#include "meta_evaluation_context.hpp"
 
 #include <util/small_vector.hpp>
 

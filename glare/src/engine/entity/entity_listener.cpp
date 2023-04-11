@@ -12,7 +12,7 @@
 #include <engine/entity/entity_state.hpp>
 #include <engine/timer.hpp>
 
-#include <engine/meta/meta.hpp>
+#include <engine/meta/data_member.hpp>
 #include <engine/meta/events.hpp>
 
 #include <engine/components/player_component.hpp>

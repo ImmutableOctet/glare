@@ -11,7 +11,9 @@
 #include <engine/commands/indirect_component_patch_command.hpp>
 #include <engine/commands/component_replace_command.hpp>
 
-#include <engine/meta/meta.hpp>
+//#include <engine/meta/hash.hpp>
+//#include <engine/meta/function.hpp>
+#include <engine/meta/data_member.hpp>
 
 // Debugging related:
 #include <util/log.hpp>

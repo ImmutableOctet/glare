@@ -1,6 +1,6 @@
 #include "name_component.hpp"
 
-#include <engine/meta/meta.hpp>
+#include <engine/meta/hash.hpp>
 
 #include <utility>
 

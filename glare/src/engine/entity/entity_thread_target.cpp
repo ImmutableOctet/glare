@@ -1,6 +1,7 @@
 #include "entity_thread_target.hpp"
 
-#include <engine/meta/meta.hpp>
+#include <engine/meta/hash.hpp>
+
 #include <util/variant.hpp>
 
 namespace engine

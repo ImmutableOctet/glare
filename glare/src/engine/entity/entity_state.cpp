@@ -2,7 +2,11 @@
 #include "entity_descriptor.hpp"
 #include "entity_factory.hpp"
 
-#include <engine/meta/meta.hpp>
+#include <engine/meta/types.hpp>
+#include <engine/meta/hash.hpp>
+#include <engine/meta/component.hpp>
+//#include <engine/meta/function.hpp>
+
 #include <engine/meta/meta_type_resolution_context.hpp>
 
 #include "components/state_component.hpp"

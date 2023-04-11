@@ -1,6 +1,7 @@
 #include "indirect_meta_any.hpp"
 
-#include "meta.hpp"
+#include "indirection.hpp"
+
 #include "shared_storage_interface.hpp"
 #include "meta_evaluation_context.hpp"
 
