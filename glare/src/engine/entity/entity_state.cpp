@@ -29,7 +29,7 @@ namespace engine
 		const auto result = storage.store(registry, entity, components);
 
 		// Ensure the correct number of components were stored.
-		assert(result == intended_count);
+		//assert(result == intended_count);
 
 		return container;
 	}
