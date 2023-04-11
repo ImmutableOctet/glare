@@ -1,8 +1,14 @@
 #include "meta_type_reference.hpp"
 
-#include "meta.hpp"
 #include "hash.hpp"
 #include "apply_operation.hpp"
+#include "indirection.hpp"
+
+#include "meta_evaluation_context.hpp"
+
+#include <engine/system_manager_interface.hpp>
+
+//#include <entt/meta/meta.hpp>
 
 #include <utility>
 
@@ -76,6 +82,19 @@ namespace engine
 		);
 	}
 
+	/*
+	// Disabled for now; may revisit again later.
+	MetaAny MetaTypeReference::get() const
+	{
+		if (auto type = get_type())
+		{
+			return type.construct();
+		}
+
+		return {};
+	}
+	*/
+
 	MetaAny MetaTypeReference::get(const MetaAny& instance) const
 	{
 		if (instance)
@@ -95,6 +114,16 @@ namespace engine
 	MetaAny MetaTypeReference::get(Registry& registry, Entity entity) const
 	{
 		return get_instance(this->type_id, registry, entity);
+	}
+
+	MetaAny MetaTypeReference::get(Registry& registry, Entity entity, const MetaEvaluationContext& context) const
+	{
+		if (auto result = get(registry, entity))
+		{
+			return result;
+		}
+
+		return get(context);
 	}
 
 	MetaAny MetaTypeReference::get(Entity target, Registry& registry, Entity context_entity) const
@@ -155,6 +184,25 @@ namespace engine
 				break;
 		}
 
+		return {};
+	}
+
+	MetaAny MetaTypeReference::get(const MetaEvaluationContext& context) const
+	{
+		if (context.system_manager)
+		{
+			const auto type = get_type();
+
+			if (type_is_system(type))
+			{
+				if (auto system_handle = context.system_manager->get_system_handle(type.id()))
+				{
+					return *system_handle.ptr;
+				}
+			}
+		}
+
+		//return get();
 		return {};
 	}
 
@@ -258,5 +306,15 @@ namespace engine
 		}
 
 		return {};
+	}
+
+	bool MetaTypeReference::is_system_type() const
+	{
+		if (auto type = get_type())
+		{
+			return type_is_system(type);
+		}
+
+		return false;
 	}
 }
