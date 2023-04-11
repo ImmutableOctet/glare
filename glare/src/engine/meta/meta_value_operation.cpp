@@ -1,7 +1,9 @@
 #include "meta_value_operation.hpp"
 
-#include "meta.hpp"
 #include "hash.hpp"
+#include "indirection.hpp"
+#include "function.hpp"
+
 #include "indirect_meta_any.hpp"
 #include "meta_evaluation_context.hpp"
 #include "apply_operation.hpp"
@@ -49,6 +51,12 @@ namespace engine
 		return std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, 0, std::nullopt, true));
 	}
 
+	MetaAny MetaValueOperation::get(const MetaEvaluationContext& context) const
+	{
+		// NOTE: See basic getter implementation for details on const-cast usage.
+		return std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, 0, std::nullopt, true, context));
+	}
+
 	MetaAny MetaValueOperation::get(const MetaAny& instance) const
 	{
 		// NOTE: Const-cast performed to avoid imposing transitive const in scenarios where it is unwanted.
@@ -57,6 +65,15 @@ namespace engine
 
 		// NOTE: See parameterless overload for details on const-cast.
 		return std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, 0, std::nullopt, true, as_ref));
+	}
+
+	MetaAny MetaValueOperation::get(const MetaAny& instance, const MetaEvaluationContext& context) const
+	{
+		// NOTE: See basic chain-getter implementation for details on const-cast usage.
+		auto as_ref = const_cast<MetaAny&>(instance).as_ref();
+
+		// NOTE: See parameterless overload for details on const-cast.
+		return std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, 0, std::nullopt, true, as_ref, context));
 	}
 
 	MetaAny MetaValueOperation::get(const MetaAny& instance, Registry& registry, Entity entity) const
@@ -110,6 +127,11 @@ namespace engine
 	MetaAny MetaValueOperation::set(MetaAny& value)
 	{
 		return set_impl(value);
+	}
+
+	MetaAny MetaValueOperation::set(MetaAny& value, const MetaEvaluationContext& context)
+	{
+		return set_impl(value, context);
 	}
 
 	MetaAny MetaValueOperation::set(MetaAny& value, Registry& registry, Entity entity)
@@ -409,6 +431,8 @@ namespace engine
 
 				if ((!look_ahead_processed_value) || (look_ahead_processed == 1))
 				{
+					result.value = {};
+
 					break;
 				}
 
@@ -422,14 +446,28 @@ namespace engine
 
 				if (!look_ahead_operation_result)
 				{
+					result.value = {};
+
 					break;
 				}
 
+				// NOTE: We subtract by one here to retrieve the latest already-processed index.
+				const auto latest_processed_index = (i + (look_ahead_processed - 1));
+
+				auto& latest_processed_segment = self.segments[latest_processed_index];
+
+				result =
+				{
+					std::move(look_ahead_operation_result),
+
+					latest_processed_segment.operation
+				};
+
 				segments_processed += look_ahead_processed;
 
-				// NOTE: We subtract one here, since this loop implicitly
-				// increments by one after each iteration.
-				i += (look_ahead_processed - 1);
+				// NOTE: We only need `i` to point to the current index since
+				// this loop automatically increments by one after each iteration.
+				i = latest_processed_index;
 			}
 		}
 
@@ -442,9 +480,19 @@ namespace engine
 		return get_indirect_value_or_ref(value);
 	}
 
+	MetaAny MetaValueOperation::Segment::get(const MetaEvaluationContext& context) const
+	{
+		return get_indirect_value_or_ref(value, context);
+	}
+
 	MetaAny MetaValueOperation::Segment::get(const MetaAny& instance) const
 	{
 		return get_indirect_value_or_ref(value, instance);
+	}
+
+	MetaAny MetaValueOperation::Segment::get(const MetaAny& instance, const MetaEvaluationContext& context) const
+	{
+		return get_indirect_value_or_ref(value, instance, context);
 	}
 
 	MetaAny MetaValueOperation::Segment::get(const MetaAny& instance, Registry& registry, Entity entity) const

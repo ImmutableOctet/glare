@@ -27,8 +27,10 @@ namespace engine
 				Operation operation; // std::optional<Operation>
 
 				MetaAny get() const;
+				MetaAny get(const MetaEvaluationContext& context) const;
 				
 				MetaAny get(const MetaAny& instance) const;
+				MetaAny get(const MetaAny& instance, const MetaEvaluationContext& context) const;
 				MetaAny get(const MetaAny& instance, Registry& registry, Entity entity) const;
 				MetaAny get(const MetaAny& instance, Registry& registry, Entity entity, const MetaEvaluationContext& context) const;
 
@@ -55,8 +57,10 @@ namespace engine
 			get_operation(std::string_view symbol, bool symbol_is_leading=false, bool resolve_non_standard_symbols=false);
 
 			MetaAny get() const;
+			MetaAny get(const MetaEvaluationContext& context) const;
 			
 			MetaAny get(const MetaAny& instance) const;
+			MetaAny get(const MetaAny& instance, const MetaEvaluationContext& context) const;
 			MetaAny get(const MetaAny& instance, Registry& registry, Entity entity) const;
 			MetaAny get(const MetaAny& instance, Registry& registry, Entity entity, const MetaEvaluationContext& context) const;
 
@@ -65,6 +69,9 @@ namespace engine
 
 			// Assigns the object produced (from evaluating this operation) to the `value` specified.
 			MetaAny set(MetaAny& value);
+
+			// Assigns the object produced (from evaluating this operation) to the `value` specified.
+			MetaAny set(MetaAny& value, const MetaEvaluationContext& context);
 
 			// Assigns the object produced (from evaluating this operation) to the `value` specified.
 			MetaAny set(MetaAny& value, Registry& registry, Entity entity);
