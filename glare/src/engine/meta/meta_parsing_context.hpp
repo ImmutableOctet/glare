@@ -17,8 +17,8 @@ namespace engine
 				variable_context(variable_context)
 			{}
 
-			inline MetaParsingContext(const MetaTypeResolutionContext* type_context)
-				: MetaParsingContext(type_context, nullptr) {}
+			//inline MetaParsingContext(const MetaTypeResolutionContext* type_context)
+			//	: MetaParsingContext(type_context, nullptr) {}
 
 			inline MetaParsingContext(MetaVariableContext* variable_context)
 				: MetaParsingContext(nullptr, variable_context) {}
