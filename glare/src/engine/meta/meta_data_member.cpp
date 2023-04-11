@@ -1,6 +1,9 @@
 #include "meta_data_member.hpp"
-#include "meta.hpp"
+
 #include "hash.hpp"
+#include "data_member.hpp"
+#include "indirection.hpp"
+//#include "function.hpp"
 
 namespace engine
 {
@@ -63,22 +66,39 @@ namespace engine
 			return {};
 		}
 
-		auto type = instance.type();
+		auto instance_type = instance.type();
 
-		if (!type)
+		if (!instance_type)
 		{
 			return {};
 		}
 
 		if (this->type_id)
 		{
-			if (type.id() != this->type_id)
+			const auto instance_type_id = instance_type.id();
+
+			if (instance_type_id != this->type_id)
 			{
+				/*
+				// Disabled for now; should be handled prior to calling this routine.
+				if (auto resolved_intended_type = get_underlying_or_direct_type(this->get_type()))
+				{
+					if (instance_type_id != resolved_intended_type.id())
+					{
+						return {};
+					}
+				}
+				else
+				{
+					return {};
+				}
+				*/
+
 				return {};
 			}
 		}
 
-		auto data_member = resolve_data_member_by_id(type, true, data_member_id);
+		auto data_member = resolve_data_member_by_id(instance_type, true, data_member_id);
 
 		if (!data_member)
 		{
