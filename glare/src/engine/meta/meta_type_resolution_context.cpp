@@ -1,7 +1,11 @@
 #include "meta_type_resolution_context.hpp"
 #include "meta_parsing_instructions.hpp"
 
-#include "meta.hpp"
+#include "hash.hpp"
+#include "short_name.hpp"
+
+#include <util/string.hpp>
+//#include <util/parse.hpp>
 
 // Debugging related:
 #include <util/log.hpp>
@@ -20,6 +24,7 @@ namespace engine
     static void generate_simplified_type_names
 	(
 		Callback&& callback,
+
 		std::string_view prefix,
 		std::string_view suffix,
 		std::string_view opt_snake_prefix={}
@@ -95,6 +100,7 @@ namespace engine
 	{
 		MetaTypeResolutionContext context;
 
+		// Components:
 		generate_aliases
 		(
 			context.component_aliases,
@@ -107,6 +113,7 @@ namespace engine
 			//, "entity"
 		);
 
+		// Commands:
 		generate_aliases
 		(
 			context.command_aliases,
@@ -121,7 +128,8 @@ namespace engine
 			// (e.g. `entity_thread_resume` becomes `thread_resume`)
 			"entity"
 		);
-
+		
+		// Instructions:
 		auto& instructions = context.instruction_aliases;
 
 		generate_aliases
@@ -150,6 +158,23 @@ namespace engine
 
 		// Already handled through different instruction type.
 		//instructions["sleep"]   = instructions["yield"];
+
+		// Systems:
+		auto& systems = context.system_aliases;
+
+		generate_aliases
+		(
+			systems,
+			
+			{},
+			"System",
+
+			standard_mapping,
+			reverse_mapping
+			//, "entity"
+		);
+
+		systems["debug"] = systems["DebugListener"];
 
 		return context;
 	}
@@ -245,7 +270,15 @@ namespace engine
 		return {};
 	}
 
-	MetaType MetaTypeResolutionContext::get_type(std::string_view name, bool resolve_components, bool resolve_commands, bool resolve_instructions) const
+	MetaType MetaTypeResolutionContext::get_type
+	(
+		std::string_view name,
+		
+		bool resolve_components,
+		bool resolve_commands,
+		bool resolve_instructions,
+		bool resolve_systems
+	) const
 	{
 		if (resolve_instructions)
 		{
@@ -271,12 +304,38 @@ namespace engine
 			}
 		}
 
+		if (resolve_systems)
+		{
+			if (auto as_system = get_system_type(name, true))
+			{
+				return as_system;
+			}
+		}
+
 		return get_type_raw(name);
 	}
 
-	MetaTypeID MetaTypeResolutionContext::get_type_id(std::string_view name, bool resolve_components, bool resolve_commands, bool resolve_instructions) const
+	MetaTypeID MetaTypeResolutionContext::get_type_id
+	(
+		std::string_view name,
+
+		bool resolve_components,
+		bool resolve_commands,
+		bool resolve_instructions,
+		bool resolve_systems
+	) const
 	{
-		if (auto type = get_type(name, resolve_components, resolve_commands, resolve_instructions))
+		auto type = get_type
+		(
+			name,
+			
+			resolve_components,
+			resolve_commands,
+			resolve_instructions,
+			resolve_systems
+		);
+
+		if (type)
 		{
 			return type.id();
 		}
@@ -292,7 +351,8 @@ namespace engine
 			
 			instructions.resolve_component_aliases,
 			instructions.resolve_command_aliases,
-			instructions.resolve_instruction_aliases
+			instructions.resolve_instruction_aliases,
+			instructions.resolve_system_references
 		);
 	}
 
@@ -304,7 +364,8 @@ namespace engine
 
 			instructions.resolve_component_aliases,
 			instructions.resolve_command_aliases,
-			instructions.resolve_instruction_aliases
+			instructions.resolve_instruction_aliases,
+			instructions.resolve_system_references
 		);
 	}
 }
