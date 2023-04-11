@@ -30,6 +30,15 @@ namespace engine
     // Returns true if the the type referenced by `type_id` has a reflected indirection function.
     bool type_has_indirection(MetaTypeID type_id);
 
+    // Returns true if the `type` specified is a 'system' type.
+    bool type_is_system(const MetaType& type);
+
+    // Returns true if the type referenced by the `type_id` specified is a 'system' type.
+    bool type_is_system(const MetaTypeID type_id);
+
+    // Returns true if the `value` specified references a 'system'.
+    bool value_is_system(const MetaAny& value);
+
     // Returns a new `MetaAny` instance if `value` could supply an enclosed (indirect) value.
     // NOTE: Recursion.
     MetaAny try_get_underlying_value(const MetaAny& value);
@@ -45,6 +54,12 @@ namespace engine
 
     // Attempts to retrieve an inner `MetaType` from `type_reference_value`, if it holds one (or the ID of one) internally.
     MetaType try_get_underlying_type(const MetaAny& type_reference_value);
+
+    // Attempts to retrieve an inner (implicit) `MetaType` from `type`.
+    MetaType try_get_underlying_type(const MetaType& type);
+
+    // Attempts to retrieve an inner `MetaType` from `type`, returning a copy of `type` if one does not exist.
+    MetaType get_underlying_or_direct_type(const MetaType& type);
 
     // Attempts to retrieve an inner `MetaType` from `direct_or_indirect_value`.
     // This routine will fallback to the type of `direct_or_indirect_value` if
@@ -62,7 +77,14 @@ namespace engine
     >
     std::enable_if_t
     <
-        (std::is_same_v<std::decay_t<AccessorType>, MetaAny> && !std::is_same_v<std::decay_t<ValueType>, Registry>),
+        (
+            (std::is_same_v<std::decay_t<AccessorType>, MetaAny>)
+            &&
+            (!std::is_same_v<std::decay_t<ValueType>, Registry>)
+            &&
+            (!std::is_same_v<std::decay_t<ValueType>, MetaEvaluationContext>)
+        ),
+
         MetaAny
     >
     try_get_underlying_value(AccessorType&& accessor, ValueType&& from, Args&&... args)
@@ -417,25 +439,31 @@ namespace engine
 			{
 				if (auto return_type = target_fn.ret())
 				{
-					return return_type;
+					return get_underlying_or_direct_type(return_type);
 				}
 			}
 		}
         else if constexpr (std::is_same_v<reference_t, MetaDataMember> || std::is_same_v<reference_t, IndirectMetaDataMember>)
         {
-            return exact_type_reference_value.get_member_type();
+            return get_underlying_or_direct_type(exact_type_reference_value.get_member_type());
         }
 		else
 		{
             if constexpr (has_method_get_type_v<reference_t, MetaType>)
             {
-                return exact_type_reference_value.get_type();
+                return get_underlying_or_direct_type(exact_type_reference_value.get_type());
             }
             else if constexpr (has_method_get_type_v<reference_t, MetaTypeID>)
             {
                 const auto type_id = exact_type_reference_value.get_type();
 
-                return resolve(type_id);
+                return get_underlying_or_direct_type(resolve(type_id));
+            }
+            else if constexpr (util::is_specialization_v<reference_t, std::optional>)
+            {
+                using value_type = typename reference_t::value_type;
+
+                return get_underlying_or_direct_type(resolve<value_type>());
             }
 		}
 
