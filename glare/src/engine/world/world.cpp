@@ -174,7 +174,14 @@ namespace engine
 		// unsubscribe(...);
 	}
 
-	Entity World::load(const filesystem::path& root_path, const std::string& json_file, Entity parent)
+	Entity World::load
+	(
+		const filesystem::path& root_path,
+		std::string_view json_file,
+		Entity parent,
+
+		SystemManagerInterface* opt_system_manager
+	)
 	{
 		auto map_data_path = (root_path / json_file);
 		
@@ -188,9 +195,16 @@ namespace engine
 
 			print("Loading...");
 
-			auto map = Stage::Load(*this, root_path, map_data, parent); // { .geometry = false }
+			auto map = Stage::Load
+			(
+				*this,
+				root_path,
+				map_data,
+				parent,
+				opt_system_manager
+			); // { .geometry = false }
 
-			event<OnStageLoaded>(map, root_path);
+			event<OnStageLoaded>(map, root_path); // map_data_path
 
 			return map;
 		}

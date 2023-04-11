@@ -38,6 +38,7 @@ namespace graphics
 
 namespace engine
 {
+	class SystemManagerInterface;
 	class ResourceManager;
 	class Config;
 
@@ -110,7 +111,14 @@ namespace engine
 				return *this;
 			}
 
-			Entity load(const filesystem::path& root_path, const std::string& json_file="map.json", Entity parent=null);
+			Entity load
+			(
+				const filesystem::path& root_path,
+				const std::string_view json_file="map.json",
+				Entity parent=null,
+
+				SystemManagerInterface* opt_system_manager=nullptr
+			);
 
 			void update(app::Milliseconds time);
 			void fixed_update(app::Milliseconds time);
