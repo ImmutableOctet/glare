@@ -7,12 +7,11 @@ namespace engine
 	//class World;
 	class ResourceManager;
 
-	//template <typename ServiceType>
+	class Service;
+	class SystemManagerInterface;
+
 	struct EntityConstructionContext
 	{
-		//using ServiceType = World;
-		//ServiceType& service;
-
 		Registry& registry;
 		ResourceManager& resource_manager;
 
@@ -23,5 +22,8 @@ namespace engine
 		// If this field is left as `null`, a factory will
 		// generate an appropriate Entity instance.
 		Entity opt_entity_out = null;
+
+		Service* opt_service = nullptr;
+		SystemManagerInterface* opt_system_manager = nullptr;
 	};
 }
