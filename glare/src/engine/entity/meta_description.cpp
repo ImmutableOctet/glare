@@ -1,8 +1,6 @@
 #include "meta_description.hpp"
 #include "entity_descriptor.hpp"
 
-//#include <engine/meta/meta.hpp>
-
 namespace engine
 {
 	const MetaTypeDescriptor* MetaDescription::get_definition(const EntityDescriptor& descriptor, MetaType type) const

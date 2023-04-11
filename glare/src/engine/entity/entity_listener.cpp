@@ -12,7 +12,7 @@
 #include <engine/entity/entity_state.hpp>
 #include <engine/timer.hpp>
 
-#include <engine/meta/meta.hpp>
+#include <engine/meta/data_member.hpp>
 #include <engine/meta/events.hpp>
 
 #include <engine/components/player_component.hpp>
@@ -31,8 +31,8 @@
 
 namespace engine
 {
-	EntityListener::EntityListener(Service* service)
-		: MetaEventListener(service) {}
+	EntityListener::EntityListener(Service* service, SystemManagerInterface* system_manager)
+		: MetaEventListener(service, system_manager) {}
 
 	bool EntityListener::add_entity(Entity entity)
 	{
@@ -215,6 +215,13 @@ namespace engine
 	{
 		using namespace engine::instructions;
 
+		auto evaluation_context = MetaEvaluationContext
+		{
+			.variable_context = {},
+			.service = service,
+			.system_manager = system_manager
+		};
+
 		if (const auto state_comp = registry.try_get<StateComponent>(entity))
 		{
 			const auto& state_index = state_comp->state_index;
@@ -228,7 +235,8 @@ namespace engine
 				(
 					registry, entity, descriptor,
 					*rules,
-					event_instance
+					event_instance,
+					evaluation_context
 				);
 			}
 		}
@@ -265,11 +273,11 @@ namespace engine
 				(
 					yield_condition,
 
-					[this, &registry, entity, &descriptor, &event_instance, &condition_reference_count, &yield_condition_met](const auto& condition)
+					[this, &registry, entity, &descriptor, &event_instance, &evaluation_context, &condition_reference_count, &yield_condition_met](const auto& condition)
 					{
 						if (condition.has_type_compatible(descriptor, this->type_id))
 						{
-							yield_condition_met = (yield_condition_met || condition.condition_met(event_instance, registry, entity));
+							yield_condition_met = (yield_condition_met || condition.condition_met(event_instance, registry, entity, evaluation_context));
 
 							condition_reference_count++;
 						}
@@ -353,7 +361,8 @@ namespace engine
 		Registry& registry, Entity entity,
 		const EntityDescriptor& descriptor,
 		const EntityStateRuleCollection& rules,
-		const MetaAny& event_instance
+		const MetaAny& event_instance,
+		const MetaEvaluationContext& evaluation_context
 	)
 	{
 		for (const auto& rule_entry : rules)
@@ -363,7 +372,7 @@ namespace engine
 			// Resolve trigger condition status:
 			if (condition)
 			{
-				if (!EventTriggerConditionType::get_condition_status(condition->get(descriptor), event_instance, registry, entity))
+				if (!EventTriggerConditionType::get_condition_status(condition->get(descriptor), event_instance, registry, entity, evaluation_context))
 				{
 					// Condition has not been met; continue to next rule.
 					continue;
@@ -383,7 +392,7 @@ namespace engine
 				rule_entry.action,
 				entity, rule_entry.target,
 				delay,
-				{},
+				evaluation_context,
 				event_instance
 			);
 		}

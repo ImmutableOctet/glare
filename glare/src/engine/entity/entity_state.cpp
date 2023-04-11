@@ -2,7 +2,11 @@
 #include "entity_descriptor.hpp"
 #include "entity_factory.hpp"
 
-#include <engine/meta/meta.hpp>
+#include <engine/meta/types.hpp>
+#include <engine/meta/hash.hpp>
+#include <engine/meta/component.hpp>
+//#include <engine/meta/function.hpp>
+
 #include <engine/meta/meta_type_resolution_context.hpp>
 
 #include "components/state_component.hpp"
@@ -25,7 +29,7 @@ namespace engine
 		const auto result = storage.store(registry, entity, components);
 
 		// Ensure the correct number of components were stored.
-		assert(result == intended_count);
+		//assert(result == intended_count);
 
 		return container;
 	}
@@ -330,11 +334,11 @@ namespace engine
 
 			if (component.forces_field_assignment() || components.persist.get_definition(descriptor, type_id))
 			{
-				EntityFactory::update_component_fields(registry, entity, component);
+				update_component_fields(registry, entity, component);
 			}
 			else
 			{
-				EntityFactory::emplace_component(registry, entity, component);
+				emplace_component(registry, entity, component);
 			}
 		}
 	}
@@ -362,9 +366,9 @@ namespace engine
 		{
 			const auto& component = component_entry.get(descriptor);
 
-			if (!EntityFactory::update_component_fields(registry, entity, component, value_assignment))
+			if (!update_component_fields(registry, entity, component, value_assignment))
 			{
-				EntityFactory::emplace_component(registry, entity, component);
+				emplace_component(registry, entity, component);
 			}
 		}
 	}

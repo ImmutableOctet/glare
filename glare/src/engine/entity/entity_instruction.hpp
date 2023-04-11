@@ -304,7 +304,7 @@ namespace engine
 		public:
 			using InstructionType = instructions::Instruction;
 
-			EntityInstruction()
+			inline EntityInstruction()
 				: value(instructions::NoOp {}) {}
 
 			inline EntityInstruction(InstructionType&& value)

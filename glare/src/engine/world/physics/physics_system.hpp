@@ -82,14 +82,18 @@ namespace engine
 			// Performs a collision cast (convex, ray, etc.) from `obj`'s current position to `destination`.
 			// This is a utility function for handling dispatch to different casting algorithms.
 			// If you know exactly which type of cast you need to perform, use the free-function casting API instead.
+			template <typename SelfType>
 			std::optional<CollisionCastResult> cast_to
 			(
-				const RayCastSelf& obj,
+				const SelfType& obj,
 				const math::Vector& destination,
 
 				std::optional<CollisionGroup> filter_group=std::nullopt,
 				std::optional<CollisionGroup> filter_mask=std::nullopt
-			);
+			)
+			{
+				return cast_to_obj_impl(obj, destination, filter_group, filter_mask);
+			}
 
 			// Explicit overload for `CollisionComponent`, shared for multiple visit paths.
 			// See main `RayCastSelf` overload for details.
@@ -98,8 +102,9 @@ namespace engine
 				const CollisionComponent& collision,
 				const math::Vector& destination,
 
-				std::optional<CollisionGroup> filter_group = std::nullopt,
-				std::optional<CollisionGroup> filter_mask = std::nullopt,
+				std::optional<CollisionGroup> filter_group=std::nullopt,
+				std::optional<CollisionGroup> filter_mask=std::nullopt,
+
 				bool check_kinematic_resolution=false
 			);
 
@@ -110,6 +115,15 @@ namespace engine
 			// TODO: Change this to a dedicated field.
 			inline constexpr auto get_max_ray_distance() const { return 2000.0f; }
 		protected:
+			std::optional<CollisionCastResult> cast_to_obj_impl
+			(
+				const impl::RayCastSelf& obj,
+				const math::Vector& destination,
+
+				std::optional<CollisionGroup> filter_group=std::nullopt,
+				std::optional<CollisionGroup> filter_mask=std::nullopt
+			);
+
 			void update_collision_world(float delta);
 
 			void handle_transform_resolution

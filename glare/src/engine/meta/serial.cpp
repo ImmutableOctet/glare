@@ -1,5 +1,11 @@
 #include "serial.hpp"
-#include "meta.hpp"
+
+#include "hash.hpp"
+#include "function.hpp"
+#include "indirection.hpp"
+#include "data_member.hpp"
+#include "cast.hpp"
+
 #include "meta_type_descriptor.hpp"
 #include "meta_type_resolution_context.hpp"
 #include "meta_value_operation.hpp"
@@ -10,9 +16,11 @@
 #include "meta_parsing_context.hpp"
 #include "meta_variable_context.hpp"
 #include "meta_variable_target.hpp"
-#include "shared_storage_interface.hpp"
+
 #include "indirect_meta_any.hpp"
 #include "indirect_meta_variable_target.hpp"
+
+#include "shared_storage_interface.hpp"
 
 #include <engine/types.hpp>
 
@@ -948,9 +956,16 @@ namespace engine
 				{
 					if ((is_command) && (symbol_used_as_type || (type && command_name_or_value.empty())))
 					{
-						if (auto result = construct_type(content))
+						if (type_is_system(type))
 						{
-							return result;
+							return enqueue(MetaTypeReference { type.id() }); // replace
+						}
+						else
+						{
+							if (auto result = construct_type(content))
+							{
+								return result;
+							}
 						}
 					}
 				}
@@ -958,6 +973,23 @@ namespace engine
 				if (symbol_used_as_type)
 				{
 					return true;
+				}
+				
+				// NOTE: 'System' references are handled here, as opposed to the initial type-resolution
+				// phase to avoid complexity when handling sub-types of 'system' types.
+				// 
+				// If the system type is used as a standalone reference, it should be caught by
+				// the fallback `MetaTypeReference` control-path found below.
+				if (instructions.resolve_system_references)
+				{
+					if ((type) && (type != initial_type) && (output.empty()) && (type_is_system(type)))
+					{
+						// Reached the first non-type symbol and the type thus far is a 'system' reference.
+						// Enqueue the system reference before doing anything else, allowing other segments to reference it.
+						enqueue(MetaTypeReference { type.id() });
+
+						// Continue processing as usual.
+					}
 				}
 
 				if (!symbol.empty())
@@ -1180,19 +1212,24 @@ namespace engine
 				{
 					if (output.empty())
 					{
-						if ((instructions.fallback_to_component_reference) && (allow_component_fallback))
+						if (is_last_symbol && !is_command)
 						{
-							if (is_last_symbol && !is_command)
+							if (auto as_type = get_as_type())
 							{
-								/*
-								if (auto result = meta_any_from_string_execute_string_command("component"_hs, symbol, symbol, instructions.allow_entity_indirection, instructions.context, instructions.storage); std::get<0>(result))
+								if (instructions.resolve_system_references && type_is_system(as_type)) // && allow_system_references
 								{
-									return enqueue(std::move(std::get<0>(result))); // replace
+									return enqueue(MetaTypeReference { as_type.id() });
 								}
-								*/
 
-								if (auto as_type = get_as_type())
+								if (instructions.fallback_to_component_reference && allow_component_fallback)
 								{
+									/*
+									if (auto result = meta_any_from_string_execute_string_command("component"_hs, symbol, symbol, instructions.allow_entity_indirection, instructions.context, instructions.storage); std::get<0>(result))
+									{
+										return enqueue(std::move(std::get<0>(result))); // replace
+									}
+									*/
+
 									return enqueue(MetaTypeReference { as_type.id() });
 								}
 							}
@@ -1835,7 +1872,7 @@ namespace engine
 
 				while (type_cast_operator_offset < current_expr.length())
 				{
-					const auto type_cast_operator_position = current_expr.find(type_cast_operator, type_cast_operator_offset);
+					const auto type_cast_operator_position = util::find_singular(current_expr, type_cast_operator, type_cast_operator_offset);
 
 					if (type_cast_operator_position == std::string_view::npos)
 					{
@@ -1862,16 +1899,6 @@ namespace engine
 					if ((projected_operator_position != std::string_view::npos) && (type_cast_operator_position >= projected_operator_position))
 					{
 						break;
-					}
-
-					// This is a workaround for conflicts between `:` (cast) and `::` (access) operators.
-					if (current_expr[type_cast_operator_position + 1] == ':')
-					{
-						// Since we've concluded that this is a false-positive
-						// (i.e. `::` operator), continue searching for a type-cast operator.
-						type_cast_operator_offset = (type_cast_operator_position + 2); // + std::string_view("::").length();
-
-						continue;
 					}
 
 					const auto cast_type_area_raw = current_expr.substr((type_cast_operator_position + type_cast_operator.length()));
@@ -1959,11 +1986,15 @@ namespace engine
 				{
 					if (!cast_type_raw.empty())
 					{
-						remainder = current_expr.substr(current_expr_cutoff);
+						//remainder = current_expr.substr(current_expr_cutoff);
+
+						const auto cast_type_raw_trailing_offset = ((cast_type_raw.data() + cast_type_raw.length()) - current_expr.data());
+
+						remainder = current_expr.substr(cast_type_raw_trailing_offset);
 					}
-					else if ((scope_end + 1) < current_expr.length())
+					else if (const auto after_scope_end = (scope_end + 1); after_scope_end < current_expr.length())
 					{
-						remainder = current_expr.substr((scope_end + 1));
+						remainder = current_expr.substr(after_scope_end);
 					}
 					else
 					{
@@ -2152,10 +2183,17 @@ namespace engine
 										{
 											if (auto underlying_type = try_get_underlying_type(remote_value))
 											{
-												cast_type = underlying_type;
-												owns_cast_type = true;
-
-												//type = underlying_type;
+												// Only attempt to cast using the underlying type if there is no user-supplied
+												// cast-type and there is another term involved in this expression.
+												if ((!cast_type) && ((prev_operator) || (current_operator) || (!operation_out.empty()))) // (!cast_type) && (other_term_involved)
+												{
+													cast_type = underlying_type;
+													owns_cast_type = true;
+												}
+												else
+												{
+													type = underlying_type;
+												}
 											}
 										}
 									}
@@ -2165,14 +2203,21 @@ namespace engine
 							{
 								if (auto underlying_type = try_get_underlying_type(current_value))
 								{
-									cast_type = underlying_type;
-									owns_cast_type = true;
-
-									//type = underlying_type;
+									// Only attempt to cast using the underlying type if there is no user-supplied
+									// cast-type and there is another term involved in this expression.
+									if ((!cast_type) && ((prev_operator) || (current_operator) || (!operation_out.empty()))) // (!cast_type) && (other_term_involved)
+									{
+										cast_type = underlying_type;
+										owns_cast_type = true;
+									}
+									else
+									{
+										type = underlying_type;
+									}
 								}
 							}
 						}
-						else  // if (!cast_type)
+						else
 						{
 							type = current_value_type;
 						}

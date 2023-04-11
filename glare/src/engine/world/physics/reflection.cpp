@@ -2,6 +2,8 @@
 
 #include "reflection.hpp"
 #include "types.hpp"
+#include "physics_system.hpp"
+#include "collision_cast.hpp"
 #include "collision_shape_description.hpp"
 #include "kinematic_resolution_config.hpp"
 
@@ -16,6 +18,45 @@
 
 namespace engine
 {
+	template <>
+	void reflect<CollisionCastResult>()
+	{
+		using native_t = decltype(CollisionCastResult::native);
+
+		engine_meta_type<CollisionCastResult>()
+			.data<&CollisionCastResult::cast_entity>("cast_entity"_hs)
+			.data<&CollisionCastResult::hit_entity>("hit_entity"_hs)
+			.data<&CollisionCastResult::hit_position>("hit_position"_hs)
+			.data<&CollisionCastResult::hit_normal>("hit_normal"_hs)
+			.data<&CollisionCastResult::closest_hit_fraction>("closest_hit_fraction"_hs)
+
+			.data<&CollisionCastResult::native>("native"_hs)
+
+			//.data<&CollisionCastResult::hit_entity>("entity"_hs) // cast_entity
+		;
+
+		engine_meta_type<native_t>()
+			.data<&native_t::cast_object>("cast_object"_hs)
+			.data<&native_t::hit_object>("hit_object"_hs)
+		;
+	}
+
+	template <>
+	void reflect<ConvexCastResult>()
+	{
+		engine_meta_type<ConvexCastResult>()
+			.base<CollisionCastResult>()
+		;
+	}
+
+	template <>
+	void reflect<RayCastResult>()
+	{
+		engine_meta_type<RayCastResult>()
+			.base<CollisionCastResult>()
+		;
+	}
+
 	template <>
 	void reflect<Ground>()
 	{
@@ -254,8 +295,97 @@ namespace engine
 	template <>
 	void reflect<PhysicsSystem>()
 	{
+		engine_system_type<PhysicsSystem>()
+			.func<&PhysicsSystem::cast_to<btCollisionObject>>("cast_to"_hs)
+			.func<&PhysicsSystem::cast_to<Entity>>("cast_to"_hs)
+			
+			//.func<&PhysicsSystem::cast_to<CollisionComponent>>("cast_to"_hs)
+
+			.func
+			<
+				static_cast
+				<
+					std::optional<CollisionCastResult> (PhysicsSystem::*)
+					(
+						const CollisionComponent&, const math::Vector&,
+						std::optional<CollisionGroup>, std::optional<CollisionGroup>,
+						bool
+					)
+				>(&PhysicsSystem::cast_to)
+			>("cast_to"_hs)
+
+			.func<&convex_cast_to<CollisionComponent>>("convex_cast_to"_hs)
+			.func<&convex_cast_to<Entity>>("convex_cast_to"_hs)
+			.func<&convex_cast_to<CollisionObjectAndConvexShape>>("convex_cast_to"_hs)
+			
+			.func<&ray_cast<btCollisionObject>>("ray_cast"_hs)
+			.func<&ray_cast<CollisionComponent>>("ray_cast"_hs)
+			.func<&ray_cast<Entity>>("ray_cast"_hs)
+
+			.func
+			<
+				static_cast
+				<
+					std::optional<RayCastResult> (*)
+					(
+						PhysicsSystem&,
+
+						const math::Vector&,
+						const math::Vector&,
+
+						std::optional<CollisionGroup>,
+						std::optional<CollisionGroup>
+					)
+				>
+				(&ray_cast)
+			>("ray_cast"_hs)
+			
+			.func<&directional_ray_cast<btCollisionObject>>("directional_ray_cast"_hs)
+			.func<&directional_ray_cast<CollisionComponent>>("directional_ray_cast"_hs)
+			.func<&directional_ray_cast<Entity>>("directional_ray_cast"_hs)
+
+			.func
+			<
+				static_cast
+				<
+					std::optional<RayCastResult> (*)
+					(
+						PhysicsSystem&,
+
+						const math::Vector&,
+						const math::Vector&,
+
+						std::optional<float>,
+
+						std::optional<CollisionGroup>,
+						std::optional<CollisionGroup>
+					)
+				>
+				(&directional_ray_cast)
+			>("directional_ray_cast"_hs)
+			
+			.func<&ray_cast_to<btCollisionObject>>("ray_cast_to"_hs)
+			.func<&ray_cast_to<CollisionComponent>>("ray_cast_to"_hs)
+			.func<&ray_cast_to<Entity>>("ray_cast_to"_hs)
+
+			.func<&directional_ray_cast_to<btCollisionObject>>("directional_ray_cast_to"_hs)
+			.func<&directional_ray_cast_to<CollisionComponent>>("directional_ray_cast_to"_hs)
+			.func<&directional_ray_cast_to<Entity>>("directional_ray_cast_to"_hs)
+
+			.func<&convex_cast>("convex_cast"_hs)
+
+			.data<nullptr, &PhysicsSystem::get_collision_world>("collision_world"_hs)
+			.data<nullptr, &PhysicsSystem::get_broadphase>("broadphase"_hs)
+			.data<nullptr, &PhysicsSystem::get_collision_dispatcher>("collision_dispatcher"_hs)
+			.data<nullptr, &PhysicsSystem::get_max_ray_distance>("max_ray_distance"_hs)
+		;
+
 		reflect<CollisionShapePrimitive>();
 		reflect<CollisionCastMethod>();
+
+		reflect<CollisionCastResult>();
+		reflect<ConvexCastResult>();
+		reflect<RayCastResult>();
 
 		reflect<CollisionShapeDescription>();
 		reflect<KinematicResolutionConfig>();

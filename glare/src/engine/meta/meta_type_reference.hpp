@@ -16,11 +16,18 @@ namespace engine
 			// The identifier for the type of the component.
 			MetaTypeID type_id;
 
+			// Attempts to default construct the type referenced by `type_id`. (Currently disabled)
+			//MetaAny get() const;
+
 			// Returns a reference to `instance` if `instance` has the same type identified by `type_id`.
 			MetaAny get(const MetaAny& instance) const;
 
 			// Retrieves an opaque reference to a component attached to `entity` with the type identified by `type_id`.
 			MetaAny get(Registry& registry, Entity entity) const;
+
+			// Attempts to retrieve an opaque reference to a component attached to `entity` with the type identified by `type_id`.
+			// If this fails, this function will attempt to retrieve a value from `context` instead.
+			MetaAny get(Registry& registry, Entity entity, const MetaEvaluationContext& context) const;
 
 			// Retrieves an opaque reference to a component attached to `target` with the type identified by `type_id`.
 			MetaAny get(Entity target, Registry& registry, Entity context_entity) const;
@@ -34,6 +41,10 @@ namespace engine
 			// If `instance` is the desired component-type (as identified by `type_id`), this will return a reference to `instance`.
 			// If `instance` is an `Entity` value, this will attempt to retrieve an attached component (identified by `type_id`) from that entity.
 			MetaAny get(const MetaAny& instance, Registry& registry, Entity context_entity, const MetaEvaluationContext& context) const;
+
+			// Attempts to retrieve a value from `context` matching the type referenced by `type_id`.
+			// (Useful for retrieving references to 'system' types)
+			MetaAny get(const MetaEvaluationContext& context) const;
 
 			// Attempts to assign `destination` to `source`, given that `source` and `destination`
 			// exist, and that `destination` has the type identified by `type_id`.
@@ -59,6 +70,8 @@ namespace engine
 
 			bool has_type() const;
 			MetaType get_type() const;
+
+			bool is_system_type() const;
 		private:
 			// NOTE: This function is non-const to avoid transitive const behavior.
 			template <typename SelfType, typename InstanceType, typename ...Args>

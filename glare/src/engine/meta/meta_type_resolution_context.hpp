@@ -26,7 +26,10 @@ namespace engine
 			AliasContainer& container_out,
 			std::string_view prefix,
 			std::string_view suffix,
-			bool standard_mapping=true, bool reverse_mapping=true,
+
+			bool standard_mapping=true,
+			bool reverse_mapping=true,
+			
 			std::string_view opt_snake_prefix={}
 		);
 
@@ -105,8 +108,46 @@ namespace engine
 			return get_type_from_alias(instruction_aliases, instruction_alias);
 		}
 
-		MetaType get_type(std::string_view name, bool resolve_components=true, bool resolve_commands=true, bool resolve_instructions=false) const;
-		MetaTypeID get_type_id(std::string_view name, bool resolve_components=true, bool resolve_commands=true, bool resolve_instructions=false) const;
+		// Attempts to resolve the input as a system alias.
+		// If the input is not a valid system alias, this will return an empty `std::string_view` instance.
+		inline std::string_view resolve_system_alias(std::string_view system_alias) const
+		{
+			return resolve_alias(system_aliases, system_alias);
+		}
+
+		// Attempts to resolve the type referenced by `system_name`.
+		// The `system_name` argument can be either an alias or a regular system name.
+		inline MetaType get_system_type(std::string_view system_name, bool is_known_alias=false) const
+		{
+			return get_type(system_aliases, system_name, is_known_alias);
+		}
+
+		// Attempts to resolve the underlying type for the system alias specified.
+		// If `system_alias` is not a registered alias, this will return an empty/invalid `MetaType` instance.
+		inline MetaType get_system_type_from_alias(std::string_view system_alias) const
+		{
+			return get_type_from_alias(system_aliases, system_alias);
+		}
+
+		MetaType get_type
+		(
+			std::string_view name,
+			
+			bool resolve_components=true,
+			bool resolve_commands=true,
+			bool resolve_instructions=false,
+			bool resolve_systems=true
+		) const;
+
+		MetaTypeID get_type_id
+		(
+			std::string_view name,
+			
+			bool resolve_components=true,
+			bool resolve_commands=true,
+			bool resolve_instructions=false,
+			bool resolve_systems=true
+		) const;
 
 		MetaType get_type(std::string_view name, const MetaParsingInstructions& instructions) const;
 		MetaTypeID get_type_id(std::string_view name, const MetaParsingInstructions& instructions) const;
@@ -119,5 +160,8 @@ namespace engine
 
 		// Map of entity instruction aliases to their underlying type name.
 		AliasContainer instruction_aliases;
+
+		// Map of engine system aliases to their underlying type name.
+		AliasContainer system_aliases;
 	};
 }

@@ -12,8 +12,12 @@
 #include "event_trigger_condition.hpp"
 #include "meta_description.hpp"
 
-#include <engine/meta/meta.hpp>
+//#include <engine/meta/meta.hpp>
+#include <engine/meta/types.hpp>
 #include <engine/meta/serial.hpp>
+#include <engine/meta/data_member.hpp>
+#include <engine/meta/short_name.hpp>
+
 #include <engine/meta/meta_type_descriptor.hpp>
 #include <engine/meta/meta_type_descriptor_flags.hpp>
 #include <engine/meta/meta_type_resolution_context.hpp>
@@ -615,11 +619,12 @@ namespace engine
 					.fallback_to_string       = false,
 					
 					// TODO: Look into direct component comparison.
-					.fallback_to_component_reference = false,
+					.fallback_to_component_reference  = false,
 
-					.allow_member_references  = true, // false
-					.allow_entity_indirection = true,
-					.allow_remote_variable_references = true
+					.allow_member_references          = true, // false
+					.allow_entity_indirection         = true,
+					.allow_remote_variable_references = true,
+					.resolve_command_aliases          = true
 				}
 			);
 
@@ -963,21 +968,28 @@ namespace engine
 		std::string_view state_path_raw, // const std::string&
 		const std::filesystem::path& base_path,
 		const MetaParsingContext& opt_parsing_context,
-		const EntityFactoryContext* opt_factory_context
+		const EntityFactoryContext* opt_factory_context,
+		std::string_view state_name
 	)
 	{
 		auto [state_base_path, state_path, state_data] = load_state_data(state_path_raw, base_path, opt_factory_context);
 
-		auto state_name = resolve_state_name(state_data, state_path);
+		std::string state_name_from_path;
 
-		if (const auto state = process_state(descriptor, states_out, state_data, state_name, state_base_path, opt_parsing_context, opt_factory_context))
+		const EntityState* state_out = nullptr;
+
+		if (state_name.empty())
 		{
-			assert(state->name.has_value());
+			state_name_from_path = resolve_state_name(state_data, state_path);
 
-			return state;
+			state_name = state_name_from_path;
 		}
 
-		return nullptr;
+		state_out = process_state(descriptor, states_out, state_data, state_name, state_base_path, opt_parsing_context, opt_factory_context);
+
+		assert((!state_out) || (state_out->name.has_value()));
+
+		return state_out;
 	}
 
 	std::size_t merge_state_list
@@ -1251,35 +1263,74 @@ namespace engine
 	{
 		std::size_t count = 0;
 
-		util::json_for_each(data, [&base_path, &states_out, opt_parsing_context, opt_factory_context, &descriptor, &count](const util::json& state_entry)
+		switch (data.type())
 		{
-			switch (state_entry.type())
+			case util::json::value_t::object:
 			{
-				case util::json::value_t::object:
+				for (const auto& [state_name, state_entry] : data.items())
 				{
-					// NOTE: Embedded state definitions must have a `name` field.
-					const auto state_name = util::get_value<std::string>(state_entry, "name");
-
-					if (process_state(descriptor, states_out, state_entry, state_name, base_path, opt_parsing_context, opt_factory_context))
+					switch (state_entry.type())
 					{
-						count++;
+						case util::json::value_t::object:
+						{
+							if (process_state(descriptor, states_out, state_entry, state_name, base_path, opt_parsing_context, opt_factory_context))
+							{
+								count++;
+							}
+
+							break;
+						}
+						case util::json::value_t::string:
+						{
+							const auto state_path_raw = state_entry.get<std::string>();
+
+							if (process_state(descriptor, states_out, state_path_raw, base_path, opt_parsing_context, opt_factory_context, state_name))
+							{
+								count++;
+							}
+
+							break;
+						}
 					}
-
-					break;
 				}
-				case util::json::value_t::string:
-				{
-					const auto state_path_raw = state_entry.get<std::string>();
 
-					if (process_state(descriptor, states_out, state_path_raw, base_path, opt_parsing_context, opt_factory_context))
-					{
-						count++;
-					}
-
-					break;
-				}
+				break;
 			}
-		});
+			default:
+			{
+				util::json_for_each(data, [&base_path, &states_out, opt_parsing_context, opt_factory_context, &descriptor, &count](const util::json& state_entry)
+				{
+					switch (state_entry.type())
+					{
+						case util::json::value_t::object:
+						{
+							// NOTE: Embedded state definitions must have a `name` field.
+							const auto state_name = util::get_value<std::string>(state_entry, "name");
+
+							if (process_state(descriptor, states_out, state_entry, state_name, base_path, opt_parsing_context, opt_factory_context))
+							{
+								count++;
+							}
+
+							break;
+						}
+						case util::json::value_t::string:
+						{
+							const auto state_path_raw = state_entry.get<std::string>();
+
+							if (process_state(descriptor, states_out, state_path_raw, base_path, opt_parsing_context, opt_factory_context))
+							{
+								count++;
+							}
+
+							break;
+						}
+					}
+				});
+
+				break;
+			}
+		}
 
 		return count;
 	}
@@ -1348,7 +1399,7 @@ namespace engine
 			true, false
 		);
 
-		assert(components_processed == build_result);
+		//assert(components_processed == build_result);
 
 		return build_result;
 	}
@@ -1377,7 +1428,7 @@ namespace engine
 			true, false
 		);
 
-		assert(components_processed == build_result);
+		//assert(components_processed == build_result);
 
 		return build_result;
 	}
@@ -1571,7 +1622,9 @@ namespace engine
 						.fallback_to_component_reference  = false,
 
 						.allow_member_references          = true,
-						.allow_entity_indirection         = true
+						.allow_entity_indirection         = true,
+
+						.resolve_command_aliases          = true
 					},
 
 					command_arg_offset
@@ -2129,7 +2182,7 @@ namespace engine
 	{
 		if (resolve_external_modules)
 		{
-			// Handles the following: "archetypes", "import", "imports", "modules"
+			// Handles the following: "archetypes", "import", "imports", "modules", "merge", "children"
 			resolve_archetypes(descriptor, data, base_path, opt_parsing_context, opt_factory_context, opt_default_state_index_out);
 		}
 
@@ -2153,6 +2206,7 @@ namespace engine
 
 		if (opt_default_state_index_out)
 		{
+			// Handles the "default_state" key.
 			if (auto default_state_index = get_default_state_index(descriptor, data))
 			{
 				*opt_default_state_index_out = default_state_index;
@@ -2183,7 +2237,7 @@ namespace engine
 			// Ignore these keys:
 
 			// Handled in `resolve_archetypes` routine.
-			"archetypes", "import", "imports", "modules",
+			"archetypes", "import", "imports", "modules", "merge",
 
 			// Handled in this function (see above):
 			"component", "components",

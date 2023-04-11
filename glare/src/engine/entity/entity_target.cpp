@@ -2,7 +2,7 @@
 
 #include "components/instance_component.hpp"
 
-#include <engine/meta/meta.hpp>
+#include <engine/meta/hash.hpp>
 #include <engine/meta/serial.hpp>
 
 #include <engine/components/relationship_component.hpp>

@@ -13,8 +13,11 @@
 #include "behaviors/debug_move_behavior.hpp"
 
 #include <engine/config.hpp>
-#include <engine/meta/meta.hpp>
+
+#include <engine/meta/hash.hpp>
 #include <engine/meta/serial.hpp>
+#include <engine/meta/component.hpp>
+#include <engine/meta/meta_evaluation_context.hpp>
 
 #include <engine/resource_manager/resource_manager.hpp>
 
@@ -45,7 +48,13 @@ namespace engine
 {
 	// Stage:
 	template <typename ...IgnoredKeys>
-	void Stage::process_component_entries(Registry& registry, Entity entity, const util::json& object_data, const MetaParsingContext& parsing_context, IgnoredKeys&&... ignored_keys)
+	void Stage::process_component_entries
+	(
+		Registry& registry, Entity entity, const util::json& object_data,
+		const MetaParsingContext& parsing_context,
+		Service* opt_service, SystemManagerInterface* opt_system_manager,
+		IgnoredKeys&&... ignored_keys
+	)
 	{
 		util::enumerate_map_filtered_ex
 		(
@@ -53,15 +62,22 @@ namespace engine
 
 			[](auto&& value) { return hash(std::forward<decltype(value)>(value)); },
 
-			[&registry, entity, &parsing_context](const auto& component_declaration, const auto& component_content)
+			[&registry, entity, &parsing_context, &opt_service, &opt_system_manager](const auto& component_declaration, const auto& component_content)
 			{
 				auto [component_name, allow_entry_update, constructor_arg_count] = parse_component_declaration(component_declaration, true);
 
 				if (auto component = process_component(component_name, &component_content, constructor_arg_count, {}, parsing_context))
 				{
-					if (!allow_entry_update || !EntityFactory::update_component_fields(registry, entity, *component, true, true))
+					auto evaluation_context = MetaEvaluationContext
 					{
-						EntityFactory::emplace_component(registry, entity, *component);
+						.variable_context = {},
+						.service          = opt_service,
+						.system_manager   = opt_system_manager
+					};
+
+					if (!allow_entry_update || !update_component_fields(registry, entity, *component, true, true, &evaluation_context))
+					{
+						emplace_component(registry, entity, *component, &evaluation_context);
 					}
 				}
 			},
@@ -78,9 +94,17 @@ namespace engine
 		);
 	}
 
-    Entity Stage::Load(World& world, const filesystem::path& root_path, const util::json& data, Entity parent, const Stage::Loader::Config& cfg)
+    Entity Stage::Load
+	(
+		World& world,
+		const filesystem::path& root_path,
+		const util::json& data,
+		Entity parent,
+		SystemManagerInterface* opt_system_manager,
+		const Stage::Loader::Config& cfg
+	)
     {
-		auto state = Stage::Loader(world, root_path, data);
+		auto state = Stage::Loader(world, root_path, data, null, opt_system_manager);
 
 		return state.load(cfg, parent);
     }
@@ -223,11 +247,19 @@ namespace engine
 		return stage;
 	}
 
-	Stage::Loader::Loader(World& world, const filesystem::path& root_path, const util::json& data, Entity stage):
+	Stage::Loader::Loader
+	(
+		World& world,
+		const filesystem::path& root_path,
+		const util::json& data,
+		Entity stage,
+		SystemManagerInterface* system_manager
+	) :
 		world(world),
 		root_path(root_path),
 		data(data),
-		stage(stage)
+		stage(stage),
+		system_manager(system_manager)
 	{}
 
 	bool Stage::Loader::ensure_stage(Entity parent)
@@ -367,12 +399,15 @@ namespace engine
 				},
 
 				{
-					//world,
-
 					.registry = registry,
 					.resource_manager = resource_manager,
 
-					.parent = player_parent
+					.parent = player_parent,
+
+					.opt_entity_out = null,
+
+					.opt_service = &world,
+					.opt_system_manager = system_manager
 				}
 			);
 
@@ -385,8 +420,10 @@ namespace engine
 
 			process_component_entries
 			(
-				registry, player, player_cfg,
+				registry, player,
+				player_cfg,
 				resource_manager.get_parsing_context(),
+				&world, system_manager,
 
 				"character"
 			);
@@ -462,12 +499,15 @@ namespace engine
 						},
 
 						{
-							//world,
-
 							.registry = registry,
 							.resource_manager = resource_manager,
 
-							.parent = stage
+							.parent = stage,
+
+							.opt_entity_out = null,
+
+							.opt_service = &world,
+							.opt_system_manager = system_manager
 						}
 					);
 				}
@@ -478,6 +518,7 @@ namespace engine
 					(
 						registry, entity, obj_cfg,
 						resource_manager.get_parsing_context(),
+						&world, system_manager,
 						"make_active"
 					);
 

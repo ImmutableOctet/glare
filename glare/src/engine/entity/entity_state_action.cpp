@@ -11,7 +11,9 @@
 #include <engine/commands/indirect_component_patch_command.hpp>
 #include <engine/commands/component_replace_command.hpp>
 
-#include <engine/meta/meta.hpp>
+//#include <engine/meta/hash.hpp>
+//#include <engine/meta/function.hpp>
+#include <engine/meta/data_member.hpp>
 
 // Debugging related:
 #include <util/log.hpp>
@@ -159,7 +161,9 @@ namespace engine
 		Entity source, Entity target,
 		std::optional<engine::Timer::Duration> delay,
 		const MetaEvaluationContext& context,
-		const MetaAny& event_instance
+		const MetaAny& event_instance,
+
+		std::optional<EntityStateIndex> state_index
 	)
 	{
 		service.timed_event<EntityThreadSpawnCommand>
@@ -169,7 +173,9 @@ namespace engine
 			source, target,
 			
 			thread_spawn.threads,
-			thread_spawn.restart_existing
+			thread_spawn.restart_existing,
+
+			state_index
 		);
 	}
 

@@ -41,7 +41,7 @@ namespace engine
 
 		// Controls whether references to type data-members
 		// can be encoded into the expression.
-		bool allow_member_references          : 1 = false;
+		bool allow_member_references          : 1 = true; // false;
 
 		// Controls whether entity indirection statements
 		// (targets) can be encoded into the expression.
@@ -107,6 +107,9 @@ namespace engine
 		// Instruction aliases are disabled by default, since they're not usually expected.
 		bool resolve_instruction_aliases      : 1 = false;
 
+		// Controls whether some types can be used as references to systems.
+		bool resolve_system_references        : 1 = true; // false;
+
 		// If enabled, container creation will be deferred to the evaluation phase.
 		// 
 		// NOTE: Deferral of associative containers has the drawback that
@@ -120,6 +123,6 @@ namespace engine
 		// 
 		// Deferral may be elided in the event that immediate evaluation of the container is known to take place.
 		// (This is usually the case with `engine::load`, as opposed to `resolve_meta_any`)
-		bool defer_container_creation : 1 = true; // false;
+		bool defer_container_creation         : 1 = true; // false;
 	};
 }

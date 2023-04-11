@@ -1,5 +1,7 @@
 #include "meta_variable.hpp"
-#include "meta.hpp"
+
+#include "hash.hpp"
+#include "indirection.hpp"
 #include "serial.hpp"
 
 namespace engine

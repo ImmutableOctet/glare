@@ -5,7 +5,11 @@
 
 #include "components/instance_component.hpp"
 
-#include <engine/meta/meta.hpp>
+#include <engine/meta/types.hpp>
+#include <engine/meta/string.hpp>
+#include <engine/meta/hash.hpp>
+#include <engine/meta/data_member.hpp>
+
 #include <engine/meta/meta_data_member.hpp>
 #include <engine/meta/indirect_meta_data_member.hpp>
 #include <engine/meta/apply_operation.hpp>
@@ -435,6 +439,18 @@ namespace engine
 		return compare(current_value, comparison_value, comparison_method);
 	}
 
+	bool EventTriggerSingleCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, const MetaEvaluationContext& context) const
+	{
+		if (!event_instance)
+		{
+			return false;
+		}
+
+		const auto current_value = get_member_value(event_instance, context);
+
+		return compare(current_value, comparison_value, comparison_method);
+	}
+
 	bool EventTriggerSingleCondition::condition_met(const MetaAny& event_instance) const
 	{
 		if (auto underlying = try_get_underlying_value(this->comparison_value))
@@ -443,6 +459,21 @@ namespace engine
 		}
 
 		if (auto result = condition_met(event_instance, this->comparison_value))
+		{
+			return result;
+		}
+
+		return standalone_boolean_result();
+	}
+
+	bool EventTriggerSingleCondition::condition_met(const MetaAny& event_instance, const MetaEvaluationContext& context) const
+	{
+		if (auto underlying = try_get_underlying_value(this->comparison_value, context))
+		{
+			return condition_met(event_instance, underlying, context);
+		}
+
+		if (auto result = condition_met(event_instance, this->comparison_value, context))
 		{
 			return result;
 		}
@@ -550,6 +581,27 @@ namespace engine
 
 	MetaAny EventTriggerSingleCondition::get_member_value(const MetaAny& event_instance, bool resolve_underlying) const
 	{
+		return get_member_value_basic_impl(event_instance, resolve_underlying);
+	}
+
+	MetaAny EventTriggerSingleCondition::get_member_value(const MetaAny& event_instance, const MetaEvaluationContext& context, bool resolve_underlying) const
+	{
+		return get_member_value_basic_impl(event_instance, resolve_underlying, context);
+	}
+
+	MetaAny EventTriggerSingleCondition::get_member_value(const MetaAny& event_instance, Registry& registry, Entity entity, bool resolve_underlying) const
+	{
+		return get_indirect_member_value_impl(event_instance, resolve_underlying, registry, entity);
+	}
+
+	MetaAny EventTriggerSingleCondition::get_member_value(const MetaAny& event_instance, Registry& registry, Entity entity, const MetaEvaluationContext& context, bool resolve_underlying) const
+	{
+		return get_indirect_member_value_impl(event_instance, resolve_underlying, registry, entity, context);
+	}
+
+	template <typename ...Args>
+	MetaAny EventTriggerSingleCondition::get_member_value_basic_impl(const MetaAny& event_instance, bool resolve_underlying, Args&&... args) const
+	{
 		auto type = event_instance.type();
 
 		if (!type)
@@ -579,23 +631,13 @@ namespace engine
 
 		if (value_out && resolve_underlying)
 		{
-			if (auto underlying = try_get_underlying_value(value_out))
+			if (auto underlying = try_get_underlying_value(value_out, std::forward<Args>(args)...))
 			{
 				return underlying;
 			}
 		}
 
 		return value_out;
-	}
-
-	MetaAny EventTriggerSingleCondition::get_member_value(const MetaAny& event_instance, Registry& registry, Entity entity, bool resolve_underlying) const
-	{
-		return get_indirect_member_value_impl(event_instance, resolve_underlying, registry, entity);
-	}
-
-	MetaAny EventTriggerSingleCondition::get_member_value(const MetaAny& event_instance, Registry& registry, Entity entity, const MetaEvaluationContext& context, bool resolve_underlying) const
-	{
-		return get_indirect_member_value_impl(event_instance, resolve_underlying, registry, entity, context);
 	}
 
 	template <typename ...Args>
@@ -674,9 +716,23 @@ namespace engine
 		return false;
 	}
 
+	bool EventTriggerMemberCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, const MetaEvaluationContext& context) const
+	{
+		// Unsupported operation.
+		return false;
+	}
+
 	bool EventTriggerMemberCondition::condition_met(const MetaAny& event_instance) const
 	{
 		//return condition_met(event_instance, this->comparison_value);
+		
+		// Unsupported operation.
+		return false;
+	}
+
+	bool EventTriggerMemberCondition::condition_met(const MetaAny& event_instance, const MetaEvaluationContext& context) const
+	{
+		//return condition_met(event_instance, this->comparison_value, context);
 		
 		// Unsupported operation.
 		return false;
@@ -740,7 +796,19 @@ namespace engine
 		return false;
 	}
 
+	bool EventTriggerCompoundCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, const MetaEvaluationContext& context) const
+	{
+		// Unable to implement due to missing storage to resolve from.
+		return false;
+	}
+
 	bool EventTriggerCompoundCondition::condition_met(const MetaAny& event_instance) const
+	{
+		// Unable to implement due to missing storage to resolve from.
+		return false;
+	}
+
+	bool EventTriggerCompoundCondition::condition_met(const MetaAny& event_instance, const MetaEvaluationContext& context) const
 	{
 		// Unable to implement due to missing storage to resolve from.
 		return false;
@@ -919,7 +987,10 @@ namespace engine
 	bool EventTriggerTrueCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const { return true; }
 	bool EventTriggerTrueCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity, const MetaEvaluationContext& context) const { return true; }
 	bool EventTriggerTrueCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const { return true; }
+	bool EventTriggerTrueCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, const MetaEvaluationContext& context) const { return true; }
 	bool EventTriggerTrueCondition::condition_met(const MetaAny& event_instance) const { return true; }
+	bool EventTriggerTrueCondition::condition_met(const MetaAny& event_instance, const MetaEvaluationContext& context) const { return true; }
+	
 	EventTriggerCompoundMethod EventTriggerTrueCondition::compound_method() const { return EventTriggerCompoundMethod::None; }
 
 	// EventTriggerFalseCondition:
@@ -928,7 +999,10 @@ namespace engine
 	bool EventTriggerFalseCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity) const { return false; }
 	bool EventTriggerFalseCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, Registry& registry, Entity entity, const MetaEvaluationContext& context) const { return false; }
 	bool EventTriggerFalseCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value) const { return false; }
+	bool EventTriggerFalseCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, const MetaEvaluationContext& context) const { return false; }
 	bool EventTriggerFalseCondition::condition_met(const MetaAny& event_instance) const { return false; }
+	bool EventTriggerFalseCondition::condition_met(const MetaAny& event_instance, const MetaEvaluationContext& context) const { return false; }
+	
 	EventTriggerCompoundMethod EventTriggerFalseCondition::compound_method() const { return EventTriggerCompoundMethod::None; }
 
 	// EventTriggerInverseCondition:
@@ -962,9 +1036,23 @@ namespace engine
 		return false;
 	}
 
+	bool EventTriggerInverseCondition::condition_met(const MetaAny& event_instance, const MetaAny& comparison_value, const MetaEvaluationContext& context) const
+	{
+		//return !get_inverse().condition_met(event_instance, comparison_value, context);
+
+		return false;
+	}
+
 	bool EventTriggerInverseCondition::condition_met(const MetaAny& event_instance) const
 	{
 		//return !get_inverse().condition_met(event_instance);
+
+		return false;
+	}
+
+	bool EventTriggerInverseCondition::condition_met(const MetaAny& event_instance, const MetaEvaluationContext& context) const
+	{
+		//return !get_inverse().condition_met(event_instance, context);
 
 		return false;
 	}

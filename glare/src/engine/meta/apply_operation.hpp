@@ -3,13 +3,15 @@
 #include "types.hpp"
 #include "meta_value_operator.hpp"
 
-//#include "hash.hpp"
 //#include "meta.hpp"
+//#include "hash.hpp"
+#include "indirection.hpp"
 
 #include <entt/meta/meta.hpp>
 #include <entt/core/type_info.hpp>
 
 #include <util/reflection.hpp>
+#include <util/algorithm.hpp>
 
 #include <math/comparison.hpp>
 
@@ -455,9 +457,17 @@ namespace engine
 
 				if (right_resolved)
 				{
-					if (auto result = try_get_underlying_value(left, right_resolved, args...))
+					if (value_has_indirection(right_resolved))
 					{
-						return result;
+						// NOTE: Recursion.
+						return apply_operation(left, right_resolved, operation, args...);
+					}
+					else
+					{
+						if (auto result = try_get_underlying_value(left, right_resolved, args...))
+						{
+							return result;
+						}
 					}
 				}
 			}

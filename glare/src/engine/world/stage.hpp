@@ -25,10 +25,11 @@ namespace graphics
 
 namespace engine
 {
+	class Service;
 	class World;
 	class ResourceManager;
-
 	class MetaParsingContext;
+	class SystemManagerInterface;
 
 	// A Stage, sometimes referred to as a Map is an abstract concept for
 	// a portion of the scene-graph that's been loaded from an external source.
@@ -42,7 +43,13 @@ namespace engine
 			using PlayerObjectMap = std::unordered_map<PlayerIndex, Entity>;
 		private:
 			template <typename ...IgnoredKeys>
-			static void process_component_entries(Registry& registry, Entity entity, const util::json& object_data, const MetaParsingContext& parsing_context, IgnoredKeys&&... ignored_keys);
+			static void process_component_entries
+			(
+				Registry& registry, Entity entity, const util::json& object_data,
+				const MetaParsingContext& parsing_context,
+				Service* opt_service, SystemManagerInterface* opt_system_manager,
+				IgnoredKeys&&... ignored_keys
+			);
 		protected:
 			static void resolve_parent(World& world, Entity entity, Entity stage, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data);
 
@@ -95,7 +102,10 @@ namespace engine
 					// Hierarchical input data in the form of a 'dictionary'. (Currently json-based)
 					const util::json& data; // util::json
 
-					Entity stage;
+					Entity stage = null;
+
+					// Optional non-owning pointer to system-manager.
+					SystemManagerInterface* system_manager = nullptr;
 				protected:
 					struct
 					{
@@ -114,7 +124,14 @@ namespace engine
 
 					bool ensure_stage(Entity parent=null);
 				public:
-					Loader(World& world, const filesystem::path& root_path, const util::json& data, Entity stage=null);
+					Loader
+					(
+						World& world,
+						const filesystem::path& root_path,
+						const util::json& data,
+						Entity stage=null,
+						SystemManagerInterface* system_manager=nullptr
+					);
 
 					Entity load(Entity stage, const Config& cfg={}, Entity parent=null, bool load_title=false);
 					Entity load(const Config& cfg={}, Entity parent=null);
@@ -140,6 +157,7 @@ namespace engine
 				const filesystem::path& root_path,
 				const util::json& data,
 				Entity parent=null,
+				SystemManagerInterface* opt_system_manager=nullptr,
 				const Stage::Loader::Config& cfg={}
 			);
 	};

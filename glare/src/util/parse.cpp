@@ -853,11 +853,13 @@ namespace util
 
 	    while (position < expr.length())
 	    {
+			const auto nearest_scope_end = expr.find(end_symbol, position);
+
 			if (has_ignore_symbols)
 			{
 				const auto ignore_begin_position = expr.find(ignore_begin_symbol, position);
 
-				if (ignore_begin_position != std::string_view::npos)
+				if ((ignore_begin_position != std::string_view::npos) && ((nearest_scope_end == std::string_view::npos) || (ignore_begin_position < nearest_scope_end)))
 				{
 					const auto ignore_end_position = expr.find(ignore_end_symbol, (ignore_begin_position + 1));
 
@@ -871,8 +873,6 @@ namespace util
 			}
 
 		    const auto nearest_scope_begin = expr.find(begin_symbol, position);
-
-		    const auto nearest_scope_end = expr.find(end_symbol, position);
 
 		    if ((nearest_scope_begin != std::string_view::npos) && (nearest_scope_begin < nearest_scope_end))
 		    {

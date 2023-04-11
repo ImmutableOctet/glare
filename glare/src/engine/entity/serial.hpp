@@ -213,7 +213,8 @@ namespace engine
 		std::string_view state_path_raw, // const std::string&
 		const std::filesystem::path& base_path,
 		const MetaParsingContext& opt_parsing_context={},
-		const EntityFactoryContext* opt_factory_context=nullptr
+		const EntityFactoryContext* opt_factory_context=nullptr,
+		std::string_view state_name={}
 	);
 
 	// This overload acts as a utility function that automatically handles
@@ -587,13 +588,14 @@ namespace engine
 		std::optional<EntityStateIndex>* opt_default_state_index_out=nullptr
 	)
 	{
-		auto archetypes = util::find_any(instance, "archetypes", "import", "imports", "modules"); // instance.find("archetypes");
+		auto archetypes = util::find_any(instance, "archetypes", "import", "imports", "modules", "merge");
 
 		if (archetypes == instance.end())
 		{
 			return false;
 		}
 
+		// TODO: Add support for JSON objects as input. (i.e. embedded archetypes)
 		auto elements_processed = util::json_for_each<util::json::value_t::string>
 		(
 			*archetypes,

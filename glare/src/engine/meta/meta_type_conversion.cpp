@@ -1,6 +1,7 @@
 #include "meta_type_conversion.hpp"
 #include "meta_evaluation_context.hpp"
-#include "meta.hpp"
+
+//#include <entt/meta/meta.hpp>
 
 namespace engine
 {

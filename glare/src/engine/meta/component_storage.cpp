@@ -1,6 +1,7 @@
 #include "component_storage.hpp"
 
-#include "meta.hpp"
+#include "hash.hpp"
+//#include "function.hpp"
 
 // Debugging related:
 #include <util/log.hpp>

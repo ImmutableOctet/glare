@@ -1,15 +1,29 @@
 #include "meta_event_listener.hpp"
 
-#include "meta.hpp"
+#include "hash.hpp"
+//#include "function.hpp"
 
 namespace engine
 {
-	MetaEventListener::MetaEventListener(Service* service, Flags flags, MetaTypeID type_id)
-		: service(service), flags(flags), type_id(type_id)
+	MetaEventListener::MetaEventListener
+	(
+		Service* service, SystemManagerInterface* system_manager,
+		Flags flags, MetaTypeID type_id
+	) :
+		service(service), system_manager(system_manager),
+		flags(flags), type_id(type_id)
 	{}
 
-	MetaEventListener::MetaEventListener(Service* service, Flags flags, MetaType type)
-		: MetaEventListener(service, flags, type.id())
+	MetaEventListener::MetaEventListener
+	(
+		Service* service, SystemManagerInterface* system_manager,
+		Flags flags, MetaType type
+	)
+		: MetaEventListener
+		(
+			service, system_manager,
+			flags, type.id()
+		)
 	{}
 
 	MetaEventListener::~MetaEventListener()

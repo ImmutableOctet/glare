@@ -46,7 +46,6 @@ namespace engine
         reflect<DebugListener>();
         reflect<EntitySystem>();
         reflect<InputSystem>();
-        reflect<World>();
 
         // ...
     }
@@ -168,9 +167,15 @@ namespace engine
         return from_string_view_impl<T>(value);
     }
 
-    template <typename PrimitiveType>
-    static auto extend_language_primitive_type()
+    template <typename PrimitiveType, bool generate_optional_type=true>
+    static auto extend_language_primitive_type(bool sync_context=true)
     {
+        if (sync_context)
+        {
+            // Ensure that we're using the correct context.
+            sync_reflection_context();
+        }
+
         auto type = entt::meta<PrimitiveType>()
             .ctor<&from_string_view_impl<PrimitiveType>>()
             .ctor<&from_string_impl<PrimitiveType>>()
@@ -189,18 +194,41 @@ namespace engine
             .conv<&arithmetic_to_string_impl<PrimitiveType>>()
         ;
 
+        if constexpr (generate_optional_type)
+        {
+            constexpr auto type_name = entt::type_name<PrimitiveType>::value();
+
+            auto opt_type = optional_custom_meta_type<PrimitiveType>(type_name);
+        }
+
         return type;
     }
 
     template <>
     void reflect<Entity>()
     {
+        constexpr bool sync_context = true;
+        constexpr bool generate_optional_type = true;
+
+        if constexpr (sync_context)
+        {
+            // Ensure that we're using the correct context.
+            sync_reflection_context();
+        }
+
         entt::meta<Entity>()
             .type("Entity"_hs)
             .conv<&entity_to_string_impl>()
             //.conv<std::underlying_type_t<Entity>>()
             .ctor<&entity_from_integer>()
         ;
+
+        if constexpr (generate_optional_type)
+        {
+            constexpr auto type_name = std::string_view { "Entity" }; // entt::type_name<Entity>::value();
+
+            auto opt_type = optional_custom_meta_type<Entity>(type_name);
+        }
     }
 
     template <>
@@ -286,11 +314,30 @@ namespace engine
     template <>
     void reflect<std::chrono::system_clock::duration>()
     {
-        entt::meta<std::chrono::system_clock::duration>()
+        using T = std::chrono::system_clock::duration;
+
+        constexpr bool generate_optional_type = true;
+        constexpr bool sync_context = true;
+
+        if constexpr (sync_context)
+        {
+            // Ensure that we're using the correct context.
+            sync_reflection_context();
+        }
+
+        entt::meta<T>()
+            //.type("Duration"_hs)
             // Constructor to convert from floating-point values (seconds) to STL system-clock duration values.
             // (Commonly aliased via `Timer::Duration`)
-            .ctor<static_cast<std::chrono::system_clock::duration(*)(float)>(&Timer::to_duration)>()
+            .ctor<static_cast<T(*)(float)>(&Timer::to_duration)>()
         ;
+
+        if constexpr (generate_optional_type)
+        {
+            constexpr auto type_name = entt::type_name<T>::value(); // std::string_view { "Duration" };
+
+            auto opt_type = optional_custom_meta_type<T>(type_name);
+        }
     }
 
     static void reflect_stl()
@@ -300,29 +347,21 @@ namespace engine
         reflect<std::chrono::system_clock::duration>();
     }
 
-    template <typename T>
-    auto reflect_math_type(auto type_name)
+    template <typename T, bool generate_optional_type=true>
+    auto reflect_math_type(auto type_name, bool sync_context=true)
     {
+        if (sync_context)
+        {
+            // Ensure that we're using the correct context.
+            sync_reflection_context();
+        }
+
         auto type = math::reflect<T>(hash(type_name));
 
-        auto opt_type = entt::meta<std::optional<T>>()
-            .type(hash(optional_name(type_name)))
-            //.template func<&from_optional<T>>("from_optional"_hs)
-            .template func<&type_id_from_optional<T>>("type_id_from_optional"_hs)
-            .template func<&type_from_optional<T>>("type_from_optional"_hs)
-        ;
-
-        if constexpr (std::is_copy_constructible_v<T>)
+        if constexpr (generate_optional_type)
         {
-            opt_type = opt_type.ctor<T>(); // const T&
+            auto opt_type = optional_custom_meta_type<T>(type_name);
         }
-
-        /*
-        if constexpr (std::is_move_constructible_v<T>)
-        {
-            opt_type = opt_type.ctor<T&&>();
-        }
-        */
 
         return type;
     }
@@ -426,6 +465,14 @@ namespace engine
     template <>
     void reflect<entt::meta_sequence_container>()
     {
+        constexpr bool sync_context = true;
+
+        if constexpr (sync_context)
+        {
+            // Ensure that we're using the correct context.
+            sync_reflection_context();
+        }
+
         entt::meta<entt::meta_sequence_container>()
             .data<nullptr, &entt::meta_sequence_container::value_type>("value_type"_hs)
             .data<&entt::meta_sequence_container::resize, &entt::meta_sequence_container::size>("size"_hs)
@@ -458,6 +505,14 @@ namespace engine
     template <>
     void reflect<entt::meta_sequence_container::iterator>()
     {
+        constexpr bool sync_context = true;
+
+        if constexpr (sync_context)
+        {
+            // Ensure that we're using the correct context.
+            sync_reflection_context();
+        }
+
         entt::meta<entt::meta_sequence_container::iterator>()
             .func<static_cast<entt::meta_sequence_container::iterator&(entt::meta_sequence_container::iterator::*)()>(&entt::meta_sequence_container::iterator::operator++)>("operator++"_hs)
             .func<static_cast<entt::meta_sequence_container::iterator(entt::meta_sequence_container::iterator::*)(int)>(&entt::meta_sequence_container::iterator::operator++)>("operator++"_hs)
@@ -478,6 +533,14 @@ namespace engine
     template <>
     void reflect<entt::meta_associative_container>()
     {
+        constexpr bool sync_context = true;
+
+        if constexpr (sync_context)
+        {
+            // Ensure that we're using the correct context.
+            sync_reflection_context();
+        }
+
         auto type = entt::meta<entt::meta_associative_container>()
             .data<nullptr, &entt::meta_associative_container::key_only>("key_only"_hs)
             .data<nullptr, &entt::meta_associative_container::key_type>("key_type"_hs)
@@ -514,6 +577,14 @@ namespace engine
     template <>
     void reflect<entt::meta_associative_container::iterator>()
     {
+        constexpr bool sync_context = true;
+
+        if constexpr (sync_context)
+        {
+            // Ensure that we're using the correct context.
+            sync_reflection_context();
+        }
+
         entt::meta<entt::meta_associative_container::iterator>()
             .func<static_cast<entt::meta_associative_container::iterator&(entt::meta_associative_container::iterator::*)()>(&entt::meta_associative_container::iterator::operator++)>("operator++"_hs)
             .func<static_cast<entt::meta_associative_container::iterator(entt::meta_associative_container::iterator::*)(int)>(&entt::meta_associative_container::iterator::operator++)>("operator++"_hs)
@@ -618,6 +689,8 @@ namespace engine
         reflect<ResourceManager>();
 
         reflect_systems();
+
+        reflect<World>();
 
         reflect<GraphicsConfig>();
         reflect<ObjectConfig>();

@@ -784,9 +784,9 @@ namespace engine
 		}
 	}
 
-	std::optional<CollisionCastResult> PhysicsSystem::cast_to
+	std::optional<CollisionCastResult> PhysicsSystem::cast_to_obj_impl
 	(
-		const RayCastSelf& obj,
+		const impl::RayCastSelf& obj,
 		const math::Vector& destination,
 
 		std::optional<CollisionGroup> filter_group,
@@ -823,7 +823,7 @@ namespace engine
 					result = convex_cast_to
 					(
 						*this,
-						CollisionObjectAndConvexShape{ c_obj, *convex_shape },
+						CollisionObjectAndConvexShape { c_obj, *convex_shape },
 						destination, filter_group, filter_mask
 					);
 				}

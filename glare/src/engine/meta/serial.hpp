@@ -1,7 +1,10 @@
 #pragma once
 
 #include "types.hpp"
+
 #include "indirection.hpp"
+#include "string.hpp"
+
 #include "meta_parsing_instructions.hpp"
 #include "meta_data_member.hpp"
 #include "indirect_meta_data_member.hpp"
@@ -19,7 +22,7 @@
 #include <util/reflection.hpp>
 #include <util/parse.hpp>
 
-#include <entt/meta/meta.hpp>
+//#include <entt/meta/meta.hpp>
 //#include <entt/entt.hpp>
 
 #include <optional>

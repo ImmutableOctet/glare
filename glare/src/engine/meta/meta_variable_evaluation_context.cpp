@@ -3,7 +3,8 @@
 #include "meta_variable_storage_interface.hpp"
 #include "meta_variable_context.hpp"
 #include "meta_variable_description.hpp"
-#include "meta.hpp"
+
+//#include "hash.hpp"
 
 #include <utility>
 
