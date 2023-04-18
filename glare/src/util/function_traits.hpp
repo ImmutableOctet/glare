@@ -11,44 +11,63 @@
 
 namespace util
 {
-    // primary template.
-    template<class T>
+    template <typename T>
     struct function_traits : function_traits<decltype(&T::operator())> {};
 
-    // partial specialization for function type
-    template<class R, class... Args>
-    struct function_traits<R(Args...)> {
-        using result_type = R;
+    // Partial specialization for function-type.
+    template <typename R, typename... Args>
+    struct function_traits<R(Args...)>
+    {
+        using return_type = R;
         using argument_types = std::tuple<Args...>;
+
+        inline static constexpr bool is_dynamic_member_function = false;
     };
 
-    // partial specialization for function pointer
-    template<class R, class... Args>
-    struct function_traits<R(*)(Args...)> {
-        using result_type = R;
+    // Partial specialization for function-pointer.
+    template <typename R, typename... Args>
+    struct function_traits<R(*)(Args...)>
+    {
+        using return_type = R;
         using argument_types = std::tuple<Args...>;
+
+        inline static constexpr bool is_dynamic_member_function = false;
     };
 
-    // partial specialization for std::function
-    template<class R, class... Args>
-    struct function_traits<std::function<R(Args...)>> {
-        using result_type = R;
+    // Partial specialization for `std::function`.
+    template <typename R, typename... Args>
+    struct function_traits<std::function<R(Args...)>>
+    {
+        using return_type = R;
         using argument_types = std::tuple<Args...>;
+
+        inline static constexpr bool is_dynamic_member_function = false;
     };
 
-    // partial specialization for pointer-to-member-function (i.e., operator()'s)
-    template<class T, class R, class... Args>
-    struct function_traits<R(T::*)(Args...)> {
-        using result_type = R;
+    // Partial specialization for pointer to dynamic member-function.
+    template <typename T, typename R, typename... Args>
+    struct function_traits<R(T::*)(Args...)>
+    {
+        using self_type = T;
+        using self_type_ref = T&;
+        using return_type = R;
         using argument_types = std::tuple<Args...>;
+
+        inline static constexpr bool is_dynamic_member_function = true;
     };
 
-    template<class T, class R, class... Args>
-    struct function_traits<R(T::*)(Args...) const> {
-        using result_type = R;
+    // Partial specialization for pointer to const dynamic member-function.
+    template <typename T, typename R, typename... Args>
+    struct function_traits<R(T::*)(Args...) const>
+    {
+        using self_type = T;
+        using self_type_ref = const T&;
+        using return_type = R;
         using argument_types = std::tuple<Args...>;
+
+        inline static constexpr bool is_dynamic_member_function = true;
     };
 
-    template<class T>
+    template <typename T>
     using first_argument_type = typename std::tuple_element<0, typename function_traits<T>::argument_types>::type;
 }
