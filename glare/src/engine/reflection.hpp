@@ -28,6 +28,9 @@
 #include <util/reflection.hpp>
 #include <util/json.hpp>
 
+#include <util/overloads.hpp>
+#include <util/lambda.hpp>
+
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -225,6 +228,33 @@ namespace engine
         {
             return !(a != b);
         }
+    }
+
+    // Generates a wrapper function for `lambda_instance`, allowing a captureless
+    // lambda to be used in place of a function-pointer. (Similar to `+[]` syntax)
+    template <auto lambda_instance>
+    constexpr auto make_overload()
+    {
+        return util::lambda_as_function_ptr<lambda_instance>();
+    }
+
+    template <auto fn_ptr, auto generic_impl_lambda, std::size_t min_args=0>
+    constexpr auto make_overloads(auto type, MetaTypeID function_id)
+    {
+        util::generate_function_overloads_ex
+        <
+            fn_ptr,
+            decltype(generic_impl_lambda), // generic_impl_lambda,
+            min_args
+        >
+        (
+            [&type, function_id]<auto overload_fn_ptr>()
+            {
+                type = type.func<overload_fn_ptr>(function_id);
+            }
+        );
+
+        return type;
     }
 
     template
