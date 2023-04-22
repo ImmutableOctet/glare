@@ -1707,7 +1707,7 @@ namespace engine
 						step_stride = 0;
 					},
 
-					[&registry, &service, entity, &descriptor, &thread, &get_variable_context](const FunctionCall& function_call)
+					[&registry, &service, &system_manager, entity, &descriptor, &thread, &get_variable_context](const FunctionCall& function_call)
 					{
 						service.event<FunctionCommand> // queue_event
 						(
@@ -1717,7 +1717,10 @@ namespace engine
 							MetaEvaluationContextStore
 							{
 								// NOTE: Unsafe due to raw pointer usage. (Will need to revisit this later)
-								get_variable_context()
+								get_variable_context(),
+
+								&service,
+								system_manager
 							}
 						);
 					},
