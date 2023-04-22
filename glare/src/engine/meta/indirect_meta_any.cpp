@@ -169,7 +169,8 @@ namespace engine
 			return {};
 		}
 
-		if (auto underlying = try_get_underlying_value(result, instance, args...))
+		// NOTE: Const-cast is used here to avoid unwanted 'transitive' const-qualification.
+		if (auto underlying = try_get_underlying_value(result, const_cast<MetaAny&>(instance).as_ref(), args...)) // instance
 		{
 			return underlying;
 		}
@@ -197,7 +198,7 @@ namespace engine
 			return result;
 		}
 
-		return remote;
+		return {}; // remote;
 	}
 
 	template <typename ...Args>
@@ -227,6 +228,6 @@ namespace engine
 			return result;
 		}
 
-		return remote;
+		return {}; // remote;
 	}
 }
