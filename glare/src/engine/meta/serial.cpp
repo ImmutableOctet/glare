@@ -1094,10 +1094,19 @@ namespace engine
 									{
 										const auto remaining_content = content.substr(content_position);
 
+										/*
+										// Type forwarding disabled for now; too much potential for
+										// conflicts when there's multiple function overloads.
+										// (i.e. type conversion should be performed at runtime)
+										// 
+										// See also: `MetaTypeDescriptor::set_variables_impl` -- Similar situation.
 										const auto argument_type = (fn)
 											? fn.arg(argument_index)
 											: MetaType {}
 										;
+										*/
+
+										const auto argument_type = MetaType {};
 
 										auto [argument, length_processed] = meta_any_from_string_compound_expr_impl
 										(
