@@ -284,7 +284,7 @@ namespace engine
 				continue;
 			}
 
-			auto kinematic_resolution = a_collision->get_kinematic_resolution();
+			const auto& kinematic_resolution = a_collision->get_kinematic_resolution();
 
 			if (kinematic_resolution.has_value())
 			{
@@ -428,7 +428,7 @@ namespace engine
 	{
 		auto& registry = world.get_registry(); // Used below.
 
-		const auto kinematic_resolution_opt = collision.get_kinematic_resolution();
+		const auto& kinematic_resolution_opt = collision.get_kinematic_resolution();
 
 		if (!kinematic_resolution_opt.has_value())
 		{
@@ -794,7 +794,7 @@ namespace engine
 	)
 	{
 		CollisionCastMethod cast_method = CollisionCastMethod::None;
-
+		
 		std::optional<CollisionCastResult> result = std::nullopt;
 
 		util::visit
@@ -870,7 +870,7 @@ namespace engine
 
 		if (is_convex && check_kinematic_resolution)
 		{
-			auto kinematic_resolution_opt = collision.get_kinematic_resolution();
+			const auto& kinematic_resolution_opt = collision.get_kinematic_resolution();
 
 			if (kinematic_resolution_opt.has_value())
 			{
