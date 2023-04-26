@@ -125,7 +125,61 @@ TEST_CASE("util::find_assignment_operator", "[util:parse]")
 
 TEST_CASE("util::parse_variable_declaration", "[util:parse]")
 {
-	SECTION("Local variable, no assignment")
+	SECTION("Local variable, no type, no assignment + unrelated trailing")
+	{
+		auto
+		[
+			scope_qualifier,
+			variable_name,
+			variable_type,
+			assignment_expr,
+			trailing_expr
+		] = util::parse_variable_declaration(std::string_view("local x unrelated"));
+
+		REQUIRE(scope_qualifier == "local");
+		REQUIRE(variable_name == "x");
+		REQUIRE(variable_type.empty());
+		REQUIRE(assignment_expr.empty());
+		REQUIRE(trailing_expr == "unrelated");
+	}
+
+	SECTION("Local variable with type, no assignment")
+	{
+		auto
+		[
+			scope_qualifier,
+			variable_name,
+			variable_type,
+			assignment_expr,
+			trailing_expr
+		] = util::parse_variable_declaration(std::string_view("local x:int"));
+
+		REQUIRE(scope_qualifier == "local");
+		REQUIRE(variable_name == "x");
+		REQUIRE(variable_type == "int");
+		REQUIRE(assignment_expr.empty());
+		REQUIRE(trailing_expr.empty());
+	}
+
+	SECTION("Local variable, no type, no assignment")
+	{
+		auto
+		[
+			scope_qualifier,
+			variable_name,
+			variable_type,
+			assignment_expr,
+			trailing_expr
+		] = util::parse_variable_declaration(std::string_view("local x"));
+
+		REQUIRE(scope_qualifier == "local");
+		REQUIRE(variable_name == "x");
+		REQUIRE(variable_type.empty());
+		REQUIRE(assignment_expr.empty());
+		REQUIRE(trailing_expr.empty());
+	}
+
+	SECTION("Local variable with type, no assignment + unrelated trailing")
 	{
 		auto
 		[
@@ -140,7 +194,7 @@ TEST_CASE("util::parse_variable_declaration", "[util:parse]")
 		REQUIRE(variable_name == "x");
 		REQUIRE(variable_type == "int");
 		REQUIRE(assignment_expr.empty());
-		REQUIRE(trailing_expr == " something unrelated");
+		REQUIRE(trailing_expr == "something unrelated");
 	}
 
 	SECTION("Local variable, no assignment, no type + trailing content")
@@ -158,7 +212,7 @@ TEST_CASE("util::parse_variable_declaration", "[util:parse]")
 		REQUIRE(variable_name == "my_var_name");
 		REQUIRE(variable_type.empty());
 		REQUIRE(assignment_expr.empty());
-		REQUIRE(trailing_expr == " unrelated trailing content");
+		REQUIRE(trailing_expr == "unrelated trailing content");
 	}
 
 	SECTION("Context variable, no type + assignment")
@@ -194,6 +248,25 @@ TEST_CASE("util::parse_variable_declaration", "[util:parse]")
 		REQUIRE(variable_name == "local_var");
 		REQUIRE(variable_type.empty());
 		REQUIRE(assignment_expr == "something");
+		REQUIRE(trailing_expr.empty());
+	}
+
+	SECTION("Local variable + advanced assignment")
+	{
+		auto
+		[
+			scope_qualifier,
+			variable_name,
+			variable_type,
+			assignment_expr,
+			trailing_expr
+		]
+		= util::parse_variable_declaration(std::string_view("auto cursor_destination = (CameraSystem::get_world_space_position_from_screen_coordinates(self.Transform2DComponent::position).normalize()):Vector"));
+
+		REQUIRE(scope_qualifier == "auto");
+		REQUIRE(variable_name == "cursor_destination");
+		REQUIRE(variable_type.empty());
+		REQUIRE(assignment_expr == "(CameraSystem::get_world_space_position_from_screen_coordinates(self.Transform2DComponent::position).normalize()):Vector");
 		REQUIRE(trailing_expr.empty());
 	}
 
