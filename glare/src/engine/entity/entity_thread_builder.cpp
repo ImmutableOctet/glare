@@ -2086,6 +2086,15 @@ namespace engine
 		using namespace engine::instructions;
 		using namespace engine::literals;
 
+		instruction_raw = util::trim(instruction_raw);
+
+		// Check if this is a comment.
+		if (instruction_raw.starts_with("//"))
+		{
+			// Return as if the line were processed.
+			return 1;
+		}
+
 		auto [instruction, thread_details] = parse_instruction_header(instruction_raw, &descriptor);
 
 		//instruction = instruction.substr(parse_offset);
