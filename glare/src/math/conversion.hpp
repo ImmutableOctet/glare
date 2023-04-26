@@ -52,4 +52,10 @@ namespace math
 	// This is mainly here as a placeholder overload, in case
 	// a templated function needs to convert between vector types.
 	inline Vector3D to_vector(const Vector3D& v) { return v; }
+
+	math::vec2f to_normalized_device_coordinates_ex(const math::vec2f& half_display_size, const math::vec2f& position);
+	math::vec2f to_normalized_device_coordinates(const math::vec2f& display_size, const math::vec2f& position);
+
+	math::vec2f from_normalized_device_coordinates_ex(const math::vec2f& half_display_size, const math::vec2f& normalized_position);
+	math::vec2f from_normalized_device_coordinates(const math::vec2f& display_size, const math::vec2f& normalized_position);
 }
