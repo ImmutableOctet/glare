@@ -619,7 +619,21 @@ namespace util
 
 		auto type_specifier_end = std::string_view::npos;
 
-		if (auto variable_type_begin = remainder.find(':'); variable_type_begin != std::string_view::npos)
+		constexpr auto assignment_operator_symbol = std::string_view { "=" };
+
+		auto assignment_operator = remainder.find(assignment_operator_symbol);
+
+		if ((assignment_operator != std::string_view::npos) && (variable_decl_end != std::string_view::npos))
+		{
+			if (assignment_operator < variable_decl_end)
+			{
+				variable_decl_end = assignment_operator;
+			}
+		}
+
+		constexpr auto type_specifier_symbol = std::string_view { ":" };
+
+		if (auto variable_type_begin = find_singular(remainder, type_specifier_symbol); ((variable_type_begin != std::string_view::npos) && ((assignment_operator == std::string_view::npos) || (variable_type_begin < assignment_operator))))
 		{
 			variable_name = util::trim(remainder.substr(0, variable_type_begin));
 
@@ -628,9 +642,38 @@ namespace util
 				return output;
 			}
 
-			remainder = util::trim_beginning(remainder.substr(variable_type_begin + 1));
+			if (assignment_operator == std::string_view::npos)
+			{
+				const auto type_subset = remainder.substr((variable_type_begin + type_specifier_symbol.length()));
 
-			type_specifier_end = remainder.find_first_of(whitespace_symbols);
+				if (!type_subset.empty())
+				{
+					const auto type_specifier_end = type_subset.find_first_of(whitespace_symbols);
+
+					if (type_specifier_end != std::string_view::npos)
+					{
+						variable_type = type_subset.substr(0, type_specifier_end);
+					}
+					else
+					{
+						variable_type = type_subset;
+					}
+				}
+			}
+			else
+			{
+				const auto type_subset_begin = (variable_type_begin + type_specifier_symbol.length());
+				const auto type_subset_length = (assignment_operator - type_subset_begin);
+
+				const auto type_subset = remainder.substr(type_subset_begin, type_subset_length);
+
+				if (!type_subset.empty())
+				{
+					variable_type = type_subset;
+				}
+			}
+
+			variable_type = util::trim(variable_type);
 		}
 		else
 		{
@@ -649,34 +692,40 @@ namespace util
 			}
 
 			remainder = remainder.substr(variable_decl_end);
+
+			if (assignment_operator != std::string_view::npos)
+			{
+				assignment_operator -= variable_decl_end;
+			}
 		}
 
-		if (auto assignment_operator = remainder.find('='); assignment_operator != std::string_view::npos)
+		if (assignment_operator == std::string_view::npos)
 		{
-			variable_type = util::trim(remainder.substr(0, assignment_operator), true);
-
-			if ((assignment_operator + 1) < remainder.size())
+			if (variable_type.empty())
 			{
-				assignment_expr = util::trim(remainder.substr(assignment_operator + 1));
+				trailing_expr = util::trim(remainder);
 			}
+			else
+			{
+				const auto variable_type_end = static_cast<std::size_t>((variable_type.data() + variable_type.length()) - remainder.data());
 
-			return output;
+				if (variable_type_end < remainder.length())
+				{
+					remainder = remainder.substr(variable_type_end);
+
+					trailing_expr = util::trim(remainder);
+				}
+			}
 		}
 		else
 		{
-			if (type_specifier_end == std::string_view::npos)
+			const auto assignment_expr_begin = (assignment_operator + assignment_operator_symbol.length());
+
+			if (assignment_expr_begin < remainder.size())
 			{
-				trailing_expr = remainder;
-
-				return output;
+				assignment_expr = util::trim(remainder.substr(assignment_expr_begin));
 			}
-
-			variable_type = util::trim(remainder.substr(0, type_specifier_end));
-
-			remainder = remainder.substr(type_specifier_end);
 		}
-
-		trailing_expr = remainder;
 
 		return output;
 	}
