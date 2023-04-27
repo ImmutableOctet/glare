@@ -2088,11 +2088,24 @@ namespace engine
 
 		instruction_raw = util::trim(instruction_raw);
 
-		// Check if this is a comment.
-		if (instruction_raw.starts_with("//"))
+		// Search for a single-line 'comment' symbol on this line:
+		const auto comment_symbol_index = instruction_raw.find("//");
+
+		switch (comment_symbol_index)
 		{
-			// Return as if the line were processed.
-			return 1;
+			case 0:
+				// This line starts with a comment-symbol, skip processing this line.
+				return 1;
+			
+			case std::string_view::npos:
+				// No comment symbol found, continue normally.
+				break;
+
+			default:
+				// Truncate the current line at the comment-symbol we found.
+				instruction_raw = instruction_raw.substr(0, comment_symbol_index);
+
+				break;
 		}
 
 		auto [instruction, thread_details] = parse_instruction_header(instruction_raw, &descriptor);
