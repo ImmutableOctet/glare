@@ -104,18 +104,37 @@ namespace engine
 			// NOTE: Link status is always ignored when stopping threads by state.
 			std::size_t stop_threads(const EntityState& state, EntityStateIndex state_index, bool limit_to_static_range=false);
 
-			// NOTES:
-			// 
-			// * May remove this overload later; the originating state index is currently
-			// stored inside of the thread itself, so the `descriptor` is unnecessary to perform the lookup.
-			// 
-			// * Link status is always ignored when stopping threads by state.
+			// NOTE: Link status is always ignored when stopping threads by state.
 			std::size_t stop_threads(EntityStateIndex state_index);
 
 			// Attempts to stop all threads.
 			// 
 			// The return value of this method indicates how many threads were fully terminated.
 			std::size_t stop_all();
+
+			// This method erases a thread without formally stopping it first.
+			// The return value of this method indicates if the specified thread was erased.
+			// 
+			// If no thread could be found, false will be returned.
+			bool erase_thread(EntityThreadIndex thread_index);
+
+			// This method erases a thread without formally stopping it first.
+			bool erase_thread(const EntityDescriptor& descriptor, EntityThreadID thread_id);
+
+			// The return value of this method indicates how many threads were erased.
+			std::size_t erase_threads(const EntityThreadRange& thread_range);
+
+			// The return value of this method indicates how many threads were erased.
+			std::size_t erase_threads(const EntityDescriptor& descriptor, EntityStateIndex state_index, bool limit_to_static_range=false);
+
+			// The return value of this method indicates how many threads were erased.
+			std::size_t erase_threads(const EntityState& state, EntityStateIndex state_index, bool limit_to_static_range=false);
+
+			// Manually erases all threads associated with a state index.
+			std::size_t erase_threads(EntityStateIndex state_index);
+
+			// Manually erases all threads marked with the `is_complete` flag.
+			std::size_t erase_completed_threads();
 
 			// Pauses a thread with the `thread_id` specified.
 			bool pause_thread
