@@ -451,7 +451,7 @@ namespace engine
 
 					if (thread_entry.is_complete)
 					{
-						service->queue_event<OnThreadComplete>
+						service->event<OnThreadComplete> // queue_event
 						(
 							entity,
 
@@ -472,6 +472,8 @@ namespace engine
 
 				if (has_updated_thread)
 				{
+					thread_comp.erase_completed_threads();
+
 					registry.patch<EntityThreadComponent>(entity); // [](auto&){}
 				}
 			}
