@@ -135,7 +135,9 @@ namespace math
         }
         else
         {
-            static_assert(std::integral_constant<T, false>::value, "Reflection is not currently supported for this type.");
+            //static_assert(std::integral_constant<T, false>::value, "Reflection is not currently supported for this type.");
+
+            return impl::reflect_type<T>(id);
         }
     }
 
