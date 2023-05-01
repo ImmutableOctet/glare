@@ -15,6 +15,9 @@ namespace engine
 		// A type-local data identifier used to retrieve a value from an object instance of `type_id`.
 		MetaSymbolID data_member_id;
 
+		// Retrieves an instance of `type` from `entity` using `registry`.
+		static MetaAny get_instance(const MetaType& type, Registry& registry, Entity entity);
+
 		// Retrieves an instance of the type referenced by `type_id` from `entity` using `registry`.
 		MetaAny get_instance(Registry& registry, Entity entity) const;
 
