@@ -167,12 +167,16 @@ namespace engine
 			systems,
 			
 			{},
+
 			"System",
 
 			standard_mapping,
 			reverse_mapping
-			//, "entity"
 		);
+
+		// Ensure we don't have a name conflict between the built-in
+		// `entity` command (i.e. 'target' syntax) and the `EntitySystem` type.
+		systems.erase("entity");
 
 		systems["debug"] = systems["DebugListener"];
 
