@@ -1707,10 +1707,10 @@ namespace engine
 
     // TODO: Look into this implementation again.
     // (Probably not very efficient to use properties for this)
-    template <typename EnumType>
-    void reflect_enum(MetaTypeID type_id, bool values_as_properties=false)
+    template <typename EnumType, bool generate_optional_reflection=true>
+    auto reflect_enum(MetaTypeID type_id, bool values_as_properties=false)
     {
-        auto meta_obj = custom_meta_type<EnumType>(type_id)
+        auto type = custom_meta_type<EnumType>(type_id)
             .template func<&string_to_enum_value<EnumType>>("string_to_value"_hs)
             .ctor<&string_to_enum_value<EnumType>>()
             .conv<&enum_value_to_string<EnumType>>()
@@ -1729,6 +1729,13 @@ namespace engine
                 }
             );
         }
+
+        if constexpr (generate_optional_reflection)
+        {
+            optional_engine_meta_type<EnumType>(false);
+        }
+
+        return type;
     }
 
     // NOTE: This is called automatically via `reflect` when `T` is an enumeration type.
