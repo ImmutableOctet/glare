@@ -186,6 +186,8 @@ namespace engine
 	{
 		engine_meta_type<MetaValueOperation>()
 			.data<&MetaValueOperation::segments>("segments"_hs)
+			.data<nullptr, &MetaValueOperation::size>("size"_hs)
+			.data<nullptr, &MetaValueOperation::empty>("empty"_hs)
 		;
 
 		engine_meta_type<MetaValueOperation::Segment>()
