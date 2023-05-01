@@ -14,97 +14,6 @@
 namespace engine
 {
 	template <typename ...Args>
-	static MetaAny get_impl
-	(
-		const MetaFunction& function, MetaAny self, const auto& function_arguments,
-		bool handle_indirection, bool attempt_to_forward_context,
-		Args&&... args
-	)
-	{
-		using IndirectionArguments = util::small_vector<MetaAny, 8>; // MetaFunctionCall::Arguments;
-
-		if (!function)
-		{
-			return {};
-		}
-
-		IndirectionArguments function_arguments_out;
-
-		if (function.is_static() && self)
-		{
-			function_arguments_out.emplace_back(std::move(self));
-
-			self = {};
-		}
-
-		if (!function_arguments.empty())
-		{
-			if (handle_indirection)
-			{
-				function_arguments_out.reserve(function_arguments.size());
-
-				for (const auto& argument : function_arguments)
-				{
-					function_arguments_out.emplace_back(get_indirect_value_or_ref(argument, std::forward<Args>(args)...));
-				}
-			}
-			else
-			{
-				if (!function.is_static())
-				{
-					// NOTE: Const-cast needed due to limitations of EnTT's API.
-					if (auto result = invoke_any_overload_with_automatic_meta_forwarding(function, self, const_cast<MetaAny* const>(function_arguments.data()), function_arguments.size()))
-					{
-						return result;
-					}
-				}
-
-				function_arguments_out.reserve(function_arguments.size());
-
-				for (const auto& argument : function_arguments)
-				{
-					function_arguments_out.emplace_back(argument.as_ref());
-				}
-			}
-		}
-
-		if (function_arguments_out.size() > 0)
-		{
-			if (auto result = invoke_any_overload_with_automatic_meta_forwarding(function, self, function_arguments_out.data(), function_arguments_out.size()))
-			{
-				return result;
-			}
-		}
-		else
-		{
-			if (auto result = invoke_any_overload(function, self))
-			{
-				return result;
-			}
-		}
-
-		if constexpr (sizeof...(args) > 0)
-		{
-			if (attempt_to_forward_context)
-			{
-				{ std::size_t i = 0; ([&] { function_arguments_out.insert(function_arguments_out.begin() + (i++), entt::forward_as_meta(args)); }(), ...); }
-
-				for (std::size_t i = sizeof...(args); i-- > 0; )
-				{
-					if (auto result = invoke_any_overload_with_automatic_meta_forwarding(function, self, function_arguments_out.data(), function_arguments_out.size())) // invoke_any_overload
-					{
-						return result;
-					}
-
-					function_arguments_out.erase(function_arguments_out.begin() + i);
-				}
-			}
-		}
-
-		return {};
-	}
-
-	template <typename ...Args>
 	MetaAny MetaFunctionCall::get_self_impl(bool resolve_as_container, bool resolve_underlying, Args&&... args) const
 	{
 		auto& self = const_cast<MetaFunctionCall*>(this)->self;
@@ -222,7 +131,7 @@ namespace engine
 		{
 			if (self)
 			{
-				return get_impl
+				return invoke_any_overload_with_indirection_context
 				(
 					target_fn,
 				
@@ -240,7 +149,7 @@ namespace engine
 			}
 			else
 			{
-				return get_impl
+				return invoke_any_overload_with_indirection_context
 				(
 					target_fn,
 				
@@ -254,7 +163,7 @@ namespace engine
 		}
 		else
 		{
-			return get_impl
+			return invoke_any_overload_with_indirection_context
 			(
 				target_fn,
 
@@ -380,7 +289,7 @@ namespace engine
 
 		if (opt_evaluation_context)
 		{
-			return get_impl
+			return invoke_any_overload_with_indirection_context
 			(
 				target_fn,
 				std::move(self),
@@ -393,7 +302,7 @@ namespace engine
 		}
 		else
 		{
-			return get_impl
+			return invoke_any_overload_with_indirection_context
 			(
 				target_fn,
 				std::move(self),
