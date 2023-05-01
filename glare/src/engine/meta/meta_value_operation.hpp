@@ -121,6 +121,12 @@ namespace engine
 				return segments.empty();
 			}
 			
+			// Returns the number of segments in this operation.
+			inline std::size_t size() const
+			{
+				return segments.size();
+			}
+			
 			SegmentContainer segments;
 
 		private:
