@@ -16,6 +16,7 @@
 #include "meta_parsing_context.hpp"
 #include "meta_variable_context.hpp"
 #include "meta_variable_target.hpp"
+#include "meta_property.hpp"
 
 #include "indirect_meta_any.hpp"
 #include "indirect_meta_variable_target.hpp"
@@ -30,6 +31,7 @@
 
 #include <util/string.hpp>
 #include <util/parse.hpp>
+#include <util/format.hpp>
 
 #include <vector>
 
@@ -681,7 +683,7 @@ namespace engine
 		{
 			using instance_t = std::decay_t<decltype(instance)>;
 
-			if constexpr (has_method_get_type_v<instance_t, MetaType> || has_method_get_type_v<instance_t, MetaTypeID>)
+			if constexpr (std::is_same_v<instance_t, MetaAny> || has_method_get_type_v<instance_t, MetaType> || has_method_get_type_v<instance_t, MetaTypeID>)
 			{
 				if (update_type)
 				{
@@ -735,11 +737,11 @@ namespace engine
 			return enqueue_raw(std::forward<decltype(instance)>(instance), update_type, operation);
 		};
 
-		auto replace = [&enqueue, &clear](MetaAny&& instance) -> bool
+		auto replace = [&enqueue, &clear](auto&& instance) -> bool
 		{
 			clear();
 
-			return enqueue(std::move(instance));
+			return enqueue(std::forward<decltype(instance)>(instance));
 		};
 
 		auto construct_type = [&instructions, &type, &enqueue, &replace](std::string_view content, bool allow_indirection=true) -> bool
@@ -1214,6 +1216,32 @@ namespace engine
 							return replace(std::move(result));
 						}
 					}
+
+					if (instructions.allow_property_translation && (!is_command))
+					{
+						const auto getter_name = util::format("get_{}", symbol);
+						const auto getter_id = hash(getter_name);
+
+						const auto getter_fn = type.func(getter_id);
+
+						const auto setter_name = util::format("set_{}", symbol);
+						const auto setter_id = hash(setter_name);
+
+						const auto setter_fn = type.func(setter_id);
+						
+						if (getter_fn || setter_fn)
+						{
+							return enqueue
+							(
+								MetaProperty
+								{
+									type.id(),
+									((getter_fn) ? getter_id : MetaFunctionID {}), // getter_id
+									((setter_fn) ? setter_id : MetaFunctionID {}) // setter_id
+								}
+							);
+						}
+					}
 				}
 
 				// Fallback control-paths:
@@ -1221,7 +1249,7 @@ namespace engine
 				{
 					if (output.empty())
 					{
-						if (is_last_symbol && !is_command)
+						if (is_last_symbol && (!is_command))
 						{
 							if (auto as_type = get_as_type())
 							{
