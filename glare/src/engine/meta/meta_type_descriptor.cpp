@@ -571,7 +571,7 @@ namespace engine
 
 				auto [result, length_processed] = meta_any_from_string_compound_expr_impl(remaining_content, instructions);
 
-				if (!result)
+				if ((!result) || (length_processed == 0))
 				{
 					break;
 				}
@@ -939,7 +939,7 @@ namespace engine
 							else
 							{
 								// Debugging related.
-								print_warn("Failed to assign resolved value, attempting original value as fallback.");
+								//print_warn("Failed to assign resolved value, attempting original value as fallback.");
 								//get_indirect_value_or_ref(field_value, args...);
 							}
 						}
@@ -958,7 +958,8 @@ namespace engine
 				// Debugging related:
 				auto _dbg_field_name = get_known_string_from_hash(field_name);
 				
-				print_warn("Failed to assign field: \"#{}\", in component: \"#{}\"", field_name, type.id());
+				//print_warn("Failed to assign field: \"#{}\", in component: \"#{}\"", field_name, type.id());
+				print_warn("Failed to assign field: \"{}\" (#{}), in component: \"#{}\"", _dbg_field_name, field_name, type.id());
 			}
 		}
 
