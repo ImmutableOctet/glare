@@ -48,13 +48,13 @@ namespace engine
 	{
 		// NOTE: Const-cast used here to avoid sharing const-qualification on references to non-const `MetaAny` objects.
 		// (i.e. If a value isn't stored as const in `segments`, we shouldn't retroactively apply const)
-		return std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, 0, std::nullopt, true));
+		return std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, size(), 0, std::nullopt, true));
 	}
 
 	MetaAny MetaValueOperation::get(const MetaEvaluationContext& context) const
 	{
 		// NOTE: See basic getter implementation for details on const-cast usage.
-		return std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, 0, std::nullopt, true, context));
+		return std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, size(), 0, std::nullopt, true, context));
 	}
 
 	MetaAny MetaValueOperation::get(const MetaAny& instance) const
@@ -64,7 +64,7 @@ namespace engine
 		auto as_ref = const_cast<MetaAny&>(instance).as_ref();
 
 		// NOTE: See parameterless overload for details on const-cast.
-		return std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, 0, std::nullopt, true, as_ref));
+		return std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, size(), 0, std::nullopt, true, as_ref));
 	}
 
 	MetaAny MetaValueOperation::get(const MetaAny& instance, const MetaEvaluationContext& context) const
@@ -73,7 +73,7 @@ namespace engine
 		auto as_ref = const_cast<MetaAny&>(instance).as_ref();
 
 		// NOTE: See parameterless overload for details on const-cast.
-		return std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, 0, std::nullopt, true, as_ref, context));
+		return std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, size(), 0, std::nullopt, true, as_ref, context));
 	}
 
 	MetaAny MetaValueOperation::get(const MetaAny& instance, Registry& registry, Entity entity) const
@@ -82,7 +82,7 @@ namespace engine
 		auto as_ref = const_cast<MetaAny&>(instance).as_ref();
 
 		// NOTE: See parameterless overload for details on const-cast.
-		return std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, 0, std::nullopt, true, as_ref, registry, entity));
+		return std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, size(), 0, std::nullopt, true, as_ref, registry, entity));
 	}
 
 	MetaAny MetaValueOperation::get(const MetaAny& instance, Registry& registry, Entity entity, const MetaEvaluationContext& context) const
@@ -91,37 +91,77 @@ namespace engine
 		auto as_ref = const_cast<MetaAny&>(instance).as_ref();
 
 		// NOTE: See parameterless overload for details on const-cast.
-		return std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, 0, std::nullopt, true, as_ref, registry, entity, context));
+		return std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, size(), 0, std::nullopt, true, as_ref, registry, entity, context));
 	}
 
 	MetaAny MetaValueOperation::get(Registry& registry, Entity entity) const
 	{
 		// NOTE: See parameterless overload for details on const-cast.
-		return std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, 0, std::nullopt, true, registry, entity));
+		return std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, size(), 0, std::nullopt, true, registry, entity));
 	}
 
 	MetaAny MetaValueOperation::get(Registry& registry, Entity entity, const MetaEvaluationContext& context) const
 	{
 		// NOTE: See parameterless overload for details on const-cast.
-		return std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, 0, std::nullopt, true, registry, entity, context));
+		return std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, size(), 0, std::nullopt, true, registry, entity, context));
 	}
 
 	template <typename ...Args>
 	MetaAny MetaValueOperation::set_impl(MetaAny& value, Args&&... args)
 	{
-		if (auto direct_evaluation_result = std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, 0, std::nullopt, true, value, args...))) // get(value, args...)
+		if (empty())
 		{
-			return direct_evaluation_result;
+			return {};
 		}
 
-		auto evaluation_result = std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, 0, std::nullopt, true, args...)); // get(args...);
+		const auto segment_count = size();
 
-		if (auto assignment_result = try_get_underlying_value(evaluation_result, value, args...))
+		bool attempt_direct_evaluation = true;
+
+		if (segment_count > 1)
+		{
+			auto& first_segment = segments[0];
+
+			if (first_segment.operation == MetaValueOperator::Get)
+			{
+				if (auto partial_evaluation_result = std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, segment_count, 1, std::nullopt, true, args...)))
+				{
+					if (auto chain_result = apply_operation(first_segment.value, value, MetaValueOperator::Assign, partial_evaluation_result, args...))
+					{
+						return chain_result;
+					}
+
+					// NOTE: We avoid duplicating evaluation work here by continuing
+					// the work that normally would be performed in `evaluate_impl`.
+					if (auto direct_evaluation_result = apply_operation(first_segment.value, partial_evaluation_result, first_segment.operation, value, args...))
+					{
+						return direct_evaluation_result;
+					}
+					else
+					{
+						// Don't bother trying direct evaluation again.
+						attempt_direct_evaluation = false;
+					}
+				}
+			}
+		}
+
+		if (attempt_direct_evaluation)
+		{
+			if (auto direct_evaluation_result = std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, segment_count, 0, std::nullopt, true, value, args...))) // get(value, args...)
+			{
+				return direct_evaluation_result;
+			}
+		}
+
+		auto regular_evaluation_result = std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, segment_count, 0, std::nullopt, true, args...)); // get(args...);
+
+		if (auto assignment_result = try_get_underlying_value(regular_evaluation_result, value, args...))
 		{
 			return assignment_result;
 		}
 
-		return evaluation_result;
+		return regular_evaluation_result;
 	}
 
 	MetaAny MetaValueOperation::set(MetaAny& value)
@@ -153,7 +193,7 @@ namespace engine
 			{
 				if (auto source_resolved = try_get_underlying_value(source, args...))
 				{
-					if (auto evaluation_result = std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, 0, std::nullopt, true, source_resolved, destination, args...))) // get(source, args...)
+					if (auto evaluation_result = std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, size(), 0, std::nullopt, true, source_resolved, destination, args...))) // get(source, args...)
 					{
 						return evaluation_result;
 					}
@@ -172,7 +212,7 @@ namespace engine
 			}
 			else
 			{
-				if (auto evaluation_result = std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, 0, std::nullopt, true, source, destination, args...))) // get(source, args...)
+				if (auto evaluation_result = std::get<0>(evaluate_impl(const_cast<MetaValueOperation&>(*this), true, size(), 0, std::nullopt, true, source, destination, args...))) // get(source, args...)
 				{
 					return evaluation_result;
 				}
@@ -303,6 +343,7 @@ namespace engine
 	(
 		SelfType&& self,
 		bool allow_ref_as_return_value,
+		std::size_t segment_count,
 		std::size_t offset,
 		std::optional<Operation> target_operation,
 		bool allow_look_ahead,
@@ -314,14 +355,14 @@ namespace engine
 			return {};
 		}
 
-		if (offset >= self.segments.size())
+		if (offset >= segment_count)
 		{
 			return {};
 		}
 
 		Segment result;
 
-		const auto remaining_entries = (self.segments.size() - offset);
+		const auto remaining_entries = (segment_count - offset);
 
 		auto& first = self.segments[offset];
 
@@ -375,7 +416,7 @@ namespace engine
 			result = { first.value.as_ref(), first.operation};
 		}
 
-		for (std::size_t i = (offset + concatenation_offset); i < self.segments.size(); i++)
+		for (std::size_t i = (offset + concatenation_offset); i < segment_count; i++)
 		{
 			auto& next_segment = self.segments[i];
 
@@ -420,14 +461,14 @@ namespace engine
 			{
 				const auto look_ahead_next_index = (i + 1);
 
-				if (!allow_look_ahead || look_ahead_next_index >= self.segments.size())
+				if (!allow_look_ahead || look_ahead_next_index >= segment_count)
 				{
 					break;
 				}
 
 				auto& look_ahead_segment = self.segments[look_ahead_next_index];
 
-				auto [look_ahead_processed_value, look_ahead_processed] = evaluate_impl(self, false, i, look_ahead_segment.operation, false, std::forward<Args>(args)...);
+				auto [look_ahead_processed_value, look_ahead_processed] = evaluate_impl(self, false, segment_count, i, look_ahead_segment.operation, false, std::forward<Args>(args)...);
 
 				if ((!look_ahead_processed_value) || (look_ahead_processed == 1))
 				{

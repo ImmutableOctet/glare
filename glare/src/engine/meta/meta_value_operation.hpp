@@ -120,7 +120,7 @@ namespace engine
 			{
 				return segments.empty();
 			}
-			
+
 			// Returns the number of segments in this operation.
 			inline std::size_t size() const
 			{
@@ -150,6 +150,7 @@ namespace engine
 			(
 				SelfType&& self,
 				bool allow_ref_as_return_value,
+				std::size_t segment_count,
 				std::size_t offset,
 				std::optional<Operation> target_operation,
 				bool allow_look_ahead,
