@@ -31,6 +31,11 @@
 #include <engine/reflection.hpp>
 #include <engine/system_manager_interface.hpp>
 
+#include <engine/components/transform_component.hpp>
+#include <engine/components/relationship_component.hpp>
+
+#include <engine/transform.hpp>
+
 #include <engine/input/buttons.hpp>
 
 #include <string_view>
@@ -109,6 +114,16 @@ namespace engine
 		}
 
 		inline operator std::int32_t() const noexcept { return (x + y + z); }
+
+		inline std::int32_t get_property_x() const
+		{
+			return x;
+		}
+
+		inline void set_property_x(std::int32_t value)
+		{
+			x = value;
+		}
 
 		static ReflectionTest fn(std::int32_t value=1)
 		{
@@ -213,6 +228,9 @@ namespace engine
 				decltype(ReflectionTest::z),
 				decltype(ReflectionTest::nested_value)
 			>()
+
+			.func<&ReflectionTest::get_property_x>("get_property_x"_hs)
+			.func<&ReflectionTest::set_property_x>("set_property_x"_hs)
 
 			.func<&ReflectionTest::fn>("fn"_hs)
 			.func<&ReflectionTest::const_method_test>("const_method_test"_hs)
@@ -350,6 +368,122 @@ TEST_CASE("engine::meta_any_from_string", "[engine:meta]")
 
 	engine::reflect<engine::ReflectionTest>();
 	engine::reflect<engine::TestSystem>();
+
+	SECTION("Member assignment")
+	{
+		auto assignment_expr = engine::meta_any_from_string
+		(
+			std::string_view("ReflectionTest::x = 10"),
+			{
+				.allow_member_references = true
+			}
+		);
+
+		REQUIRE(assignment_expr);
+
+		auto instance = engine::ReflectionTest {};
+
+		auto assignment_result = engine::try_get_underlying_value(assignment_expr, instance);
+
+		REQUIRE(assignment_result);
+
+		REQUIRE(instance.x == 10);
+	}
+
+	SECTION("Property member assignment")
+	{
+		auto assignment_expr = engine::meta_any_from_string
+		(
+			std::string_view("ReflectionTest::property_x = 10"),
+			{
+				.allow_member_references = true
+			}
+		);
+
+		REQUIRE(assignment_expr);
+
+		auto instance = engine::ReflectionTest {};
+
+		auto assignment_result = engine::try_get_underlying_value(assignment_expr, instance);
+
+		REQUIRE(assignment_result);
+
+		REQUIRE(instance.get_property_x() == 10);
+	}
+
+	SECTION("Get value of property")
+	{
+		engine::Registry registry;
+
+		auto entity = registry.create();
+
+		{
+			auto& relationship_component = registry.emplace<engine::RelationshipComponent>(entity);
+			auto& tform_component = registry.emplace<engine::TransformComponent>(entity);
+
+			auto tform = engine::Transform(registry, entity, tform_component);
+
+			tform.set_position({ 10.0f, 20.0f, 30.0f });
+		}
+
+		auto getter_expr = engine::meta_any_from_string
+		(
+			std::string_view("self.position"),
+			{
+				.allow_entity_indirection      = true,
+				.allow_function_call_semantics = true,
+				.allow_property_translation    = true
+			}
+		);
+
+		REQUIRE(getter_expr);
+
+		auto getter_result = engine::try_get_underlying_value(getter_expr, registry, entity);
+
+		REQUIRE(getter_result);
+
+		auto* as_vector = getter_result.try_cast<math::Vector3D>();
+
+		REQUIRE(as_vector);
+
+		REQUIRE(as_vector->x >= 10.0f);
+		REQUIRE(as_vector->y >= 20.0f);
+		REQUIRE(as_vector->z >= 30.0f);
+	}
+
+	SECTION("Set value of property")
+	{
+		engine::Registry registry;
+
+		auto entity = registry.create();
+
+		auto& relationship_component = registry.emplace<engine::RelationshipComponent>(entity);
+		auto& tform_component = registry.emplace<engine::TransformComponent>(entity);
+
+		auto setter_expr = engine::meta_any_from_string
+		(
+			std::string_view("self.position = Vector(100.0, 200.0, 300.0)"),
+			{
+				.allow_entity_indirection      = true,
+				.allow_function_call_semantics = true,
+				.allow_property_translation    = true
+			}
+		);
+
+		REQUIRE(setter_expr);
+
+		auto setter_result = engine::try_get_underlying_value(setter_expr, registry, entity);
+
+		REQUIRE(setter_result);
+
+		auto tform = engine::Transform(registry, entity, tform_component);
+
+		auto position = tform.get_position();
+
+		REQUIRE(position.x >= 100.0f);
+		REQUIRE(position.y >= 200.0f);
+		REQUIRE(position.z >= 300.0f);
+	}
 
 	SECTION("Existing optional value")
 	{
