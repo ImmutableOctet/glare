@@ -19,6 +19,7 @@ namespace engine
     struct MetaFunctionCall;
     struct MetaTypeReference;
     struct MetaDataMember;
+    struct MetaProperty;
     struct IndirectMetaDataMember;
 
 	// Returns true if the `value` specified has a reflected indirection function.
@@ -443,7 +444,7 @@ namespace engine
 				}
 			}
 		}
-        else if constexpr (std::is_same_v<reference_t, MetaDataMember> || std::is_same_v<reference_t, IndirectMetaDataMember>)
+        else if constexpr (std::is_same_v<reference_t, MetaDataMember> || std::is_same_v<reference_t, IndirectMetaDataMember> || std::is_same_v<reference_t, MetaProperty>)
         {
             return get_underlying_or_direct_type(exact_type_reference_value.get_member_type());
         }
