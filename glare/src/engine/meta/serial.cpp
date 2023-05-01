@@ -1716,12 +1716,14 @@ namespace engine
 				return;
 			}
 
-			offset = static_cast<std::size_t>(current_expr.data() - (expr.data()));
+			auto updated_offset = static_cast<std::size_t>(current_expr.data() - (expr.data()));
 
 			if (is_completed)
 			{
-				offset += current_expr.length();
+				updated_offset += current_expr.length();
 			}
+
+			offset = std::max(offset, updated_offset);
 		};
 
 		// Remove leading whitespace via offset.
@@ -2007,6 +2009,8 @@ namespace engine
 							}
 
 							owns_cast_type = static_cast<bool>(cast_type);
+
+							update_offset(cast_type_raw, true);
 						}
 						else
 						{
