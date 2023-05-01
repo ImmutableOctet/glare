@@ -64,6 +64,11 @@ namespace engine
 		// Controls whether an expression can encode a deferred function or method call operation.
 		bool allow_function_call_semantics    : 1 = true;
 
+		// Controls whether usage of 'properties' can be converted to calls to getter and setter methods of a similar name.
+		// e.g. `position` -> `set_position` & `get_position`
+		// (Allows for function-call semantics and context to be passed to a seemingly regular member)
+		bool allow_property_translation       : 1 = true;
+
 		// Controls whether an expression can encode a subscript operation.
 		bool allow_subscript_semantics        : 1 = true;
 
