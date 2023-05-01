@@ -8,6 +8,7 @@
 #include "meta_variable_target.hpp"
 #include "meta_variable_context.hpp"
 #include "meta_data_member.hpp"
+#include "meta_property.hpp"
 #include "meta_parsing_instructions.hpp"
 #include "indirect_meta_data_member.hpp"
 #include "meta_type_descriptor.hpp"
@@ -113,6 +114,50 @@ namespace engine
 		engine_meta_type<IndirectMetaDataMember>()
 			.data<&IndirectMetaDataMember::target>("target"_hs)
 			.data<&IndirectMetaDataMember::data_member>("data_member"_hs)
+		;
+	}
+
+	template <>
+	void reflect<MetaProperty>()
+	{
+		engine_meta_type<MetaProperty>()
+			.data<&MetaProperty::type_id>("type_id"_hs)
+			.data<&MetaProperty::getter_id>("getter_id"_hs)
+			.data<&MetaProperty::setter_id>("setter_id"_hs)
+
+			.data<nullptr, &MetaProperty::has_type>("has_type"_hs)
+			.data<nullptr, &MetaProperty::get_type>("type"_hs)
+			
+			.data<nullptr, &MetaProperty::has_member_type>("has_member_type"_hs)
+			.data<nullptr, &MetaProperty::get_member_type>("member_type"_hs)
+			.data<nullptr, &MetaProperty::has_member>("has_member"_hs)
+			
+			.data<nullptr, &MetaProperty::has_getter>("has_getter"_hs)
+			.data<nullptr, &MetaProperty::has_setter>("has_setter"_hs)
+
+			.data<nullptr, static_cast<MetaFunction (MetaProperty::*)() const>(&MetaProperty::getter)>("getter"_hs)
+			.data<nullptr, static_cast<MetaFunction (MetaProperty::*)() const>(&MetaProperty::setter)>("setter"_hs)
+
+			.func<static_cast<MetaFunction (MetaProperty::*)() const>(&MetaProperty::getter)>("getter"_hs)
+			.func<static_cast<MetaFunction (MetaProperty::*)(const MetaType& type) const>(&MetaProperty::getter)>("getter"_hs)
+
+			.func<static_cast<MetaFunction (MetaProperty::*)() const>(&MetaProperty::setter)>("setter"_hs)
+			.func<static_cast<MetaFunction (MetaProperty::*)(const MetaType& type) const>(&MetaProperty::setter)>("setter"_hs)
+
+			.ctor<decltype(MetaProperty::type_id)>()
+
+			.ctor
+			<
+				decltype(MetaProperty::type_id),
+				decltype(MetaProperty::getter_id)
+			>()
+
+			.ctor
+			<
+				decltype(MetaProperty::type_id),
+				decltype(MetaProperty::getter_id),
+				decltype(MetaProperty::setter_id)
+			>()
 		;
 	}
 
@@ -275,6 +320,7 @@ namespace engine
 		reflect<MetaVariableContext>();
 		reflect<MetaDataMember>();
 		reflect<IndirectMetaDataMember>();
+		reflect<MetaProperty>();
 		reflect<MetaTypeDescriptor>();
 		reflect<MetaTypeConversion>();
 		reflect<MetaValueOperation>();
