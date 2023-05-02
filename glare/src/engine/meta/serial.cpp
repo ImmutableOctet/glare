@@ -33,8 +33,8 @@
 #include <util/parse.hpp>
 #include <util/format.hpp>
 
+#include <tuple>
 #include <vector>
-
 #include <optional>
 #include <type_traits>
 #include <algorithm>
@@ -706,7 +706,10 @@ namespace engine
 					{
 						if (update_type)
 						{
-							type = instance_meta_type;
+							if (!type_has_indirection(instance_meta_type))
+							{
+								type = instance_meta_type;
+							}
 
 							update_type = false;
 						}
@@ -773,6 +776,62 @@ namespace engine
 			return false;
 		};
 
+		auto make_property_access_ids = [](std::string_view symbol) -> std::tuple<MetaSymbolID, MetaSymbolID>
+		{
+			if (symbol.empty())
+			{
+				return {};
+			}
+
+			const auto getter_name = util::format("get_{}", symbol);
+			const auto getter_id = hash(getter_name);
+
+			const auto setter_name = util::format("set_{}", symbol);
+			const auto setter_id = hash(setter_name);
+
+			return { getter_id, setter_id };
+		};
+
+		auto resolve_property = [&make_property_access_ids](const MetaType& type, std::string_view symbol, MetaSymbolID symbol_id={}) -> std::optional<MetaProperty>
+		{
+			const auto [getter_id, setter_id] = make_property_access_ids(symbol);
+
+			const auto getter_fn = type.func(getter_id);
+			const auto setter_fn = type.func(setter_id);
+			
+			const auto data_member = resolve_data_member_by_id(type, true, symbol_id);
+
+			if (getter_fn || setter_fn || data_member)
+			{
+				return MetaProperty
+				{
+					type.id(),
+									
+					((getter_fn) ? getter_id : MetaFunctionID {}), // getter_id
+					((setter_fn) ? setter_id : MetaFunctionID {}), // setter_id
+
+					((data_member) ? symbol_id : MetaSymbolID {})
+				};
+			}
+
+			return std::nullopt;
+		};
+
+		auto make_opaque_property = [&make_property_access_ids](std::string_view symbol, MetaSymbolID data_member_id={}, MetaTypeID type_id={})
+		{
+			const auto [getter_id, setter_id] = make_property_access_ids(symbol);
+
+			return MetaProperty
+			{
+				type_id,
+
+				getter_id,
+				setter_id,
+
+				data_member_id
+			};
+		};
+
 		util::split
 		(
 			value,
@@ -786,7 +845,7 @@ namespace engine
 
 			[
 				&instructions, allow_entity_fallback, allow_component_fallback, allow_standalone_opaque_function, &type, &value,
-				&initial_type, had_initial_type, &enqueue, &replace, &construct_type, &output
+				&initial_type, had_initial_type, &enqueue, &replace, &construct_type, &resolve_property, &make_opaque_property, &output
 			]
 			(std::string_view& symbol, bool is_first_symbol, bool is_last_symbol) -> bool
 			{
@@ -1219,27 +1278,9 @@ namespace engine
 
 					if (instructions.allow_property_translation && (!is_command))
 					{
-						const auto getter_name = util::format("get_{}", symbol);
-						const auto getter_id = hash(getter_name);
-
-						const auto getter_fn = type.func(getter_id);
-
-						const auto setter_name = util::format("set_{}", symbol);
-						const auto setter_id = hash(setter_name);
-
-						const auto setter_fn = type.func(setter_id);
-						
-						if (getter_fn || setter_fn)
+						if (auto meta_property = resolve_property(type, symbol, symbol_id))
 						{
-							return enqueue
-							(
-								MetaProperty
-								{
-									type.id(),
-									((getter_fn) ? getter_id : MetaFunctionID {}), // getter_id
-									((setter_fn) ? setter_id : MetaFunctionID {}) // setter_id
-								}
-							);
+							return enqueue(std::move(*meta_property));
 						}
 					}
 				}
@@ -1283,11 +1324,16 @@ namespace engine
 						{
 							return enqueue
 							(
+								/*
+								// Alternative implementation (doesn't support 'property' accessors):
 								MetaDataMember
 								{
 									MetaTypeID {},
 									symbol_id
 								}
+								*/
+
+								make_opaque_property(symbol, symbol_id)
 							);
 						}
 					}
