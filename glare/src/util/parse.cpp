@@ -8,6 +8,7 @@ namespace util
 {
 	std::tuple<std::size_t, std::string_view> find_accessor(std::string_view expr)
 	{
+		// TODO: Move access symbols to a dedicated/shared array.
 		return find_first_of_ex
 		(
 			expr,
@@ -22,6 +23,7 @@ namespace util
 
 	std::tuple<std::size_t, std::string_view> find_last_accessor(std::string_view expr)
 	{
+		// TODO: Move access symbols to a dedicated/shared array.
 		return find_last
 		(
 			expr,
@@ -1191,7 +1193,7 @@ namespace util
 
 		if (initial_result_index == std::string_view::npos)
 		{
-			return { initial_result_index, initial_result_symbol };
+			return { std::string_view::npos, {} }; // { initial_result_index, initial_result_symbol };
 		}
 
 		if ((initial_result_symbol.length() == 1) || (initial_result_symbol == "<<") || (initial_result_symbol == ">>"))
@@ -1215,7 +1217,7 @@ namespace util
 			return expandable_result(initial_result_index, initial_result_symbol.length(), '=');
 		}
 
-		return { initial_result_index, initial_result_symbol };
+		return { initial_result_index, expr.substr(initial_result_index, initial_result_symbol.length()) };
 	}
 
 	std::tuple<std::size_t, std::size_t>
