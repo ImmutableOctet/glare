@@ -124,25 +124,31 @@ namespace engine
 			.data<&MetaProperty::type_id>("type_id"_hs)
 			.data<&MetaProperty::getter_id>("getter_id"_hs)
 			.data<&MetaProperty::setter_id>("setter_id"_hs)
+			.data<&MetaProperty::data_member_id>("data_member_id"_hs)
 
 			.data<nullptr, &MetaProperty::has_type>("has_type"_hs)
 			.data<nullptr, &MetaProperty::get_type>("type"_hs)
 			
+			.data<nullptr, &MetaProperty::has_member_access>("has_member_access"_hs)
 			.data<nullptr, &MetaProperty::has_member_type>("has_member_type"_hs)
 			.data<nullptr, &MetaProperty::get_member_type>("member_type"_hs)
-			.data<nullptr, &MetaProperty::has_member>("has_member"_hs)
-			
+
 			.data<nullptr, &MetaProperty::has_getter>("has_getter"_hs)
 			.data<nullptr, &MetaProperty::has_setter>("has_setter"_hs)
+			.data<nullptr, &MetaProperty::has_data_member>("has_data_member"_hs)
 
 			.data<nullptr, static_cast<MetaFunction (MetaProperty::*)() const>(&MetaProperty::getter)>("getter"_hs)
 			.data<nullptr, static_cast<MetaFunction (MetaProperty::*)() const>(&MetaProperty::setter)>("setter"_hs)
+			.data<nullptr, static_cast<entt::meta_data (MetaProperty::*)() const>(&MetaProperty::data_member)>("data_member"_hs)
 
 			.func<static_cast<MetaFunction (MetaProperty::*)() const>(&MetaProperty::getter)>("getter"_hs)
 			.func<static_cast<MetaFunction (MetaProperty::*)(const MetaType& type) const>(&MetaProperty::getter)>("getter"_hs)
 
 			.func<static_cast<MetaFunction (MetaProperty::*)() const>(&MetaProperty::setter)>("setter"_hs)
 			.func<static_cast<MetaFunction (MetaProperty::*)(const MetaType& type) const>(&MetaProperty::setter)>("setter"_hs)
+
+			.func<static_cast<entt::meta_data (MetaProperty::*)() const>(&MetaProperty::data_member)>("data_member"_hs)
+			.func<static_cast<entt::meta_data (MetaProperty::*)(const MetaType& type) const>(&MetaProperty::data_member)>("data_member"_hs)
 
 			.ctor<decltype(MetaProperty::type_id)>()
 
@@ -157,6 +163,14 @@ namespace engine
 				decltype(MetaProperty::type_id),
 				decltype(MetaProperty::getter_id),
 				decltype(MetaProperty::setter_id)
+			>()
+
+			.ctor
+			<
+				decltype(MetaProperty::type_id),
+				decltype(MetaProperty::getter_id),
+				decltype(MetaProperty::setter_id),
+				decltype(MetaProperty::data_member_id)
 			>()
 		;
 	}
