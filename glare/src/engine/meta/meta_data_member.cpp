@@ -268,7 +268,7 @@ namespace engine
 		{
 			if (auto type = get_type())
 			{
-				return type.data(data_member_id);
+				return resolve_data_member_by_id(type, true, data_member_id);
 			}
 		}
 
