@@ -6,12 +6,19 @@ namespace engine
 {
 	struct MetaEvaluationContext;
 
-	// An abstraction for a pair of functions handling access to a member.
+	/*
+		An abstraction for a handling access to a member.
+		
+		A property may be defined either by specifying a pair of functions,
+		or by directly specifying a type and data-member.
+
+		See: `getter_id`, `setter_id`, `data_member_id`
+	*/
 	struct MetaProperty
 	{
 		public:
-			// An optional type identifier used contextually
-			// for validation and component retrieval.
+			// An optional identifier for the underlying type this property is accessing.
+			// If this is left unspecified, type checks will be ignored where possible.
 			MetaTypeID type_id = {};
 
 			// A function identifier used to retrieve a value from this 'property'.
@@ -21,6 +28,10 @@ namespace engine
 			// A function identifier used to assign the value of this 'property'.
 			// If this function is not specified, calls to `set` will immediately fail.
 			MetaFunctionID setter_id = {};
+
+			// An optional identifier used to represent the formal name of this property.
+			// If specified, this field may also be used as a fallback when calling a `getter` or `setter` function.
+			MetaSymbolID data_member_id = {};
 
 			// Attempts to call `getter` as a static member-function.
 			MetaAny get() const;
@@ -166,15 +177,22 @@ namespace engine
 			bool has_member_type() const;
 
 			/*
-				Attempts to retrieve the type of the value returned by a call to `getter`.
+				If `getter_id` is specified, this attempts to retrieve the
+				type of the value returned by a call to `getter`.
+
+				If `getter_id` is not specified, but `data_member_id` is, this attempts
+				to retrieve the type of the data-member identified by `data_member_id`.
 				
 				NOTE: This method returns `getter`'s first overload's return-type,
 				which may differ from the type of the value provided during resolution.
 			*/
 			MetaType get_member_type() const;
 
-			// Indicates whether `getter_id` or `setter_id` is specified.
-			bool has_member() const;
+			// Indicates whether `data_member_id` is specified.
+			bool has_data_member() const;
+
+			// Indicates whether `getter_id`, `setter_id` or `data_member_id` is specified.
+			bool has_member_access() const;
 
 			// Returns true if `getter_id` is specified.
 			bool has_getter() const;
@@ -196,6 +214,11 @@ namespace engine
 			// This overload uses `get_type` to retrieve the requested function.
 			MetaFunction setter() const;
 			
+			// Retrieves the data-member referenced by `data_member_id`, using `type`.
+			entt::meta_data data_member(const MetaType& type) const;
+
+			// Retrieves the data-member referenced by `data_member_id`.
+			entt::meta_data data_member() const;
 		private:
 			template <bool check_type, typename ...Args>
 			MetaAny get_from_impl(const MetaAny& instance, Args&&... args) const;
@@ -220,5 +243,11 @@ namespace engine
 
 			template <bool fallback_to_entity_type, bool check_value_type, typename ...Args>
 			MetaAny set_impl(MetaAny& value, Registry& registry, Entity entity, Entity context_entity, Args&&... args);
+
+			template <typename ...Args>
+			MetaAny get_fallback_impl(Args&&... args) const;
+
+			template <typename ...Args>
+			MetaAny set_fallback_impl(Args&&... args);
 	};
 }
