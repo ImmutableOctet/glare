@@ -641,6 +641,7 @@ namespace engine
 	GENERATE_SINGLE_FIELD_DERIVED_TYPE_REFLECTION(instructions::Yield, instructions::Thread, condition);
 	GENERATE_EMPTY_DERIVED_TYPE_REFLECTION(instructions::IfControlBlock, instructions::LocalConditionControlBlock);
 	GENERATE_SINGLE_FIELD_TYPE_REFLECTION(instructions::FunctionCall, function);
+	GENERATE_SINGLE_FIELD_TYPE_REFLECTION(instructions::AdvancedMetaExpression, expr);
 	GENERATE_SINGLE_FIELD_TYPE_REFLECTION(instructions::VariableDeclaration, variable_details);
 
 	template <>
@@ -741,6 +742,7 @@ namespace engine
 		reflect<instructions::MultiControlBlock>();
 		reflect<instructions::IfControlBlock>();
 		reflect<instructions::FunctionCall>();
+		reflect<instructions::AdvancedMetaExpression>();
 		reflect<instructions::VariableDeclaration>();
 		reflect<instructions::VariableAssignment>();
 		reflect<instructions::EventCapture>();
