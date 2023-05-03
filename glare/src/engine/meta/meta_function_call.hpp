@@ -12,6 +12,7 @@ namespace engine
 	{
 		public:
 			using Arguments = util::small_vector<MetaAny, 4>; // 8
+			using ForwardingArguments = util::small_vector<MetaAny, 5>; // 8
 
 			MetaTypeID type_id;
 			MetaFunctionID function_id;
@@ -19,6 +20,9 @@ namespace engine
 			Arguments arguments;
 
 			MetaAny self = {};
+
+			// When enabled, data-member accesses may be performed using function-call syntax.
+			bool allow_fallback_to_member : 1 = true;
 
 			MetaAny get_self(bool resolve_as_container=false, bool resolve_underlying=true) const;
 
@@ -34,53 +38,38 @@ namespace engine
 			MetaType get_type() const;
 
 			bool has_type() const;
+			bool has_function() const;
 
 			// Wrapper for `get`; added for reflection purposes.
-			inline MetaAny get_indirect_value() const
-			{
-				return get();
-			}
+			MetaAny get_indirect_value() const;
 
 			// Wrapper for `get`; added for reflection purposes.
-			inline MetaAny get_indirect_value(const MetaEvaluationContext& context) const
-			{
-				return get(context);
-			}
+			MetaAny get_indirect_value(const MetaEvaluationContext& context) const;
 
 			// Wrapper for `get`; added for reflection purposes.
-			inline MetaAny get_indirect_value(const MetaAny& self) const
-			{
-				// NOTE: Const-cast needed here to allow for non-const member-function calls.
-				// Usage of `as_ref` allows for reference-policy forwarding without
-				// imposing transitive const from reference-type of `self`.
-				return get(const_cast<MetaAny&>(self).as_ref(), true);
-			}
+			MetaAny get_indirect_value(const MetaAny& self) const;
 
 			// Wrapper for `get`; added for reflection purposes.
-			inline MetaAny get_indirect_value(const MetaAny& self, Registry& registry, Entity entity) const
-			{
-				// NOTE: See basic indirect chain-getter implementation for details on const-cast usage.
-				return get(registry, entity, true, const_cast<MetaAny&>(self).as_ref());
-			}
+			MetaAny get_indirect_value(const MetaAny& self, Registry& registry, Entity entity) const;
 
 			// Wrapper for `get`; added for reflection purposes.
-			inline MetaAny get_indirect_value(const MetaAny& self, Registry& registry, Entity entity, const MetaEvaluationContext& context) const
-			{
-				// NOTE: See basic indirect chain-getter implementation for details on const-cast usage.
-				return get(registry, entity, true, const_cast<MetaAny&>(self).as_ref(), &context);
-			}
+			MetaAny get_indirect_value(const MetaAny& self, Registry& registry, Entity entity, const MetaEvaluationContext& context) const;
 
 			// Wrapper for `get`; added for reflection purposes.
-			inline MetaAny get_indirect_value(Registry& registry, Entity entity) const
-			{
-				return get(registry, entity, true);
-			}
+			MetaAny get_indirect_value(Registry& registry, Entity entity) const;
 
 			// Wrapper for `get`; added for reflection purposes.
-			inline MetaAny get_indirect_value(Registry& registry, Entity entity, const MetaEvaluationContext& context) const
-			{
-				return get(registry, entity, true, {}, &context);
-			}
+			MetaAny get_indirect_value(Registry& registry, Entity entity, const MetaEvaluationContext& context) const;
+
+			MetaAny set_indirect_value(MetaAny& value);
+			MetaAny set_indirect_value(MetaAny& value, const MetaEvaluationContext& context);
+			MetaAny set_indirect_value(MetaAny& value, Registry& registry, Entity entity);
+			MetaAny set_indirect_value(MetaAny& value, Registry& registry, Entity entity, const MetaEvaluationContext& context);
+
+			MetaAny set_indirect_value(MetaAny& source, MetaAny& destination);
+			MetaAny set_indirect_value(MetaAny& source, MetaAny& destination, const MetaEvaluationContext& context);
+			MetaAny set_indirect_value(MetaAny& source, MetaAny& destination, Registry& registry, Entity entity);
+			MetaAny set_indirect_value(MetaAny& source, MetaAny& destination, Registry& registry, Entity entity, const MetaEvaluationContext& context);
 
 			inline MetaAny operator()(MetaAny self={}, bool resolve_indirection=true) const
 			{
@@ -97,5 +86,31 @@ namespace engine
 
 			template <typename ...Args>
 			MetaAny get_self(bool resolve_as_container, bool resolve_underlying, Args&&... args) const;
+
+			template <typename ...Args>
+			MetaAny get_fallback_impl(const MetaAny& self, bool resolve_indirection, Args&&... args) const;
+
+			template <typename ...Args>
+			MetaAny get_fallback(const MetaAny& self, bool resolve_indirection, Args&&... args) const;
+
+			template <typename ...Args>
+			MetaAny set_fallback_impl(MetaAny self, MetaAny& value, bool resolve_indirection, Args&&... args);
+
+			template <typename ...Args>
+			MetaAny set_fallback(MetaAny self, MetaAny& value, bool resolve_indirection, Args&&... args);
+
+			template <typename ...Args>
+			MetaAny set_with_fallback_impl(MetaAny& source, MetaAny& destination, bool resolve_indirection, Args&&... args);
+
+			template <typename ...Args>
+			MetaAny set_with_fallback(MetaAny& source, MetaAny& destination, bool resolve_indirection, Args&&... args);
+
+			template <typename ArgumentContainer>
+			MetaAny execute_impl(ArgumentContainer&& arguments, MetaAny self={}, bool resolve_indirection=true) const;
+
+			template <typename ArgumentContainer>
+			MetaAny execute_impl(ArgumentContainer&& arguments, Registry& registry, Entity entity=null, bool resolve_indirection=true, MetaAny self={}, const MetaEvaluationContext* opt_evaluation_context=nullptr) const;
+
+			// TODO: Implement an overload of `execute_impl` that takes in only a `MetaEvaluationContext` reference.
 	};
 }
