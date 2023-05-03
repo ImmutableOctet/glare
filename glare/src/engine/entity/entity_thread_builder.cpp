@@ -918,15 +918,14 @@ namespace engine
 		{
 			if (const auto* as_operation = remote_instance.try_cast<MetaValueOperation>())
 			{
-				if (!as_operation->contains_function_call(storage, true))
+				// TODO: Look into expanding this check to only include function calls without non-`MetaValueOperator::Get` operators.
+				if (as_operation->contains_function_call(storage, true))
 				{
-					// TODO: Add deallocation routine.
-
-					return 0;
+					return instruct<FunctionCall>(std::move(*as_indirect));
 				}
 			}
 
-			return instruct<FunctionCall>(std::move(*as_indirect));
+			return instruct<AdvancedMetaExpression>(std::move(*as_indirect));
 		}
 	}
 
@@ -2089,9 +2088,9 @@ namespace engine
 		instruction_raw = util::trim(instruction_raw);
 
 		// Search for a single-line 'comment' symbol on this line:
-		const auto comment_symbol_index = instruction_raw.find("//");
+		const auto single_line_comment_symbol_index = instruction_raw.find("//");
 
-		switch (comment_symbol_index)
+		switch (single_line_comment_symbol_index)
 		{
 			case 0:
 				// This line starts with a comment-symbol, skip processing this line.
@@ -2103,7 +2102,7 @@ namespace engine
 
 			default:
 				// Truncate the current line at the comment-symbol we found.
-				instruction_raw = instruction_raw.substr(0, comment_symbol_index);
+				instruction_raw = instruction_raw.substr(0, single_line_comment_symbol_index);
 
 				break;
 		}
@@ -2154,7 +2153,9 @@ namespace engine
 					// No further processing needed.
 					return 1;
 				}
-				// Workaround for informal entity syntax:
+				// This clause is a workaround for informal entity syntax.
+				// i.e. this allows you to write `some_entity.some_component = some_value`,
+				// rather than `entity(some_entity).some_component = some_value`.
 				else if (entity_ref_expr.empty())
 				{
 					const auto opt_type_context = get_type_context();
@@ -2168,45 +2169,61 @@ namespace engine
 
 					if (member_as_type)
 					{
-						const auto& uncaptured_entity_ref = type_or_variable_name;
+						bool leading_symbol_is_variable = false;
 
-						const auto corrected_instruction_subset_offset = static_cast<std::size_t>((member_as_type_name.data() - instruction_raw.data()));
-						const auto corrected_instruction_subset = instruction_raw.substr(corrected_instruction_subset_offset);
-
-						auto
-						[
-							unlikely_nested_entity_ref_expr,
-							intended_type_name, actual_member_name,
-							intended_operator_symbol, intended_assignment_value_raw,
-							intended_updated_offset
-						] = parse_qualified_assignment_or_comparison(corrected_instruction_subset);
-
-						if (!intended_type_name.empty())
+						// Make sure the symbol referenced isn't a variable:
+						if (auto opt_variable_context = parsing_context.get_variable_context())
 						{
-							//assert(unlikely_nested_entity_ref_expr.empty());
-
-							const auto corrected_update_instruction_result = process_update_instruction_from_values
-							(
-								intended_type_name,
-								actual_member_name,
-								intended_assignment_value_raw,
-								
-								(unlikely_nested_entity_ref_expr.empty())
-									? uncaptured_entity_ref
-									: unlikely_nested_entity_ref_expr
-								,
-
-								intended_operator_symbol
-							);
-
-							if (corrected_update_instruction_result)
+							if (opt_variable_context->retrieve_variable(type_or_variable_name))
 							{
-								// Update the previous-instruction ID to reflect
-								// the inline-update operation we just processed.
-								this->prev_instruction_id = "update"_hs;
+								leading_symbol_is_variable = true;
+							}
+						}
 
-								// No further processing needed.
-								return 1;
+						// NOTE: If this check was not present, any member-access from a variable could conflict with this logic.
+						// e.g. `my_var.member` could be seen as a entity-component access, rather than a variable member access.
+						if (!leading_symbol_is_variable)
+						{
+							const auto& uncaptured_entity_ref = type_or_variable_name;
+
+							const auto corrected_instruction_subset_offset = static_cast<std::size_t>((member_as_type_name.data() - instruction_raw.data()));
+							const auto corrected_instruction_subset = instruction_raw.substr(corrected_instruction_subset_offset);
+
+							auto
+							[
+								unlikely_nested_entity_ref_expr,
+								intended_type_name, actual_member_name,
+								intended_operator_symbol, intended_assignment_value_raw,
+								intended_updated_offset
+							] = parse_qualified_assignment_or_comparison(corrected_instruction_subset);
+
+							if (!intended_type_name.empty())
+							{
+								//assert(unlikely_nested_entity_ref_expr.empty());
+
+								const auto corrected_update_instruction_result = process_update_instruction_from_values
+								(
+									intended_type_name,
+									actual_member_name,
+									intended_assignment_value_raw,
+								
+									(unlikely_nested_entity_ref_expr.empty())
+										? uncaptured_entity_ref
+										: unlikely_nested_entity_ref_expr
+									,
+
+									intended_operator_symbol
+								);
+
+								if (corrected_update_instruction_result)
+								{
+									// Update the previous-instruction ID to reflect
+									// the inline-update operation we just processed.
+									this->prev_instruction_id = "update"_hs;
+
+									// No further processing needed.
+									return 1;
+								}
 							}
 						}
 					}
