@@ -1013,20 +1013,19 @@ namespace engine
 					}
 				}
 
-				if (instructions.allow_explicit_type_construction)
+				if ((is_command) && (symbol_used_as_type || (type && command_name_or_value.empty())))
 				{
-					if ((is_command) && (symbol_used_as_type || (type && command_name_or_value.empty())))
+					// Forward usage of system-types in construction syntax to regular type references.
+					// (May remove this later)
+					if (type_is_system(type))
 					{
-						if (type_is_system(type))
+						return replace(MetaTypeReference { type.id() });
+					}
+					else if (instructions.allow_explicit_type_construction)
+					{
+						if (auto result = construct_type(content))
 						{
-							return enqueue(MetaTypeReference { type.id() }); // replace
-						}
-						else
-						{
-							if (auto result = construct_type(content))
-							{
-								return result;
-							}
+							return result;
 						}
 					}
 				}
@@ -1288,31 +1287,47 @@ namespace engine
 				// Fallback control-paths:
 				if (!symbol.empty())
 				{
-					if (output.empty())
+					// NOTE: These if-conditions are split this way intentionally to allow for context-specific prioritization of fallback methods.
+					// (e.g. type-references are higher priority than entity-references, system-types take precedence over component-types, etc.)
+
+					if (!is_command)
 					{
-						if (is_last_symbol && (!is_command))
+						if (instructions.resolve_system_references)
 						{
-							if (auto as_type = get_as_type())
+							// See previous `resolve_system_references` section for regular system-type deduction.
+							if (output.empty() && is_last_symbol)
 							{
-								if (instructions.resolve_system_references && type_is_system(as_type)) // && allow_system_references
+								if (auto as_type = get_as_type())
 								{
-									return enqueue(MetaTypeReference { as_type.id() });
-								}
-
-								if (instructions.fallback_to_component_reference && allow_component_fallback)
-								{
-									/*
-									if (auto result = meta_any_from_string_execute_string_command("component"_hs, symbol, symbol, instructions.allow_entity_indirection, instructions.context, instructions.storage); std::get<0>(result))
+									if (type_is_system(as_type)) // && allow_system_references
 									{
-										return enqueue(std::move(std::get<0>(result))); // replace
+										return enqueue(MetaTypeReference { as_type.id() });
 									}
-									*/
-
-									return enqueue(MetaTypeReference { as_type.id() });
 								}
 							}
 						}
+						
+						if (instructions.fallback_to_component_reference && allow_component_fallback)
+						{
+							if ((output.empty()) || (!type) || (type.id() == "Entity"_hs)) // resolve<Entity>()
+							{
+								if (auto as_type = get_as_type())
+								{
+									return enqueue
+									(
+										MetaTypeReference
+										{
+											.type_id = as_type.id(),
+											.validate_assignment_type = false
+										}
+									);
+								}
+							}
+						}
+					}
 
+					if (output.empty())
+					{
 						if ((instructions.fallback_to_entity_reference && instructions.allow_entity_indirection) && (allow_entity_fallback && !is_command))
 						{
 							return enqueue(EntityTarget { EntityTarget::EntityNameTarget { symbol_id } }); // EntityTarget::from_string(symbol)
@@ -1320,7 +1335,7 @@ namespace engine
 					}
 					else
 					{
-						if ((instructions.allow_member_references && instructions.allow_opaque_member_references)) // !is_first_symbol && ...
+						if ((!is_command) && (instructions.allow_member_references && instructions.allow_opaque_member_references)) // !is_first_symbol && ...
 						{
 							return enqueue
 							(
