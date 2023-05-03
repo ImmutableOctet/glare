@@ -37,7 +37,10 @@ namespace engine
 			{
 				auto member = MetaDataMember { type_id, data_member_id };
 
-				return member.set(std::forward<Args>(args)...);
+				if (member.set(std::forward<Args>(args)...))
+				{
+					return entt::forward_as_meta(*this);
+				}
 			}
 		}
 
