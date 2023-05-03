@@ -1,6 +1,8 @@
 #include "indirect_meta_any.hpp"
 
 #include "indirection.hpp"
+#include "function.hpp"
+#include "hash.hpp"
 
 #include "shared_storage_interface.hpp"
 #include "meta_evaluation_context.hpp"
@@ -139,19 +141,19 @@ namespace engine
 	template <typename ...Args>
 	MetaAny IndirectMetaAny::get_indirect_value_impl(Args&&... args) const
 	{
-		auto result = get(args...);
+		auto proxy = get(args...);
 
-		if (!result)
+		if (!proxy)
 		{
 			return {};
 		}
 
-		if (auto underlying = try_get_underlying_value(result, args...))
+		if (auto underlying = try_get_underlying_value(proxy, args...))
 		{
 			return underlying;
 		}
 
-		return result;
+		return proxy;
 	}
 
 	template <typename ...Args>
@@ -162,15 +164,15 @@ namespace engine
 			return {};
 		}
 
-		auto result = get(args...);
+		auto proxy = get(args...);
 
-		if (!result)
+		if (!proxy)
 		{
 			return {};
 		}
 
 		// NOTE: Const-cast is used here to avoid unwanted 'transitive' const-qualification.
-		if (auto underlying = try_get_underlying_value(result, const_cast<MetaAny&>(instance).as_ref(), args...)) // instance
+		if (auto underlying = try_get_underlying_value(proxy, const_cast<MetaAny&>(instance).as_ref(), args...)) // instance
 		{
 			return underlying;
 		}
@@ -181,29 +183,49 @@ namespace engine
 	template <typename ...Args>
 	MetaAny IndirectMetaAny::set_indirect_value_impl(MetaAny& value, Args&&... args)
 	{
+		using namespace engine::literals;
+
 		if (!value)
 		{
 			return {};
 		}
 
-		auto remote = get(args...);
+		auto proxy = get(args...);
 
-		if (!remote)
+		if (!proxy)
 		{
 			return {};
 		}
 
-		if (auto result = try_get_underlying_value(remote, value, args...))
+		if (auto proxy_type = proxy.type())
 		{
-			return result;
+			// NOTE: We directly call `operator=` here since the intent for a 'set' operation is known.
+			// Directly calling `operator=` also has the benefit of guaranteeing intent.
+			if (auto set_fn = proxy_type.func("operator="_hs))
+			{
+				if (invoke_any_overload(set_fn, proxy, value, args...)) // const_cast<MetaAny&>(proxy).as_ref()
+				{
+					return entt::forward_as_meta(*this);
+				}
+			}
 		}
 
-		return {}; // remote;
+		/*
+		// Alternative implementation (This has the drawback of allowing 'get' results as a fallback):
+		if (try_get_underlying_value(proxy, value, args...))
+		{
+			return entt::forward_as_meta(*this);
+		}
+		*/
+
+		return {}; // proxy;
 	}
 
 	template <typename ...Args>
 	MetaAny IndirectMetaAny::set_indirect_value_using_remote_impl(MetaAny& source, MetaAny& destination, Args&&... args)
 	{
+		using namespace engine::literals;
+
 		if (!source)
 		{
 			return {};
@@ -216,18 +238,34 @@ namespace engine
 		}
 		*/
 
-		auto remote = get(args...);
+		auto proxy = get(args...);
 
-		if (!remote)
+		if (!proxy)
 		{
 			return {};
 		}
 
-		if (auto result = try_get_underlying_value(remote, source, destination, args...))
+		if (auto proxy_type = proxy.type())
 		{
-			return result;
+			// NOTE: We directly call `operator=` here since the intent for a 'set' operation is known.
+			// Directly calling `operator=` also has the benefit of guaranteeing intent.
+			if (auto set_fn = proxy_type.func("operator="_hs))
+			{
+				if (invoke_any_overload(set_fn, proxy, source, destination, args...)) // const_cast<MetaAny&>(proxy).as_ref()
+				{
+					return entt::forward_as_meta(*this);
+				}
+			}
 		}
 
-		return {}; // remote;
+		/*
+		// Alternative implementation (This has the drawback of allowing 'get' results as a fallback):
+		if (try_get_underlying_value(proxy, source, destination, args...))
+		{
+			return entt::forward_as_meta(*this);
+		}
+		*/
+
+		return {}; // proxy;
 	}
 }
