@@ -223,6 +223,14 @@ namespace engine
 			bool operator!=(const FunctionCall&) const noexcept = default;
 		};
 
+		struct AdvancedMetaExpression
+		{
+			IndirectMetaAny expr;
+
+			bool operator==(const AdvancedMetaExpression&) const noexcept = default;
+			bool operator!=(const AdvancedMetaExpression&) const noexcept = default;
+		};
+
 		struct VariableDeclaration
 		{
 			MetaVariableTarget variable_details;
@@ -291,6 +299,7 @@ namespace engine
 			IfControlBlock,
 
 			FunctionCall,
+			AdvancedMetaExpression,
 			VariableDeclaration,
 			VariableAssignment,
 			EventCapture,
