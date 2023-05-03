@@ -1243,28 +1243,31 @@ namespace engine
 						}
 					}
 
-					if (auto as_basic_function = type.func(symbol_id))
+					if (instructions.allow_function_call_semantics)
 					{
-						do
+						if (auto as_basic_function = type.func(symbol_id))
 						{
-							const auto argument_count = as_basic_function.arity();
-
-							if (argument_count == 0)
+							do
 							{
-								return enqueue(MetaFunctionCall { type.id(), symbol_id });
-							}
-							else
-							{
-								const auto first_arg_type = as_basic_function.arg(0);
+								const auto argument_count = as_basic_function.arity();
 
-								if (first_arg_type.id() == entt::type_hash<Registry>::value()) // resolve<Registry>().id()
+								if (argument_count == 0)
 								{
 									return enqueue(MetaFunctionCall { type.id(), symbol_id });
 								}
-							}
+								else
+								{
+									const auto first_arg_type = as_basic_function.arg(0);
 
-							as_basic_function = as_basic_function.next();
-						} while (as_basic_function);
+									if (first_arg_type.id() == entt::type_hash<Registry>::value()) // resolve<Registry>().id()
+									{
+										return enqueue(MetaFunctionCall { type.id(), symbol_id });
+									}
+								}
+
+								as_basic_function = as_basic_function.next();
+							} while (as_basic_function);
+						}
 					}
 
 					if (auto str_fn = type.func("string_to_value"_hs))
@@ -1321,18 +1324,17 @@ namespace engine
 								)
 							)
 						)
+						{
+							if (auto as_type = get_as_type())
 							{
-								if (auto as_type = get_as_type())
-								{
-									return enqueue
-									(
-										MetaTypeReference
-										{
-											.type_id = as_type.id(),
-											.validate_assignment_type = false
-										}
-									);
-								}
+								return enqueue
+								(
+									MetaTypeReference
+									{
+										.type_id = as_type.id(),
+										.validate_assignment_type = false
+									}
+								);
 							}
 						}
 					}
