@@ -56,14 +56,24 @@ namespace engine
 
 	MetaAny MetaTypeReference::set_instance(MetaAny&& instance, Registry& registry, Entity entity)
 	{
-		using namespace engine::literals;
-
 		if (!instance)
 		{
 			return {};
 		}
 
 		const auto component_type = instance.type();
+
+		return set_instance(component_type, std::move(instance), registry, entity);
+	}
+
+	MetaAny MetaTypeReference::set_instance(const MetaType& component_type, MetaAny&& instance, Registry& registry, Entity entity)
+	{
+		using namespace engine::literals;
+
+		if (!instance)
+		{
+			return {};
+		}
 
 		const auto replace_fn = component_type.func("emplace_meta_component"_hs);
 
@@ -113,7 +123,7 @@ namespace engine
 
 	MetaAny MetaTypeReference::get(Registry& registry, Entity entity) const
 	{
-		return get_instance(this->type_id, registry, entity);
+		return get_from_entity_impl(entity, registry);
 	}
 
 	MetaAny MetaTypeReference::get(Registry& registry, Entity entity, const MetaEvaluationContext& context) const
@@ -128,7 +138,12 @@ namespace engine
 
 	MetaAny MetaTypeReference::get(Entity target, Registry& registry, Entity context_entity) const
 	{
-		return get(registry, target);
+		return get_from_entity_impl(target, registry);
+	}
+
+	MetaAny MetaTypeReference::get(Entity target, Registry& registry, Entity context_entity, const MetaEvaluationContext& context) const
+	{
+		return get_from_entity_impl(target, registry);
 	}
 
 	MetaAny MetaTypeReference::get(const MetaAny& instance, Registry& registry, Entity context_entity) const
@@ -160,31 +175,39 @@ namespace engine
 
 		const auto instance_type_id = instance_type.id();
 
-		switch (instance_type_id)
+		if (instance_type_id == "Entity"_hs) // entt::type_hash<Entity>::value(): // resolve<Entity>().id()
 		{
-			case "Entity"_hs: // entt::type_hash<Entity>::value(): // resolve<Entity>().id():
-				if (auto target_entity = instance.try_cast<Entity>())
+			if (const auto target_entity = instance.try_cast<Entity>())
+			{
+				// NOTE: Direct usage of `get` avoided here to prevent possibility of infinite recursion.
+				// 
+				// Explanation: There aren't enough overload-permutations for `get` directly taking an `Entity`,
+				// so ADL may fallback to an implicit conversion to `MetaAny`, which would recurse to this exact spot.
+				if (auto result = self.get_from_entity_impl(*target_entity, args...))
 				{
-					return self.get(*target_entity, args...);
+					return result;
 				}
+			}
+		}
 
-				break;
-			default:
-				if (instance_type_id == self.type_id)
-				{
-					return instance.as_ref(); // self.get(instance);
-				}
-				
-				if (auto resolved = try_get_underlying_value(instance, args...))
-				{
-					// NOTE: Recursion.
-					return get_from_impl(self, resolved, args...);
-				}
+		if (instance_type_id == self.type_id)
+		{
+			return instance.as_ref(); // self.get(instance);
+		}
 
-				break;
+		if (auto resolved = try_get_underlying_value(instance, args...))
+		{
+			// NOTE: Recursion.
+			return get_from_impl(self, resolved, args...);
 		}
 
 		return {};
+	}
+
+	template <typename ...Args>
+	MetaAny MetaTypeReference::get_from_entity_impl(Entity entity, Registry& registry, Args&&... args) const
+	{
+		return get_instance(this->type_id, registry, entity);
 	}
 
 	MetaAny MetaTypeReference::get(const MetaEvaluationContext& context) const
@@ -230,19 +253,31 @@ namespace engine
 
 	MetaAny MetaTypeReference::set(MetaAny& instance, Registry& registry, Entity entity)
 	{
-		const auto instance_type = instance.type();
-		const auto instance_type_id = instance_type.id();
-
-		if (instance_type_id != this->type_id)
+		if (!instance)
 		{
 			return {};
+		}
+
+		if (validate_assignment_type)
+		{
+			if (has_type())
+			{
+				const auto instance_type = instance.type();
+
+				if (instance_type.id() != this->type_id)
+				{
+					return {};
+				}
+			}
 		}
 
 		// Alternative implementation:
 		//auto existing = get_instance(this->type_id, registry, entity);
 		//return set(instance, existing);
 
-		if (auto result = set_instance(std::move(instance), registry, entity))
+		const auto type = get_type();
+
+		if (auto result = set_instance(((type) ? type : instance.type()), std::move(instance), registry, entity))
 		{
 			return entt::forward_as_meta(*this); // result;
 		}

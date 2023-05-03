@@ -11,10 +11,21 @@ namespace engine
 	{
 		public:
 			static MetaAny get_instance(MetaTypeID type_id, Registry& registry, Entity entity);
+
 			static MetaAny set_instance(MetaAny&& instance, Registry& registry, Entity entity);
+			static MetaAny set_instance(const MetaType& component_type, MetaAny&& instance, Registry& registry, Entity entity);
 
 			// The identifier for the type of the component.
 			MetaTypeID type_id;
+
+			/*
+				If enabled, the type of an assignment value must match `type_id`.
+				
+				If disabled, component construction/assignment will be performed as-is, potentially failing at runtime.
+				
+				See also: `emplace_meta_component`
+			*/
+			bool validate_assignment_type : 1 = true;
 
 			// Attempts to default construct the type referenced by `type_id`. (Currently disabled)
 			//MetaAny get() const;
@@ -31,6 +42,9 @@ namespace engine
 
 			// Retrieves an opaque reference to a component attached to `target` with the type identified by `type_id`.
 			MetaAny get(Entity target, Registry& registry, Entity context_entity) const;
+
+			// Retrieves an opaque reference to a component attached to `target` with the type identified by `type_id`.
+			MetaAny get(Entity target, Registry& registry, Entity context_entity, const MetaEvaluationContext& context) const;
 
 			// Attempts to resolve `instance` using the context parameters provided.
 			// If `instance` is the desired component-type (as identified by `type_id`), this will return a reference to `instance`.
@@ -76,6 +90,16 @@ namespace engine
 			// NOTE: This function is non-const to avoid transitive const behavior.
 			template <typename SelfType, typename InstanceType, typename ...Args>
 			static MetaAny get_from_impl(SelfType&& self, InstanceType&& instance, Args&&... args);
+
+			template <typename ...Args>
+			MetaAny get_from_entity_impl(Entity entity, Registry& registry, Args&&... args) const;
+
+			// This overload exists to catch any permutation without a `Registry` parameter.
+			template <typename ...Args>
+			MetaAny get_from_entity_impl(Entity entity, Args&&... args) const
+			{
+				return {};
+			}
 	};
 
 	using MetaComponentReference = MetaTypeReference;
