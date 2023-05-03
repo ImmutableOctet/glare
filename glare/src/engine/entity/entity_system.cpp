@@ -38,6 +38,7 @@
 #include <engine/meta/meta_variable_storage_interface.hpp>
 
 #include <engine/commands/function_command.hpp>
+#include <engine/commands/expr_command.hpp>
 
 #include <util/variant.hpp>
 
@@ -1715,6 +1716,24 @@ namespace engine
 						(
 							entity, entity,
 							function_call.function.get(descriptor.get_shared_storage()),
+
+							MetaEvaluationContextStore
+							{
+								// NOTE: Unsafe due to raw pointer usage. (Will need to revisit this later)
+								get_variable_context(),
+
+								&service,
+								system_manager
+							}
+						);
+					},
+
+					[&registry, &service, &system_manager, entity, &descriptor, &thread, &get_variable_context](const AdvancedMetaExpression& advanced_expr)
+					{
+						service.event<ExprCommand> // queue_event
+						(
+							entity, entity,
+							advanced_expr.expr.get(descriptor.get_shared_storage()),
 
 							MetaEvaluationContextStore
 							{
