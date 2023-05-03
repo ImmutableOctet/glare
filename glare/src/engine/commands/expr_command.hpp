@@ -7,14 +7,14 @@
 
 namespace engine
 {
-	// See also: `ExprCommand`
-	struct FunctionCommand : public Command
+	// See also: `FunctionCommand`
+	struct ExprCommand : public Command
 	{
-		// Opaque (non-owning) reference to a `MetaFunctionCall`
+		// Opaque (non-owning) reference to a `MetaValueOperation`
 		// instance or similar executable fragment.
-		MetaAny function;
+		MetaAny expr;
 
-		// Optional evaluation context used when resolving `function`.
+		// Optional evaluation context used when resolving `expr`.
 		MetaEvaluationContextStore context = {};
 	};
 }
