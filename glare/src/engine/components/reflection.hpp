@@ -42,7 +42,10 @@ namespace engine
 		engine_meta_type<NameComponent>()
 			.data<&NameComponent::set_name, &NameComponent::get_name>("name"_hs)
 			.data<nullptr, &NameComponent::hash>("hash"_hs)
+			.data<nullptr, &NameComponent::size>("size"_hs)
+			.data<nullptr, &NameComponent::length>("length"_hs)
 			.ctor<std::string>()
+			.conv<std::string>()
 		;
 	}
 
