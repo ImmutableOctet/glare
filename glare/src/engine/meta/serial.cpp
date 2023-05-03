@@ -1307,9 +1307,20 @@ namespace engine
 							}
 						}
 						
-						if (instructions.fallback_to_component_reference && allow_component_fallback)
-						{
-							if ((output.empty()) || (!type) || (type.id() == "Entity"_hs)) // resolve<Entity>()
+						if
+						(
+							((!output.empty()) && (output.segments[0].value.type().id() == "MetaVariableTarget"_hs)) // resolve<MetaVariableTarget>()
+							||
+							(
+								(instructions.fallback_to_component_reference && allow_component_fallback)
+								&&
+								(
+									(output.empty())
+									|| (!type)
+									|| (type.id() == "Entity"_hs) // resolve<Entity>()
+								)
+							)
+						)
 							{
 								if (auto as_type = get_as_type())
 								{
