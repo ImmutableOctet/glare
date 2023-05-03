@@ -3,6 +3,7 @@
 #include "types.hpp"
 #include "action.hpp"
 
+#include "system_manager_interface.hpp"
 #include "service_events.hpp"
 #include "timed_event.hpp"
 #include "timer.hpp"
@@ -51,6 +52,7 @@ namespace engine
 	struct ComponentPatchCommand;
 	struct ComponentReplaceCommand;
 	struct FunctionCommand;
+	struct ExprCommand;
 
 	class Service
 	{
@@ -63,11 +65,12 @@ namespace engine
 			Service
 			(
 				Registry& registry,
+				SystemManagerInterface& systems,
 
 				bool register_input_events=true,
 				bool register_timed_event_wrapper=false,
 				bool register_core_commands=true,
-				bool register_function_commands=true,
+				bool register_evaluation_commands=true,
 				bool allocate_root_entity=true,
 				bool allocate_universal_variables=false
 			);
@@ -487,12 +490,15 @@ namespace engine
 			void on_component_replace(ComponentReplaceCommand& component_replace);
 
 			void opaque_function_handler(const FunctionCommand& function_command);
+			void opaque_expression_handler(const ExprCommand& expr_command);
 		protected:
 			virtual void on_function_command(const FunctionCommand& function_command);
+			virtual void on_expression_command(const ExprCommand& expr_command);
 
 			void handle_deferred_operations();
 
 			Registry& registry; // std::reference_wrapper<Registry>
+			SystemManagerInterface& systems;
 
 			Entity root = null;
 

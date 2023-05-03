@@ -10,6 +10,7 @@
 #include "commands/component_patch_command.hpp"
 #include "commands/component_replace_command.hpp"
 #include "commands/function_command.hpp"
+#include "commands/expr_command.hpp"
 
 #include "event_handler.hpp"
 
@@ -27,15 +28,17 @@ namespace engine
 	Service::Service
 	(
 		Registry& registry,
+		SystemManagerInterface& systems,
 
 		bool register_input_events,
 		bool register_timed_event_wrapper,
 		bool register_core_commands,
-		bool register_function_commands,
+		bool register_evaluation_commands,
 		bool allocate_root_entity,
 		bool allocate_universal_variables
 	) :
 		registry(registry),
+		systems(systems),
 		active_event_handler(&standard_event_handler)
 	{
 		if (register_input_events)
@@ -59,9 +62,10 @@ namespace engine
 			register_event<ComponentReplaceCommand,       &Service::on_component_replace>(*this);
 		}
 
-		if (register_function_commands)
+		if (register_evaluation_commands)
 		{
 			register_event<FunctionCommand, &Service::opaque_function_handler>(*this);
+			register_event<ExprCommand, &Service::opaque_expression_handler>(*this);
 		}
 
 		if (allocate_root_entity)
@@ -215,6 +219,11 @@ namespace engine
 		on_function_command(function_command);
 	}
 
+	void Service::opaque_expression_handler(const ExprCommand& expr_command)
+	{
+		on_expression_command(expr_command);
+	}
+
 	void Service::on_function_command(const FunctionCommand& function_command)
 	{
 		execute_opaque_function
@@ -223,6 +232,17 @@ namespace engine
 			get_registry(),
 			function_command.source, // function_command.target
 			function_command.context.get_context()
+		);
+	}
+
+	void Service::on_expression_command(const ExprCommand& expr_command)
+	{
+		execute_opaque_expression
+		(
+			expr_command.expr,
+			get_registry(),
+			expr_command.source, // expr_command.target
+			expr_command.context.get_context()
 		);
 	}
 
