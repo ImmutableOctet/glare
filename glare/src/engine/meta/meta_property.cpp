@@ -8,10 +8,28 @@
 #include "meta_data_member.hpp"
 #include "meta_evaluation_context.hpp"
 
+#include <util/format.hpp>
 #include <util/small_vector.hpp>
 
 namespace engine
 {
+	std::tuple<MetaSymbolID, MetaSymbolID>
+	MetaProperty::generate_accessor_identifiers(std::string_view symbol)
+	{
+		if (symbol.empty())
+		{
+			return {};
+		}
+
+		const auto getter_name = util::format("get_{}", symbol);
+		const auto getter_id = hash(getter_name);
+
+		const auto setter_name = util::format("set_{}", symbol);
+		const auto setter_id = hash(setter_name);
+
+		return { getter_id, setter_id };
+	}
+
 	template <typename ...Args>
 	MetaAny MetaProperty::get_fallback_impl(Args&&... args) const
 	{

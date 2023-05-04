@@ -2,6 +2,9 @@
 
 #include "types.hpp"
 
+#include <string_view>
+#include <tuple>
+
 namespace engine
 {
 	struct MetaEvaluationContext;
@@ -17,6 +20,14 @@ namespace engine
 	struct MetaProperty
 	{
 		public:
+			// Generates a pair of identifiers used to resolve accessor functions.
+			static std::tuple
+			<
+				MetaSymbolID, // getter_id
+				MetaSymbolID  // setter_id
+			>
+			generate_accessor_identifiers(std::string_view symbol);
+
 			// An optional identifier for the underlying type this property is accessing.
 			// If this is left unspecified, type checks will be ignored where possible.
 			MetaTypeID type_id = {};
