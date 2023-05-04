@@ -22,6 +22,7 @@ namespace engine
 		IndirectMetaVariableTarget& set(MetaAny& value, MetaVariableEvaluationContext& context);
 		IndirectMetaVariableTarget& set(MetaAny& value, const MetaEvaluationContext& context);
 		IndirectMetaVariableTarget& set(MetaAny& value, Registry& registry, Entity source);
+		IndirectMetaVariableTarget& set(MetaAny& value, Registry& registry, Entity source, const MetaEvaluationContext& external_context);
 
 		MetaVariableEvaluationContext get_variable_context(Registry& registry, Entity entity) const;
 
