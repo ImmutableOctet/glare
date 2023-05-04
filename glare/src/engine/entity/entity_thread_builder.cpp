@@ -23,6 +23,7 @@
 #include <engine/meta/indirect_meta_variable_target.hpp>
 #include <engine/meta/meta_variable_context.hpp>
 #include <engine/meta/meta_variable_target.hpp>
+#include <engine/meta/meta_property.hpp>
 
 #include <tuple>
 
@@ -714,7 +715,7 @@ namespace engine
 		return process_update_instruction_from_values(type_name, member_name, assignment_value_raw, entity_ref_expr, operator_symbol);
 	};
 
-	EntityInstructionCount EntityThreadBuilder::process_meta_expression_instruction(std::string_view instruction)
+	EntityInstructionCount EntityThreadBuilder::process_meta_expression_instruction(std::string_view instruction, bool allow_first_symbol_entity_fallback)
 	{
 		using namespace engine::literals;
 		using namespace engine::instructions;
@@ -874,11 +875,17 @@ namespace engine
 			true, // allow_numeric_literals
 			true, // allow_boolean_literals
 			
-			// Disabled for initial value to allow for fallthrough to thread operations.
-			// (Similar to reasoning for `allow_string_fallback`)
-			false, // allow_entity_fallback
+			// Defaults to being disabled on the initial value to allow for fallthrough to thread operations.
+			// (Similar to reasoning for `allow_string_fallback` always being false)
+			allow_first_symbol_entity_fallback, // allow_entity_fallback
+
 			false, // allow_component_fallback
-			false  // allow_standalone_opaque_function
+			false, // allow_standalone_opaque_function
+
+			// This value must always be the inverse of `allow_first_symbol_entity_fallback`
+			// to ensure entity names are resolved correctly.
+			// (i.e. remote variables are detected earlier in the process and would take priority otherwise)
+			(!allow_first_symbol_entity_fallback) // allow_remote_variables
 		);
 
 		if (!deferred_operation)
@@ -2132,6 +2139,12 @@ namespace engine
 				updated_offset
 			] = parse_qualified_assignment_or_comparison(instruction_raw);
 
+			bool meta_expr_allow_first_symbol_as_entity = false;
+
+			bool try_as_directive                  = true;
+			bool try_as_meta_expr                  = true;
+			bool try_as_remote_variable_assignment = true;
+
 			if (!type_or_variable_name.empty())
 			{
 				// Try to process the raw instruction as an inline-update.
@@ -2158,35 +2171,41 @@ namespace engine
 				// rather than `entity(some_entity).some_component = some_value`.
 				else if (entity_ref_expr.empty())
 				{
-					const auto opt_type_context = get_type_context();
+					bool leading_symbol_is_variable = false;
 
-					const auto& member_as_type_name = member_name;
-
-					const auto member_as_type = (opt_type_context)
-						? opt_type_context->get_component_type(member_as_type_name)
-						: resolve(hash(member_as_type_name))
-					;
-
-					if (member_as_type)
+					// Make sure the symbol referenced isn't a variable:
+					if (auto opt_variable_context = parsing_context.get_variable_context())
 					{
-						bool leading_symbol_is_variable = false;
-
-						// Make sure the symbol referenced isn't a variable:
-						if (auto opt_variable_context = parsing_context.get_variable_context())
+						if (opt_variable_context->retrieve_variable(type_or_variable_name))
 						{
-							if (opt_variable_context->retrieve_variable(type_or_variable_name))
-							{
-								leading_symbol_is_variable = true;
-							}
+							leading_symbol_is_variable = true;
+						}
+					}
+
+					// NOTE: If this check was not present, any member-access from a variable could conflict with this logic.
+					// e.g. `my_var.member` could be seen as a entity-component access, rather than a variable member access.
+					if (!leading_symbol_is_variable)
+					{
+						auto member_as_type = MetaType {};
+						auto member_id = MetaSymbolID {};
+
+						const auto opt_type_context = get_type_context();
+
+						if (opt_type_context)
+						{
+							member_as_type = opt_type_context->get_component_type(member_name);
+						}
+						else
+						{
+							member_id = hash(member_name);
+							member_as_type = resolve(member_id);
 						}
 
-						// NOTE: If this check was not present, any member-access from a variable could conflict with this logic.
-						// e.g. `my_var.member` could be seen as a entity-component access, rather than a variable member access.
-						if (!leading_symbol_is_variable)
+						if (member_as_type)
 						{
 							const auto& uncaptured_entity_ref = type_or_variable_name;
 
-							const auto corrected_instruction_subset_offset = static_cast<std::size_t>((member_as_type_name.data() - instruction_raw.data()));
+							const auto corrected_instruction_subset_offset = static_cast<std::size_t>((member_name.data() - instruction_raw.data()));
 							const auto corrected_instruction_subset = instruction_raw.substr(corrected_instruction_subset_offset);
 
 							auto
@@ -2226,23 +2245,77 @@ namespace engine
 								}
 							}
 						}
+						else
+						{
+							auto
+							[
+								unlikely_nested_entity_ref_expr,
+								unqualified_entity_name, actual_member_name,
+								intended_operator_symbol, intended_assignment_value_raw,
+								intended_updated_offset
+							] = parse_qualified_assignment_or_comparison(instruction_raw);
+
+							if (!unqualified_entity_name.empty() && !actual_member_name.empty())
+							{
+								if (const auto entity_type = resolve<Entity>())
+								{
+									if (!member_id)
+									{
+										member_id = hash(member_name);
+									}
+
+									if (entity_type.data(member_id))
+									{
+										// Found a valid data-member; treat this as an expression using an entity reference. (If applicable)
+										meta_expr_allow_first_symbol_as_entity = true;
+
+										// Don't bother processing this instruction as a directive or remote-variable assignment:
+										try_as_directive = false;
+										try_as_remote_variable_assignment = false;
+									}
+									else
+									{
+										const auto property_accessors = MetaProperty::generate_accessor_identifiers(member_name);
+										const auto& setter_id = std::get<1>(property_accessors);
+
+										if (auto setter_fn = entity_type.func(setter_id))
+										{
+											// Found a valid 'setter' function; treat this as a 'property' expression using an entity reference. (If applicable)
+											meta_expr_allow_first_symbol_as_entity = true;
+
+											// Don't bother processing this instruction as a directive or remote-variable assignment:
+											try_as_directive = false;
+											try_as_remote_variable_assignment = false;
+										}
+									}
+								}
+							}
+						}
 					}
 				}
 			}
 
-			// Fallback to treating the 'headerless' instruction as a directive:
-			auto directive_result = process_directive(content_source, content_index, thread_details, instruction);
+			if (try_as_directive)
+			{
+				// Fallback to treating the 'headerless' instruction as a directive:
+				auto directive_result = process_directive(content_source, content_index, thread_details, instruction);
 
-			if (!directive_result.has_value() || (*directive_result > 0))
-			{
-				// No further processing needed.
-				return directive_result;
+				if (!directive_result.has_value() || (*directive_result > 0))
+				{
+					// No further processing needed.
+					return directive_result;
+				}
 			}
-			else if (auto result = process_meta_expression_instruction(instruction_raw))
+
+			if (try_as_meta_expr)
 			{
-				return result;
+				if (auto result = process_meta_expression_instruction(instruction_raw, meta_expr_allow_first_symbol_as_entity))
+				{
+					return result;
+				}
 			}
-			else if (thread_details && !type_or_variable_name.empty()) // && (thread_details.target_entity.is_self_targeted() || thread_details.thread_id)
+
+			if (try_as_remote_variable_assignment && thread_details && !type_or_variable_name.empty()) // && (thread_details.target_entity.is_self_targeted() || thread_details.thread_id)
 			{
 				const auto& thread_name = type_or_variable_name;
 				const auto& thread_local_variable_name = member_name;

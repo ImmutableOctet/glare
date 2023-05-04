@@ -192,7 +192,13 @@ namespace engine
 				std::string_view instruction_raw
 			);
 
-			EntityInstructionCount process_meta_expression_instruction(std::string_view instruction);
+			EntityInstructionCount process_meta_expression_instruction
+			(
+				std::string_view instruction,
+
+				// See implementation for details.
+				bool allow_first_symbol_entity_fallback=false
+			);
 
 			EntityInstructionCount process_remote_variable_assignment
 			(
