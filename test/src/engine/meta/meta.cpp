@@ -368,6 +368,160 @@ TEST_CASE("engine::meta_any_from_string", "[engine:meta]")
 
 	engine::reflect<engine::ReflectionTest>();
 	engine::reflect<engine::TestSystem>();
+	
+	SECTION("Call function with member access syntax")
+	{
+		auto function_expr = engine::meta_any_from_string
+		(
+			std::string_view("ReflectionTest::const_method_test"),
+			{
+				.allow_function_call_semantics = true
+			}
+		);
+
+		REQUIRE(function_expr);
+
+		auto instance = engine::ReflectionTest { 0, 10, 0 };
+
+		auto function_result = engine::try_get_underlying_value(function_expr, instance);
+
+		REQUIRE(function_result);
+
+		auto as_int = function_result.try_cast<std::int32_t>();
+
+		REQUIRE(as_int);
+		REQUIRE((*as_int) == 10);
+	}
+
+	SECTION("Set value of data member using function call syntax")
+	{
+		auto member_expr = engine::meta_any_from_string
+		(
+			std::string_view("ReflectionTest::x(128)"),
+			{
+				.allow_function_call_semantics = true
+			}
+		);
+
+		REQUIRE(member_expr);
+
+		auto instance = engine::ReflectionTest { 0, 0, 0 };
+
+		auto member_result = engine::try_get_underlying_value(member_expr, instance);
+
+		REQUIRE(member_result);
+		REQUIRE(instance.x == 128);
+	}
+
+	SECTION("Get value of data member using function call syntax")
+	{
+		auto member_expr = engine::meta_any_from_string
+		(
+			std::string_view("ReflectionTest::x()"),
+			{
+				.allow_function_call_semantics = true
+			}
+		);
+
+		REQUIRE(member_expr);
+
+		auto instance = engine::ReflectionTest { 52, 3, 8 };
+
+		auto member_result = engine::try_get_underlying_value(member_expr, instance);
+
+		REQUIRE(member_result);
+
+		auto as_int = member_result.try_cast<std::int32_t>();
+
+		REQUIRE(as_int);
+		REQUIRE((*as_int) == 52);
+	}
+	
+	SECTION("Name component from entity")
+	{
+		auto registry = engine::Registry {};
+
+		const auto entity = registry.create();
+
+		const auto intended_name = std::string_view { "Test Name" };
+
+		registry.emplace<engine::NameComponent>(entity, std::string { intended_name });
+		
+		auto type_resolution_context = engine::MetaTypeResolutionContext::generate();
+
+		auto name_expr = engine::meta_any_from_string
+		(
+			std::string_view("self.name"),
+			{
+				.context =
+				{
+					&type_resolution_context
+				},
+
+				.fallback_to_component_reference = true,
+				.allow_member_references         = true,
+				.allow_entity_indirection        = true,
+				.allow_property_translation      = true,
+				.allow_opaque_member_references  = true,
+				.resolve_component_aliases       = true
+			}
+		);
+
+		REQUIRE(name_expr);
+
+		const auto name_expr_result = engine::try_get_underlying_value(name_expr, registry, entity);
+
+		REQUIRE(name_expr_result);
+
+		const auto as_name_component = name_expr_result.try_cast<engine::NameComponent>();
+
+		REQUIRE(as_name_component);
+
+		const auto name = as_name_component->get_name();
+
+		REQUIRE(name == intended_name);
+	}
+
+	SECTION("Assign name component of entity")
+	{
+		auto registry = engine::Registry {};
+
+		const auto entity = registry.create();
+		
+		auto type_resolution_context = engine::MetaTypeResolutionContext::generate();
+
+		auto name_expr = engine::meta_any_from_string
+		(
+			std::string_view("self.name = \"Some Name\""),
+			{
+				.context =
+				{
+					&type_resolution_context
+				},
+
+				.fallback_to_component_reference = true,
+				.allow_member_references         = true,
+				.allow_entity_indirection        = true,
+				.allow_property_translation      = true,
+				.allow_opaque_member_references  = true,
+				.resolve_component_aliases       = true
+			}
+		);
+
+		REQUIRE(name_expr);
+
+		const auto name_expr_result = engine::try_get_underlying_value(name_expr, registry, entity);
+
+		REQUIRE(name_expr_result);
+
+		const auto name_component = registry.try_get<engine::NameComponent>(entity);
+
+		REQUIRE(name_component);
+
+		const auto name = name_component->get_name();
+
+		REQUIRE(name == "Some Name");
+	}
 
 	SECTION("Member assignment")
 	{
