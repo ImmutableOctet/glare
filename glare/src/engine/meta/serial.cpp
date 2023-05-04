@@ -611,7 +611,8 @@ namespace engine
 		MetaType type={},
 		bool allow_entity_fallback=true,
 		bool allow_component_fallback=true,
-		bool allow_standalone_opaque_function=true
+		bool allow_standalone_opaque_function=true,
+		bool allow_remote_variables=true
 	)
 	{
 		using namespace engine::literals;
@@ -776,25 +777,9 @@ namespace engine
 			return false;
 		};
 
-		auto make_property_access_ids = [](std::string_view symbol) -> std::tuple<MetaSymbolID, MetaSymbolID>
+		auto resolve_property = [](const MetaType& type, std::string_view symbol, MetaSymbolID symbol_id={}) -> std::optional<MetaProperty>
 		{
-			if (symbol.empty())
-			{
-				return {};
-			}
-
-			const auto getter_name = util::format("get_{}", symbol);
-			const auto getter_id = hash(getter_name);
-
-			const auto setter_name = util::format("set_{}", symbol);
-			const auto setter_id = hash(setter_name);
-
-			return { getter_id, setter_id };
-		};
-
-		auto resolve_property = [&make_property_access_ids](const MetaType& type, std::string_view symbol, MetaSymbolID symbol_id={}) -> std::optional<MetaProperty>
-		{
-			const auto [getter_id, setter_id] = make_property_access_ids(symbol);
+			const auto [getter_id, setter_id] = MetaProperty::generate_accessor_identifiers(symbol);
 
 			const auto getter_fn = type.func(getter_id);
 			const auto setter_fn = type.func(setter_id);
@@ -817,9 +802,9 @@ namespace engine
 			return std::nullopt;
 		};
 
-		auto make_opaque_property = [&make_property_access_ids](std::string_view symbol, MetaSymbolID data_member_id={}, MetaTypeID type_id={})
+		auto make_opaque_property = [](std::string_view symbol, MetaSymbolID data_member_id={}, MetaTypeID type_id={})
 		{
-			const auto [getter_id, setter_id] = make_property_access_ids(symbol);
+			const auto [getter_id, setter_id] = MetaProperty::generate_accessor_identifiers(symbol);
 
 			return MetaProperty
 			{
@@ -1527,7 +1512,8 @@ namespace engine
 		bool try_boolean=true,
 		bool allow_entity_fallback=true,
 		bool allow_component_fallback=true,
-		bool allow_standalone_opaque_function=true
+		bool allow_standalone_opaque_function=true,
+		bool allow_remote_variables=true
 	)
 	{
 		using namespace engine::literals;
@@ -1562,7 +1548,7 @@ namespace engine
 		{
 			MetaValueOperation output;
 
-			if (instructions.allow_remote_variable_references)
+			if (allow_remote_variables && instructions.allow_remote_variable_references)
 			{
 				auto
 				[
@@ -1618,7 +1604,12 @@ namespace engine
 				}
 			}
 
-			meta_any_from_string_resolve_expression_impl(output, value, instructions, type, allow_entity_fallback, allow_component_fallback, allow_standalone_opaque_function);
+			meta_any_from_string_resolve_expression_impl
+			(
+				output, value, instructions, type,
+				allow_entity_fallback, allow_component_fallback,
+				allow_standalone_opaque_function, allow_remote_variables
+			);
 
 			if (!output.empty())
 			{
@@ -1758,6 +1749,7 @@ namespace engine
 		bool allow_entity_fallback,
 		bool allow_component_fallback,
 		bool allow_standalone_opaque_function,
+		bool allow_remote_variables,
 
 		bool assume_static_type
 	)
@@ -2192,7 +2184,8 @@ namespace engine
 						(!is_first_expr || try_boolean),
 						(!is_first_expr || allow_entity_fallback),
 						(!is_first_expr || allow_component_fallback),
-						(!is_first_expr || allow_standalone_opaque_function)
+						(!is_first_expr || allow_standalone_opaque_function),
+						(!is_first_expr || allow_remote_variables)
 					);
 				}
 
@@ -2630,7 +2623,8 @@ namespace engine
 		bool allow_boolean_literals,
 		bool allow_entity_fallback,
 		bool allow_component_fallback,
-		bool allow_standalone_opaque_function
+		bool allow_standalone_opaque_function,
+		bool allow_remote_variables
 	)
 	{
 		using namespace engine::literals;
@@ -2665,7 +2659,8 @@ namespace engine
 			(
 				value, instructions, type,
 				allow_numeric_literals, allow_string_fallback, allow_boolean_literals,
-				allow_entity_fallback, allow_component_fallback, allow_standalone_opaque_function
+				allow_entity_fallback, allow_component_fallback, allow_standalone_opaque_function,
+				allow_remote_variables
 			);
 
 			if (result)
@@ -2699,7 +2694,8 @@ namespace engine
 		bool allow_boolean_literals,
 		bool allow_entity_fallback,
 		bool allow_component_fallback,
-		bool allow_standalone_opaque_function
+		bool allow_standalone_opaque_function,
+		bool allow_remote_variables
 	)
 	{
 		auto string_value = value.get<std::string>();
@@ -2717,7 +2713,8 @@ namespace engine
 			allow_boolean_literals,
 			allow_entity_fallback,
 			allow_component_fallback,
-			allow_standalone_opaque_function
+			allow_standalone_opaque_function,
+			allow_remote_variables
 		);
 	}
 
