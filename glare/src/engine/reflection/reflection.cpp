@@ -5,166 +5,58 @@
 
 #include "reflection.hpp"
 
-#include "components/reflection.hpp"
-#include "commands/reflection.hpp"
+#include "container_extensions.hpp"
+#include "entity_extensions.hpp"
+#include "math_extensions.hpp"
+#include "primitive_extensions.hpp"
+#include "string_extensions.hpp"
 
-#include "meta/reflection.hpp"
-#include "resource_manager/reflection.hpp"
-#include "entity/reflection.hpp"
-#include "debug/reflection.hpp"
-#include "input/reflection.hpp"
-#include "world/reflection.hpp"
+#include "string_conversion.hpp"
 
-#include "config.hpp"
-#include "timer.hpp"
+#include <engine/components/reflection.hpp>
+#include <engine/commands/reflection.hpp>
+
+#include <engine/meta/reflection.hpp>
+#include <engine/resource_manager/reflection.hpp>
+#include <engine/entity/reflection.hpp>
+#include <engine/debug/reflection.hpp>
+#include <engine/input/reflection.hpp>
+#include <engine/world/reflection.hpp>
+#include <engine/editor/reflection.hpp>
+
+#include <engine/meta/hash.hpp>
+
+#include <engine/config.hpp>
+#include <engine/timer.hpp>
 
 #include <math/reflection.hpp>
+#include <math/format.hpp>
+#include <math/types.hpp>
 
 #include <util/format.hpp>
 #include <util/string.hpp>
 
 #include <utility>
-#include <optional>
+#include <type_traits>
 #include <string>
 #include <string_view>
-#include <cstdint>
-#include <type_traits>
+#include <optional>
 #include <algorithm>
+#include <cstdint>
 
 //#include <entt/meta/meta.hpp>
 //#include <entt/entt.hpp>
 
 namespace engine
 {
-    entt::locator<entt::meta_ctx>::node_type get_shared_reflection_handle()
-    {
-        return entt::locator<entt::meta_ctx>::handle();
-    }
-
     void reflect_systems()
     {
         reflect<DebugListener>();
         reflect<EntitySystem>();
         reflect<InputSystem>();
+        reflect<Editor>();
 
         // ...
-    }
-
-    static entt::meta_sequence_container::iterator meta_sequence_container_push_back_impl(entt::meta_sequence_container& container, MetaAny value) // const MetaAny&
-    {
-        /*
-        // Alternative implementation:
-        auto it = (container.begin());
-
-        for (std::size_t i = 0; i < (container.size() - 1); i++)
-        {
-            it = it++;
-        }
-        */
-
-        /*
-        // Alternative implementation:
-        auto it = (container.begin());
-
-        const auto current_container_size = container.size();
-
-        if (current_container_size > 0)
-        {
-            it.operator++(static_cast<int>(current_container_size - 1));
-        }
-        */
-
-        auto it = container.end();
-
-        return container.insert(it, std::move(value));
-    }
-
-    static entt::meta_sequence_container::iterator meta_sequence_container_at_impl(entt::meta_sequence_container& container, std::int32_t index) // std::size_t // const
-    {
-        auto it = container.begin();
-
-        if (index > 0)
-        {
-            it.operator++((index - 1));
-        }
-
-        return it;
-    }
-
-    static entt::meta_sequence_container::iterator meta_sequence_container_find_impl(entt::meta_sequence_container& container, const MetaAny& value) // const
-    {
-        return std::find(container.begin(), container.end(), value);
-    }
-
-    static std::string add_strings(const std::string& a, const std::string& b)
-    {
-        return (a + b);
-    }
-
-    static bool string_equality(const std::string a, const std::string& b)
-    {
-        return (a == b);
-    }
-
-    static bool string_inequality(const std::string a, const std::string& b)
-    {
-        return (a != b);
-    }
-
-    static std::string entity_to_string_impl(Entity entity)
-    {
-        return util::format("Entity #{}", entity);
-    }
-
-    static Entity entity_from_integer(std::underlying_type_t<Entity> value)
-    {
-        return static_cast<Entity>(value);
-    }
-
-    template <typename ArithmeticType, typename=std::enable_if_t<std::is_arithmetic_v<ArithmeticType>>>
-    static std::string arithmetic_to_string_impl(ArithmeticType value) // const ArithmeticType&
-    {
-        if constexpr (std::is_same_v<std::decay_t<ArithmeticType>, bool>)
-        {
-            if (value)
-            {
-                return "true";
-            }
-            else
-            {
-                return "false";
-            }
-        }
-        else
-        {
-            return std::to_string(value);
-        }
-    }
-
-    template <typename T>
-    static T from_string_view_impl(std::string_view value) // const std::string_view&
-    {
-        // TODO: Determine if `bool` should have different behavior here.
-        // (e.g. checking against `value.empty()` instead of looking for `true`-like values)
-
-        if (auto result = util::from_string<T>(value, true))
-        {
-            return *result;
-        }
-
-        return {};
-    }
-
-    template <typename ToType, typename FromType>
-    static ToType static_cast_impl(const FromType& from_value)
-    {
-        return static_cast<ToType>(from_value);
-    }
-
-    template <typename T>
-    static T from_string_impl(const std::string& value)
-    {
-        return from_string_view_impl<T>(value);
     }
 
     template <typename PrimitiveType, bool generate_optional_type=true>
@@ -177,21 +69,21 @@ namespace engine
         }
 
         auto type = entt::meta<PrimitiveType>()
-            .ctor<&from_string_view_impl<PrimitiveType>>()
-            .ctor<&from_string_impl<PrimitiveType>>()
-            .ctor<&static_cast_impl<PrimitiveType, float>>()
-            .ctor<&static_cast_impl<PrimitiveType, double>>()
-            .ctor<&static_cast_impl<PrimitiveType, long double>>()
-            .ctor<&static_cast_impl<PrimitiveType, std::int64_t>>()
-            .ctor<&static_cast_impl<PrimitiveType, std::uint64_t>>()
-            .ctor<&static_cast_impl<PrimitiveType, std::int32_t>>()
-            .ctor<&static_cast_impl<PrimitiveType, std::uint32_t>>()
-            .ctor<&static_cast_impl<PrimitiveType, std::int16_t>>()
-            .ctor<&static_cast_impl<PrimitiveType, std::uint16_t>>()
-            //.ctor<&static_cast_impl<PrimitiveType, std::int8_t>>()
-            //.ctor<&static_cast_impl<PrimitiveType, std::uint8_t>>()
+            .ctor<&impl::from_string_view_impl<PrimitiveType>>()
+            .ctor<&impl::from_string_impl<PrimitiveType>>()
+            .ctor<&impl::static_cast_impl<PrimitiveType, float>>()
+            .ctor<&impl::static_cast_impl<PrimitiveType, double>>()
+            .ctor<&impl::static_cast_impl<PrimitiveType, long double>>()
+            .ctor<&impl::static_cast_impl<PrimitiveType, std::int64_t>>()
+            .ctor<&impl::static_cast_impl<PrimitiveType, std::uint64_t>>()
+            .ctor<&impl::static_cast_impl<PrimitiveType, std::int32_t>>()
+            .ctor<&impl::static_cast_impl<PrimitiveType, std::uint32_t>>()
+            .ctor<&impl::static_cast_impl<PrimitiveType, std::int16_t>>()
+            .ctor<&impl::static_cast_impl<PrimitiveType, std::uint16_t>>()
+            //.ctor<&impl::static_cast_impl<PrimitiveType, std::int8_t>>()
+            //.ctor<&impl::static_cast_impl<PrimitiveType, std::uint8_t>>()
 
-            .conv<&arithmetic_to_string_impl<PrimitiveType>>()
+            .conv<&impl::arithmetic_to_string_impl<PrimitiveType>>()
         ;
 
         if constexpr (generate_optional_type)
@@ -218,9 +110,32 @@ namespace engine
 
         entt::meta<Entity>()
             .type("Entity"_hs)
-            .conv<&entity_to_string_impl>()
+            
+            .conv<&impl::entity_to_string_impl>()
             //.conv<std::underlying_type_t<Entity>>()
-            .ctor<&entity_from_integer>()
+            
+            .ctor<&impl::entity_from_integer>()
+
+            .func<&impl::entity_set_position>("set_position"_hs)
+            .func<&impl::entity_get_position>("get_position"_hs)
+
+            .func<&impl::entity_set_local_position>("set_local_position"_hs)
+            .func<&impl::entity_get_local_position>("get_local_position"_hs)
+
+            .func<&impl::entity_set_rotation>("set_rotation"_hs)
+            .func<&impl::entity_get_rotation>("get_rotation"_hs)
+
+            .func<&impl::entity_set_local_rotation>("set_local_rotation"_hs)
+            .func<&impl::entity_get_local_rotation>("get_local_rotation"_hs)
+
+            .func<&impl::entity_get_direction_vector>("get_direction_vector"_hs)
+            .func<&impl::entity_set_direction_vector>("set_direction_vector"_hs)
+
+            .func<&impl::entity_set_scale>("set_scale"_hs)
+            .func<&impl::entity_get_scale>("get_scale"_hs)
+
+            .func<&impl::entity_set_local_scale>("set_local_scale"_hs)
+            .func<&impl::entity_get_local_scale>("get_local_scale"_hs)
         ;
 
         if constexpr (generate_optional_type)
@@ -252,36 +167,41 @@ namespace engine
 
         //entt::meta<std::string>().type("string"_hs)
 
-            .func<&add_strings>("operator+"_hs)
-            .func<&string_equality>("operator=="_hs)
-            .func<&string_inequality>("operator!="_hs)
+            .func<&impl::add_strings<std::string, std::string>>("operator+"_hs)
+            .func<&impl::add_strings<std::string, std::string_view>>("operator+"_hs)
+            
+            .func<&impl::string_equality<std::string, std::string>>("operator=="_hs)
+            .func<&impl::string_equality<std::string, std::string_view>>("operator=="_hs)
+            
+            .func<&impl::string_inequality<std::string, std::string>>("operator!="_hs)
+            .func<&impl::string_inequality<std::string, std::string_view>>("operator!="_hs)
 
             .ctor<std::string_view>()
 
             // Constructors for floating-point-to-string conversions:
-            .ctor<&arithmetic_to_string_impl<float>>()
-            .ctor<&arithmetic_to_string_impl<double>>()
-            .ctor<&arithmetic_to_string_impl<long double>>()
+            .ctor<&impl::arithmetic_to_string_impl<float>>()
+            .ctor<&impl::arithmetic_to_string_impl<double>>()
+            .ctor<&impl::arithmetic_to_string_impl<long double>>()
 
             // Constructors for integral-to-string conversions:
-            .ctor<&arithmetic_to_string_impl<std::int64_t>>()
-            .ctor<&arithmetic_to_string_impl<std::uint64_t>>()
-            .ctor<&arithmetic_to_string_impl<std::int32_t>>()
-            .ctor<&arithmetic_to_string_impl<std::uint32_t>>()
-            .ctor<&arithmetic_to_string_impl<std::int16_t>>()
-            .ctor<&arithmetic_to_string_impl<std::uint16_t>>()
-            //.ctor<&arithmetic_to_string_impl<std::int8_t>>()
-            //.ctor<&arithmetic_to_string_impl<std::uint8_t>>()
+            .ctor<&impl::arithmetic_to_string_impl<std::int64_t>>()
+            .ctor<&impl::arithmetic_to_string_impl<std::uint64_t>>()
+            .ctor<&impl::arithmetic_to_string_impl<std::int32_t>>()
+            .ctor<&impl::arithmetic_to_string_impl<std::uint32_t>>()
+            .ctor<&impl::arithmetic_to_string_impl<std::int16_t>>()
+            .ctor<&impl::arithmetic_to_string_impl<std::uint16_t>>()
+            //.ctor<&impl::arithmetic_to_string_impl<std::int8_t>>()
+            //.ctor<&impl::arithmetic_to_string_impl<std::uint8_t>>()
 
-            .ctor<&entity_to_string_impl>()
+            .ctor<&impl::entity_to_string_impl>()
 
-            .conv<&from_string_impl<std::int32_t>>()
-            .conv<&from_string_impl<std::uint32_t>>()
-            .conv<&from_string_impl<std::int64_t>>()
-            .conv<&from_string_impl<std::uint64_t>>()
-            .conv<&from_string_impl<float>>()
-            .conv<&from_string_impl<double>>()
-            .conv<&from_string_impl<bool>>()
+            .conv<&impl::from_string_impl<std::int32_t>>()
+            .conv<&impl::from_string_impl<std::uint32_t>>()
+            .conv<&impl::from_string_impl<std::int64_t>>()
+            .conv<&impl::from_string_impl<std::uint64_t>>()
+            .conv<&impl::from_string_impl<float>>()
+            .conv<&impl::from_string_impl<double>>()
+            .conv<&impl::from_string_impl<bool>>()
         ;
     }
 
@@ -303,6 +223,15 @@ namespace engine
             }
         >
         ("string_view"_hs) // "std::string_view"_hs // "StringView"_hs
+            .func<&impl::add_strings<std::string_view, std::string_view, std::string>>("operator+"_hs)
+            .func<&impl::add_strings<std::string_view, std::string, std::string>>("operator+"_hs)
+
+            .func<&impl::string_equality<std::string_view, std::string_view>>("operator=="_hs)
+            .func<&impl::string_equality<std::string_view, std::string>>("operator=="_hs)
+            
+            .func<&impl::string_inequality<std::string_view, std::string_view>>("operator!="_hs)
+            .func<&impl::string_inequality<std::string_view, std::string>>("operator!="_hs)
+
             .ctor<std::string_view>()
 
             // NOTE: May remove this constructor overload due to possible
@@ -347,7 +276,14 @@ namespace engine
         reflect<std::chrono::system_clock::duration>();
     }
 
-    template <typename T, bool generate_optional_type=true>
+    template
+    <
+        typename T,
+        
+        bool generate_optional_type=true,
+        bool generate_operators=true,
+        bool generate_standard_methods=true
+    >
     auto reflect_math_type(auto type_name, bool sync_context=true)
     {
         if (sync_context)
@@ -357,6 +293,40 @@ namespace engine
         }
 
         auto type = math::reflect<T>(hash(type_name));
+
+        if constexpr (generate_operators)
+        {
+            type = type
+                .func<&impl::add_impl<T>>("operator+"_hs)
+                .func<&impl::subtract_impl<T>>("operator-"_hs)
+                .func<&impl::multiply_impl<T>>("operator*"_hs)
+            ;
+        }
+
+        // NOTE: This check doesn't work due to non-type template parameters for `glm::vec`.
+        // TODO: Revisit the idea of checking for vector types.
+        //if constexpr (util::is_specialization_v<T, glm::vec>)
+        if constexpr (std::is_same_v<T, math::Vector2D> || std::is_same_v<T, math::Vector3D> || std::is_same_v<T, math::Vector4D>) // || std::is_same_v<T, math::vec2i>
+        {
+            if constexpr (generate_operators)
+            {
+                type = type.func<&impl::divide_impl<T>>("operator/"_hs);
+            }
+
+            type = type.conv<&impl::format_string_conv<T>>();
+
+            if constexpr (generate_standard_methods)
+            {
+                using value_type = typename T::value_type;
+
+                if constexpr (std::is_same_v<value_type, float>)
+                {
+                    type = type
+                        .func<&impl::normalize_impl<T>>("normalize"_hs)
+                    ;
+                }
+            }
+        }
 
         if constexpr (generate_optional_type)
         {
@@ -381,7 +351,9 @@ namespace engine
     template <>
     void reflect<math::Vector3D>()
     {
-        reflect_math_type<math::Vector3D>("Vector"); // "Vector3D"
+        reflect_math_type<math::Vector3D>("Vector") // "Vector3D"
+            .ctor<&impl::vec3_from_vec2>()
+        ;
     }
 
     // Reflects `math::Vector4D` with the generalized name of `Vector4D`.
@@ -390,7 +362,10 @@ namespace engine
     template <>
     void reflect<math::Vector4D>()
     {
-        reflect_math_type<math::Vector4D>("Vector4D");
+        reflect_math_type<math::Vector4D>("Vector4D")
+            .ctor<&impl::vec4_from_vec2>()
+            .ctor<&impl::vec4_from_vec3>()
+        ;
     }
 
     // Reflects `math::vec2i` with the generalized name of `vec2i`.
@@ -400,6 +375,49 @@ namespace engine
     void reflect<math::vec2i>()
     {
         reflect_math_type<math::vec2i>("vec2i");
+    }
+
+    template <>
+    void reflect<math::Matrix4x4>()
+    {
+        reflect_math_type<math::Matrix4x4>("Matrix") // "Matrix4x4"
+            .func<&impl::mat4_vec4_multiply_impl>("operator*"_hs)
+            .func<&impl::mat4_vec3_multiply_impl>("operator*"_hs)
+            .func<&impl::mat_quat_multiply_impl<math::Matrix4x4>>("operator*"_hs)
+            .func<&math::identity<math::Matrix4x4>>("identity"_hs)
+            .func<&impl::inverse_impl<math::Matrix4x4>>("inverse"_hs)
+            .func<&impl::transpose_impl<math::Matrix4x4>>("transpose"_hs)
+            .func<&impl::mat4_translate_impl>("translate"_hs)
+        ;
+    }
+
+    template <>
+    void reflect<math::Matrix3x3>()
+    {
+        reflect_math_type<math::Matrix3x3>("Matrix3x3")
+            .func<&impl::multiply_impl<math::Matrix3x3, math::Vector3D>>("operator*"_hs)
+            .func<&impl::mat_quat_multiply_impl<math::Matrix3x3>>("operator*"_hs)
+            .func<&math::identity<math::Matrix3x3>>("identity"_hs)
+            .func<&impl::inverse_impl<math::Matrix3x3>>("inverse"_hs)
+            .func<&impl::transpose_impl<math::Matrix3x3>>("transpose"_hs)
+        ;
+    }
+
+    template <>
+    void reflect<math::Quaternion>()
+    {
+        reflect_math_type<math::Quaternion>("Quaternion")
+            .func<&impl::quat_vec3_multiply_impl>("operator*"_hs)
+            .func<&impl::quat_vec4_multiply_impl>("operator*"_hs)
+            .func<&impl::inverse_impl<math::Quaternion>>("inverse"_hs)
+            .conv<&math::quaternion_to_matrix<math::Matrix3x3>>()
+            .conv<&math::quaternion_to_matrix<math::Matrix4x4>>()
+            .data<&math::Quaternion::x>("x"_hs)
+            .data<&math::Quaternion::y>("y"_hs)
+            .data<&math::Quaternion::z>("z"_hs)
+            .data<&math::Quaternion::w>("w"_hs)
+            .ctor<math::Vector3D>()
+        ;
     }
 
     template <>
@@ -485,8 +503,8 @@ namespace engine
             .func<&entt::meta_sequence_container::begin>("begin"_hs)
             .func<&entt::meta_sequence_container::end>("end"_hs)
             
-            .func<&meta_sequence_container_at_impl>("at"_hs)
-            .func<&meta_sequence_container_at_impl>("index"_hs)
+            .func<&impl::meta_sequence_container_at_impl>("at"_hs)
+            .func<&impl::meta_sequence_container_at_impl>("index"_hs)
 
             // NOTE: May need to make a wrapper function for this.
             .func<&entt::meta_sequence_container::insert>("insert"_hs)
@@ -495,10 +513,10 @@ namespace engine
             .func<&entt::meta_sequence_container::operator[]>("operator[]"_hs)
             .func<&entt::meta_sequence_container::operator bool>("operator bool"_hs)
 
-            .func<&meta_sequence_container_push_back_impl>("push_back"_hs)
-            .func<&meta_sequence_container_push_back_impl>("emplace_back"_hs)
+            .func<&impl::meta_sequence_container_push_back_impl>("push_back"_hs)
+            .func<&impl::meta_sequence_container_push_back_impl>("emplace_back"_hs)
 
-            .func<&meta_sequence_container_find_impl>("find"_hs)
+            .func<&impl::meta_sequence_container_find_impl>("find"_hs)
         ;
     }
 
@@ -612,6 +630,9 @@ namespace engine
         reflect<math::Vector4D>();
 
         reflect<math::vec2i>();
+
+        reflect<math::Matrix4x4>();
+        reflect<math::Matrix3x3>();
 
         // ...
     }
