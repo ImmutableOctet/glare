@@ -196,8 +196,8 @@ namespace engine
 			(
 				std::string_view instruction,
 
-				// See implementation for details.
-				bool allow_first_symbol_entity_fallback=false
+				bool allow_first_symbol_entity_fallback=false,
+				bool allow_leading_remote_variable=true
 			);
 
 			EntityInstructionCount process_remote_variable_assignment

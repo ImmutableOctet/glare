@@ -715,7 +715,13 @@ namespace engine
 		return process_update_instruction_from_values(type_name, member_name, assignment_value_raw, entity_ref_expr, operator_symbol);
 	};
 
-	EntityInstructionCount EntityThreadBuilder::process_meta_expression_instruction(std::string_view instruction, bool allow_first_symbol_entity_fallback)
+	EntityInstructionCount EntityThreadBuilder::process_meta_expression_instruction
+	(
+		std::string_view instruction,
+		
+		bool allow_first_symbol_entity_fallback,
+		bool allow_leading_remote_variable
+	)
 	{
 		using namespace engine::literals;
 		using namespace engine::instructions;
@@ -882,10 +888,10 @@ namespace engine
 			false, // allow_component_fallback
 			false, // allow_standalone_opaque_function
 
-			// This value must always be the inverse of `allow_first_symbol_entity_fallback`
-			// to ensure entity names are resolved correctly.
-			// (i.e. remote variables are detected earlier in the process and would take priority otherwise)
-			(!allow_first_symbol_entity_fallback) // allow_remote_variables
+			// NOTE: Generally speaking, this value should be the inverse of `allow_first_symbol_entity_fallback`
+			// to ensure entity names are resolved correctly. (see default argument)
+			// (This is because remote variables are detected earlier in the process and would take priority otherwise)
+			allow_leading_remote_variable // (!allow_first_symbol_entity_fallback) // allow_remote_variables
 		);
 
 		if (!deferred_operation)
@@ -2114,7 +2120,7 @@ namespace engine
 				break;
 		}
 
-		auto [instruction, thread_details] = parse_instruction_header(instruction_raw, &descriptor);
+		auto [instruction, thread_details, thread_accessor_used] = parse_instruction_header(instruction_raw, &descriptor);
 
 		//instruction = instruction.substr(parse_offset);
 
@@ -2140,6 +2146,7 @@ namespace engine
 			] = parse_qualified_assignment_or_comparison(instruction_raw);
 
 			bool meta_expr_allow_first_symbol_as_entity = false;
+			bool meta_expr_allow_leading_remote_variable = true;
 
 			bool try_as_directive                  = true;
 			bool try_as_meta_expr                  = true;
@@ -2147,145 +2154,172 @@ namespace engine
 
 			if (!type_or_variable_name.empty())
 			{
-				// Try to process the raw instruction as an inline-update.
-				const auto initial_update_instruction_result = process_update_instruction_from_values
-				(
-					type_or_variable_name,
-					member_name,
-					assignment_value_raw,
-					entity_ref_expr,
-					operator_symbol
-				);
+				const auto type_or_variable_id = hash(type_or_variable_name).value();
+				
+				const auto& possible_thread_id = type_or_variable_id;
 
-				if (initial_update_instruction_result)
+				if (descriptor.has_thread(possible_thread_id))
 				{
-					// Update the previous-instruction ID to reflect
-					// the inline-update operation we just processed.
-					this->prev_instruction_id = "update"_hs;
-
-					// No further processing needed.
-					return 1;
-				}
-				// This clause is a workaround for informal entity syntax.
-				// i.e. this allows you to write `some_entity.some_component = some_value`,
-				// rather than `entity(some_entity).some_component = some_value`.
-				else if (entity_ref_expr.empty())
-				{
-					bool leading_symbol_is_variable = false;
-
-					// Make sure the symbol referenced isn't a variable:
-					if (auto opt_variable_context = parsing_context.get_variable_context())
+					if ((!member_name.empty()) && (!assignment_value_raw.empty())) // && (!operator_symbol.empty())
 					{
-						if (opt_variable_context->retrieve_variable(type_or_variable_name))
-						{
-							leading_symbol_is_variable = true;
-						}
+						meta_expr_allow_first_symbol_as_entity = false;
+						meta_expr_allow_leading_remote_variable = false;
+
+						try_as_directive = false;
+
+						// `try_as_meta_expr` is currently left enabled as a formality.
+						// (May change in the future)
+						//try_as_meta_expr = false;
 					}
+				}
+				else if (!thread_accessor_used)
+				{
+					// Try to process the raw instruction as an inline-update.
+					const auto initial_update_instruction_result = process_update_instruction_from_values
+					(
+						type_or_variable_name,
+						member_name,
+						assignment_value_raw,
+						entity_ref_expr,
+						operator_symbol
+					);
 
-					// NOTE: If this check was not present, any member-access from a variable could conflict with this logic.
-					// e.g. `my_var.member` could be seen as a entity-component access, rather than a variable member access.
-					if (!leading_symbol_is_variable)
+					if (initial_update_instruction_result)
 					{
-						auto member_as_type = MetaType {};
-						auto member_id = MetaSymbolID {};
+						// Update the previous-instruction ID to reflect
+						// the inline-update operation we just processed.
+						this->prev_instruction_id = "update"_hs;
 
-						const auto opt_type_context = get_type_context();
+						// No further processing needed.
+						return 1;
+					}
+					// This clause is a workaround for informal entity syntax.
+					// i.e. this allows you to write `some_entity.some_component = some_value`,
+					// rather than `entity(some_entity).some_component = some_value`.
+					else if (entity_ref_expr.empty())
+					{
+						bool leading_symbol_is_variable = false;
 
-						if (opt_type_context)
+						// Make sure the symbol referenced isn't a variable:
+						if (auto opt_variable_context = parsing_context.get_variable_context())
 						{
-							member_as_type = opt_type_context->get_component_type(member_name);
-						}
-						else
-						{
-							member_id = hash(member_name);
-							member_as_type = resolve(member_id);
-						}
-
-						if (member_as_type)
-						{
-							const auto& uncaptured_entity_ref = type_or_variable_name;
-
-							const auto corrected_instruction_subset_offset = static_cast<std::size_t>((member_name.data() - instruction_raw.data()));
-							const auto corrected_instruction_subset = instruction_raw.substr(corrected_instruction_subset_offset);
-
-							auto
-							[
-								unlikely_nested_entity_ref_expr,
-								intended_type_name, actual_member_name,
-								intended_operator_symbol, intended_assignment_value_raw,
-								intended_updated_offset
-							] = parse_qualified_assignment_or_comparison(corrected_instruction_subset);
-
-							if (!intended_type_name.empty())
+							if (opt_variable_context->retrieve_variable(type_or_variable_name))
 							{
-								//assert(unlikely_nested_entity_ref_expr.empty());
-
-								const auto corrected_update_instruction_result = process_update_instruction_from_values
-								(
-									intended_type_name,
-									actual_member_name,
-									intended_assignment_value_raw,
-								
-									(unlikely_nested_entity_ref_expr.empty())
-										? uncaptured_entity_ref
-										: unlikely_nested_entity_ref_expr
-									,
-
-									intended_operator_symbol
-								);
-
-								if (corrected_update_instruction_result)
-								{
-									// Update the previous-instruction ID to reflect
-									// the inline-update operation we just processed.
-									this->prev_instruction_id = "update"_hs;
-
-									// No further processing needed.
-									return 1;
-								}
+								leading_symbol_is_variable = true;
 							}
 						}
-						else
+
+						// NOTE: If this check was not present, any member-access from a variable could conflict with this logic.
+						// e.g. `my_var.member` could be seen as a entity-component access, rather than a variable member access.
+						if (!leading_symbol_is_variable)
 						{
-							auto
-							[
-								unlikely_nested_entity_ref_expr,
-								unqualified_entity_name, actual_member_name,
-								intended_operator_symbol, intended_assignment_value_raw,
-								intended_updated_offset
-							] = parse_qualified_assignment_or_comparison(instruction_raw);
+							auto member_as_type = MetaType {};
+							auto member_id = MetaSymbolID {};
 
-							if (!unqualified_entity_name.empty() && !actual_member_name.empty())
+							const auto opt_type_context = get_type_context();
+
+							if (opt_type_context)
 							{
-								if (const auto entity_type = resolve<Entity>())
+								member_as_type = opt_type_context->get_component_type(member_name);
+							}
+							else
+							{
+								member_id = hash(member_name);
+								member_as_type = resolve(member_id);
+							}
+
+							if (member_as_type)
+							{
+								const auto& uncaptured_entity_ref = type_or_variable_name;
+
+								const auto corrected_instruction_subset_offset = static_cast<std::size_t>((member_name.data() - instruction_raw.data()));
+								const auto corrected_instruction_subset = instruction_raw.substr(corrected_instruction_subset_offset);
+
+								auto
+								[
+									unlikely_nested_entity_ref_expr,
+									intended_type_name, actual_member_name,
+									intended_operator_symbol, intended_assignment_value_raw,
+									intended_updated_offset
+								] = parse_qualified_assignment_or_comparison(corrected_instruction_subset);
+
+								if (!intended_type_name.empty() && !intended_operator_symbol.empty())
 								{
-									if (!member_id)
+									//assert(unlikely_nested_entity_ref_expr.empty());
+
+									const auto corrected_update_instruction_result = process_update_instruction_from_values
+									(
+										intended_type_name,
+										actual_member_name,
+										intended_assignment_value_raw,
+								
+										(unlikely_nested_entity_ref_expr.empty())
+											? uncaptured_entity_ref
+											: unlikely_nested_entity_ref_expr
+										,
+
+										intended_operator_symbol
+									);
+
+									if (corrected_update_instruction_result)
 									{
-										member_id = hash(member_name);
+										// Update the previous-instruction ID to reflect
+										// the inline-update operation we just processed.
+										this->prev_instruction_id = "update"_hs;
+
+										// No further processing needed.
+										return 1;
 									}
+								}
+							}
+							else
+							{
+								auto
+								[
+									unlikely_nested_entity_ref_expr,
+									unqualified_entity_name, actual_member_name,
+									intended_operator_symbol, intended_assignment_value_raw,
+									intended_updated_offset
+								] = parse_qualified_assignment_or_comparison(instruction_raw);
 
-									if (entity_type.data(member_id))
+								if (!intended_operator_symbol.empty())
+								{
+									// Disable leading remote variables in favor of dedicated assignment logic.
+									meta_expr_allow_leading_remote_variable = false;
+
+									if (!unqualified_entity_name.empty() && !actual_member_name.empty())
 									{
-										// Found a valid data-member; treat this as an expression using an entity reference. (If applicable)
-										meta_expr_allow_first_symbol_as_entity = true;
-
-										// Don't bother processing this instruction as a directive or remote-variable assignment:
-										try_as_directive = false;
-										try_as_remote_variable_assignment = false;
-									}
-									else
-									{
-										const auto property_accessors = MetaProperty::generate_accessor_identifiers(member_name);
-										const auto& setter_id = std::get<1>(property_accessors);
-
-										if (auto setter_fn = entity_type.func(setter_id))
+										if (const auto entity_type = resolve<Entity>())
 										{
-											// Found a valid 'setter' function; treat this as a 'property' expression using an entity reference. (If applicable)
-											meta_expr_allow_first_symbol_as_entity = true;
+											if (!member_id)
+											{
+												member_id = hash(member_name);
+											}
 
-											// Don't bother processing this instruction as a directive or remote-variable assignment:
-											try_as_directive = false;
-											try_as_remote_variable_assignment = false;
+											if (entity_type.data(member_id))
+											{
+												// Found a valid data-member; treat this as an expression using an entity reference. (If applicable)
+												meta_expr_allow_first_symbol_as_entity = true;
+
+												// Don't bother processing this instruction as a directive or remote-variable assignment:
+												try_as_directive = false;
+												try_as_remote_variable_assignment = false;
+											}
+											else
+											{
+												const auto property_accessors = MetaProperty::generate_accessor_identifiers(member_name);
+												const auto& setter_id = std::get<1>(property_accessors);
+
+												if (auto setter_fn = entity_type.func(setter_id))
+												{
+													// Found a valid 'setter' function; treat this as a 'property' expression using an entity reference. (If applicable)
+													meta_expr_allow_first_symbol_as_entity = true;
+
+													// Don't bother processing this instruction as a directive or remote-variable assignment:
+													try_as_directive = false;
+													try_as_remote_variable_assignment = false;
+												}
+											}
 										}
 									}
 								}
@@ -2309,7 +2343,7 @@ namespace engine
 
 			if (try_as_meta_expr)
 			{
-				if (auto result = process_meta_expression_instruction(instruction_raw, meta_expr_allow_first_symbol_as_entity))
+				if (auto result = process_meta_expression_instruction(instruction_raw, meta_expr_allow_first_symbol_as_entity, meta_expr_allow_leading_remote_variable))
 				{
 					return result;
 				}
@@ -2532,13 +2566,13 @@ namespace engine
 					//const auto check_linked = util::from_string<bool>(instruction_content).value_or(true);
 
 					//return instruct_thread<Pause>(thread_details, check_linked);
-					return instruct_thread<Pause>(util::optional_or(parse_thread_details(instruction_content), thread_details));
+					return instruct_thread<Pause>(util::optional_or(std::get<0>(parse_thread_details(instruction_content)), thread_details));
 				}
 
 				case "wake"_hs:
 				case "resume"_hs:
 				{
-					return instruct_thread<Resume>(util::optional_or(parse_thread_details(instruction_content), thread_details));
+					return instruct_thread<Resume>(util::optional_or(std::get<0>(parse_thread_details(instruction_content)), thread_details));
 				}
 
 				case "link"_hs:
@@ -2549,7 +2583,7 @@ namespace engine
 				// This is due to the default assumption that threads are linked. As a consequence,
 				// re-linking a thread requires referencing local thread instances directly.
 				case "unlink"_hs:
-					return instruct_thread<Unlink>(util::optional_or(parse_thread_details(instruction_content), thread_details));
+					return instruct_thread<Unlink>(util::optional_or(std::get<0>(parse_thread_details(instruction_content)), thread_details));
 
 				// TODO: Determine if `attach` should take a state ID/name
 				// or allow for alternate thread-designation syntax.
@@ -2570,7 +2604,7 @@ namespace engine
 				// handles state IDs, we assume the alternate thread-designation is fine.
 				case "detach"_hs:
 					//return instruct_thread<Detach>(thread_details);
-					return instruct_thread<Detach>(util::optional_or(parse_thread_details(instruction_content), thread_details));
+					return instruct_thread<Detach>(util::optional_or(std::get<0>(parse_thread_details(instruction_content)), thread_details));
 
 				// NOTE: For `start`, we currently allow both boolean input (restart behavior)
 				// as well as the alternate thread-designation syntax.
@@ -2591,7 +2625,7 @@ namespace engine
 
 						target_thread_details = (restart_existing_as_first_parameter)
 							? thread_details
-							: util::optional_or(parse_thread_details(instruction_args[0]), thread_details)
+							: util::optional_or(std::get<0>(parse_thread_details(instruction_args[0])), thread_details)
 						;
 						
 						restart_existing = (restart_existing_as_first_parameter)
@@ -2651,7 +2685,7 @@ namespace engine
 
 						auto target_thread_details = (yield_result_as_first_parameter)
 							? thread_details
-							: util::optional_or(parse_thread_details(instruction_args[0]), thread_details)
+							: util::optional_or(std::get<0>(parse_thread_details(instruction_args[0])), thread_details)
 						;
 
 						// NOTE: This condition may be changed or removed at a later date.
@@ -2694,11 +2728,81 @@ namespace engine
 					//const auto check_linked = util::from_string<bool>(instruction_content).value_or(true);
 
 					//return instruct_thread<Stop>(thread_details, check_linked);
-					return instruct_thread<Stop>(util::optional_or(parse_thread_details(instruction_content), thread_details));
+					return instruct_thread<Stop>(util::optional_or(std::get<0>(parse_thread_details(instruction_content)), thread_details));
 				}
 
+				// NOTE:
+				// `sleep`, `wait` and `yield` have the same capabilities, but different prioritization for inputs.
+				// e.g. `sleep` will look for a duration first, whereas `yield` will look for a trigger condition first.
+				// 
+				// This allows `sleep` to take a variable as input for its duration, whereas
+				// `wait` and `yield` would assume the variable is a wake condition.
+				// 
+				// See also: `wait`, `yield`
 				case "sleep"_hs:
+				{
+					if (instruction_content.empty())
+					{
+						return instruct_thread<Pause>(thread_details);
+					}
+					else
+					{
+						if (auto sleep_duration = parse_time_duration(instruction_content))
+						{
+							return instruct_thread<Sleep>(thread_details, std::move(*sleep_duration));
+						}
+						else if (auto remote_instruction = resolve_instruction.operator()<Sleep>(thread_details))
+						{
+							return instruct<InstructionDescriptor>(std::move(*remote_instruction));
+						}
+						else if (auto condition = process_unified_condition_block(descriptor, instruction_content, parsing_context))
+						{
+							auto condition_ref = descriptor.allocate<EventTriggerCondition>(std::move(*condition));
+
+							return instruct_thread<Yield>(thread_details, std::move(condition_ref));
+						}
+						else
+						{
+							error("Failed to resolve `yield` expression.");
+						}
+					}
+
+					break;
+				}
+
+				// See also: `sleep`, `yield`
 				case "wait"_hs:
+				{
+					if (instruction_content.empty())
+					{
+						return instruct_thread<Pause>(thread_details);
+					}
+					else
+					{
+						if (auto sleep_duration = parse_time_duration(instruction_content))
+						{
+							return instruct_thread<Sleep>(thread_details, std::move(*sleep_duration));
+						}
+						else if (auto condition = process_unified_condition_block(descriptor, instruction_content, parsing_context, false))
+						{
+							auto condition_ref = descriptor.allocate<EventTriggerCondition>(std::move(*condition));
+
+							return instruct_thread<Yield>(thread_details, std::move(condition_ref));
+						}
+						else if (auto remote_instruction = resolve_instruction.operator()<Sleep>(thread_details))
+						{
+							return instruct<InstructionDescriptor>(std::move(*remote_instruction));
+						}
+						else
+						{
+							error("Failed to resolve `yield` expression.");
+						}
+					}
+
+					break;
+				}
+
+				// See also: `sleep`, `wait`
 				case "yield"_hs:
 				{
 					if (instruction_content.empty())
