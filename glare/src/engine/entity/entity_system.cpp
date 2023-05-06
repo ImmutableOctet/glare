@@ -636,7 +636,7 @@ namespace engine
 	}
 
 	template <bool allow_emplace, typename EventType, typename ThreadCommandType, typename RangeCallback, typename IDCallback, typename ...EventArgs>
-	void EntitySystem::thread_command_impl(const ThreadCommandType& thread_command, RangeCallback&& range_callback, IDCallback&& id_callback, std::string_view dbg_name, std::string_view dbg_name_past_tense, EventArgs&&... event_args)
+	bool EntitySystem::thread_command_impl(const ThreadCommandType& thread_command, RangeCallback&& range_callback, IDCallback&& id_callback, std::string_view dbg_name, std::string_view dbg_name_past_tense, EventArgs&&... event_args)
 	{
 		static_assert(!std::is_same_v<ThreadCommandType, void>);
 		static_assert(!std::is_same_v<RangeCallback, void>);
@@ -651,7 +651,7 @@ namespace engine
 		{
 			print_warn("Entity #{}: Empty thread command detected.", entity);
 
-			return;
+			return false;
 		}
 
 		auto& thread_component = (allow_emplace)
@@ -670,33 +670,46 @@ namespace engine
 			{
 				const auto begin = threads.begin_point();
 				
-				if (threads.size() == 1)
+				/*
+				if (!dbg_name.empty())
 				{
-					//print("Entity #{}: Attempting to {} thread #{}...", entity, dbg_name, begin);
-				}
-				else
-				{
-					const auto end = threads.end_point();
+					if (threads.size() == 1)
+					{
+						print("Entity #{}: Attempting to {} thread #{}...", entity, dbg_name, begin);
+					}
+					else
+					{
+						const auto end = threads.end_point();
 
-					//print("Entity #{}: Attempting to {} threads #{} through #{}...", entity, dbg_name, begin, (end - 1));
+						print("Entity #{}: Attempting to {} threads #{} through #{}...", entity, dbg_name, begin, (end - 1));
+					}
 				}
+				*/
 
 				const auto result = range_callback(thread_command, thread_component, threads);
 
 				if (static_cast<bool>(result))
 				{
-					if (threads.size() == 1)
+					/*
+					if (!dbg_name_past_tense.empty())
 					{
-						//print("Entity #{}: Thread #{} {} successfully.", entity, begin, dbg_name_past_tense);
+						if (threads.size() == 1)
+						{
+							print("Entity #{}: Thread #{} {} successfully.", entity, begin, dbg_name_past_tense);
+						}
+						else
+						{
+							print("Entity #{}: {} {} of {} threads.", entity, dbg_name_past_tense, result, threads.size());
+						}
 					}
-					else
-					{
-						//print("Entity #{}: {} {} of {} threads.", entity, dbg_name_past_tense, result, threads.size());
-					}
+					*/
 				}
 				else
 				{
-					print_warn("Entity #{}: Failed to {} any threads.", entity, dbg_name);
+					if (!dbg_name.empty())
+					{
+						print_warn("Entity #{}: Failed to {} any threads.", entity, dbg_name);
+					}
 				}
 
 				if constexpr (!std::is_same_v<EventType, void>)
@@ -756,7 +769,12 @@ namespace engine
 
 			[this, &id_callback, &thread_command, entity, &thread_component, &dbg_name, &dbg_name_past_tense](EntityThreadID thread_id)
 			{
-				//print("Entity #{}: Attempting to {} thread by ID (#{})...", entity, dbg_name, thread_id);
+				/*
+				if (!dbg_name.empty())
+				{
+					print("Entity #{}: Attempting to {} thread by ID (#{})...", entity, dbg_name, thread_id);
+				}
+				*/
 				
 				const auto* descriptor = get_descriptor(entity);
 				
@@ -773,11 +791,21 @@ namespace engine
 
 				if (static_cast<bool>(result))
 				{
-					//print("Entity #{}: Thread (#{}) {} successfully.", entity, thread_id, dbg_name_past_tense);
+					/*
+					if (!dbg_name_past_tense.empty())
+					{
+						print("Entity #{}: Thread (#{}) {} successfully.", entity, thread_id, dbg_name_past_tense);
+					}
+					*/
 				}
 				else
 				{
-					print_warn("Entity #{}: Failed to {} any threads.", entity, dbg_name);
+					/*
+					if (!dbg_name.empty())
+					{
+						print_warn("Entity #{}: Failed to {} any threads.", entity, dbg_name);
+					}
+					*/
 				}
 
 				if constexpr (!std::is_same_v<EventType, void>)
@@ -820,6 +848,8 @@ namespace engine
 				}
 			}
 		);
+
+		return true;
 	}
 
 	void EntitySystem::on_thread_spawn_command(const EntityThreadSpawnCommand& thread_command)
@@ -850,22 +880,43 @@ namespace engine
 
 	void EntitySystem::on_thread_stop_command(const EntityThreadStopCommand& thread_command)
 	{
-		thread_command_impl<false, OnThreadTerminated>
+		// Execute an initial 'dry run' to generate `OnThreadTerminated` events.
+		auto event_result = thread_command_impl<false, OnThreadTerminated>
 		(
 			thread_command,
 			
 			[](const EntityThreadStopCommand& thread_command, EntityThreadComponent& thread_component, const EntityThreadRange& threads)
 			{
-				return thread_component.stop_threads(threads, thread_command.check_linked);
+				return true;
 			},
 
 			[](const EntityThreadStopCommand& thread_command, EntityThreadComponent& thread_component, const EntityDescriptor& descriptor, EntityThreadID thread_id)
 			{
-				return thread_component.stop_thread(descriptor, thread_id, thread_command.check_linked);
+				return true;
 			},
 
-			"stop", "stopped"
+			{}, {}
 		);
+
+		if (event_result)
+		{
+			thread_command_impl<false, void>
+			(
+				thread_command,
+			
+				[](const EntityThreadStopCommand& thread_command, EntityThreadComponent& thread_component, const EntityThreadRange& threads)
+				{
+					return thread_component.stop_threads(threads, thread_command.check_linked);
+				},
+
+				[](const EntityThreadStopCommand& thread_command, EntityThreadComponent& thread_component, const EntityDescriptor& descriptor, EntityThreadID thread_id)
+				{
+					return thread_component.stop_thread(descriptor, thread_id, thread_command.check_linked);
+				},
+
+				"stop", "stopped"
+			);
+		}
 	}
 
 	void EntitySystem::on_thread_pause_command(const EntityThreadPauseCommand& thread_command)
@@ -1581,6 +1632,8 @@ namespace engine
 					{
 						const auto& condition_raw = yield.condition.get(descriptor);
 						
+						// TODO: Review whether 'yield as no-op' makes sense;
+						// I'm not sure if this behavior is the most intuitive.
 						if (condition_met(condition_raw))
 						{
 							return;
@@ -2060,9 +2113,25 @@ namespace engine
 						}
 					},
 
-					[&exec_impl_recursive, &registry, entity](const InstructionDescriptor& instruction_desc)
+					[&exec_impl_recursive, &get_variable_context, &registry, entity, &service, &system_manager](const InstructionDescriptor& instruction_desc)
 					{
-						auto result = try_get_underlying_value(instruction_desc.instruction, registry, entity);
+						auto result = MetaAny {};
+
+						if (auto variable_context = get_variable_context())
+						{
+							auto evaluation_context = MetaEvaluationContext
+							{
+								.variable_context = &variable_context,
+								.service = &service,
+								.system_manager = system_manager
+							};
+
+							result = try_get_underlying_value(instruction_desc.instruction, registry, entity, evaluation_context);
+						}
+						else
+						{
+							result = try_get_underlying_value(instruction_desc.instruction, registry, entity);
+						}
 
 						if (result)
 						{

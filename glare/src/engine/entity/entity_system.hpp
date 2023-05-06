@@ -154,7 +154,7 @@ namespace engine
 			);
 		private:
 			template <bool allow_emplace, typename EventType=void, typename ThreadCommandType=void, typename RangeCallback=void, typename IDCallback=void, typename ...EventArgs>
-			void thread_command_impl(const ThreadCommandType& thread_command, RangeCallback&& range_callback, IDCallback&& id_callback, std::string_view dbg_name, std::string_view dbg_name_past_tense, EventArgs&&... event_args);
+			bool thread_command_impl(const ThreadCommandType& thread_command, RangeCallback&& range_callback, IDCallback&& id_callback, std::string_view dbg_name, std::string_view dbg_name_past_tense, EventArgs&&... event_args);
 
 			EntityListener* listen(MetaTypeID event_type_id);
 
