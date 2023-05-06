@@ -58,6 +58,12 @@ namespace engine::impl
         return str.starts_with(prefix);
     }
 
+    template <typename StringType, typename PrefixStringType=StringType>
+    bool string_ends_with_impl(const StringType& str, const PrefixStringType& suffix)
+    {
+        return str.ends_with(suffix);
+    }
+
     template <typename StringType, typename ValueType=StringType>
     bool string_contains_impl(const StringType& str, const ValueType& value)
     {
