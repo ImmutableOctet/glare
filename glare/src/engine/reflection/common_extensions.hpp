@@ -3,6 +3,8 @@
 #include <engine/types.hpp>
 #include <engine/meta/types.hpp>
 
+#include <type_traits>
+
 namespace engine::impl
 {
 	template <typename T>
@@ -10,14 +12,22 @@ namespace engine::impl
     {
         //return static_cast<bool>(value);
 
-        ///*
-        if (value)
+        if constexpr (std::is_floating_point_v<std::decay_t<T>>)
         {
-            return true;
+            if (value > static_cast<T>(0.0))
+            {
+                return true;
+            }
+        }
+        else
+        {
+            if (value)
+            {
+                return true;
+            }
         }
 
         return false;
-        //*/
     }
 
     template <typename T>
