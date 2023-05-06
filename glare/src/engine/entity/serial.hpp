@@ -59,15 +59,20 @@ namespace engine
 
 	std::tuple
 	<
-		std::string_view,                      // instruction
-		std::optional<EntityThreadInstruction> // thread_details
+		std::string_view,                       // instruction
+		std::optional<EntityThreadInstruction>, // thread_details
+		bool                                    // thread_accessor_used
 	> parse_instruction_header
 	(
 		std::string_view instruction_raw,
 		const EntityDescriptor* opt_descriptor=nullptr
 	);
 
-	std::optional<EntityThreadInstruction> // EntityThreadInstruction
+	std::tuple
+	<
+		std::optional<EntityThreadInstruction>, // thread_details
+		bool                                    // accessor_used
+	>
 	parse_thread_details
 	(
 		std::string_view combined_expr,
@@ -75,7 +80,11 @@ namespace engine
 		const EntityDescriptor* opt_descriptor=nullptr
 	);
 
-	std::optional<EntityThreadInstruction> // EntityThreadInstruction
+	std::tuple
+	<
+		std::optional<EntityThreadInstruction>, // thread_details
+		bool                                    // accessor_used
+	>
 	parse_thread_details
 	(
 		std::string_view thread_ref,
