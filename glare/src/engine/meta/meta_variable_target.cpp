@@ -27,7 +27,16 @@ namespace engine
 
 	MetaVariableTarget& MetaVariableTarget::set(MetaAny& value, MetaVariableEvaluationContext& context)
 	{
-		const auto result = context.set(scope, name, std::move(value), true, true);
+		bool result = false;
+
+		if (value.owner())
+		{
+			result = context.set(scope, name, MetaAny { value }, true, true); // std::move(value)
+		}
+		else
+		{
+			result = context.set(scope, name, value.as_ref(), true, true);
+		}
 
 		assert(result);
 
