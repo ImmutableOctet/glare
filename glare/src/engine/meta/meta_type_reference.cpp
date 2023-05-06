@@ -277,7 +277,7 @@ namespace engine
 
 		const auto type = get_type();
 
-		if (auto result = set_instance(((type) ? type : instance.type()), std::move(instance), registry, entity))
+		if (auto result = set_instance(((type) ? type : instance.type()), instance.as_ref(), registry, entity)) // std::move(instance)
 		{
 			return entt::forward_as_meta(*this); // result;
 		}
