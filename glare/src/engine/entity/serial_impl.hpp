@@ -337,7 +337,8 @@ namespace engine
 		std::string_view trigger_condition_expr,
 		Callback&& callback,
 		bool always_embed_type=false,
-		const MetaParsingContext& opt_parsing_context={}
+		const MetaParsingContext& opt_parsing_context={},
+		bool allow_encode_default_variable_comparison=true
 	)
 	{
 		using namespace engine::literals;
@@ -811,116 +812,112 @@ namespace engine
 						}
 					);
 
-					constexpr MetaSymbolID variable_update_result_field_id = "variable_update_result"_hs;
+					auto comparison_value = MetaAny {};
 
-					assert(expr_type.data(variable_update_result_field_id));
-
-					auto comparison_value = (compared_value_raw.empty())
-						? MetaAny { true }
-						: process_trigger_condition_value(descriptor, compared_value_raw, opt_parsing_context)
-					;
-
-					const auto comparison_method = EventTriggerConditionType::get_comparison_method(comparison_operator, invert_condition);
-
-					handle_condition
-					(
-						Combinator::And,
-
-						EventTriggerSingleCondition
-						{
-							variable_update_result_field_id,
-								
-							MetaAny { comparison_value }, // std::move(comparison_value) // comparison_value.as_ref()
-
-							comparison_method,
-
-							expr_type_id
-						}
-					);
-
-					const auto value_operator = EventTriggerConditionType::operation_from_comparison_method(comparison_method);
-
-					auto operation_out = MetaValueOperation {};
-
-					// if (value_has_indirection(comparison_value)) ...
-
-					if (is_remote_variable || thread_id)
+					if (compared_value_raw.empty())
 					{
-						operation_out.segments.emplace_back
-						(
-							allocate_meta_any
-							(
-								IndirectMetaVariableTarget
-								{
-									*entity_target,
+						if (allow_encode_default_variable_comparison)
+						{
+							comparison_value = MetaAny { true };
+						}
+					}
+					else
+					{
+						comparison_value = process_trigger_condition_value(descriptor, compared_value_raw, opt_parsing_context);
+					}
 
+					if (comparison_value)
+					{
+						auto comparison_method = (!compared_value_raw.empty()) // (comparison_operator.empty())
+							? EventTriggerConditionType::get_comparison_method(comparison_operator, invert_condition)
+						
+							// This behavior may change in the future. (See notes below)
+							: EventTriggerConditionType::get_comparison_method(">=", invert_condition) // EventTriggerConditionType::ComparisonMethod::GreaterThanOrEqual
+
+							// Alternative:
+							//: EventTriggerConditionType::get_comparison_method("==", invert_condition) // EventTriggerConditionType::ComparisonMethod::Equal
+						;
+
+						constexpr MetaSymbolID variable_update_result_field_id = "variable_update_result"_hs;
+
+						assert(expr_type.data(variable_update_result_field_id));
+
+						handle_condition
+						(
+							Combinator::And,
+
+							EventTriggerSingleCondition
+							{
+								variable_update_result_field_id,
+								
+								// NOTE: This is an intentional copy of `comparison_value`, see below for secondary usage.
+								MetaAny { comparison_value }, // std::move(comparison_value) // comparison_value.as_ref()
+
+								comparison_method,
+
+								expr_type_id
+							}
+						);
+
+						const auto value_operator = EventTriggerConditionType::operation_from_comparison_method(comparison_method);
+
+						auto operation_out = MetaValueOperation {};
+
+						// if (value_has_indirection(comparison_value)) ...
+
+						if (is_remote_variable || thread_id)
+						{
+							operation_out.segments.emplace_back
+							(
+								allocate_meta_any
+								(
+									IndirectMetaVariableTarget
+									{
+										*entity_target,
+
+										MetaVariableTarget
+										{
+											resolved_variable_id,
+											variable_scope
+										},
+									
+										(thread_id)
+											? EntityThreadTarget { *thread_id }
+											: EntityThreadTarget {}
+									},
+
+									&shared_storage
+								),
+
+								value_operator
+							);
+						}
+						else
+						{
+							operation_out.segments.emplace_back
+							(
+								allocate_meta_any
+								(
 									MetaVariableTarget
 									{
 										resolved_variable_id,
 										variable_scope
 									},
-									
-									(thread_id)
-										? EntityThreadTarget { *thread_id }
-										: EntityThreadTarget {}
-								},
 
-								&shared_storage
-							),
+									&shared_storage
+								),
 
-							value_operator
-						);
-					}
-					else
-					{
+								value_operator
+							);
+						}
+
 						operation_out.segments.emplace_back
 						(
-							allocate_meta_any
-							(
-								MetaVariableTarget
-								{
-									resolved_variable_id,
-									variable_scope
-								},
-
-								&shared_storage
-							),
-
+							std::move(comparison_value), // MetaAny { comparison_value }, // comparison_value.as_ref()
 							value_operator
 						);
-					}
 
-					operation_out.segments.emplace_back
-					(
-						std::move(comparison_value), // MetaAny { comparison_value }, // comparison_value.as_ref()
-						value_operator
-					);
-
-					//store_condition();
-
-					handle_condition
-					(
-						Combinator::Or,
-
-						EventTriggerSingleCondition
-						{
-							allocate_meta_any
-							(
-								std::move(operation_out),
-								&shared_storage
-							)
-						}
-					);
-
-					/*
-					// Alternative implementation:
-					if (!is_remote_variable)
-					{
-						const auto comparison_expr = std::string_view
-						{
-							variable_name.data(),
-							static_cast<std::size_t>((compared_value_raw.data() + compared_value_raw.length()) - variable_name.data())
-						};
+						//store_condition();
 
 						handle_condition
 						(
@@ -928,11 +925,36 @@ namespace engine
 
 							EventTriggerSingleCondition
 							{
-								process_trigger_condition_value(descriptor, comparison_expr, opt_parsing_context)
+								allocate_meta_any
+								(
+									std::move(operation_out),
+									&shared_storage
+								)
 							}
 						);
+
+						/*
+						// Alternative implementation:
+						if (!is_remote_variable)
+						{
+							const auto comparison_expr = std::string_view
+							{
+								variable_name.data(),
+								static_cast<std::size_t>((compared_value_raw.data() + compared_value_raw.length()) - variable_name.data())
+							};
+
+							handle_condition
+							(
+								Combinator::Or,
+
+								EventTriggerSingleCondition
+								{
+									process_trigger_condition_value(descriptor, comparison_expr, opt_parsing_context)
+								}
+							);
+						}
+						*/
 					}
-					*/
 				}
 			}
 
@@ -965,7 +987,7 @@ namespace engine
 	
 	// Processes an 'all-in-one' (unified) condition-block from `trigger_condition_expr`.
 	// This condition cannot be used in a traditional rule/trigger scenario, since it could encode multiple primary types.
-	inline std::optional<EventTriggerCondition> process_unified_condition_block(EntityDescriptor& descriptor, const std::string& trigger_condition_expr, const MetaParsingContext& opt_parsing_context={}) // std::string_view
+	inline std::optional<EventTriggerCondition> process_unified_condition_block(EntityDescriptor& descriptor, std::string_view trigger_condition_expr, const MetaParsingContext& opt_parsing_context={}, bool allow_encode_default_variable_comparison=true)
 	{
 		using Combinator = EventTriggerCompoundMethod;
 
@@ -997,15 +1019,11 @@ namespace engine
 			// Always embed type information. (Required for `EntityThread` runtime)
 			true,
 
-			opt_parsing_context
+			opt_parsing_context,
+
+			allow_encode_default_variable_comparison
 		);
 
 		return condition_out;
-	}
-
-	// TODO: Optimize. (Temporary string generated due to limitation with `std::regex`)
-	inline std::optional<EventTriggerCondition> process_unified_condition_block(EntityDescriptor& descriptor, std::string_view trigger_condition_expr, const MetaParsingContext& opt_parsing_context={})
-	{
-		return process_unified_condition_block(descriptor, std::string(trigger_condition_expr), opt_parsing_context);
 	}
 }
