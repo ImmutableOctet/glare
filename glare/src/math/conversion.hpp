@@ -2,6 +2,8 @@
 
 #include "types.hpp"
 
+#include <type_traits>
+
 namespace math
 {
 	template <typename T>
@@ -47,6 +49,33 @@ namespace math
 	inline Quaternion to_quaternion(const Matrix& m)
 	{
 		return glm::quat_cast(m);
+	}
+
+	inline Matrix4x4 quat_to_mat4(const Quaternion& q)
+	{
+		return glm::mat4_cast(q);
+	}
+
+	inline Matrix3x3 quat_to_mat3(const Quaternion& q)
+	{
+		return glm::mat3_cast(q);
+	}
+
+	template <typename MatrixType>
+	inline MatrixType quaternion_to_matrix(const Quaternion& q)
+	{
+		if constexpr (std::is_same_v<std::decay_t<MatrixType>, Matrix4x4>)
+		{
+			return quat_to_mat4(q);
+		}
+		else if constexpr (std::is_same_v<std::decay_t<MatrixType>, Matrix3x3>)
+		{
+			return quat_to_mat3(q);
+		}
+		else
+		{
+			return glm::identity<MatrixType>(); // {};
+		}
 	}
 	
 	// This is mainly here as a placeholder overload, in case
