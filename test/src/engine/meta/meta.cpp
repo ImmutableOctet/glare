@@ -24,6 +24,7 @@
 #include <engine/entity/components/instance_component.hpp>
 
 #include <engine/components/name_component.hpp>
+#include <engine/components/relationship_component.hpp>
 
 #include <engine/resource_manager/entity_factory_data.hpp>
 
@@ -521,6 +522,56 @@ TEST_CASE("engine::meta_any_from_string", "[engine:meta]")
 		const auto name = name_component->get_name();
 
 		REQUIRE(name == "Some Name");
+	}
+
+	SECTION("Access parent's name component")
+	{
+		auto registry = engine::Registry {};
+
+		const auto parent = registry.create();
+		const auto entity = registry.create();
+
+		registry.emplace<engine::RelationshipComponent>(parent);
+
+		engine::RelationshipComponent::set_parent(registry, entity, parent);
+
+		const auto intended_name = std::string_view { "Parent's Name" };
+
+		registry.emplace<engine::NameComponent>(parent, std::string { intended_name });
+		
+		auto type_resolution_context = engine::MetaTypeResolutionContext::generate();
+
+		auto name_expr = engine::meta_any_from_string
+		(
+			std::string_view("self.parent.name"),
+			{
+				.context =
+				{
+					&type_resolution_context
+				},
+
+				.fallback_to_component_reference = true,
+				.allow_member_references         = true,
+				.allow_entity_indirection        = true,
+				.allow_property_translation      = true,
+				.allow_opaque_member_references  = true,
+				.resolve_component_aliases       = true
+			}
+		);
+
+		REQUIRE(name_expr);
+
+		const auto name_expr_result = engine::try_get_underlying_value(name_expr, registry, entity);
+
+		REQUIRE(name_expr_result);
+
+		const auto as_name_component = name_expr_result.try_cast<engine::NameComponent>();
+
+		REQUIRE(as_name_component);
+
+		const auto name = as_name_component->get_name();
+
+		REQUIRE(name == intended_name);
 	}
 
 	SECTION("Member assignment")
