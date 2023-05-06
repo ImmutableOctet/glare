@@ -21,6 +21,7 @@ namespace graphics
 namespace engine
 {
 	// Standard forward declarations:
+	class Service;
 	class World;
 	class ResourceManager;
 
