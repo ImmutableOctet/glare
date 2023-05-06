@@ -126,6 +126,21 @@ namespace engine
 				return get_thread_index(*thread_id);
 			}
 
+			inline bool has_thread(EntityThreadID thread_id) const
+			{
+				return get_thread_index(thread_id).has_value();
+			}
+
+			inline bool has_thread(std::optional<EntityThreadID> thread_id) const
+			{
+				if (!thread_id.has_value())
+				{
+					return false;
+				}
+
+				return has_thread(*thread_id);
+			}
+
 			std::optional<EntityThreadID> get_thread_id(EntityThreadIndex thread_index) const;
 
 			inline const EntityState* get_state(EntityStateID name) const
