@@ -1,7 +1,13 @@
 #pragma once
 
 #include <engine/types.hpp>
+#include <engine/events.hpp>
+#include <engine/service.hpp>
 #include <engine/transform.hpp>
+
+#include <engine/components/relationship_component.hpp>
+
+#include <engine/meta/meta_evaluation_context.hpp>
 
 #include <math/types.hpp>
 
@@ -108,6 +114,29 @@ namespace engine
             Transform(registry, self).set_local_scale(scale);
 
             return scale;
+        }
+
+        inline Entity entity_get_parent(Entity self, Registry& registry)
+        {
+            if (auto relationship_comp = registry.try_get<RelationshipComponent>(self))
+            {
+                return relationship_comp->get_parent();
+            }
+
+            return null;
+        }
+
+        inline Entity entity_set_parent(Entity self, Registry& registry, Entity context_entity, const MetaEvaluationContext& context, Entity parent)
+        {
+            auto prev_parent = RelationshipComponent::set_parent(registry, self, parent);
+
+            if (context.service)
+            {
+                // TODO: Look into automating this event.
+                context.service->event<OnParentChanged>(self, prev_parent, parent);
+            }
+
+            return self; // prev_parent;
         }
 	}
 }
