@@ -45,4 +45,22 @@ namespace engine::impl
     {
         return (left != right);
     }
+
+    template <typename StringType>
+    bool string_bool_impl(const StringType& str)
+    {
+        return !str.empty();
+    }
+
+    template <typename StringType, typename PrefixStringType=StringType>
+    bool string_starts_with_impl(const StringType& str, const PrefixStringType& prefix)
+    {
+        return str.starts_with(prefix);
+    }
+
+    template <typename StringType, typename ValueType=StringType>
+    bool string_contains_impl(const StringType& str, const ValueType& value)
+    {
+        return str.contains(value);
+    }
 }
