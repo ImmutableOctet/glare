@@ -10,6 +10,7 @@
 #include "math_extensions.hpp"
 #include "primitive_extensions.hpp"
 #include "string_extensions.hpp"
+#include "chrono_extensions.hpp"
 
 #include "string_conversion.hpp"
 
@@ -71,6 +72,7 @@ namespace engine
         auto type = entt::meta<PrimitiveType>()
             .ctor<&impl::from_string_view_impl<PrimitiveType>>()
             .ctor<&impl::from_string_impl<PrimitiveType>>()
+            .ctor<&impl::static_cast_impl<PrimitiveType, bool>>()
             .ctor<&impl::static_cast_impl<PrimitiveType, float>>()
             .ctor<&impl::static_cast_impl<PrimitiveType, double>>()
             .ctor<&impl::static_cast_impl<PrimitiveType, long double>>()
@@ -84,6 +86,7 @@ namespace engine
             //.ctor<&impl::static_cast_impl<PrimitiveType, std::uint8_t>>()
 
             .conv<&impl::arithmetic_to_string_impl<PrimitiveType>>()
+            .conv<&impl::operator_bool_impl<PrimitiveType>>()
         ;
 
         if constexpr (generate_optional_type)
@@ -116,26 +119,29 @@ namespace engine
             
             .ctor<&impl::entity_from_integer>()
 
-            .func<&impl::entity_set_position>("set_position"_hs)
             .func<&impl::entity_get_position>("get_position"_hs)
+            .func<&impl::entity_set_position>("set_position"_hs)
 
-            .func<&impl::entity_set_local_position>("set_local_position"_hs)
             .func<&impl::entity_get_local_position>("get_local_position"_hs)
+            .func<&impl::entity_set_local_position>("set_local_position"_hs)
 
-            .func<&impl::entity_set_rotation>("set_rotation"_hs)
             .func<&impl::entity_get_rotation>("get_rotation"_hs)
+            .func<&impl::entity_set_rotation>("set_rotation"_hs)
 
-            .func<&impl::entity_set_local_rotation>("set_local_rotation"_hs)
             .func<&impl::entity_get_local_rotation>("get_local_rotation"_hs)
+            .func<&impl::entity_set_local_rotation>("set_local_rotation"_hs)
 
-            .func<&impl::entity_get_direction_vector>("get_direction_vector"_hs)
             .func<&impl::entity_set_direction_vector>("set_direction_vector"_hs)
+            .func<&impl::entity_get_direction_vector>("get_direction_vector"_hs)
 
-            .func<&impl::entity_set_scale>("set_scale"_hs)
             .func<&impl::entity_get_scale>("get_scale"_hs)
+            .func<&impl::entity_set_scale>("set_scale"_hs)
 
-            .func<&impl::entity_set_local_scale>("set_local_scale"_hs)
             .func<&impl::entity_get_local_scale>("get_local_scale"_hs)
+            .func<&impl::entity_set_local_scale>("set_local_scale"_hs)
+
+            .func<&impl::entity_get_parent>("get_parent"_hs)
+            .func<&impl::entity_set_parent>("set_parent"_hs)
         ;
 
         if constexpr (generate_optional_type)
@@ -176,6 +182,19 @@ namespace engine
             .func<&impl::string_inequality<std::string, std::string>>("operator!="_hs)
             .func<&impl::string_inequality<std::string, std::string_view>>("operator!="_hs)
 
+            .func<&impl::string_starts_with_impl<std::string, std::string>>("starts_with"_hs)
+            .func<&impl::string_starts_with_impl<std::string, std::string_view>>("starts_with"_hs)
+
+            .func<&impl::string_ends_with_impl<std::string, std::string>>("ends_with"_hs)
+            .func<&impl::string_ends_with_impl<std::string, std::string_view>>("ends_with"_hs)
+
+            .func<&impl::string_contains_impl<std::string, std::string>>("contains"_hs)
+            .func<&impl::string_contains_impl<std::string, std::string_view>>("contains"_hs)
+
+            .data<nullptr, &std::string::length>("length"_hs)
+            .data<nullptr, &std::string::size>("size"_hs)
+            .data<nullptr, &std::string::empty>("empty"_hs)
+
             .ctor<std::string_view>()
 
             // Constructors for floating-point-to-string conversions:
@@ -192,6 +211,7 @@ namespace engine
             .ctor<&impl::arithmetic_to_string_impl<std::uint16_t>>()
             //.ctor<&impl::arithmetic_to_string_impl<std::int8_t>>()
             //.ctor<&impl::arithmetic_to_string_impl<std::uint8_t>>()
+            .ctor<&impl::arithmetic_to_string_impl<bool>>()
 
             .ctor<&impl::entity_to_string_impl>()
 
@@ -202,6 +222,8 @@ namespace engine
             .conv<&impl::from_string_impl<float>>()
             .conv<&impl::from_string_impl<double>>()
             .conv<&impl::from_string_impl<bool>>()
+            
+            .conv<&impl::string_bool_impl<std::string>>()
         ;
     }
 
@@ -232,11 +254,26 @@ namespace engine
             .func<&impl::string_inequality<std::string_view, std::string_view>>("operator!="_hs)
             .func<&impl::string_inequality<std::string_view, std::string>>("operator!="_hs)
 
+            .func<&impl::string_starts_with_impl<std::string_view, std::string_view>>("starts_with"_hs)
+            .func<&impl::string_starts_with_impl<std::string_view, std::string>>("starts_with"_hs)
+
+            .func<&impl::string_ends_with_impl<std::string_view, std::string_view>>("ends_with"_hs)
+            .func<&impl::string_ends_with_impl<std::string_view, std::string>>("ends_with"_hs)
+
+            .func<&impl::string_contains_impl<std::string_view, std::string_view>>("contains"_hs)
+            .func<&impl::string_contains_impl<std::string_view, std::string>>("contains"_hs)
+
+            .data<nullptr, &std::string_view::length>("length"_hs)
+            .data<nullptr, &std::string_view::size>("size"_hs)
+            .data<nullptr, &std::string_view::empty>("empty"_hs)
+
             .ctor<std::string_view>()
 
             // NOTE: May remove this constructor overload due to possible
             // memory-safety concerns around string lifetimes.
             .ctor<std::string>()
+
+            .conv<&impl::string_bool_impl<std::string_view>>()
         ;
     }
 
@@ -256,9 +293,15 @@ namespace engine
 
         entt::meta<T>()
             //.type("Duration"_hs)
+            
             // Constructor to convert from floating-point values (seconds) to STL system-clock duration values.
             // (Commonly aliased via `Timer::Duration`)
             .ctor<static_cast<T(*)(float)>(&Timer::to_duration)>()
+            
+            .ctor<&impl::duration_from_integer>()
+
+            .ctor<&impl::duration_from_string_view>()
+            .ctor<&impl::duration_from_string>()
         ;
 
         if constexpr (generate_optional_type)
