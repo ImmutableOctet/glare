@@ -1437,7 +1437,7 @@ namespace engine
 			control_flow_command.template operator()<EntityThreadSpawnCommand>(launch, true, restart_existing);
 		};
 
-		auto stop_thread = [&registry, &service, entity, &descriptor, &thread_comp, &thread, thread_index, &resolve_thread_instruction](const auto& stop)
+		auto stop_thread = [&registry, &service, entity, &descriptor, &thread_comp, &thread, thread_index, &resolve_thread_instruction](const instructions::Stop& stop={})
 		{
 			const auto [target_entity, target_thread_index] = resolve_thread_instruction(stop);
 
@@ -1727,7 +1727,7 @@ namespace engine
 						);
 					},
 
-					[entity, &registry, &descriptor, &thread, &condition_met, &step_stride](const IfControlBlock& control_block)
+					[&descriptor, &condition_met, &step_stride](const IfControlBlock& control_block)
 					{
 						const auto& condition = control_block.condition.get(descriptor);
 
@@ -2111,6 +2111,54 @@ namespace engine
 							// Fallback to assigning an empty value.
 							variable_context.set(variable_scope, variable_name, MetaAny{});
 						}
+					},
+
+					[&descriptor, &condition_met, &stop_thread](const instructions::Assert& assert_instruction)
+					{
+						const auto& condition = assert_instruction.condition.get(descriptor);
+
+						const auto result = condition_met(condition);
+
+						if (!result)
+						{
+							//assert(false);
+
+							if (assert_instruction.debug_message)
+							{
+								const auto& debug_message = assert_instruction.debug_message->get(descriptor);
+
+								if (assert_instruction.condition_representation)
+								{
+									const auto& condition_representation = assert_instruction.condition_representation->get(descriptor);
+
+									print_error("Assert failed: \"{}\" ({})", debug_message, condition_representation);
+								}
+								else
+								{
+									print_error("Assert failed: \"{}\"", debug_message);
+								}
+							}
+							else
+							{
+								if (assert_instruction.condition_representation)
+								{
+									const auto& condition_representation = assert_instruction.condition_representation->get(descriptor);
+
+									print_error("Assert failed: ({})", condition_representation);
+								}
+								else
+								{
+									print_error("Assert failed");
+								}
+							}
+
+							print_warn("Unable to continue execution of thread; terminating...");
+
+							// TODO: Look into alternative methods for sending 'stop' signal.
+							stop_thread();
+						}
+
+						// NOTE: If the assert condition was met, we continue to the next instruction regularly.
 					},
 
 					[&exec_impl_recursive, &get_variable_context, &registry, entity, &service, &system_manager](const InstructionDescriptor& instruction_desc)

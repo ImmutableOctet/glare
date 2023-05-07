@@ -2677,6 +2677,7 @@ namespace engine
 				}
 
 				case "restart"_hs:
+				{
 					if (auto instruction_parse_result = util::split_from_ex<2>(instruction_content, ",", 0))
 					{
 						const auto& instruction_args = std::get<0>(*instruction_parse_result);
@@ -2720,6 +2721,7 @@ namespace engine
 					}
 
 					return instruct_thread<Restart>(thread_details);
+				}
 
 				// NOTE: We don't currently handle the `check_linked` field for `Stop`.
 				case "terminate"_hs:
@@ -2729,6 +2731,55 @@ namespace engine
 
 					//return instruct_thread<Stop>(thread_details, check_linked);
 					return instruct_thread<Stop>(util::optional_or(std::get<0>(parse_thread_details(instruction_content)), thread_details));
+				}
+
+				case "assert"_hs:
+				{
+					if (instruction_content.empty())
+					{
+						error("Unable to generate assert instruction; condition missing.");
+					}
+					else
+					{
+						if (auto instruction_args = util::split_from<2>(instruction_content, ",", 1))
+						{
+							const auto& condition_content = (*instruction_args)[0];
+
+							assert(!condition_content.empty());
+
+							if (auto condition = process_immediate_trigger_condition(condition_content))
+							{
+								auto condition_ref = descriptor.allocate<EventTriggerCondition>(std::move(*condition));
+
+								using remote_message_t = decltype(instructions::Assert::debug_message);
+
+								remote_message_t debug_message;
+
+								if (auto& debug_message_raw = (*instruction_args)[1]; !debug_message_raw.empty())
+								{
+									debug_message = descriptor.allocate<std::string>(util::unquote_safe(debug_message_raw));
+								}
+
+								return instruct<Assert>
+								(
+									std::move(condition_ref),
+									std::move(debug_message),
+
+									descriptor.allocate<std::string>(condition_content)
+								);
+							}
+							else
+							{
+								error("Unable to resolve assert-condition while building thread.");
+							}
+						}
+						else
+						{
+							error("Unable to resolve assert-condition while building thread.");
+						}
+					}
+
+					break;
 				}
 
 				// NOTE:
