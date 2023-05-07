@@ -3060,7 +3060,7 @@ namespace engine
 
 		if (opt_factory_context)
 		{
-			resolved_path = opt_factory_context->resolve_path
+			resolved_path = opt_factory_context->resolve_script_reference
 			(
 				script_path,
 

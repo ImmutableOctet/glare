@@ -54,11 +54,21 @@ namespace engine
 
 	std::filesystem::path EntityFactoryContext::resolve_reference(const std::filesystem::path& path, const std::filesystem::path& base_path) const
 	{
+		return resolve_reference_impl(path, base_path, "json");
+	}
+
+	std::filesystem::path EntityFactoryContext::resolve_script_reference(const std::filesystem::path& path, const std::filesystem::path& base_path) const
+	{
+		return resolve_reference_impl(path, base_path, "es");
+	}
+
+	std::filesystem::path EntityFactoryContext::resolve_reference_impl(const std::filesystem::path& path, const std::filesystem::path& base_path, std::string_view file_extension) const
+	{
 		auto module_path = resolve_path(path, base_path);
 
 		if (module_path.empty())
 		{
-			auto direct_path = path; direct_path.replace_extension("json");
+			auto direct_path = path; direct_path.replace_extension(file_extension);
 
 			module_path = resolve_path(direct_path, base_path);
 
@@ -71,7 +81,7 @@ namespace engine
 		{
 			const auto module_name = module_path.filename();
 
-			return (module_path / module_name).replace_extension("json");
+			return (module_path / module_name).replace_extension(file_extension);
 		}
 
 		return module_path;
