@@ -338,7 +338,7 @@ namespace engine
 		Callback&& callback,
 		bool always_embed_type=false,
 		const MetaParsingContext& opt_parsing_context={},
-		bool allow_encode_default_variable_comparison=true
+		bool encode_default_variable_comparison_as_null_check=false
 	)
 	{
 		using namespace engine::literals;
@@ -813,31 +813,34 @@ namespace engine
 					);
 
 					auto comparison_value = MetaAny {};
+					auto comparison_method = EventTriggerConditionType::ComparisonMethod::Equal;
 
 					if (compared_value_raw.empty())
 					{
-						if (allow_encode_default_variable_comparison)
+						if (encode_default_variable_comparison_as_null_check)
+						{
+							comparison_value = MetaAny { Entity { engine::null } };
+							comparison_method = EventTriggerConditionType::get_comparison_method("!=", invert_condition);
+						}
+						else
 						{
 							comparison_value = MetaAny { true };
+
+							// This behavior may change in the future.
+							comparison_method = EventTriggerConditionType::get_comparison_method(">=", invert_condition); // EventTriggerConditionType::ComparisonMethod::GreaterThanOrEqual
+
+							// Alternative:
+							//comparison_method = EventTriggerConditionType::get_comparison_method("==", invert_condition); // EventTriggerConditionType::ComparisonMethod::Equal
 						}
 					}
 					else
 					{
 						comparison_value = process_trigger_condition_value(descriptor, compared_value_raw, opt_parsing_context);
+						comparison_method = EventTriggerConditionType::get_comparison_method(comparison_operator, invert_condition);
 					}
 
 					if (comparison_value)
 					{
-						auto comparison_method = (!compared_value_raw.empty()) // (comparison_operator.empty())
-							? EventTriggerConditionType::get_comparison_method(comparison_operator, invert_condition)
-						
-							// This behavior may change in the future. (See notes below)
-							: EventTriggerConditionType::get_comparison_method(">=", invert_condition) // EventTriggerConditionType::ComparisonMethod::GreaterThanOrEqual
-
-							// Alternative:
-							//: EventTriggerConditionType::get_comparison_method("==", invert_condition) // EventTriggerConditionType::ComparisonMethod::Equal
-						;
-
 						constexpr MetaSymbolID variable_update_result_field_id = "variable_update_result"_hs;
 
 						assert(expr_type.data(variable_update_result_field_id));
@@ -987,7 +990,7 @@ namespace engine
 	
 	// Processes an 'all-in-one' (unified) condition-block from `trigger_condition_expr`.
 	// This condition cannot be used in a traditional rule/trigger scenario, since it could encode multiple primary types.
-	inline std::optional<EventTriggerCondition> process_unified_condition_block(EntityDescriptor& descriptor, std::string_view trigger_condition_expr, const MetaParsingContext& opt_parsing_context={}, bool allow_encode_default_variable_comparison=true)
+	inline std::optional<EventTriggerCondition> process_unified_condition_block(EntityDescriptor& descriptor, std::string_view trigger_condition_expr, const MetaParsingContext& opt_parsing_context={}, bool encode_default_variable_comparison_as_null_check=false)
 	{
 		using Combinator = EventTriggerCompoundMethod;
 
@@ -1021,7 +1024,7 @@ namespace engine
 
 			opt_parsing_context,
 
-			allow_encode_default_variable_comparison
+			encode_default_variable_comparison_as_null_check
 		);
 
 		return condition_out;
