@@ -39,33 +39,6 @@ namespace engine
 
 	MetaAny MetaTypeConversion::get(const MetaAny& instance) const
 	{
-		if (!instance)
-		{
-			return {};
-		}
-
-		if (const auto instance_type = instance.type())
-		{
-			if (instance_type.id() == get_type_id())
-			{
-				/*
-				// Cast optimization; disabled for now due to safety concerns.
-				if (instance.owner())
-				{
-
-					// NOTE: Const-cast used here to circumvent transitive const behavior.
-					// 
-					// This does not override existing reference policies, but does allow
-					// for 'owned' objects to be treated as-is, without requiring the
-					// caller to cast or copy-construct the underlying object.
-					return const_cast<MetaAny&>(instance).as_ref();
-				}
-				*/
-				
-				return MetaAny { instance };
-			}
-		}
-
 		const auto type = get_type();
 
 		if (!type)
@@ -73,16 +46,46 @@ namespace engine
 			return {};
 		}
 
-		if (auto cast_result = instance.allow_cast(type))
+		if (instance)
 		{
-			return cast_result;
+			if (const auto instance_type = instance.type())
+			{
+				if (instance_type.id() == get_type_id()) // type.id()
+				{
+					/*
+					// Cast optimization; disabled for now due to safety concerns.
+					if (instance.owner())
+					{
+
+						// NOTE: Const-cast used here to circumvent transitive const behavior.
+						// 
+						// This does not override existing reference policies, but does allow
+						// for 'owned' objects to be treated as-is, without requiring the
+						// caller to cast or copy-construct the underlying object.
+						return const_cast<MetaAny&>(instance).as_ref();
+					}
+					*/
+				
+					return MetaAny { instance };
+				}
+			}
+
+			if (auto cast_result = instance.allow_cast(type))
+			{
+				return cast_result;
+			}
+
+			// TODO: Look into whether unnecessary copies need to be avoided here
+			// by using the manual (`MetaAny` pointer) argument interface.
+			if (auto construct_from = type.construct(instance))
+			{
+				return construct_from;
+			}
 		}
 
-		// TODO: Look into whether unnecessary copies need to be avoided here
-		// by using the manual (`MetaAny` pointer) argument interface.
-		if (auto construct_from = type.construct(instance))
+		if (type == resolve<bool>()) // (type.id() == "bool"_hs)
 		{
-			return construct_from;
+			return { static_cast<bool>(instance) };
 		}
 
 		return {};

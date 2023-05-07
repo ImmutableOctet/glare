@@ -553,124 +553,174 @@ namespace engine
 			}
 		}
 
-		if (!left && right && right_type.is_arithmetic())
+		if (right_type)
 		{
-			// Unary operator control-path.
-			return apply_arithmetic_operation
-			(
-				right_type,
-				right,
-				operation
-			);
-		}
-		else if (left_type.is_arithmetic() && right_type.is_arithmetic())
-		{
-			// Standard arithmetic-type operator implementations.
-			return apply_arithmetic_operation
-			(
-				((left_type) ? left_type : right_type),
+			if (right_type.is_arithmetic())
+			{
+				if (!left && right)
+				{
+					// Unary operator control-path.
+					return apply_arithmetic_operation
+					(
+						right_type,
+						right,
+						operation
+					);
+				}
+				else if (left_type)
+				{
+					if ((right_type == resolve<bool>()) && (!type_has_indirection(left_type))) // (right_type.id() == "bool"_hs)
+					{
+						// Boolean comparison.
+						auto boolean_result = apply_arithmetic_operation
+						(
+							right_type,
+							left, right,
+							operation
+						);
 
-				left, right,
-				operation
-			);
+						if (boolean_result)
+						{
+							return boolean_result;
+						}
+					}
+				}
+			}
+
+			if
+			(
+				(left && left_type && left_type.is_arithmetic())
+				&&
+				(
+					(right_type.is_arithmetic())
+					||
+					((left_type == resolve<bool>()) && (!type_has_indirection(right_type)))
+				)
+			)
+			{
+				// Standard arithmetic-type operator implementations.
+				auto arithmetic_result = apply_arithmetic_operation
+				(
+					left_type,
+
+					left, right,
+					operation
+				);
+
+				if (arithmetic_result)
+				{
+					return arithmetic_result;
+				}
+			}
 		}
-		else
-		{
-			// Standard operator dispatch:
-			const auto operator_name = get_operator_name(operation);
+
+		// Standard operator dispatch:
+		const auto operator_name = get_operator_name(operation);
 			
-			if (auto operator_fn = left_type.func(operator_name))
+		if (auto operator_fn = left_type.func(operator_name))
+		{
+			if (auto result = invoke_operator(operator_fn, left, right, args...))
+			{
+				return result;
+			}
+		}
+
+		if (auto operator_fn = right_type.func(operator_name))
+		{
+			if (left)
 			{
 				if (auto result = invoke_operator(operator_fn, left, right, args...))
 				{
 					return result;
 				}
 			}
-
-			if (auto operator_fn = right_type.func(operator_name))
+			else
 			{
-				if (left)
+				if (auto result = invoke_unary_operator(operator_fn, right, args...))
 				{
-					if (auto result = invoke_operator(operator_fn, left, right, args...))
-					{
-						return result;
-					}
+					return result;
 				}
-				else
+			}
+		}
+
+		if (operation_is_assignment && (operation != MetaValueOperator::Assign))
+		{
+			if (const auto underlying_operation = decay_operation(operation); (underlying_operation != operation))
+			{
+				if (auto value_result = apply_operation(left, right, underlying_operation, args...))
 				{
-					if (auto result = invoke_unary_operator(operator_fn, right, args...))
+					if (auto assignment_result = apply_operation(left, value_result, MetaValueOperator::Assign, args...))
 					{
-						return result;
+						return assignment_result;
 					}
 				}
 			}
+		}
 
-			if (operation_is_assignment && (operation != MetaValueOperator::Assign))
-			{
-				if (const auto underlying_operation = decay_operation(operation); (underlying_operation != operation))
+		// Common operator fallbacks:
+		switch (operation)
+		{
+			case MetaValueOperator::Dereference:
+				if (auto dereferenced = *right)
 				{
-					if (auto value_result = apply_operation(left, right, underlying_operation, args...))
+					return dereferenced;
+				}
+
+				if (right_type.is_sequence_container())
+				{
+					return right.as_sequence_container();
+				}
+				else if (right_type.is_associative_container())
+				{
+					return right.as_associative_container();
+				}
+
+				break;
+
+			case MetaValueOperator::Subscript:
+				if (left_type.is_sequence_container())
+				{
+					if (auto as_container = left.as_sequence_container())
 					{
-						if (auto assignment_result = apply_operation(left, value_result, MetaValueOperator::Assign, args...))
+						if (auto it = right.try_cast<entt::meta_sequence_container::iterator>()) // (right_type.id() == entt::type_hash<entt::meta_sequence_container::iterator>::value())
 						{
-							return assignment_result;
+							// NOTE: There's no check here for relationship between iterator and source container.
+							// (Not currently supported by EnTT's API)
+							return *(*it);
 						}
-					}
-				}
-			}
-
-			// Common operator fallbacks:
-			switch (operation)
-			{
-				case MetaValueOperator::Dereference:
-					if (auto dereferenced = *right)
-					{
-						return dereferenced;
-					}
-
-					if (right_type.is_sequence_container())
-					{
-						return right.as_sequence_container();
-					}
-					else if (right_type.is_associative_container())
-					{
-						return right.as_associative_container();
-					}
-
-					break;
-
-				case MetaValueOperator::Subscript:
-					if (left_type.is_sequence_container())
-					{
-						if (auto as_container = left.as_sequence_container())
+						else if (auto right_as_index_any = std::as_const(right).allow_cast<std::size_t>())
 						{
-							if (auto it = right.try_cast<entt::meta_sequence_container::iterator>()) // (right_type.id() == entt::type_hash<entt::meta_sequence_container::iterator>::value())
+							if (auto right_as_index = right_as_index_any.try_cast<std::size_t>())
 							{
-								// NOTE: There's no check here for relationship between iterator and source container.
-								// (Not currently supported by EnTT's API)
-								return *(*it);
-							}
-							else if (auto right_as_index_any = std::as_const(right).allow_cast<std::size_t>())
-							{
-								if (auto right_as_index = right_as_index_any.try_cast<std::size_t>())
+								if (auto result = as_container[*right_as_index])
 								{
-									if (auto result = as_container[*right_as_index])
-									{
-										return result;
-									}
+									return result;
 								}
 							}
 						}
 					}
-					else if (left_type.is_associative_container())
+				}
+				else if (left_type.is_associative_container())
+				{
+					if (auto as_container = left.as_associative_container())
 					{
-						if (auto as_container = left.as_associative_container())
-						{
-							const auto key_type = as_container.key_type();
+						const auto key_type = as_container.key_type();
 
-							if (right_type == key_type)
+						if (right_type == key_type)
+						{
+							if (auto it = as_container.find(right); it != as_container.end())
 							{
-								if (auto it = as_container.find(right); it != as_container.end())
+								if (auto& result = it->second)
+								{
+									return result; // .as_ref();
+								}
+							}
+						}
+						else
+						{
+							if (auto right_as_key_any = std::as_const(right).allow_cast(key_type))
+							{
+								if (auto it = as_container.find(right_as_key_any); it != as_container.end())
 								{
 									if (auto& result = it->second)
 									{
@@ -678,103 +728,90 @@ namespace engine
 									}
 								}
 							}
-							else
-							{
-								if (auto right_as_key_any = std::as_const(right).allow_cast(key_type))
-								{
-									if (auto it = as_container.find(right_as_key_any); it != as_container.end())
-									{
-										if (auto& result = it->second)
-										{
-											return result; // .as_ref();
-										}
-									}
-								}
-							}
 						}
-					}
-
-					break;
-
-				// NOTE: For most scenarios we could probably fall through on these two
-				// operations, rather than using `MetaValueOperator::Equal` explicitly.
-				// 
-				// However, since there could be a custom `operator==` implementation
-				// that EnTT doesn't identify, we'll recurse anyway.
-
-				case MetaValueOperator::GreaterThanOrEqual:
-					if (auto result = apply_operation(left, right, MetaValueOperator::GreaterThan, args...))
-					{
-						if (const auto as_bool = result.try_cast<bool>())
-						{
-							if (*as_bool)
-							{
-								return result;
-							}
-						}
-					}
-
-					return apply_operation(left, right, MetaValueOperator::Equal, args...);
-
-				case MetaValueOperator::LessThanOrEqual:
-					if (auto result = apply_operation(left, right, MetaValueOperator::LessThan, args...))
-					{
-						if (const auto as_bool = result.try_cast<bool>())
-						{
-							if (*as_bool)
-							{
-								return result;
-							}
-						}
-					}
-
-					return apply_operation(left, right, MetaValueOperator::Equal, args...);
-
-				case MetaValueOperator::Equal:
-					if (compare_boolean_values(left, right, true, [](bool left_as_bool, bool right_as_bool) { return (left_as_bool == right_as_bool); }, args...))
-					{
-						return true;
-					}
-					else
-					{
-						return (left == right);
-					}
-
-					break;
-
-				case MetaValueOperator::NotEqual:
-					if (compare_boolean_values(left, right, true, [](bool left_as_bool, bool right_as_bool) { return (left_as_bool != right_as_bool); }, args...))
-					{
-						return true;
-					}
-					else
-					{
-						return (left != right);
-					}
-
-					break;
-			}
-
-			// Arithmetic conversion fallbacks:
-			if (left_type.is_arithmetic())
-			{
-				if (auto right_out = right.allow_cast(left_type))
-				{
-					if (auto result = apply_arithmetic_operation(left_type, left, right_out, operation))
-					{
-						return result;
 					}
 				}
-			}
 
-			if (right_type.is_arithmetic())
-			{
-				if (auto left_out = left.allow_cast(right_type))
+				break;
+
+			// NOTE: For most scenarios we could probably fall through on these two
+			// operations, rather than using `MetaValueOperator::Equal` explicitly.
+			// 
+			// However, since there could be a custom `operator==` implementation
+			// that EnTT doesn't identify, we'll recurse anyway.
+
+			case MetaValueOperator::GreaterThanOrEqual:
+				if (auto result = apply_operation(left, right, MetaValueOperator::GreaterThan, args...))
 				{
-					if (auto result = apply_arithmetic_operation(right_type, left_out, right, operation))
+					if (const auto as_bool = result.try_cast<bool>())
 					{
-						return result;
+						if (*as_bool)
+						{
+							return result;
+						}
 					}
+				}
+
+				return apply_operation(left, right, MetaValueOperator::Equal, args...);
+
+			case MetaValueOperator::LessThanOrEqual:
+				if (auto result = apply_operation(left, right, MetaValueOperator::LessThan, args...))
+				{
+					if (const auto as_bool = result.try_cast<bool>())
+					{
+						if (*as_bool)
+						{
+							return result;
+						}
+					}
+				}
+
+				return apply_operation(left, right, MetaValueOperator::Equal, args...);
+
+			case MetaValueOperator::Equal:
+				if (compare_boolean_values(left, right, true, [](bool left_as_bool, bool right_as_bool) { return (left_as_bool == right_as_bool); }, args...))
+				{
+					return true;
+				}
+				else
+				{
+					return (left == right);
+				}
+
+				break;
+
+			case MetaValueOperator::NotEqual:
+				if (compare_boolean_values(left, right, true, [](bool left_as_bool, bool right_as_bool) { return (left_as_bool != right_as_bool); }, args...))
+				{
+					return true;
+				}
+				else
+				{
+					return (left != right);
+				}
+
+				break;
+		}
+
+		// Arithmetic conversion fallbacks:
+		if (left_type.is_arithmetic())
+		{
+			if (auto right_out = right.allow_cast(left_type))
+			{
+				if (auto result = apply_arithmetic_operation(left_type, left, right_out, operation))
+				{
+					return result;
+				}
+			}
+		}
+
+		if (right_type.is_arithmetic())
+		{
+			if (auto left_out = left.allow_cast(right_type))
+			{
+				if (auto result = apply_arithmetic_operation(right_type, left_out, right, operation))
+				{
+					return result;
 				}
 			}
 		}
@@ -927,15 +964,39 @@ namespace engine
 	template <typename OutputType>
 	MetaAny apply_operation_exact(const MetaAny& left, const MetaAny& right, MetaValueOperator operation)
 	{
-		auto left_out = (left)
-			? left.allow_cast<OutputType>().cast<OutputType>()
-			: OutputType {}
-		;
+		auto left_out = OutputType {};
+
+		if (left)
+		{
+			if (auto left_casted = left.allow_cast<OutputType>())
+			{
+				left_out = left_casted.cast<OutputType>();
+			}
+			else
+			{
+				if constexpr (std::is_same_v<std::decay_t<OutputType>, bool>)
+				{
+					left_out = true;
+				}
+			}
+		}
+
+		auto right_out = OutputType {};
 		
-		auto right_out = (right)
-			? right.allow_cast<OutputType>().cast<OutputType>()
-			: OutputType {}
-		;
+		if (right)
+		{
+			if (auto right_casted = right.allow_cast<OutputType>())
+			{
+				right_out = right_casted.cast<OutputType>();
+			}
+			else
+			{
+				if constexpr (std::is_same_v<std::decay_t<OutputType>, bool>)
+				{
+					right_out = true;
+				}
+			}
+		}
 
 		return apply_operation_exact<OutputType, OutputType, OutputType>(left_out, right_out, operation);
 	}
