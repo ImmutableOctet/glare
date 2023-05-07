@@ -362,7 +362,7 @@ namespace engine
 				const auto left_as_bool = left.try_cast<bool>();
 
 				// Use both `left` and `right` as-is.
-				if (right_type.id() == entt::type_hash<bool>::value())
+				if (right_type.id() == entt::type_hash<bool>::value()) // (right_type == resolve<bool>())
 				{
 					const auto right_as_bool = right.try_cast<bool>();
 
@@ -374,7 +374,7 @@ namespace engine
 					return callback(*left_as_bool, right_as_bool_any.cast<bool>());
 				}
 			}
-			else if (right_type.id() == entt::type_hash<bool>::value())
+			else if (right_type.id() == entt::type_hash<bool>::value()) // (right_type == resolve<bool>())
 			{
 				// Convert `left` to `bool`, use `right` as-is.
 				if (auto left_as_bool_any = as_bool_any(left))
@@ -779,6 +779,45 @@ namespace engine
 				}
 				else
 				{
+					// Special behavior for `null` value in equality comparison:
+					// TODO: Look into implementing 'symbolic-null' as an alternative, rather than using `Entity`'s `null` value.
+
+					if (auto left_as_null = left.try_cast<Entity>(); ((left_as_null) && ((*left_as_null) == null)))
+					{
+						if (auto right_as_entity = right.try_cast<Entity>())
+						{
+							return (null == (*right_as_entity)); // ((*left_as_null) == ...);
+						}
+						else if (value_has_indirection(right))
+						{
+							// Indirection is considered 'null-equivalent' in a comparison.
+							// (i.e. Any indirection that has made it this far is due to a failure to resolve)
+							return true;
+						}
+						else
+						{
+							return (!static_cast<bool>(right));
+						}
+					}
+
+					if (auto right_as_null = right.try_cast<Entity>(); ((right_as_null) && ((*right_as_null) == null)))
+					{
+						if (auto left_as_entity = left.try_cast<Entity>())
+						{
+							return ((*left_as_entity) == null); // (... == (*right_as_null));
+						}
+						else if (value_has_indirection(left))
+						{
+							// Indirection is considered 'null-equivalent' in a comparison.
+							// (i.e. Any indirection that has made it this far is due to a failure to resolve)
+							return true;
+						}
+						else
+						{
+							return (!static_cast<bool>(left));
+						}
+					}
+
 					return (left == right);
 				}
 
@@ -791,6 +830,45 @@ namespace engine
 				}
 				else
 				{
+					// Special behavior for `null` value in equality comparison:
+					// TODO: Look into implementing 'symbolic-null' as an alternative, rather than using `Entity`'s `null` value.
+
+					if (auto left_as_null = left.try_cast<Entity>(); ((left_as_null) && ((*left_as_null) == null)))
+					{
+						if (auto right_as_entity = right.try_cast<Entity>())
+						{
+							return (null != (*right_as_entity)); // ((*left_as_null) != ...);
+						}
+						else if (value_has_indirection(right))
+						{
+							// Indirection is considered 'null-equivalent' in a comparison.
+							// (i.e. Any indirection that has made it this far is due to a failure to resolve)
+							return false;
+						}
+						else
+						{
+							return (static_cast<bool>(right));
+						}
+					}
+
+					if (auto right_as_null = right.try_cast<Entity>(); ((right_as_null) && ((*right_as_null) == null)))
+					{
+						if (auto left_as_entity = left.try_cast<Entity>())
+						{
+							return ((*left_as_entity) != null); // (... != (*right_as_null));
+						}
+						else if (value_has_indirection(left))
+						{
+							// Indirection is considered 'null-equivalent' in a comparison.
+							// (i.e. Any indirection that has made it this far is due to a failure to resolve)
+							return false;
+						}
+						else
+						{
+							return (static_cast<bool>(left));
+						}
+					}
+
 					return (left != right);
 				}
 
