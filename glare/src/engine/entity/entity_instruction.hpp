@@ -15,6 +15,7 @@
 
 #include <utility>
 #include <optional>
+#include <string>
 
 namespace engine
 {
@@ -157,6 +158,7 @@ namespace engine
 		struct Sleep : Thread
 		{
 			Timer::Duration duration;
+
 			bool check_linked = true;
 
 			bool operator==(const Sleep&) const noexcept = default;
@@ -260,6 +262,17 @@ namespace engine
 			bool operator!=(const EventCapture&) const noexcept = default;
 		};
 
+		struct Assert
+		{
+			EntityDescriptorShared<EventTriggerCondition> condition; // IndirectMetaAny
+
+			std::optional<EntityDescriptorShared<std::string>> debug_message;
+			std::optional<EntityDescriptorShared<std::string>> condition_representation;
+
+			bool operator==(const Assert&) const noexcept = default;
+			bool operator!=(const Assert&) const noexcept = default;
+		};
+
 		using Instruction = std::variant
 		<
 			NoOp,
@@ -303,6 +316,7 @@ namespace engine
 			VariableDeclaration,
 			VariableAssignment,
 			EventCapture,
+			Assert,
 
 			InstructionDescriptor
 		>;
