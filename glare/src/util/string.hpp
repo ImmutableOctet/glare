@@ -230,7 +230,15 @@ namespace util
 	// 
 	// This function returns true if `str` contains `separator`.
 	template <std::size_t n_separators, typename Callback>
-	bool split(std::string_view str, const std::array<std::string_view, n_separators>& separators, Callback&& callback, bool separator_required = false, std::string_view trim_values = " \n")
+	bool split
+	(
+		std::string_view str,
+		const std::array<std::string_view, n_separators>& separators,
+		Callback&& callback,
+		bool separator_required=false,
+		std::string_view trim_values=util::whitespace_symbols,
+		bool include_empty_substrings=false
+	)
 	{
 		if (str.empty())
 		{
@@ -242,6 +250,46 @@ namespace util
 		bool separator_found = false;
 
 		bool is_first_symbol = true;
+		bool is_last_symbol  = false;
+
+		auto execute_callback = [&callback, &is_first_symbol, &is_last_symbol](std::string_view& substr) -> bool
+		{
+			if constexpr (std::is_invocable_r_v<bool, Callback, std::string_view, bool, bool> || std::is_invocable_r_v<bool, Callback, std::string_view&, bool, bool>)
+			{
+				if (!callback(substr, is_first_symbol, is_last_symbol))
+				{
+					return false;
+				}
+			}
+			else if constexpr (std::is_invocable_r_v<void, Callback, std::string_view, bool, bool>)
+			{
+				callback(substr, is_first_symbol, is_last_symbol);
+			}
+			else if constexpr (std::is_invocable_r_v<bool, Callback, std::string_view, bool> || std::is_invocable_r_v<bool, Callback, std::string_view&, bool>)
+			{
+				if (!callback(substr, is_last_symbol))
+				{
+					return false;
+				}
+			}
+			else if constexpr (std::is_invocable_r_v<void, Callback, std::string_view, bool>)
+			{
+				callback(substr, is_last_symbol);
+			}
+			else if constexpr (std::is_invocable_r_v<bool, Callback, std::string_view>)
+			{
+				if (!callback(substr))
+				{
+					return false;
+				}
+			}
+			else if constexpr (std::is_invocable_r_v<void, Callback, std::string_view>)
+			{
+				callback(substr);
+			}
+
+			return true;
+		};
 
 		// Separator not found (End-of-string):
 		while (current_position < str.length()) // && (current_position != std::string_view::npos)
@@ -267,7 +315,7 @@ namespace util
 
 			auto substr = std::string_view {};
 
-			const bool is_last_symbol = (find_result == std::string_view::npos);
+			is_last_symbol = (find_result == std::string_view::npos);
 
 			if (is_last_symbol)
 			{
@@ -278,28 +326,39 @@ namespace util
 
 				substr = str.substr(current_position);
 			}
-			// Separator found with no content between, skip forward:
-			else if ((find_result - current_position) == 0)
-			{
-				//assert(separator);
-
-				if (separator)
-				{
-					current_position = (find_result + separator->length()); // +=
-				}
-				else
-				{
-					current_position++;
-				}
-
-				continue;
-			}
 			// Separator found as expected:
 			else
 			{
 				substr = str.substr(current_position, (find_result - current_position));
 
-				separator_found = true;
+				// Separator found with no content between, skip forward:
+				if ((find_result - current_position) == 0)
+				{
+					//assert(separator);
+
+					if (include_empty_substrings)
+					{
+						if (!execute_callback(substr))
+						{
+							break;
+						}
+					}
+
+					if (separator)
+					{
+						current_position = (find_result + separator->length()); // +=
+					}
+					else
+					{
+						current_position++;
+					}
+
+					continue;
+				}
+				else
+				{
+					separator_found = true;
+				}
 			}
 
 			const auto initial_substr_length = substr.length();
@@ -317,38 +376,9 @@ namespace util
 
 				const auto trimmed_substr_length = substr.length();
 
-				if constexpr (std::is_invocable_r_v<bool, Callback, std::string_view, bool, bool> || std::is_invocable_r_v<bool, Callback, std::string_view&, bool, bool>)
+				if (!execute_callback(substr))
 				{
-					if (!callback(substr, is_first_symbol, is_last_symbol))
-					{
-						break;
-					}
-				}
-				else if constexpr (std::is_invocable_r_v<void, Callback, std::string_view, bool, bool>)
-				{
-					callback(substr, is_first_symbol, is_last_symbol);
-				}
-				else if constexpr (std::is_invocable_r_v<bool, Callback, std::string_view, bool> || std::is_invocable_r_v<bool, Callback, std::string_view&, bool>)
-				{
-					if (!callback(substr, is_last_symbol))
-					{
-						break;
-					}
-				}
-				else if constexpr (std::is_invocable_r_v<void, Callback, std::string_view, bool>)
-				{
-					callback(substr, is_last_symbol);
-				}
-				else if constexpr (std::is_invocable_r_v<bool, Callback, std::string_view>)
-				{
-					if (!callback(substr))
-					{
-						break;
-					}
-				}
-				else if constexpr (std::is_invocable_r_v<void, Callback, std::string_view>)
-				{
-					callback(substr);
+					break;
 				}
 
 				is_first_symbol = false;
@@ -379,13 +409,36 @@ namespace util
 	}
 
 	template <typename Callback>
-	bool split(std::string_view str, std::string_view separator, Callback&& callback, bool separator_required=false, std::string_view trim_values=" \n")
+	bool split
+	(
+		std::string_view str,
+		std::string_view separator,
+		Callback&& callback,
+		bool separator_required=false,
+		std::string_view trim_values=util::whitespace_symbols,
+		bool include_empty_substrings=false
+	)
 	{
-		return split(str, std::array{ separator }, std::forward<Callback>(callback), separator_required, trim_values);
+		return split
+		(
+			str,
+			std::array { separator },
+			std::forward<Callback>(callback),
+			separator_required,
+			trim_values,
+			include_empty_substrings
+		);
 	}
 
 	template <std::size_t expected_count, typename ArrayType=std::array<std::string_view, expected_count>>
-	std::optional<std::tuple<ArrayType, std::size_t>> split_from_ex(std::string_view str, std::string_view separator, std::size_t min_allowed=expected_count, std::string_view trim_values=" \n")
+	std::optional<std::tuple<ArrayType, std::size_t>> split_from_ex
+	(
+		std::string_view str,
+		std::string_view separator,
+		std::size_t min_allowed=expected_count,
+		std::string_view trim_values=util::whitespace_symbols,
+		bool include_empty_substrings=false
+	)
 	{
 		auto out = ArrayType {};
 		auto count = std::size_t {};
@@ -406,7 +459,9 @@ namespace util
 
 			(min_allowed > 1),
 
-			trim_values
+			trim_values,
+
+			include_empty_substrings
 		);
 
 		if (count < min_allowed)
@@ -418,9 +473,16 @@ namespace util
 	}
 
 	template <std::size_t expected_count, typename ArrayType=std::array<std::string_view, expected_count>>
-	std::optional<ArrayType> split_from(std::string_view str, std::string_view separator, std::size_t min_allowed=expected_count, std::string_view trim_values=" \n")
+	std::optional<ArrayType> split_from
+	(
+		std::string_view str,
+		std::string_view separator,
+		std::size_t min_allowed=expected_count,
+		std::string_view trim_values=util::whitespace_symbols,
+		bool include_empty_substrings=false
+	)
 	{
-		if (auto result = split_from_ex<expected_count, ArrayType>(str, separator, min_allowed, trim_values))
+		if (auto result = split_from_ex<expected_count, ArrayType>(str, separator, min_allowed, trim_values, include_empty_substrings))
 		{
 			return { std::move(std::get<0>(*result)) };
 		}
