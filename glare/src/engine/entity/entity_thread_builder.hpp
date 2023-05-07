@@ -29,6 +29,8 @@ namespace engine
 	struct MetaTypeDescriptor;
 	struct EntityFactoryContext;
 
+	struct EntityTarget;
+
 	class EntityThreadBuilderContext
 	{
 		public:
@@ -156,7 +158,6 @@ namespace engine
 			EntityInstructionCount process(std::string_view lines, EntityInstructionCount skip=0);
 			EntityInstructionCount process(const ContentSource& content, EntityInstructionCount skip=0);
 
-			// NOTE: The return-value of this function is a non-owning pointer to the affected descriptor.
 			bool process_update_instruction_from_values
 			(
 				std::string_view type_name,
@@ -164,6 +165,16 @@ namespace engine
 				std::string_view assignment_value_raw,
 				std::string_view entity_ref_expr,
 				std::string_view operator_symbol="="
+			);
+
+			bool process_update_instruction_from_values
+			(
+				std::string_view type_name,
+				std::string_view member_name,
+				std::string_view assignment_value_raw,
+				std::string_view operator_symbol,
+
+				const EntityTarget& target
 			);
 
 			// NOTE: The return-value of this function is a non-owning pointer to the affected descriptor.
