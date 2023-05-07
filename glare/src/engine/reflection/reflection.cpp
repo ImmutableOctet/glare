@@ -116,6 +116,8 @@ namespace engine
             
             .conv<&impl::entity_to_string_impl>()
             //.conv<std::underlying_type_t<Entity>>()
+
+            .conv<&impl::entity_to_bool_impl>()
             
             .ctor<&impl::entity_from_integer>()
 

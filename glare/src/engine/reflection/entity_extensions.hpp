@@ -27,6 +27,11 @@ namespace engine
             }
         }
 
+        inline bool entity_to_bool_impl(Entity entity)
+        {
+            return (entity != null);
+        }
+
         inline Entity entity_from_integer(std::underlying_type_t<Entity> value)
         {
             return static_cast<Entity>(value);
