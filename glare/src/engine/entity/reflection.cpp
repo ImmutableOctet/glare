@@ -665,6 +665,34 @@ namespace engine
 		;
 	}
 
+	template <>
+	void reflect<instructions::Assert>()
+	{
+		engine_meta_type<instructions::Assert>()
+			.data<&instructions::Assert::condition>("condition"_hs)
+			.data<&instructions::Assert::debug_message>("debug_message"_hs)
+			.data<&instructions::Assert::condition_representation>("condition_representation"_hs)
+
+			.ctor
+			<
+				decltype(instructions::Assert::condition)
+			>()
+
+			.ctor
+			<
+				decltype(instructions::Assert::condition),
+				decltype(instructions::Assert::debug_message)
+			>()
+
+			.ctor
+			<
+				decltype(instructions::Assert::condition),
+				decltype(instructions::Assert::debug_message),
+				decltype(instructions::Assert::condition_representation)
+			>()
+		;
+	}
+
     template <>
 	void reflect<EntitySystem>()
 	{
@@ -746,5 +774,6 @@ namespace engine
 		reflect<instructions::VariableDeclaration>();
 		reflect<instructions::VariableAssignment>();
 		reflect<instructions::EventCapture>();
+		reflect<instructions::Assert>();
 	}
 }
