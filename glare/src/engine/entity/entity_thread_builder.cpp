@@ -2899,7 +2899,7 @@ namespace engine
 						{
 							return instruct_thread<Sleep>(thread_details, std::move(*sleep_duration));
 						}
-						else if (auto condition = process_unified_condition_block(descriptor, instruction_content, parsing_context, false))
+						else if (auto condition = process_unified_condition_block(descriptor, instruction_content, parsing_context, true))
 						{
 							auto condition_ref = descriptor.allocate<EventTriggerCondition>(std::move(*condition));
 
@@ -3143,7 +3143,11 @@ namespace engine
 					return true;
 				}
 
-				if (!instruction.empty())
+				if (instruction.empty())
+				{
+					processed_instruction_count++;
+				}
+				else
 				{
 					const auto result = process_instruction(lines, content_index, instruction);
 				
