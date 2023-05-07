@@ -7,6 +7,8 @@
 //#include "hash.hpp"
 #include "indirection.hpp"
 
+#include <engine/reflection/common_extensions.hpp>
+
 #include <entt/meta/meta.hpp>
 #include <entt/core/type_info.hpp>
 
@@ -552,64 +554,66 @@ namespace engine
 				}
 			}
 		}
-
-		if (right_type)
+		else
 		{
-			if (right_type.is_arithmetic())
+			if (right_type)
 			{
-				if (!left && right)
+				if (right_type.is_arithmetic())
 				{
-					// Unary operator control-path.
-					return apply_arithmetic_operation
-					(
-						right_type,
-						right,
-						operation
-					);
-				}
-				else if (left_type)
-				{
-					if ((right_type == resolve<bool>()) && (!type_has_indirection(left_type))) // (right_type.id() == "bool"_hs)
+					if (!left && right)
 					{
-						// Boolean comparison.
-						auto boolean_result = apply_arithmetic_operation
+						// Unary operator control-path.
+						return apply_arithmetic_operation
 						(
 							right_type,
-							left, right,
+							right,
 							operation
 						);
-
-						if (boolean_result)
+					}
+					else if (left_type)
+					{
+						if ((right_type == resolve<bool>()) && (!type_has_indirection(left_type))) // (right_type.id() == "bool"_hs)
 						{
-							return boolean_result;
+							// Boolean comparison.
+							auto boolean_result = apply_arithmetic_operation
+							(
+								right_type,
+								left, right,
+								operation
+							);
+
+							if (boolean_result)
+							{
+								return boolean_result;
+							}
 						}
 					}
 				}
-			}
 
-			if
-			(
-				(left && left_type && left_type.is_arithmetic())
-				&&
+				if
 				(
-					(right_type.is_arithmetic())
-					||
-					((left_type == resolve<bool>()) && (!type_has_indirection(right_type)))
+					(left && left_type && left_type.is_arithmetic())
+					&&
+					(
+						(right_type.is_arithmetic())
+						||
+						((left_type == resolve<bool>()) && (!type_has_indirection(right_type)))
+					)
 				)
-			)
-			{
-				// Standard arithmetic-type operator implementations.
-				auto arithmetic_result = apply_arithmetic_operation
-				(
-					left_type,
-
-					left, right,
-					operation
-				);
-
-				if (arithmetic_result)
 				{
-					return arithmetic_result;
+					// Standard arithmetic-type operator implementations.
+					auto arithmetic_result = apply_arithmetic_operation
+					(
+						left_type,
+
+						left, right,
+						operation
+					);
+
+					if (arithmetic_result)
+					{
+						return arithmetic_result;
+					}
 				}
 			}
 		}
@@ -873,7 +877,7 @@ namespace engine
 						return (static_cast<OutputType>(left) != static_cast<OutputType>(right));
 				}
 			}
-			else
+			else // if constexpr (std::is_floating_point_v<OutputType>)
 			{
 				switch (operation)
 				{
@@ -924,9 +928,11 @@ namespace engine
 			{
 				if (result)
 				{
-					auto* computed_value = result.try_cast<OutputType>();
-
-					return static_cast<bool>(result);
+					if (auto* computed_value = result.try_cast<OutputType>())
+					{
+						//return static_cast<bool>(*computed_value);
+						return impl::operator_bool_impl(*computed_value);
+					}
 				}
 				else
 				{
@@ -940,7 +946,8 @@ namespace engine
 			{
 				if constexpr (std::is_constructible_v<bool, decltype((std::declval<const OutputType&>()))>)
 				{
-					return static_cast<bool>(result);
+					//return static_cast<bool>(result);
+					return impl::operator_bool_impl(result);
 				}
 				else
 				{
