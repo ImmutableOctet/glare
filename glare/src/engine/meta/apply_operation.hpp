@@ -4,8 +4,10 @@
 #include "meta_value_operator.hpp"
 
 //#include "meta.hpp"
-//#include "hash.hpp"
+#include "hash.hpp"
 #include "indirection.hpp"
+
+//#include <engine/entity/entity_target.hpp>
 
 #include <engine/reflection/common_extensions.hpp>
 
@@ -406,6 +408,8 @@ namespace engine
 	template <typename Left, typename Right, typename ...Args>
 	MetaAny apply_operation(Left&& left, Right&& right, MetaValueOperator operation, Args&&... args)
 	{
+		using namespace engine::literals;
+
 		if (right)
 		{
 			if (left)
@@ -435,6 +439,33 @@ namespace engine
 
 		if (operation == MetaValueOperator::Get)
 		{
+			if (left)
+			{
+				// Explicit checks for retrieval from a `null` entity value:
+				if (right_type.id() == "EntityTarget"_hs) // (right_type == resolve<EntityTarget>())
+				{
+					if (auto right_as_entity_any = try_get_underlying_value(right, args...))
+					{
+						if (auto right_as_entity = right_as_entity_any.try_cast<Entity>())
+						{
+							if ((*right_as_entity) == null)
+							{
+								// Retrieval from `null` is considered invalid.
+								return {};
+							}
+						}
+					}
+				}
+				else if (auto right_as_entity = right.try_cast<Entity>())
+				{
+					if ((*right_as_entity) == null)
+					{
+						// Retrieval from `null` is considered invalid.
+						return {};
+					}
+				}
+			}
+
 			/*
 			if constexpr (sizeof...(args) == 0)
 			{
