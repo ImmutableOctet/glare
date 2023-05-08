@@ -2,7 +2,7 @@
 
 #include "world_events.hpp"
 #include "entity.hpp"
-#include "stage.hpp"
+#include "scene.hpp"
 
 #include "light.hpp"
 
@@ -197,7 +197,7 @@ namespace engine
 
 			print("Loading...");
 
-			auto map = Stage::Load
+			auto map = Scene::Load
 			(
 				*this,
 				root_path,
@@ -206,7 +206,7 @@ namespace engine
 				opt_system_manager
 			); // { .geometry = false }
 
-			event<OnStageLoaded>(map, root_path); // map_data_path
+			event<OnSceneLoaded>(map, root_path); // map_data_path
 
 			return map;
 		}

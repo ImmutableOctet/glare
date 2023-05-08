@@ -279,6 +279,4 @@ namespace engine
 			bool _transform_and_reset_collision_store_active_state(CollisionComponent* collision);
 			void _transform_and_reset_collision_revert_active_state(CollisionComponent* collision, const math::Matrix& tform_matrix, bool collision_active);
 	};
-
-	using Scene = World;
 }
