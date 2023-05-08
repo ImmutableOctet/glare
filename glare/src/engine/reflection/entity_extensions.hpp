@@ -43,6 +43,23 @@ namespace engine
             return static_cast<Entity>(value);
         }
 
+        inline Entity entity_static_create(Registry& registry)
+        {
+            return registry.create();
+        }
+
+        inline Entity entity_static_destroy(Registry& registry, Entity entity)
+        {
+            registry.destroy(entity);
+
+            return null; // entity;
+        }
+
+        inline Entity entity_destroy(Entity self, Registry& registry)
+        {
+            return entity_static_destroy(registry, self);
+        }
+
 		inline math::Vector entity_get_position(Entity self, Registry& registry)
         {
             return Transform(registry, self).get_position();
@@ -139,15 +156,12 @@ namespace engine
 
         inline Entity entity_set_parent(Entity self, Registry& registry, Entity context_entity, const MetaEvaluationContext& context, Entity parent)
         {
-            auto prev_parent = RelationshipComponent::set_parent(registry, self, parent);
-
             if (context.service)
             {
-                // TODO: Look into automating this event.
-                context.service->event<OnParentChanged>(self, prev_parent, parent);
+                context.service->set_parent(self, parent);
             }
 
-            return self; // prev_parent;
+            return self;
         }
 
         inline const StateComponent* entity_try_get_state_component(Entity self, Registry& registry)
@@ -164,6 +178,21 @@ namespace engine
                 if (auto state_comp = registry.try_get<StateComponent>(self))
                 {
                     return descriptor.get_state_by_index(state_comp->state_index);
+                }
+            }
+
+            return {};
+        }
+
+        inline const EntityState* entity_try_get_prev_state(Entity self, Registry& registry)
+        {
+            if (auto instance_comp = registry.try_get<InstanceComponent>(self))
+            {
+                auto& descriptor = instance_comp->get_descriptor();
+
+                if (auto state_comp = registry.try_get<StateComponent>(self))
+                {
+                    return descriptor.get_state_by_index(state_comp->prev_state_index);
                 }
             }
 
@@ -238,6 +267,47 @@ namespace engine
             }
 
             return self;
+        }
+
+        inline EntityStateIndex entity_get_prev_state_index(Entity self, Registry& registry)
+        {
+            if (auto state_comp = entity_try_get_state_component(self, registry))
+            {
+                return state_comp->prev_state_index;
+            }
+
+            //assert(false);
+
+            return {};
+        }
+
+        inline MetaSymbolID entity_get_prev_state_id(Entity self, Registry& registry)
+        {
+            if (auto instance_comp = registry.try_get<InstanceComponent>(self))
+            {
+                auto& descriptor = instance_comp->get_descriptor();
+
+                const auto prev_state_index = entity_get_prev_state_index(self, registry);
+
+                if (auto state_name = descriptor.get_state_name(prev_state_index))
+                {
+                    return (*state_name);
+                }
+            }
+
+            //assert(false);
+
+            return {};
+        }
+
+        inline std::string entity_get_prev_state_name(Entity self, Registry& registry)
+        {
+            if (auto prev_state_id = entity_get_prev_state_id(self, registry))
+            {
+                return std::string { get_known_string_from_hash(prev_state_id) };
+            }
+
+            return {};
         }
 	}
 }
