@@ -178,6 +178,16 @@ namespace engine
 				return states.get_state_by_index(*this, state_index);
 			}
 
+			inline std::optional<EntityStateID> get_state_name(EntityStateIndex state_index) const
+			{
+				if (const auto state = get_state_by_index(state_index))
+				{
+					return state->name;
+				}
+
+				return std::nullopt;
+			}
+
 			bool set_state(Registry& registry, Entity entity, std::optional<EntityStateIndex> previous_state, std::string_view state_name) const;
 			bool set_state_by_id(Registry& registry, Entity entity, std::optional<EntityStateIndex> previous_state, EntityStateID state_id) const;
 			bool set_state_by_index(Registry& registry, Entity entity, std::optional<EntityStateIndex> previous_state, EntityStateIndex state_index) const;
