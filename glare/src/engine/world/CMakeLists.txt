@@ -5,15 +5,10 @@ target_sources(
     
     PRIVATE
 
-    # Top-Level:
     "world.cpp"
     "reflection.cpp"
     "world_system.cpp"
     "entity.cpp"
-
-    # TODO: Remove/rework.
-    "zones/zones.cpp"
-
     "graphics_entity.cpp"
     "light.cpp"
     "stage.cpp"
