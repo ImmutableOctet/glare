@@ -121,6 +121,11 @@ namespace engine
             
             .ctor<&impl::entity_from_integer>()
 
+            // Methods:
+            .func<&impl::entity_try_get_state_component>("try_get_state_component"_hs)
+            .func<&impl::entity_try_get_active_state>("try_get_active_state"_hs)
+
+            // Properties:
             .func<&impl::entity_get_position>("get_position"_hs)
             .func<&impl::entity_set_position>("set_position"_hs)
 
@@ -144,6 +149,20 @@ namespace engine
 
             .func<&impl::entity_get_parent>("get_parent"_hs)
             .func<&impl::entity_set_parent>("set_parent"_hs)
+
+            .func<&impl::entity_get_state_name>("get_state"_hs)
+            .func<&impl::entity_set_state_id>("set_state"_hs)
+            .func<&impl::entity_set_state_name>("set_state"_hs)
+
+            .func<&impl::entity_get_state_name>("get_state_name"_hs)
+            .func<&impl::entity_set_state_name>("set_state_name"_hs)
+
+            .func<&impl::entity_get_state_id>("get_state_id"_hs)
+            .func<&impl::entity_set_state_name>("set_state_id"_hs)
+            .func<&impl::entity_set_state_id>("set_state_id"_hs)
+
+            .func<&impl::entity_get_state_index>("get_state_index"_hs)
+            .func<&impl::entity_set_state_index>("set_state_index"_hs)
         ;
 
         if constexpr (generate_optional_type)

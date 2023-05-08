@@ -7,6 +7,12 @@
 
 #include <engine/components/relationship_component.hpp>
 
+#include <engine/entity/entity_descriptor.hpp>
+#include <engine/entity/components/instance_component.hpp>
+#include <engine/entity/components/state_component.hpp>
+#include <engine/entity/commands/state_change_command.hpp>
+
+#include <engine/meta/hash.hpp>
 #include <engine/meta/meta_evaluation_context.hpp>
 
 #include <math/types.hpp>
@@ -142,6 +148,96 @@ namespace engine
             }
 
             return self; // prev_parent;
+        }
+
+        inline const StateComponent* entity_try_get_state_component(Entity self, Registry& registry)
+        {
+            return registry.try_get<StateComponent>(self);
+        }
+
+        inline const EntityState* entity_try_get_active_state(Entity self, Registry& registry)
+        {
+            if (auto instance_comp = registry.try_get<InstanceComponent>(self))
+            {
+                auto& descriptor = instance_comp->get_descriptor();
+
+                if (auto state_comp = registry.try_get<StateComponent>(self))
+                {
+                    return descriptor.get_state_by_index(state_comp->state_index);
+                }
+            }
+
+            return {};
+        }
+
+        inline MetaSymbolID entity_get_state_id(Entity self, Registry& registry)
+        {
+            if (auto active_state = entity_try_get_active_state(self, registry))
+            {
+                if (active_state->name)
+                {
+                    return *active_state->name;
+                }
+            }
+
+            return {};
+        }
+
+        inline Entity entity_set_state_id(Entity self, Registry& registry, Entity context_entity, const MetaEvaluationContext& context, MetaSymbolID state_id)
+        {
+            if (context.service)
+            {
+                context.service->queue_event<StateChangeCommand> // event
+                (
+                    context_entity,
+                    self,
+                    state_id
+                );
+            }
+
+            return self;
+        }
+
+        inline std::string entity_get_state_name(Entity self, Registry& registry)
+        {
+            if (auto state_id = entity_get_state_id(self, registry))
+            {
+                return std::string { get_known_string_from_hash(state_id) };
+            }
+
+            return {};
+        }
+
+        inline Entity entity_set_state_name(Entity self, Registry& registry, Entity context_entity, const MetaEvaluationContext& context, const std::string& state_name)
+        {
+            const auto state_id = hash(state_name).value();
+
+            return entity_set_state_id(self, registry, context_entity, context, state_id);
+        }
+
+        inline EntityStateIndex entity_get_state_index(Entity self, Registry& registry)
+        {
+            if (auto state_comp = entity_try_get_state_component(self, registry))
+            {
+                return state_comp->state_index;
+            }
+
+            return {};
+        }
+
+        inline Entity entity_set_state_index(Entity self, Registry& registry, Entity context_entity, const MetaEvaluationContext& context, EntityStateIndex state_index)
+        {
+            if (auto instance_comp = registry.try_get<InstanceComponent>(self))
+            {
+                auto& descriptor = instance_comp->get_descriptor();
+
+                if (const auto state_id = descriptor.get_state_name(state_index))
+                {
+                    entity_set_state_id(self, registry, context_entity, context, *state_id);
+                }
+            }
+
+            return self;
         }
 	}
 }
