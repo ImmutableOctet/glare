@@ -18,6 +18,7 @@
 #include <engine/meta/serial.hpp>
 #include <engine/meta/component.hpp>
 #include <engine/meta/meta_evaluation_context.hpp>
+#include <engine/meta/meta_variable.hpp>
 
 #include <engine/resource_manager/resource_manager.hpp>
 
@@ -25,6 +26,9 @@
 #include <engine/entity/entity_factory.hpp>
 #include <engine/entity/entity_descriptor.hpp>
 #include <engine/entity/entity_construction_context.hpp>
+
+#include <engine/entity/components/entity_thread_component.hpp>
+#include <engine/entity/components/instance_component.hpp>
 
 #include <engine/components/name_component.hpp>
 #include <engine/components/model_component.hpp>
@@ -48,7 +52,7 @@ namespace engine
 {
 	// Stage:
 	template <typename ...IgnoredKeys>
-	void Stage::process_component_entries
+	void Stage::process_data_entries
 	(
 		Registry& registry, Entity entity, const util::json& object_data,
 		const MetaParsingContext& parsing_context,
@@ -62,11 +66,11 @@ namespace engine
 
 			[](auto&& value) { return hash(std::forward<decltype(value)>(value)); },
 
-			[&registry, entity, &parsing_context, &opt_service, &opt_system_manager](const auto& component_declaration, const auto& component_content)
+			[&registry, entity, &parsing_context, &opt_service, &opt_system_manager](const auto& key, const auto& value)
 			{
-				auto [component_name, allow_entry_update, constructor_arg_count] = parse_component_declaration(component_declaration, true);
+				auto [component_name, allow_entry_update, constructor_arg_count] = parse_component_declaration(key, true);
 
-				if (auto component = process_component(component_name, &component_content, constructor_arg_count, {}, parsing_context))
+				if (auto component = process_component(component_name, &value, constructor_arg_count, {}, parsing_context))
 				{
 					auto evaluation_context = MetaEvaluationContext
 					{
@@ -78,6 +82,42 @@ namespace engine
 					if (!allow_entry_update || !update_component_fields(registry, entity, *component, true, true, &evaluation_context))
 					{
 						emplace_component(registry, entity, *component, &evaluation_context);
+					}
+				}
+				else
+				{
+					// Ensure that this is an entity that can take advantage of thread variables.
+					if (registry.try_get<InstanceComponent>(entity))
+					{
+						auto& thread_component = registry.get_or_emplace<EntityThreadComponent>(entity);
+
+						if (auto* global_variables = thread_component.get_global_variables())
+						{
+							global_variables->set
+							(
+								MetaVariable
+								{
+									// NOTE: Global variables always use the direct
+									// hash of the variable name as their identifier.
+									key, value,
+
+									MetaParsingInstructions
+									{
+										.context                          = parsing_context,
+
+										.fallback_to_string               = true, // false,
+										
+										.fallback_to_component_reference  = true, // false,
+										.fallback_to_entity_reference     = false, // true,
+
+										.allow_member_references          = true,
+										.allow_entity_indirection         = true,
+
+										.allow_remote_variable_references = true
+									}
+								}
+							);
+						}
 					}
 				}
 			},
@@ -418,7 +458,7 @@ namespace engine
 				return;
 			}
 
-			process_component_entries
+			process_data_entries
 			(
 				registry, player,
 				player_cfg,
@@ -514,7 +554,7 @@ namespace engine
 
 				if (entity != null)
 				{
-					process_component_entries
+					process_data_entries
 					(
 						registry, entity, obj_cfg,
 						resource_manager.get_parsing_context(),

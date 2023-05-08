@@ -43,7 +43,7 @@ namespace engine
 			using PlayerObjectMap = std::unordered_map<PlayerIndex, Entity>;
 		private:
 			template <typename ...IgnoredKeys>
-			static void process_component_entries
+			static void process_data_entries
 			(
 				Registry& registry, Entity entity, const util::json& object_data,
 				const MetaParsingContext& parsing_context,
