@@ -1382,21 +1382,34 @@ namespace engine
 			return std::nullopt;
 		}
 
-		auto validate_symbol = [&instructions](const std::string_view& symbol, bool validate_not_local_variable=false, bool validate_not_type=true)
+		auto validate_symbol = [&instructions](const std::string_view& symbol, bool validate_not_local_variable=false, bool validate_not_type=true, bool validate_not_entity_member=true)
 		{
 			if (symbol.empty())
 			{
 				return false;
 			}
 
+			auto symbol_id = MetaSymbolID {};
+
 			if (validate_not_type)
 			{
 				const auto opt_type_context = instructions.context.get_type_context();
 
-				const auto type = (opt_type_context)
-					? opt_type_context->get_type(symbol, instructions)
-					: resolve(hash(symbol).value())
-				;
+				auto type = MetaType {};
+
+				if (opt_type_context)
+				{
+					type = opt_type_context->get_type(symbol, instructions);
+				}
+				else
+				{
+					//if (!symbol_id) // <-- Always true
+					{
+						symbol_id = hash(symbol).value();
+					}
+
+					type = resolve(symbol_id);
+				}
 
 				if (type)
 				{
@@ -1408,9 +1421,50 @@ namespace engine
 			{
 				if (const auto opt_variable_context = instructions.context.get_variable_context())
 				{
-					if (opt_variable_context->contains(symbol))
+					if (!symbol_id)
+					{
+						symbol_id = hash(symbol).value();
+					}
+
+					if (opt_variable_context->contains(symbol_id)) // symbol
 					{
 						return false;
+					}
+				}
+			}
+
+			// TODO: Look into possible optimizations for this.
+			// (Setter/getter IDs possibly generated twice; see `meta_any_from_string_resolve_expression_impl`)
+			if (validate_not_entity_member)
+			{
+				if (const auto entity_type = resolve<Entity>())
+				{
+					if (!symbol_id)
+					{
+						symbol_id = hash(symbol).value();
+					}
+
+					auto& member_id = symbol_id;
+
+					if (entity_type.data(member_id))
+					{
+						return false;
+					}
+					else
+					{
+						const auto property_accessors = MetaProperty::generate_accessor_identifiers(symbol);
+
+						const auto& getter_id = std::get<0>(property_accessors);
+						const auto& setter_id = std::get<1>(property_accessors);
+
+						if (getter_id && entity_type.func(getter_id))
+						{
+							return false;
+						}
+						else if (setter_id && entity_type.func(setter_id))
+						{
+							return false;
+						}
 					}
 				}
 			}
@@ -1420,7 +1474,7 @@ namespace engine
 
 		if (validate_first_symbol)
 		{
-			if (!validate_symbol(first_symbol, (!target || !target->is_self_targeted()), true))
+			if (!validate_symbol(first_symbol, (!target || !target->is_self_targeted()), true, (second_symbol.empty())))
 			{
 				return std::nullopt;
 			}
@@ -1461,7 +1515,7 @@ namespace engine
 		{
 			if (validate_second_symbol)
 			{
-				if (!validate_symbol(second_symbol, false, true))
+				if (!validate_symbol(second_symbol, false, true, true))
 				{
 					return std::nullopt;
 				}
