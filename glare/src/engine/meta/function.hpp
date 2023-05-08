@@ -22,6 +22,12 @@ namespace engine
 	*/
 	bool function_has_meta_any_argument(const MetaFunction& function, bool check_overloads=true);
 
+	// Returns true if any of the overloads referenced by `function_overloads` reports true for `MetaFunction::is_static`.
+	bool function_has_static_overload(const MetaFunction& function_overloads);
+
+	// Returns true if any of the overloads referenced by `function_overloads` reports true for `MetaFunction::is_const`.
+	bool function_has_const_overload(const MetaFunction& function_overloads);
+
 	/*
 		Attempts to invoke `function` with the `args` specified.
 		
@@ -214,77 +220,107 @@ namespace engine
 
 		IndirectionArguments function_arguments_out;
 
-		std::size_t argument_offset = 0;
-
-		if (function.is_static() && self)
-		{
-			function_arguments_out.emplace_back(std::move(self));
-
-			argument_offset++;
-
-			self = {};
-		}
-
 		if (!function_arguments.empty())
 		{
 			if (handle_indirection)
 			{
-				function_arguments_out.reserve(function_arguments.size());
+				function_arguments_out.reserve((function_arguments.size() + static_cast<bool>(self)));
 
-				for (const auto& argument : function_arguments)
+				// NOTE: May change this back to using const references at some point. (See notes below)
+				for (auto& argument : function_arguments) // const auto&
 				{
 					function_arguments_out.emplace_back(get_indirect_value_or_ref(argument, std::forward<Args>(args)...));
+				}
+
+				if (auto result = invoke_any_overload_with_automatic_meta_forwarding(function, self, function_arguments_out.data(), function_arguments_out.size()))
+				{
+					return result;
 				}
 			}
 			else
 			{
-				if (!function.is_static())
+				// NOTE: Const-cast needed due to limitations of EnTT's API.
+				if (auto result = invoke_any_overload_with_automatic_meta_forwarding(function, self, const_cast<MetaAny* const>(function_arguments.data()), function_arguments.size()))
 				{
-					// NOTE: Const-cast needed due to limitations of EnTT's API.
-					if (auto result = invoke_any_overload_with_automatic_meta_forwarding(function, self, const_cast<MetaAny* const>(function_arguments.data()), function_arguments.size()))
-					{
-						return result;
-					}
+					return result;
 				}
 
-				function_arguments_out.reserve(function_arguments.size());
+				// NOTE: Unlike the `handle_indirection` case, this reserve call must happen after
+				// the initial invocation attempt, due to a possible (unlikely) dynamic memory allocation.
+				function_arguments_out.reserve((function_arguments.size() + static_cast<bool>(self)));
 
-				for (const auto& argument : function_arguments)
+				// NOTE: Non-const reference used to avoid transitive const issues with `as_ref`.
+				for (auto& argument : function_arguments)
 				{
 					function_arguments_out.emplace_back(argument.as_ref());
 				}
 			}
 		}
 
-		if (function_arguments_out.size() > 0)
+		auto execute_with_context = [&](std::size_t argument_insertion_offset=0) -> MetaAny
 		{
+			if constexpr (sizeof...(args) > 0)
+			{
+				if (attempt_to_forward_context)
+				{
+					//function_arguments_out.reserve(function_arguments_out.size() + sizeof...(args));
+
+					{ std::size_t i = argument_insertion_offset; ([&] { function_arguments_out.insert(function_arguments_out.begin() + (i++), entt::forward_as_meta(args)); }(), ...); }
+
+					for (std::size_t i = (sizeof...(args) + argument_insertion_offset); i-- > argument_insertion_offset; )
+					{
+						if (auto result = invoke_any_overload_with_automatic_meta_forwarding(function, self, function_arguments_out.data(), function_arguments_out.size())) // invoke_any_overload
+						{
+							return result;
+						}
+
+						function_arguments_out.erase(function_arguments_out.begin() + i);
+					}
+				}
+			}
+
+			return {};
+		};
+
+		if (auto result = execute_with_context())
+		{
+			return result;
+		}
+
+		// Try again, but with `self` handled as the first argument:
+		if (self && function_has_static_overload(function))
+		{
+			function_arguments_out.insert(function_arguments_out.begin(), std::move(self));
+
+			self = {};
+
 			if (auto result = invoke_any_overload_with_automatic_meta_forwarding(function, self, function_arguments_out.data(), function_arguments_out.size()))
 			{
 				return result;
 			}
-		}
-		else
-		{
-			if (auto result = invoke_any_overload(function, self))
+
+			if (auto result = execute_with_context(1))
 			{
 				return result;
 			}
-		}
 
-		if constexpr (sizeof...(args) > 0)
-		{
-			if (attempt_to_forward_context)
+			if (function_arguments.empty())
 			{
-				{ std::size_t i = argument_offset; ([&] { function_arguments_out.insert(function_arguments_out.begin() + (i++), entt::forward_as_meta(args)); }(), ...); }
+				auto& embedded_self = function_arguments_out[0];
 
-				for (std::size_t i = (sizeof...(args) + argument_offset); i-- > argument_offset; )
+				if (auto result = invoke_any_overload(function, embedded_self.as_ref()))
 				{
-					if (auto result = invoke_any_overload_with_automatic_meta_forwarding(function, self, function_arguments_out.data(), function_arguments_out.size())) // invoke_any_overload
-					{
-						return result;
-					}
-
-					function_arguments_out.erase(function_arguments_out.begin() + i);
+					return result;
+				}
+			}
+		}
+		else 
+		{
+			if (function_arguments.empty())
+			{
+				if (auto result = invoke_any_overload(function, self))
+				{
+					return result;
 				}
 			}
 		}
