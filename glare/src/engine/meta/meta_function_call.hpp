@@ -27,6 +27,7 @@ namespace engine
 			MetaAny get_self(bool resolve_as_container=false, bool resolve_underlying=true) const;
 
 			MetaAny get(MetaAny self={}, bool resolve_indirection=true) const;
+			MetaAny get(MetaAny self, bool resolve_indirection, const MetaEvaluationContext& evaluation_context) const;
 			MetaAny get(Registry& registry, Entity entity=null, bool resolve_indirection=true, MetaAny self={}, const MetaEvaluationContext* opt_evaluation_context=nullptr) const;
 
 			bool has_indirection() const;
@@ -105,8 +106,8 @@ namespace engine
 			template <typename ...Args>
 			MetaAny set_with_fallback(MetaAny& source, MetaAny& destination, bool resolve_indirection, Args&&... args);
 
-			template <typename ArgumentContainer>
-			MetaAny execute_impl(ArgumentContainer&& arguments, MetaAny self={}, bool resolve_indirection=true) const;
+			template <typename ArgumentContainer, typename ...Args>
+			MetaAny execute_impl(ArgumentContainer&& arguments, MetaAny self={}, bool resolve_indirection=true, Args&&... args) const;
 
 			template <typename ArgumentContainer>
 			MetaAny execute_impl(ArgumentContainer&& arguments, Registry& registry, Entity entity=null, bool resolve_indirection=true, MetaAny self={}, const MetaEvaluationContext* opt_evaluation_context=nullptr) const;

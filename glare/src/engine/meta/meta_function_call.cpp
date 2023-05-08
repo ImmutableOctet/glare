@@ -71,7 +71,7 @@ namespace engine
 
 		if (resolve_underlying)
 		{
-			if (auto self_resolved = try_get_underlying_value(self_ref, std::forward<Args>(args)...))
+			if (auto self_resolved = try_get_underlying_value(self_ref, args...))
 			{
 				return self_resolved;
 			}
@@ -83,7 +83,7 @@ namespace engine
 	template <typename ...Args>
 	MetaAny MetaFunctionCall::get_self(bool resolve_as_container, bool resolve_underlying, Args&&... args) const
 	{
-		return get_self_impl(resolve_as_container, resolve_underlying, std::forward<Args>(args)...);
+		return get_self_impl(resolve_as_container, resolve_underlying, args...);
 	}
 
 	MetaAny MetaFunctionCall::get_self(bool resolve_as_container, bool resolve_underlying) const
@@ -91,8 +91,8 @@ namespace engine
 		return get_self_impl(resolve_as_container, resolve_underlying);
 	}
 
-	template <typename ArgumentContainer>
-	MetaAny MetaFunctionCall::execute_impl(ArgumentContainer&& arguments, MetaAny self, bool resolve_indirection) const
+	template <typename ArgumentContainer, typename ...Args>
+	MetaAny MetaFunctionCall::execute_impl(ArgumentContainer&& arguments, MetaAny self, bool resolve_indirection, Args&&... args) const
 	{
 		const bool resolve_argument_indirection = (resolve_indirection)
 			? has_indirection()
@@ -106,7 +106,7 @@ namespace engine
 		{
 			if (resolve_indirection)
 			{
-				if (auto self_resolved = try_get_underlying_value(self))
+				if (auto self_resolved = try_get_underlying_value(self, args...))
 				{
 					self = std::move(self_resolved);
 				}
@@ -124,7 +124,7 @@ namespace engine
 		}
 		else
 		{
-			self = get_self(false, resolve_indirection);
+			self = get_self(false, resolve_indirection, args...);
 
 			if (has_type())
 			{
@@ -175,7 +175,8 @@ namespace engine
 					resolve_argument_indirection,
 					false, // true,
 
-					self // self.as_ref()
+					self, // self.as_ref()
+					args...
 				);
 			}
 			else
@@ -188,7 +189,8 @@ namespace engine
 
 					arguments,
 					resolve_argument_indirection,
-					false // true
+					false, // true
+					args...
 				);
 			}
 		}
@@ -202,7 +204,8 @@ namespace engine
 
 				arguments,
 				resolve_argument_indirection,
-				false
+				false,
+				args...
 			);
 		}
 	}
@@ -573,6 +576,24 @@ namespace engine
 		return {};
 	}
 
+	MetaAny MetaFunctionCall::get(MetaAny self, bool resolve_indirection, const MetaEvaluationContext& evaluation_context) const
+	{
+		if (auto result = execute_impl(arguments, ((self) ? self.as_ref() : MetaAny {}), resolve_indirection, evaluation_context))
+		{
+			return result;
+		}
+
+		if (arguments.empty())
+		{
+			if (auto result = get_fallback(self, resolve_indirection, evaluation_context))
+			{
+				return result;
+			}
+		}
+
+		return {};
+	}
+
 	MetaAny MetaFunctionCall::get(Registry& registry, Entity entity, bool resolve_indirection, MetaAny self, const MetaEvaluationContext* opt_evaluation_context) const
 	{
 		if (auto result = execute_impl(arguments, registry, entity, resolve_indirection, self.as_ref(), opt_evaluation_context))
@@ -608,7 +629,7 @@ namespace engine
 
 	MetaAny MetaFunctionCall::get_indirect_value(const MetaEvaluationContext& context) const
 	{
-		return get(context);
+		return get({}, true, context);
 	}
 
 	MetaAny MetaFunctionCall::get_indirect_value(const MetaAny& self) const
