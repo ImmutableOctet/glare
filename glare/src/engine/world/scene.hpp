@@ -31,10 +31,10 @@ namespace engine
 	class MetaParsingContext;
 	class SystemManagerInterface;
 
-	// A Stage, sometimes referred to as a Map is an abstract concept for
+	// A `Scene`, sometimes referred to as a 'Map' or 'Stage' is an abstract concept for
 	// a portion of the scene-graph that's been loaded from an external source.
 	// e.g. from disk, network, etc.
-	class Stage
+	class Scene
 	{
 		public:
 			using ObjectIndex = std::uint16_t; // std::string; // PlayerIndex;
@@ -51,7 +51,7 @@ namespace engine
 				IgnoredKeys&&... ignored_keys
 			);
 		protected:
-			static void resolve_parent(World& world, Entity entity, Entity stage, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data);
+			static void resolve_parent(World& world, Entity entity, Entity scene, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data);
 
 			static Entity resolve_object_reference(const std::string& query, World& world, const PlayerObjectMap& player_objects, const ObjectMap& objects); // std::tuple<std::string, std::string>
 
@@ -75,11 +75,11 @@ namespace engine
 			}
 		public:
 			// Used internally to keep track of objects involved in the loading process.
-			// e.g. the `world` object we're loading into, the `stage` entity acting as parent to the scene loaded, etc.
+			// e.g. the `world` object we're loading into, the `scene` entity acting as parent to the scene loaded, etc.
 			class Loader
 			{
 				protected:
-					static Entity make_stage_pivot(World& world, Entity parent=null);
+					static Entity make_scene_pivot(World& world, Entity parent=null);
 				public:
 					// Loader configuration; e.g. should we load objects, players, etc.
 					struct Config
@@ -97,13 +97,13 @@ namespace engine
 					// The target `World` object we're loading the scene into.
 					World& world;
 
-					// The root path of this stage. (i.e. where stage-specific resources can be loaded from -- geometry, etc.)
+					// The root path of this scene. (i.e. where scene-specific resources can be loaded from -- geometry, etc.)
 					const filesystem::path& root_path; // filesystem::path
 
 					// Hierarchical input data in the form of a 'dictionary'. (Currently json-based)
 					const util::json& data; // util::json
 
-					Entity stage = null;
+					Entity scene = null;
 
 					// Optional non-owning pointer to system-manager.
 					SystemManagerInterface* system_manager = nullptr;
@@ -123,21 +123,21 @@ namespace engine
 						} objects;
 					} indices;
 
-					bool ensure_stage(Entity parent=null);
+					bool ensure_scene(Entity parent=null);
 				public:
 					Loader
 					(
 						World& world,
 						const filesystem::path& root_path,
 						const util::json& data,
-						Entity stage=null,
+						Entity scene=null,
 						SystemManagerInterface* system_manager=nullptr
 					);
 
-					Entity load(Entity stage, const Config& cfg={}, Entity parent=null, bool load_title=false);
+					Entity load(Entity scene, const Config& cfg={}, Entity parent=null, bool load_title=false);
 					Entity load(const Config& cfg={}, Entity parent=null);
 
-					void load_properties(bool load_title=false, const std::string& default_title="Unknown Stage");
+					void load_properties(bool load_title=false, const std::string& default_title="Unknown Scene");
 					void load_geometry();
 					void load_players();
 					void load_objects();
@@ -146,9 +146,9 @@ namespace engine
 
 					inline operator Entity() const
 					{
-						//assert(stage != null);
+						//assert(scene != null);
 
-						return stage;
+						return scene;
 					}
 			};
 
@@ -159,7 +159,7 @@ namespace engine
 				const util::json& data,
 				Entity parent=null,
 				SystemManagerInterface* opt_system_manager=nullptr,
-				const Stage::Loader::Config& cfg={}
+				const Scene::Loader::Config& cfg={}
 			);
 	};
 }

@@ -1,11 +1,11 @@
-#include "stage.hpp"
+#include "scene.hpp"
 
 #include "world.hpp"
 #include "world_events.hpp"
 #include "entity.hpp"
 #include "graphics_entity.hpp"
 
-#include "components/camera_component.hpp"
+#include "camera/components/camera_component.hpp"
 #include "physics/components/collision_component.hpp"
 #include "behaviors/simple_follow_behavior.hpp"
 
@@ -30,6 +30,8 @@
 #include <engine/entity/components/entity_thread_component.hpp>
 #include <engine/entity/components/instance_component.hpp>
 
+#include <engine/entity/commands/state_change_command.hpp>
+
 #include <engine/components/name_component.hpp>
 #include <engine/components/model_component.hpp>
 #include <engine/components/player_component.hpp>
@@ -50,9 +52,9 @@
 
 namespace engine
 {
-	// Stage:
+	// Scene:
 	template <typename ...IgnoredKeys>
-	void Stage::process_data_entries
+	void Scene::process_data_entries
 	(
 		Registry& registry, Entity entity, const util::json& object_data,
 		const MetaParsingContext& parsing_context,
@@ -136,22 +138,22 @@ namespace engine
 		);
 	}
 
-    Entity Stage::Load
+    Entity Scene::Load
 	(
 		World& world,
 		const filesystem::path& root_path,
 		const util::json& data,
 		Entity parent,
 		SystemManagerInterface* opt_system_manager,
-		const Stage::Loader::Config& cfg
+		const Scene::Loader::Config& cfg
 	)
     {
-		auto state = Stage::Loader(world, root_path, data, null, opt_system_manager);
+		auto state = Scene::Loader(world, root_path, data, null, opt_system_manager);
 
 		return state.load(cfg, parent);
     }
 
-	void Stage::resolve_parent(World& world, Entity entity, Entity stage, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
+	void Scene::resolve_parent(World& world, Entity entity, Entity scene, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
 	{
 		auto parent_query = util::get_value<std::string>(data, "parent"); // data["parent"].get<std::string>();
 
@@ -159,7 +161,7 @@ namespace engine
 
 		if (parent == null)
 		{
-			parent = stage;
+			parent = scene;
 		}
 
 		if (parent != null)
@@ -168,7 +170,7 @@ namespace engine
 		}
 	}
 
-	Entity Stage::resolve_object_reference(const std::string& query, World& world, const PlayerObjectMap& player_objects, const ObjectMap& objects)
+	Entity Scene::resolve_object_reference(const std::string& query, World& world, const PlayerObjectMap& player_objects, const ObjectMap& objects)
 	{
 		static const auto re = std::regex("(object|player)?(\\@|\\#)\"?([\\w\\s\\d\\-]+)\"?"); // constexpr
 
@@ -223,7 +225,7 @@ namespace engine
 		return null;
 	}
 
-	math::TransformVectors Stage::get_transform_data(const util::json& cfg)
+	math::TransformVectors Scene::get_transform_data(const util::json& cfg)
 	{
 		auto position = math::Vector {};
 		auto rotation = math::Vector {};
@@ -249,7 +251,7 @@ namespace engine
 		return { position, rotation, scale };
 	}
 
-	void Stage::apply_transform(World& world, Entity entity, const util::json& cfg)
+	void Scene::apply_transform(World& world, Entity entity, const util::json& cfg)
 	{
 		auto tform_data = get_transform_data(cfg);
 
@@ -257,7 +259,7 @@ namespace engine
 		world.apply_transform_and_reset_collision(entity, tform_data);
 	}
 
-	bool Stage::apply_state(World& world, Entity entity, const util::json& cfg)
+	bool Scene::apply_state(World& world, Entity entity, const util::json& cfg)
 	{
 		if (const auto& state = util::find_any(cfg, "state", "default_state"); state != cfg.end())
 		{
@@ -272,7 +274,7 @@ namespace engine
 		return false;
 	}
 
-	std::optional<graphics::ColorRGBA> Stage::apply_color(World& world, Entity entity, const util::json& cfg)
+	std::optional<graphics::ColorRGBA> Scene::apply_color(World& world, Entity entity, const util::json& cfg)
 	{
 		//auto color = util::get_color(cfg, "color");
 
@@ -295,66 +297,66 @@ namespace engine
 		return std::nullopt;
 	}
 
-	// Stage::Loader:
-	Entity Stage::Loader::make_stage_pivot(World& world, Entity parent)
+	// Scene::Loader:
+	Entity Scene::Loader::make_scene_pivot(World& world, Entity parent)
 	{
 		//parent = create_pivot(world, parent);
-		auto stage = create_pivot(world, parent);
+		auto scene = create_pivot(world, parent);
 
-		return stage;
+		return scene;
 	}
 
-	Stage::Loader::Loader
+	Scene::Loader::Loader
 	(
 		World& world,
 		const filesystem::path& root_path,
 		const util::json& data,
-		Entity stage,
+		Entity scene,
 		SystemManagerInterface* system_manager
 	) :
 		world(world),
 		root_path(root_path),
 		data(data),
-		stage(stage),
+		scene(scene),
 		system_manager(system_manager)
 	{}
 
-	bool Stage::Loader::ensure_stage(Entity parent)
+	bool Scene::Loader::ensure_scene(Entity parent)
 	{
-		if (stage != null)
+		if (scene != null)
 		{
 			return false;
 		}
 
-		// Automatically generated scene/stage pivot:
+		// Automatically generated scene pivot:
 		print("Creating scene pivot...");
 
-		stage = make_stage_pivot(world, parent);
+		scene = make_scene_pivot(world, parent);
 
 		return true;
 	}
 
-	Entity Stage::Loader::load(const Stage::Loader::Config& cfg, Entity parent)
+	Entity Scene::Loader::load(const Scene::Loader::Config& cfg, Entity parent)
 	{
-		auto stage = this->stage;
+		auto scene = this->scene;
 
-		if (stage == null)
+		if (scene == null)
 		{
-			stage = make_stage_pivot(world, parent);
+			scene = make_scene_pivot(world, parent);
 		}
 
-		return load(stage, cfg, parent);
+		return load(scene, cfg, parent);
 	}
 
-	Entity Stage::Loader::load(Entity stage, const Stage::Loader::Config& cfg, Entity parent, bool load_title)
+	Entity Scene::Loader::load(Entity scene, const Scene::Loader::Config& cfg, Entity parent, bool load_title)
 	{
-		assert(stage != null);
+		assert(scene != null);
 
-		this->stage = stage;
+		this->scene = scene;
 
-		load_properties((stage == this->stage));
+		load_properties((scene == this->scene));
 
-		// Stage geometry:
+		// Scene geometry:
 		if (cfg.geometry)
 		{
 			load_geometry();
@@ -372,34 +374,35 @@ namespace engine
 			load_objects();
 		}
 
-		// Apply stage transform, etc.
+		// Apply scene transform, etc.
 		if (cfg.apply_transform)
 		{
-			print("Applying stage transform...");
-			apply_transform(world, stage, data);
+			print("Applying scene transform...");
+
+			apply_transform(world, scene, data);
 		}
 
-		return stage;
+		return scene;
 	}
 
-	void Stage::Loader::load_properties(bool load_title, const std::string& default_title)
+	void Scene::Loader::load_properties(bool load_title, const std::string& default_title)
 	{
-		if ((load_title) && (stage != null))
+		if ((load_title) && (scene != null))
 		{
-			world.set_name(stage, util::get_value<std::string>(data, "title", util::get_value<std::string>(data, "name", default_title)));
+			world.set_name(scene, util::get_value<std::string>(data, "title", util::get_value<std::string>(data, "name", default_title)));
 		}
 
 		if (auto properties = data.find("properties"); properties != data.end())
 		{
-			print("Initializing stage properties...");
+			print("Initializing scene properties...");
 
 			world.set_properties(engine::load<WorldProperties>(*properties));
 		}
 	}
 
-	void Stage::Loader::load_geometry()
+	void Scene::Loader::load_geometry()
 	{
-		ensure_stage();
+		ensure_scene();
 
 		print("Loading scene geometry...");
 
@@ -413,17 +416,17 @@ namespace engine
 
 			auto type = EntityType::Geometry;
 			
-			auto model = load_model(world, model_path, stage, type, true, CollisionConfig(type, collision_enabled));
+			auto model = load_model(world, model_path, scene, type, true, CollisionConfig(type, collision_enabled));
 
-			print("Applying transformation to stage geometry...");
+			print("Applying transformation to scene geometry...");
 
 			apply_transform(world, model, model_cfg);
 		});
 	}
 
-	void Stage::Loader::load_players()
+	void Scene::Loader::load_players()
 	{
-		ensure_stage();
+		ensure_scene();
 
 		print("Loading players...");
 
@@ -438,7 +441,7 @@ namespace engine
 			auto& player_objects = indices.players.player_objects;
 
 			auto player_character = util::get_value<std::string>(player_cfg, "character", config.players.default_player.character);
-			auto player_parent    = stage; // null;
+			auto player_parent    = scene; // null;
 
 			auto character_directory = (std::filesystem::path(config.players.character_path) / player_character);
 			auto character_path = (character_directory / util::format("{}.json", player_character));
@@ -509,7 +512,7 @@ namespace engine
 		});
 	}
 
-	void Stage::Loader::load_objects()
+	void Scene::Loader::load_objects()
 	{
 		auto& registry = world.get_registry();
 		auto& resource_manager = world.get_resource_manager();
@@ -520,7 +523,7 @@ namespace engine
 		auto& objects = indices.objects.objects;
 		auto& player_objects = indices.players.player_objects;
 
-		ensure_stage();
+		ensure_scene();
 
 		print("Loading objects...");
 
@@ -539,7 +542,7 @@ namespace engine
 				{
 					auto tform = get_transform_data(obj_cfg);
 
-					entity = create_pivot(world, tform, stage);
+					entity = create_pivot(world, tform, scene);
 				}
 				else
 				{
@@ -561,7 +564,7 @@ namespace engine
 							.registry = registry,
 							.resource_manager = resource_manager,
 
-							.parent = stage,
+							.parent = scene,
 
 							.opt_entity_out = null,
 
@@ -586,7 +589,7 @@ namespace engine
 
 					// TODO: Ensure `tform` doesn't get invalidated by call to `resolve_parent`.
 					// (May actually make sense to call `get_matrix` before `resolve_parent` anyway)
-					resolve_parent(world, entity, stage, root_path, player_objects, objects, obj_cfg);
+					resolve_parent(world, entity, scene, root_path, player_objects, objects, obj_cfg);
 
 					if (auto player_index = util::get_optional<PlayerIndex>(obj_cfg, "player"))
 					{
@@ -619,7 +622,7 @@ namespace engine
 		);
 	}
 
-	ResourceManager& Stage::Loader::get_resource_manager() const
+	ResourceManager& Scene::Loader::get_resource_manager() const
 	{
 		return world.get_resource_manager();
 	}
