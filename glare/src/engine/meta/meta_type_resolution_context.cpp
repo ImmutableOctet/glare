@@ -101,9 +101,11 @@ namespace engine
 		MetaTypeResolutionContext context;
 
 		// Components:
+		auto& components = context.component_aliases;
+
 		generate_aliases
 		(
-			context.component_aliases,
+			components,
 			
 			{},
 			"Component",
@@ -112,6 +114,9 @@ namespace engine
 			reverse_mapping
 			//, "entity"
 		);
+
+		// Removed due to conflict with `Entity::state` property.
+		components.erase("state");
 
 		// Commands:
 		generate_aliases
