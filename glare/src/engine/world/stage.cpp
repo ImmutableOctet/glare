@@ -130,6 +130,8 @@ namespace engine
 			// General:
 			"type", "player", "index", "parent", "color", // "target",
 
+			"state", "default_state",
+
 			std::forward<IgnoredKeys>(ignored_keys)...
 		);
 	}
@@ -253,6 +255,21 @@ namespace engine
 
 		//world.apply_transform(entity, tform_data);
 		world.apply_transform_and_reset_collision(entity, tform_data);
+	}
+
+	bool Stage::apply_state(World& world, Entity entity, const util::json& cfg)
+	{
+		if (const auto& state = util::find_any(cfg, "state", "default_state"); state != cfg.end())
+		{
+			const auto& state_name = state.value().get<std::string>();
+			const auto state_id = hash(state_name).value();
+
+			world.queue_event<StateChangeCommand>(entity, entity, state_id); // event
+
+			return true;
+		}
+
+		return false;
 	}
 
 	std::optional<graphics::ColorRGBA> Stage::apply_color(World& world, Entity entity, const util::json& cfg)
@@ -484,9 +501,11 @@ namespace engine
 
 			apply_transform(world, player, player_cfg);
 
-			world.event<OnPlayerLoaded>(player, character_path);
+			apply_state(world, player, player_cfg);
 
-			player_idx_counter = std::max((player_idx_counter+1), (player_idx+1));
+			player_idx_counter = std::max((player_idx_counter + 1), (player_idx + 1));
+
+			world.event<OnPlayerLoaded>(player, character_path);
 		});
 	}
 
@@ -585,6 +604,8 @@ namespace engine
 							print_warn("Failed to set active camera to Entity #{}.", entity);
 						}
 					}
+
+					apply_state(world, entity, obj_cfg);
 
 					auto obj_idx = util::get_value<ObjectIndex>(obj_cfg, "index", obj_idx_counter);
 
