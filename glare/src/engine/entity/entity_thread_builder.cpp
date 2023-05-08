@@ -2262,10 +2262,18 @@ namespace engine
 							// No further processing needed.
 							return 1;
 						}
+						
+						/*
+						if (!entity_ref_expr.empty())
+						{
+							meta_expr_allow_first_symbol_as_entity = true;
+						}
+						*/
+
 						// This clause is a workaround for informal entity syntax.
-						// i.e. this allows you to write `some_entity.some_component = some_value`,
-						// rather than `entity(some_entity).some_component = some_value`.
-						else if (entity_ref_expr.empty())
+						// i.e. this allows you to write `some_entity.some_property = some_value`,
+						// rather than `entity(some_entity).some_property = some_value`.
+						if (entity_ref_expr.empty()) // || entity_target.is_self_targeted()
 						{
 							bool leading_symbol_is_variable = false;
 
@@ -2343,6 +2351,8 @@ namespace engine
 								}
 								else
 								{
+									// TODO: Look into whether removing this step makes sense.
+									// (A similar validation step now happens in `meta_any_resolve_remote_variable_reference`)
 									auto
 									[
 										unlikely_nested_entity_ref_expr,
