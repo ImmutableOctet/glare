@@ -49,6 +49,8 @@ namespace engine
 
 	math::RotationMatrix Transform::orientation(const math::Vector& origin, const math::Vector& target, const math::Vector& up)
 	{
+		//return math::RotationMatrix { quat_orientation(origin, target, up) };
+
 		auto k = glm::normalize(origin - target);
 		auto i = glm::normalize(glm::cross(up, k));
 		auto j = glm::cross(k, i);
@@ -58,7 +60,7 @@ namespace engine
 
 	math::Quaternion Transform::quat_orientation(const math::Vector& origin, const math::Vector& target, const math::Vector& up)
 	{
-		return glm::quatLookAt((origin - target), up);
+		return glm::quatLookAt(glm::normalize(origin - target), up);
 	}
 
 	std::optional<Transform> Transform::get_parent() const
@@ -325,7 +327,7 @@ namespace engine
 
 	void Transform::set_direction_vector(const math::Vector& direction)
 	{
-		set_basis(math::rotation_from_vector(direction));
+		set_basis(orientation({}, direction));
 	}
 
 	math::TransformVectors Transform::get_vectors() const
