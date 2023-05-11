@@ -118,10 +118,15 @@ namespace engine
 		// Removed due to conflict with `Entity::state` property.
 		components.erase("state");
 
+		// Removed due to conflict with `EntityTarget` syntax.
+		components.erase("player");
+
 		// Commands:
+		auto& commands = context.command_aliases;
+
 		generate_aliases
 		(
-			context.command_aliases,
+			commands,
 			
 			{},
 			"Command",
@@ -133,6 +138,9 @@ namespace engine
 			// (e.g. `entity_thread_resume` becomes `thread_resume`)
 			"entity"
 		);
+
+		// Removed due to conflict with extension member-function of `Entity`.
+		commands.erase("set_parent");
 		
 		// Instructions:
 		auto& instructions = context.instruction_aliases;
