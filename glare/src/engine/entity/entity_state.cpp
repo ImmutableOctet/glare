@@ -383,7 +383,7 @@ namespace engine
 		auto& thread_component = registry.get_or_emplace<EntityThreadComponent>(entity);
 
 		// TODO: Change to use of `EntityThreadSpawnCommand` instead of direct call.
-		thread_component.start_threads(*this, self_index);
+		thread_component.start_threads(descriptor, *this, self_index);
 	}
 
 	void EntityState::decay_threads(const EntityDescriptor& descriptor, Registry& registry, Entity entity, EntityStateIndex self_index) const
