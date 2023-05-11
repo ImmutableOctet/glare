@@ -1,7 +1,7 @@
 #pragma once
 
 #include "buttons.hpp"
-#include "analogs.hpp"
+#include "analog.hpp"
 
 namespace engine
 {

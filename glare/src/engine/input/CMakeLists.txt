@@ -5,7 +5,7 @@ target_sources(
     
     PRIVATE
 
-    "analogs.cpp"
+    "analog.cpp"
     "buttons.cpp"
     "input_event.cpp"
     "input_state.cpp"
