@@ -3,6 +3,7 @@
 #include "entity_state_action.hpp"
 #include "event_trigger_condition.hpp"
 #include "entity_descriptor_shared.hpp"
+#include "entity_thread_cadence.hpp"
 
 #include <engine/timer.hpp>
 
@@ -64,7 +65,7 @@ namespace engine
 		struct ControlBlock
 		{
 			// Number of instructions included in this control-block.
-			EntityInstructionCount size;
+			EntityInstructionCount size = {};
 
 			bool operator==(const ControlBlock&) const noexcept = default;
 			bool operator!=(const ControlBlock&) const noexcept = default;
@@ -211,6 +212,19 @@ namespace engine
 			bool operator!=(const MultiControlBlock&) const noexcept = default;
 		};
 
+		struct CadenceControlBlock
+		{
+			EntityThreadCadence cadence; // = EntityThreadCadence::Default;
+			//EntityThreadCadence prev_cadence; // = EntityThreadCadence::Default;
+
+			// Number of subsequent instructions to be
+			// included in this 'cadence' block.
+			ControlBlock included_instructions = {};
+
+			bool operator==(const CadenceControlBlock&) const noexcept = default;
+			bool operator!=(const CadenceControlBlock&) const noexcept = default;
+		};
+
 		struct IfControlBlock : LocalConditionControlBlock
 		{
 			bool operator==(const IfControlBlock&) const noexcept = default;
@@ -309,6 +323,7 @@ namespace engine
 			Rewind,
 
 			MultiControlBlock,
+			CadenceControlBlock,
 			IfControlBlock,
 
 			FunctionCall,
