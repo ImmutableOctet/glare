@@ -57,6 +57,9 @@ namespace engine
 			.data<nullptr, &InputEvent::has_unknown_input_source>("has_unknown_input_source"_hs)
 			.data<nullptr, &InputEvent::source_index>("source_index"_hs)
 
+			.data<nullptr, &InputEvent::player_index>("player_index"_hs)
+			.data<nullptr, &InputEvent::player_index>("player"_hs)
+
 			/*
 			.data<InputEvent::UnknownIndex>("UnknownIndex"_hs)
 			.data<InputEvent::MouseIndex>("MouseIndex"_hs)
@@ -271,6 +274,17 @@ namespace engine
 	}
 
 	template <>
+	void reflect<app::input::OnMousePosition>()
+	{
+		custom_meta_type<app::input::OnMousePosition>("OnMousePosition"_hs)
+			.base<app::input::MouseStateEvent>()
+			
+			.data<&app::input::OnMousePosition::x>("x"_hs)
+			.data<&app::input::OnMousePosition::y>("y"_hs)
+		;
+	}
+
+	template <>
 	void reflect<app::input::OnMouseScroll>()
 	{
 		custom_meta_type<app::input::OnMouseScroll>("OnMouseScroll"_hs)
@@ -397,9 +411,8 @@ namespace engine
 	void reflect<InputSystem>()
 	{
 		// Primitives:
-		
-		// TODO: Change this into something the game instance owns.
 		reflect<Button>();
+		reflect<Analog>();
 
 		// Components:
 		reflect<InputComponent>();
@@ -429,6 +442,7 @@ namespace engine
 		reflect<app::input::OnMouseButtonUp>();
 		reflect<app::input::OnMouseMove>();
 		reflect<app::input::OnMouseScroll>();
+		reflect<app::input::OnMousePosition>();
 		reflect<app::input::OnMouseVirtualAnalogInput>();
 
 		reflect<app::input::GamepadStateEvent>();
