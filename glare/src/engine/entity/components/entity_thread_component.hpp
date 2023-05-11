@@ -48,15 +48,29 @@ namespace engine
 				const EntityDescriptor& descriptor,
 				EntityThreadID thread_id,
 
+				std::optional<EntityStateIndex> state_index,
+				bool check_existing,
+				bool check_linked,
+				bool restart_existing,
+				const EntityThreadFlags& flags
+			);
+
+			// NOTE: This overload automatically generates an `EntityThreadFlags` object.
+			// (e.g. handles the thread's `cadence` field automatically)
+			EntityThread* start_thread
+			(
+				const EntityDescriptor& descriptor,
+				EntityThreadID thread_id,
+
 				std::optional<EntityStateIndex> state_index=std::nullopt,
 				bool check_existing=true,
 				bool check_linked=true,
-				bool restart_existing=false,
-				const EntityThreadFlags& flags={}
+				bool restart_existing=false
 			);
 
 			std::size_t start_threads
 			(
+				const EntityDescriptor& descriptor,
 				const EntityThreadRange& thread_range,
 				std::optional<EntityStateIndex> state_index=std::nullopt,
 				bool restart_existing=false
@@ -71,6 +85,7 @@ namespace engine
 
 			std::size_t start_threads
 			(
+				const EntityDescriptor& descriptor,
 				const EntityState& state,
 				EntityStateIndex state_index,
 				bool restart_existing=false

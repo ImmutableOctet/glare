@@ -92,8 +92,37 @@ namespace engine
 		return {};
 	}
 
+	EntityThread* EntityThreadComponent::start_thread
+	(
+		const EntityDescriptor& descriptor,
+		EntityThreadID thread_id,
+
+		std::optional<EntityStateIndex> state_index,
+		bool check_existing,
+		bool check_linked,
+		bool restart_existing
+	)
+	{
+		if (const auto thread_description = descriptor.get_thread_by_id(thread_id))
+		{
+			return start_thread
+			(
+				descriptor, thread_id, state_index,
+				check_existing, check_linked, restart_existing,
+
+				EntityThreadFlags
+				{
+					.cadence = thread_description->cadence
+				}
+			);
+		}
+
+		return {};
+	}
+
 	std::size_t EntityThreadComponent::start_threads
 	(
+		const EntityDescriptor& descriptor,
 		const EntityThreadRange& thread_range,
 		
 		std::optional<EntityStateIndex> state_index,
@@ -105,9 +134,22 @@ namespace engine
 		iterate_thread_range
 		(
 			thread_range,
-			[this, &state_index, restart_existing, &started_thread_count](EntityThreadIndex thread_index)
+			[this, &descriptor, &state_index, restart_existing, &started_thread_count](EntityThreadIndex thread_index)
 			{
-				if (start_thread(thread_index, state_index, true, true, restart_existing))
+				const auto& thread_description = descriptor.get_thread(thread_index);
+
+				const auto start_result = start_thread
+				(
+					thread_index, state_index,
+					true, true, restart_existing,
+
+					EntityThreadFlags
+					{
+						.cadence = thread_description.cadence
+					}
+				);
+
+				if (start_result)
 				{
 					started_thread_count++;
 				}
@@ -131,11 +173,12 @@ namespace engine
 			return 0;
 		}
 
-		return start_threads(*state, state_index, restart_existing);
+		return start_threads(descriptor, *state, state_index, restart_existing);
 	}
 
 	std::size_t EntityThreadComponent::start_threads
 	(
+		const EntityDescriptor& descriptor,
 		const EntityState& state,
 		EntityStateIndex state_index,
 		bool restart_existing
@@ -145,7 +188,7 @@ namespace engine
 
 		for (const auto& threads : state.immediate_threads)
 		{
-			threads_started += start_threads(threads, state_index, restart_existing);
+			threads_started += start_threads(descriptor, threads, state_index, restart_existing);
 		}
 
 		return threads_started;
