@@ -232,7 +232,7 @@ namespace engine
 					function_arguments_out.emplace_back(get_indirect_value_or_ref(argument, std::forward<Args>(args)...));
 				}
 
-				if (auto result = invoke_any_overload_with_automatic_meta_forwarding(function, self, function_arguments_out.data(), function_arguments_out.size()))
+				if (auto result = invoke_any_overload_with_automatic_meta_forwarding(function, self.as_ref(), function_arguments_out.data(), function_arguments_out.size()))
 				{
 					return result;
 				}
@@ -240,7 +240,7 @@ namespace engine
 			else
 			{
 				// NOTE: Const-cast needed due to limitations of EnTT's API.
-				if (auto result = invoke_any_overload_with_automatic_meta_forwarding(function, self, const_cast<MetaAny* const>(function_arguments.data()), function_arguments.size()))
+				if (auto result = invoke_any_overload_with_automatic_meta_forwarding(function, self.as_ref(), const_cast<MetaAny* const>(function_arguments.data()), function_arguments.size()))
 				{
 					return result;
 				}
@@ -269,7 +269,7 @@ namespace engine
 
 					for (std::size_t i = (sizeof...(args) + argument_insertion_offset); i-- > argument_insertion_offset; )
 					{
-						if (auto result = invoke_any_overload_with_automatic_meta_forwarding(function, self, function_arguments_out.data(), function_arguments_out.size())) // invoke_any_overload
+						if (auto result = invoke_any_overload_with_automatic_meta_forwarding(function, self.as_ref(), function_arguments_out.data(), function_arguments_out.size())) // invoke_any_overload
 						{
 							return result;
 						}
@@ -318,7 +318,7 @@ namespace engine
 		{
 			if (function_arguments.empty())
 			{
-				if (auto result = invoke_any_overload(function, self))
+				if (auto result = invoke_any_overload(function, self.as_ref()))
 				{
 					return result;
 				}
