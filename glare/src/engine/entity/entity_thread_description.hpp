@@ -2,6 +2,7 @@
 
 #include "types.hpp"
 #include "entity_instruction.hpp"
+#include "entity_thread_cadence.hpp"
 
 #include <util/small_vector.hpp>
 
@@ -16,11 +17,15 @@ namespace engine
 		using Instruction = EntityInstruction;
 		using InstructionIndex = EntityInstructionIndex;
 
-		// A series of instructions to be executed in-order.
-		util::small_vector<EntityInstruction, 32> instructions; // 64 // 48
+		// The default cadence that this thread uses.
+		// (Not guaranteed to be what it's executed with)
+		EntityThreadCadence cadence = EntityThreadCadence::Default;
 
 		// NOTE: May move this to another location later. (e.g. handle via map)
 		std::optional<EntityThreadID> thread_id;
+
+		// A series of instructions to be executed in-order.
+		util::small_vector<EntityInstruction, 32> instructions; // 64 // 48
 
 		inline const EntityInstruction& get_instruction(InstructionIndex index) const
 		{
