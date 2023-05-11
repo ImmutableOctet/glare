@@ -283,9 +283,12 @@ namespace engine
 				{
 					if (auto target_entity = self.try_cast<Entity>())
 					{
-						self = get_component_ref(registry, *target_entity, type_id);
+						if (auto as_component = get_component_ref(registry, *target_entity, type_id))
+						{
+							self = std::move(as_component);
 
-						self_type = get_type();
+							self_type = get_type();
+						}
 					}
 				}
 				else if (self_type_id != type_id)
