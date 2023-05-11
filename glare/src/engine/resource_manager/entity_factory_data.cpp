@@ -102,7 +102,7 @@ namespace engine
 
 			for (const auto& thread_range : descriptor.immediate_threads)
 			{
-				thread_component.start_threads(thread_range);
+				thread_component.start_threads(descriptor, thread_range);
 			}
 
 			// Trigger listeners looking for `EntityThreadComponent` patches.
