@@ -109,6 +109,18 @@ namespace engine
 			// TODO: Optimize via map lookup, etc.
 			const EntityThreadDescription& get_thread(EntityThreadIndex thread_index) const;
 
+			const EntityThreadDescription* get_thread_by_id(EntityThreadID thread_id) const;
+
+			const EntityThreadDescription* get_thread_by_id(std::optional<EntityThreadID> thread_id) const
+			{
+				if (!thread_id)
+				{
+					return {};
+				}
+
+				return get_thread_by_id(*thread_id);
+			}
+
 			inline EntityThreadIndex get_next_thread_index() const
 			{
 				return shared_storage.get_next_index<EntityThreadDescription>();

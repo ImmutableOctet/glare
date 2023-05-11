@@ -78,7 +78,19 @@ namespace engine
 	{
 		const auto& threads = get_threads();
 
+		assert(thread_index < threads.size());
+
 		return threads[thread_index]; // .at(thread_index);
+	}
+
+	const EntityThreadDescription* EntityDescriptor::get_thread_by_id(EntityThreadID thread_id) const
+	{
+		if (const auto thread_index = get_thread_index(thread_id))
+		{
+			return &(get_thread(*thread_index));
+		}
+
+		return {};
 	}
 
 	// TODO: Optimize via map lookup, etc.
