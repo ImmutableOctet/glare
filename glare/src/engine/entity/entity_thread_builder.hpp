@@ -5,6 +5,7 @@
 
 #include "entity_state_action.hpp"
 #include "entity_thread_description.hpp"
+#include "entity_thread_cadence.hpp"
 #include "entity_descriptor_shared.hpp"
 
 #include <engine/meta/meta_variable_scope.hpp>
@@ -42,7 +43,8 @@ namespace engine
 				ThreadDescriptor thread,
 				const EntityFactoryContext* opt_factory_context=nullptr,
 				const std::filesystem::path* opt_base_path = nullptr,
-				const MetaParsingContext& parsing_context={}
+				const MetaParsingContext& parsing_context={},
+				EntityThreadCadence cadence=EntityThreadCadence::Default
 			);
 
 			EntityThreadBuilderContext(const EntityThreadBuilderContext&) = default;
@@ -52,6 +54,19 @@ namespace engine
 			(
 				const EntityThreadBuilderContext& parent_context,
 				const MetaParsingContext& parsing_context
+			);
+
+			EntityThreadBuilderContext
+			(
+				const EntityThreadBuilderContext& parent_context,
+				EntityThreadCadence cadence
+			);
+
+			EntityThreadBuilderContext
+			(
+				const EntityThreadBuilderContext& parent_context,
+				const MetaParsingContext& parsing_context,
+				EntityThreadCadence cadence
 			);
 
 			EntityThreadBuilderContext& operator=(const EntityThreadBuilderContext&) = default;
@@ -104,6 +119,8 @@ namespace engine
 			const std::filesystem::path* opt_base_path = nullptr;
 			MetaParsingContext parsing_context = {};
 
+			EntityThreadCadence cadence = EntityThreadCadence::Default;
+
 		private:
 			ThreadDescriptor thread; // EntityThreadDescription&
 	};
@@ -140,7 +157,8 @@ namespace engine
 				std::string_view opt_thread_name={},
 				const EntityFactoryContext* opt_factory_context=nullptr,
 				const std::filesystem::path* opt_base_path=nullptr,
-				const MetaParsingContext& parsing_context={}
+				const MetaParsingContext& parsing_context={},
+				EntityThreadCadence cadence=EntityThreadCadence::Default
 			);
 
 			EntityThreadBuilder
@@ -149,7 +167,8 @@ namespace engine
 				std::string_view opt_thread_name={},
 				const EntityFactoryContext* opt_factory_context=nullptr,
 				const std::filesystem::path* opt_base_path=nullptr,
-				const MetaParsingContext& parsing_context={}
+				const MetaParsingContext& parsing_context={},
+				EntityThreadCadence cadence=EntityThreadCadence::Default
 			);
 
 			virtual ~EntityThreadBuilder();
@@ -406,13 +425,28 @@ namespace engine
 			MetaVariableContext sub_thread_variable_store(std::string_view thread_name={});
 
 			// Generates a sub-context for a given `target_sub_thread`.
-			EntityThreadBuilderContext sub_thread_context(ThreadDescriptor target_sub_thread, std::optional<MetaParsingContext> opt_parsing_context=std::nullopt) const;
+			EntityThreadBuilderContext sub_thread_context
+			(
+				ThreadDescriptor target_sub_thread,
+				std::optional<MetaParsingContext> opt_parsing_context=std::nullopt,
+				std::optional<EntityThreadCadence> opt_cadence=std::nullopt
+			) const;
 
 			// Generates a sub-context and allocates a new thread to be associated.
-			EntityThreadBuilderContext sub_thread_context(std::optional<MetaParsingContext> opt_parsing_context=std::nullopt) const;
+			EntityThreadBuilderContext sub_thread_context
+			(
+				std::optional<MetaParsingContext> opt_parsing_context=std::nullopt,
+				std::optional<EntityThreadCadence> opt_cadence=std::nullopt
+			) const;
 
 			// Generates a new thread-builder using this builder's targeted `descriptor`.
-			EntityThreadBuilder sub_thread(std::string_view thread_name={}, std::optional<MetaParsingContext> opt_parsing_context=std::nullopt);
+			EntityThreadBuilder sub_thread
+			(
+				std::string_view thread_name={},
+
+				std::optional<MetaParsingContext> opt_parsing_context=std::nullopt,
+				std::optional<EntityThreadCadence> opt_cadence=std::nullopt
+			);
 
 			// Loads instruction content from a file located at `script_path`.
 			// NOTE: This uses the `opt_base_path` field to better resolve the path specified.
@@ -561,6 +595,22 @@ namespace engine
 				EntityInstructionCount content_index
 			);
 
+			EntityInstructionCount generate_cadence_block
+			(
+				const ContentSource& content_source,
+				EntityInstructionCount content_index,
+				EntityThreadCadence cadence
+			);
+
+			EntityInstructionCount generate_cadence_block
+			(
+				const ContentSource& content_source,
+				EntityInstructionCount content_index,
+				EntityThreadCadence cadence,
+				instructions::ControlBlock& control_block_out,
+				bool generate_cadence_restore_instruction=true
+			);
+
 			EntityInstructionCount process_variable_declaration(std::string_view declaration);
 			EntityInstructionCount process_inline_yield_instruction(std::string_view yield_instruction_content);
 
@@ -651,6 +701,26 @@ namespace engine
 
 	// Builds a `multi` block.
 	class EntityThreadMultiBuilder final : public EntityThreadBuilder
+	{
+		public:
+			using EntityThreadBuilder::EntityThreadBuilder;
+
+		protected:
+			std::optional<EntityInstructionCount> process_directive_impl
+			(
+				const ContentSource& content_source,
+				EntityInstructionCount content_index,
+
+				const std::optional<EntityThreadInstruction>& thread_details,
+
+				std::string_view instruction_raw,
+				StringHash directive_id,
+				std::string_view directive_content
+			) override;
+	};
+
+	// Builds a `cadence` block.
+	class EntityThreadCadenceBuilder final : public EntityThreadBuilder
 	{
 		public:
 			using EntityThreadBuilder::EntityThreadBuilder;

@@ -14,6 +14,7 @@
 #include <engine/meta/hash.hpp>
 #include <engine/meta/serial.hpp>
 #include <engine/meta/data_member.hpp>
+#include <engine/meta/enum.hpp>
 
 #include <engine/meta/meta_type_resolution_context.hpp>
 #include <engine/meta/meta_type_descriptor.hpp>
@@ -156,12 +157,14 @@ namespace engine
 		ThreadDescriptor thread,
 		const EntityFactoryContext* opt_factory_context,
 		const std::filesystem::path* opt_base_path,
-		const MetaParsingContext& parsing_context
+		const MetaParsingContext& parsing_context,
+		EntityThreadCadence cadence
 	) :
 		descriptor(descriptor),
 		opt_factory_context(opt_factory_context),
 		opt_base_path(opt_base_path),
 		parsing_context(parsing_context),
+		cadence(cadence),
 		thread(thread)
 	{}
 
@@ -173,6 +176,27 @@ namespace engine
 		EntityThreadBuilderContext(parent_context)
 	{
 		this->parsing_context = parsing_context;
+	}
+
+	EntityThreadBuilderContext::EntityThreadBuilderContext
+	(
+		const EntityThreadBuilderContext& parent_context,
+		EntityThreadCadence cadence
+	) :
+		EntityThreadBuilderContext(parent_context)
+	{
+		this->cadence = cadence;
+	}
+
+	EntityThreadBuilderContext::EntityThreadBuilderContext
+	(
+		const EntityThreadBuilderContext& parent_context,
+		const MetaParsingContext& parsing_context,
+		EntityThreadCadence cadence
+	) :
+		EntityThreadBuilderContext(parent_context, parsing_context)
+	{
+		this->cadence = cadence;
 	}
 
 	EntityThreadIndex EntityThreadBuilderContext::thread_index() const
@@ -240,7 +264,8 @@ namespace engine
 		std::string_view opt_thread_name,
 		const EntityFactoryContext* opt_factory_context,
 		const std::filesystem::path* opt_base_path,
-		const MetaParsingContext& parsing_context
+		const MetaParsingContext& parsing_context,
+		EntityThreadCadence cadence
 	)
 		: EntityThreadBuilder
 		(
@@ -250,7 +275,8 @@ namespace engine
 				thread,
 				opt_factory_context,
 				opt_base_path,
-				parsing_context
+				parsing_context,
+				cadence
 			),
 
 			opt_thread_name
@@ -263,7 +289,8 @@ namespace engine
 		std::string_view opt_thread_name,
 		const EntityFactoryContext* opt_factory_context,
 		const std::filesystem::path* opt_base_path,
-		const MetaParsingContext& parsing_context
+		const MetaParsingContext& parsing_context,
+		EntityThreadCadence cadence
 	)
 		: EntityThreadBuilder
 		(
@@ -272,13 +299,14 @@ namespace engine
 			ThreadDescriptor
 			(
 				descriptor,
-				descriptor.shared_storage.allocate<EntityThreadDescription>()
+				descriptor.shared_storage.allocate<EntityThreadDescription>(cadence)
 			),
 
 			opt_thread_name,
 			opt_factory_context,
 			opt_base_path,
-			parsing_context
+			parsing_context,
+			cadence
 		)
 	{}
 
@@ -1577,6 +1605,21 @@ namespace engine
 				// See also: `multi` command.
 				return generate_multi_block(content_source, content_index);
 
+			case "fixed"_hs:
+			case "begin_fixed"_hs:
+				return generate_cadence_block(content_source, content_index, EntityThreadCadence::Fixed);
+
+			case "realtime"_hs:
+			case "begin_realtime"_hs:
+				return generate_cadence_block(content_source, content_index, EntityThreadCadence::Realtime);
+
+			//case "on_update"_hs:
+			case "update_driven"_hs:
+			case "begin_update_driven"_hs:
+			case "frame_driven"_hs:
+			case "begin_frame_driven"_hs:
+				return generate_cadence_block(content_source, content_index, EntityThreadCadence::Update);
+
 			//case "forever"_hs:
 			case "repeat"_hs:
 				return generate_repeat_block(content_source, content_index);
@@ -1717,6 +1760,8 @@ namespace engine
 		return EntityThreadBuilderContext
 		{
 			scope_context(),
+
+			MetaParsingContext
 			{
 				get_type_context(),
 				&scope_local_variables
@@ -1764,7 +1809,12 @@ namespace engine
 		);
 	}
 
-	EntityThreadBuilderContext EntityThreadBuilder::sub_thread_context(ThreadDescriptor target_sub_thread, std::optional<MetaParsingContext> opt_parsing_context) const
+	EntityThreadBuilderContext EntityThreadBuilder::sub_thread_context
+	(
+		ThreadDescriptor target_sub_thread,
+		std::optional<MetaParsingContext> opt_parsing_context,
+		std::optional<EntityThreadCadence> opt_cadence
+	) const
 	{
 		return EntityThreadBuilderContext
 		{
@@ -1775,11 +1825,19 @@ namespace engine
 
 			(opt_parsing_context)
 				? *opt_parsing_context
-				: parsing_context
+				: parsing_context,
+
+			(opt_cadence)
+				? *opt_cadence
+				: cadence
 		};
 	}
 
-	EntityThreadBuilderContext EntityThreadBuilder::sub_thread_context(std::optional<MetaParsingContext> opt_parsing_context) const
+	EntityThreadBuilderContext EntityThreadBuilder::sub_thread_context
+	(
+		std::optional<MetaParsingContext> opt_parsing_context,
+		std::optional<EntityThreadCadence> opt_cadence
+	) const
 	{
 		return sub_thread_context
 		(
@@ -1787,18 +1845,25 @@ namespace engine
 			(
 				descriptor,
 
-				descriptor.shared_storage.allocate<EntityThreadDescription>()
+				descriptor.shared_storage.allocate<EntityThreadDescription>(this->cadence)
 			),
 
-			opt_parsing_context
+			opt_parsing_context,
+			opt_cadence
 		);
 	}
 
-	EntityThreadBuilder EntityThreadBuilder::sub_thread(std::string_view thread_name, std::optional<MetaParsingContext> opt_parsing_context)
+	EntityThreadBuilder EntityThreadBuilder::sub_thread
+	(
+		std::string_view thread_name,
+		
+		std::optional<MetaParsingContext> opt_parsing_context,
+		std::optional<EntityThreadCadence> opt_cadence
+	)
 	{
 		return EntityThreadBuilder
 		{
-			sub_thread_context(opt_parsing_context),
+			sub_thread_context(opt_parsing_context, opt_cadence),
 			thread_name
 		};
 	}
@@ -2113,6 +2178,86 @@ namespace engine
 		);
 	}
 
+	EntityInstructionCount EntityThreadBuilder::generate_cadence_block
+	(
+		const ContentSource& content_source,
+		EntityInstructionCount content_index,
+		EntityThreadCadence cadence
+	)
+	{
+		using namespace engine::instructions;
+
+		auto& cadence_control_block = emit<CadenceControlBlock>
+		(
+			// Intended cadence for this control-block.
+			cadence,
+
+			ControlBlock { 0 }
+		);
+
+		return generate_cadence_block
+		(
+			content_source, content_index,
+			cadence,
+			cadence_control_block.included_instructions,
+			true
+		);
+	}
+
+	EntityInstructionCount EntityThreadBuilder::generate_cadence_block
+	(
+		const ContentSource& content_source,
+		EntityInstructionCount content_index,
+		EntityThreadCadence cadence,
+		instructions::ControlBlock& control_block_out,
+		bool generate_cadence_restore_instruction
+	)
+	{
+		using namespace engine::instructions;
+
+		const auto block_result = control_block
+		(
+			control_block_out,
+
+			[this, &content_source, content_index, cadence]()
+			{
+				auto scope_local_variables = scope_variable_store();
+				
+				auto cadence_builder = EntityThreadCadenceBuilder
+				{
+					EntityThreadBuilderContext
+					{
+						scope_context(),
+
+						// TODO: Look into whether we still want cadence to
+						// act as a separate variable/parsing context.
+						MetaParsingContext
+						{
+							get_type_context(),
+							&scope_local_variables
+						},
+						
+						cadence
+					}
+				};
+				
+				return cadence_builder.process(content_source, (content_index + 1));
+			}
+		);
+
+		if (generate_cadence_restore_instruction)
+		{
+			emit<CadenceControlBlock>
+			(
+				this->cadence,
+
+				ControlBlock { 0 }
+			);
+		}
+
+		return block_result;
+	}
+
 	std::optional<EntityInstructionCount> EntityThreadBuilder::process_instruction
 	(
 		const ContentSource& content_source,
@@ -2124,6 +2269,12 @@ namespace engine
 		using namespace engine::literals;
 
 		instruction_raw = util::trim(instruction_raw);
+
+		if (instruction_raw.empty() || util::is_whitespace(instruction_raw))
+		{
+			// Skip this line, it's whitespace.
+			return 1;
+		}
 
 		// TODO: Rework single-line comment implementation to account for strings.
 		// 
@@ -2634,6 +2785,143 @@ namespace engine
 				case "group"_hs:
 				case "begin_multi"_hs:
 					return generate_multi_block(content_source, content_index);
+
+				// Cadence control-block instruction.
+				case "cadence"_hs:
+				case "begin_cadence"_hs:
+				{
+					if (instruction_content.empty())
+					{
+						error("Missing cadence specification.");
+					}
+					else
+					{
+						constexpr auto cadence_enum_prefix = std::string_view { "EntityThreadCadence" };
+
+						const auto [leading_symbol, trailing_symbol, parsed_length] = util::parse_member_reference(instruction_content);
+
+						auto cadence_value = std::string_view {};
+
+						if (leading_symbol == cadence_enum_prefix)
+						{
+							cadence_value = trailing_symbol;
+						}
+						else
+						{
+							cadence_value = instruction_content;
+						}
+
+						if (!cadence_value.empty())
+						{
+							if (auto target_cadence = try_string_to_enum_value<EntityThreadCadence>(cadence_value))
+							{
+								if (auto cadence_block_count = generate_cadence_block(content_source, content_index, *target_cadence))
+								{
+									return cadence_block_count;
+								}
+							}
+						}
+
+						if (auto remote_instruction = resolve_instruction.operator()<CadenceControlBlock>(std::nullopt))
+						{
+							instruct<InstructionDescriptor>(std::move(*remote_instruction));
+
+							auto cadence_block = ControlBlock { 0 };
+
+							const auto block_result = generate_cadence_block
+							(
+								content_source, content_index,
+								
+								// NOTE: Transitive cadence is not possible with dynamic values.
+								this->cadence,
+								
+								cadence_block,
+								true
+							);
+
+							// TODO: Add block-size encoding support for dynamic cadence blocks. (`cadence_block`)
+
+							return block_result;
+						}
+						else
+						{
+							error("Failed to resolve 'cadence' value.");
+						}
+					}
+
+					break;
+				}
+
+				// Manual cadence assignment instruction.
+				// (Unscoped / no control-block)
+				case "set_cadence"_hs:
+				{
+					if (instruction_content.empty())
+					{
+						error("Missing cadence specification.");
+					}
+					else
+					{
+						constexpr auto cadence_enum_prefix = std::string_view { "EntityThreadCadence" };
+
+						const auto [leading_symbol, trailing_symbol, parsed_length] = util::parse_member_reference(instruction_content);
+
+						auto cadence_value = std::string_view {};
+
+						if (leading_symbol == cadence_enum_prefix)
+						{
+							cadence_value = trailing_symbol;
+						}
+						else
+						{
+							cadence_value = instruction_content;
+						}
+
+						if (!cadence_value.empty())
+						{
+							if (auto target_cadence = try_string_to_enum_value<EntityThreadCadence>(cadence_value))
+							{
+								// Since this is a known cadence value, change our static cadence accordingly.
+								this->cadence = *target_cadence;
+
+								return instruct<CadenceControlBlock>
+								(
+									*target_cadence,
+
+									ControlBlock { 0 }
+								);
+							}
+						}
+
+						if (auto remote_instruction = resolve_instruction.operator()<CadenceControlBlock>(std::nullopt))
+						{
+							// NOTE: Static cadence configuration cannot be updated using dynamic values.
+
+							return instruct<InstructionDescriptor>(std::move(*remote_instruction));
+						}
+						else
+						{
+							error("Failed to resolve 'cadence' value.");
+						}
+					}
+
+					break;
+				}
+
+				case "fixed"_hs:
+				case "begin_fixed"_hs:
+					return generate_cadence_block(content_source, content_index, EntityThreadCadence::Fixed);
+
+				case "realtime"_hs:
+				case "begin_realtime"_hs:
+					return generate_cadence_block(content_source, content_index, EntityThreadCadence::Realtime);
+
+				//case "on_update"_hs:
+				case "update_driven"_hs:
+				case "begin_update_driven"_hs:
+				case "frame_driven"_hs:
+				case "begin_frame_driven"_hs:
+					return generate_cadence_block(content_source, content_index, EntityThreadCadence::Update);
 
 				// NOTE: We don't currently handle the `check_linked` field for `Pause`.
 				case "pause"_hs:
@@ -3406,6 +3694,43 @@ namespace engine
 		{
 			case "end_multi"_hs:
 			case "end_group"_hs:
+				return std::nullopt;
+		}
+
+		return EntityThreadBuilder::process_directive_impl
+		(
+			content_source,
+			content_index,
+
+			thread_details,
+
+			instruction_raw,
+			directive_id,
+			directive_content
+		);
+	}
+
+	// EntityThreadCadenceBuilder:
+	std::optional<EntityInstructionCount> EntityThreadCadenceBuilder::process_directive_impl
+	(
+		const ContentSource& content_source,
+		EntityInstructionCount content_index,
+
+		const std::optional<EntityThreadInstruction>& thread_details,
+
+		std::string_view instruction_raw,
+		StringHash directive_id,
+		std::string_view directive_content
+	)
+	{
+		using namespace engine::literals;
+
+		switch (directive_id)
+		{
+			case "end_cadence"_hs:
+			case "end_fixed"_hs:
+			case "end_realtime"_hs:
+			case "end_frame_driven"_hs:
 				return std::nullopt;
 		}
 
