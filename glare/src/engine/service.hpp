@@ -56,6 +56,7 @@ namespace engine
 	struct ComponentReplaceCommand;
 	struct FunctionCommand;
 	struct ExprCommand;
+	struct SetParentCommand;
 
 	class Service
 	{
@@ -561,6 +562,7 @@ namespace engine
 			// This, in turn, means that said object is in a moved-from state after this method executes.
 			void on_component_replace(ComponentReplaceCommand& component_replace);
 
+			void on_set_parent(const SetParentCommand& parent_command);
 		protected:
 			void opaque_function_handler(const FunctionCommand& function_command);
 			void opaque_expression_handler(const ExprCommand& expr_command);

@@ -15,6 +15,7 @@
 #include "commands/component_replace_command.hpp"
 #include "commands/function_command.hpp"
 #include "commands/expr_command.hpp"
+#include "commands/set_parent_command.hpp"
 
 #include "events.hpp"
 
@@ -72,6 +73,7 @@ namespace engine
 			register_event<IndirectComponentPatchCommand, &Service::on_indirect_component_patch>(*this);
 			register_event<ComponentPatchCommand,         &Service::on_direct_component_patch>(*this);
 			register_event<ComponentReplaceCommand,       &Service::on_component_replace>(*this);
+			register_event<SetParentCommand,              &Service::on_set_parent>(*this);
 		}
 
 		if (register_evaluation_commands)
@@ -231,6 +233,11 @@ namespace engine
 		{
 			print_warn("Entity #{}: Failed to replace component type: {}", entity, type.id());
 		}
+	}
+
+	void Service::on_set_parent(const SetParentCommand& parent_command)
+	{
+		set_parent(parent_command.target, parent_command.parent);
 	}
 
 	void Service::opaque_function_handler(const FunctionCommand& function_command)
