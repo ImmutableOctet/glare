@@ -5,6 +5,7 @@
 #include <util/magic_enum.hpp>
 
 #include <string_view>
+#include <optional>
 #include <stdexcept>
 
 // TODO: Migrate macros for enum-based bitwise operators.
@@ -14,6 +15,17 @@
 namespace engine
 {
 	template <typename EnumType>
+    std::optional<EnumType> try_string_to_enum_value(std::string_view enum_short_str)
+    {
+        if (auto result = magic_enum::enum_cast<EnumType>(enum_short_str))
+        {
+            return *result;
+        }
+
+        return std::nullopt;
+    }
+
+    template <typename EnumType>
     EnumType string_to_enum_value(std::string_view enum_short_str)
     {
         auto result = magic_enum::enum_cast<EnumType>(enum_short_str);
