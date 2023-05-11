@@ -23,6 +23,7 @@
 #include <engine/resource_manager/resource_manager.hpp>
 
 #include <engine/entity/serial.hpp>
+#include <engine/entity/entity_target.hpp>
 #include <engine/entity/entity_factory.hpp>
 #include <engine/entity/entity_descriptor.hpp>
 #include <engine/entity/entity_construction_context.hpp>
@@ -44,6 +45,7 @@
 #include <util/json.hpp>
 #include <util/log.hpp>
 #include <util/string.hpp>
+#include <util/parse.hpp>
 #include <util/format.hpp>
 #include <util/algorithm.hpp>
 
@@ -152,78 +154,6 @@ namespace engine
 
 		return state.load(cfg, parent);
     }
-
-	void Scene::resolve_parent(World& world, Entity entity, Entity scene, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data)
-	{
-		auto parent_query = util::get_value<std::string>(data, "parent"); // data["parent"].get<std::string>();
-
-		auto parent = resolve_object_reference(parent_query, world, player_objects, objects);
-
-		if (parent == null)
-		{
-			parent = scene;
-		}
-
-		if (parent != null)
-		{
-			world.set_parent(entity, parent);
-		}
-	}
-
-	Entity Scene::resolve_object_reference(const std::string& query, World& world, const PlayerObjectMap& player_objects, const ObjectMap& objects)
-	{
-		static const auto re = std::regex("(object|player)?(\\@|\\#)\"?([\\w\\s\\d\\-]+)\"?"); // constexpr
-
-		if (query.empty())
-		{
-			return null;
-		}
-
-		auto results = util::get_regex_groups(query, re);
-
-		std::string target_pool = results[1];
-
-		if (target_pool == "player")
-		{
-			std::string player_name = results[3];
-			auto idx = static_cast<PlayerIndex>(std::stoul(player_name));
-
-			auto p = player_objects.find(idx);
-
-			if (p == player_objects.end())
-			{
-				return world.get_by_name(player_name);
-			}
-			else
-			{
-				return p->second;
-			}
-		}
-		else if ((target_pool.empty()) || (target_pool == "object"))
-		{
-			const auto& ref_type = results[2];
-
-			if (ref_type == "#")
-			{
-				auto idx = static_cast<ObjectIndex>(std::stoul(results[3]));
-
-				auto o = objects.find(idx);
-
-				if (o != objects.end())
-				{
-					return o->second;
-				}
-			}
-			else // "@"
-			{
-				std::string obj_name = results[3];
-
-				return world.get_by_name(obj_name);
-			}
-		}
-
-		return null;
-	}
 
 	math::TransformVectors Scene::get_transform_data(const util::json& cfg)
 	{
@@ -437,11 +367,7 @@ namespace engine
 
 		ForEach(data["players"], [&](const auto& player_cfg)
 		{
-			auto& player_idx_counter = indices.players.player_idx_counter;
-			auto& player_objects = indices.players.player_objects;
-
 			auto player_character = util::get_value<std::string>(player_cfg, "character", config.players.default_player.character);
-			auto player_parent    = scene; // null;
 
 			auto character_directory = (std::filesystem::path(config.players.character_path) / player_character);
 			auto character_path = (character_directory / util::format("{}.json", player_character));
@@ -462,7 +388,7 @@ namespace engine
 					.registry = registry,
 					.resource_manager = resource_manager,
 
-					.parent = player_parent,
+					.parent = scene,
 
 					.opt_entity_out = null,
 
@@ -471,10 +397,14 @@ namespace engine
 				}
 			);
 
+			resolve_parent(player, player_cfg, false);
+
 			//assert(player != null);
 
 			if (player == null)
 			{
+				print_warn("Failed to create player object for character: \"{}\"", player_character);
+
 				return;
 			}
 
@@ -500,8 +430,6 @@ namespace engine
 				registry.emplace_or_replace<NameComponent>(player, config.players.default_player.name);
 			}
 
-			player_objects[player_idx] = player;
-
 			apply_transform(world, player, player_cfg);
 
 			apply_state(world, player, player_cfg);
@@ -518,10 +446,6 @@ namespace engine
 		auto& resource_manager = world.get_resource_manager();
 
 		const auto& config = world.get_config();
-
-		auto& obj_idx_counter = indices.objects.obj_idx_counter;
-		auto& objects = indices.objects.objects;
-		auto& player_objects = indices.players.player_objects;
 
 		ensure_scene();
 
@@ -574,52 +498,79 @@ namespace engine
 					);
 				}
 
-				if (entity != null)
+				if (entity == null)
 				{
-					process_data_entries
-					(
-						registry, entity, obj_cfg,
-						resource_manager.get_parsing_context(),
-						&world, system_manager,
-						"make_active"
-					);
+					print_warn("Failed to create object of type: \"{}\"", obj_type);
 
-					apply_color(world, entity, obj_cfg);
-					apply_transform(world, entity, obj_cfg);
-
-					// TODO: Ensure `tform` doesn't get invalidated by call to `resolve_parent`.
-					// (May actually make sense to call `get_matrix` before `resolve_parent` anyway)
-					resolve_parent(world, entity, scene, root_path, player_objects, objects, obj_cfg);
-
-					if (auto player_index = util::get_optional<PlayerIndex>(obj_cfg, "player"))
-					{
-						registry.emplace_or_replace<PlayerTargetComponent>(entity, *player_index);
-					}
-
-					if (auto make_active = util::get_value<bool>(obj_cfg, "make_active", false))
-					{
-						if (const auto* camera = registry.try_get<CameraComponent>(entity))
-						{
-							world.set_camera(entity);
-						}
-						else
-						{
-							print_warn("Failed to set active camera to Entity #{}.", entity);
-						}
-					}
-
-					apply_state(world, entity, obj_cfg);
-
-					auto obj_idx = util::get_value<ObjectIndex>(obj_cfg, "index", obj_idx_counter);
-
-					objects[obj_idx] = entity;
-
-					obj_idx_counter = std::max((obj_idx_counter + 1), (obj_idx + 1));
-
-					print("\"{}\" object created.", obj_type);
+					return;
 				}
+
+				// TODO: Ensure `tform` doesn't get invalidated by call to `resolve_parent`.
+				// (May actually make sense to call `get_matrix` before `resolve_parent` anyway)
+				resolve_parent(entity, obj_cfg);
+
+				process_data_entries
+				(
+					registry, entity, obj_cfg,
+					resource_manager.get_parsing_context(),
+					&world, system_manager,
+					"make_active"
+				);
+
+				apply_color(world, entity, obj_cfg);
+				apply_transform(world, entity, obj_cfg);
+
+				if (auto player_index = util::get_optional<PlayerIndex>(obj_cfg, "player"))
+				{
+					registry.emplace_or_replace<PlayerTargetComponent>(entity, *player_index);
+				}
+
+				if (auto make_active = util::get_value<bool>(obj_cfg, "make_active", false))
+				{
+					if (const auto* camera = registry.try_get<CameraComponent>(entity))
+					{
+						world.set_camera(entity);
+					}
+					else
+					{
+						print_warn("Failed to set active camera to Entity #{}.", entity);
+					}
+				}
+
+				apply_state(world, entity, obj_cfg);
+
+				print("\"{}\" object created.", obj_type);
 			}
 		);
+	}
+
+	Entity Scene::Loader::entity_reference(std::string_view query) // const
+	{
+		if (auto target = EntityTarget::parse(query))
+		{
+			return target->get(world.get_registry(), scene);
+		}
+
+		return null;
+	}
+
+	Entity Scene::Loader::resolve_parent(Entity entity, const util::json& data, bool fallback_to_scene)
+	{
+		const auto parent_query = util::get_value<std::string>(data, "parent"); // data["parent"].get<std::string>();
+
+		auto parent = entity_reference(parent_query);
+
+		if ((parent == null) && (fallback_to_scene))
+		{
+			parent = scene;
+		}
+
+		if (parent != null)
+		{
+			world.set_parent(entity, parent);
+		}
+
+		return parent;
 	}
 
 	ResourceManager& Scene::Loader::get_resource_manager() const

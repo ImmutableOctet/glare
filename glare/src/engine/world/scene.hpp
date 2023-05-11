@@ -10,10 +10,10 @@
 #include <string>
 #include <tuple>
 #include <utility>
+#include <string_view>
 
 //#define _ENFORCE_MATCHING_ALLOCATORS 0
 
-#include <unordered_map>
 #include <functional>
 
 namespace filesystem = std::filesystem;
@@ -36,11 +36,6 @@ namespace engine
 	// e.g. from disk, network, etc.
 	class Scene
 	{
-		public:
-			using ObjectIndex = std::uint16_t; // std::string; // PlayerIndex;
-
-			using ObjectMap       = std::unordered_map<ObjectIndex, Entity>;
-			using PlayerObjectMap = std::unordered_map<PlayerIndex, Entity>;
 		private:
 			template <typename ...IgnoredKeys>
 			static void process_data_entries
@@ -50,11 +45,8 @@ namespace engine
 				Service* opt_service, SystemManagerInterface* opt_system_manager,
 				IgnoredKeys&&... ignored_keys
 			);
+
 		protected:
-			static void resolve_parent(World& world, Entity entity, Entity scene, const filesystem::path& root_path, const PlayerObjectMap& player_objects, const ObjectMap& objects, const util::json& data);
-
-			static Entity resolve_object_reference(const std::string& query, World& world, const PlayerObjectMap& player_objects, const ObjectMap& objects); // std::tuple<std::string, std::string>
-
 			static math::TransformVectors get_transform_data(const util::json& cfg);
 
 			static void apply_transform(World& world, Entity entity, const util::json& cfg);
@@ -78,8 +70,6 @@ namespace engine
 			// e.g. the `world` object we're loading into, the `scene` entity acting as parent to the scene loaded, etc.
 			class Loader
 			{
-				protected:
-					static Entity make_scene_pivot(World& world, Entity parent=null);
 				public:
 					// Loader configuration; e.g. should we load objects, players, etc.
 					struct Config
@@ -90,6 +80,9 @@ namespace engine
 
 						bool apply_transform = true;
 					};
+
+				protected:
+					static Entity make_scene_pivot(World& world, Entity parent=null);
 
 					// Some members of this type are reference/const-reference for
 					// optimization purposes, but may be changed to value-types later.
@@ -107,23 +100,13 @@ namespace engine
 
 					// Optional non-owning pointer to system-manager.
 					SystemManagerInterface* system_manager = nullptr;
-				protected:
-					struct
-					{
-						struct
-						{
-							PlayerObjectMap player_objects;
-							PlayerIndex     player_idx_counter = 1;
-						} players;
 
-						struct
-						{
-							ObjectMap   objects;
-							ObjectIndex obj_idx_counter = 1; // std::uint16_t
-						} objects;
-					} indices;
-
+					PlayerIndex player_idx_counter = PRIMARY_LOCAL_PLAYER;
+					
 					bool ensure_scene(Entity parent=null);
+
+					Entity resolve_parent(Entity entity, const util::json& data, bool fallback_to_scene=true);
+
 				public:
 					Loader
 					(
@@ -141,6 +124,8 @@ namespace engine
 					void load_geometry();
 					void load_players();
 					void load_objects();
+
+					Entity entity_reference(std::string_view query); // const
 
 					ResourceManager& get_resource_manager() const;
 
