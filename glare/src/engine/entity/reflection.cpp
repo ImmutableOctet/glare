@@ -13,6 +13,7 @@
 #include "event_trigger_condition.hpp"
 #include "state_storage_manager.hpp"
 #include "entity_thread_range.hpp"
+#include "entity_thread_cadence.hpp"
 
 #include "components/instance_component.hpp"
 #include "components/state_component.hpp"
@@ -645,6 +646,16 @@ namespace engine
 	GENERATE_SINGLE_FIELD_TYPE_REFLECTION(instructions::VariableDeclaration, variable_details);
 
 	template <>
+	void reflect<instructions::CadenceControlBlock>()
+	{
+		engine_meta_type<instructions::CadenceControlBlock>()
+			.data<&instructions::CadenceControlBlock::cadence>("cadence"_hs)
+			.data<&instructions::CadenceControlBlock::included_instructions>("included_instructions"_hs)
+			//.data<&instructions::CadenceControlBlock::prev_cadence>("prev_cadence"_hs)
+		;
+	}
+
+	template <>
 	void reflect<instructions::VariableAssignment>()
 	{
 		engine_meta_type<instructions::VariableAssignment>()
@@ -706,9 +717,9 @@ namespace engine
 		reflect<EntityDescriptor>();
 		reflect<EntityThreadTarget>();
 		reflect<EventTriggerCondition>();
-
 		reflect<StateStorageManager>();
 		reflect<EntityStateInfo>();
+		reflect<EntityThreadCadence>();
 
 		// Components:
 		reflect<InstanceComponent>();
@@ -768,6 +779,7 @@ namespace engine
 		reflect<instructions::Skip>();
 		reflect<instructions::Rewind>();
 		reflect<instructions::MultiControlBlock>();
+		reflect<instructions::CadenceControlBlock>();
 		reflect<instructions::IfControlBlock>();
 		reflect<instructions::FunctionCall>();
 		reflect<instructions::AdvancedMetaExpression>();
