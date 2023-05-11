@@ -296,12 +296,12 @@ namespace engine
 
 		const auto& to_state_id = state_id;
 
-		const auto to_state = descriptor->get_state(to_state_id); // auto*
-
-		if (!to_state)
+		if (!to_state_id)
 		{
 			return false;
 		}
+
+		const auto to_state = descriptor->get_state(to_state_id); // auto*
 
 		const auto to_state_index = descriptor->get_state_index(to_state_id);
 
@@ -414,71 +414,12 @@ namespace engine
 
 	void EntitySystem::on_update(const OnServiceUpdate& data)
 	{
-		// ...
+		progress_threads<EntityThreadCadence::Update, EntityThreadCadence::Multi>();
 	}
 
 	void EntitySystem::on_fixed_update(const OnServiceFixedUpdate& data)
 	{
-		auto& registry = get_registry();
-
-		registry.view<InstanceComponent, EntityThreadComponent>().each
-		(
-			[this, &registry](auto entity, const InstanceComponent& instance_comp, EntityThreadComponent& thread_comp)
-			{
-				const auto& descriptor = instance_comp.get_descriptor();
-
-				bool has_updated_thread = false;
-
-				for (auto& thread_entry : thread_comp.threads)
-				{
-					if (thread_entry.is_suspended()) // || thread_entry.is_complete (implied)
-					{
-						continue;
-					}
-
-					const auto& thread_source = descriptor.get_thread(thread_entry.thread_index);
-
-					thread_entry.next_instruction = step_thread
-					(
-						registry,
-						entity,
-						
-						descriptor,
-						thread_source,
-
-						thread_comp,
-						thread_entry
-					);
-
-					if (thread_entry.is_complete)
-					{
-						service->event<OnThreadComplete> // queue_event
-						(
-							entity,
-
-							thread_entry.thread_index,
-							thread_source.thread_id,
-
-							static_cast<EntityThreadIndex>
-							(
-								std::distance(thread_comp.threads.begin(), &thread_entry)
-							),
-
-							thread_entry.next_instruction
-						);
-					}
-
-					has_updated_thread = true;
-				}
-
-				if (has_updated_thread)
-				{
-					thread_comp.erase_completed_threads();
-
-					registry.patch<EntityThreadComponent>(entity); // [](auto&){}
-				}
-			}
-		);
+		progress_threads<EntityThreadCadence::FixedUpdate>();
 	}
 
 	// TODO: Review event-handling issue.
@@ -686,9 +627,31 @@ namespace engine
 				}
 				*/
 
-				const auto result = range_callback(thread_command, thread_component, threads);
+				const EntityDescriptor* descriptor = nullptr;
 
-				if (static_cast<bool>(result))
+				bool result = false;
+
+				if constexpr (std::is_invocable_v<RangeCallback, const ThreadCommandType&, EntityThreadComponent&, const EntityDescriptor&, const EntityThreadRange&>)
+				{
+					descriptor = get_descriptor(entity);
+
+					assert(descriptor);
+
+					if (!descriptor)
+					{
+						print_warn("Unable to resolve descriptor for Entity #{}.", entity);
+
+						return;
+					}
+
+					result = static_cast<bool>(range_callback(thread_command, thread_component, *descriptor, threads));
+				}
+				else
+				{
+					result = static_cast<bool>(range_callback(thread_command, thread_component, threads));
+				}
+
+				if (result)
 				{
 					/*
 					if (!dbg_name_past_tense.empty())
@@ -714,20 +677,23 @@ namespace engine
 
 				if constexpr (!std::is_same_v<EventType, void>)
 				{
+					if (!descriptor)
+					{
+						descriptor = get_descriptor(entity);
+
+						//assert(descriptor);
+
+						if (!descriptor)
+						{
+							print_warn("Unable to resolve descriptor for Entity #{}.", entity);
+						}
+					}
+
 					bool check_linked = true; // false;
 
 					if constexpr (has_field_check_linked_v<ThreadCommandType>)
 					{
 						check_linked = thread_command.check_linked;
-					}
-
-					const auto* descriptor = get_descriptor(entity);
-
-					assert(descriptor);
-
-					if (!descriptor)
-					{
-						print_warn("Unable to resolve descriptor for Entity #{}.", entity);
 					}
 
 					thread_component.enumerate_threads
@@ -858,12 +824,12 @@ namespace engine
 		(
 			thread_command,
 			
-			[](const EntityThreadSpawnCommand& thread_command, EntityThreadComponent& thread_component, const EntityThreadRange& threads)
+			[](const EntityThreadSpawnCommand& thread_command, EntityThreadComponent& thread_component, const EntityDescriptor& descriptor, const EntityThreadRange& threads) -> bool
 			{
-				return thread_component.start_threads(threads, thread_command.state_index, thread_command.restart_existing);
+				return thread_component.start_threads(descriptor, threads, thread_command.state_index, thread_command.restart_existing);
 			},
 
-			[](const EntityThreadSpawnCommand& thread_command, EntityThreadComponent& thread_component, const EntityDescriptor& descriptor, EntityThreadID thread_id)
+			[](const EntityThreadSpawnCommand& thread_command, EntityThreadComponent& thread_component, const EntityDescriptor& descriptor, EntityThreadID thread_id) -> bool
 			{
 				return thread_component.start_thread
 				(
@@ -872,6 +838,8 @@ namespace engine
 					true, true,
 					thread_command.restart_existing
 				);
+
+				return false;
 			},
 
 			"start", "started"
@@ -1271,6 +1239,151 @@ namespace engine
 		return false;
 	}
 
+	template <EntityThreadCadence... target_cadence>
+	std::size_t EntitySystem::progress_threads() // EntityThreadCount
+	{
+		using namespace engine::instructions;
+
+		auto& registry = get_registry();
+
+		std::size_t threads_updated = 0; // EntityThreadCount
+
+		registry.view<InstanceComponent, EntityThreadComponent>().each
+		(
+			[&](Entity entity, const InstanceComponent& instance_comp, EntityThreadComponent& thread_comp)
+			{
+				const auto& descriptor = instance_comp.get_descriptor();
+
+				bool has_updated_thread = false;
+
+				for (auto& thread_entry : thread_comp.threads)
+				{
+					if (((thread_entry.cadence == target_cadence) || ...))
+					{
+						if (thread_entry.is_suspended()) // || thread_entry.is_complete (implied)
+						{
+							continue;
+						}
+
+						const auto& thread_source = descriptor.get_thread(thread_entry.thread_index);
+
+						auto step = [&]()
+						{
+							const auto updated_instruction_index = step_thread
+							(
+								registry,
+								entity,
+						
+								descriptor,
+								thread_source,
+
+								thread_comp,
+								thread_entry
+							);
+
+							thread_entry.next_instruction = updated_instruction_index;
+
+							return updated_instruction_index;
+						};
+
+						const auto initial_thread_cadence = thread_entry.cadence;
+
+						switch (initial_thread_cadence)
+						{
+							case EntityThreadCadence::Multi:
+								while (true)
+								{
+									const auto initial_instruction_index = thread_entry.next_instruction;
+									const auto updated_instruction_index = step();
+
+									if (updated_instruction_index == initial_instruction_index)
+									{
+										break;
+									}
+
+									if (thread_entry.is_suspended()) // is_complete
+									{
+										break;
+									}
+
+									bool is_implicit_yield_instruction = false;
+
+									const auto& current_instruction = thread_source.get_instruction(initial_instruction_index);
+
+									// After handling a rewind instruction, pause execution until the next `progress_threads` call.
+									// (Ensures continuous loops don't stall the application)
+									switch (current_instruction.type_index())
+									{
+										case util::variant_index<EntityInstruction::InstructionType, Rewind>():
+										{
+											is_implicit_yield_instruction = true;
+
+											break;
+										}
+
+										case util::variant_index<EntityInstruction::InstructionType, CadenceControlBlock>():
+										{
+											const auto& cadence_control_block = std::get<CadenceControlBlock>(current_instruction.value);
+
+											if (cadence_control_block.cadence != initial_thread_cadence)
+											{
+												is_implicit_yield_instruction = true;
+											}
+
+											break;
+										}
+									}
+
+									if (is_implicit_yield_instruction)
+									{
+										break;
+									}
+								}
+
+								break;
+
+							default:
+								step();
+
+								break;
+						}
+
+						threads_updated++;
+
+						if (thread_entry.is_complete)
+						{
+							service->event<OnThreadComplete> // queue_event
+							(
+								entity,
+
+								thread_entry.thread_index,
+								thread_source.thread_id,
+
+								static_cast<EntityThreadIndex>
+								(
+									std::distance(thread_comp.threads.begin(), &thread_entry)
+								),
+
+								thread_entry.next_instruction
+							);
+						}
+
+						has_updated_thread = true;
+					}
+				}
+
+				if (has_updated_thread)
+				{
+					thread_comp.erase_completed_threads();
+
+					registry.patch<EntityThreadComponent>(entity); // [](auto&){}
+				}
+			}
+		);
+
+		return threads_updated;
+	}
+
 	EntityInstructionCount EntitySystem::step_thread
 	(
 		Registry& registry,
@@ -1292,8 +1405,11 @@ namespace engine
 			// We've stepped beyond the scope of this thread; mark this thread as complete.
 			thread.is_complete = true;
 
-			// Always point to the last valid instruction when complete.
-			thread.next_instruction = static_cast<EntityInstructionIndex>(source.instructions.size()-1);
+			if (!source.instructions.empty())
+			{
+				// Always point to the last valid instruction when complete.
+				thread.next_instruction = static_cast<EntityInstructionIndex>(source.instructions.size()-1);
+			}
 
 			// Return the last valid instruction.
 			return thread.next_instruction;
@@ -1745,22 +1861,57 @@ namespace engine
 
 					[&](const MultiControlBlock& control_block)
 					{
-						// Manually progress by one instruction so that we
-						// don't loop indefinitely on this multi-instruction.
-						thread.next_instruction++;
-				
-						// NOTE: This target index accounts for this instruction as well.
-						auto target_instruction_index = (thread.next_instruction + control_block.included_instructions.size);
-
-						// Continue executing instructions until we reach the end of the multi-instruction block.
-						while ((thread.next_instruction < target_instruction_index) && !thread.is_suspended())
+						if (control_block.included_instructions.size > 0)
 						{
-							// NOTE: Recursion.
-							step_thread(registry, entity, descriptor, source, thread_comp, thread);
-						}
+							// Manually progress by one instruction so that we
+							// don't loop indefinitely on this multi-instruction.
+							thread.next_instruction++;
+				
+							// NOTE: This target index accounts for this instruction as well.
+							auto target_instruction_index = (thread.next_instruction + control_block.included_instructions.size);
 
-						// Stride already handled via multi-instruction loop.
-						step_stride = 0;
+							// Continue executing instructions until we reach the end of the multi-instruction block.
+							while ((thread.next_instruction < target_instruction_index) && !thread.is_suspended())
+							{
+								// NOTE: Recursion.
+								step_thread(registry, entity, descriptor, source, thread_comp, thread);
+							}
+
+							// Stride already handled via multi-instruction loop.
+							step_stride = 0;
+						}
+					},
+
+					[&](const CadenceControlBlock& control_block)
+					{
+						switch (control_block.cadence)
+						{
+							case EntityThreadCadence::Multi:
+								if (control_block.included_instructions.size > 0)
+								{
+									exec_impl_recursive
+									(
+										EntityInstruction::InstructionType
+										{
+											MultiControlBlock
+											{
+												control_block.included_instructions
+											}
+										},
+
+										exec_impl_recursive
+									);
+								}
+
+								thread.cadence = EntityThreadCadence::Multi; // control_block.cadence;
+
+								break;
+
+							default:
+								thread.cadence = control_block.cadence;
+
+								break;
+						}
 					},
 
 					[&registry, &service, &system_manager, entity, &descriptor, &thread, &get_variable_context](const FunctionCall& function_call)
