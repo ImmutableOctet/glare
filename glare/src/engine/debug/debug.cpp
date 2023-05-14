@@ -17,6 +17,8 @@
 
 #include <engine/input/events.hpp>
 
+#include <engine/meta/hash.hpp>
+
 #include <app/input/events.hpp>
 
 #include <game/game.hpp>
@@ -129,7 +131,7 @@ namespace engine
 		registry.on_construct<SkeletalComponent>().connect<&DebugListener::on_skeleton>(*this);
 
 		// Standard event types:
-		enable<OnStageLoaded>();
+		enable<OnSceneLoaded>();
 		enable<OnEntityCreated>();
 		enable<OnParentChanged>();
 
@@ -151,9 +153,14 @@ namespace engine
 		//enable<app::input::OnGamepadAnalogInput>();
 
 		//enable<OnButtonDown>();
-		enable<OnButtonReleased>();
-		enable<OnButtonPressed>();
+		
+		//enable<OnButtonReleased>();
+		//enable<OnButtonPressed>();
+		
 		//enable<OnAnalogInput>();
+
+		//enable<app::input::OnMouseMove>();
+		//enable<app::input::OnMousePosition>();
 
 		enable<PrintCommand>();
 
@@ -162,6 +169,7 @@ namespace engine
 		enable<OnThreadTerminated>();
 		//enable<OnThreadPaused>();
 		//enable<OnThreadResumed>();
+		//enable<OnThreadVariableUpdate>();
 	}
 
 	void DebugListener::on_skeleton(Registry& registry, Entity entity)
@@ -179,19 +187,18 @@ namespace engine
 		return world.label(entity);
 	}
 
-	void DebugListener::operator()(const OnStageLoaded& stage_info)
+	void DebugListener::operator()(const OnSceneLoaded& stage_info)
 	{
-		assert(stage_info.stage != null);
+		assert(stage_info.scene != null);
 
 		if (stage_info.path)
 		{
-			print("Stage \"{}\" loaded successfully.", stage_info.path->string());
+			print("Scene \"{}\" loaded successfully.", stage_info.path->string());
 			//util::log::console->info("Stage \"{}\" loaded successfully.", stage_info.path->string());
 		}
 
-		auto stage = stage_info.stage;
-
-		print_children(world, stage);
+		//auto scene = stage_info.scene;
+		//print_children(world, scene);
 	}
 
 	void DebugListener::operator()(const OnEntityCreated& entity_info)
@@ -304,6 +311,16 @@ namespace engine
 		print("Controller #{} - Analog Input [{}]: {} ({})", data.device_index, static_cast<unsigned int>(data.analog), data.value, math::degrees(data.angle()));
 	}
 
+	void DebugListener::operator()(const app::input::OnMouseMove& data)
+	{
+		print("Mouse moved: {}x{}", data.x, data.y);
+	}
+
+	void DebugListener::operator()(const app::input::OnMousePosition& data)
+	{
+		print("Mouse position changed: {}x{}", data.x, data.y);
+	}
+
 	void DebugListener::operator()(const OnButtonDown& data)
 	{
 		const auto& player_id = data.state_index;
@@ -335,7 +352,10 @@ namespace engine
 
 	void DebugListener::operator()(const PrintCommand& data)
 	{
-		print(data.message);
+		if (!data.message.empty())
+		{
+			print(data.message);
+		}
 	}
 
 	void DebugListener::operator()(const OnThreadSpawn& thread_details)
@@ -396,5 +416,10 @@ namespace engine
 		{
 			print("Entity #{}: Thread #{} Execution resumed", thread_details.entity, thread_details.thread_index);
 		}
+	}
+
+	void DebugListener::operator()(const OnThreadVariableUpdate& thread_details)
+	{
+		print("Entity #{}: Thread #{} Variable updated (ID: #{})", thread_details.entity, thread_details.thread_index, thread_details.resolved_variable_name);
 	}
 }
