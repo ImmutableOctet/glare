@@ -4,6 +4,7 @@
 #include <tuple>
 
 #include "types.hpp"
+#include "window_flags.hpp"
 
 // SDL:
 struct SDL_Window;
