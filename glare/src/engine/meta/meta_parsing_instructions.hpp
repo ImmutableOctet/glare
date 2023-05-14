@@ -43,6 +43,10 @@ namespace engine
 		// can be encoded into the expression.
 		bool allow_member_references          : 1 = true; // false;
 
+		// Controls whether static members found in 'global namespace' types
+		// may be referenced without explicitly specifying the type.
+		bool allow_global_member_references : 1 = true;
+
 		// Controls whether entity indirection statements
 		// (targets) can be encoded into the expression.
 		bool allow_entity_indirection         : 1 = false;
@@ -88,6 +92,10 @@ namespace engine
 		// Controls whether opaque function references can be encoded.
 		// (i.e. when the type is not known ahead-of-time, but the function is)
 		bool allow_opaque_function_references : 1 = true;
+
+		// Controls whether static functions found in 'global namespace' types
+		// may be referenced without explicitly specifying the type.
+		bool allow_global_function_references : 1 = true;
 
 		// Controls whether value operations (Use of operators; `+`, `-`, etc.)
 		// can be performed by an expression during its evaluation step.
