@@ -20,6 +20,7 @@ namespace engine
 		public:
 			friend World;
 			friend EntityFactory;
+
 		protected:
 			std::uint32_t child_count = 0;
 
@@ -29,6 +30,7 @@ namespace engine
 			Entity prev = null;
 			Entity next = null;
 
+		public:
 			// This returns the previous parent entity, if it existed before a new assignment took place.
 			static Entity set_parent(Registry& registry, Entity self, Entity parent, bool fail_on_existing_parent=false);
 			//Entity set_parent(Registry& registry, Entity self, Entity parent);
@@ -36,7 +38,7 @@ namespace engine
 			// If `child_relationship` is not specified, a lookup will be performed on `child`.
 			Entity add_child(Registry& registry, Entity self, Entity child, RelationshipComponent* child_relationship = nullptr);
 			Entity remove_child(Registry& registry, Entity child, Entity self = null, bool remove_in_registry = false);
-		public:
+
 			// Internal use only.
 			// 
 			// TODO: Review why this isn't currently protected or private.
@@ -69,7 +71,7 @@ namespace engine
 				typename exit_fn,
 				typename get_continuation_fn
 			>
-			inline Entity enumerate_children(Registry& registry, enum_fn fn, bool recursive, exit_fn on_exit, get_continuation_fn get_continuation, const response_type* parent_response=nullptr) const // enter_fn on_enter
+			inline Entity enumerate_children(Registry& registry, enum_fn&& fn, bool recursive, exit_fn on_exit, get_continuation_fn get_continuation, const response_type* parent_response=nullptr) const // enter_fn on_enter
 			{
 				auto child = first;
 
@@ -122,18 +124,24 @@ namespace engine
 			// The `fn` callable's signature must be:
 			// `bool fn(Entity child, [const] RelationshipComponent& child_relationship, Entity next_child)` - or similar.
 			template <typename enum_fn, typename exit_fn, typename response_type=bool> // typename enter_fn
-			inline Entity enumerate_children(Registry& registry, enum_fn fn, bool recursive, exit_fn on_exit) const
+			inline Entity enumerate_children(Registry& registry, enum_fn&& fn, bool recursive, exit_fn on_exit) const
 			{
 				return enumerate_children<response_type>
 				(
 					registry,
+					
 					[&fn](auto child, auto& relationship, auto next_child, auto* parent_response)
 					{
 						return fn(child, relationship, next_child);
 					},
+					
 					recursive,
 					on_exit,
-					[](auto continue_recurse) { return static_cast<bool>(continue_recurse); }
+
+					[](auto continue_recurse)
+					{
+						return static_cast<bool>(continue_recurse);
+					}
 				);
 			}
 
@@ -141,15 +149,15 @@ namespace engine
 			// The `fn` callable's signature must be:
 			// `bool fn(Entity child, [const] RelationshipComponent& child_relationship, Entity next_child)` - or similar.
 			template <typename enum_fn, typename response_type=bool>
-			inline Entity enumerate_children(Registry& registry, enum_fn fn, bool recursive=false) const
+			inline Entity enumerate_children(Registry& registry, enum_fn&& fn, bool recursive=false) const
 			{
 				return enumerate_children
 				(
 					registry,
-					fn,
+					std::forward<enum_fn>(fn),
 					recursive,
-					[](auto child, auto& relationship, auto next_child, auto response){}
-				); // []{}
+					[](auto child, auto& relationship, auto next_child, auto response) {}
+				);
 			}
 
 			// Enumerates children and adds them to `out` via `push_back`.
@@ -189,13 +197,14 @@ namespace engine
 			// If enumeration is short-circuited, the entity returned is the last entity sent to `fn`.
 			// If enumeration completes, the returned entity will be `null`.
 			template <typename enum_fn>
-			inline Entity enumerate_child_entities(Registry& registry, enum_fn fn) const
+			inline Entity enumerate_child_entities(Registry& registry, enum_fn&& fn) const
 			{
 				auto child = first;
 
 				while (child != null)
 				{
 					auto& relationship = registry.get<RelationshipComponent>(child); // *this;
+
 					auto next_child = relationship.next;
 
 					if (child == next_child)
