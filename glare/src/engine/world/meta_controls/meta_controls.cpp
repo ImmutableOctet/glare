@@ -327,21 +327,27 @@ namespace engine
 
 	void animation_control(World& world, Entity entity)
 	{
-		display::named_window(world, entity, [&world](Entity entity)
+		auto& registry = world.get_registry();
+
+		display::named_window(world, entity, [&world, &registry](Entity entity)
 		{
-			auto& registry = world.get_registry();
+			auto* animator = registry.try_get<AnimationComponent>(entity);
+
+			if (!animator)
+			{
+				return;
+			}
+
 			const auto& rel = registry.get<RelationshipComponent>(entity);
 
 			ImGui::FormatText("Number of Children: {}, {} locally", rel.total_children(registry), rel.children());
 
 			ImGui::Separator();
 
-			auto& animator = registry.get<AnimationComponent>(entity);
+			display::animator(*animator);
 
-			display::animator(animator);
-
-			const Animation* cur_anim = animator.get_current_animation();
-			const Animation* prev_anim = animator.get_prev_animation();
+			const Animation* cur_anim = animator->get_current_animation();
+			const Animation* prev_anim = animator->get_prev_animation();
 
 			if (cur_anim)
 				display::animation(*cur_anim, "Current Animation");
