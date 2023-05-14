@@ -4,6 +4,8 @@
 
 #include <math/math.hpp>
 
+#include <graphics/viewport.hpp>
+
 namespace engine
 {
 	struct CameraComponent
@@ -58,7 +60,7 @@ namespace engine
 			dynamic_aspect_ratio(dynamic_aspect_ratio)
 		{}
 
-		inline auto constexpr update_aspect_ratio(int width, int height)
+		inline constexpr auto update_aspect_ratio(int width, int height)
 		{
 			auto ratio = calculate_aspect_ratio(width, height);
 
@@ -66,7 +68,37 @@ namespace engine
 
 			return ratio;
 		}
+
+		inline math::Matrix get_orthographic_projection(const graphics::Viewport& viewport) const
+		{
+			const auto width = static_cast<float>(viewport.get_width());
+			const auto height = static_cast<float>(viewport.get_height());
+
+			const auto hw = (width / 2.0f);
+			const auto hh = (height / 2.0f);
+
+			//return glm::ortho(-hw, hw, hh, -hh, near_plane, far_plane);
+			return glm::ortho(-hw, hw, -hh, hh, near_plane, far_plane);
+		}
+
+		inline math::Matrix get_perspective_projection() const
+		{
+			return glm::perspective(fov, aspect_ratio, near_plane, far_plane);
+		}
 		
+		inline math::Matrix get_projection(const graphics::Viewport& viewport) const
+		{
+			switch (projection_mode)
+			{
+				case CameraProjection::Orthographic:
+				{
+					return get_orthographic_projection(viewport);
+				}
+			}
+
+			return get_perspective_projection();
+		}
+
 		inline constexpr float get_vertical_fov() const { return glm::degrees(fov); }
 		inline constexpr void set_vertical_fov(float v_fov_deg) { fov = glm::radians(v_fov_deg); }
 
