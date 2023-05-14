@@ -13,19 +13,10 @@
 namespace app
 {
 	Application::Application(UpdateRate update_rate) :
-		//delta_time(update_rate),
-		fixed_update_rate(update_rate)
+		update_rate(update_rate),
+		fixed_update_interval(static_cast<decltype(fixed_update_interval)>(1000 / update_rate))
 	{
 		assert(glare::lib::init_sdl());
-
-		*this << Timer::make_continuous(fixed_update_duration(), milliseconds(), [this](Timer& timer, Duration time_elapsed)
-		{
-			auto time = milliseconds();
-
-			fixed_update(time);
-
-			return fixed_update_duration();
-		});
 	}
 
 	bool Application::start()
@@ -71,16 +62,15 @@ namespace app
 				break; // return;
 			}
 
-			auto time = milliseconds();
+			const auto frame_time = milliseconds();
 
-			// Update timed events.
-			*this << time;
+			update(frame_time); update_counter++;
 
-			update(time); update_counter++;
+			handle_fixed_update(frame_time);
 
-			begin_render();
-			render(); render_counter++;
-			end_render();
+			begin_render(frame_time);
+			render(frame_time); render_counter++;
+			end_render(frame_time);
 		}
 	}
 
@@ -159,10 +149,34 @@ namespace app
 		std::cout << "Done.\n";
 	}
 
+	void Application::handle_fixed_update(Milliseconds frame_time)
+	{
+		// Execute the fixed update routine as many times
+		// as needed to meet the intended interval.
+		while (true)
+		{
+			const auto fixed_update_elapsed = (frame_time - fixed_update_timer);
+
+			if (fixed_update_elapsed < fixed_update_interval)
+			{
+				break;
+			}
+
+			fixed_update(frame_time);
+			fixed_update_counter++;
+
+			//fixed_update_timer = frame_time;
+			fixed_update_timer += fixed_update_interval;
+		}
+	}
+
 	// Empty implementations:
-	void Application::begin_render() {}
-	void Application::end_render() {}
+	void Application::begin_render(Milliseconds time) {}
+	void Application::render(Milliseconds time) {}
+	void Application::end_render(Milliseconds time) {}
+	
 	entt::dispatcher* Application::get_event_handler() { return nullptr; }
+
 	void Application::on_keydown(const keyboard_event_t& event) {}
 	void Application::on_keyup(const keyboard_event_t& event) {}
 	void Application::on_window_resize(Window& window, int width, int height) {}
