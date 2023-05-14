@@ -370,6 +370,34 @@ TEST_CASE("engine::meta_any_from_string", "[engine:meta]")
 	engine::reflect<engine::ReflectionTest>();
 	engine::reflect<engine::TestSystem>();
 	
+	SECTION("Call global function")
+	{
+		auto type_resolution_context = engine::MetaTypeResolutionContext::generate();
+
+		auto math_expr = engine::meta_any_from_string
+		(
+			std::string_view("degrees(Pi()):int"), // Pi
+			{
+				.context = { &type_resolution_context },
+
+				.allow_function_call_semantics = true,
+				.allow_global_function_references = true
+			}
+		);
+
+		REQUIRE(math_expr);
+
+		auto result = engine::try_get_underlying_value(math_expr);
+
+		REQUIRE(result);
+
+		auto as_int = result.try_cast<std::int32_t>();
+
+		REQUIRE(as_int);
+
+		REQUIRE((*as_int) == 180);
+	}
+
 	SECTION("Call function with member access syntax")
 	{
 		auto function_expr = engine::meta_any_from_string
