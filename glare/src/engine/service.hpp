@@ -17,6 +17,8 @@
 #include "entity/entity_variables.hpp"
 #include "meta/types.hpp"
 
+#include <app/types.hpp>
+
 #include <util/small_vector.hpp>
 
 //#include <entt/signal/fwd.hpp>
@@ -388,8 +390,8 @@ namespace engine
 				deferred_operations.emplace_back(callback);
 			}
 
-			void update(float delta=1.0f);
-			void fixed_update(float delta=1.0f);
+			void update(app::Milliseconds time, float delta);
+			void fixed_update(app::Milliseconds time, float delta=1.0f);
 
 			void render(app::Graphics& gfx);
 

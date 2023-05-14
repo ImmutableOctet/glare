@@ -355,7 +355,7 @@ namespace engine
 
 	// TODO: Implement thread-safe locking/synchronization event-handler interface.
 	// TODO: Determine if some (or all) events should be handled in the fixed update function, rather than the continuous function.
-	void Service::update(float delta)
+	void Service::update(app::Milliseconds time, float delta)
 	{
 		// Handle standard events:
 		use_forwarding_events();
@@ -369,17 +369,17 @@ namespace engine
 		forwarding_event_handler.update();
 
 		// Trigger the standard update event for this service.
-		this->event<OnServiceUpdate>(this, delta);
+		this->event<OnServiceUpdate>(this, time, delta);
 
 		service_event_handler.update();
 
 		handle_deferred_operations();
 	}
 
-	void Service::fixed_update(float delta)
+	void Service::fixed_update(app::Milliseconds time, float delta)
 	{
 		// Trigger the fixed update event for this service.
-		this->event<OnServiceFixedUpdate>(this, delta);
+		this->event<OnServiceFixedUpdate>(this, time, delta);
 	}
 
 	void Service::handle_deferred_operations()
