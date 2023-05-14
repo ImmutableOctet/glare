@@ -29,6 +29,8 @@ namespace engine
 	{
 		bool result = false;
 
+		/*
+		// Alternative implementation (Disabled due to possibility of dangling references):
 		if (value.owner())
 		{
 			result = context.set(scope, name, MetaAny { value }, true, true); // std::move(value)
@@ -37,6 +39,9 @@ namespace engine
 		{
 			result = context.set(scope, name, value.as_ref(), true, true);
 		}
+		*/
+
+		result = context.set(scope, name, MetaAny { value }, true, true); // std::move(value)
 
 		assert(result);
 
