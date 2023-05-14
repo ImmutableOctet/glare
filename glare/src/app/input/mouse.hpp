@@ -46,6 +46,8 @@ namespace app::input
 			// Applies post-processing via the internal input profile, if present.
 			MouseAnalogInput process_analog_value(MouseAnalogInput raw_input) const;
 
+			void clear_state();
+
 			bool lock();
 			bool unlock();
 
@@ -79,7 +81,8 @@ namespace app::input
 			*/
 			State& poll_next_state
 			(
-				bool update_motion, bool update_buttons, bool update_wheel=false,
+				bool update_motion, bool update_buttons,
+				bool update_wheel=false, bool update_position=true,
 				bool force_clear=false
 			) const;
 			
@@ -89,7 +92,7 @@ namespace app::input
 			bool handle_manual_event_detection
 			(
 				entt::dispatcher& event_handler,
-				bool check_motion, bool check_buttons, bool check_wheel
+				bool check_motion, bool check_buttons, bool check_wheel, bool check_position
 			) const;
 
 			// Enumerates button-based Hat descriptors, generating `OnMouseVirtualAnalogInput` events appropriately.
@@ -116,11 +119,23 @@ namespace app::input
 				int wheel_x, int wheel_y,
 				MouseDeviceIndex device_index=DEFAULT_MOUSE_DEVICE_INDEX
 			) const;
-		private:
-			bool is_locked                   : 1 = false;
+
+			void trigger_mouse_position_event
+			(
+				entt::dispatcher& event_handler,
+				int x, int y,
+				MouseDeviceIndex device_index=DEFAULT_MOUSE_DEVICE_INDEX
+			) const;
+
 			bool event_motion                : 1 = false;
 			bool event_buttons               : 1 = false;
 			bool event_wheel                 : 1 = true;
+			bool event_position              : 1 = false;
+		private:
+			// Internal state:
+			bool is_locked                   : 1 = false;
 			bool poll_continuous_button_down : 1 = true;
+
+			mutable bool mouse_position_changed : 1 = false;
 	};
 }
