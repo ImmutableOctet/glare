@@ -27,7 +27,8 @@ namespace util
             )
         );
     
-        return &(instantiate_template_with_tuple<wrap_functor, TemplateInput>::type::execute);
+        //return &(instantiate_template_with_tuple<wrap_functor, TemplateInput>::type::execute);
+        return instantiate_template_with_tuple<wrap_functor, TemplateInput>::type::decay_ptr;
     }
 
 	template <auto lambda_instance>

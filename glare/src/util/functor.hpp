@@ -15,6 +15,10 @@ namespace util
 	template <typename Functor, typename ReturnType, typename... Args>
 	struct wrap_functor
 	{
+		using decay_ptr_t = ReturnType(*)(Args...);
+
+		static inline constexpr decay_ptr_t decay_ptr = Functor();
+
 		static ReturnType execute(Args&&... args)
 		{
 			return static_cast<ReturnType>(Functor()(std::forward<Args>(args)...));
