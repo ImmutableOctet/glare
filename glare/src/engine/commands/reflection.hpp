@@ -11,6 +11,7 @@
 #include "component_replace_command.hpp"
 #include "function_command.hpp"
 #include "expr_command.hpp"
+#include "set_parent_command.hpp"
 
 #include <engine/meta/meta_evaluation_context.hpp>
 
@@ -120,14 +121,23 @@ namespace engine
 		;
 	}
 
+	template <>
+	void reflect<SetParentCommand>()
+	{
+		engine_command_type<SetParentCommand>()
+			.data<&SetParentCommand::parent>("parent"_hs)
+		;
+	}
+
 	void reflect_core_commands()
 	{
 		reflect<Command>();
 		reflect<PrintCommand>();
-		reflect<FunctionCommand>();
-		reflect<ExprCommand>();
 		reflect<IndirectComponentPatchCommand>();
 		reflect<ComponentPatchCommand>();
 		reflect<ComponentReplaceCommand>();
+		reflect<FunctionCommand>();
+		reflect<ExprCommand>();
+		reflect<SetParentCommand>();
 	}
 }
