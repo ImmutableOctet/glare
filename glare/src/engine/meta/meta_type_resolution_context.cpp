@@ -3,9 +3,13 @@
 
 #include "hash.hpp"
 #include "short_name.hpp"
+#include "indirection.hpp"
+#include "data_member.hpp"
 
 #include <util/string.hpp>
 //#include <util/parse.hpp>
+
+#include <algorithm>
 
 // Debugging related:
 #include <util/log.hpp>
@@ -98,6 +102,8 @@ namespace engine
 
 	MetaTypeResolutionContext MetaTypeResolutionContext::generate(bool standard_mapping, bool reverse_mapping)
 	{
+		using namespace engine::literals;
+
 		MetaTypeResolutionContext context;
 
 		// Components:
@@ -192,6 +198,32 @@ namespace engine
 		systems.erase("entity");
 
 		systems["debug"] = systems["DebugListener"];
+
+		// Global namespace:
+		auto& global_namespace = context.global_namespace;
+
+		// Enumerate every reflected type, checking if the
+		// `global namespace` property has been set:
+		for (const auto& type_entry : entt::resolve())
+		{
+			const auto& type = type_entry.second;
+
+			if (type_has_global_namespace_flag(type))
+			{
+				// Alternative implementation:
+				// 
+				// NOTE: Unused due to differing identifier from what can be used with `resolve`.
+				// 
+				// EnTT may be reporting a hash of the original type name,
+				// rather than the "custom" (e.g. shortened) type name?
+				// 
+				//const auto& type_id = type_entry.first;
+
+				const auto type_id = type.id();
+
+				global_namespace.emplace_back(type_id);
+			}
+		}
 
 		return context;
 	}
@@ -384,5 +416,90 @@ namespace engine
 			instructions.resolve_instruction_aliases,
 			instructions.resolve_system_references
 		);
+	}
+
+	bool MetaTypeResolutionContext::type_in_global_namespace(const MetaType& type) const
+	{
+		if (!type)
+		{
+			return false;
+		}
+
+		return type_in_global_namespace(type.id());
+	}
+
+	bool MetaTypeResolutionContext::type_in_global_namespace(MetaTypeID type_id) const
+	{
+		if (!type_id)
+		{
+			return false;
+		}
+
+		if (auto it = std::find(global_namespace.begin(), global_namespace.end(), type_id); it != global_namespace.end())
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	std::tuple<MetaType, MetaFunction> MetaTypeResolutionContext::resolve_global_function(MetaFunctionID function_id) const
+	{
+		for (const auto& type_id : global_namespace)
+		{
+			auto type = resolve(type_id);
+
+			assert(type);
+
+			if (type)
+			{
+				if (auto fn = type.func(function_id))
+				{
+					return { std::move(type), std::move(fn) };
+				}
+			}
+		}
+
+		return {};
+	}
+
+	std::tuple<MetaType, entt::meta_data> MetaTypeResolutionContext::resolve_global_data_member(MetaSymbolID member_id) const
+	{
+		for (const auto& type_id : global_namespace)
+		{
+			auto type = resolve(type_id);
+
+			assert(type);
+
+			if (type)
+			{
+				if (auto data_member = resolve_data_member_by_id(type, true, member_id)) // type.data(member_id)
+				{
+					return { std::move(type), std::move(data_member) };
+				}
+			}
+		}
+
+		return {};
+	}
+
+	std::tuple<MetaType, entt::meta_prop> MetaTypeResolutionContext::resolve_global_property(MetaSymbolID property_id) const
+	{
+		for (const auto& type_id : global_namespace)
+		{
+			auto type = resolve(type_id);
+
+			assert(type);
+
+			if (type)
+			{
+				if (auto global_property = type.prop(property_id))
+				{
+					return { std::move(type), std::move(global_property) };
+				}
+			}
+		}
+
+		return {};
 	}
 }

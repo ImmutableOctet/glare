@@ -1111,76 +1111,112 @@ namespace engine
 					{
 						if (is_command)
 						{
-							if ((type) || ((instructions.allow_opaque_function_references) && (allow_standalone_opaque_function || !output.empty())))
+							auto fn = MetaFunction {};
+
+							if (type)
 							{
-								auto fn = MetaFunction {};
-
-								if (type)
+								fn = type.func(symbol_id);
+							}
+							else
+							{
+								if (instructions.allow_global_function_references && output.empty())
 								{
-									fn = type.func(symbol_id);
-								}
-
-								if ((fn) || (instructions.allow_opaque_function_references)) // ((instructions.allow_opaque_function_references) && (allow_standalone_opaque_function || !output.empty()))
-								{
-									auto function_out = MetaFunctionCall
+									if (const auto type_context = instructions.context.get_type_context())
 									{
-										(type)
-											? type.id()
-											: MetaTypeID {}
-										,
+										auto [global_type, global_function] = type_context->resolve_global_function(symbol_id);
 
-										symbol_id
-									};
-
-									std::size_t argument_index = 0;
-									std::size_t content_position = 0;
-
-									while (content_position < content.length())
-									{
-										const auto remaining_content = content.substr(content_position);
-
-										/*
-										// Type forwarding disabled for now; too much potential for
-										// conflicts when there's multiple function overloads.
-										// (i.e. type conversion should be performed at runtime)
-										// 
-										// See also: `MetaTypeDescriptor::set_variables_impl` -- Similar situation.
-										const auto argument_type = (fn)
-											? fn.arg(argument_index)
-											: MetaType {}
-										;
-										*/
-
-										const auto argument_type = MetaType {};
-
-										auto [argument, length_processed] = meta_any_from_string_compound_expr_impl
-										(
-											remaining_content,
-											instructions,
-											argument_type
-										);
-
-										if (!argument)
+										if (global_function)
 										{
-											break;
+											type = std::move(global_type);
+											fn = std::move(global_function);
 										}
+									}
+								}
+							}
 
-										function_out.arguments.emplace_back(std::move(argument));
+							if ((fn) || ((instructions.allow_opaque_function_references) && (allow_standalone_opaque_function || !output.empty())))
+							{
+								auto function_out = MetaFunctionCall
+								{
+									(type)
+										? type.id()
+										: MetaTypeID {}
+									,
 
-										content_position += length_processed;
-										argument_index++;
+									symbol_id
+								};
+
+								std::size_t argument_index = 0;
+								std::size_t content_position = 0;
+
+								while (content_position < content.length())
+								{
+									const auto remaining_content = content.substr(content_position);
+
+									/*
+									// Type forwarding disabled for now; too much potential for
+									// conflicts when there's multiple function overloads.
+									// (i.e. type conversion should be performed at runtime)
+									// 
+									// See also: `MetaTypeDescriptor::set_variables_impl` -- Similar situation.
+									const auto argument_type = (fn)
+										? fn.arg(argument_index)
+										: MetaType {}
+									;
+									*/
+
+									const auto argument_type = MetaType {};
+
+									auto [argument, length_processed] = meta_any_from_string_compound_expr_impl
+									(
+										remaining_content,
+										instructions,
+										argument_type
+									);
+
+									if (!argument)
+									{
+										break;
 									}
 
-									return enqueue(std::move(function_out));
+									function_out.arguments.emplace_back(std::move(argument));
+
+									content_position += length_processed;
+									argument_index++;
 								}
+
+								return enqueue(std::move(function_out));
 							}
 						}
 					}
 				}
 
-				if (type)
+				// if ((type) || (instructions.allow_global_member_references && output.empty()))
 				{
-					if (auto as_data = resolve_data_member_by_id(type, true, symbol_id))
+					auto as_data = entt::meta_data {};
+
+					if (type)
+					{
+						as_data = resolve_data_member_by_id(type, true, symbol_id);
+					}
+					else
+					{
+						if (instructions.allow_global_member_references && output.empty())
+						{
+							if (const auto type_context = instructions.context.get_type_context())
+							{
+								auto [global_type, global_data_member] = type_context->resolve_global_data_member(symbol_id);
+
+								if (global_data_member)
+								{
+									type = std::move(global_type);
+									as_data = std::move(global_data_member);
+								}
+							}
+						}
+					}
+
+					if (as_data)
 					{
 						if (as_data.is_static())
 						{
@@ -1220,16 +1256,51 @@ namespace engine
 						}
 					}
 
-					if (auto as_prop = type.prop(symbol_id))
+					auto as_prop = entt::meta_prop {};
+
+					if (type)
+					{
+						as_prop = type.prop(symbol_id);
+					}
+					else
+					{
+						if (instructions.allow_global_member_references && output.empty())
+						{
+							if (const auto type_context = instructions.context.get_type_context())
+							{
+								auto [global_type, global_property] = type_context->resolve_global_property(symbol_id);
+
+								if (global_property)
+								{
+									type = std::move(global_type);
+									as_prop = std::move(global_property);
+								}
+							}
+						}
+					}
+
+					if (as_prop)
 					{
 						if (auto prop_value = as_prop.value())
 						{
 							return replace(std::move(prop_value));
 						}
 					}
+				}
 
+				if (type)
+				{
 					if (instructions.allow_function_call_semantics)
 					{
+						/*
+							NOTE: 'Basic' function calls explicitly do not support global namespace resolution.
+							
+							The rationale being that a global function call is obvious when call-syntax is present,
+							whereas arbitrary identifiers could cause confusion.
+
+							For example, the programmer may make the assumption that an unqualified name is an entity name,
+							but if 'basic' function calls supported global resolution, that identifier could instead be an unexpected function call.
+						*/
 						if (auto as_basic_function = type.func(symbol_id))
 						{
 							do
