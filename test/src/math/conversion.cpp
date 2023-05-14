@@ -11,7 +11,7 @@ TEST_CASE("Normalized device coordinates", "[math:conversion]")
 	const auto normalized_result = math::to_normalized_device_coordinates(device_size, { 1500.0f, 300.0f });
 
 	REQUIRE(normalized_result.x >= 0.8f); // 0.875f
-	REQUIRE(normalized_result.y <= -0.3f); // -0.3333f
+	REQUIRE(normalized_result.y >= 0.3f); // 0.3333f
 
 	const auto device_result = math::from_normalized_device_coordinates(device_size, normalized_result);
 
