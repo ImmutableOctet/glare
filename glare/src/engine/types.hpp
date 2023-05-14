@@ -81,9 +81,9 @@ namespace engine
 	{
 		Default = 0,
 
-		Geometry,      // Stage geometry, etc.
+		Geometry,      // Level geometry, etc.
 		Scenery,       // Scenery, such as decorative objects - e.g. grass, etc. (No solid collision)
-		Platform,      // Dynamic stage geometry; platforms, etc.
+		Platform,      // Dynamic level geometry; platforms, etc.
 		Crusher,       // Crusher objects.
 		Light,         // Any type of lighting object.
 		Pivot,         // Generic pivots; used for physics, object behaviors, etc.
