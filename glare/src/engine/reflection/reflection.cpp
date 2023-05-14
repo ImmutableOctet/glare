@@ -7,12 +7,13 @@
 
 #include "container_extensions.hpp"
 #include "entity_extensions.hpp"
-#include "math_extensions.hpp"
 #include "primitive_extensions.hpp"
 #include "string_extensions.hpp"
 #include "chrono_extensions.hpp"
 
 #include "string_conversion.hpp"
+
+#include "math.hpp"
 
 #include <engine/components/reflection.hpp>
 #include <engine/commands/reflection.hpp>
@@ -30,9 +31,8 @@
 #include <engine/config.hpp>
 #include <engine/timer.hpp>
 
-#include <math/reflection.hpp>
-#include <math/format.hpp>
-#include <math/types.hpp>
+//#include <math/format.hpp>
+//#include <math/types.hpp>
 
 #include <util/format.hpp>
 #include <util/string.hpp>
@@ -84,6 +84,12 @@ namespace engine
             .ctor<&impl::static_cast_impl<PrimitiveType, std::uint16_t>>()
             //.ctor<&impl::static_cast_impl<PrimitiveType, std::int8_t>>()
             //.ctor<&impl::static_cast_impl<PrimitiveType, std::uint8_t>>()
+
+            .conv<&impl::static_cast_impl<float, PrimitiveType>>()
+            .conv<&impl::static_cast_impl<double, PrimitiveType>>()
+
+            .conv<&impl::static_cast_impl<std::int32_t, PrimitiveType>>()
+            .conv<&impl::static_cast_impl<std::int64_t, PrimitiveType>>()
 
             .conv<&impl::arithmetic_to_string_impl<PrimitiveType>>()
             .conv<&impl::operator_bool_impl<PrimitiveType>>()
@@ -348,155 +354,12 @@ namespace engine
         }
     }
 
+    // TODO: Split STL types into their own reflection submodule.
     static void reflect_stl()
     {
         reflect<std::string>();
         reflect<std::string_view>();
         reflect<std::chrono::system_clock::duration>();
-    }
-
-    template
-    <
-        typename T,
-        
-        bool generate_optional_type=true,
-        bool generate_operators=true,
-        bool generate_standard_methods=true
-    >
-    auto reflect_math_type(auto type_name, bool sync_context=true)
-    {
-        if (sync_context)
-        {
-            // Ensure that we're using the correct context.
-            sync_reflection_context();
-        }
-
-        auto type = math::reflect<T>(hash(type_name));
-
-        if constexpr (generate_operators)
-        {
-            type = type
-                .func<&impl::add_impl<T>>("operator+"_hs)
-                .func<&impl::subtract_impl<T>>("operator-"_hs)
-                .func<&impl::multiply_impl<T>>("operator*"_hs)
-            ;
-        }
-
-        // NOTE: This check doesn't work due to non-type template parameters for `glm::vec`.
-        // TODO: Revisit the idea of checking for vector types.
-        //if constexpr (util::is_specialization_v<T, glm::vec>)
-        if constexpr (std::is_same_v<T, math::Vector2D> || std::is_same_v<T, math::Vector3D> || std::is_same_v<T, math::Vector4D>) // || std::is_same_v<T, math::vec2i>
-        {
-            if constexpr (generate_operators)
-            {
-                type = type.func<&impl::divide_impl<T>>("operator/"_hs);
-            }
-
-            type = type.conv<&impl::format_string_conv<T>>();
-
-            if constexpr (generate_standard_methods)
-            {
-                using value_type = typename T::value_type;
-
-                if constexpr (std::is_same_v<value_type, float>)
-                {
-                    type = type
-                        .func<&impl::normalize_impl<T>>("normalize"_hs)
-                    ;
-                }
-            }
-        }
-
-        if constexpr (generate_optional_type)
-        {
-            auto opt_type = optional_custom_meta_type<T>(type_name);
-        }
-
-        return type;
-    }
-
-    // Reflects `math::Vector2D` with the generalized name of `Vector2D`.
-    // 
-    // TODO: Look into migrating this to another file/header.
-    template <>
-    void reflect<math::Vector2D>()
-    {
-        reflect_math_type<math::Vector2D>("Vector2D");
-    }
-
-    // Reflects `math::Vector3D` with the generalized name of `Vector`.
-    // 
-    // TODO: Look into migrating this to another file/header.
-    template <>
-    void reflect<math::Vector3D>()
-    {
-        reflect_math_type<math::Vector3D>("Vector") // "Vector3D"
-            .ctor<&impl::vec3_from_vec2>()
-        ;
-    }
-
-    // Reflects `math::Vector4D` with the generalized name of `Vector4D`.
-    // 
-    // TODO: Look into migrating this to another file/header.
-    template <>
-    void reflect<math::Vector4D>()
-    {
-        reflect_math_type<math::Vector4D>("Vector4D")
-            .ctor<&impl::vec4_from_vec2>()
-            .ctor<&impl::vec4_from_vec3>()
-        ;
-    }
-
-    // Reflects `math::vec2i` with the generalized name of `vec2i`.
-    // 
-    // TODO: Look into migrating this to another file/header.
-    template <>
-    void reflect<math::vec2i>()
-    {
-        reflect_math_type<math::vec2i>("vec2i");
-    }
-
-    template <>
-    void reflect<math::Matrix4x4>()
-    {
-        reflect_math_type<math::Matrix4x4>("Matrix") // "Matrix4x4"
-            .func<&impl::mat4_vec4_multiply_impl>("operator*"_hs)
-            .func<&impl::mat4_vec3_multiply_impl>("operator*"_hs)
-            .func<&impl::mat_quat_multiply_impl<math::Matrix4x4>>("operator*"_hs)
-            .func<&math::identity<math::Matrix4x4>>("identity"_hs)
-            .func<&impl::inverse_impl<math::Matrix4x4>>("inverse"_hs)
-            .func<&impl::transpose_impl<math::Matrix4x4>>("transpose"_hs)
-            .func<&impl::mat4_translate_impl>("translate"_hs)
-        ;
-    }
-
-    template <>
-    void reflect<math::Matrix3x3>()
-    {
-        reflect_math_type<math::Matrix3x3>("Matrix3x3")
-            .func<&impl::multiply_impl<math::Matrix3x3, math::Vector3D>>("operator*"_hs)
-            .func<&impl::mat_quat_multiply_impl<math::Matrix3x3>>("operator*"_hs)
-            .func<&math::identity<math::Matrix3x3>>("identity"_hs)
-            .func<&impl::inverse_impl<math::Matrix3x3>>("inverse"_hs)
-            .func<&impl::transpose_impl<math::Matrix3x3>>("transpose"_hs)
-        ;
-    }
-
-    template <>
-    void reflect<math::Quaternion>()
-    {
-        reflect_math_type<math::Quaternion>("Quaternion")
-            .func<&impl::quat_vec3_multiply_impl>("operator*"_hs)
-            .func<&impl::quat_vec4_multiply_impl>("operator*"_hs)
-            .func<&impl::inverse_impl<math::Quaternion>>("inverse"_hs)
-            .conv<&math::quaternion_to_matrix<math::Matrix3x3>>()
-            .conv<&math::quaternion_to_matrix<math::Matrix4x4>>()
-            .data<&math::Quaternion::x>("x"_hs)
-            .data<&math::Quaternion::y>("y"_hs)
-            .data<&math::Quaternion::z>("z"_hs)
-            .data<&math::Quaternion::w>("w"_hs)
-            .ctor<math::Vector3D>()
-        ;
     }
 
     template <>
@@ -701,21 +564,6 @@ namespace engine
         ;
     }
 
-    // TODO: Implement reflection for matrix types.
-    void reflect_math()
-    {
-        reflect<math::Vector2D>();
-        reflect<math::Vector3D>();
-        reflect<math::Vector4D>();
-
-        reflect<math::vec2i>();
-
-        reflect<math::Matrix4x4>();
-        reflect<math::Matrix3x3>();
-
-        // ...
-    }
-
     void reflect_entt()
     {
         reflect<entt::meta_sequence_container>();
@@ -728,7 +576,8 @@ namespace engine
     {
         reflect_entt();
         reflect_stl();
-        reflect_math();
+
+        reflect<engine::Math>();
     }
 
     void reflect_primitives()
