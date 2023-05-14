@@ -30,7 +30,6 @@ namespace glare
 
 			engine::Transform get_named_transform(std::string_view name);
 
-			//void on_stage_loaded(const engine::OnStageLoaded& stage_info);
 			void on_user_keyboard_input(const app::input::KeyboardState& keyboard);
 
 			void on_update(float delta) override;

@@ -57,7 +57,6 @@
 #include <engine/world/physics/components/collision_component.hpp>
 #include <engine/world/motion/components/motion_component.hpp>
 
-#include <engine/world/zones/zones.hpp>
 #include <bullet/btBulletCollisionCommon.h>
 
 #include <engine/meta/meta.hpp>
@@ -92,7 +91,7 @@ namespace glare
 				engine::generate_analog_map(input_handler.get_analogs());
 			}
 		);
-
+		
 		world_system<engine::DebugListener>();
 
 		// TODO: Look into this again.
@@ -105,119 +104,6 @@ namespace glare
 		//const auto path = std::filesystem::path { "assets/maps/collision_test" };
 
 		world.load(path, "map.json", engine::null, &systems);
-
-		auto& registry = world.get_registry();
-
-		auto cube = engine::load_model
-		(
-			world, "assets/objects/cube/cube.b3d", engine::null,
-			engine::EntityType::Object, true
-
-			/*
-			, engine::CollisionConfig
-			(
-				engine::CollisionGroup::Object,
-				engine::CollisionGroup::All,
-				engine::CollisionGroup::All
-			)
-			*/
-		);
-
-		world.set_name(cube, "Cube");
-
-		attach_collision
-		(
-			world, cube,
-			engine::CollisionData::build_basic_shape
-			(
-				engine::CollisionShapeDescription
-				{
-					engine::CollisionShapePrimitive::Sphere,
-					{ 20.0f, 20.0f, 20.0f }
-				}
-			),
-			engine::EntityType::Object
-		);
-
-		auto& cube_c = registry.get<engine::CollisionComponent>(cube);
-		cube_c.set_mass(0.5f);
-
-		if (auto& kinematic_resolution = cube_c.get_kinematic_resolution())
-		{
-			kinematic_resolution->accepts_influence = false;
-			//kinematic_resolution->resolve_intersections = false;
-			kinematic_resolution->can_influence_children = false;
-			kinematic_resolution->can_be_influenced_by_children = false;
-			//kinematic_resolution->cast_method = engine::CollisionCastMethod::None;
-		}
-
-		world.transform_and_reset_collision(cube, [&](auto& cube_t)
-		{
-			cube_t.set_position({ -6.20467f, 160.5406f, 39.1254f });
-		});
-
-		auto cube2 = engine::load_model
-		(
-			world, "assets/objects/cube/cube.b3d", engine::null,
-			engine::EntityType::Object, true
-			/*
-			, engine::CollisionConfig
-			(
-				engine::CollisionGroup::Object,
-				engine::CollisionGroup::All,
-				engine::CollisionGroup::All
-			)
-			*/
-		);
-
-		world.set_name(cube2, "Cube2");
-
-		attach_collision
-		(
-			world, cube2,
-
-			engine::CollisionData::build_basic_shape
-			(
-				engine::CollisionShapeDescription
-				{
-					engine::CollisionShapePrimitive::Sphere,
-					{ 4.0f, 4.0f, 4.0f }
-				}
-			),
-
-			engine::EntityType::Object
-		);
-		auto& cube2_c = registry.get<engine::CollisionComponent>(cube2);
-		cube2_c.set_mass(2.0f);
-		
-		if (auto& kinematic_resolution = cube2_c.get_kinematic_resolution())
-		{
-			//kinematic_resolution->accepts_influence = true;
-			
-			//kinematic_resolution->resolve_intersections = true;
-			//kinematic_resolution->resolve_intersections = false;
-
-			//kinematic_resolution->cast_method = engine::CollisionCastMethod::RayCast;
-		}
-
-		world.transform_and_reset_collision(cube2, [&](auto& cube2_t)
-		{
-			//cube2_t.set_scale(4.0f);
-			cube2_t.set_position({ -6.20467f, 180.5406f, 39.1254f });
-			//cube2_t.set_position({ 38.3709, 45.9637, 120.579 });
-		});
-
-		auto& cube2_motion = registry.emplace<engine::MotionComponent>(cube2);
-
-		cube2_motion.attach_to_dynamic_ground = true;
-		//cube2_motion.apply_gravity = false;
-
-		auto& camera_c = registry.get<engine::CollisionComponent>(world.get_camera());
-
-		camera_c.set_mass(2.0f);
-
-		auto zone = create_zone(world, math::AABB { { -144.822, 150.215, -141.586 }, { -74.4793, 71.374, -203.555 } });
-		world.set_name(zone, "Zone");
 	}
 
 	engine::Transform Glare::get_named_transform(std::string_view name)
@@ -240,7 +126,7 @@ namespace glare
 		//auto transform = world.get_transform(world.get_camera());
 		//auto transform = get_named_transform(target_obj);
 		//auto angle = glm::normalize(transform.get_position() - camera_pos);
-		//float delta = world.delta();
+		//float delta = world.get_delta();
 
 		if (keyboard.get_key(SDL_SCANCODE_Q))
 		{
