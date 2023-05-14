@@ -1,6 +1,6 @@
 #pragma once
 
-#include "components/camera_component.hpp"
+#include "camera/components/camera_component.hpp"
 
 #include <math/types.hpp>
 

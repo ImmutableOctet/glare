@@ -3,7 +3,7 @@
 #include <app/window.hpp>
 
 #include <engine/world/world.hpp>
-#include <engine/world/components/camera_component.hpp>
+#include <engine/world/camera/components/camera_component.hpp>
 
 #include <graphics/shader.hpp>
 

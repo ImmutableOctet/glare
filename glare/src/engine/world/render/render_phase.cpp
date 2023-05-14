@@ -8,7 +8,7 @@
 #include <graphics/gbuffer_render_flags.hpp>
 
 #include <engine/world/world.hpp>
-#include <engine/world/components/camera_component.hpp>
+#include <engine/world/camera/components/camera_component.hpp>
 #include <engine/world/animation/animation.hpp>
 
 #include <engine/config.hpp>
