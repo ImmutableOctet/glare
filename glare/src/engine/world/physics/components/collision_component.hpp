@@ -44,11 +44,9 @@ namespace engine
 
 	/*
 		Represents a 'collider' object attached to an entity.
+		
 		This can be thought of as an in-world instance of collision shape (see 'Shape' types below),
 		tied directly to an Entity's world-space transform.
-
-		***To attach `CollisionComponent` objects to an entity, please use the `attach_collision` command to
-		ensure registration with the `World` object's physics-system occurs properly.***
 	*/
 	struct CollisionComponent : protected CollisionConfig
 	{
@@ -77,16 +75,17 @@ namespace engine
 			// TODO: Look into making the return-value of this function a struct outlining several properties of the collision-object.
 			static bool apply_collision_flags(btCollisionObject& c_obj, const CollisionConfig& config, bool keep_existing_flags=true, bool allow_kinematic=true);
 
+			// Declared for internal use only. (Forwards to static free-function implementation)
+			static void set_entity_for_collision_object(btCollisionObject& c_obj, Entity entity);
+
 			// This constructor overload does not generate an internal collision object. (To do so requires a collision-shape; see other overloads)
 			// This exists purely to simplify constructor delegation.
 			CollisionComponent(const CollisionConfig& config, std::unique_ptr<CollisionMotionState>&& motion_state={});
 
 			bool collision_object_in_monostate() const;
 			const collision_object_variant_t& get_collision_object_variant() const;
-		private:
-			// Declared for internal use only. (Forwards to static free-function implementation)
-			static void set_entity_for_collision_object(btCollisionObject& c_obj, Entity entity);
 
+		private:
 			template <typename RawShapeType>
 			inline void set_shape(const std::shared_ptr<RawShapeType>& shape)
 			{
@@ -371,6 +370,7 @@ namespace engine
 			void set_kinematic_resolution(const KinematicResolutionConfig& resolution);
 			const std::optional<KinematicResolutionConfig>& get_kinematic_resolution() const;
 			std::optional<KinematicResolutionConfig>& get_kinematic_resolution();
+
 		protected:
 			std::optional<KinematicResolutionConfig> kinematic_resolution;
 
@@ -378,44 +378,4 @@ namespace engine
 			collision_object_variant_t collision_object;
 			shape_variant_t shape;
 	};
-
-	Entity attach_collision_impl(World& world, Entity entity, CollisionComponent&& col);
-
-	template <typename ShapeType>
-	inline Entity attach_collision
-	(
-		World& world, Entity entity,
-		const ShapeType& collision_shape_data,
-		const CollisionConfig& config,
-		float mass=0.0f,
-		std::optional<KinematicResolutionConfig> resolution_method=std::nullopt
-	) // CollisionComponent::Shape
-	{
-		// TODO: Refactor into something more explicit from the user. (or something better for automatically determining body type)
-		// We currently assume kinematic rigid bodies if a motion-state is generated:
-		std::unique_ptr<CollisionMotionState> motion_state;
-
-		CollisionBodyType body_type = get_collision_body_type(config.group);
-
-		switch (body_type)
-		{
-			//case CollisionBodyType::Kinematic:
-			case CollisionBodyType::Dynamic:
-				motion_state = make_collision_motion_state(world, entity, config);
-
-				break;
-		}
-
-		return attach_collision_impl
-		(
-			world, entity,
-
-			CollisionComponent
-			(
-				collision_shape_data, config,
-				resolution_method, body_type,
-				mass, std::move(motion_state)
-			)
-		);
-	}
 }

@@ -27,6 +27,46 @@ namespace graphics
 
 namespace engine
 {
+	// TODO: Remove/deprecate.
+	template <typename ShapeType>
+	static Entity attach_collision
+	(
+		World& world, Entity entity,
+		const ShapeType& collision_shape_data,
+		const CollisionConfig& config,
+		float mass=0.0f,
+		std::optional<KinematicResolutionConfig> resolution_method=std::nullopt
+	) // CollisionComponent::Shape
+	{
+		// TODO: Refactor into something more explicit from the user. (or something better for automatically determining body type)
+		// We currently assume kinematic rigid bodies if a motion-state is generated:
+		std::unique_ptr<CollisionMotionState> motion_state;
+
+		CollisionBodyType body_type = get_collision_body_type(config.group);
+
+		switch (body_type)
+		{
+			//case CollisionBodyType::Kinematic:
+			case CollisionBodyType::Dynamic:
+				motion_state = make_collision_motion_state(world, entity, config);
+
+				break;
+		}
+
+		auto& registry = world.get_registry();
+
+		registry.emplace<CollisionComponent>
+		(
+			entity,
+
+			collision_shape_data, config,
+			resolution_method, body_type,
+			mass, std::move(motion_state)
+		);
+
+		return entity;
+	}
+
 	Entity create_model(World& world, const std::shared_ptr<graphics::Model>& model, Entity parent, EntityType type)
 	{
 		assert(model);
