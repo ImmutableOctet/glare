@@ -376,30 +376,7 @@ namespace engine
 			view = camera_transform.get_camera_matrix();
 		}
 
-		switch (camera_params.projection_mode)
-		{
-			case CameraProjection::Orthographic:
-			{
-				float width = static_cast<float>(viewport.get_width());
-				float height = static_cast<float>(viewport.get_height());
-
-				float hw = (width / 2.0f);
-				float hh = (height / 2.0f);
-
-				//projection = glm::ortho(-hw, hw, hh, -hh, camera_params.near_plane, camera_params.far_plane);
-				projection = glm::ortho(-hw, hw, -hh, hh, camera_params.near_plane, camera_params.far_plane);
-				//camera_matrix = glm::inverse(camera_transform.get_matrix());
-				//camera_matrix = glm::inverse(camera_matrix);
-
-				break;
-			}
-			default: // case CameraProjection::Perspective:
-			{
-				projection = glm::perspective(camera_params.fov, camera_params.aspect_ratio, camera_params.near_plane, camera_params.far_plane);
-
-				break;
-			}
-		}
+		projection = camera_params.get_projection(viewport);
 
 		return camera_transform;
 	}

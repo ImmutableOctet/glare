@@ -38,7 +38,25 @@ namespace engine
 			friend class WorldRenderer;
 
 			using Canvas = graphics::Canvas;
-		public:
+			
+			static Transform get_camera_matrices
+			(
+				World& world,
+				const graphics::Viewport& viewport,
+				Entity camera, const engine::CameraComponent& camera_params,
+
+				math::Matrix& projection, math::Matrix& view
+			);
+
+			static Transform get_camera_matrices
+			(
+				World& world,
+				const graphics::Viewport& viewport,
+				Entity camera,
+
+				math::Matrix& projection, math::Matrix& view
+			);
+
 			//virtual ~RenderPhase() = default;
 
 			void draw_model
@@ -107,24 +125,6 @@ namespace engine
 				graphics::CanvasDrawMode additional_draw_modes=graphics::CanvasDrawMode::None,
 				bool _combine_view_proj_matrices=false,
 				bool _bind_dynamic_textures=false
-			);
-
-			Transform get_camera_matrices
-			(
-				World& world,
-				const graphics::Viewport& viewport,
-				Entity camera, const engine::CameraComponent& camera_params,
-
-				math::Matrix& projection, math::Matrix& view
-			);
-
-			Transform get_camera_matrices
-			(
-				World& world,
-				const graphics::Viewport& viewport,
-				Entity camera,
-
-				math::Matrix& projection, math::Matrix& view
 			);
 
 			// Not required due to util::pipeline allowing for any return type to be passed forward, etc.
