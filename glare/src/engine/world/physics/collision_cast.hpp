@@ -2,6 +2,7 @@
 
 #include "collision_cast_result.hpp"
 #include "collision_group.hpp"
+#include "directional_ray.hpp"
 
 #include <engine/types.hpp>
 
@@ -210,6 +211,28 @@ namespace engine
 		return impl::directional_ray_cast(physics, from, to_direction, max_distance, filter_group, filter_mask, self);
 	}
 
+	/*
+	// Convenience overload allowing for `DirectionalRay` as input.
+	// (Disabled for now, due to reflection name conflicts)
+	template <typename SelfType>
+	std::optional<RayCastResult> directional_ray_cast
+	(
+		PhysicsSystem& physics,
+
+		const SelfType& self,
+
+		const DirectionalRay& ray,
+
+		std::optional<float> max_distance=std::nullopt,          // If no maximum distance is supplied, then the `physics` object's configured max-distance is used.
+
+		std::optional<CollisionGroup> filter_group=std::nullopt, // Defaults to filter resolved from `self`, if available.
+		std::optional<CollisionGroup> filter_mask=std::nullopt   // Defaults to mask resolved from `self`, if available.
+	)
+	{
+		return impl::directional_ray_cast(physics, ray.origin, ray.direction, max_distance, filter_group, filter_mask, self);
+	}
+	*/
+
 	// Similar to `ray_cast`, but allows for a normalized `to_direction` vector, instead of an exact end-position.
 	// This can be useful for things like hitscan weapons, speculative floor-detection, etc.
 	inline std::optional<RayCastResult> directional_ray_cast
@@ -227,6 +250,25 @@ namespace engine
 	{
 		return impl::directional_ray_cast(physics, from, to_direction, max_distance, filter_group, filter_mask);
 	}
+
+	/*
+	// Convenience overload allowing for `DirectionalRay` as input.
+	// (Disabled for now, due to reflection name conflicts)
+	inline std::optional<RayCastResult> directional_ray_cast
+	(
+		PhysicsSystem& physics,
+
+		const DirectionalRay& ray,
+
+		std::optional<float> max_distance=std::nullopt, // If no maximum distance is supplied, then the `physics` object's configured max-distance is used.
+
+		std::optional<CollisionGroup> filter_group=std::nullopt,
+		std::optional<CollisionGroup> filter_mask=std::nullopt
+	)
+	{
+		return impl::directional_ray_cast(physics, ray.origin, ray.direction, max_distance, filter_group, filter_mask);
+	}
+	*/
 
 	// Performs a ray-cast for `self` from its current position to `destination`.
 	// See also: `ray_cast` for general-purpose ray-casting.
