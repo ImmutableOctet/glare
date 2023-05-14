@@ -36,6 +36,8 @@ namespace engine
 		//MenuSelectAlt = MenuCycleForward, // Gamepad: RB
 		//MenuCycleBackward = ...,          // Gamepad: LB
 		//MenuBackAlt = MenuCycleBackward,  // Gamepad: LB
+
+		EditorSelect = MediumAttack,
 	};
 
 	using EngineButton = Button;
