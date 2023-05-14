@@ -94,4 +94,7 @@ namespace math
 
 	math::vec2f from_normalized_device_coordinates_ex(const math::vec2f& half_display_size, const math::vec2f& normalized_position);
 	math::vec2f from_normalized_device_coordinates(const math::vec2f& display_size, const math::vec2f& normalized_position);
+
+	math::vec2f normalized_device_coordinates_to_screen_space(const math::vec2f& normalized_position);
+	math::vec2f normalized_device_coordinates_to_screen_space(const math::vec2f& display_size, const math::vec2f& normalized_position);
 }

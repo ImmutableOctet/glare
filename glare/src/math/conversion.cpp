@@ -21,4 +21,18 @@ namespace math
 	{
 		return (((normalized_position + 1.0f) / 2.0f) * display_size);
 	}
+
+	math::vec2f normalized_device_coordinates_to_screen_space(const math::vec2f& normalized_position)
+	{
+		return
+		{
+			(1.0f - ((-normalized_position.x + 1.0f) / 2.0f)),
+			((-normalized_position.y + 1.0f) / 2.0f)
+		};
+	}
+
+	math::vec2f normalized_device_coordinates_to_screen_space(const math::vec2f& display_size, const math::vec2f& normalized_position)
+	{
+		return (display_size * normalized_device_coordinates_to_screen_space(normalized_position));
+	}
 }
