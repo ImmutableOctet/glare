@@ -22,6 +22,8 @@
 
 #include "camera/camera_system.hpp"
 
+#include "delta/delta_system.hpp"
+
 #include <engine/components/model_component.hpp>
 
 #include <engine/entity/entity_descriptor.hpp>
@@ -112,15 +114,13 @@ namespace engine
 	) :
 		Service(registry, systems),
 		config(config),
-		resource_manager(resource_manager),
-		delta_time(update_rate),
-		fixed_delta_time(update_rate)
+		resource_manager(resource_manager)
 	{
 		registry.emplace<TransformComponent>(root);
 
 		set_name(root, "Root");
 
-		register_event<OnTransformChanged, &World::on_transform_change>(*this);
+		register_event<OnTransformChanged, &World::on_transform_changed>(*this);
 
 		registry.on_construct<InstanceComponent>().connect<&World::on_instance>(*this);
 
@@ -223,50 +223,18 @@ namespace engine
 
 	void World::update(app::Milliseconds time)
 	{
-		// Update the delta-timer.
-		delta_time << time;
+		float delta = 1.0f;
+		
+		if (auto delta_system = get_delta_system())
+		{
+			delta = delta_system->update_delta(time);
+		}
 
-		// Update systems:
-		Service::update(delta_time);
-
-		// TODO: Look into workarounds for collision objects updating a frame behind.
 		// Handle changes in entity transforms.
-		handle_transform_events(delta_time);
-	}
-
-	void World::fixed_update(app::Milliseconds time)
-	{
-		// Update the fixed delta-timer.
-		fixed_delta_time << time;
+		handle_transform_events(delta);
 
 		// Update systems:
-		Service::fixed_update(fixed_delta_time);
-	}
-
-	void World::handle_transform_events(float delta)
-	{
-		// Another pass is required, in order to ensure all of the hierarchy has a chance to validate collision representation:
-		registry.view<TransformComponent>().each([this](auto entity, auto& tf)
-		{
-			tf.on_flag(TransformComponent::Flag::EventFlag, [this, entity]()
-			{
-				//this->queue_event<OnTransformChanged>(entity);
-				this->event<OnTransformChanged>(entity);
-			});
-
-			// Already handled by `on_flag`.
-			//tf.validate(TransformComponent::Dirty::EventFlag);
-		});
-
-		/*
-		registry.view<TransformComponent, RelationshipComponent>().each([&](auto entity, auto& tf, auto& rel)
-		{
-			auto transform = Transform(registry, entity, rel, tf);
-
-			//transform.validate_collision();
-			transform.validate_collision_shallow();
-		});
-		*/
+		Service::update(time, delta);
 	}
 
 	Entity World::get_forwarded(Entity entity)
@@ -372,6 +340,59 @@ namespace engine
 		return resource_manager;
 	}
 
+	// NOTE: Unsafe. (Assumes remote `DeltaSystem` object will always be valid)
+	const DeltaSystem* World::get_delta_system() const
+	{
+		if (this->_delta_system)
+		{
+			return this->_delta_system;
+		}
+
+		if (const auto* delta_system = systems.get_system<DeltaSystem>())
+		{
+			//this->_delta_system = const_cast<DeltaSystem*>(delta_system);
+
+			return delta_system;
+		}
+
+		return {};
+	}
+
+	// NOTE: Unsafe. (Assumes remote `DeltaSystem` object will always be valid)
+	DeltaSystem* World::get_delta_system()
+	{
+		if (this->_delta_system)
+		{
+			return this->_delta_system;
+		}
+
+		if (auto* delta_system = systems.get_system<DeltaSystem>())
+		{
+			this->_delta_system = delta_system;
+		}
+
+		return {};
+	}
+
+	const DeltaTime& World::get_delta_time() const
+	{
+		auto delta_system = get_delta_system();
+
+		assert(delta_system);
+
+		return delta_system->get_delta_time();
+	}
+	
+	float World::get_delta() const
+	{
+		if (auto delta_system = get_delta_system())
+		{
+			return delta_system->get_delta();
+		}
+
+		return 1.0f;
+	}
+
 	// The actively bound camera.
 	// NOTE: Does not always represent the rendering camera.
 	Entity World::get_camera() const
@@ -428,18 +449,9 @@ namespace engine
 		return glm::normalize(get_gravity());
 	}
 
-	void World::on_transform_change(const OnTransformChanged& tform_change)
+	void World::on_transform_changed(const OnTransformChanged& tform_change)
 	{
-		auto entity = tform_change.entity;
-
-		auto* tform_history = registry.try_get<TransformHistoryComponent>(entity);
-
-		if (tform_history)
-		{
-			auto tform = get_transform(entity);
-
-			*tform_history << tform;
-		}
+		const auto entity = tform_change.entity;
 
 		// TODO: Move this into a separate lighting system/event-handler...?
 		// Update shadow-maps for light entities.
@@ -460,6 +472,34 @@ namespace engine
 		}
 
 		print("Entity #{}{} ({}) - Transform Changed: {}", entity, name_label, entity_type, get_transform(entity).get_vectors());
+		*/
+	}
+
+	void World::handle_transform_events(float delta)
+	{
+		auto& registry = get_registry();
+
+		// Another pass is required, in order to ensure all of the hierarchy has a chance to validate collision representation:
+		registry.view<TransformComponent>().each([this](auto entity, auto& tf)
+		{
+			tf.on_flag(TransformComponent::Flag::EventFlag, [this, entity]()
+			{
+				//this->queue_event<OnTransformChanged>(entity);
+				this->event<OnTransformChanged>(entity);
+			});
+
+			// Already handled by `on_flag`.
+			//tf.validate(TransformComponent::Dirty::EventFlag);
+		});
+
+		/*
+		registry.view<TransformComponent, RelationshipComponent>().each([&](auto entity, auto& tf, auto& rel)
+		{
+			auto transform = Transform(registry, entity, rel, tf);
+
+			//transform.validate_collision();
+			transform.validate_collision_shallow();
+		});
 		*/
 	}
 

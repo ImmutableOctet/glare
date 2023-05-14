@@ -5,11 +5,11 @@
 #include <engine/action.hpp>
 #include <engine/service.hpp>
 #include <engine/transform.hpp>
+#include <engine/delta_time.hpp>
 
 #include "world_properties.hpp"
 
 //#include <graphics/types.hpp> // Not actually needed. (`ColorRGB` is actually located in math)
-#include <app/delta_time.hpp>
 
 #include <math/types.hpp>
 #include <util/json.hpp>
@@ -42,35 +42,21 @@ namespace engine
 	class ResourceManager;
 	class Config;
 
-	struct CollisionComponent;
+	class DeltaSystem;
 
 	struct LightComponent;
 	struct DirectionalLightComponent;
 	struct PointLightComponent;
 	struct SpotLightComponent;
+	struct CollisionComponent;
 
 	struct OnTransformChanged;
 
 	class World : public Service
 	{
 		public:
-			using UpdateRate = app::DeltaTime::Rate;
-		protected:
-			// Ensure the relevant light (sub)-component is associated to `entity`.
-			// The return value is an opaque pointer to the component associated with `type`.
-			static void* ensure_light_sub_component(Registry& registry, Entity entity, LightType type);
-
-			// Removes all light components except for the component-type associated with `except_type` (if specified).
-			static std::size_t remove_light_sub_components(Registry& registry, Entity entity, std::optional<LightType> except_type=std::nullopt);
-
-			Config& config;
-			ResourceManager& resource_manager;
+			using UpdateRate = DeltaTime::Rate;
 			
-			app::DeltaTime delta_time;
-			app::DeltaTime fixed_delta_time;
-
-			WorldProperties properties;
-		public:
 			World
 			(
 				Registry& registry,
@@ -119,11 +105,6 @@ namespace engine
 			);
 
 			void update(app::Milliseconds time);
-			void fixed_update(app::Milliseconds time);
-
-			void handle_transform_events(float delta);
-
-			//void on_child_removed(const Event_ChildRemoved& e);
 
 			// If `entity` has a `ForwardingComponent` attached, this returns the `root_entity` from that component.
 			// If no `ForwardingComponent` is found, `entity` is returned back to the caller.
@@ -207,8 +188,12 @@ namespace engine
 			// Retrieves the root scene-node; parent to all world-scoped entities.
 			inline Entity get_root() const { return root; }
 
-			inline const app::DeltaTime& get_delta_time() const { return delta_time; }
-			inline const app::DeltaTime& get_fixed_delta_time() const { return fixed_delta_time; }
+			const DeltaSystem* get_delta_system() const;
+			DeltaSystem* get_delta_system();
+
+			const DeltaTime& get_delta_time() const;
+
+			float get_delta() const;
 
 			// The actively bound camera.
 			// NOTE: Does not always represent the rendering camera.
@@ -225,10 +210,9 @@ namespace engine
 			void set_properties(const WorldProperties& properties);
 			const WorldProperties& get_properties() const { return properties; }
 
-			inline float delta() const { return delta_time; }
 			inline operator Entity() const { return get_root(); }
 
-			void on_transform_change(const OnTransformChanged& tform_change);
+			void on_transform_changed(const OnTransformChanged& tform_change);
 
 			// Same as `defer`, but implicitly forwards `this` prior to any arguments following the target function; useful for deferring member functions.
 			template <typename fn_t, typename... arguments>
@@ -236,7 +220,22 @@ namespace engine
 			{
 				defer(std::forward<fn_t>(f), this, std::forward<arguments>(args)...);
 			}
+
 		protected:
+			// Ensure the relevant light (sub)-component is associated to `entity`.
+			// The return value is an opaque pointer to the component associated with `type`.
+			static void* ensure_light_sub_component(Registry& registry, Entity entity, LightType type);
+
+			// Removes all light components except for the component-type associated with `except_type` (if specified).
+			static std::size_t remove_light_sub_components(Registry& registry, Entity entity, std::optional<LightType> except_type=std::nullopt);
+
+			Config& config;
+			ResourceManager& resource_manager;
+
+			WorldProperties properties;
+
+			void handle_transform_events(float delta);
+
 			// Enforces explicit light-type rules, as well as handling shadow sub-components.
 			// (i.e. only one sub-component at a time unless `light_comp.type` == `LightType::Any`)
 			// 
@@ -274,6 +273,9 @@ namespace engine
 			void on_spot_light_destroyed(Registry& registry, Entity entity);
 
 		private:
+			// Cache for `DeltaSystem` instance. (NOTE: Unsafe)
+			mutable DeltaSystem* _delta_system = {};
+
 			CollisionComponent* get_collision_component(Entity entity);
 
 			bool _transform_and_reset_collision_store_active_state(CollisionComponent* collision);
