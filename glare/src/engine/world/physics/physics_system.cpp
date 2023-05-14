@@ -895,7 +895,7 @@ namespace engine
 
 		bool object_found = component.on_collision_object
 		(
-			[this, &component, &transform](const auto& collision_obj)
+			[this, entity, &component, &transform](const auto& collision_obj)
 			{
 				auto c_group = static_cast<int>(component.get_group());
 				auto c_mask = static_cast<int>(component.get_full_mask());
@@ -910,6 +910,14 @@ namespace engine
 				{
 					this->collision_world->addCollisionObject(collision_obj.get(), c_group, c_mask);
 				}
+
+				CollisionComponent::set_entity_for_collision_object(*collision_obj, entity);
+
+				#ifndef NDEBUG
+					// Note: Unsafe due to entt's ability to move/reallocate this component.
+					// (Used for debugging purposes only)
+					//c_obj->setUserPointer(&component);
+				#endif
 
 				update_collision_object(*collision_obj, transform);
 			}
@@ -931,6 +939,8 @@ namespace engine
 		{
 			return;
 		}
+
+		//CollisionComponent::set_entity_for_collision_object(*collision_obj, null);
 
 		/*
 			Bullet handles checks for derived collision-object types and handles them
