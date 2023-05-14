@@ -9,6 +9,7 @@
 #include "forwarding_component.hpp"
 #include "relationship_component.hpp"
 #include "transform_component.hpp"
+#include "transform2d_component.hpp"
 #include "transform_history_component.hpp"
 #include "model_component.hpp"
 
@@ -70,6 +71,25 @@ namespace engine
 	}
 
 	template <>
+	void reflect<Transform2DComponent>()
+	{
+		engine_meta_type<Transform2DComponent>()
+			.data<&Transform2DComponent::position>("position"_hs)
+			.data<&Transform2DComponent::rotation>("rotation"_hs)
+			//.data<&Transform2DComponent::scale>("scale"_hs)
+			.ctor
+			<
+				decltype(Transform2DComponent::position),
+				decltype(Transform2DComponent::rotation)
+			>()
+			.ctor
+			<
+				decltype(Transform2DComponent::position)
+			>()
+		;
+	}
+
+	template <>
 	void reflect<ModelComponent>()
 	{
 		engine_meta_type<ModelComponent>()
@@ -119,7 +139,9 @@ namespace engine
 
 		// TODO: Implement reflection for `Transform` type as well.
 		reflect<TransformComponent>();
+		reflect<Transform2DComponent>();
 
 		reflect<ModelComponent>();
+
 	}
 }
