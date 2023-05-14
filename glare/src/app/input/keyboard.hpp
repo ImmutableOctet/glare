@@ -22,6 +22,8 @@ namespace app::input
 			void peek(State& state) const override;
 			void flush() override;
 
+			void clear_state();
+
 			bool process_event(const SDL_Event& e, entt::dispatcher* opt_event_handler=nullptr) override;
 
 			// Handles triggering keyboard button events when SDL events are disabled.
