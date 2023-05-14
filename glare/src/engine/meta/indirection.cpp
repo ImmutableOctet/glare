@@ -110,6 +110,34 @@ namespace engine
 		return false;
 	}
 
+	bool type_has_global_namespace_flag(const MetaType& type)
+	{
+		using namespace engine::literals;
+
+		if (type)
+		{
+			if (type.prop("global namespace"_hs))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	bool type_has_global_namespace_flag(MetaTypeID type_id)
+	{
+		if (type_id)
+		{
+			if (auto type = resolve(type_id))
+			{
+				return type_has_global_namespace_flag(type);
+			}
+		}
+
+		return false;
+	}
+
 	template <typename ValueType, typename ...Args>
 	static MetaAny try_get_underlying_value_impl(const MetaFunction& resolution_fn, ValueType&& value, Args&&... args)
 	{
