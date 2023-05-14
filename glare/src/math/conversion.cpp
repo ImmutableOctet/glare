@@ -4,7 +4,16 @@ namespace math
 {
 	math::vec2f to_normalized_device_coordinates_ex(const math::vec2f& half_display_size, const math::vec2f& position)
 	{
-		return ((position - half_display_size) / half_display_size);
+		constexpr bool flip_y = true;
+
+		auto result = ((position - half_display_size) / half_display_size);
+
+		if constexpr (flip_y)
+		{
+			result.y = -result.y;
+		}
+
+		return result;
 	}
 
 	math::vec2f to_normalized_device_coordinates(const math::vec2f& display_size, const math::vec2f& position)
