@@ -9,6 +9,8 @@
 #include "components/alignment_proxy_component.hpp"
 #include "components/motion_attachment_proxy_component.hpp"
 #include "components/deceleration_component.hpp"
+#include "components/focus_component.hpp"
+#include "components/orbit_component.hpp"
 
 #include <math/types.hpp>
 #include <math/bullet.hpp>
@@ -54,6 +56,11 @@ namespace engine
 		apply_velocity(delta);
 		update_gravity(delta);
 		handle_deceleration(delta);
+		update_focus(delta);
+
+		// TODO: Look into whether it makes more sense to only update
+		// orbiting objects during transform changes.
+		update_orbiting_objects(delta);
 	}
 
 	void MotionSystem::apply_velocity(float delta)
@@ -123,6 +130,84 @@ namespace engine
 						vel_comp.velocity = {};
 					}
 				}
+			}
+		);
+	}
+
+	void MotionSystem::update_focus(float delta)
+	{
+		auto& registry = get_registry();
+
+		update_transform<FocusComponent>
+		(
+			registry,
+
+			[delta, &registry](Entity entity, Transform& entity_transform, const FocusComponent& focus)
+			{
+				const auto& target = focus.target;
+
+				if (target == null)
+				{
+					return;
+				}
+
+				const auto& focus_offset = focus.focus_offset;
+
+				auto target_tform = Transform(registry, target);
+
+				const auto target_position = (target_tform.get_position() + focus_offset);
+
+				entity_transform.look_at(target_position, (focus.tracking_speed * delta));
+
+				/*
+				// Alternative implementation:
+				const auto focus_direction = glm::normalize(target_position - entity_position);
+
+				entity_transform.set_direction_vector(focus_direction, (focus.tracking_speed * delta));
+				*/
+			}
+		);
+	}
+
+	void MotionSystem::update_orbiting_objects(float delta)
+	{
+		auto& registry = get_registry();
+
+		registry.view<RelationshipComponent, TransformComponent, OrbitComponent>().each
+		(
+			[&](const Entity entity, const RelationshipComponent& relationship, TransformComponent& tform_comp, OrbitComponent& orbit)
+			{
+				auto target = relationship.get_parent();
+				auto focus_offset = math::Vector {};
+
+				if (const auto* focus = registry.try_get<FocusComponent>(entity))
+				{
+					if (focus->target != null)
+					{
+						target = focus->target;
+					}
+
+					focus_offset = focus->focus_offset;
+				}
+
+				if (target == null)
+				{
+					return;
+				}
+
+				auto target_tform = Transform(registry, target);
+
+				const auto target_position = (target_tform.get_position() + focus_offset);
+
+				// TODO: Move into update event for `OrbitComponent`.
+				orbit.distance = math::clamp(orbit.distance, orbit.min_distance, orbit.max_distance);
+
+				auto entity_tform = Transform(registry, entity, relationship, tform_comp);
+
+				//entity_tform.look_at(target_position);
+
+				entity_tform.set_position(target_position);
+				entity_tform.move({ 0.0f, 0.0f, orbit.distance }, true);
 			}
 		);
 	}

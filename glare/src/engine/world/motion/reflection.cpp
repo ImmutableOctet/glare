@@ -9,6 +9,8 @@
 #include "components/motion_component.hpp"
 #include "components/velocity_component.hpp"
 #include "components/deceleration_component.hpp"
+#include "components/focus_component.hpp"
+#include "components/orbit_component.hpp"
 
 #include "motion_events.hpp"
 
@@ -44,6 +46,28 @@ namespace engine
 		engine_meta_type<MotionAttachmentProxyComponent>()
 			.data<&MotionAttachmentProxyComponent::intended_parent>("intended_parent"_hs)
 			.data<nullptr, &MotionAttachmentProxyComponent::is_active>("is_active"_hs)
+		;
+	}
+
+	template <>
+	template <>
+	void reflect<FocusComponent>()
+	{
+		engine_meta_type<FocusComponent>()
+			.data<&FocusComponent::target>("target"_hs)
+			.data<&FocusComponent::focus_offset>("focus_offset"_hs)
+			.data<&FocusComponent::tracking_speed>("tracking_speed"_hs)
+		;
+	}
+
+	template <>
+	void reflect<OrbitComponent>()
+	{
+		engine_meta_type<OrbitComponent>()
+			.data<&OrbitComponent::movement_speed>("movement_speed"_hs)
+			.data<&OrbitComponent::distance>("distance"_hs)
+			.data<&OrbitComponent::min_distance>("min_distance"_hs)
+			.data<&OrbitComponent::max_distance>("max_distance"_hs)
 		;
 	}
 
@@ -114,6 +138,8 @@ namespace engine
 		reflect<DecelerationComponent>();
 		reflect<GroundComponent>();
 		reflect<MotionAttachmentProxyComponent>();
+		reflect<FocusComponent>();
+		reflect<OrbitComponent>();
 
 		// Events:
 		reflect<OnAirToGround>();

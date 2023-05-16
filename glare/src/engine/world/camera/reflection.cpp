@@ -3,7 +3,6 @@
 #include "camera_system.hpp"
 
 #include "components/camera_component.hpp"
-#include "components/camera_orbit_component.hpp"
 #include "components/camera_control_component.hpp"
 #include "components/camera_freelook_component.hpp"
 
@@ -48,19 +47,6 @@ namespace engine
 				
 				bool, bool
 			>()
-		;
-	}
-
-	template <>
-	void reflect<CameraOrbitComponent>()
-	{
-		engine_meta_type<CameraOrbitComponent>()
-			.data<&CameraOrbitComponent::movement_speed>("movement_speed"_hs)
-			.data<&CameraOrbitComponent::focus_offset>("focus_offset"_hs)
-			.data<&CameraOrbitComponent::distance>("distance"_hs)
-			.data<&CameraOrbitComponent::min_distance>("min_distance"_hs)
-			.data<&CameraOrbitComponent::max_distance>("max_distance"_hs)
-			.data<&CameraOrbitComponent::target>("target"_hs)
 		;
 	}
 
@@ -120,7 +106,6 @@ namespace engine
 		//reflect<graphics::Viewport>(); // graphics::PointRect
 
 		reflect<CameraComponent>();
-		reflect<CameraOrbitComponent>();
 		reflect<CameraFreeLookComponent>();
 		reflect<CameraControlComponent>();
 

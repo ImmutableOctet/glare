@@ -63,12 +63,11 @@ namespace engine
 			CameraComponent get_active_camera_parameters() const;
 		protected:
 			// A multiplier used to increase the influence of a mouse-based analog input.
-			inline static constexpr float mouse_movement_multiplier = 30.0f;
+			inline static constexpr float mouse_movement_multiplier = 20.0f;
 
 			// TODO: Look into reworking/replacing this.
 			void update_camera_parameters(int width, int height);
 
-			void update_orbiting_cameras(float delta);
 			void handle_orbiting_camera_input(const OnAnalogInput& analog_input, float delta);
 			void handle_first_person_camera_input(const OnAnalogInput& analog_input, float delta);
 			

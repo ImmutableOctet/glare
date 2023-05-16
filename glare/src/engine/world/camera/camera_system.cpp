@@ -1,7 +1,6 @@
 #include "camera_system.hpp"
 
 #include "components/camera_component.hpp"
-#include "components/camera_orbit_component.hpp"
 #include "components/camera_control_component.hpp"
 #include "components/camera_freelook_component.hpp"
 
@@ -17,6 +16,9 @@
 
 #include <engine/world/world.hpp>
 #include <engine/world/render/render_phase.hpp>
+
+#include <engine/world/motion/components/focus_component.hpp>
+#include <engine/world/motion/components/orbit_component.hpp>
 
 #include <engine/input/events.hpp>
 
@@ -94,10 +96,7 @@ namespace engine
 	{
 		//update_camera_parameters(...);
 
-		auto& registry = get_registry();
-
-		// TODO: Look into whether it makes more sense to only update orbiting cameras during transform changes.
-		update_orbiting_cameras(delta);
+		//auto& registry = get_registry();
 	}
 
 	void CameraSystem::on_analog_input(const OnAnalogInput& analog_input)
@@ -127,55 +126,30 @@ namespace engine
 		});
 	}
 
-	void CameraSystem::update_orbiting_cameras(float delta)
-	{
-		auto& registry = get_registry();
-
-		registry.view<RelationshipComponent, TransformComponent, CameraOrbitComponent>().each
-		(
-			[&](const Entity entity, const RelationshipComponent& relationship, TransformComponent& tform_comp, CameraOrbitComponent& orbit)
-			{
-				const auto target = (orbit.target == null)
-					? relationship.get_parent()
-					: orbit.target
-				;
-
-				if (target == null)
-				{
-					return;
-				}
-
-				auto entity_tform = Transform(registry, entity, relationship, tform_comp);
-				auto target_tform = Transform(registry, target);
-
-				const auto target_position = (target_tform.get_position() + orbit.focus_offset);
-
-				orbit.distance = math::clamp(orbit.distance, orbit.min_distance, orbit.max_distance);
-
-				entity_tform.look_at(target_position);
-
-				entity_tform.set_position(target_position);
-				entity_tform.move({ 0.0f, 0.0f, orbit.distance }, true);
-			}
-		);
-	}
-
 	void CameraSystem::handle_orbiting_camera_input(const OnAnalogInput& analog_input, float delta)
 	{
 		auto& registry = get_registry();
 
-		registry.view<RelationshipComponent, TransformComponent, CameraOrbitComponent, CameraControlComponent, PlayerTargetComponent>().each
+		registry.view<RelationshipComponent, TransformComponent, OrbitComponent, CameraControlComponent, PlayerTargetComponent>().each
 		(
-			[&](const auto entity, const RelationshipComponent& relationship, TransformComponent& tform_comp, CameraOrbitComponent& orbit, const CameraControlComponent& camera_control, const PlayerTargetComponent& player_target)
+			[&](const auto entity, const RelationshipComponent& relationship, TransformComponent& tform_comp, OrbitComponent& orbit, const CameraControlComponent& camera_control, const PlayerTargetComponent& player_target)
 			{
 				if ((analog_input.player_index() == player_target.player_index))
 				{
 					if (analog_input.analog == camera_control.look)
 					{
-						const auto target = (orbit.target == null)
-							? relationship.get_parent()
-							: orbit.target
-						;
+						auto target = relationship.get_parent();
+						auto focus_offset = math::Vector {};
+
+						if (const auto* focus = registry.try_get<FocusComponent>(entity))
+						{
+							if (focus->target != null)
+							{
+								target = focus->target;
+							}
+
+							focus_offset = focus->focus_offset;
+						}
 
 						if (target == null)
 						{
@@ -186,8 +160,9 @@ namespace engine
 						auto target_tform = Transform(registry, target);
 
 						const auto entity_initial_position = entity_tform.get_position();
-						const auto target_position = (target_tform.get_position() + orbit.focus_offset);
+						const auto target_position = (target_tform.get_position() + focus_offset);
 
+						// TODO: Move into update event for `OrbitComponent`.
 						orbit.distance = math::clamp(orbit.distance, orbit.min_distance, orbit.max_distance);
 
 						const auto& input = analog_input.value;
@@ -197,7 +172,7 @@ namespace engine
 							: (orbit.movement_speed)
 						;
 
-						entity_tform.look_at(target_position);
+						//entity_tform.look_at(target_position);
 
 						apply_analog_input(entity_tform, (math::Vector2D { movement_speed } * input), delta);
 
