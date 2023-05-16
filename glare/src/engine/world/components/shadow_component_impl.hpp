@@ -1,8 +1,7 @@
 #pragma once
 
-#include "camera_component.hpp"
-
 #include <engine/world/types.hpp>
+#include <engine/world/camera/components/camera_component.hpp>
 
 #include <graphics/types.hpp>
 #include <graphics/shadow_map.hpp>
