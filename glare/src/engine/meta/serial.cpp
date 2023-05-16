@@ -2080,6 +2080,10 @@ namespace engine
 							projected_operator_position = static_cast<std::size_t>((trailing_expr.data() + projected_operator_sub_position) - current_expr.data());
 						}
 					}
+
+					// Update the offset to account for isolated value.
+					// NOTE: We add one to `scope_end` here to account for the closing symbol's length. (e.g. ')')
+					offset = std::max(offset, (scope_end + 1));
 				}
 				else
 				{
