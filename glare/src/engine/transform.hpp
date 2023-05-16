@@ -134,7 +134,12 @@ namespace engine
 			// this does not preserve local orientation -- i.e. `roll`.
 			// 
 			// See also: `set_basis`, `set_basis_q`
-			void set_direction_vector(const math::Vector& direction);
+			Transform& set_direction_vector(const math::Vector& direction);
+
+			// Gradually orients this transform (based on `turn_speed`) to look in `direction`.
+			// 
+			// NOTE: This assumes that `direction` is already normalized.
+			Transform& set_direction_vector(const math::Vector& direction, float turn_speed);
 
 			math::TransformVectors get_vectors() const;
 
@@ -184,17 +189,23 @@ namespace engine
 			// If `local` is true, this applies `align_vector` to `tv` before affecting the local position.
 			Transform& move(const math::Vector& tv, bool local=false);
 
-			// Orients this transform to look at 'target', then returns the new basis.
-			math::RotationMatrix look_at(const math::Vector& target, const math::Vector& up={0.0f, 1.0f, 0.0f});
+			// Orients this transform to look at 'target_position'.
+			Transform& look_at(const math::Vector& target_position, const math::Vector& up={ 0.0f, 1.0f, 0.0f });
 
-			// Orients this transform to look at the 't' Transform's position, then returns the new basis.
-			math::RotationMatrix look_at(Transform& t, const math::Vector& up={0.0f, 1.0f, 0.0f});
+			// Orients this transform gradually (based on `turn_speed`) to look at 'target_position'.
+			Transform& look_at(const math::Vector& target_position, float turn_speed, const math::Vector& up={0.0f, 1.0f, 0.0f});
 
-			// Orients this transform to look at 'entity', then returns the new basis.
-			// 
-			// NOTE: This may be less efficient than the other overloads of
-			// `look_at`, if you already have a `Transform` for `entity`.
-			math::RotationMatrix look_at(Entity entity, const math::Vector& up = { 0.0f, 1.0f, 0.0f });
+			// Orients this transform to look at `target_tform`.
+			Transform& look_at(const Transform& target_tform, const math::Vector& up={ 0.0f, 1.0f, 0.0f });
+
+			// Orients this transform gradually (based on `turn_speed`) to look at `target_tform`.
+			Transform& look_at(const Transform& target_tform, float turn_speed, const math::Vector& up={ 0.0f, 1.0f, 0.0f });
+
+			// Orients this transform to look at `target`.
+			Transform& look_at(Entity target, const math::Vector& up={ 0.0f, 1.0f, 0.0f });
+
+			// Orients this transform gradually (based on `turn_speed`) to look at `target`.
+			Transform& look_at(Entity target, float turn_speed, const math::Vector& up={ 0.0f, 1.0f, 0.0f });
 
 			// Rotation:
 			Transform& rotate(const math::Vector& rv, bool local=false);

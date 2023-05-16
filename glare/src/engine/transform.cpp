@@ -51,7 +51,7 @@ namespace engine
 	{
 		//return math::RotationMatrix { quat_orientation(origin, target, up) };
 
-		auto k = glm::normalize(origin - target);
+		auto k = glm::normalize(target - origin); // origin - target
 		auto i = glm::normalize(glm::cross(up, k));
 		auto j = glm::cross(k, i);
 
@@ -60,7 +60,7 @@ namespace engine
 
 	math::Quaternion Transform::quat_orientation(const math::Vector& origin, const math::Vector& target, const math::Vector& up)
 	{
-		return glm::quatLookAt(glm::normalize(origin - target), up);
+		return glm::quatLookAt(glm::normalize(target - origin), up); // origin - target
 	}
 
 	std::optional<Transform> Transform::get_parent() const
@@ -325,9 +325,20 @@ namespace engine
 		return (get_basis() * forward);
 	}
 
-	void Transform::set_direction_vector(const math::Vector& direction)
+	Transform& Transform::set_direction_vector(const math::Vector& direction)
 	{
 		set_basis(orientation({}, direction));
+
+		return *this;
+	}
+
+	Transform& Transform::set_direction_vector(const math::Vector& direction, float turn_speed)
+	{
+		const auto self_direction = get_direction_vector();
+
+		const auto updated_direction = math::nlerp(self_direction, direction, turn_speed); // lerp
+
+		return set_direction_vector(updated_direction);
 	}
 
 	math::TransformVectors Transform::get_vectors() const
@@ -497,27 +508,55 @@ namespace engine
 		return set_local_position(get_local_position() + tv);
 	}
 
-	math::RotationMatrix Transform::look_at(const math::Vector& target, const math::Vector& up)
+	Transform& Transform::look_at(const math::Vector& target_position, const math::Vector& up)
 	{
-		auto position = get_position();
+		const auto self_position = get_position();
 
-		auto m = orientation(position, target, up);
+		const auto focus_basis = orientation(self_position, target_position, up);
 
-		set_basis(m);
+		set_basis(focus_basis);
 
-		return m;
+		return *this;
 	}
 
-	math::RotationMatrix Transform::look_at(Transform& t, const math::Vector& up)
+	Transform& Transform::look_at(const math::Vector& target_position, float turn_speed, const math::Vector& up)
 	{
-		return look_at(t.get_position(), up);
+		const auto self_position = get_position();
+
+		const auto focus_basis = Transform::quat_orientation(self_position, target_position); // orientation
+		const auto self_basis = get_basis_q(); // get_basis();
+
+		const auto updated_basis = math::slerp(self_basis, focus_basis, turn_speed);
+
+		return set_basis_q(updated_basis);
 	}
 
-	math::RotationMatrix Transform::look_at(Entity entity, const math::Vector& up)
+	Transform& Transform::look_at(const Transform& target_tform, const math::Vector& up)
 	{
-		auto entity_tform = Transform(registry, entity);
+		const auto target_position = target_tform.get_position();
 
-		return look_at(entity_tform.get_position(), up);
+		return look_at(target_position, up);
+	}
+
+	Transform& Transform::look_at(const Transform& target_tform, float turn_speed, const math::Vector& up)
+	{
+		const auto target_position = target_tform.get_position();
+
+		return look_at(target_position, turn_speed, up);
+	}
+
+	Transform& Transform::look_at(Entity target, const math::Vector& up)
+	{
+		auto target_tform = Transform(registry, target);
+
+		return look_at(target_tform, up);
+	}
+
+	Transform& Transform::look_at(Entity target, float turn_speed, const math::Vector& up)
+	{
+		auto target_tform = Transform(registry, entity);
+
+		return look_at(target_tform, turn_speed, up);
 	}
 
 	Transform& Transform::rotate(const math::Vector& rv, bool local)
