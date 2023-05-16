@@ -2,9 +2,9 @@
 
 #include "reflection.hpp"
 
-#include "components/alignment_component.hpp"
 #include "components/gravity_component.hpp"
 #include "components/ground_component.hpp"
+#include "components/alignment_proxy_component.hpp"
 #include "components/motion_attachment_proxy_component.hpp"
 #include "components/motion_component.hpp"
 #include "components/velocity_component.hpp"
@@ -14,7 +14,7 @@
 
 namespace engine
 {
-	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(AlignmentComponent, entity);
+	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(AlignmentProxyComponent, entity);
 	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(VelocityComponent, velocity);
 	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(GravityComponent, intensity); //GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(GravityComponent, ...);
 	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(DecelerationComponent, deceleration);
@@ -108,7 +108,7 @@ namespace engine
 	{
 		// Components:
 		reflect<MotionComponent>();
-		reflect<AlignmentComponent>();
+		reflect<AlignmentProxyComponent>();
 		reflect<VelocityComponent>();
 		reflect<GravityComponent>();
 		reflect<DecelerationComponent>();

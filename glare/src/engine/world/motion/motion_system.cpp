@@ -6,8 +6,8 @@
 #include "components/velocity_component.hpp"
 #include "components/ground_component.hpp"
 #include "components/gravity_component.hpp"
+#include "components/alignment_proxy_component.hpp"
 #include "components/motion_attachment_proxy_component.hpp"
-#include "components/alignment_component.hpp"
 #include "components/deceleration_component.hpp"
 
 #include <math/types.hpp>
@@ -192,7 +192,7 @@ namespace engine
 			{
 				Entity alignment_entity = entity; // null;
 
-				if (auto* alignment_proxy = registry.try_get<AlignmentComponent>(entity))
+				if (auto* alignment_proxy = registry.try_get<AlignmentProxyComponent>(entity))
 				{
 					if (alignment_proxy->entity != null)
 					{

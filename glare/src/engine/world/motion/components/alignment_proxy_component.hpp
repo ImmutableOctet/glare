@@ -5,7 +5,7 @@
 namespace engine
 {
 	// Similar to `ForwardingComponent`, this specifies a proxy entity for alignment to be applied.
-	struct AlignmentComponent
+	struct AlignmentProxyComponent
 	{
 		Entity entity = null;
 	};
