@@ -197,6 +197,9 @@ namespace engine
 		// `entity` command (i.e. 'target' syntax) and the `EntitySystem` type.
 		systems.erase("entity");
 
+		// Removed alias due to name conflicts. (e.g. `AnimationComponent`)
+		systems.erase("animation");
+
 		systems["debug"] = systems["DebugListener"];
 
 		// Global namespace:
