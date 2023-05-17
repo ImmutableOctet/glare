@@ -1481,7 +1481,13 @@ namespace engine
 						const auto full_assignment_expr_length = static_cast<std::size_t>(full_assignment_expr_end - full_assignment_expr_begin);
 						const auto full_assignment_expr = std::string_view { full_assignment_expr_begin, full_assignment_expr_length };
 
-						process_variable_assignment(variable_description->resolved_name, variable_description->scope, full_assignment_expr, variable_type, true);
+						process_variable_assignment
+						(
+							variable_description->resolved_name, variable_description->scope,
+							full_assignment_expr,
+							variable_type,
+							(variable_description->scope != MetaVariableScope::Local) // (variable_description->scope == MetaVariableScope::Global) // false
+						);
 
 						// Only one instruction processed, but several produced.
 						return 1;
