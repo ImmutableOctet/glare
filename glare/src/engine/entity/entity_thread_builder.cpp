@@ -2348,6 +2348,8 @@ namespace engine
 			error_impl(true, message);
 		};
 
+		bool try_as_meta_expr = true;
+
 		if (instruction_name.empty())
 		{
 			auto
@@ -2362,7 +2364,6 @@ namespace engine
 			bool meta_expr_allow_leading_remote_variable = true;
 
 			bool try_as_directive                  = true;
-			bool try_as_meta_expr                  = true;
 			bool try_as_remote_variable_assignment = true;
 
 			if (!type_or_variable_name.empty())
@@ -2605,9 +2606,12 @@ namespace engine
 				return 1; // std::nullopt;
 			}
 		}
-		else if (auto result = process_meta_expression_instruction(instruction_raw))
+		else if (try_as_meta_expr)
 		{
-			return result;
+			if (auto result = process_meta_expression_instruction(instruction_raw, false, true))
+			{
+				return result;
+			}
 		}
 
 		const auto instruction_id = hash(instruction_name).value();
@@ -3311,6 +3315,16 @@ namespace engine
 			}
 		}
 
+		// Try processing as a meta-expression again, but with entity-reference fallbacks turned on.
+		if (try_as_meta_expr)
+		{
+			if (auto result = process_meta_expression_instruction(instruction_raw, true, true)) // false
+			{
+				return result;
+			}
+		}
+
+		// If all else fails, notify the user and continue processing.
 		warn(util::format("Unknown instruction detected: `{}` (#{})", instruction_name, instruction_id));
 
 		// NOTE: We always return 1 on invalid instructions, since
