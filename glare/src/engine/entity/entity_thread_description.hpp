@@ -25,7 +25,7 @@ namespace engine
 		std::optional<EntityThreadID> thread_id;
 
 		// A series of instructions to be executed in-order.
-		util::small_vector<EntityInstruction, 32> instructions; // 64 // 48
+		util::small_vector<EntityInstruction, 64> instructions; // 32 // 48
 
 		inline const EntityInstruction& get_instruction(InstructionIndex index) const
 		{
