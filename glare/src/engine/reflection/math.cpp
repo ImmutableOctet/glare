@@ -363,6 +363,10 @@ namespace engine
             .func<&math::rotation_yaw>("rotation_yaw"_hs)
             .func<&math::rotation_roll>("rotation_roll"_hs)
 
+            .func<&math::rotation_pitch_q>("rotation_pitch_q"_hs)
+            .func<&math::rotation_yaw_q>("rotation_yaw_q"_hs)
+            .func<&math::rotation_roll_q>("rotation_roll_q"_hs)
+
             .func<static_cast<math::Quaternion(*)(const math::Vector&, const math::Vector&, const math::Vector&)>(&math::quaternion_from_orthogonal)>("quaternion_from_orthogonal"_hs)
             .func<static_cast<math::Quaternion(*)(const math::Vector&, const math::Vector&)>(&math::quaternion_from_orthogonal)>("quaternion_from_orthogonal"_hs)
             .func<static_cast<math::Quaternion(*)(const math::OrthogonalVectors&)>(&math::quaternion_from_orthogonal)>("quaternion_from_orthogonal"_hs)
