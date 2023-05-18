@@ -4,6 +4,9 @@
 
 #include <regex>
 
+#include <array>
+#include <string_view>
+
 namespace util
 {
 	std::tuple<std::size_t, std::string_view> find_accessor(std::string_view expr)
@@ -891,151 +894,72 @@ namespace util
 		return { key_name, value_type, trailing_expr, expression_syntax_used };
 	}
 
-	std::size_t find_scope_closing_symbol(std::string_view expr, std::string_view begin_symbol, std::string_view end_symbol, std::size_t position, std::string_view ignore_begin_symbol, std::string_view ignore_end_symbol)
-    {
-	    if (position == std::string_view::npos)
-	    {
-		    return std::string_view::npos;
-	    }
-
-	    std::size_t begin_symbols_found = 0;
-
-		const bool has_ignore_symbols = (!ignore_begin_symbol.empty() && !ignore_end_symbol.empty());
-
-	    while (position < expr.length())
-	    {
-			const auto nearest_scope_end = expr.find(end_symbol, position);
-
-			if (has_ignore_symbols)
-			{
-				const auto ignore_begin_position = expr.find(ignore_begin_symbol, position);
-
-				if ((ignore_begin_position != std::string_view::npos) && ((nearest_scope_end == std::string_view::npos) || (ignore_begin_position < nearest_scope_end)))
-				{
-					const auto ignore_end_position = expr.find(ignore_end_symbol, (ignore_begin_position + 1));
-
-					if (ignore_end_position != std::string_view::npos)
-					{
-						position = ignore_end_position;
-
-						continue;
-					}
-				}
-			}
-
-		    const auto nearest_scope_begin = expr.find(begin_symbol, position);
-
-		    if ((nearest_scope_begin != std::string_view::npos) && (nearest_scope_begin < nearest_scope_end))
-		    {
-			    begin_symbols_found++;
-
-			    position = (nearest_scope_begin + 1);
-
-			    continue;
-		    }
-
-		    if (nearest_scope_end == std::string_view::npos)
-		    {
-			    break;
-		    }
-
-		    if (begin_symbols_found > 0)
-		    {
-			    begin_symbols_found--;
-
-			    position = nearest_scope_end + 1;
-		    }
-		    else
-		    {
-			    return nearest_scope_end;
-		    }
-	    }
-
-	    return std::string_view::npos;
-    }
-
-    std::tuple<std::size_t, std::size_t> find_scope_symbols(std::string_view expr, std::string_view begin_symbol, std::string_view end_symbol, std::string_view ignore_begin_symbol, std::string_view ignore_end_symbol)
-    {
-		std::size_t scope_begin = std::string_view::npos;
-
-		const bool has_ignore_symbols = (!ignore_begin_symbol.empty() && !ignore_end_symbol.empty());
-
-		if (has_ignore_symbols)
-		{
-			std::size_t position = 0;
-
-			while (position < expr.length())
-			{
-				scope_begin = expr.find(begin_symbol, position);
-
-				const auto first_ignore_begin_symbol = expr.find(ignore_begin_symbol, position);
-
-				if ((first_ignore_begin_symbol != std::string_view::npos) && (scope_begin > first_ignore_begin_symbol))
-				{
-					const auto first_ignore_end_symbol = expr.find(ignore_end_symbol, (first_ignore_begin_symbol + 1));
-
-					if ((first_ignore_end_symbol != std::string_view::npos) && (scope_begin < first_ignore_end_symbol))
-					{
-						position = (first_ignore_end_symbol + 1);
-					}
-					else
-					{
-						break;
-					}
-				}
-				else
-				{
-					break;
-				}
-			}
-
-			if (position >= expr.length())
-			{
-				scope_begin = std::string_view::npos;
-			}
-		}
-		else
-		{
-			scope_begin = expr.find(begin_symbol);
-		}
-
-	    if (scope_begin == std::string_view::npos)
-	    {
-			return { std::string_view::npos, std::string_view::npos };
-	    }
-
-	    return
-		{
-			scope_begin,
-
-			find_scope_closing_symbol
-			(
-				expr,
-				begin_symbol, end_symbol,
-				(scope_begin + 1),
-				ignore_begin_symbol, ignore_end_symbol
-			)
-		};
-    }
-
     std::size_t find_closing_parenthesis(std::string_view expr, std::size_t position)
     {
-        return find_scope_closing_symbol(expr, "(", ")", position, "\"", "\"");
+        return find_scope_closing_symbol
+		(
+			expr,
+			
+			"(", ")",
+			
+			position,
+			
+			std::array
+			{
+				std::pair { "[", "]" },
+				std::pair { "\"", "\"" }
+			}
+		);
     }
 
     std::tuple<std::size_t, std::size_t> find_parentheses(std::string_view expr)
     {
-        return find_scope_symbols(expr, "(", ")", "\"", "\"");
+        return find_scope_symbols
+		(
+			expr,
+
+			"(", ")",
+			
+			std::array
+			{
+				std::pair { "[", "]" },
+				std::pair { "\"", "\"" }
+			}
+		);
     }
 
 	std::size_t find_closing_subscript(std::string_view expr, std::size_t position)
 	{
-		return find_scope_closing_symbol(expr, "[", "]", position, "\"", "\"");
+		return find_scope_closing_symbol
+		(
+			expr,
+
+			"[", "]",
+
+			position,
+
+			std::array
+			{
+				std::pair { "(", ")" },
+				std::pair { "\"", "\"" }
+			}
+		);
 	}
 
 	std::tuple<std::size_t, std::size_t> find_subscript(std::string_view expr)
 	{
-		return find_scope_symbols(expr, "[", "]", "\"", "\"");
+		return find_scope_symbols
+		(
+			expr,
+
+			"[", "]",
+
+			std::array
+			{
+				std::pair { "(", ")" },
+				std::pair { "\"", "\"" }
+			}
+		);
 	}
 
 	std::tuple<std::size_t, std::string_view>
