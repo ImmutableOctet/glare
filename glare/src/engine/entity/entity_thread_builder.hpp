@@ -177,6 +177,8 @@ namespace engine
 			EntityInstructionCount process(std::string_view lines, EntityInstructionCount skip=0);
 			EntityInstructionCount process(const ContentSource& content, EntityInstructionCount skip=0);
 
+			EntityInstructionCount process_from_file(const std::filesystem::path& script_path, std::string_view separator="\n", EntityInstructionCount skip=0);
+
 			bool process_update_instruction_from_values
 			(
 				std::string_view type_name,
@@ -448,9 +450,7 @@ namespace engine
 				std::optional<EntityThreadCadence> opt_cadence=std::nullopt
 			);
 
-			// Loads instruction content from a file located at `script_path`.
-			// NOTE: This uses the `opt_base_path` field to better resolve the path specified.
-			EntityInstructionCount from_file(const std::filesystem::path& script_path, std::string_view separator="\n", EntityInstructionCount skip=0);
+			
 		protected:
 			// Retrieves a mutable reference to the current multi-line update instruction.
 			// 
@@ -539,9 +539,22 @@ namespace engine
 				);
 			}
 
+			// This is an internal subroutine. For the public API, please use `process`.
 			EntityInstructionCount from_array(const util::json& thread_content, EntityInstructionCount skip=0);
+
+			// This is an internal subroutine. For the public API, please use `process`.
 			EntityInstructionCount from_object(const util::json& thread_content, bool flush=true);
+
+			// This is an internal subroutine. For the public API, please use `process`.
 			EntityInstructionCount from_lines(std::string_view lines, std::string_view separator="\n", EntityInstructionCount skip=0);
+
+			/*
+				This is an internal subroutine. For the public API, please use `process_from_file`.
+
+				Loads instruction content from a file located at `script_path`.
+				NOTE: This uses the `opt_base_path` field to better resolve the path specified.
+			*/
+			EntityInstructionCount from_file(const std::filesystem::path& script_path, std::string_view separator="\n", EntityInstructionCount skip=0);
 
 			EntityInstructionCount generate_if_block
 			(

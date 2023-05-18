@@ -1941,6 +1941,8 @@ namespace engine
 
 				[this, &content_source, else_index, &condition_ref, &if_builder]()
 				{
+					// TODO: Look into whether it still makes sense to re-use `if_builder` here,
+					// since the variable context would also be shared.
 					return if_builder.process(content_source, else_index);
 				},
 				
@@ -2147,7 +2149,7 @@ namespace engine
 			}
 		);
 
-		imported_thread.from_file(path);
+		imported_thread.process_from_file(path);
 
 		if (launch_immediately)
 		{
@@ -3275,9 +3277,11 @@ namespace engine
 
 				case "merge"_hs:
 				case "include"_hs:
+					// NOTE: Direct use of `from_file`.
 					return from_file(instruction_content);
 
 				case "embed"_hs:
+					// NOTE: Direct use of `from_lines`.
 					return from_lines(instruction_content);
 
 				case "import"_hs:
@@ -3483,7 +3487,7 @@ namespace engine
 						active_skip_count += (processed - 1);
 					}
 
-					processed_instruction_count += *result;
+					processed_instruction_count += processed;
 				}
 
 				content_index++;
@@ -3579,7 +3583,12 @@ namespace engine
 
 	EntityInstructionCount EntityThreadBuilder::process(std::string_view lines, EntityInstructionCount skip)
 	{
-		return from_lines(lines, "\n", skip);
+		const auto result = from_lines(lines, "\n", skip);
+
+		// Ensure to flush the current update instruction.
+		flush_update_instruction();
+
+		return result;
 	}
 
 	EntityInstructionCount EntityThreadBuilder::process(const ContentSource& content, EntityInstructionCount skip)
@@ -3589,15 +3598,29 @@ namespace engine
 		util::visit
 		(
 			content,
+
 			[this, skip, &result](std::string_view lines)
 			{
 				result = process(lines, skip);
 			},
+
 			[this, skip, &result](const util::json& data)
 			{
 				result = process(data, skip);
 			}
 		);
+
+		// NOTE: There's no need to call `flush_update_instruction` here since this is a delegating overload.
+
+		return result;
+	}
+
+	EntityInstructionCount EntityThreadBuilder::process_from_file(const std::filesystem::path& script_path, std::string_view separator, EntityInstructionCount skip)
+	{
+		const auto result = from_file(script_path, separator, skip);
+
+		// Ensure to flush the current update instruction.
+		flush_update_instruction();
 
 		return result;
 	}
