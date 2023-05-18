@@ -38,6 +38,25 @@ namespace engine
         return type;
     }
 
+    template <auto fn_ptr, auto generic_impl_lambda, std::size_t min_args=0>
+    constexpr auto make_constructors(auto type)
+    {
+        util::generate_function_overloads_ex
+        <
+            fn_ptr,
+            decltype(generic_impl_lambda), // generic_impl_lambda,
+            min_args
+        >
+        (
+            [&type]<auto overload_fn_ptr>()
+            {
+                type = type.ctor<overload_fn_ptr>();
+            }
+        );
+
+        return type;
+    }
+
     template
     <
         typename T, typename trait,
