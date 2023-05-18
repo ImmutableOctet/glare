@@ -1,5 +1,6 @@
 #include "math.hpp"
 #include "math_extensions.hpp"
+#include "common_extensions.hpp"
 #include "string_conversion.hpp"
 
 #include <engine/meta/hash.hpp>
@@ -169,13 +170,6 @@ namespace engine
             .func<&impl::quat_vec3_multiply_impl>("operator*"_hs)
             .func<&impl::quat_vec4_multiply_impl>("operator*"_hs)
             .func<&impl::inverse_impl<math::Quaternion>>("inverse"_hs)
-            .conv<&math::quaternion_to_matrix<math::Matrix3x3>>()
-            .conv<&math::quaternion_to_matrix<math::Matrix4x4>>()
-            .data<&math::Quaternion::x>("x"_hs)
-            .data<&math::Quaternion::y>("y"_hs)
-            .data<&math::Quaternion::z>("z"_hs)
-            .data<&math::Quaternion::w>("w"_hs)
-            .ctor<math::Vector3D>()
         ;
     }
 
@@ -325,6 +319,54 @@ namespace engine
             .func<static_cast<int(*)(const std::int64_t&, const std::int64_t&)>(&math::sign<std::int64_t>)>("sign"_hs)
             */
 
+            // GLM:
+
+            // Dot product:
+            .func<util::lambda_as_function_ptr<[](float x, float y) { return math::dot(x, y); }>()>("dot"_hs)
+            .func<util::lambda_as_function_ptr<[](const math::Quaternion& x, const math::Quaternion& y) { return math::dot(x, y); }>()>("dot"_hs)
+            .func<util::lambda_as_function_ptr<[](const math::Vector4D& x, const math::Vector4D& y) { return math::dot(x, y); }>()>("dot"_hs)
+            .func<util::lambda_as_function_ptr<[](const math::Vector2D& x, const math::Vector2D& y) { return math::dot(x, y); }>()>("dot"_hs)
+            .func<util::lambda_as_function_ptr<[](const math::Vector3D& x, const math::Vector3D& y) { return math::dot(x, y); }>()>("dot"_hs)
+
+            // Cross product:
+            .func<util::lambda_as_function_ptr<[](const math::Vector3D& x, const math::Vector3D& y) { return math::cross(x, y); }>()>("cross"_hs)
+            .func<util::lambda_as_function_ptr<[](const math::Quaternion& q, const math::Vector3D& v) { return math::cross(q, v); }>()>("cross"_hs)
+            .func<util::lambda_as_function_ptr<[](const math::Vector3D& v, const math::Quaternion& q) { return math::cross(v, q); }>()>("cross"_hs)
+            .func<util::lambda_as_function_ptr<[](const math::Quaternion& q1, const math::Quaternion& q2) { return math::cross(q1, q2); }>()>("cross"_hs)
+
+            // Normalize:
+            .func<util::lambda_as_function_ptr<[](const math::Vector3D& v) { return math::normalize(v); }>()>("normalize"_hs)
+            .func<util::lambda_as_function_ptr<[](const math::Quaternion& q) { return math::normalize(q); }>()>("normalize"_hs)
+
+            // Length:
+            .func<util::lambda_as_function_ptr<[](float value) { return math::length(value); }>()>("length"_hs)
+            .func<util::lambda_as_function_ptr<[](const math::Quaternion& q) { return math::length(q); }>()>("length"_hs)
+            .func<util::lambda_as_function_ptr<[](const math::Vector4D& v) { return math::length(v); }>()>("length"_hs)
+            .func<util::lambda_as_function_ptr<[](const math::Vector2D& v) { return math::length(v); }>()>("length"_hs)
+            .func<util::lambda_as_function_ptr<[](const math::Vector3D& v) { return math::length(v); }>()>("length"_hs)
+
+            // Inverse:
+            .func<util::lambda_as_function_ptr<[](const math::Quaternion& q) { return math::inverse(q); }>()>("inverse"_hs)
+            .func<util::lambda_as_function_ptr<[](const math::Matrix4x4& m) { return math::inverse(m); }>()>("inverse"_hs)
+            .func<util::lambda_as_function_ptr<[](const math::Matrix3x3& m) { return math::inverse(m); }>()>("inverse"_hs)
+
+            // Transpose:
+            .func<util::lambda_as_function_ptr<[](const math::Matrix4x4& m) { return math::transpose(m); }>()>("transpose"_hs)
+            .func<util::lambda_as_function_ptr<[](const math::Matrix3x3& m) { return math::transpose(m); }>()>("transpose"_hs)
+
+            // Translate:
+            .func<util::lambda_as_function_ptr<[](const math::Matrix4x4& m, const math::Vector3D& v) { return math::translate(m, v); }>()>("translate"_hs)
+
+            // Rotate:
+            .func<util::lambda_as_function_ptr<[](const math::Matrix4x4& m, float angle, const math::Vector3D& v) { return math::rotate(m, angle, v); }>()>("rotate"_hs)
+            .func<util::lambda_as_function_ptr<[](const math::Quaternion& q, float angle, const math::Vector3D& v) { return math::rotate(q, angle, v); }>()>("rotate"_hs)
+            .func<util::lambda_as_function_ptr<[](const math::Quaternion& q, const math::Vector3D& v) { return math::rotate(q, v); }>()>("rotate"_hs)
+            .func<util::lambda_as_function_ptr<[](const math::Quaternion& q, const math::Vector4D& v) { return math::rotate(q, v); }>()>("rotate"_hs)
+
+            // Scale:
+            .func<util::lambda_as_function_ptr<[](const math::Matrix4x4& m, const math::Vector3D& v) { return math::scale(m, v); }>()>("scale"_hs)
+
+            // General:
             .func<&math::positive<std::int64_t>>("positive"_hs)
             .func<&math::positive<std::int32_t>>("positive"_hs)
             .func<&math::positive<double>>("positive"_hs)
@@ -476,6 +518,7 @@ namespace engine
         reflect<math::Vector2D>();
         reflect<math::Vector3D>();
         reflect<math::Vector4D>();
+        reflect<math::Quaternion>();
 
         reflect<math::vec2i>();
 
