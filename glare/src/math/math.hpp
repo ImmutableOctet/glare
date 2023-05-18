@@ -11,7 +11,15 @@
 namespace math
 {
 	// Imported GLM functions:
+	using glm::dot;
 	using glm::cross;
+	using glm::normalize;
+	using glm::length;
+	using glm::inverse;
+	using glm::transpose;
+	using glm::translate;
+	using glm::rotate;
+	using glm::scale;
 
 	// Standard math functions:
 	using std::abs;
