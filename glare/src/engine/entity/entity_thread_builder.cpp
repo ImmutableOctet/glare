@@ -2287,7 +2287,7 @@ namespace engine
 		// TODO: Rework single-line comment implementation to account for strings.
 		// 
 		// Search for a single-line 'comment' symbol on this line:
-		const auto single_line_comment_symbol_index = instruction_raw.find("//");
+		const auto single_line_comment_symbol_index = util::find_unscoped(instruction_raw, "//");
 
 		switch (single_line_comment_symbol_index)
 		{
