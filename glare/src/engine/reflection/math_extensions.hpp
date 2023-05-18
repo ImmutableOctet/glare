@@ -1,5 +1,7 @@
 #pragma once
 
+#include "common_extensions.hpp"
+
 #include <math/types.hpp>
 #include <math/conversion.hpp>
 
@@ -53,6 +55,88 @@ namespace engine
         }
 
         // Vector:
+        template <typename T, typename OutputType=T>
+        OutputType vector_operator_unary_plus_impl(const T& value)
+        {
+            using value_t = typename T::value_type;
+            using output_value_t = typename OutputType::value_type;
+
+            constexpr auto vector_length = T::length();
+
+            if constexpr (vector_length == 2)
+            {
+                return OutputType
+                {
+                    operator_unary_plus_impl<value_t, output_value_t>(value.x),
+                    operator_unary_plus_impl<value_t, output_value_t>(value.y)
+                };
+            }
+            else if constexpr (vector_length == 3)
+            {
+                return OutputType
+                {
+                    operator_unary_plus_impl<value_t, output_value_t>(value.x),
+                    operator_unary_plus_impl<value_t, output_value_t>(value.y),
+                    operator_unary_plus_impl<value_t, output_value_t>(value.z)
+                };
+            }
+            else if constexpr (vector_length == 4)
+            {
+                return OutputType
+                {
+                    operator_unary_plus_impl<value_t, output_value_t>(value.x),
+                    operator_unary_plus_impl<value_t, output_value_t>(value.y),
+                    operator_unary_plus_impl<value_t, output_value_t>(value.z),
+                    operator_unary_plus_impl<value_t, output_value_t>(value.w)
+                };
+            }
+            else
+            {
+                static_assert(std::integral_constant<T, false>::value, "Unsupported vector type.");
+            }
+        }
+
+        template <typename T, typename OutputType=T>
+        OutputType vector_operator_unary_minus_impl(const T& value)
+        {
+            using value_t = typename T::value_type;
+            using output_value_t = typename OutputType::value_type;
+
+            constexpr auto vector_length = T::length();
+
+            if constexpr (vector_length == 2)
+            {
+                return OutputType
+                {
+                    operator_unary_minus_impl<value_t, output_value_t>(value.x),
+                    operator_unary_minus_impl<value_t, output_value_t>(value.y)
+                };
+            }
+            else if constexpr (vector_length == 3)
+            {
+                return OutputType
+                {
+                    operator_unary_minus_impl<value_t, output_value_t>(value.x),
+                    operator_unary_minus_impl<value_t, output_value_t>(value.y),
+                    operator_unary_minus_impl<value_t, output_value_t>(value.z)
+                };
+            }
+            else if constexpr (vector_length == 4)
+            {
+                return OutputType
+                {
+                    operator_unary_minus_impl<value_t, output_value_t>(value.x),
+                    operator_unary_minus_impl<value_t, output_value_t>(value.y),
+                    operator_unary_minus_impl<value_t, output_value_t>(value.z),
+                    operator_unary_minus_impl<value_t, output_value_t>(value.w)
+                };
+            }
+            else
+            {
+                static_assert(std::integral_constant<T, false>::value, "Unsupported vector type.");
+            }
+        }
+
         inline math::Vector4D vec4_from_vec2(const math::Vector2D& xy, float z, float w)
         {
             return { xy.x, xy.y, z, w };

@@ -46,13 +46,28 @@ namespace engine
 
         // NOTE: This check doesn't work due to non-type template parameters for `glm::vec`.
         // TODO: Revisit the idea of checking for vector types.
-        //if constexpr (util::is_specialization_v<T, glm::vec>)
-        if constexpr (std::is_same_v<T, math::Vector2D> || std::is_same_v<T, math::Vector3D> || std::is_same_v<T, math::Vector4D>) // || std::is_same_v<T, math::vec2i>
+        //constexpr auto is_vector_type = (util::is_specialization_v<T, glm::vec>)
+        constexpr auto is_vector_type = (std::is_same_v<T, math::Vector2D> || std::is_same_v<T, math::Vector3D> || std::is_same_v<T, math::Vector4D>); // std::is_same_v<T, math::vec2i>
+        
+        if constexpr (is_vector_type)
         {
             if constexpr (generate_operators)
             {
                 type = type
+                    .func<&impl::vector_operator_unary_plus_impl<T>>("+operator"_hs)
+                    .func<&impl::vector_operator_unary_minus_impl<T>>("-operator"_hs)
+
+                    // NOTE: Same-type division is not supported by quaternions, only vectors.
                     .func<&impl::divide_impl<T>>("operator/"_hs)
+                ;
+            }
+        }
+
+        if constexpr (is_vector_type || std::is_same_v<T, math::Quaternion>)
+        {
+            if constexpr (generate_operators)
+            {
+                type = type
                     .func<&impl::multiply_impl<T, float>>("operator*"_hs)
                 ;
             }
