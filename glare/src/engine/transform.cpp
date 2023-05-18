@@ -60,7 +60,10 @@ namespace engine
 
 	math::Quaternion Transform::quat_orientation(const math::Vector& origin, const math::Vector& target, const math::Vector& up)
 	{
-		return glm::quatLookAt(glm::normalize(target - origin), up); // origin - target
+		// Alternative implementation:
+		//return math::Quaternion { orientation(origin, target, up) };
+
+		return glm::quatLookAt(glm::normalize(target - origin), up); // (origin - target)
 	}
 
 	std::optional<Transform> Transform::get_parent() const
@@ -309,18 +312,50 @@ namespace engine
 
 	Transform& Transform::set_direction_vector(const math::Vector& direction)
 	{
-		set_basis(orientation({}, direction));
+		set_basis(orientation({}, -direction));
 
 		return *this;
 	}
 
 	Transform& Transform::set_direction_vector(const math::Vector& direction, float turn_speed)
 	{
+		/*
+		// Alternative implementation:
 		const auto self_direction = get_direction_vector();
 
 		const auto updated_direction = math::nlerp(self_direction, direction, turn_speed); // lerp
 
 		return set_direction_vector(updated_direction);
+		*/
+
+		// Quaternion-based implementation:
+		return set_basis_q(Transform::quat_orientation({}, direction), turn_speed);
+	}
+
+	Transform& Transform::set_direction_vector(const math::Vector& direction, float turn_speed, bool apply_x, bool apply_y, bool apply_z)
+	{
+		const auto entity_basis = get_basis_q();
+		const auto direction_basis = Transform::quat_orientation({}, direction);
+
+		const auto destination_basis = math::Quaternion
+		{
+			math::Vector3D
+			{
+				(apply_x)
+				? glm::pitch(direction_basis)
+				: glm::pitch(entity_basis),
+				
+				(apply_y)
+				? glm::yaw(direction_basis)
+				: glm::yaw(entity_basis),
+						
+				(apply_z)
+				? glm::roll(direction_basis)
+				: glm::roll(entity_basis)
+			}
+		};
+
+		return set_basis_q(destination_basis, turn_speed);
 	}
 
 	math::Vector Transform::get_flat_direction_vector(const math::Vector& forward) const
@@ -422,10 +457,51 @@ namespace engine
 		return *this;
 	}
 
+	Transform& Transform::set_basis(const math::RotationMatrix& basis, float turn_speed)
+	{
+		// Use quaternion math for interpolation.
+		return set_basis_q(math::Quaternion { basis }, turn_speed);
+	}
+
 	Transform& Transform::set_basis_q(const math::Quaternion& basis)
 	{
+		// Use matrix to store the static value.
 		//return set_basis(glm::mat3_cast(basis));
 		return set_basis(math::to_rotation_matrix((basis))); // TODO: Review use of 'conjugate'. // glm::conjugate
+	}
+
+	Transform& Transform::set_basis_q(const math::Quaternion& basis, float turn_speed)
+	{
+		return set_basis_q(math::slerp(get_basis_q(), basis, turn_speed));
+	}
+
+	Transform& Transform::set_local_basis(const math::RotationMatrix& basis)
+	{
+		transform.basis = basis; // glm::orthonormalize(basis);
+
+		invalidate();
+
+		//update_local_matrix(get_local_position(), get_local_scale(), basis);
+
+		return *this;
+	}
+
+	Transform& Transform::set_local_basis(const math::RotationMatrix& basis, float turn_speed)
+	{
+		// Use quaternion math for interpolation.
+		return set_local_basis_q(math::Quaternion { basis }, turn_speed);
+	}
+
+	Transform& Transform::set_local_basis_q(const math::Quaternion& basis)
+	{
+		// Use matrix to store the static value.
+		//return set_local_basis(glm::mat3_cast(basis));
+		return set_local_basis(math::to_rotation_matrix(glm::conjugate(basis))); // TODO: Review use of 'conjugate'.
+	}
+
+	Transform& Transform::set_local_basis_q(const math::Quaternion& basis, float turn_speed)
+	{
+		return set_local_basis_q(math::slerp(get_local_basis_q(), basis, turn_speed));
 	}
 
 	Transform& Transform::apply_basis(const math::RotationMatrix& basis, bool local)
@@ -446,26 +522,30 @@ namespace engine
 		return *this;
 	}
 
-	Transform& Transform::apply_basis(const math::RotationMatrix& basis, float turn_speed, bool local)
+	Transform& Transform::apply_basis(const math::RotationMatrix& relative_basis, float turn_extent, bool local)
 	{
 		// Use quaternion math for interpolation.
-		return apply_basis_q(math::Quaternion { basis }, turn_speed, local);
+		return apply_basis_q(math::Quaternion { relative_basis }, turn_extent, local);
 	}
 
 	Transform& Transform::apply_basis_q(const math::Quaternion& basis, bool local)
 	{
-		// Use matrix math for static value.
+		// Use matrix to store the static value.
 		return apply_basis(math::RotationMatrix { basis }, local);
 	}
 
-	Transform& Transform::apply_basis_q(const math::Quaternion& basis, float turn_speed, bool local)
+	Transform& Transform::apply_basis_q(const math::Quaternion& relative_basis, float turn_extent, bool local)
 	{
 		if (local)
 		{
-			return set_local_basis_q(math::slerp(get_local_basis_q(), basis, turn_speed));
+			const auto current_local_basis = get_local_basis_q();
+
+			return set_local_basis_q(math::slerp(current_local_basis, (current_local_basis * relative_basis), turn_extent));
 		}
 
-		return set_basis_q(math::slerp(get_basis_q(), basis, turn_speed));
+		const auto current_basis = get_basis_q();
+
+		return set_basis_q(math::slerp(current_basis, (current_basis * relative_basis), turn_extent));
 	}
 
 	Transform& Transform::set_rotation(const math::Vector& rv)
@@ -518,7 +598,7 @@ namespace engine
 		const auto current_basis = get_basis_q();
 		const auto target_basis = (current_basis * relative_basis);
 
-		return apply_basis_q(target_basis, turn_speed);
+		return set_basis_q(target_basis, turn_speed);
 	}
 	
 	Transform& Transform::set_ry(float ry, float turn_speed)
@@ -529,7 +609,7 @@ namespace engine
 		const auto current_basis = get_basis_q();
 		const auto target_basis = (current_basis * relative_basis);
 
-		return apply_basis_q(target_basis, turn_speed);
+		return set_basis_q(target_basis, turn_speed);
 	}
 	
 	Transform& Transform::set_rz(float rz, float turn_speed)
@@ -540,7 +620,7 @@ namespace engine
 		const auto current_basis = get_basis_q();
 		const auto target_basis = (current_basis * relative_basis);
 
-		return apply_basis_q(target_basis, turn_speed);
+		return set_basis_q(target_basis, turn_speed);
 	}
 
 	Transform& Transform::set_ry(const math::Vector& direction)
@@ -582,7 +662,7 @@ namespace engine
 		const auto current_basis = get_local_basis_q();
 		const auto target_basis = (current_basis * relative_basis);
 
-		return apply_basis_q(target_basis, turn_speed, true);
+		return set_local_basis_q(target_basis, turn_speed);
 	}
 	
 	Transform& Transform::set_local_ry(float ry, float turn_speed)
@@ -593,7 +673,7 @@ namespace engine
 		const auto current_basis = get_local_basis_q();
 		const auto target_basis = (current_basis * relative_basis);
 
-		return apply_basis_q(target_basis, turn_speed, true);
+		return set_local_basis_q(target_basis, turn_speed);
 	}
 	
 	Transform& Transform::set_local_rz(float rz, float turn_speed)
@@ -604,7 +684,7 @@ namespace engine
 		const auto current_basis = get_local_basis_q();
 		const auto target_basis = (current_basis * relative_basis);
 
-		return apply_basis_q(target_basis, turn_speed, true);
+		return set_local_basis_q(target_basis, turn_speed);
 	}
 
 	Transform& Transform::set_local_ry(const math::Vector& direction)
@@ -691,6 +771,11 @@ namespace engine
 	Transform& Transform::rotate(const math::Vector& rv, bool local)
 	{
 		return apply_basis(math::rotation_from_vector(rv), local);
+	}
+
+	Transform& Transform::rotate(const math::Vector& rv, float turn_extent, bool local)
+	{
+		return apply_basis(math::rotation_from_vector(rv), turn_extent, local);
 	}
 
 	Transform& Transform::rotateX(float rx, bool local)
@@ -849,22 +934,5 @@ namespace engine
 		//update_local_matrix(get_local_position(), scale, get_local_basis());
 
 		return *this;
-	}
-
-	Transform& Transform::set_local_basis(const math::RotationMatrix& basis)
-	{
-		transform.basis = basis; // glm::orthonormalize(basis);
-
-		invalidate();
-
-		//update_local_matrix(get_local_position(), get_local_scale(), basis);
-
-		return *this;
-	}
-
-	Transform& Transform::set_local_basis_q(const math::Quaternion& basis)
-	{
-		//return set_local_basis(glm::mat3_cast(basis));
-		return set_local_basis(math::to_rotation_matrix(glm::conjugate(basis))); // TODO: Review use of 'conjugate'.
 	}
 }

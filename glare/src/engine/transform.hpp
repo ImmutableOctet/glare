@@ -139,6 +139,14 @@ namespace engine
 			// NOTE: This assumes that `direction` is already normalized.
 			Transform& set_direction_vector(const math::Vector& direction, float turn_speed);
 
+			// Gradually orients this transform (based on `turn_speed`) to look in `direction`.
+			// 
+			// The `apply_x`, `apply_y` and `apply_z` parameters control
+			// whether the entity's pitch/yaw/roll angles are affected.
+			// 
+			// NOTE: This assumes that `direction` is already normalized.
+			Transform& set_direction_vector(const math::Vector& direction, float turn_speed, bool apply_x, bool apply_y=true, bool apply_z=true);
+
 			// Retrieves a normalized direction vector with the `y` element set to zero.
 			math::Vector get_flat_direction_vector(const math::Vector& forward={ 0.0f, 0.0f, -1.0f }) const; // {0.0f, 0.0f, 1.0f}
 
@@ -181,12 +189,21 @@ namespace engine
 			Transform& set_scale(float scale);
 
 			Transform& set_basis(const math::RotationMatrix& basis);
+			Transform& set_basis(const math::RotationMatrix& basis, float turn_speed);
+			
 			Transform& set_basis_q(const math::Quaternion& basis);
+			Transform& set_basis_q(const math::Quaternion& basis, float turn_speed);
+
+			Transform& set_local_basis(const math::RotationMatrix& basis);
+			Transform& set_local_basis(const math::RotationMatrix& basis, float turn_speed);
+			Transform& set_local_basis_q(const math::Quaternion& basis);
+			Transform& set_local_basis_q(const math::Quaternion& basis, float turn_speed);
 			
 			Transform& apply_basis(const math::RotationMatrix& basis, bool local=false);
-			Transform& apply_basis(const math::RotationMatrix& basis, float turn_speed, bool local=false);
+			Transform& apply_basis(const math::RotationMatrix& relative_basis, float turn_extent, bool local=false);
+
 			Transform& apply_basis_q(const math::Quaternion& basis, bool local=false);
-			Transform& apply_basis_q(const math::Quaternion& basis, float turn_speed, bool local=false);
+			Transform& apply_basis_q(const math::Quaternion& relative_basis, float turn_extent, bool local=false);
 
 			// Euler angles. (Pitch, Yaw, Roll)
 			Transform& set_rotation(const math::Vector& rv);
@@ -268,6 +285,7 @@ namespace engine
 
 			// Rotation:
 			Transform& rotate(const math::Vector& rv, bool local=false);
+			Transform& rotate(const math::Vector& rv, float turn_extent, bool local=false);
 
 			Transform& rotateX(float rx, bool local=false);
 			Transform& rotateY(float ry, bool local=false);
@@ -289,8 +307,5 @@ namespace engine
 			Transform& set_local_matrix(const math::Matrix& m);
 			Transform& set_local_position(const math::Vector& position);
 			Transform& set_local_scale(const math::Vector& scale);
-
-			Transform& set_local_basis(const math::RotationMatrix& basis);
-			Transform& set_local_basis_q(const math::Quaternion& basis);
 	};
 }
