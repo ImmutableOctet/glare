@@ -2,6 +2,7 @@
 
 #include <type_traits>
 #include <optional>
+#include <array>
 
 #include "function_traits.hpp"
 #include "member_traits.hpp"
@@ -23,6 +24,16 @@ namespace util
 
 		static_assert(is_complete_specialization<spec_test<int>>::value);
 		static_assert(!is_complete_specialization<spec_test<float>>::value);
+
+		template <typename>
+		struct array_size_trait;
+
+		template <typename T, std::size_t N>
+		struct array_size_trait<std::array<T, N>>
+		{
+			inline static constexpr std::size_t value = N;
+			//inline static constexpr std::size_t size = N;
+		};
 	}
 
 	template <typename T>
@@ -105,4 +116,9 @@ namespace util
 
 	template <typename T>
     inline constexpr bool is_convertible_to_bool = (std::is_constructible_v<bool, decltype((std::declval<const T&>()))>); // (std::is_constructible_v<bool, const T&>) // (std::is_convertible_v<T, bool>);
+
+	template <typename ArrayType>
+	inline constexpr auto array_size = impl::array_size_trait<ArrayType>::value;
+
+	static_assert(array_size<std::array<int, 3>> == 3);
 }
