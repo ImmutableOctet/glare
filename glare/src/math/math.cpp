@@ -70,9 +70,40 @@ namespace math
 		return { {cos, sin, 0.0f}, {-sin, cos, 0.0f}, {0.0f, 0.0f, 1.0f} };
 	}
 
+	Quaternion rotation_pitch_q(float angle)
+	{
+		return Quaternion { rotation_pitch(angle) };
+
+		//return glm::rotate(Quaternion{}, angle, { 1.0f, 0.0f, 0.0f });
+	}
+
+	Quaternion rotation_yaw_q(float angle)
+	{
+		return Quaternion { rotation_yaw(angle) };
+
+		//return glm::rotate(Quaternion {}, angle, { 0.0f, 1.0f, 0.0f });
+	}
+
+	Quaternion rotation_roll_q(float angle)
+	{
+		return Quaternion { rotation_roll(angle) };
+
+		//return glm::rotate(Quaternion {}, angle, { 0.0f, 0.0f, 1.0f });
+	}
+
 	RotationMatrix rotation_from_vector(const Vector& rv)
 	{
 		return (rotation_yaw(rv.y) * rotation_pitch(rv.x) * rotation_roll(rv.z));
+	}
+
+	Quaternion rotation_from_vector_q(const Vector& rv)
+	{
+		// TODO: Change to a more optimal implementation.
+		// (i.e. without matrix conversion)
+		return Quaternion { rotation_from_vector(rv) };
+
+		// Alternative implementation (untested 'optimal' version):
+		//return (rotation_yaw_q(rv.y) * rotation_pitch_q(rv.x) * rotation_roll_q(rv.z));
 	}
 
 	Quaternion quaternion_from_orthogonal(const Vector& a, const Vector& b, const Vector& c)

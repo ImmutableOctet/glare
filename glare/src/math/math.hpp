@@ -126,9 +126,15 @@ namespace math
 	RotationMatrix rotation_yaw(float angle);
 	RotationMatrix rotation_roll(float angle);
 
+	Quaternion rotation_pitch_q(float angle);
+	Quaternion rotation_yaw_q(float angle);
+	Quaternion rotation_roll_q(float angle);
+
 	// Aligned basis from direction vector `rv`.
 	// See also: `rotation_from_orthogonal` and `quaternion_from_orthogonal`.
 	RotationMatrix rotation_from_vector(const Vector& rv);
+
+	Quaternion rotation_from_vector_q(const Vector& rv);
 
 	Quaternion quaternion_from_orthogonal(const Vector& a, const Vector& b, const Vector& c);
 	Quaternion quaternion_from_orthogonal(const Vector& a, const Vector& b); // Automatically computes `c`.
