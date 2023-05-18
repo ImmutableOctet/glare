@@ -60,7 +60,7 @@ namespace engine
         // ...
     }
 
-    template <typename PrimitiveType, bool generate_optional_type=true>
+    template <typename PrimitiveType, bool generate_optional_type=true, bool generate_operators=false>
     static auto extend_language_primitive_type(bool sync_context=true)
     {
         if (sync_context)
@@ -94,6 +94,14 @@ namespace engine
             .conv<&impl::arithmetic_to_string_impl<PrimitiveType>>()
             .conv<&impl::operator_bool_impl<PrimitiveType>>()
         ;
+
+        if constexpr (generate_operators)
+        {
+            type = type
+                .func<&impl::operator_unary_plus_impl<PrimitiveType>>("+operator"_hs)
+                .func<&impl::operator_unary_minus_impl<PrimitiveType>>("-operator"_hs)
+            ;
+        }
 
         if constexpr (generate_optional_type)
         {
@@ -364,8 +372,6 @@ namespace engine
 
         if constexpr (generate_optional_type)
         {
-            constexpr auto type_name = std::string_view { "Entity" }; // entt::type_name<Entity>::value();
-
             auto opt_type = optional_custom_meta_type<Entity>(type_name);
         }
     }
