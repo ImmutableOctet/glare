@@ -9,13 +9,20 @@
 #include "components/motion_component.hpp"
 #include "components/velocity_component.hpp"
 #include "components/deceleration_component.hpp"
+#include "components/direction_component.hpp"
+#include "components/orientation_component.hpp"
+#include "components/rotate_component.hpp"
 #include "components/focus_component.hpp"
 #include "components/orbit_component.hpp"
 
 #include "motion_events.hpp"
 
+#include <engine/transform.hpp>
+
 namespace engine
 {
+	//struct Transform;
+
 	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(AlignmentProxyComponent, entity);
 	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(VelocityComponent, velocity);
 	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(GravityComponent, intensity); //GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(GravityComponent, ...);
@@ -50,6 +57,125 @@ namespace engine
 	}
 
 	template <>
+	void reflect<DirectionComponent>()
+	{
+		engine_meta_type<DirectionComponent>()
+			.data<&DirectionComponent::direction>("direction"_hs)
+			.data<&DirectionComponent::turn_speed>("turn_speed"_hs)
+			.data<&DirectionComponent::set_ignore_x, &DirectionComponent::get_ignore_x>("ignore_x"_hs)
+			.data<&DirectionComponent::set_ignore_y, &DirectionComponent::get_ignore_y>("ignore_y"_hs)
+			.data<&DirectionComponent::set_ignore_z, &DirectionComponent::get_ignore_z>("ignore_z"_hs)
+
+			.ctor
+			<
+				decltype(DirectionComponent::direction)
+			>()
+
+			.ctor
+			<
+				decltype(DirectionComponent::direction),
+				decltype(DirectionComponent::turn_speed)
+			>()
+
+			.ctor
+			<
+				decltype(DirectionComponent::direction),
+				decltype(DirectionComponent::turn_speed),
+				decltype(DirectionComponent::ignore_x)
+			>()
+
+			.ctor
+			<
+				decltype(DirectionComponent::direction),
+				decltype(DirectionComponent::turn_speed),
+				decltype(DirectionComponent::ignore_x),
+				decltype(DirectionComponent::ignore_y)
+			>()
+
+			.ctor
+			<
+				decltype(DirectionComponent::direction),
+				decltype(DirectionComponent::turn_speed),
+				decltype(DirectionComponent::ignore_x),
+				decltype(DirectionComponent::ignore_y),
+				decltype(DirectionComponent::ignore_z)
+			>()
+		;
+	}
+
+	template <>
+	void reflect<OrientationComponent>()
+	{
+		auto type = engine_meta_type<OrientationComponent>()
+			.data<&OrientationComponent::orientation>("orientation"_hs)
+			.data<&OrientationComponent::turn_speed>("turn_speed"_hs)
+			.data<&OrientationComponent::set_direction, &OrientationComponent::get_direction>("direction"_hs)
+
+			.ctor
+			<
+				decltype(OrientationComponent::orientation)
+			>()
+
+			.ctor
+			<
+				decltype(OrientationComponent::orientation),
+				decltype(OrientationComponent::turn_speed)
+			>()
+		;
+
+		type = make_constructors
+		<
+			&OrientationComponent::from_direction,
+			[](auto&&... args) { return OrientationComponent::from_direction(std::forward<decltype(args)>(args)...); },
+			1
+		>(type);
+	}
+
+	template <>
+	void reflect<RotateComponent>()
+	{
+		auto type = engine_meta_type<RotateComponent>()
+			.data<&RotateComponent::relative_orientation>("relative_orientation"_hs)
+			.data<&RotateComponent::turn_speed>("turn_speed"_hs)
+			.data<&RotateComponent::set_use_local_rotation, &RotateComponent::get_use_local_rotation>("use_local_rotation"_hs)
+
+			//.data<&RotateComponent::set_direction, nullptr>("direction"_hs)
+
+			.func<&RotateComponent::set_direction>("set_direction"_hs)
+			.func<&RotateComponent::get_direction>("get_direction"_hs)
+
+			.func<&RotateComponent::get_next_basis>("get_next_basis"_hs)
+
+			.func<static_cast<math::Vector(RotateComponent::*)(const Transform&, float) const>(&RotateComponent::get_next_direction)>("get_next_direction"_hs)
+			.func<static_cast<math::Vector(RotateComponent::*)(Entity, Registry&, float) const>(&RotateComponent::get_next_direction)>("get_next_direction"_hs)
+
+			.ctor
+			<
+				decltype(RotateComponent::relative_orientation)
+			>()
+
+			.ctor
+			<
+				decltype(RotateComponent::relative_orientation),
+				decltype(RotateComponent::turn_speed)
+			>()
+
+			.ctor
+			<
+				decltype(RotateComponent::relative_orientation),
+				decltype(RotateComponent::turn_speed),
+				decltype(RotateComponent::use_local_rotation)
+			>()
+		;
+
+		type = make_constructors
+		<
+			&RotateComponent::from_direction,
+			[](auto&&... args) { return RotateComponent::from_direction(std::forward<decltype(args)>(args)...); },
+			1
+		>(type);
+	}
+
 	template <>
 	void reflect<FocusComponent>()
 	{
@@ -138,6 +264,9 @@ namespace engine
 		reflect<DecelerationComponent>();
 		reflect<GroundComponent>();
 		reflect<MotionAttachmentProxyComponent>();
+		reflect<DirectionComponent>();
+		reflect<OrientationComponent>();
+		reflect<RotateComponent>();
 		reflect<FocusComponent>();
 		reflect<OrbitComponent>();
 
