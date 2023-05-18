@@ -127,6 +127,12 @@ namespace engine
 		// Removed due to conflict with `EntityTarget` syntax.
 		components.erase("player");
 
+		// Removed due to conflict with `Entity::rotate` property.
+		components.erase("rotate");
+
+		// Removed due to conflict with `Entity::direction` property.
+		components.erase("direction");
+
 		// Commands:
 		auto& commands = context.command_aliases;
 
