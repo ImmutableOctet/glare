@@ -940,10 +940,14 @@ namespace engine
 		switch (operation)
 		{
 			case MetaValueOperator::UnaryPlus:
-				return +left; // std::abs(left);
+				//return +left; // std::abs(left);
+
+				return impl::operator_unary_plus_impl(left);
 
 			case MetaValueOperator::UnaryMinus:
-				return -left;
+				//return -left;
+
+				return impl::operator_unary_minus_impl(left);
 
 			case MetaValueOperator::BitwiseNot:
 				if constexpr (std::is_integral_v<LeftType>)
