@@ -598,6 +598,9 @@ namespace util
 	std::size_t find_singular(std::string_view str, std::string_view symbol, std::size_t offset=0);
 	std::size_t find_last_singular(std::string_view str, std::string_view symbol, std::size_t offset=0);
 
+	// Finds an instance of `target_symbol` in `str` starting at `offset`, where `escape_symbol` is not preceding `target_symbol`.
+	std::size_t find_unescaped(std::string_view str, std::string_view target_symbol, std::size_t offset=0, std::string_view escape_symbol="\\");
+
 	// TODO: Move this to a different source file.
 	std::string_view to_string_view(const aiString& str);
 

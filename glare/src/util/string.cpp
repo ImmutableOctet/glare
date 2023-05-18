@@ -427,4 +427,23 @@ namespace util
 			offset
 		);
 	}
+
+    std::size_t find_unescaped(std::string_view str, std::string_view target_symbol, std::size_t offset, std::string_view escape_symbol)
+	{
+		const auto result = str.find(target_symbol, offset);
+
+		if ((result != std::string_view::npos) && (result >= escape_symbol.length()))
+		{
+			const auto escape_area = std::string_view { (str.data() + result - escape_symbol.length()), escape_symbol.length() };
+
+			if (escape_area == escape_symbol)
+			{
+				const auto updated_offset = (result + target_symbol.length());
+
+				return find_unescaped(str, target_symbol, updated_offset, escape_symbol);
+			}
+		}
+
+		return result;
+	}
 }
