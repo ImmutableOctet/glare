@@ -11,9 +11,13 @@
 #include "components/deceleration_component.hpp"
 #include "components/focus_component.hpp"
 #include "components/orbit_component.hpp"
+#include "components/direction_component.hpp"
+#include "components/orientation_component.hpp"
+#include "components/rotate_component.hpp"
 
 #include <math/types.hpp>
 #include <math/bullet.hpp>
+#include <math/comparison.hpp>
 
 #include <engine/transform.hpp>
 #include <engine/components/transform_component.hpp>
@@ -24,6 +28,8 @@
 #include <engine/world/physics/ground.hpp>
 #include <engine/world/physics/physics_system.hpp>
 #include <engine/world/physics/components/collision_component.hpp>
+
+#include <algorithm>
 
 namespace engine
 {
@@ -57,6 +63,7 @@ namespace engine
 		update_gravity(delta);
 		handle_deceleration(delta);
 		update_focus(delta);
+		update_turning_objects(delta);
 
 		// TODO: Look into whether it makes more sense to only update
 		// orbiting objects during transform changes.
@@ -208,6 +215,49 @@ namespace engine
 
 				entity_tform.set_position(target_position);
 				entity_tform.move({ 0.0f, 0.0f, orbit.distance }, true);
+			}
+		);
+	}
+
+	void MotionSystem::update_turning_objects(float delta)
+	{
+		auto& registry = get_registry();
+
+		update_transform<DirectionComponent>
+		(
+			registry,
+
+			[delta, &registry](Entity entity, Transform& entity_transform, const DirectionComponent& turn)
+			{
+				entity_transform.set_direction_vector
+				(
+					turn.direction,
+					(turn.turn_speed * delta),
+					(!turn.ignore_x), (!turn.ignore_y), (!turn.ignore_z)
+				);
+			}
+		);
+
+		update_transform<OrientationComponent>
+		(
+			registry,
+
+			[delta, &registry](Entity entity, Transform& entity_transform, const OrientationComponent& orientation_comp)
+			{
+				entity_transform.set_basis_q(orientation_comp.orientation, (orientation_comp.turn_speed * delta));
+			}
+		);
+
+		update_transform<RotateComponent>
+		(
+			registry,
+
+			[delta, &registry](Entity entity, Transform& entity_transform, const RotateComponent& rotate_comp)
+			{
+				entity_transform.apply_basis_q(rotate_comp.relative_orientation, (rotate_comp.turn_speed * delta));
+
+				// Alternative implementation:
+				//entity_transform.set_basis_q(rotate_comp.get_next_basis(entity_transform, delta));
 			}
 		);
 	}

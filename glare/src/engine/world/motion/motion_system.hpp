@@ -75,6 +75,7 @@ namespace engine
 			void handle_deceleration(float delta);
 			void update_focus(float delta);
 			void update_orbiting_objects(float delta);
+			void update_turning_objects(float delta);
 
 			// Internal shorthand for `world.get_gravity()`.
 			math::Vector get_gravity() const;
