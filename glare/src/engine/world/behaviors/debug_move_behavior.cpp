@@ -26,7 +26,7 @@ namespace engine
 	{
 		//return;
 
-		auto delta = world.delta();
+		auto delta = world.get_delta();
 
 		auto h_movement_speed = movement_speed;
 		auto v_movement_speed = movement_speed;

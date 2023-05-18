@@ -30,7 +30,7 @@ namespace behavior_impl                                                         
             return;                                                              \
         }                                                                        \
                                                                                  \
-        BehaviorType::behavior_function_name(*world, world->delta(), event_obj); \
+        BehaviorType::behavior_function_name(*world, world->get_delta(), event_obj); \
     }                                                                            \
 }
 
@@ -123,7 +123,7 @@ namespace engine
                 return;
             }
 
-            BehaviorType::on_mouse(*world, world->delta(), *mouse_event.mouse_state);
+            BehaviorType::on_mouse(*world, world->get_delta(), *mouse_event.mouse_state);
         }
 
         template <typename BehaviorType>
@@ -136,7 +136,7 @@ namespace engine
                 return;
             }
 
-            BehaviorType::on_keyboard(*world, world->delta(), *keyboard_event.keyboard_state);
+            BehaviorType::on_keyboard(*world, world->get_delta(), *keyboard_event.keyboard_state);
         }
     }
 }

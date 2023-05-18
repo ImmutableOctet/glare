@@ -30,7 +30,7 @@ namespace engine
 
 		// TODO: Look into changing this implementation to use a
 		// global variable or component-local variable, etc.
-		// (instead of using `app::DeltaTime` directly)
+		// (instead of using `DeltaTime` directly)
 		const auto& dt = world.get_delta_time();
 		
 		auto t = static_cast<float>(dt.current_frame_time()) / 600.0f;
