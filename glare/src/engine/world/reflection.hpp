@@ -4,8 +4,10 @@
 
 #include "animation/reflection.hpp"
 #include "behaviors/reflection.hpp"
+#include "camera/reflection.hpp"
 #include "motion/reflection.hpp"
 #include "physics/reflection.hpp"
+#include "delta/reflection.hpp"
 // ...
 
 namespace engine
