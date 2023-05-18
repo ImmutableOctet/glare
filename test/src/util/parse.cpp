@@ -6,6 +6,9 @@
 #include <util/parse.hpp>
 #include <util/algorithm.hpp>
 
+#include <array>
+#include <utility>
+
 TEST_CASE("util::find_accessor", "[util:parse]")
 {
 	REQUIRE(std::get<1>(util::find_accessor("A::B")) == "::");
@@ -980,5 +983,156 @@ TEST_CASE("util::find_quotes", "[util:parse]")
 
 		REQUIRE(first_quote == std::string_view::npos);
 		REQUIRE(second_quote == std::string_view::npos);
+	}
+}
+
+TEST_CASE("util::enumerate_unscoped_substrings")
+{
+	SECTION("Prefix and suffix")
+	{
+		auto result = std::string {};
+
+		util::enumerate_unscoped_substrings
+		(
+			std::string_view { "A(\"\", test)()()(())[(test)]B" },
+
+			std::array
+			{
+				std::pair<std::string_view, std::string_view> { "(", ")" },
+				std::pair<std::string_view, std::string_view> { "[", "]" },
+				std::pair<std::string_view, std::string_view> { "\"", "\"" }
+			},
+
+			[&result](std::string_view substr)
+			{
+				result += substr;
+			}
+		);
+
+		REQUIRE(result == "AB");
+	}
+
+	SECTION("Unclosed scope")
+	{
+		auto result = std::string {};
+
+		util::enumerate_unscoped_substrings
+		(
+			std::string_view{ "A(\"\"[])[B" },
+
+			std::array
+			{
+				std::pair<std::string_view, std::string_view> { "(", ")" },
+				std::pair<std::string_view, std::string_view> { "[", "]" },
+				std::pair<std::string_view, std::string_view> { "\"", "\"" }
+			},
+
+			[&result](std::string_view substr)
+			{
+				result += substr;
+			}
+		);
+
+		REQUIRE(result == "A[B");
+	}
+
+	SECTION("Escape characters")
+	{
+		auto result = std::string {};
+
+		util::enumerate_unscoped_substrings
+		(
+			std::string_view{ "A\\(\\\"\\\"\\)B" },
+
+			std::array
+			{
+				std::pair<std::string_view, std::string_view> { "(", ")" },
+				std::pair<std::string_view, std::string_view> { "[", "]" },
+				std::pair<std::string_view, std::string_view> { "\"", "\"" }
+			},
+
+			[&result](std::string_view substr)
+			{
+				result += substr;
+			}
+		);
+
+		REQUIRE(result == "A\\(\\\"\\\"\\)B");
+	}
+
+	SECTION("Escape characters + unclosed scope")
+	{
+		auto result = std::string {};
+
+		util::enumerate_unscoped_substrings
+		(
+			std::string_view{ "A\\(\"\"[]\\[\\]\\)[B" },
+
+			std::array
+			{
+				std::pair<std::string_view, std::string_view> { "(", ")" },
+				std::pair<std::string_view, std::string_view> { "[", "]" },
+				std::pair<std::string_view, std::string_view> { "\"", "\"" }
+			},
+
+			[&result](std::string_view substr)
+			{
+				result += substr;
+			}
+		);
+
+		REQUIRE(result == "A\\(\\[\\]\\)[B");
+	}
+}
+
+TEST_CASE("util::find_unscoped")
+{
+	REQUIRE(util::find_unscoped("A(,),B", ",") == 4);
+	REQUIRE(util::find_unscoped("A\\(,),B", ",") == 3);
+	REQUIRE(util::find_unscoped("A(\\,) ,B", ",", 4) == 6);
+
+	SECTION("Standard symbols + custom find function")
+	{
+		REQUIRE
+		(
+			util::find_unscoped
+			(
+				"A[\\,]\\||B",
+				
+				"|", 0,
+				
+				util::standard_scope_symbols,
+
+				[](const auto& unscoped_substr, const auto& target_symbol)
+				{
+					return util::find_unescaped(unscoped_substr, target_symbol);
+				}
+			) == 7
+		);
+	}
+
+	SECTION("Custom symbols + custom find function + offset")
+	{
+		const auto custom_symbols = std::array
+		{
+			std::pair<std::string_view, std::string_view> { "{", "}" }
+		};
+
+		REQUIRE
+		(
+			util::find_unscoped
+			(
+				",A{\\,}\\, ,B",
+				
+				",", 1,
+				
+				custom_symbols,
+
+				[](const auto& unscoped_substr, const auto& target_symbol)
+				{
+					return util::find_unescaped(unscoped_substr, target_symbol);
+				}
+			) == 9
+		);
 	}
 }
