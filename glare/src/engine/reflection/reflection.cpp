@@ -117,8 +117,10 @@ namespace engine
             sync_reflection_context();
         }
 
-        entt::meta<Entity>()
-            .type("Entity"_hs)
+        constexpr auto type_name = std::string_view { "Entity" }; // entt::type_name<Entity>::value();
+
+        auto entity_type = entt::meta<Entity>()
+            .type("Entity"_hs) // hash(type_name)
             
             .ctor<&impl::entity_static_create>()
 
@@ -153,14 +155,78 @@ namespace engine
             .func<&impl::entity_get_local_rotation>("get_local_rotation"_hs)
             .func<&impl::entity_set_local_rotation>("set_local_rotation"_hs)
 
-            .func<&impl::entity_set_direction_vector>("set_direction_vector"_hs)
+            .func<&impl::entity_get_basis>("get_basis"_hs)
+            .func<static_cast<math::Quaternion(*)(Entity, Registry&, const math::Quaternion&, float)>(&impl::entity_set_basis_q)>("set_basis"_hs)
+            .func<static_cast<math::Quaternion(*)(Entity, Registry&, const math::Quaternion&)>(&impl::entity_set_basis_q)>("set_basis"_hs)
+            .func<static_cast<math::RotationMatrix(*)(Entity, Registry&, const math::RotationMatrix&, float)>(&impl::entity_set_basis)>("set_basis"_hs)
+            .func<static_cast<math::RotationMatrix(*)(Entity, Registry&, const math::RotationMatrix&)>(&impl::entity_set_basis)>("set_basis"_hs)
+
+            .func<&impl::entity_get_local_basis>("get_local_basis"_hs)
+            .func<static_cast<math::Quaternion(*)(Entity, Registry&, const math::Quaternion&, float)>(&impl::entity_set_local_basis_q)>("set_local_basis"_hs)
+            .func<static_cast<math::Quaternion(*)(Entity, Registry&, const math::Quaternion&)>(&impl::entity_set_local_basis_q)>("set_local_basis"_hs)
+            .func<static_cast<math::RotationMatrix(*)(Entity, Registry&, const math::RotationMatrix&, float)>(&impl::entity_set_local_basis)>("set_local_basis"_hs)
+            .func<static_cast<math::RotationMatrix(*)(Entity, Registry&, const math::RotationMatrix&)>(&impl::entity_set_local_basis)>("set_local_basis"_hs)
+
+            .func<&impl::entity_get_basis_q>("get_basis_q"_hs)
+            .func<static_cast<math::Quaternion(*)(Entity, Registry&, const math::Quaternion&, float)>(&impl::entity_set_basis_q)>("set_basis_q"_hs)
+            .func<static_cast<math::Quaternion(*)(Entity, Registry&, const math::Quaternion&)>(&impl::entity_set_basis_q)>("set_basis_q"_hs)
+
+            .func<&impl::entity_get_local_basis_q>("get_local_basis_q"_hs)
+            .func<static_cast<math::Quaternion(*)(Entity, Registry&, const math::Quaternion&, float)>(&impl::entity_set_local_basis_q)>("set_local_basis_q"_hs)
+            .func<static_cast<math::Quaternion(*)(Entity, Registry&, const math::Quaternion&)>(&impl::entity_set_local_basis_q)>("set_local_basis_q"_hs)
+
+            // See below for `set_direction_vector` bindings.
             .func<&impl::entity_get_direction_vector>("get_direction_vector"_hs)
+
+            .func<&impl::entity_get_flat_direction_vector>("get_flat_direction_vector"_hs)
+            .func<static_cast<math::Vector(*)(Entity, Registry&, const math::Vector&, float)>(&impl::entity_set_flat_direction_vector)>("set_flat_direction_vector"_hs)
+            .func<static_cast<math::Vector(*)(Entity, Registry&, const math::Vector&)>(&impl::entity_set_flat_direction_vector)>("set_flat_direction_vector"_hs)
+
+            // See below for direction-vector assignment bindings.
+            .func<&impl::entity_get_direction_vector>("get_direction"_hs)
+            .func<static_cast<math::RotationMatrix(*)(Entity, Registry&, const math::RotationMatrix&, float)>(&impl::entity_set_basis)>("set_direction"_hs)
+            .func<static_cast<math::RotationMatrix(*)(Entity, Registry&, const math::RotationMatrix&)>(&impl::entity_set_basis)>("set_direction"_hs)
+            .func<static_cast<math::Quaternion(*)(Entity, Registry&, const math::Quaternion&, float)>(&impl::entity_set_basis_q)>("set_direction"_hs)
+            .func<static_cast<math::Quaternion(*)(Entity, Registry&, const math::Quaternion&)>(&impl::entity_set_basis_q)>("set_direction"_hs)
 
             .func<&impl::entity_get_scale>("get_scale"_hs)
             .func<&impl::entity_set_scale>("set_scale"_hs)
 
             .func<&impl::entity_get_local_scale>("get_local_scale"_hs)
             .func<&impl::entity_set_local_scale>("set_local_scale"_hs)
+
+            .func<&impl::entity_get_position_x>("get_x"_hs)
+            .func<&impl::entity_set_position_x>("set_x"_hs)
+
+            .func<&impl::entity_get_position_y>("get_y"_hs)
+            .func<&impl::entity_set_position_y>("set_y"_hs)
+
+            .func<&impl::entity_get_position_z>("get_z"_hs)
+            .func<&impl::entity_set_position_z>("set_z"_hs)
+
+            .func<&impl::entity_get_rotation_pitch>("get_pitch"_hs)
+            .func<static_cast<float(*)(Entity, Registry&, float, float)>(&impl::entity_set_rotation_pitch)>("set_pitch"_hs)
+            .func<static_cast<float(*)(Entity, Registry&, float)>(&impl::entity_set_rotation_pitch)>("set_pitch"_hs)
+
+            .func<&impl::entity_get_rotation_yaw>("get_yaw"_hs)
+            .func<static_cast<float(*)(Entity, Registry&, float, float)>(&impl::entity_set_rotation_yaw)>("set_yaw"_hs)
+            .func<static_cast<float(*)(Entity, Registry&, float)>(&impl::entity_set_rotation_yaw)>("set_yaw"_hs)
+
+            .func<&impl::entity_get_rotation_roll>("get_roll"_hs)
+            .func<static_cast<float(*)(Entity, Registry&, float, float)>(&impl::entity_set_rotation_roll)>("set_roll"_hs)
+            .func<static_cast<float(*)(Entity, Registry&, float)>(&impl::entity_set_rotation_roll)>("set_roll"_hs)
+
+            .func<&impl::entity_get_local_rotation_pitch>("get_local_pitch"_hs)
+            .func<static_cast<float(*)(Entity, Registry&, float, float)>(&impl::entity_set_local_rotation_pitch)>("set_local_pitch"_hs)
+            .func<static_cast<float(*)(Entity, Registry&, float)>(&impl::entity_set_local_rotation_pitch)>("set_local_pitch"_hs)
+
+            .func<&impl::entity_get_local_rotation_yaw>("get_local_yaw"_hs)
+            .func<static_cast<float(*)(Entity, Registry&, float, float)>(&impl::entity_set_local_rotation_yaw)>("set_local_yaw"_hs)
+            .func<static_cast<float(*)(Entity, Registry&, float)>(&impl::entity_set_local_rotation_yaw)>("set_local_yaw"_hs)
+
+            .func<&impl::entity_get_local_rotation_roll>("get_local_roll"_hs)
+            .func<static_cast<float(*)(Entity, Registry&, float, float)>(&impl::entity_set_local_rotation_roll)>("set_local_roll"_hs)
+            .func<static_cast<float(*)(Entity, Registry&, float)>(&impl::entity_set_local_rotation_roll)>("set_local_roll"_hs)
 
             .func<&impl::entity_get_parent>("get_parent"_hs)
             .func<&impl::entity_set_parent>("set_parent"_hs)
@@ -185,6 +251,116 @@ namespace engine
             .func<&impl::entity_set_state_id>("set_state"_hs)
             .func<&impl::entity_set_state_name>("set_state"_hs)
         ;
+
+        auto bind_apply_basis = [&](MetaFunctionID function_id)
+        {
+            // Matrix overloads:
+            entity_type = make_overloads
+		    <
+                static_cast<math::RotationMatrix(*)(Entity, Registry&, const math::RotationMatrix&, bool)>(&impl::entity_apply_basis),
+			    [](auto&&... args) { return impl::entity_apply_basis(std::forward<decltype(args)>(args)...); },
+			    3
+		    >(entity_type, function_id);
+
+            entity_type = make_overloads
+		    <
+                static_cast<math::RotationMatrix(*)(Entity, Registry&, const math::RotationMatrix&, float, bool)>(&impl::entity_apply_basis),
+			    [](auto&&... args) { return impl::entity_apply_basis(std::forward<decltype(args)>(args)...); },
+			    4
+		    >(entity_type, function_id);
+
+            // Quaternion overloads:
+            entity_type = make_overloads
+		    <
+                static_cast<math::Quaternion(*)(Entity, Registry&, const math::Quaternion&, bool)>(&impl::entity_apply_basis_q),
+			    [](auto&&... args) { return impl::entity_apply_basis_q(std::forward<decltype(args)>(args)...); },
+			    3
+		    >(entity_type, function_id);
+
+            entity_type = make_overloads
+		    <
+                static_cast<math::Quaternion(*)(Entity, Registry&, const math::Quaternion&, float, bool)>(&impl::entity_apply_basis_q),
+			    [](auto&&... args) { return impl::entity_apply_basis_q(std::forward<decltype(args)>(args)...); },
+			    4
+		    >(entity_type, function_id);
+        };
+
+        auto bind_set_direction_vector = [&](MetaFunctionID function_id)
+        {
+            entity_type = make_overloads
+		    <
+                static_cast<math::Vector(*)(Entity, Registry&, const math::Vector&, float, bool, bool, bool)>(&impl::entity_set_direction_vector),
+			    [](auto&&... args) { return impl::entity_set_direction_vector(std::forward<decltype(args)>(args)...); },
+			    5
+		    >(entity_type, function_id);
+
+            entity_type = entity_type
+                .func<static_cast<math::Vector(*)(Entity, Registry&, const math::Vector&, float)>(&impl::entity_set_direction_vector)>(function_id)
+                .func<static_cast<math::Vector(*)(Entity, Registry&, const math::Vector&)>(&impl::entity_set_direction_vector)>(function_id)
+            ;
+        };
+
+        bind_apply_basis("apply_basis"_hs);
+        bind_apply_basis("rotate"_hs);
+
+        bind_set_direction_vector("set_direction_vector"_hs);
+        bind_set_direction_vector("set_direction"_hs);
+
+        entity_type = make_overloads
+		<
+            &impl::entity_move,
+			[](auto&&... args) { return impl::entity_move(std::forward<decltype(args)>(args)...); },
+			3
+		>(entity_type, "move"_hs);
+
+        entity_type = make_overloads
+		<
+            static_cast<math::Vector(*)(Entity, Registry&, const math::Vector&, bool)>(&impl::entity_rotate),
+			[](auto&&... args) { return impl::entity_rotate(std::forward<decltype(args)>(args)...); },
+			3
+		>(entity_type, "rotate"_hs);
+
+        entity_type = make_overloads
+		<
+            static_cast<math::Vector(*)(Entity, Registry&, const math::Vector&, float, bool)>(&impl::entity_rotate),
+			[](auto&&... args) { return impl::entity_rotate(std::forward<decltype(args)>(args)...); },
+			4
+		>(entity_type, "rotate"_hs);
+
+        entity_type = make_overloads
+		<
+            &impl::entity_rotate_x,
+			[](auto&&... args) { return impl::entity_rotate_x(std::forward<decltype(args)>(args)...); },
+			3
+		>(entity_type, "rotateX"_hs);
+
+        entity_type = make_overloads
+		<
+            &impl::entity_rotate_y,
+			[](auto&&... args) { return impl::entity_rotate_y(std::forward<decltype(args)>(args)...); },
+			3
+		>(entity_type, "rotateY"_hs);
+
+        entity_type = make_overloads
+		<
+            &impl::entity_rotate_z,
+			[](auto&&... args) { return impl::entity_rotate_z(std::forward<decltype(args)>(args)...); },
+			3
+		>(entity_type, "rotateZ"_hs);
+
+        entity_type = make_overloads
+		<
+            static_cast<math::Quaternion(*)(Entity, Registry&, const math::Quaternion&, bool)>(&impl::entity_apply_basis_q),
+			[](auto&&... args) { return impl::entity_apply_basis_q(std::forward<decltype(args)>(args)...); },
+			3
+		>(entity_type, "apply_basis_q"_hs);
+
+        entity_type = make_overloads
+		<
+            static_cast<math::Quaternion(*)(Entity, Registry&, const math::Quaternion&, float, bool)>(&impl::entity_apply_basis_q),
+			[](auto&&... args) { return impl::entity_apply_basis_q(std::forward<decltype(args)>(args)...); },
+			4
+		>(entity_type, "apply_basis_q"_hs);
 
         if constexpr (generate_optional_type)
         {

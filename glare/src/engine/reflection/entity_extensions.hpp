@@ -96,6 +96,126 @@ namespace engine
             return rotation_angles;
         }
 
+        inline math::RotationMatrix entity_get_basis(Entity self, Registry& registry)
+        {
+            return Transform(registry, self).get_basis();
+        }
+
+        inline math::RotationMatrix entity_set_basis(Entity self, Registry& registry, const math::RotationMatrix& basis)
+        {
+            Transform(registry, self).set_basis(basis);
+
+            return basis;
+        }
+
+        inline math::RotationMatrix entity_set_basis(Entity self, Registry& registry, const math::RotationMatrix& basis, float turn_speed)
+        {
+            auto tform = Transform(registry, self);
+            
+            tform.set_basis(basis, turn_speed);
+
+            return tform.get_basis();
+        }
+
+        inline math::RotationMatrix entity_get_local_basis(Entity self, Registry& registry)
+        {
+            return Transform(registry, self).get_local_basis();
+        }
+
+        inline math::RotationMatrix entity_set_local_basis(Entity self, Registry& registry, const math::RotationMatrix& basis)
+        {
+            Transform(registry, self).set_local_basis(basis);
+
+            return basis;
+        }
+
+        inline math::RotationMatrix entity_set_local_basis(Entity self, Registry& registry, const math::RotationMatrix& basis, float turn_speed)
+        {
+            auto tform = Transform(registry, self);
+
+            tform.set_local_basis(basis, turn_speed);
+
+            return tform.get_local_basis();
+        }
+
+        inline math::Quaternion entity_get_basis_q(Entity self, Registry& registry)
+        {
+            return Transform(registry, self).get_basis_q();
+        }
+
+        inline math::Quaternion entity_set_basis_q(Entity self, Registry& registry, const math::Quaternion& basis)
+        {
+            Transform(registry, self).set_basis_q(basis);
+
+            return basis;
+        }
+
+        inline math::Quaternion entity_set_basis_q(Entity self, Registry& registry, const math::Quaternion& basis, float turn_speed)
+        {
+            auto tform = Transform(registry, self);
+            
+            tform.set_basis_q(basis, turn_speed);
+
+            return tform.get_basis_q();
+        }
+
+        inline math::Quaternion entity_get_local_basis_q(Entity self, Registry& registry)
+        {
+            return Transform(registry, self).get_local_basis_q();
+        }
+
+        inline math::Quaternion entity_set_local_basis_q(Entity self, Registry& registry, const math::Quaternion& basis)
+        {
+            Transform(registry, self).set_local_basis_q(basis);
+
+            return basis;
+        }
+
+        inline math::Quaternion entity_set_local_basis_q(Entity self, Registry& registry, const math::Quaternion& basis, float turn_speed)
+        {
+            auto tform = Transform(registry, self);
+            
+            tform.set_local_basis_q(basis, turn_speed);
+
+            return tform.get_local_basis_q();
+        }
+
+        inline math::RotationMatrix entity_apply_basis(Entity self, Registry& registry, const math::RotationMatrix& basis, bool local=false)
+        {
+            auto tform = Transform(registry, self);
+
+            tform.apply_basis(basis, local);
+
+            return tform.get_basis();
+        }
+
+        inline math::RotationMatrix entity_apply_basis(Entity self, Registry& registry, const math::RotationMatrix& basis, float turn_speed, bool local=false)
+        {
+            auto tform = Transform(registry, self);
+
+            tform.apply_basis(basis, turn_speed, local);
+
+            return tform.get_basis();
+        }
+
+        inline math::Quaternion entity_apply_basis_q(Entity self, Registry& registry, const math::Quaternion& basis, bool local=false)
+        {
+            auto tform = Transform(registry, self);
+
+            tform.apply_basis_q(basis, local);
+
+            return tform.get_basis_q();
+        }
+
+        inline math::Quaternion entity_apply_basis_q(Entity self, Registry& registry, const math::Quaternion& basis, float turn_speed, bool local=false)
+        {
+            auto tform = Transform(registry, self);
+
+            tform.apply_basis_q(basis, turn_speed, local);
+
+            return tform.get_basis_q();
+        }
+
         inline math::Vector entity_get_local_rotation(Entity self, Registry& registry)
         {
             return Transform(registry, self).get_local_rotation();
@@ -113,11 +233,56 @@ namespace engine
             return Transform(registry, self).get_direction_vector();
         }
 
-        inline math::Vector entity_set_direction_vector(Entity self, Registry& registry, const math::Vector3D& direction_vector)
+        inline math::Vector entity_set_direction_vector(Entity self, Registry& registry, const math::Vector& direction_vector)
         {
             Transform(registry, self).set_direction_vector(direction_vector);
 
             return direction_vector;
+        }
+
+        inline math::Vector entity_set_direction_vector(Entity self, Registry& registry, const math::Vector& direction_vector, float turn_speed)
+        {
+            auto tform = Transform(registry, self);
+
+            tform.set_direction_vector(direction_vector, turn_speed);
+
+            return tform.get_direction_vector();
+        }
+
+        inline math::Vector entity_set_direction_vector(Entity self, Registry& registry, const math::Vector& direction_vector, float turn_speed, bool apply_x, bool apply_y=true, bool apply_z=true)
+        {
+            auto tform = Transform(registry, self);
+
+            tform.set_direction_vector
+            (
+                direction_vector, turn_speed,
+                apply_x, apply_y, apply_z
+            );
+
+            return tform.get_direction_vector();
+        }
+
+        inline math::Vector entity_get_flat_direction_vector(Entity self, Registry& registry)
+        {
+            return Transform(registry, self).get_flat_direction_vector();
+        }
+
+        inline math::Vector entity_set_flat_direction_vector(Entity self, Registry& registry, const math::Vector& direction_vector)
+        {
+            auto tform = Transform(registry, self);
+
+            tform.set_flat_direction_vector(direction_vector);
+
+            return tform.get_flat_direction_vector(); // get_direction_vector();
+        }
+
+        inline math::Vector entity_set_flat_direction_vector(Entity self, Registry& registry, const math::Vector& direction_vector, float turn_speed)
+        {
+            auto tform = Transform(registry, self);
+
+            tform.set_flat_direction_vector(direction_vector, turn_speed);
+
+            return tform.get_flat_direction_vector(); // get_direction_vector();
         }
 
         inline math::Vector entity_get_scale(Entity self, Registry& registry)
@@ -142,6 +307,174 @@ namespace engine
             Transform(registry, self).set_local_scale(scale);
 
             return scale;
+        }
+
+        inline float entity_get_position_x(Entity self, Registry& registry)
+        {
+            return Transform(registry, self).get_position().x;
+        }
+
+        inline float entity_set_position_x(Entity self, Registry& registry, float value)
+        {
+            auto tform = Transform(registry, self);
+
+            auto position = tform.get_position();
+
+            position.x = value;
+
+            tform.set_position(position);
+
+            return value;
+        }
+
+        inline float entity_get_position_y(Entity self, Registry& registry)
+        {
+            return Transform(registry, self).get_position().y;
+        }
+
+        inline float entity_set_position_y(Entity self, Registry& registry, float value)
+        {
+            auto tform = Transform(registry, self);
+
+            auto position = tform.get_position();
+
+            position.y = value;
+
+            tform.set_position(position);
+
+            return value;
+        }
+
+        inline float entity_get_position_z(Entity self, Registry& registry)
+        {
+            return Transform(registry, self).get_position().z;
+        }
+
+        inline float entity_set_position_z(Entity self, Registry& registry, float value)
+        {
+            auto tform = Transform(registry, self);
+
+            auto position = tform.get_position();
+
+            position.z = value;
+
+            tform.set_position(position);
+
+            return value;
+        }
+
+        inline float entity_get_rotation_pitch(Entity self, Registry& registry)
+        {
+            return Transform(registry, self).get_pitch();
+        }
+
+        inline float entity_set_rotation_pitch(Entity self, Registry& registry, float value)
+        {
+            Transform(registry, self).set_pitch(value);
+
+            return value;
+        }
+
+        inline float entity_set_rotation_pitch(Entity self, Registry& registry, float value, float turn_speed)
+        {
+            Transform(registry, self).set_pitch(value, turn_speed);
+
+            return value;
+        }
+
+        inline float entity_get_rotation_yaw(Entity self, Registry& registry)
+        {
+            return Transform(registry, self).get_yaw();
+        }
+
+        inline float entity_set_rotation_yaw(Entity self, Registry& registry, float value)
+        {
+            Transform(registry, self).set_yaw(value);
+
+            return value;
+        }
+
+        inline float entity_set_rotation_yaw(Entity self, Registry& registry, float value, float turn_speed)
+        {
+            Transform(registry, self).set_yaw(value, turn_speed);
+
+            return value;
+        }
+
+        inline float entity_get_rotation_roll(Entity self, Registry& registry)
+        {
+            return Transform(registry, self).get_roll();
+        }
+
+        inline float entity_set_rotation_roll(Entity self, Registry& registry, float value)
+        {
+            Transform(registry, self).set_roll(value);
+
+            return value;
+        }
+
+        inline float entity_set_rotation_roll(Entity self, Registry& registry, float value, float turn_speed)
+        {
+            Transform(registry, self).set_roll(value, turn_speed);
+
+            return value;
+        }
+
+        inline float entity_get_local_rotation_pitch(Entity self, Registry& registry)
+        {
+            return Transform(registry, self).get_local_pitch();
+        }
+
+        inline float entity_set_local_rotation_pitch(Entity self, Registry& registry, float value)
+        {
+            Transform(registry, self).set_local_pitch(value);
+
+            return value;
+        }
+
+        inline float entity_set_local_rotation_pitch(Entity self, Registry& registry, float value, float turn_speed)
+        {
+            Transform(registry, self).set_local_pitch(value, turn_speed);
+
+            return value;
+        }
+
+        inline float entity_get_local_rotation_yaw(Entity self, Registry& registry)
+        {
+            return Transform(registry, self).get_local_yaw();
+        }
+
+        inline float entity_set_local_rotation_yaw(Entity self, Registry& registry, float value)
+        {
+            Transform(registry, self).set_local_yaw(value);
+
+            return value;
+        }
+
+        inline float entity_set_local_rotation_yaw(Entity self, Registry& registry, float value, float turn_speed)
+        {
+            Transform(registry, self).set_local_yaw(value, turn_speed);
+
+            return value;
+        }
+
+        inline float entity_get_local_rotation_roll(Entity self, Registry& registry)
+        {
+            return Transform(registry, self).get_local_roll();
+        }
+
+        inline float entity_set_local_rotation_roll(Entity self, Registry& registry, float value)
+        {
+            Transform(registry, self).set_local_roll(value);
+
+            return value;
+        }
+
+        inline float entity_set_local_rotation_roll(Entity self, Registry& registry, float value, float turn_speed)
+        {
+            Transform(registry, self).set_local_roll(value, turn_speed);
+
+            return value;
         }
 
         inline Entity entity_get_parent(Entity self, Registry& registry)
@@ -308,6 +641,90 @@ namespace engine
             }
 
             return {};
+        }
+
+        inline math::Vector entity_rotate(Entity self, Registry& registry, const math::Vector& rotation, bool local=false)
+        {
+            auto tform = Transform(registry, self);
+
+            tform.rotate(rotation, local);
+
+            if (local)
+            {
+                return tform.get_local_rotation();
+            }
+
+            return tform.get_rotation();
+        }
+
+        inline math::Vector entity_rotate(Entity self, Registry& registry, const math::Vector& rotation, float turn_speed, bool local=false)
+        {
+            auto tform = Transform(registry, self);
+
+            tform.rotate(rotation, turn_speed, local);
+
+            if (local)
+            {
+                return tform.get_local_rotation();
+            }
+
+            return tform.get_rotation();
+        }
+
+        inline float entity_rotate_x(Entity self, Registry& registry, float value, bool local=false)
+        {
+            auto tform = Transform(registry, self);
+
+            tform.rotateX(value, local);
+
+            if (local)
+            {
+                return tform.get_local_rotation().x;
+            }
+
+            return tform.rx();
+        }
+
+        inline float entity_rotate_y(Entity self, Registry& registry, float value, bool local=false)
+        {
+            auto tform = Transform(registry, self);
+
+            tform.rotateY(value, local);
+
+            if (local)
+            {
+                return tform.get_local_rotation().y;
+            }
+
+            return tform.ry();
+        }
+
+        inline float entity_rotate_z(Entity self, Registry& registry, float value, bool local=false)
+        {
+            auto tform = Transform(registry, self);
+
+            tform.rotateZ(value, local);
+
+            if (local)
+            {
+                return tform.get_local_rotation().z;
+            }
+
+            return tform.rz();
+        }
+
+        inline math::Vector entity_move(Entity self, Registry& registry, const math::Vector& translation_vector, bool local=false)
+        {
+            auto tform = Transform(registry, self);
+
+            tform.move(translation_vector, local);
+
+            if (local)
+            {
+                return tform.get_local_position();
+            }
+
+            return tform.get_position();
         }
 	}
 }
