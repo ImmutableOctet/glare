@@ -3,6 +3,7 @@
 // This header provides interoperative facilities for `entt`'s meta-type reflection system.
 
 #include "types.hpp"
+#include "conversion.hpp"
 
 #include <util/reflection.hpp>
 
@@ -98,6 +99,36 @@ namespace math
                 .ctor<&make_vector4d<VectorType>>()
             ;
         }
+
+        template <typename IdentifierType>
+        auto reflect_quaternion(IdentifierType&& id)
+        {
+            using namespace engine::literals;
+
+            return reflect_type<Quaternion>(id)
+                .data<&Quaternion::w>("w"_hs)
+                .data<&Quaternion::x>("x"_hs)
+                .data<&Quaternion::y>("y"_hs)
+                .data<&Quaternion::z>("z"_hs)
+
+                .ctor
+                <
+                    decltype(Quaternion::w),
+                    decltype(Quaternion::x),
+                    decltype(Quaternion::y),
+                    decltype(Quaternion::z)
+                >()
+
+                .ctor<Vector3D>()
+                .ctor<Vector3D, Vector3D>()
+                .ctor<float, Vector3D>()
+                .ctor<Matrix3x3>()
+                .ctor<Matrix4x4>()
+
+                .conv<&quaternion_to_matrix<Matrix3x3>>()
+                .conv<&quaternion_to_matrix<Matrix4x4>>()
+            ;
+        }
     }
 
     // Reflects type `T` using `id`.
@@ -128,6 +159,10 @@ namespace math
                 .data<&T::b>("b"_hs)
                 .data<&T::a>("a"_hs)
             ;
+        }
+        else if constexpr (std::is_same_v<T, Quaternion>)
+        {
+            return impl::reflect_quaternion(id);
         }
         else if constexpr (std::is_same_v<T, vec2i>)
         {
