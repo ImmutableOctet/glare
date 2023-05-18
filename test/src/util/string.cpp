@@ -8,6 +8,13 @@
 #include <vector>
 #include <tuple>
 
+TEST_CASE("util::find_unescaped", "[util:string]")
+{
+	REQUIRE(util::find_unescaped("A\\B\\BB", "B") == 5);
+	REQUIRE(util::find_unescaped("AB", "B") == 1);
+	REQUIRE(util::find_unescaped("ABCDB", "B", 2) == 4);
+}
+
 TEST_CASE("util::is_quoted", "[util:string]")
 {
 	REQUIRE(!util::is_quoted(std::string_view("\"Test\" == \"Test\"")));
