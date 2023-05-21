@@ -9,6 +9,15 @@
 
 namespace util
 {
+	namespace impl
+	{
+		template <std::size_t offset, typename GenericLambdaType, std::size_t... Is>
+		constexpr void static_iota_impl(GenericLambdaType&& lambda_instance, std::integer_sequence<std::size_t, Is...> const &)
+		{
+			(lambda_instance.template operator()<(offset + Is)>(), ...);
+		}
+	}
+
 	template<std::size_t index, typename... Types>
 	using get_type_by_index = typename std::tuple_element<index, std::tuple<Types...>>::type;
 
@@ -19,6 +28,35 @@ namespace util
 	using get_first_type = get_type_by_index<0, Types...>;
 
 	static_assert(std::is_same_v<get_first_type<short, double, int>, short>);
+
+	/*
+		Executes `lambda_instance`'s call operator with a template argument
+		of each number in the sequence between `from_n` to `until_n`,
+		where `from_n` is inclusive and `until_n` is exclusive.
+
+		i.e. If `from_n` is 0 and `until_n` is 10, then the values 0 through 9 will be provided.
+	*/
+	template <std::size_t from_n, std::size_t until_n, typename GenericLambdaType>
+	constexpr void static_iota_ex(GenericLambdaType&& lambda_instance)
+	{
+		impl::static_iota_impl<from_n, GenericLambdaType>
+		(
+			std::forward<GenericLambdaType>(lambda_instance),
+			std::make_integer_sequence<std::size_t, (until_n - from_n)> {}
+		);
+	}
+
+	/*
+		Executes `lambda_instance`'s call operator with a template
+		argument of each number in the sequence from 0 until `n`.
+
+		i.e. If `n` is 7, then the values 0 through 6 will be provided.
+	*/
+	template <std::size_t n, typename GenericLambdaType>
+	constexpr void static_iota(GenericLambdaType&& lambda_instance)
+	{
+		static_iota_ex<0, n>(std::forward<GenericLambdaType>(lambda_instance));
+	}
 
 	// Calls `stateless_generic_lambda` with the types in `Ts`,
 	// removing types from the end of the sequence until none are left.
