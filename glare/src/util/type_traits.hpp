@@ -3,6 +3,7 @@
 #include <type_traits>
 #include <optional>
 #include <array>
+#include <iterator>
 
 #include "function_traits.hpp"
 #include "member_traits.hpp"
@@ -121,4 +122,57 @@ namespace util
 	inline constexpr auto array_size = impl::array_size_trait<ArrayType>::value;
 
 	static_assert(array_size<std::array<int, 3>> == 3);
+
+	template <typename T, typename=void>
+	struct is_iterable : std::false_type {};
+
+	template <typename T>
+	struct is_iterable
+	<
+		T,
+		
+		std::void_t
+		<
+			decltype(std::begin(std::declval<T&>())),
+			decltype(std::end(std::declval<T&>()))
+		>
+	> : std::true_type {};
+
+	template <typename T>
+	inline constexpr bool is_iterable_v = is_iterable<T>::value;
+
+	template <typename T, typename=void>
+	struct is_const_iterable : std::false_type {};
+
+	template <typename T>
+	struct is_const_iterable
+	<
+		T,
+
+		std::void_t
+		<
+			decltype(std::cbegin(std::declval<const T&>())),
+			decltype(std::cend(std::declval<const T&>()))
+		>
+	> : std::true_type {};
+
+	template <typename T>
+	inline constexpr bool is_const_iterable_v = is_const_iterable<T>::value;
+
+	template <typename T, typename=void>
+	struct is_iterator : std::false_type {};
+
+	template <typename T>
+	struct is_iterator
+	<
+		T,
+		
+		std::void_t
+		<
+			typename std::iterator_traits<T>::iterator_category
+		>
+	> : std::true_type {};
+
+	template <typename T>
+	inline constexpr bool is_iterator_v = is_iterator<T>::value;
 }
