@@ -4,6 +4,7 @@
 
 #include "format.hpp"
 #include "small_vector.hpp"
+#include "sampler.hpp"
 
 //#include <entt/meta/meta.hpp>
 #include <entt/entt.hpp>
@@ -142,6 +143,75 @@ namespace entt
                 }
             }
 
+            return iterator {};
+        }
+    };
+
+    template <typename KeyType, typename ValueType, typename... Args>
+    struct meta_sequence_container_traits<util::SamplerImpl<KeyType, ValueType, Args...>>
+    {
+        // Native type:
+        using Type                  = util::SamplerImpl<KeyType, ValueType, Args...>;
+        using EntryType             = typename Type::Entry;
+
+        using key_type              = typename Type::key_type;        // typename EntryType::first_type;
+        using value_type            = typename Type::value_type;      // typename EntryType::second_type;
+        using const_reference       = typename Type::const_reference; // const EntryType&;
+
+        using native_iterator       = typename Type::iterator;
+        using native_const_iterator = typename Type::const_iterator;
+
+        // EnTT API:
+        using iterator              = meta_sequence_container::iterator;
+        using size_type             = typename Type::size_type;
+
+        [[nodiscard]] static size_type size(const entt::any& container) noexcept
+        {
+            return any_cast<const Type&>(container).size();
+        }
+
+        [[nodiscard]] static bool resize([[maybe_unused]] entt::any& container, [[maybe_unused]] size_type sz)
+        {
+            // Resizing is not allowed for sampler objects.
+            return false;
+        }
+
+        // NOTE: Both const and non-const uses of `begin` and `end` produce const iterators. (Immutable)
+        [[nodiscard]] static iterator iter(const entt::meta_ctx& ctx, entt::any& container, const bool as_end)
+        {
+            if (auto* const underlying = any_cast<Type>(&container))
+            {
+                return iterator
+                {
+                    ctx,
+
+                    (as_end)
+                        ? underlying->end()
+                        : underlying->begin()
+                };
+            }
+
+            const Type& as_const = any_cast<const Type&>(container);
+
+            return iterator
+            {
+                ctx,
+
+                (as_end)
+                    ? as_const.end()
+                    : as_const.begin()
+            };
+        }
+
+        // Insertion and erasure are unsupported operations for sampler objects.
+        [[nodiscard]] static iterator insert_or_erase
+        (
+            [[maybe_unused]] const entt::meta_ctx& ctx,
+            [[maybe_unused]] entt::any& container,
+            [[maybe_unused]] const entt::any& handle,
+            [[maybe_unused]] entt::meta_any& value
+        )
+        {
             return iterator {};
         }
     };
