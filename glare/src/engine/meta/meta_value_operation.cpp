@@ -438,13 +438,44 @@ namespace engine
 				break;
 			}
 
-			auto operation_result = apply_operation
-			(
-				result.value, next_segment.value,
-				result.operation,
+			auto operation_result = MetaAny {};
 
-				std::forward<Args>(args)...
-			);
+			if ((result.operation == MetaValueOperator::Get) && is_isolated_operation(next_segment.operation))
+			{
+				operation_result = apply_operation
+				(
+					MetaAny {}, result.value,
+					result.operation,
+
+					std::forward<Args>(args)...
+				);
+
+				if (operation_result)
+				{
+					auto isolated_result = apply_operation
+					(
+						operation_result, next_segment.value,
+						next_segment.operation,
+
+						std::forward<Args>(args)...
+					);
+
+					if (isolated_result)
+					{
+						operation_result = std::move(isolated_result);
+					}
+				}
+			}
+			else
+			{
+				operation_result = apply_operation
+				(
+					result.value, next_segment.value,
+					result.operation,
+
+					std::forward<Args>(args)...
+				);
+			}
 
 			if (operation_result)
 			{
