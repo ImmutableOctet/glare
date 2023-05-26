@@ -370,6 +370,71 @@ TEST_CASE("engine::meta_any_from_string", "[engine:meta]")
 	engine::reflect<engine::ReflectionTest>();
 	engine::reflect<engine::TestSystem>();
 	
+	SECTION("Subscript operator on variable")
+	{
+		engine::MetaVariableContext variable_declaration_context;
+
+		variable_declaration_context.define_variable(engine::MetaVariableScope::Local, "my_vec");
+
+		engine::EntityVariables<1> variables;
+
+		auto runtime_variable_context = engine::MetaVariableEvaluationContext { &variables };
+
+		auto evaluation_context = engine::MetaEvaluationContext
+		{
+			&runtime_variable_context
+		};
+
+		REQUIRE(runtime_variable_context.declare(variable_declaration_context) == 1);
+
+		auto initial_assignment = engine::meta_any_from_string
+		(
+			std::string_view("my_vec = Vector(1.0, 2.0, 3.0)"),
+			{
+				.context = { &variable_declaration_context },
+				.allow_variable_assignment = true
+			}
+		);
+
+		REQUIRE(initial_assignment);
+
+		auto initial_assignment_result = engine::try_get_underlying_value(initial_assignment, evaluation_context);
+
+		REQUIRE(initial_assignment_result);
+
+		auto initial_assignment_result_underlying = engine::try_get_underlying_value(initial_assignment_result, evaluation_context);
+
+		REQUIRE(initial_assignment_result_underlying);
+
+		auto initial_assignment_result_raw = initial_assignment_result_underlying.try_cast<math::Vector>();
+
+		REQUIRE(initial_assignment_result_raw);
+		REQUIRE(initial_assignment_result_raw->x >= 1.0f);
+		REQUIRE(initial_assignment_result_raw->y >= 2.0f);
+		REQUIRE(initial_assignment_result_raw->z >= 3.0f);
+
+		auto subscript_expr = engine::meta_any_from_string
+		(
+			std::string_view("my_vec[0]"),
+			{
+				.context = { &variable_declaration_context },
+				.allow_member_references = true,
+				.allow_subscript_semantics = true
+			}
+		);
+
+		REQUIRE(subscript_expr);
+
+		auto subscript_result = engine::try_get_underlying_value(subscript_expr, evaluation_context);
+
+		REQUIRE(subscript_result);
+
+		auto subscript_result_raw = subscript_result.try_cast<float>();
+
+		REQUIRE(subscript_result_raw);
+		REQUIRE((*subscript_result_raw) >= 1.0f);
+	}
+
 	SECTION("Call global function")
 	{
 		auto type_resolution_context = engine::MetaTypeResolutionContext::generate();
