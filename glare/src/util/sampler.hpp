@@ -29,8 +29,49 @@ namespace util
 		};
 		*/
 
-		template <typename KeyType, typename ValueType>
-		using Sampler_BasicEntry = std::pair<KeyType, ValueType>;
+		//template <typename KeyType, typename ValueType>
+		//using Sampler_BasicEntry = std::pair<KeyType, ValueType>;
+
+		// NOTE: Inheritance is used here to ensure a unique type signature.
+		template <typename KeyType, typename ValueType> // typename LessImpl=std::less<KeyType>
+		struct Sampler_BasicEntry : std::pair<KeyType, ValueType>
+		{
+			using pair_type = std::pair<KeyType, ValueType>;
+
+			using pair_type::pair_type;
+
+			Sampler_BasicEntry(const Sampler_BasicEntry&) = default;
+			Sampler_BasicEntry(Sampler_BasicEntry&&) noexcept = default;
+
+			constexpr Sampler_BasicEntry(pair_type&& content) noexcept
+				: pair_type(std::move(content))
+			{}
+
+			constexpr Sampler_BasicEntry(const pair_type& content)
+				: pair_type(content)
+			{}
+
+			using pair_type::operator=;
+			//using pair_type::operator==;
+
+			Sampler_BasicEntry& operator=(const Sampler_BasicEntry&) = default;
+			Sampler_BasicEntry& operator=(Sampler_BasicEntry&&) noexcept = default;
+
+			//auto operator<=>(const Sampler_BasicEntry&) const = default;
+
+			bool operator==(const Sampler_BasicEntry&) const = default;
+			bool operator!=(const Sampler_BasicEntry&) const = default;
+
+			bool operator==(const pair_type& other) const
+			{
+				return (static_cast<const pair_type&>(*this) == other);
+			}
+
+			bool operator!=(const pair_type& other) const
+			{
+				return (static_cast<const pair_type&>(*this) != other);
+			}
+		};
 	}
 
 	template
@@ -57,10 +98,11 @@ namespace util
 	class SamplerImpl
 	{
 		public:
-			using Entry           = EntryType; // typename ContainerType::value_type;
+			using Container       = ContainerType;
+			using Entry           = EntryType; // typename Container::value_type;
 			using Sample          = Entry;
 
-			using ConstIterator   = typename ContainerType::const_iterator;
+			using ConstIterator   = typename Container::const_iterator;
 
 			// STL compatibility aliases:
 			using size_type       = IndexType; // std::size_t;
@@ -77,7 +119,7 @@ namespace util
 			SamplerImpl(SamplerImpl&&) noexcept = default;
 
 			// Takes ownership of `data`, sorting if needed.
-			SamplerImpl(ContainerType&& data, bool is_sorted=false)
+			SamplerImpl(Container&& data, bool is_sorted=false)
 				: data(std::move(data))
 			{
 				if (!is_sorted)
@@ -87,7 +129,7 @@ namespace util
 			}
 
 			// Copies from `data`, sorting if needed.
-			SamplerImpl(const ContainerType& data, bool is_sorted=false)
+			SamplerImpl(const Container& data, bool is_sorted=false)
 				: data(data)
 			{
 				if (!is_sorted)
@@ -514,6 +556,12 @@ namespace util
 				return result;
 			}
 
+			// Returns a const-reference to the internal container.
+			const Container& get_sample_data() const
+			{
+				return data;
+			}
+
 			// Returns a const-iterator to the beginning of the sample data.
 			decltype(auto) cbegin() const
 			{
@@ -573,7 +621,7 @@ namespace util
 				);
 			}
 
-			ContainerType data;
+			Container data;
 	};
 
 	template <typename ValueType>
