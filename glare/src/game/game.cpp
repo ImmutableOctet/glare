@@ -6,7 +6,7 @@
 #include <app/input/keyboard.hpp>
 #include <app/input/gamepad.hpp>
 
-#include <engine/meta.hpp>
+#include <engine/editor/editor.hpp>
 
 #include <engine/entity/entity_system.hpp>
 
