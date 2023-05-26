@@ -9,14 +9,17 @@ include(Catch)
 
 add_executable(
     glare_test
-    "src/engine/entity/serial.cpp"
     "src/engine/meta/meta.cpp"
     "src/engine/meta/serial.cpp"
+    "src/engine/meta/variant_wrapper.cpp"
+    "src/engine/entity/serial.cpp"
+    "src/engine/entity/parse.cpp"
     "src/util/string.cpp"
     "src/util/parse.cpp"
     "src/util/algorithm.cpp"
-    "src/engine/entity/parse.cpp"
- "src/engine/meta/variant_wrapper.cpp")
+    "src/util/sampler.cpp"
+    "src/math/conversion.cpp"
+)
 
 target_compile_features(glare_test PRIVATE cxx_std_23)
 
