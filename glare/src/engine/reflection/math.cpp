@@ -60,6 +60,10 @@ namespace engine
 
                     // NOTE: Same-type division is not supported by quaternions, only vectors.
                     .func<&impl::divide_impl<T>>("operator/"_hs)
+
+                    .func<&impl::vector_operator_index_subscript_impl<T>>("operator[]"_hs)
+                    .func<&impl::vector_operator_string_view_subscript_impl<T>>("operator[]"_hs)
+                    .func<&impl::vector_operator_string_subscript_impl<T>>("operator[]"_hs)
                 ;
             }
         }

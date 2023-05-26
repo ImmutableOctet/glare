@@ -2,10 +2,16 @@
 
 #include "common_extensions.hpp"
 
+#include <engine/meta/hash.hpp>
+
 #include <math/types.hpp>
 #include <math/conversion.hpp>
 
 #include <utility>
+#include <type_traits>
+#include <string_view>
+#include <string>
+#include <cstdint>
 
 namespace engine
 {
@@ -135,6 +141,68 @@ namespace engine
             {
                 static_assert(std::integral_constant<T, false>::value, "Unsupported vector type.");
             }
+        }
+
+        template <typename T, typename IndexType=typename T::length_type, typename OutputType=typename T::value_type> // std::size_t
+        OutputType vector_operator_index_subscript_impl(const T& self, IndexType index)
+        {
+            if constexpr (std::is_signed_v<IndexType>)
+            {
+                if (index < 0)
+                {
+                    return OutputType {};
+                }
+            }
+
+            if (index >= T::length())
+            {
+                return OutputType {};
+            }
+
+            return static_cast<OutputType>(self[index]);
+        }
+
+        template <typename T, typename OutputType=typename T::value_type>
+        OutputType vector_operator_string_view_subscript_impl(const T& self, std::string_view query_str)
+        {
+            using IndexType = typename T::length_type;
+
+            const auto query_id = hash(query_str);
+
+            switch (query_id)
+            {
+                case "x"_hs:
+                case "X"_hs:
+                case "r"_hs:
+                case "R"_hs:
+                    return vector_operator_index_subscript_impl<T, IndexType, OutputType>(self, 0);
+
+                case "y"_hs:
+                case "Y"_hs:
+                case "g"_hs:
+                case "G"_hs:
+                    return vector_operator_index_subscript_impl<T, IndexType, OutputType>(self, 1);
+
+                case "z"_hs:
+                case "Z"_hs:
+                case "b"_hs:
+                case "B"_hs:
+                    return vector_operator_index_subscript_impl<T, IndexType, OutputType>(self, 2);
+
+                case "w"_hs:
+                case "W"_hs:
+                case "a"_hs:
+                case "A"_hs:
+                    return vector_operator_index_subscript_impl<T, IndexType, OutputType>(self, 3);
+            }
+
+            return OutputType {};
+        }
+
+        template <typename T, typename OutputType = typename T::value_type>
+        OutputType vector_operator_string_subscript_impl(const T& self, const std::string& query_str)
+        {
+            return vector_operator_string_view_subscript_impl(self, std::string_view { query_str });
         }
 
         inline math::Vector4D vec4_from_vec2(const math::Vector2D& xy, float z, float w)
