@@ -13,13 +13,16 @@
 #include <engine/world/physics/physics.hpp>
 #include <engine/world/motion/motion.hpp>
 #include <engine/world/animation/animation.hpp>
-#include <engine/world/zones/zones.hpp>
+#include <engine/world/camera/camera_system.hpp>
+#include <engine/world/delta/delta_system.hpp>
 
 #include <engine/world/render/world_render_state.hpp>
 #include <engine/world/render/deferred_render_pipeline.hpp>
 #include <engine/world/render/render_scene.hpp>
 
 #include <engine/input/input_system.hpp>
+
+#include <engine/meta/reflect_all.hpp>
 
 // Debugging related:
 #include <engine/world/render/bullet_debug_render_phase.hpp>
@@ -50,7 +53,7 @@ namespace game
 		screen(graphics.context, window->get_size()),
 		
 		resource_manager(graphics.context),
-		world(registry, cfg, resource_manager, update_rate),
+		world(registry, systems, cfg, resource_manager, update_rate),
 		systems(world),
 
 		// May split this out in body of constructor. -- This would
@@ -130,14 +133,21 @@ namespace game
 	{
 		world.fixed_update(time);
 
-		on_fixed_update(world.get_fixed_delta_time());
+		on_fixed_update();
 	}
 
-	void Game::render()
+	void Game::render(app::Milliseconds time)
 	{
 		using namespace graphics;
 
-		auto camera = world.get_camera();
+		auto camera_system = systems.get_system<engine::CameraSystem>();
+
+		if (!camera_system)
+		{
+			return;
+		}
+
+		const auto camera = camera_system->get_active_camera(); // world.get_camera();
 
 		if (camera == engine::null)
 		{
@@ -145,6 +155,8 @@ namespace game
 		}
 
 		auto [viewport, window_size] = screen.update_viewport(*window, world, camera);
+
+		camera_system->update_active_camera_viewport(viewport, { std::get<0>(window_size), std::get<1>(window_size) });
 
 		// Backbuffer clear; for gbuffer, see `Screen::render`, etc.
 		graphics.context->clear(effects.clear_color.r, effects.clear_color.g, effects.clear_color.b, effects.clear_color.a, BufferType::Color|BufferType::Depth);
@@ -155,6 +167,7 @@ namespace game
 		}
 
 		RenderState render_state;
+
 		initialize_render_state(render_state);
 
 		renderer.render(camera, screen, viewport, render_state);
@@ -167,7 +180,7 @@ namespace game
 		on_render(render_state);
 	}
 
-	void Game::on_fixed_update(float delta) {}
+	void Game::on_fixed_update() {}
 	void Game::on_render(RenderState& render_state) {}
 	void Game::on_resize(int width, int height) {}
 
@@ -178,7 +191,13 @@ namespace game
 			return;
 		}
 
-		world.update_camera_parameters(width, height);
+		/*
+		if (auto camera_system = systems.get_system<engine::CameraSystem>())
+		{
+			// TODO: Rework this interface.
+			camera_system->update_camera_parameters(width, height);
+		}
+		*/
 
 		screen.resize(width, height);
 		on_resize(width, height);
@@ -262,14 +281,16 @@ namespace game
 	{
 		//auto& resource_manager = world.get_resource_manager();
 
-		world_system<engine::EntitySystem>();
+		world_system<engine::DeltaSystem>(get_update_rate());
+
+		world_system<engine::EntitySystem>(systems);
+		world_system<engine::CameraSystem>();
 
 		auto& physics = world_system<engine::PhysicsSystem>();
 
 		world_system<engine::MotionSystem>(physics);
 
 		world_system<engine::AnimationSystem>();
-		world_system<engine::ZoneSystem>();
 
 		// Behaviors:
 		behavior<engine::FreeLookBehavior>();
