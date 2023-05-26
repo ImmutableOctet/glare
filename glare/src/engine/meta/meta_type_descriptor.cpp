@@ -10,6 +10,7 @@
 #include "function.hpp"
 #include "indirection.hpp"
 #include "data_member.hpp"
+#include "container.hpp"
 
 #include <engine/entity/entity_target.hpp>
 
@@ -163,16 +164,20 @@ namespace engine
 
 	MetaType MetaTypeDescriptor::adopt_type(const MetaType& type)
 	{
+		using namespace engine::literals;
+
 		if (auto resolved_type = resolve_type(type, this->flags))
 		{
 			this->type_id = resolved_type.id();
 
 			const bool is_sequential_container  = resolved_type.is_sequence_container();
 			const bool is_associative_container = resolved_type.is_associative_container();
+			const bool is_wrapper_container     = meta_type_is_container_wrapper(type);
 
-			this->flags.is_container             = (is_sequential_container || is_associative_container);
+			this->flags.is_container             = (is_sequential_container || is_associative_container || is_wrapper_container);
 			this->flags.is_sequential_container  = is_sequential_container;
 			this->flags.is_associative_container = is_associative_container;
+			this->flags.is_wrapper_container     = is_wrapper_container;
 
 			return resolved_type;
 		}
@@ -365,7 +370,7 @@ namespace engine
 
 			auto var_name_hash = MetaSymbolID {};
 
-			if (!this->flags.is_sequential_container)
+			if ((!this->flags.is_sequential_container) && ((!this->flags.is_wrapper_container) || (!content.is_array())))
 			{
 				if (var_name_is_expression)
 				{
@@ -427,31 +432,48 @@ namespace engine
 				return {};
 			};
 
-			auto resolve_variable_type = [this, &opt_type_context, &var_type_spec, &resolve_data_entry]() -> MetaType
+			auto resolve_variable_type = [this, &type, &opt_type_context, &var_type_spec, &resolve_data_entry]() -> MetaType
 			{
 				if (this->flags.is_container)
 				{
-					return {};
-				}
-
-				if (var_type_spec.empty())
-				{
-					if (auto data_entry = resolve_data_entry())
+					// NOTE: Works for both associative and wrapper containers.
+					// (Assuming a valid type resolution control-path is found; e.g. explicit member-function)
+					if (auto pair_type = try_get_container_pair_type(type))
 					{
-						return data_entry.type();
+						return pair_type;
+					}
+
+					// NOTE: Explicit check for sequence container due to possible
+					// conflicts with associative and wrapper containers.
+					if (type.is_sequence_container())
+					{
+						if (auto value_type = try_get_container_value_type(type))
+						{
+							return value_type;
+						}
 					}
 				}
 				else
 				{
-					if (opt_type_context)
+					if (var_type_spec.empty())
 					{
-						if (auto type = opt_type_context->get_type(var_type_spec))
+						if (auto data_entry = resolve_data_entry())
 						{
-							return type;
+							return data_entry.type();
 						}
 					}
+					else
+					{
+						if (opt_type_context)
+						{
+							if (auto type = opt_type_context->get_type(var_type_spec))
+							{
+								return type;
+							}
+						}
 
-					return resolve(hash(var_type_spec));
+						return resolve(hash(var_type_spec));
+					}
 				}
 
 				return {};
@@ -840,11 +862,21 @@ namespace engine
 		{
 			if (flags.is_sequential_container)
 			{
-				return apply_fields_sequential_container_impl(instance, field_count, offset, std::forward<Args>(args)...);
+				auto container_result = apply_fields_sequential_container_impl(instance, field_count, offset, std::forward<Args>(args)...);
+
+				if (container_result || (!flags.is_wrapper_container))
+				{
+					return container_result;
+				}
 			}
 			else if (flags.is_associative_container)
 			{
-				return apply_fields_associative_container_impl(instance, field_count, offset, std::forward<Args>(args)...);
+				auto container_result = apply_fields_associative_container_impl(instance, field_count, offset, std::forward<Args>(args)...);
+
+				if (container_result || (!flags.is_wrapper_container))
+				{
+					return container_result;
+				}
 			}
 		}
 
@@ -955,11 +987,15 @@ namespace engine
 			}
 			else
 			{
+				//print_warn("Failed to assign field: \"#{}\", in component: \"#{}\"", field_name, type.id());
+				
 				// Debugging related:
 				auto _dbg_field_name = get_known_string_from_hash(field_name);
+				auto _dbg_type_name = get_known_string_from_hash(type.id());
 				
-				//print_warn("Failed to assign field: \"#{}\", in component: \"#{}\"", field_name, type.id());
-				print_warn("Failed to assign field: \"{}\" (#{}), in component: \"#{}\"", _dbg_field_name, field_name, type.id());
+				print_warn("Failed to assign field: \"{}\" (#{}), for type: \"{}\" (#{})", _dbg_field_name, field_name, _dbg_type_name, type.id());
+
+				//auto test = try_get_underlying_value(field_value, args...);
 			}
 		}
 
@@ -1207,6 +1243,140 @@ namespace engine
 		}
 
 		return count;
+	}
+
+	std::size_t MetaTypeDescriptor::populate_sequential_container_raw(MetaAny& instance, const MetaAny* field_values, std::size_t field_count)
+	{
+		if (!instance)
+		{
+			return 0;
+		}
+
+		auto sequence_container = instance.as_sequence_container();
+
+		if (!sequence_container)
+		{
+			return 0;
+		}
+
+		return populate_sequential_container_raw(sequence_container, field_values, field_count);
+	}
+
+	std::size_t MetaTypeDescriptor::populate_sequential_container_raw(entt::meta_sequence_container& sequence_container, const MetaAny* field_values, std::size_t field_count)
+	{
+		if (!field_values)
+		{
+			return 0;
+		}
+
+		const auto container_value_type = sequence_container.value_type();
+
+		// TODO: Add checks for successful use of `insert`.
+		for (std::size_t i = 0; i < field_count; i++)
+		{
+			const auto& field_value = field_values[i];
+
+			const auto field_value_type = field_value.type();
+
+			if (field_value_type != container_value_type)
+			{
+				// Attempt conversion into new instance:
+				if (auto converted_field_value = field_value.allow_cast(container_value_type))
+				{
+					sequence_container.insert(sequence_container.end(), std::move(converted_field_value));
+
+					continue;
+				}
+			}
+
+			sequence_container.insert(sequence_container.end(), field_value);
+		}
+
+		return field_count;
+	}
+
+	std::size_t MetaTypeDescriptor::populate_associative_container_raw(MetaAny& instance, const MetaSymbolID* field_names, const MetaAny* field_values, std::size_t field_count)
+	{
+		if (!instance)
+		{
+			return 0;
+		}
+
+		auto associative_container = instance.as_associative_container();
+
+		if (!associative_container)
+		{
+			return 0;
+		}
+
+		return populate_associative_container_raw(associative_container, field_names, field_values, field_count);
+	}
+
+	std::size_t MetaTypeDescriptor::populate_associative_container_raw(entt::meta_associative_container& associative_container, const MetaSymbolID* field_names, const MetaAny* field_values, std::size_t field_count)
+	{
+		if (!field_names)
+		{
+			return 0;
+		}
+
+		if (!field_values)
+		{
+			return 0;
+		}
+
+		const auto container_key_type = associative_container.key_type();
+
+		const auto container_key_type_is_string = meta_type_is_string(container_key_type);
+
+		if ((container_key_type.id() != entt::type_hash<MetaSymbolID>::value()) && (!container_key_type_is_string))
+		{
+			return 0;
+		}
+
+		const auto container_value_type = associative_container.mapped_type(); // value_type();
+
+		// TODO: Add checks for successful use of `insert`.
+		for (std::size_t i = 0; i < field_count; i++)
+		{
+			const auto& field_name_id  = field_names[i];
+			const auto& field_value    = field_values[i];
+
+			auto key = MetaAny {};
+
+			if (container_key_type_is_string)
+			{
+				if (auto field_name = get_known_string_from_hash(field_name_id); !field_name.empty())
+				{
+					key = container_key_type.construct(field_name);
+				}
+			}
+			else
+			{
+				key = field_name_id;
+			}
+
+			if (!key)
+			{
+				continue;
+			}
+
+			const auto field_value_type = field_value.type();
+
+			if (field_value_type != container_value_type)
+			{
+				// Attempt conversion into new instance:
+				if (auto converted_field_value = field_value.allow_cast(container_value_type))
+				{
+					associative_container.insert(key, std::move(converted_field_value));
+
+					continue;
+				}
+			}
+
+			associative_container.insert(key, field_value);
+		}
+
+		return field_count;
 	}
 
 	MetaTypeDescriptor load_descriptor

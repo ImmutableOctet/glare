@@ -5,6 +5,8 @@
 #include "meta_type_descriptor_flags.hpp"
 #include "meta_parsing_instructions.hpp"
 #include "meta_evaluation_context.hpp"
+#include "hash.hpp"
+#include "container.hpp"
 
 #include <util/small_vector.hpp>
 
@@ -232,9 +234,20 @@ namespace engine
 			template <typename ...Args>
 			inline MetaAny instance(const MetaTypeConstructionFlags& construction_flags, Args&&... args) const
 			{
+				using namespace engine::literals;
+
 				auto instance = MetaAny {};
 
-				if (flags.allow_forwarding_fields_to_constructor && !flags.is_container)
+				if
+				(
+					(flags.allow_forwarding_fields_to_constructor)
+					&&
+					(
+						(!flags.is_container)
+						||
+						(flags.is_wrapper_container)
+					)
+				)
 				{
 					instance = instance_exact(construction_flags, std::forward<Args>(args)...);
 				}
@@ -254,7 +267,8 @@ namespace engine
 					{
 						if (construction_flags.type)
 						{
-							print_warn("Unable to resolve constructor for component: \"#{}\"", construction_flags.type.id());
+							//print_warn("Unable to resolve constructor for component: \"#{}\"", construction_flags.type.id());
+							print_warn("Unable to resolve constructor for component: \"{}\"", get_known_string_from_hash(construction_flags.type.id()));
 						}
 
 						return {};
@@ -309,7 +323,7 @@ namespace engine
 			template <typename ...Args>
 			inline MetaAny instance_exact(const MetaTypeConstructionFlags& construction_flags, Args&&... args) const
 			{
-				if (flags.is_container)
+				if (flags.is_container && !flags.is_wrapper_container)
 				{
 					return {};
 				}
@@ -336,6 +350,46 @@ namespace engine
 				{
 					return {};
 				}
+
+				const MetaSymbolID* constructor_arg_names = (field_names.size() >= constructor_args_count)
+					? field_names.data()
+					: nullptr
+				;
+
+				auto construct = [this, &type](const MetaSymbolID* constructor_arg_names, MetaAny* constructor_args, std::size_t constructor_args_count) // const MetaAny*
+				{
+					if (this->flags.is_wrapper_container)
+					{
+						if (auto wrapped_type = try_get_wrapped_container_type(type))
+						{
+							assert(meta_type_is_container(wrapped_type, false));
+
+							if (auto underlying_container = wrapped_type.construct())
+							{
+								std::size_t container_result = 0;
+
+								if (wrapped_type.is_sequence_container())
+								{
+									container_result = populate_sequential_container_raw(underlying_container, constructor_args, constructor_args_count);
+								}
+								else if (wrapped_type.is_associative_container())
+								{
+									container_result = populate_associative_container_raw(underlying_container, constructor_arg_names, constructor_args, constructor_args_count);
+								}
+
+								if (container_result == constructor_args_count) // (container_result)
+								{
+									if (auto from_container = type.construct(static_cast<MetaAny* const>(&underlying_container), static_cast<MetaType::size_type>(1)))
+									{
+										return from_container;
+									}
+								}
+							}
+						}
+					}
+
+					return type.construct(constructor_args, constructor_args_count);
+				};
 
 				if (construction_flags.allow_indirection)
 				{
@@ -373,7 +427,7 @@ namespace engine
 							}
 						}
 
-						return type.construct(constructor_args, constructor_args_count);
+						return construct(constructor_arg_names, constructor_args, constructor_args_count);
 					}
 				}
 
@@ -383,7 +437,7 @@ namespace engine
 				// are something we should be concerned with in practice.
 				auto constructor_args = const_cast<MetaAny*>(field_values.data());
 
-				return type.construct(constructor_args, constructor_args_count);
+				return construct(constructor_arg_names, constructor_args, constructor_args_count);
 			}
 
 			template <typename ...Args>
@@ -573,6 +627,12 @@ namespace engine
 				return instance(true);
 			}
 		private:
+			static std::size_t populate_sequential_container_raw(MetaAny& instance, const MetaAny* field_values, std::size_t field_count);
+			static std::size_t populate_sequential_container_raw(entt::meta_sequence_container& sequence_container, const MetaAny* field_values, std::size_t field_count);
+
+			static std::size_t populate_associative_container_raw(MetaAny& instance, const MetaSymbolID* field_names, const MetaAny* field_values, std::size_t field_count);
+			static std::size_t populate_associative_container_raw(entt::meta_associative_container& associative_container, const MetaSymbolID* field_names, const MetaAny* field_values, std::size_t field_count);
+
 			std::size_t set_variables_impl
 			(
 				const MetaType& type,
@@ -625,15 +685,15 @@ namespace engine
 
 			// Defined and only used in source file.
 			template <typename ...Args>
+			std::size_t resolve_values_impl(Values& values_out, std::size_t constructor_args_count, std::size_t offset, Args&&... args) const;
+
+			// Defined and only used in source file.
+			template <typename ...Args>
 			std::size_t apply_fields_sequential_container_impl(MetaAny& instance, std::size_t field_count, std::size_t offset, Args&&... args) const;
 
 			// Defined and only used in source file.
 			template <typename ...Args>
 			std::size_t apply_fields_associative_container_impl(MetaAny& instance, std::size_t field_count, std::size_t offset, Args&&... args) const;
-
-			// Defined and only used in source file.
-			template <typename ...Args>
-			std::size_t resolve_values_impl(Values& values_out, std::size_t constructor_args_count, std::size_t offset, Args&&... args) const;
 	};
 
 	MetaTypeDescriptor load_descriptor
