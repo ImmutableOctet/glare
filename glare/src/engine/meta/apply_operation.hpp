@@ -6,6 +6,7 @@
 //#include "meta.hpp"
 #include "hash.hpp"
 #include "indirection.hpp"
+#include "function.hpp"
 
 //#include <engine/entity/entity_target.hpp>
 
@@ -16,6 +17,7 @@
 
 #include <util/reflection.hpp>
 #include <util/algorithm.hpp>
+#include <util/type_algorithms.hpp>
 
 #include <math/comparison.hpp>
 
@@ -257,29 +259,189 @@ namespace engine
 	{
 		using namespace engine::impl;
 
+		// Exact / very similar arguments attempts
+		// (Unwanted type conversions are avoided):
 		if constexpr (sizeof...(args) > 0)
 		{
-			auto full_arguments = operator_fn;
-
-			while (full_arguments)
+			for (auto with_context = operator_fn; (with_context); with_context = with_context.next())
 			{
-				if (auto result = invoke_operator_impl<false>(full_arguments, left, right, args...))
+				const auto function_arg_count = with_context.arity();
+
+				std::size_t function_argument_offset = 0;
+
+				if (with_context.is_static())
+				{
+					constexpr auto expected_static_function_arity = (2 + sizeof...(args));
+
+					if (function_arg_count < expected_static_function_arity)
+					{
+						continue;
+					}
+
+					if (left)
+					{
+						const auto left_type = left.type();
+						const auto first_arg_type = with_context.arg(0);
+
+						if (!argument_has_invocation_priority(first_arg_type, left_type))
+						{
+							continue;
+						}
+					}
+
+					if (right) // && (function_arg_count > 1)
+					{
+						const auto right_type = right.type();
+						const auto second_arg_type = with_context.arg(1);
+
+						if (!argument_has_invocation_priority(second_arg_type, right_type))
+						{
+							continue;
+						}
+					}
+
+					// An offset of 2 to account for `left` and `right`.
+					function_argument_offset = 2; // (expected_static_function_arity - sizeof...(args));
+				}
+				else
+				{
+					constexpr auto expected_dynamic_function_arity = (1 + sizeof...(args));
+
+					if (function_arg_count < expected_dynamic_function_arity)
+					{
+						continue;
+					}
+
+					if (right) // && (function_arg_count > 1)
+					{
+						const auto right_type = right.type();
+						const auto first_arg_type = with_context.arg(0);
+
+						if (!argument_has_invocation_priority(first_arg_type, right_type))
+						{
+							continue;
+						}
+					}
+
+					function_argument_offset = 1; // (expected_dynamic_function_arity - sizeof...(args));
+				}
+
+				assert(function_argument_offset);
+
+				bool skip_overload = false;
+
+				util::static_iota<sizeof...(args)>
+				(
+					[&]<std::size_t argument_index>()
+					{
+						using arg_t = util::get_type_by_index<argument_index, Args...>;
+
+						if (!skip_overload)
+						{
+							const auto function_arg_type = with_context.arg(argument_index + function_argument_offset);
+							const auto input_arg_type = resolve<arg_t>();
+
+							if (!argument_has_invocation_priority(function_arg_type, input_arg_type))
+							{
+								skip_overload = true;
+							}
+						}
+					}
+				);
+
+				if (skip_overload)
+				{
+					continue;
+				}
+
+				if (auto result = invoke_operator_impl<false>(with_context, left, right, args...))
 				{
 					return result;
 				}
-
-				full_arguments = full_arguments.next();
 			}
 		}
 
-		while (operator_fn)
+		for (auto without_context = operator_fn; (without_context); without_context = without_context.next())
 		{
-			if (auto result = invoke_operator_impl<false>(operator_fn, left, right))
+			const auto function_arg_count = without_context.arity();
+
+			if (without_context.is_static())
+			{
+				constexpr auto expected_static_function_arity = 2;
+
+				if (function_arg_count < expected_static_function_arity)
+				{
+					continue;
+				}
+
+				if (left)
+				{
+					const auto left_type = left.type();
+					const auto first_arg_type = without_context.arg(0);
+
+					if (!argument_has_invocation_priority(first_arg_type, left_type))
+					{
+						continue;
+					}
+				}
+
+				if (right) // && (function_arg_count > 1)
+				{
+					const auto right_type = right.type();
+					const auto second_arg_type = without_context.arg(1);
+
+					if (!argument_has_invocation_priority(second_arg_type, right_type))
+					{
+						continue;
+					}
+				}
+			}
+			else
+			{
+				constexpr auto expected_dynamic_function_arity = 1;
+
+				if (function_arg_count < expected_dynamic_function_arity)
+				{
+					continue;
+				}
+
+				if (right) // && (function_arg_count > 1)
+				{
+					const auto right_type = right.type();
+					const auto first_arg_type = without_context.arg(0);
+
+					if (!argument_has_invocation_priority(first_arg_type, right_type))
+					{
+						continue;
+					}
+				}
+			}
+
+			if (auto result = invoke_operator_impl<false>(without_context, left, right))
 			{
 				return result;
 			}
+		}
 
-			operator_fn = operator_fn.next();
+		// Fallback/regular invocation attempts
+		// (Various type conversions may occur):
+		if constexpr (sizeof...(args) > 0)
+		{
+			for (auto with_context = operator_fn; (with_context); with_context = with_context.next())
+			{
+				if (auto result = invoke_operator_impl<false>(with_context, left, right, args...))
+				{
+					return result;
+				}
+			}
+		}
+
+		for (auto without_context = operator_fn; (without_context); without_context = without_context.next())
+		{
+			if (auto result = invoke_operator_impl<false>(without_context, left, right))
+			{
+				return result;
+			}
 		}
 
 		return {};
@@ -421,7 +583,7 @@ namespace engine
 			}
 			else
 			{
-				if (!is_unary_operation(operation))
+				if ((operation != MetaValueOperator::Get) && (!is_unary_operation(operation)))
 				{
 					return {};
 				}
@@ -930,6 +1092,12 @@ namespace engine
 		}
 
 		//print_warn("Unable to resolve operator function ({}) for types #{} & #{}.", operation, left_type.id(), right_type.id());
+
+		// Unary `Get` operation.
+		if ((operation == MetaValueOperator::Get) && (!left))
+		{
+			return right;
+		}
 
 		return {};
 	}
