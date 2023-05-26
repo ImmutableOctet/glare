@@ -6,6 +6,7 @@ target_sources(
     PRIVATE
 
     "editor.cpp"
+    "reflection.cpp"
 )
 
 #target_link_libraries(
