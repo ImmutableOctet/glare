@@ -16,6 +16,7 @@
 #include "meta_parsing_context.hpp"
 #include "meta_variable_context.hpp"
 #include "meta_variable_target.hpp"
+#include "meta_property.hpp"
 
 #include "indirect_meta_any.hpp"
 #include "indirect_meta_variable_target.hpp"
@@ -30,9 +31,10 @@
 
 #include <util/string.hpp>
 #include <util/parse.hpp>
+#include <util/format.hpp>
 
+#include <tuple>
 #include <vector>
-
 #include <optional>
 #include <type_traits>
 #include <algorithm>
@@ -609,7 +611,8 @@ namespace engine
 		MetaType type={},
 		bool allow_entity_fallback=true,
 		bool allow_component_fallback=true,
-		bool allow_standalone_opaque_function=true
+		bool allow_standalone_opaque_function=true,
+		bool allow_remote_variables=true
 	)
 	{
 		using namespace engine::literals;
@@ -681,7 +684,7 @@ namespace engine
 		{
 			using instance_t = std::decay_t<decltype(instance)>;
 
-			if constexpr (has_method_get_type_v<instance_t, MetaType> || has_method_get_type_v<instance_t, MetaTypeID>)
+			if constexpr (std::is_same_v<instance_t, MetaAny> || has_method_get_type_v<instance_t, MetaType> || has_method_get_type_v<instance_t, MetaTypeID>)
 			{
 				if (update_type)
 				{
@@ -704,7 +707,10 @@ namespace engine
 					{
 						if (update_type)
 						{
-							type = instance_meta_type;
+							if (!type_has_indirection(instance_meta_type))
+							{
+								type = instance_meta_type;
+							}
 
 							update_type = false;
 						}
@@ -735,11 +741,11 @@ namespace engine
 			return enqueue_raw(std::forward<decltype(instance)>(instance), update_type, operation);
 		};
 
-		auto replace = [&enqueue, &clear](MetaAny&& instance) -> bool
+		auto replace = [&enqueue, &clear](auto&& instance) -> bool
 		{
 			clear();
 
-			return enqueue(std::move(instance));
+			return enqueue(std::forward<decltype(instance)>(instance));
 		};
 
 		auto construct_type = [&instructions, &type, &enqueue, &replace](std::string_view content, bool allow_indirection=true) -> bool
@@ -771,6 +777,46 @@ namespace engine
 			return false;
 		};
 
+		auto resolve_property = [](const MetaType& type, std::string_view symbol, MetaSymbolID symbol_id={}) -> std::optional<MetaProperty>
+		{
+			const auto [getter_id, setter_id] = MetaProperty::generate_accessor_identifiers(symbol);
+
+			const auto getter_fn = type.func(getter_id);
+			const auto setter_fn = type.func(setter_id);
+			
+			const auto data_member = resolve_data_member_by_id(type, true, symbol_id);
+
+			if (getter_fn || setter_fn || data_member)
+			{
+				return MetaProperty
+				{
+					type.id(),
+									
+					((getter_fn) ? getter_id : MetaFunctionID {}), // getter_id
+					((setter_fn) ? setter_id : MetaFunctionID {}), // setter_id
+
+					((data_member) ? symbol_id : MetaSymbolID {})
+				};
+			}
+
+			return std::nullopt;
+		};
+
+		auto make_opaque_property = [](std::string_view symbol, MetaSymbolID data_member_id={}, MetaTypeID type_id={})
+		{
+			const auto [getter_id, setter_id] = MetaProperty::generate_accessor_identifiers(symbol);
+
+			return MetaProperty
+			{
+				type_id,
+
+				getter_id,
+				setter_id,
+
+				data_member_id
+			};
+		};
+
 		util::split
 		(
 			value,
@@ -784,7 +830,7 @@ namespace engine
 
 			[
 				&instructions, allow_entity_fallback, allow_component_fallback, allow_standalone_opaque_function, &type, &value,
-				&initial_type, had_initial_type, &enqueue, &replace, &construct_type, &output
+				&initial_type, had_initial_type, &enqueue, &replace, &construct_type, &resolve_property, &make_opaque_property, &output
 			]
 			(std::string_view& symbol, bool is_first_symbol, bool is_last_symbol) -> bool
 			{
@@ -819,12 +865,30 @@ namespace engine
 				}
 				else
 				{
-					const auto subscript_begin = symbol.find(subscript_begin_symbol);
+					const auto subscript_begin = util::find_scope_beginning_symbol // symbol.find(subscript_begin_symbol);
+					(
+						symbol,
+						
+						subscript_begin_symbol,
+
+						std::array
+						{
+							std::pair { "(", ")" },
+							std::pair { "\"", "\"" }
+						}
+					);
 
 					if (subscript_begin != std::string_view::npos)
 					{
 						if (subscript_begin > 0)
 						{
+							// Trim the symbol down to remove the subscript portion.
+							// 
+							// NOTE: Since the end of `symbol` dictates the next iterations start point, performing this
+							// trim allows the below subscript logic to be executed in isolation. (i.e. on the next cycle)
+							// 
+							// This is advantageous, since if we didn't separate the symbol and the subscript operator,
+							// the subsequent processing steps would need dedicated logic to handle it.
 							symbol = symbol.substr(0, subscript_begin);
 						}
 						else
@@ -952,20 +1016,19 @@ namespace engine
 					}
 				}
 
-				if (instructions.allow_explicit_type_construction)
+				if ((is_command) && (symbol_used_as_type || (type && command_name_or_value.empty())))
 				{
-					if ((is_command) && (symbol_used_as_type || (type && command_name_or_value.empty())))
+					// Forward usage of system-types in construction syntax to regular type references.
+					// (May remove this later)
+					if (type_is_system(type))
 					{
-						if (type_is_system(type))
+						return replace(MetaTypeReference { type.id() });
+					}
+					else if (instructions.allow_explicit_type_construction)
+					{
+						if (auto result = construct_type(content))
 						{
-							return enqueue(MetaTypeReference { type.id() }); // replace
-						}
-						else
-						{
-							if (auto result = construct_type(content))
-							{
-								return result;
-							}
+							return result;
 						}
 					}
 				}
@@ -1066,67 +1129,112 @@ namespace engine
 					{
 						if (is_command)
 						{
-							if ((type) || ((instructions.allow_opaque_function_references) && (allow_standalone_opaque_function || !output.empty())))
+							auto fn = MetaFunction {};
+
+							if (type)
 							{
-								auto fn = MetaFunction {};
-
-								if (type)
+								fn = type.func(symbol_id);
+							}
+							else
+							{
+								if (instructions.allow_global_function_references && output.empty())
 								{
-									fn = type.func(symbol_id);
-								}
-
-								if ((fn) || (instructions.allow_opaque_function_references)) // ((instructions.allow_opaque_function_references) && (allow_standalone_opaque_function || !output.empty()))
-								{
-									auto function_out = MetaFunctionCall
+									if (const auto type_context = instructions.context.get_type_context())
 									{
-										(type)
-											? type.id()
-											: MetaTypeID {}
-										,
+										auto [global_type, global_function] = type_context->resolve_global_function(symbol_id);
 
-										symbol_id
-									};
-
-									std::size_t argument_index = 0;
-									std::size_t content_position = 0;
-
-									while (content_position < content.length())
-									{
-										const auto remaining_content = content.substr(content_position);
-
-										const auto argument_type = (fn)
-											? fn.arg(argument_index)
-											: MetaType {}
-										;
-
-										auto [argument, length_processed] = meta_any_from_string_compound_expr_impl
-										(
-											remaining_content,
-											instructions,
-											argument_type
-										);
-
-										if (!argument)
+										if (global_function)
 										{
-											break;
+											type = std::move(global_type);
+											fn = std::move(global_function);
 										}
+									}
+								}
+							}
 
-										function_out.arguments.emplace_back(std::move(argument));
+							if ((fn) || ((instructions.allow_opaque_function_references) && (allow_standalone_opaque_function || !output.empty())))
+							{
+								auto function_out = MetaFunctionCall
+								{
+									(type)
+										? type.id()
+										: MetaTypeID {}
+									,
 
-										content_position += length_processed;
-										argument_index++;
+									symbol_id
+								};
+
+								std::size_t argument_index = 0;
+								std::size_t content_position = 0;
+
+								while (content_position < content.length())
+								{
+									const auto remaining_content = content.substr(content_position);
+
+									/*
+									// Type forwarding disabled for now; too much potential for
+									// conflicts when there's multiple function overloads.
+									// (i.e. type conversion should be performed at runtime)
+									// 
+									// See also: `MetaTypeDescriptor::set_variables_impl` -- Similar situation.
+									const auto argument_type = (fn)
+										? fn.arg(argument_index)
+										: MetaType {}
+									;
+									*/
+
+									const auto argument_type = MetaType {};
+
+									auto [argument, length_processed] = meta_any_from_string_compound_expr_impl
+									(
+										remaining_content,
+										instructions,
+										argument_type
+									);
+
+									if (!argument)
+									{
+										break;
 									}
 
-									return enqueue(std::move(function_out));
+									function_out.arguments.emplace_back(std::move(argument));
+
+									content_position += length_processed;
+									argument_index++;
 								}
+
+								return enqueue(std::move(function_out));
 							}
 						}
 					}
 				}
 
-				if (type)
+				// if ((type) || (instructions.allow_global_member_references && output.empty()))
 				{
-					if (auto as_data = resolve_data_member_by_id(type, true, symbol_id))
+					auto as_data = entt::meta_data {};
+
+					if (type)
+					{
+						as_data = resolve_data_member_by_id(type, true, symbol_id);
+					}
+					else
+					{
+						if (instructions.allow_global_member_references && output.empty())
+						{
+							if (const auto type_context = instructions.context.get_type_context())
+							{
+								auto [global_type, global_data_member] = type_context->resolve_global_data_member(symbol_id);
+
+								if (global_data_member)
+								{
+									type = std::move(global_type);
+									as_data = std::move(global_data_member);
+								}
+							}
+						}
+					}
+
+					if (as_data)
 					{
 						if (as_data.is_static())
 						{
@@ -1166,36 +1274,74 @@ namespace engine
 						}
 					}
 
-					if (auto as_prop = type.prop(symbol_id))
+					auto as_prop = entt::meta_prop {};
+
+					if (type)
+					{
+						as_prop = type.prop(symbol_id);
+					}
+					else
+					{
+						if (instructions.allow_global_member_references && output.empty())
+						{
+							if (const auto type_context = instructions.context.get_type_context())
+							{
+								auto [global_type, global_property] = type_context->resolve_global_property(symbol_id);
+
+								if (global_property)
+								{
+									type = std::move(global_type);
+									as_prop = std::move(global_property);
+								}
+							}
+						}
+					}
+
+					if (as_prop)
 					{
 						if (auto prop_value = as_prop.value())
 						{
 							return replace(std::move(prop_value));
 						}
 					}
+				}
 
-					if (auto as_basic_function = type.func(symbol_id))
+				if (type)
+				{
+					if (instructions.allow_function_call_semantics)
 					{
-						do
+						/*
+							NOTE: 'Basic' function calls explicitly do not support global namespace resolution.
+							
+							The rationale being that a global function call is obvious when call-syntax is present,
+							whereas arbitrary identifiers could cause confusion.
+
+							For example, the programmer may make the assumption that an unqualified name is an entity name,
+							but if 'basic' function calls supported global resolution, that identifier could instead be an unexpected function call.
+						*/
+						if (auto as_basic_function = type.func(symbol_id))
 						{
-							const auto argument_count = as_basic_function.arity();
-
-							if (argument_count == 0)
+							do
 							{
-								return enqueue(MetaFunctionCall { type.id(), symbol_id });
-							}
-							else
-							{
-								const auto first_arg_type = as_basic_function.arg(0);
+								const auto argument_count = as_basic_function.arity();
 
-								if (first_arg_type.id() == entt::type_hash<Registry>::value()) // resolve<Registry>().id()
+								if (argument_count == 0)
 								{
 									return enqueue(MetaFunctionCall { type.id(), symbol_id });
 								}
-							}
+								else
+								{
+									const auto first_arg_type = as_basic_function.arg(0);
 
-							as_basic_function = as_basic_function.next();
-						} while (as_basic_function);
+									if (first_arg_type.id() == entt::type_hash<Registry>::value()) // resolve<Registry>().id()
+									{
+										return enqueue(MetaFunctionCall { type.id(), symbol_id });
+									}
+								}
+
+								as_basic_function = as_basic_function.next();
+							} while (as_basic_function);
+						}
 					}
 
 					if (auto str_fn = type.func("string_to_value"_hs))
@@ -1205,36 +1351,70 @@ namespace engine
 							return replace(std::move(result));
 						}
 					}
+
+					if (instructions.allow_property_translation && (!is_command))
+					{
+						if (auto meta_property = resolve_property(type, symbol, symbol_id))
+						{
+							return enqueue(std::move(*meta_property));
+						}
+					}
 				}
 
 				// Fallback control-paths:
 				if (!symbol.empty())
 				{
-					if (output.empty())
+					// NOTE: These if-conditions are split this way intentionally to allow for context-specific prioritization of fallback methods.
+					// (e.g. type-references are higher priority than entity-references, system-types take precedence over component-types, etc.)
+
+					if (!is_command)
 					{
-						if (is_last_symbol && !is_command)
+						if (instructions.resolve_system_references)
 						{
-							if (auto as_type = get_as_type())
+							// See previous `resolve_system_references` section for regular system-type deduction.
+							if (output.empty() && is_last_symbol)
 							{
-								if (instructions.resolve_system_references && type_is_system(as_type)) // && allow_system_references
+								if (auto as_type = get_as_type())
 								{
-									return enqueue(MetaTypeReference { as_type.id() });
-								}
-
-								if (instructions.fallback_to_component_reference && allow_component_fallback)
-								{
-									/*
-									if (auto result = meta_any_from_string_execute_string_command("component"_hs, symbol, symbol, instructions.allow_entity_indirection, instructions.context, instructions.storage); std::get<0>(result))
+									if (type_is_system(as_type)) // && allow_system_references
 									{
-										return enqueue(std::move(std::get<0>(result))); // replace
+										return enqueue(MetaTypeReference { as_type.id() });
 									}
-									*/
-
-									return enqueue(MetaTypeReference { as_type.id() });
 								}
 							}
 						}
+						
+						if
+						(
+							((!output.empty()) && (output.segments[0].value.type().id() == "MetaVariableTarget"_hs)) // resolve<MetaVariableTarget>()
+							||
+							(
+								(instructions.fallback_to_component_reference && allow_component_fallback)
+								&&
+								(
+									(output.empty())
+									|| (!type)
+									|| (type.id() == "Entity"_hs) // resolve<Entity>()
+								)
+							)
+						)
+						{
+							if (auto as_type = get_as_type())
+							{
+								return enqueue
+								(
+									MetaTypeReference
+									{
+										.type_id = as_type.id(),
+										.validate_assignment_type = false
+									}
+								);
+							}
+						}
+					}
 
+					if (output.empty())
+					{
 						if ((instructions.fallback_to_entity_reference && instructions.allow_entity_indirection) && (allow_entity_fallback && !is_command))
 						{
 							return enqueue(EntityTarget { EntityTarget::EntityNameTarget { symbol_id } }); // EntityTarget::from_string(symbol)
@@ -1242,15 +1422,20 @@ namespace engine
 					}
 					else
 					{
-						if ((instructions.allow_member_references && instructions.allow_opaque_member_references)) // !is_first_symbol && ...
+						if ((!is_command) && (instructions.allow_member_references && instructions.allow_opaque_member_references)) // !is_first_symbol && ...
 						{
 							return enqueue
 							(
+								/*
+								// Alternative implementation (doesn't support 'property' accessors):
 								MetaDataMember
 								{
 									MetaTypeID {},
 									symbol_id
 								}
+								*/
+
+								make_opaque_property(symbol, symbol_id)
 							);
 						}
 					}
@@ -1286,21 +1471,34 @@ namespace engine
 			return std::nullopt;
 		}
 
-		auto validate_symbol = [&instructions](const std::string_view& symbol, bool validate_not_local_variable=false, bool validate_not_type=true)
+		auto validate_symbol = [&instructions](const std::string_view& symbol, bool validate_not_local_variable=false, bool validate_not_type=true, bool validate_not_entity_member=true)
 		{
 			if (symbol.empty())
 			{
 				return false;
 			}
 
+			auto symbol_id = MetaSymbolID {};
+
 			if (validate_not_type)
 			{
 				const auto opt_type_context = instructions.context.get_type_context();
 
-				const auto type = (opt_type_context)
-					? opt_type_context->get_type(symbol, instructions)
-					: resolve(hash(symbol).value())
-				;
+				auto type = MetaType {};
+
+				if (opt_type_context)
+				{
+					type = opt_type_context->get_type(symbol, instructions);
+				}
+				else
+				{
+					//if (!symbol_id) // <-- Always true
+					{
+						symbol_id = hash(symbol).value();
+					}
+
+					type = resolve(symbol_id);
+				}
 
 				if (type)
 				{
@@ -1312,9 +1510,50 @@ namespace engine
 			{
 				if (const auto opt_variable_context = instructions.context.get_variable_context())
 				{
-					if (opt_variable_context->contains(symbol))
+					if (!symbol_id)
+					{
+						symbol_id = hash(symbol).value();
+					}
+
+					if (opt_variable_context->contains(symbol_id)) // symbol
 					{
 						return false;
+					}
+				}
+			}
+
+			// TODO: Look into possible optimizations for this.
+			// (Setter/getter IDs possibly generated twice; see `meta_any_from_string_resolve_expression_impl`)
+			if (validate_not_entity_member)
+			{
+				if (const auto entity_type = resolve<Entity>())
+				{
+					if (!symbol_id)
+					{
+						symbol_id = hash(symbol).value();
+					}
+
+					auto& member_id = symbol_id;
+
+					if (entity_type.data(member_id))
+					{
+						return false;
+					}
+					else
+					{
+						const auto property_accessors = MetaProperty::generate_accessor_identifiers(symbol);
+
+						const auto& getter_id = std::get<0>(property_accessors);
+						const auto& setter_id = std::get<1>(property_accessors);
+
+						if (getter_id && entity_type.func(getter_id))
+						{
+							return false;
+						}
+						else if (setter_id && entity_type.func(setter_id))
+						{
+							return false;
+						}
 					}
 				}
 			}
@@ -1324,7 +1563,7 @@ namespace engine
 
 		if (validate_first_symbol)
 		{
-			if (!validate_symbol(first_symbol, (!target || !target->is_self_targeted()), true))
+			if (!validate_symbol(first_symbol, (!target || !target->is_self_targeted()), true, (second_symbol.empty())))
 			{
 				return std::nullopt;
 			}
@@ -1365,7 +1604,7 @@ namespace engine
 		{
 			if (validate_second_symbol)
 			{
-				if (!validate_symbol(second_symbol, false, true))
+				if (!validate_symbol(second_symbol, false, true, true))
 				{
 					return std::nullopt;
 				}
@@ -1416,7 +1655,8 @@ namespace engine
 		bool try_boolean=true,
 		bool allow_entity_fallback=true,
 		bool allow_component_fallback=true,
-		bool allow_standalone_opaque_function=true
+		bool allow_standalone_opaque_function=true,
+		bool allow_remote_variables=true
 	)
 	{
 		using namespace engine::literals;
@@ -1451,7 +1691,7 @@ namespace engine
 		{
 			MetaValueOperation output;
 
-			if (instructions.allow_remote_variable_references)
+			if (allow_remote_variables && instructions.allow_remote_variable_references)
 			{
 				auto
 				[
@@ -1507,7 +1747,12 @@ namespace engine
 				}
 			}
 
-			meta_any_from_string_resolve_expression_impl(output, value, instructions, type, allow_entity_fallback, allow_component_fallback, allow_standalone_opaque_function);
+			meta_any_from_string_resolve_expression_impl
+			(
+				output, value, instructions, type,
+				allow_entity_fallback, allow_component_fallback,
+				allow_standalone_opaque_function, allow_remote_variables
+			);
 
 			if (!output.empty())
 			{
@@ -1647,6 +1892,7 @@ namespace engine
 		bool allow_entity_fallback,
 		bool allow_component_fallback,
 		bool allow_standalone_opaque_function,
+		bool allow_remote_variables,
 
 		bool assume_static_type
 	)
@@ -1679,12 +1925,14 @@ namespace engine
 				return;
 			}
 
-			offset = static_cast<std::size_t>(current_expr.data() - (expr.data()));
+			auto updated_offset = static_cast<std::size_t>(current_expr.data() - (expr.data()));
 
 			if (is_completed)
 			{
-				offset += current_expr.length();
+				updated_offset += current_expr.length();
 			}
+
+			offset = std::max(offset, updated_offset);
 		};
 
 		// Remove leading whitespace via offset.
@@ -1842,7 +2090,7 @@ namespace engine
 
 						if (projected_operator_sub_position == std::string_view::npos)
 						{
-							projected_operator_sub_position = current_expr.find(',');
+							projected_operator_sub_position = util::find_unscoped(current_expr, ",");
 						}
 
 						if (projected_operator_sub_position != std::string_view::npos)
@@ -1850,6 +2098,10 @@ namespace engine
 							projected_operator_position = static_cast<std::size_t>((trailing_expr.data() + projected_operator_sub_position) - current_expr.data());
 						}
 					}
+
+					// Update the offset to account for isolated value.
+					// NOTE: We add one to `scope_end` here to account for the closing symbol's length. (e.g. ')')
+					offset = std::max(offset, (scope_end + 1));
 				}
 				else
 				{
@@ -1858,7 +2110,7 @@ namespace engine
 
 					if (projected_operator_position == std::string_view::npos)
 					{
-						projected_operator_position = current_expr.find(',');
+						projected_operator_position = util::find_unscoped(current_expr, ",");
 					}
 				}
 
@@ -1970,6 +2222,8 @@ namespace engine
 							}
 
 							owns_cast_type = static_cast<bool>(cast_type);
+
+							update_offset(cast_type_raw, true);
 						}
 						else
 						{
@@ -2022,7 +2276,7 @@ namespace engine
 
 						if (trailing_operator_position == std::string_view::npos)
 						{
-							trailing_operator_position = operator_area.find(',');
+							trailing_operator_position = util::find_unscoped(operator_area, ",");
 						}
 
 						if (trailing_operator_position == std::string_view::npos)
@@ -2077,7 +2331,8 @@ namespace engine
 						(!is_first_expr || try_boolean),
 						(!is_first_expr || allow_entity_fallback),
 						(!is_first_expr || allow_component_fallback),
-						(!is_first_expr || allow_standalone_opaque_function)
+						(!is_first_expr || allow_standalone_opaque_function),
+						(!is_first_expr || allow_remote_variables)
 					);
 				}
 
@@ -2100,7 +2355,7 @@ namespace engine
 
 			if (current_operator_symbol.empty())
 			{
-				if (auto exit_operator = remainder.find(','); exit_operator != std::string_view::npos)
+				if (auto exit_operator = util::find_unscoped(remainder, ","); exit_operator != std::string_view::npos)
 				{
 					constexpr std::size_t exit_operator_length = 1;
 
@@ -2515,7 +2770,8 @@ namespace engine
 		bool allow_boolean_literals,
 		bool allow_entity_fallback,
 		bool allow_component_fallback,
-		bool allow_standalone_opaque_function
+		bool allow_standalone_opaque_function,
+		bool allow_remote_variables
 	)
 	{
 		using namespace engine::literals;
@@ -2550,7 +2806,8 @@ namespace engine
 			(
 				value, instructions, type,
 				allow_numeric_literals, allow_string_fallback, allow_boolean_literals,
-				allow_entity_fallback, allow_component_fallback, allow_standalone_opaque_function
+				allow_entity_fallback, allow_component_fallback, allow_standalone_opaque_function,
+				allow_remote_variables
 			);
 
 			if (result)
@@ -2584,7 +2841,8 @@ namespace engine
 		bool allow_boolean_literals,
 		bool allow_entity_fallback,
 		bool allow_component_fallback,
-		bool allow_standalone_opaque_function
+		bool allow_standalone_opaque_function,
+		bool allow_remote_variables
 	)
 	{
 		auto string_value = value.get<std::string>();
@@ -2602,7 +2860,8 @@ namespace engine
 			allow_boolean_literals,
 			allow_entity_fallback,
 			allow_component_fallback,
-			allow_standalone_opaque_function
+			allow_standalone_opaque_function,
+			allow_remote_variables
 		);
 	}
 

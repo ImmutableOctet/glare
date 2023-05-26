@@ -6,6 +6,7 @@
 #include <engine/entity/entity_state.hpp>
 
 #include <iterator>
+#include <algorithm>
 
 namespace engine
 {
@@ -91,8 +92,37 @@ namespace engine
 		return {};
 	}
 
+	EntityThread* EntityThreadComponent::start_thread
+	(
+		const EntityDescriptor& descriptor,
+		EntityThreadID thread_id,
+
+		std::optional<EntityStateIndex> state_index,
+		bool check_existing,
+		bool check_linked,
+		bool restart_existing
+	)
+	{
+		if (const auto thread_description = descriptor.get_thread_by_id(thread_id))
+		{
+			return start_thread
+			(
+				descriptor, thread_id, state_index,
+				check_existing, check_linked, restart_existing,
+
+				EntityThreadFlags
+				{
+					.cadence = thread_description->cadence
+				}
+			);
+		}
+
+		return {};
+	}
+
 	std::size_t EntityThreadComponent::start_threads
 	(
+		const EntityDescriptor& descriptor,
 		const EntityThreadRange& thread_range,
 		
 		std::optional<EntityStateIndex> state_index,
@@ -104,9 +134,22 @@ namespace engine
 		iterate_thread_range
 		(
 			thread_range,
-			[this, &state_index, restart_existing, &started_thread_count](EntityThreadIndex thread_index)
+			[this, &descriptor, &state_index, restart_existing, &started_thread_count](EntityThreadIndex thread_index)
 			{
-				if (start_thread(thread_index, state_index, true, true, restart_existing))
+				const auto& thread_description = descriptor.get_thread(thread_index);
+
+				const auto start_result = start_thread
+				(
+					thread_index, state_index,
+					true, true, restart_existing,
+
+					EntityThreadFlags
+					{
+						.cadence = thread_description.cadence
+					}
+				);
+
+				if (start_result)
 				{
 					started_thread_count++;
 				}
@@ -130,11 +173,12 @@ namespace engine
 			return 0;
 		}
 
-		return start_threads(*state, state_index, restart_existing);
+		return start_threads(descriptor, *state, state_index, restart_existing);
 	}
 
 	std::size_t EntityThreadComponent::start_threads
 	(
+		const EntityDescriptor& descriptor,
 		const EntityState& state,
 		EntityStateIndex state_index,
 		bool restart_existing
@@ -144,7 +188,7 @@ namespace engine
 
 		for (const auto& threads : state.immediate_threads)
 		{
-			threads_started += start_threads(threads, state_index, restart_existing);
+			threads_started += start_threads(descriptor, threads, state_index, restart_existing);
 		}
 
 		return threads_started;
@@ -187,7 +231,6 @@ namespace engine
 		return true; // false;
 	}
 
-	// The return value of this method indicates how many threads were fully terminated.
 	std::size_t EntityThreadComponent::stop_threads(const EntityThreadRange& thread_range, bool check_linked)
 	{
 		std::size_t terminated_count = 0;
@@ -268,9 +311,6 @@ namespace engine
 		return stop_threads(state_index);
 	}
 
-	// Attempts to stop all threads.
-	// 
-	// The return value of this method indicates how many threads were fully terminated.
 	std::size_t EntityThreadComponent::stop_all()
 	{
 		std::size_t terminated_thread_count = 0;
@@ -290,6 +330,133 @@ namespace engine
 		}
 
 		return terminated_thread_count;
+	}
+
+	bool EntityThreadComponent::erase_thread(EntityThreadIndex thread_index)
+	{
+		if (auto* thread = get_thread(thread_index, false))
+		{
+			threads.erase(thread);
+			
+			return true;
+		}
+
+		// Notify the user that the thread has already been erased.
+		return false;
+	}
+
+	bool EntityThreadComponent::erase_thread(const EntityDescriptor& descriptor, EntityThreadID thread_id)
+	{
+		if (auto thread_index = descriptor.get_thread_index(thread_id))
+		{
+			return erase_thread(*thread_index);
+		}
+
+		return false;
+	}
+
+	std::size_t EntityThreadComponent::erase_threads(const EntityThreadRange& thread_range)
+	{
+		std::size_t erased_count = 0;
+
+		return iterate_thread_range
+		(
+			thread_range,
+
+			[this, &erased_count](EntityThreadIndex thread_index)
+			{
+				if (erase_thread(thread_index))
+				{
+					erased_count++;
+				}
+			}
+		);
+
+		return erased_count;
+	}
+
+	std::size_t EntityThreadComponent::erase_threads(EntityStateIndex state_index)
+	{
+		std::size_t erased_thread_count = 0;
+
+		for (auto it = threads.begin(); it != threads.end();)
+		{
+			auto& thread = *it;
+
+			if (state_index == thread.state_index.value_or(state_index))
+			{
+				if (auto updated_it = threads.erase(&thread))
+				{
+					it = updated_it;
+
+					erased_thread_count++;
+
+					continue;
+				}
+			}
+
+			++it;
+		}
+
+		return erased_thread_count;
+	}
+
+	std::size_t EntityThreadComponent::erase_threads(const EntityDescriptor& descriptor, EntityStateIndex state_index, bool limit_to_static_range)
+	{
+		if (limit_to_static_range)
+		{
+			if (auto* state = descriptor.get_state_by_index(state_index))
+			{
+				return erase_threads(*state, state_index, limit_to_static_range);
+			}
+			else
+			{
+				return 0;
+			}
+		}
+
+		return erase_threads(state_index);
+	}
+
+	std::size_t EntityThreadComponent::erase_threads(const EntityState& state, EntityStateIndex state_index, bool limit_to_static_range)
+	{
+		if (limit_to_static_range)
+		{
+			std::size_t terminated_thread_count = 0;
+
+			for (const auto& threads : state.immediate_threads)
+			{
+				terminated_thread_count += erase_threads(threads);
+			}
+
+			return terminated_thread_count;
+		}
+		
+		return erase_threads(state_index);
+	}
+
+	std::size_t EntityThreadComponent::erase_completed_threads()
+	{
+		const auto initial_thread_count = threads.size();
+
+		threads.erase
+		(
+			std::remove_if
+			(
+				threads.begin(), threads.end(),
+
+				[](const EntityThread& thread_entry)
+				{
+					return (thread_entry.is_complete);
+				}
+			),
+
+			threads.end()
+		);
+
+		const auto updated_thread_count = threads.size();
+
+		return (initial_thread_count - updated_thread_count);
 	}
 
 	bool EntityThreadComponent::pause_thread

@@ -11,13 +11,13 @@ namespace engine
 {
 	struct TransformComponent;
 
-	// Indicates that a stage/map has been loaded into the `World`, and that its parent is `stage`.
-	struct OnStageLoaded
+	// Indicates that a scene has been loaded into the `World`, and that its root entity is `scene`.
+	struct OnSceneLoaded
 	{
-		// The parent/pivot entity representing the loaded stage.
-		Entity stage;
+		// The parent/pivot entity representing the loaded scene.
+		Entity scene;
 
-		// An optional file-path indicating the source of the stage in question.
+		// An optional file-path indicating the source of the scene in question.
 		std::optional<std::filesystem::path> path = std::nullopt;
 	};
 

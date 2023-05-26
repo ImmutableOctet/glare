@@ -3,6 +3,8 @@
 #include "types.hpp"
 #include "action.hpp"
 
+#include "service_policy.hpp"
+#include "system_manager_interface.hpp"
 #include "service_events.hpp"
 #include "timed_event.hpp"
 #include "timer.hpp"
@@ -15,6 +17,8 @@
 #include "entity/entity_variables.hpp"
 #include "meta/types.hpp"
 
+#include <app/types.hpp>
+
 #include <util/small_vector.hpp>
 
 //#include <entt/signal/fwd.hpp>
@@ -22,8 +26,10 @@
 #include <utility>
 #include <functional>
 #include <type_traits>
+#include <string_view>
 #include <optional>
 #include <memory>
+#include <string>
 //#include <vector>
 
 // Debugging related:
@@ -51,6 +57,8 @@ namespace engine
 	struct ComponentPatchCommand;
 	struct ComponentReplaceCommand;
 	struct FunctionCommand;
+	struct ExprCommand;
+	struct SetParentCommand;
 
 	class Service
 	{
@@ -63,11 +71,13 @@ namespace engine
 			Service
 			(
 				Registry& registry,
+				SystemManagerInterface& systems,
+				const ServicePolicy& policy={},
 
 				bool register_input_events=true,
 				bool register_timed_event_wrapper=false,
 				bool register_core_commands=true,
-				bool register_function_commands=true,
+				bool register_evaluation_commands=true,
 				bool allocate_root_entity=true,
 				bool allocate_universal_variables=false
 			);
@@ -75,7 +85,7 @@ namespace engine
 			Service(const Service&) = delete;
 			Service(Service&&) noexcept = delete;
 
-			virtual ~Service() {};
+			virtual ~Service();
 
 			/*
 			inline Registry& get_registry()
@@ -380,10 +390,78 @@ namespace engine
 				deferred_operations.emplace_back(callback);
 			}
 
-			void update(float delta=1.0f);
-			void fixed_update(float delta=1.0f);
+			void update(app::Milliseconds time, float delta);
+			void fixed_update(app::Milliseconds time, float delta=1.0f);
 
 			void render(app::Graphics& gfx);
+
+			/*
+				Retrieves the current parent of `entity`.
+
+				If `entity` does not have a parent, or if `entity` does not
+				have a `RelationshipComponent` attached, this will return `null`.
+			*/
+			Entity get_parent(Entity entity) const;
+
+			/*
+				Sets the parent of `entity` to `parent`.
+				
+				The return value is `entity`'s previous parent.
+
+				If `entity` did not have a parent prior to this call,
+				the return-value will be `null` instead.
+			*/
+			Entity set_parent(Entity entity, Entity parent);
+
+			/*
+				Attempts to remove the relationship between `child` and `entity`.
+				
+				If `root` exists, rather than orphaning the `child`,
+				its parent will instead be set to `root`.
+
+				If there is no parent/child relationship between
+				`entity` and `child`, this will return false.
+			*/
+			bool remove_child(Entity entity, Entity child);
+
+			/*
+				Removes the active parent of `entity`,
+				replacing it with `root` if possible.
+
+				The return value of this function indicates if
+				`entity`'s parent has been changed to `root` (true),
+				or if it has been removed completely (false).
+			*/
+			bool remove_parent(Entity entity);
+
+			// Returns a label for the entity specified.
+			// If no `NameComponent` is associated with the entity, the entity number will be used.
+			std::string label(Entity entity) const;
+
+			// Returns the name associated with the `entity` specified.
+			// If no `NameComponent` is associated with the entity, an empty string will be returned.
+			std::string_view get_name(Entity entity) const; // const;
+
+			// Returns true if the result of `get_name` is a non-empty string.
+			bool has_name(Entity entity) const;
+
+			// Sets the name of `entity`, emplacing a `NameComponent` if necessary.
+			// The return value of this function indicates success/failure.
+			bool set_name(Entity entity, std::string_view name);
+
+			// Retrieves the first entity found with the `name` specified.
+			// NOTE: Multiple entities may share the same name.
+			Entity get_by_name(std::string_view name) const;
+
+			/*
+				Retrieves the first child-entity found with the name specified,
+				regardless of other attributes/components.
+				(e.g. includes both bone & non-bone children)
+			*/
+			Entity get_child_by_name(Entity entity, std::string_view child_name, bool recursive=true) const;
+
+			// Attempts to retrieve an entity with the `player` index specified.
+			Entity get_player(PlayerIndex player=engine::PRIMARY_LOCAL_PLAYER) const;
 
 			// NOTE: Registering to this event handler is considered unsafe due to there
 			// being 'standard' and 'forwarding' event handlers internally. Use this method with caution.
@@ -486,17 +564,26 @@ namespace engine
 			// This, in turn, means that said object is in a moved-from state after this method executes.
 			void on_component_replace(ComponentReplaceCommand& component_replace);
 
-			void opaque_function_handler(const FunctionCommand& function_command);
+			void on_set_parent(const SetParentCommand& parent_command);
 		protected:
+			void opaque_function_handler(const FunctionCommand& function_command);
+			void opaque_expression_handler(const ExprCommand& expr_command);
+
+			void relationship_destroyed_handler(Registry& registry, Entity entity);
+
 			virtual void on_function_command(const FunctionCommand& function_command);
+			virtual void on_expression_command(const ExprCommand& expr_command);
 
 			void handle_deferred_operations();
 
 			Registry& registry; // std::reference_wrapper<Registry>
+			SystemManagerInterface& systems;
 
 			Entity root = null;
 
 			std::shared_ptr<UniversalVariables> universal_variables;
+
+			ServicePolicy policy;
 
 			EventHandler* swap_event_handlers();
 			EventHandler* use_standard_events();

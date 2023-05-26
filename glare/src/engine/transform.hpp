@@ -73,8 +73,6 @@ namespace engine
 
 			const Transform& recalculate(bool force) const;
 
-			Transform& apply_basis(const math::RotationMatrix& basis, bool local=false); // math::RotationMatrix&
-
 			Transform(TransformViewData data);
 		public:
 			using Flag = Dirty;
@@ -134,25 +132,83 @@ namespace engine
 			// this does not preserve local orientation -- i.e. `roll`.
 			// 
 			// See also: `set_basis`, `set_basis_q`
-			void set_direction_vector(const math::Vector& direction);
+			Transform& set_direction_vector(const math::Vector& direction);
+
+			// Gradually orients this transform (based on `turn_speed`) to look in `direction`.
+			// 
+			// NOTE: This assumes that `direction` is already normalized.
+			Transform& set_direction_vector(const math::Vector& direction, float turn_speed);
+
+			// Gradually orients this transform (based on `turn_speed`) to look in `direction`.
+			// 
+			// The `apply_x`, `apply_y` and `apply_z` parameters control
+			// whether the entity's pitch/yaw/roll angles are affected.
+			// 
+			// NOTE: This assumes that `direction` is already normalized.
+			Transform& set_direction_vector(const math::Vector& direction, float turn_speed, bool apply_x, bool apply_y=true, bool apply_z=true);
+
+			// Retrieves a normalized direction vector with the `y` element set to zero.
+			math::Vector get_flat_direction_vector(const math::Vector& forward={ 0.0f, 0.0f, -1.0f }) const; // {0.0f, 0.0f, 1.0f}
+
+			// Sets the basis of this entity to point towards `direction`, ignoring the `y` axis.
+			Transform& set_flat_direction_vector(const math::Vector& direction);
+
+			// Gradually orients this transform (based on `turn_speed`) to look in `direction`, whilst ignoring the `y` axis.
+			Transform& set_flat_direction_vector(const math::Vector& direction, float turn_speed);
 
 			math::TransformVectors get_vectors() const;
 
 			math::Vector get_local_direction_vector(const math::Vector forward = { 0.0f, 0.0f, -1.0f }) const; // 1.0f
 
-			inline float rx() const { return get_rotation().x; }
-			inline float ry() const { return get_rotation().y; }
-			inline float rz() const { return get_rotation().z; }
+			inline float get_rx() const { return get_rotation().x; }
+			inline float get_ry() const { return get_rotation().y; }
+			inline float get_rz() const { return get_rotation().z; }
+
+			inline float get_local_rx() const { return get_local_rotation().x; }
+			inline float get_local_ry() const { return get_local_rotation().y; }
+			inline float get_local_rz() const { return get_local_rotation().z; }
+
+			inline float rx() const { return get_rx(); }
+			inline float ry() const { return get_ry(); }
+			inline float rz() const { return get_rz(); }
+
+			inline float local_rx() const { return get_local_rx(); }
+			inline float local_ry() const { return get_local_ry(); }
+			inline float local_rz() const { return get_local_rz(); }
+
+			inline float get_pitch() const { return get_rx(); }
+			inline float get_yaw() const { return get_ry(); }
+			inline float get_roll() const { return get_rz(); }
+
+			inline float get_local_pitch() const { return get_local_rx(); }
+			inline float get_local_yaw() const { return get_local_ry(); }
+			inline float get_local_roll() const { return get_local_rz(); }
 
 			Transform& set_position(const math::Vector& position);
 			Transform& set_scale(const math::Vector& scale);
 			Transform& set_scale(float scale);
 
 			Transform& set_basis(const math::RotationMatrix& basis);
+			Transform& set_basis(const math::RotationMatrix& basis, float turn_speed);
+			
 			Transform& set_basis_q(const math::Quaternion& basis);
+			Transform& set_basis_q(const math::Quaternion& basis, float turn_speed);
+
+			Transform& set_local_basis(const math::RotationMatrix& basis);
+			Transform& set_local_basis(const math::RotationMatrix& basis, float turn_speed);
+			Transform& set_local_basis_q(const math::Quaternion& basis);
+			Transform& set_local_basis_q(const math::Quaternion& basis, float turn_speed);
+			
+			Transform& apply_basis(const math::RotationMatrix& basis, bool local=false);
+			Transform& apply_basis(const math::RotationMatrix& relative_basis, float turn_extent, bool local=false);
+
+			Transform& apply_basis_q(const math::Quaternion& basis, bool local=false);
+			Transform& apply_basis_q(const math::Quaternion& relative_basis, float turn_extent, bool local=false);
 
 			// Euler angles. (Pitch, Yaw, Roll)
 			Transform& set_rotation(const math::Vector& rv);
+
+			// Euler angles. (Pitch, Yaw, Roll)
 			Transform& set_local_rotation(const math::Vector& rv);
 
 			Transform& apply(const math::TransformVectors& tform);
@@ -161,43 +217,75 @@ namespace engine
 			Transform& set_ry(float ry);
 			Transform& set_rz(float rz);
 
-			// Same as `set_ry`.
-			Transform& set_yaw(float yaw);
+			Transform& set_rx(float rx, float turn_speed);
+			Transform& set_ry(float ry, float turn_speed);
+			Transform& set_rz(float rz, float turn_speed);
 
-			// Computes the `yaw` angle of `direction`, then calls `set_ry`.
-			Transform& set_yaw(const math::Vector& direction);
+			Transform& set_ry(const math::Vector& direction);
+			Transform& set_ry(const math::Vector& direction, float turn_speed);
 
-			// Shorthand for `rx`.
-			float get_pitch() const;
+			Transform& set_local_rx(float rx);
+			Transform& set_local_ry(float ry);
+			Transform& set_local_rz(float rz);
 
-			// Shorthand for `ry`.
-			float get_yaw() const;
+			Transform& set_local_rx(float rx, float turn_speed);
+			Transform& set_local_ry(float ry, float turn_speed);
+			Transform& set_local_rz(float rz, float turn_speed);
 
-			// Shorthand for `rz`.
-			float get_roll() const;
+			Transform& set_local_ry(const math::Vector& direction);
+			Transform& set_local_ry(const math::Vector& direction, float turn_speed);
+
+			inline Transform& set_pitch(float pitch) { return set_rx(pitch); }
+			inline Transform& set_pitch(float pitch, float turn_speed) { return set_rx(pitch, turn_speed); }
+
+			inline Transform& set_yaw(float yaw) { return set_ry(yaw); }
+			inline Transform& set_yaw(float yaw, float turn_speed) { return set_ry(yaw, turn_speed); }
+			inline Transform& set_yaw(const math::Vector& direction) { return set_ry(direction); }
+			inline Transform& set_yaw(const math::Vector& direction, float turn_speed) { return set_ry(direction, turn_speed); }
+
+			inline Transform& set_roll(float roll) { return set_rz(roll); }
+			inline Transform& set_roll(float roll, float turn_speed) { return set_rz(roll, turn_speed); }
+
+			inline Transform& set_local_pitch(float pitch) { return set_local_rx(pitch); }
+			inline Transform& set_local_pitch(float pitch, float turn_speed) { return set_local_rx(pitch, turn_speed); }
+
+			inline Transform& set_local_yaw(float yaw) { return set_local_ry(yaw); }
+			inline Transform& set_local_yaw(float yaw, float turn_speed) { return set_local_ry(yaw, turn_speed); }
+			inline Transform& set_local_yaw(const math::Vector& direction) { return set_local_ry(direction); }
+			inline Transform& set_local_yaw(const math::Vector& direction, float turn_speed) { return set_local_ry(direction, turn_speed); }
+
+			inline Transform& set_local_roll(float roll) { return set_local_rz(roll); }
+			inline Transform& set_local_roll(float roll, float turn_speed) { return set_local_rz(roll, turn_speed); }
 
 			// Aligns a vector to the direction/basis of this entity.
 			// (Useful for things like determining local movement before it happens)
-			math::Vector align_vector(const math::Vector& v) const;
+			math::Vector align_vector(const math::Vector& v, bool local=false) const;
 
 			// Moves this entity forward by `tv`.
 			// If `local` is true, this applies `align_vector` to `tv` before affecting the local position.
 			Transform& move(const math::Vector& tv, bool local=false);
 
-			// Orients this transform to look at 'target', then returns the new basis.
-			math::RotationMatrix look_at(const math::Vector& target, const math::Vector& up={0.0f, 1.0f, 0.0f});
+			// Orients this transform to look at 'target_position'.
+			Transform& look_at(const math::Vector& target_position, const math::Vector& up={ 0.0f, 1.0f, 0.0f });
 
-			// Orients this transform to look at the 't' Transform's position, then returns the new basis.
-			math::RotationMatrix look_at(Transform& t, const math::Vector& up={0.0f, 1.0f, 0.0f});
+			// Orients this transform gradually (based on `turn_speed`) to look at 'target_position'.
+			Transform& look_at(const math::Vector& target_position, float turn_speed, const math::Vector& up={0.0f, 1.0f, 0.0f});
 
-			// Orients this transform to look at 'entity', then returns the new basis.
-			// 
-			// NOTE: This may be less efficient than the other overloads of
-			// `look_at`, if you already have a `Transform` for `entity`.
-			math::RotationMatrix look_at(Entity entity, const math::Vector& up = { 0.0f, 1.0f, 0.0f });
+			// Orients this transform to look at `target_tform`.
+			Transform& look_at(const Transform& target_tform, const math::Vector& up={ 0.0f, 1.0f, 0.0f });
+
+			// Orients this transform gradually (based on `turn_speed`) to look at `target_tform`.
+			Transform& look_at(const Transform& target_tform, float turn_speed, const math::Vector& up={ 0.0f, 1.0f, 0.0f });
+
+			// Orients this transform to look at `target`.
+			Transform& look_at(Entity target, const math::Vector& up={ 0.0f, 1.0f, 0.0f });
+
+			// Orients this transform gradually (based on `turn_speed`) to look at `target`.
+			Transform& look_at(Entity target, float turn_speed, const math::Vector& up={ 0.0f, 1.0f, 0.0f });
 
 			// Rotation:
 			Transform& rotate(const math::Vector& rv, bool local=false);
+			Transform& rotate(const math::Vector& rv, float turn_extent, bool local=false);
 
 			Transform& rotateX(float rx, bool local=false);
 			Transform& rotateY(float ry, bool local=false);
@@ -219,8 +307,5 @@ namespace engine
 			Transform& set_local_matrix(const math::Matrix& m);
 			Transform& set_local_position(const math::Vector& position);
 			Transform& set_local_scale(const math::Vector& scale);
-
-			Transform& set_local_basis(const math::RotationMatrix& basis);
-			Transform& set_local_basis_q(const math::Quaternion& basis);
 	};
 }

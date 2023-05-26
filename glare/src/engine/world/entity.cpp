@@ -54,29 +54,6 @@ namespace engine
 		return entity;
 	}
 
-	void destory_entity(World& world, Entity entity, bool destroy_orphans)
-	{
-		auto& registry = world.get_registry();
-
-		auto* relationship = registry.try_get<RelationshipComponent>(entity);
-
-		auto root = world.get_root();
-		
-		Entity parent = ((relationship) ? relationship->get_parent() : null);
-
-		EntityType type = EntityType::Other; // EntityType::Default;
-
-		auto* tp = registry.try_get<TypeComponent>(entity);
-
-		if (tp)
-		{
-			type = tp->type;
-		}
-
-		// Actual destruction takes place once the 'World' object has received the event.
-		world.queue_event<OnEntityDestroyed>(entity, parent, type, destroy_orphans);
-	}
-
 	// Currently no difference between a pivot and a default entity state.
 	// (Other than the default value of the `type` field)
 	Entity create_pivot(World& world, Entity parent, EntityType type)

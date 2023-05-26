@@ -48,15 +48,29 @@ namespace engine
 				const EntityDescriptor& descriptor,
 				EntityThreadID thread_id,
 
+				std::optional<EntityStateIndex> state_index,
+				bool check_existing,
+				bool check_linked,
+				bool restart_existing,
+				const EntityThreadFlags& flags
+			);
+
+			// NOTE: This overload automatically generates an `EntityThreadFlags` object.
+			// (e.g. handles the thread's `cadence` field automatically)
+			EntityThread* start_thread
+			(
+				const EntityDescriptor& descriptor,
+				EntityThreadID thread_id,
+
 				std::optional<EntityStateIndex> state_index=std::nullopt,
 				bool check_existing=true,
 				bool check_linked=true,
-				bool restart_existing=false,
-				const EntityThreadFlags& flags={}
+				bool restart_existing=false
 			);
 
 			std::size_t start_threads
 			(
+				const EntityDescriptor& descriptor,
 				const EntityThreadRange& thread_range,
 				std::optional<EntityStateIndex> state_index=std::nullopt,
 				bool restart_existing=false
@@ -71,6 +85,7 @@ namespace engine
 
 			std::size_t start_threads
 			(
+				const EntityDescriptor& descriptor,
 				const EntityState& state,
 				EntityStateIndex state_index,
 				bool restart_existing=false
@@ -104,18 +119,37 @@ namespace engine
 			// NOTE: Link status is always ignored when stopping threads by state.
 			std::size_t stop_threads(const EntityState& state, EntityStateIndex state_index, bool limit_to_static_range=false);
 
-			// NOTES:
-			// 
-			// * May remove this overload later; the originating state index is currently
-			// stored inside of the thread itself, so the `descriptor` is unnecessary to perform the lookup.
-			// 
-			// * Link status is always ignored when stopping threads by state.
+			// NOTE: Link status is always ignored when stopping threads by state.
 			std::size_t stop_threads(EntityStateIndex state_index);
 
 			// Attempts to stop all threads.
 			// 
 			// The return value of this method indicates how many threads were fully terminated.
 			std::size_t stop_all();
+
+			// This method erases a thread without formally stopping it first.
+			// The return value of this method indicates if the specified thread was erased.
+			// 
+			// If no thread could be found, false will be returned.
+			bool erase_thread(EntityThreadIndex thread_index);
+
+			// This method erases a thread without formally stopping it first.
+			bool erase_thread(const EntityDescriptor& descriptor, EntityThreadID thread_id);
+
+			// The return value of this method indicates how many threads were erased.
+			std::size_t erase_threads(const EntityThreadRange& thread_range);
+
+			// The return value of this method indicates how many threads were erased.
+			std::size_t erase_threads(const EntityDescriptor& descriptor, EntityStateIndex state_index, bool limit_to_static_range=false);
+
+			// The return value of this method indicates how many threads were erased.
+			std::size_t erase_threads(const EntityState& state, EntityStateIndex state_index, bool limit_to_static_range=false);
+
+			// Manually erases all threads associated with a state index.
+			std::size_t erase_threads(EntityStateIndex state_index);
+
+			// Manually erases all threads marked with the `is_complete` flag.
+			std::size_t erase_completed_threads();
 
 			// Pauses a thread with the `thread_id` specified.
 			bool pause_thread

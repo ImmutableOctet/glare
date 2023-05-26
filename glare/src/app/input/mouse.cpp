@@ -38,12 +38,14 @@ namespace app::input
 		{
 			case SDL_MOUSEBUTTONUP:
 			case SDL_MOUSEBUTTONDOWN:
+			{
 				if (event_buttons)
 				{
 					// TODO: Add some form of range-check for `MouseButton` cast.
-					auto mouse_button = static_cast<MouseButton>(e.button.button);
-					auto mouse_device_id = static_cast<MouseDeviceIndex>(e.button.which);
-					auto value = (e.type == SDL_MOUSEBUTTONDOWN);
+					const auto mouse_button = static_cast<MouseButton>(e.button.button);
+					const auto mouse_device_id = static_cast<MouseDeviceIndex>(e.button.which);
+
+					const auto value = (e.type == SDL_MOUSEBUTTONDOWN);
 
 					set_button(mouse_button, value);
 
@@ -56,32 +58,61 @@ namespace app::input
 				}
 
 				break;
-
+			}
 			case SDL_MOUSEMOTION:
+			{
+				const auto mouse_device_id = static_cast<MouseDeviceIndex>(e.motion.which);
+
+				bool next_state_updated = false;
+
 				if (event_motion)
 				{
-					const auto mouse_device_id = static_cast<MouseDeviceIndex>(e.motion.which);
-
 					const auto [x_motion, y_motion] = process_analog_value({ e.motion.xrel, e.motion.yrel });
 
 					next_state.x = x_motion;
 					next_state.y = y_motion;
+					
+					next_state_updated = true;
 
 					if (opt_event_handler)
 					{
 						trigger_mouse_motion_event(*opt_event_handler, x_motion, y_motion, mouse_device_id);
 					}
+				}
 
+				if (event_position)
+				{
+					const auto position_x = e.motion.x;
+					const auto position_y = e.motion.y;
+
+					next_state.position_x = position_x;
+					next_state.position_y = position_y;
+
+					next_state_updated = true;
+
+					mouse_position_changed = true;
+
+					if (opt_event_handler)
+					{
+						trigger_mouse_position_event(*opt_event_handler, position_x, position_y, mouse_device_id);
+					}
+				}
+
+				if (next_state_updated)
+				{
 					return true;
 				}
 
 				break;
+			}
 			case SDL_MOUSEWHEEL:
+			{
 				if (event_wheel)
 				{
 					const auto mouse_device_id = static_cast<MouseDeviceIndex>(e.wheel.which);
 
-					int wheel_x, wheel_y;
+					int wheel_x = 0;
+					int wheel_y = 0;
 
 					switch (e.wheel.direction)
 					{
@@ -111,6 +142,7 @@ namespace app::input
 				}
 
 				break;
+			}
 		}
 
 		return false;
@@ -118,18 +150,19 @@ namespace app::input
 
 	const Mouse::State& Mouse::poll(entt::dispatcher* opt_event_handler)
 	{
-		bool manual_motion  = (!event_motion);
-		bool manual_buttons = (!event_buttons);
-		bool manual_wheel   = (!event_wheel);
+		const bool manual_motion   = (!event_motion);
+		const bool manual_buttons  = (!event_buttons);
+		const bool manual_wheel    = (!event_wheel);
+		const bool manual_position = (!event_position);
 
-		poll_next_state(manual_motion, manual_buttons, manual_wheel, false);
+		poll_next_state(manual_motion, manual_buttons, manual_wheel, manual_position, false);
 
 		if (opt_event_handler)
 		{
 			handle_manual_event_detection
 			(
 				*opt_event_handler,
-				manual_motion, manual_buttons, manual_wheel
+				manual_motion, manual_buttons, manual_wheel, manual_position
 			);
 
 			handle_hat_event_detection(*opt_event_handler, next_state);
@@ -156,6 +189,8 @@ namespace app::input
 			next_state.wheel_x = 0;
 			next_state.wheel_y = 0;
 		}
+
+		mouse_position_changed = false;
 	}
 
 	std::string Mouse::get_device_name() const
@@ -201,6 +236,11 @@ namespace app::input
 		}
 
 		return raw_input;
+	}
+
+	void Mouse::clear_state()
+	{
+		this->next_state = {};
 	}
 
 	bool Mouse::lock()
@@ -295,13 +335,14 @@ namespace app::input
 
 	Mouse::State& Mouse::poll_next_state
 	(
-		bool update_motion, bool update_buttons, bool update_wheel,
+		bool update_motion, bool update_buttons,
+		bool update_wheel, bool update_position,
 		bool force_clear
 	) const
 	{
 		if (force_clear)
 		{
-			next_state = {};
+			next_state = {}; // clear_state();
 		}
 
 		int x_motion_raw = 0;
@@ -333,6 +374,25 @@ namespace app::input
 			next_state.wheel_y = 0;
 		}
 
+		if (update_position)
+		{
+			int position_x = 0;
+			int position_y = 0;
+
+			SDL_GetMouseState(&position_x, &position_y);
+
+			const auto prev_position_x = next_state.position_x;
+			const auto prev_position_y = next_state.position_y;
+
+			if ((position_x != prev_position_x) || (position_y != prev_position_y))
+			{
+				next_state.position_x = position_x;
+				next_state.position_y = position_y;
+
+				mouse_position_changed = true;
+			}
+		}
+
 		return next_state;
 	}
 
@@ -340,7 +400,7 @@ namespace app::input
 	bool Mouse::handle_manual_event_detection
 	(
 		entt::dispatcher& event_handler,
-		bool check_motion, bool check_buttons, bool check_wheel
+		bool check_motion, bool check_buttons, bool check_wheel, bool check_position
 	) const
 	{
 		const auto& state = get_state();
@@ -378,6 +438,18 @@ namespace app::input
 			if ((next_state.wheel_x != 0) || (next_state.wheel_y != 0))
 			{
 				trigger_mouse_scroll_event(event_handler, next_state.wheel_x, next_state.wheel_y);
+
+				change_detected = true;
+			}
+		}
+
+		if (check_position)
+		{
+			if (mouse_position_changed)
+			{
+				trigger_mouse_position_event(event_handler, next_state.position_x, next_state.position_y);
+
+				//mouse_position_changed = false;
 
 				change_detected = true;
 			}
@@ -474,6 +546,21 @@ namespace app::input
 			next_state,
 			MouseMotion::Scroll,
 			wheel_x, wheel_y
+		);
+	}
+
+	void Mouse::trigger_mouse_position_event
+	(
+		entt::dispatcher& event_handler,
+		int x, int y,
+		MouseDeviceIndex device_index
+	) const
+	{
+		event_handler.enqueue<OnMousePosition>
+		(
+			device_index,
+			next_state,
+			x, y
 		);
 	}
 }

@@ -5,8 +5,6 @@ target_sources(
     glare_engine
     
     PRIVATE
-
-    "reflection.cpp"
     
     "service.cpp"
     "timer.cpp"
@@ -28,6 +26,8 @@ target_link_libraries(
 #    $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
 #)
 
+add_subdirectory("reflection")
+
 add_subdirectory("components")
 
 #add_subdirectory("common")
@@ -38,6 +38,9 @@ add_subdirectory("input")
 add_subdirectory("meta")
 add_subdirectory("resource_manager")
 add_subdirectory("world")
+add_subdirectory("editor")
+
+add_subdirectory("test")
 
 #add_dependencies(
 #    glare_engine

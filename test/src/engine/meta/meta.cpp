@@ -24,12 +24,18 @@
 #include <engine/entity/components/instance_component.hpp>
 
 #include <engine/components/name_component.hpp>
+#include <engine/components/relationship_component.hpp>
 
 #include <engine/resource_manager/entity_factory_data.hpp>
 
 #include <engine/types.hpp>
 #include <engine/reflection.hpp>
 #include <engine/system_manager_interface.hpp>
+
+#include <engine/components/transform_component.hpp>
+#include <engine/components/relationship_component.hpp>
+
+#include <engine/transform.hpp>
 
 #include <engine/input/buttons.hpp>
 
@@ -39,6 +45,7 @@
 #include <variant>
 #include <unordered_map>
 #include <optional>
+#include <cstdint>
 
 // Debugging related:
 #include <util/parse.hpp>
@@ -110,6 +117,16 @@ namespace engine
 
 		inline operator std::int32_t() const noexcept { return (x + y + z); }
 
+		inline std::int32_t get_property_x() const
+		{
+			return x;
+		}
+
+		inline void set_property_x(std::int32_t value)
+		{
+			x = value;
+		}
+
 		static ReflectionTest fn(std::int32_t value=1)
 		{
 			return { value*1, value*2, value*3 };
@@ -159,6 +176,16 @@ namespace engine
 			}
 
 			return std::nullopt;
+		}
+
+		static std::string overloaded_function(std::int32_t value)
+		{
+			return "integer";
+		}
+
+		static std::string overloaded_function(const std::string& value)
+		{
+			return "string";
 		}
 	};
 
@@ -214,6 +241,9 @@ namespace engine
 				decltype(ReflectionTest::nested_value)
 			>()
 
+			.func<&ReflectionTest::get_property_x>("get_property_x"_hs)
+			.func<&ReflectionTest::set_property_x>("set_property_x"_hs)
+
 			.func<&ReflectionTest::fn>("fn"_hs)
 			.func<&ReflectionTest::const_method_test>("const_method_test"_hs)
 			.func<&ReflectionTest::non_const_method_test>("non_const_method_test"_hs)
@@ -224,6 +254,8 @@ namespace engine
 			.func<&ReflectionTest::method_with_context>("method_with_context"_hs)
 			.func<&ReflectionTest::function_with_context>("function_with_context"_hs)
 			.func<&ReflectionTest::get_optional_value>("get_optional_value"_hs)
+			.func<static_cast<std::string (*)(std::int32_t value)>(&ReflectionTest::overloaded_function)>("overloaded_function"_hs)
+			.func<static_cast<std::string (*)(const std::string& value)>(&ReflectionTest::overloaded_function)>("overloaded_function"_hs)
 		;
 
 		engine_meta_type<ReflectionTest::Nested>()
@@ -350,6 +382,460 @@ TEST_CASE("engine::meta_any_from_string", "[engine:meta]")
 
 	engine::reflect<engine::ReflectionTest>();
 	engine::reflect<engine::TestSystem>();
+	
+	SECTION("Function overload resolution")
+	{
+		auto int_function_expr = engine::meta_any_from_string
+		(
+			std::string_view("ReflectionTest::overloaded_function(10)"),
+			{
+				.allow_function_call_semantics = true
+			}
+		);
+
+		REQUIRE(int_function_expr);
+
+		auto int_function_result = engine::try_get_underlying_value(int_function_expr);
+
+		REQUIRE(int_function_result);
+
+		auto int_function_result_raw = int_function_result.try_cast<std::string>();
+
+		REQUIRE(int_function_result_raw);
+		REQUIRE((*int_function_result_raw) == "integer");
+
+		auto string_function_expr = engine::meta_any_from_string
+		(
+			std::string_view("ReflectionTest::overloaded_function(\"Test\")"),
+			{
+				.allow_function_call_semantics = true
+			}
+		);
+
+		REQUIRE(string_function_expr);
+
+		auto string_function_result = engine::try_get_underlying_value(string_function_expr);
+
+		REQUIRE(string_function_result);
+
+		auto string_function_result_raw = string_function_result.try_cast<std::string>();
+
+		REQUIRE(string_function_result_raw);
+		REQUIRE((*string_function_result_raw) == "string");
+	}
+
+	SECTION("Subscript operator on variable")
+	{
+		engine::MetaVariableContext variable_declaration_context;
+
+		variable_declaration_context.define_variable(engine::MetaVariableScope::Local, "my_vec");
+
+		engine::EntityVariables<1> variables;
+
+		auto runtime_variable_context = engine::MetaVariableEvaluationContext { &variables };
+
+		auto evaluation_context = engine::MetaEvaluationContext
+		{
+			&runtime_variable_context
+		};
+
+		REQUIRE(runtime_variable_context.declare(variable_declaration_context) == 1);
+
+		auto initial_assignment = engine::meta_any_from_string
+		(
+			std::string_view("my_vec = Vector(1.0, 2.0, 3.0)"),
+			{
+				.context = { &variable_declaration_context },
+				.allow_variable_assignment = true
+			}
+		);
+
+		REQUIRE(initial_assignment);
+
+		auto initial_assignment_result = engine::try_get_underlying_value(initial_assignment, evaluation_context);
+
+		REQUIRE(initial_assignment_result);
+
+		auto initial_assignment_result_underlying = engine::try_get_underlying_value(initial_assignment_result, evaluation_context);
+
+		REQUIRE(initial_assignment_result_underlying);
+
+		auto initial_assignment_result_raw = initial_assignment_result_underlying.try_cast<math::Vector>();
+
+		REQUIRE(initial_assignment_result_raw);
+		REQUIRE(initial_assignment_result_raw->x >= 1.0f);
+		REQUIRE(initial_assignment_result_raw->y >= 2.0f);
+		REQUIRE(initial_assignment_result_raw->z >= 3.0f);
+
+		auto subscript_expr = engine::meta_any_from_string
+		(
+			std::string_view("my_vec[0]"),
+			{
+				.context = { &variable_declaration_context },
+				.allow_member_references = true,
+				.allow_subscript_semantics = true
+			}
+		);
+
+		REQUIRE(subscript_expr);
+
+		auto subscript_result = engine::try_get_underlying_value(subscript_expr, evaluation_context);
+
+		REQUIRE(subscript_result);
+
+		auto subscript_result_raw = subscript_result.try_cast<float>();
+
+		REQUIRE(subscript_result_raw);
+		REQUIRE((*subscript_result_raw) >= 1.0f);
+	}
+
+	SECTION("Call global function")
+	{
+		auto type_resolution_context = engine::MetaTypeResolutionContext::generate();
+
+		auto math_expr = engine::meta_any_from_string
+		(
+			std::string_view("degrees(Pi()):int"), // Pi
+			{
+				.context = { &type_resolution_context },
+
+				.allow_function_call_semantics = true,
+				.allow_global_function_references = true
+			}
+		);
+
+		REQUIRE(math_expr);
+
+		auto result = engine::try_get_underlying_value(math_expr);
+
+		REQUIRE(result);
+
+		auto as_int = result.try_cast<std::int32_t>();
+
+		REQUIRE(as_int);
+
+		REQUIRE((*as_int) == 180);
+	}
+
+	SECTION("Call function with member access syntax")
+	{
+		auto function_expr = engine::meta_any_from_string
+		(
+			std::string_view("ReflectionTest::const_method_test"),
+			{
+				.allow_function_call_semantics = true
+			}
+		);
+
+		REQUIRE(function_expr);
+
+		auto instance = engine::ReflectionTest { 0, 10, 0 };
+
+		auto function_result = engine::try_get_underlying_value(function_expr, instance);
+
+		REQUIRE(function_result);
+
+		auto as_int = function_result.try_cast<std::int32_t>();
+
+		REQUIRE(as_int);
+		REQUIRE((*as_int) == 10);
+	}
+
+	SECTION("Set value of data member using function call syntax")
+	{
+		auto member_expr = engine::meta_any_from_string
+		(
+			std::string_view("ReflectionTest::x(128)"),
+			{
+				.allow_function_call_semantics = true
+			}
+		);
+
+		REQUIRE(member_expr);
+
+		auto instance = engine::ReflectionTest { 0, 0, 0 };
+
+		auto member_result = engine::try_get_underlying_value(member_expr, instance);
+
+		REQUIRE(member_result);
+		REQUIRE(instance.x == 128);
+	}
+
+	SECTION("Get value of data member using function call syntax")
+	{
+		auto member_expr = engine::meta_any_from_string
+		(
+			std::string_view("ReflectionTest::x()"),
+			{
+				.allow_function_call_semantics = true
+			}
+		);
+
+		REQUIRE(member_expr);
+
+		auto instance = engine::ReflectionTest { 52, 3, 8 };
+
+		auto member_result = engine::try_get_underlying_value(member_expr, instance);
+
+		REQUIRE(member_result);
+
+		auto as_int = member_result.try_cast<std::int32_t>();
+
+		REQUIRE(as_int);
+		REQUIRE((*as_int) == 52);
+	}
+	
+	SECTION("Name component from entity")
+	{
+		auto registry = engine::Registry {};
+
+		const auto entity = registry.create();
+
+		const auto intended_name = std::string_view { "Test Name" };
+
+		registry.emplace<engine::NameComponent>(entity, std::string { intended_name });
+		
+		auto type_resolution_context = engine::MetaTypeResolutionContext::generate();
+
+		auto name_expr = engine::meta_any_from_string
+		(
+			std::string_view("self.name"),
+			{
+				.context =
+				{
+					&type_resolution_context
+				},
+
+				.fallback_to_component_reference = true,
+				.allow_member_references         = true,
+				.allow_entity_indirection        = true,
+				.allow_property_translation      = true,
+				.allow_opaque_member_references  = true,
+				.resolve_component_aliases       = true
+			}
+		);
+
+		REQUIRE(name_expr);
+
+		const auto name_expr_result = engine::try_get_underlying_value(name_expr, registry, entity);
+
+		REQUIRE(name_expr_result);
+
+		const auto as_name_component = name_expr_result.try_cast<engine::NameComponent>();
+
+		REQUIRE(as_name_component);
+
+		const auto name = as_name_component->get_name();
+
+		REQUIRE(name == intended_name);
+	}
+
+	SECTION("Assign name component of entity")
+	{
+		auto registry = engine::Registry {};
+
+		const auto entity = registry.create();
+		
+		auto type_resolution_context = engine::MetaTypeResolutionContext::generate();
+
+		auto name_expr = engine::meta_any_from_string
+		(
+			std::string_view("self.name = \"Some Name\""),
+			{
+				.context =
+				{
+					&type_resolution_context
+				},
+
+				.fallback_to_component_reference = true,
+				.allow_member_references         = true,
+				.allow_entity_indirection        = true,
+				.allow_property_translation      = true,
+				.allow_opaque_member_references  = true,
+				.resolve_component_aliases       = true
+			}
+		);
+
+		REQUIRE(name_expr);
+
+		const auto name_expr_result = engine::try_get_underlying_value(name_expr, registry, entity);
+
+		REQUIRE(name_expr_result);
+
+		const auto name_component = registry.try_get<engine::NameComponent>(entity);
+
+		REQUIRE(name_component);
+
+		const auto name = name_component->get_name();
+
+		REQUIRE(name == "Some Name");
+	}
+
+	SECTION("Access parent's name component")
+	{
+		auto registry = engine::Registry {};
+
+		const auto parent = registry.create();
+		const auto entity = registry.create();
+
+		registry.emplace<engine::RelationshipComponent>(parent);
+
+		engine::RelationshipComponent::set_parent(registry, entity, parent);
+
+		const auto intended_name = std::string_view { "Parent's Name" };
+
+		registry.emplace<engine::NameComponent>(parent, std::string { intended_name });
+		
+		auto type_resolution_context = engine::MetaTypeResolutionContext::generate();
+
+		auto name_expr = engine::meta_any_from_string
+		(
+			std::string_view("self.parent.name"),
+			{
+				.context =
+				{
+					&type_resolution_context
+				},
+
+				.fallback_to_component_reference = true,
+				.allow_member_references         = true,
+				.allow_entity_indirection        = true,
+				.allow_property_translation      = true,
+				.allow_opaque_member_references  = true,
+				.resolve_component_aliases       = true
+			}
+		);
+
+		REQUIRE(name_expr);
+
+		const auto name_expr_result = engine::try_get_underlying_value(name_expr, registry, entity);
+
+		REQUIRE(name_expr_result);
+
+		const auto as_name_component = name_expr_result.try_cast<engine::NameComponent>();
+
+		REQUIRE(as_name_component);
+
+		const auto name = as_name_component->get_name();
+
+		REQUIRE(name == intended_name);
+	}
+
+	SECTION("Member assignment")
+	{
+		auto assignment_expr = engine::meta_any_from_string
+		(
+			std::string_view("ReflectionTest::x = 10"),
+			{
+				.allow_member_references = true
+			}
+		);
+
+		REQUIRE(assignment_expr);
+
+		auto instance = engine::ReflectionTest {};
+
+		auto assignment_result = engine::try_get_underlying_value(assignment_expr, instance);
+
+		REQUIRE(assignment_result);
+
+		REQUIRE(instance.x == 10);
+	}
+
+	SECTION("Property member assignment")
+	{
+		auto assignment_expr = engine::meta_any_from_string
+		(
+			std::string_view("ReflectionTest::property_x = 10"),
+			{
+				.allow_member_references = true
+			}
+		);
+
+		REQUIRE(assignment_expr);
+
+		auto instance = engine::ReflectionTest {};
+
+		auto assignment_result = engine::try_get_underlying_value(assignment_expr, instance);
+
+		REQUIRE(assignment_result);
+
+		REQUIRE(instance.get_property_x() == 10);
+	}
+
+	SECTION("Get value of property")
+	{
+		engine::Registry registry;
+
+		auto entity = registry.create();
+
+		{
+			auto& relationship_component = registry.emplace<engine::RelationshipComponent>(entity);
+			auto& tform_component = registry.emplace<engine::TransformComponent>(entity);
+
+			auto tform = engine::Transform(registry, entity, tform_component);
+
+			tform.set_position({ 10.0f, 20.0f, 30.0f });
+		}
+
+		auto getter_expr = engine::meta_any_from_string
+		(
+			std::string_view("self.position"),
+			{
+				.allow_entity_indirection      = true,
+				.allow_function_call_semantics = true,
+				.allow_property_translation    = true
+			}
+		);
+
+		REQUIRE(getter_expr);
+
+		auto getter_result = engine::try_get_underlying_value(getter_expr, registry, entity);
+
+		REQUIRE(getter_result);
+
+		auto* as_vector = getter_result.try_cast<math::Vector3D>();
+
+		REQUIRE(as_vector);
+
+		REQUIRE(as_vector->x >= 10.0f);
+		REQUIRE(as_vector->y >= 20.0f);
+		REQUIRE(as_vector->z >= 30.0f);
+	}
+
+	SECTION("Set value of property")
+	{
+		engine::Registry registry;
+
+		auto entity = registry.create();
+
+		auto& relationship_component = registry.emplace<engine::RelationshipComponent>(entity);
+		auto& tform_component = registry.emplace<engine::TransformComponent>(entity);
+
+		auto setter_expr = engine::meta_any_from_string
+		(
+			std::string_view("self.position = Vector(100.0, 200.0, 300.0)"),
+			{
+				.allow_entity_indirection      = true,
+				.allow_function_call_semantics = true,
+				.allow_property_translation    = true
+			}
+		);
+
+		REQUIRE(setter_expr);
+
+		auto setter_result = engine::try_get_underlying_value(setter_expr, registry, entity);
+
+		REQUIRE(setter_result);
+
+		auto tform = engine::Transform(registry, entity, tform_component);
+
+		auto position = tform.get_position();
+
+		REQUIRE(position.x >= 100.0f);
+		REQUIRE(position.y >= 200.0f);
+		REQUIRE(position.z >= 300.0f);
+	}
 
 	SECTION("Existing optional value")
 	{

@@ -6,12 +6,18 @@
 #include "components/velocity_component.hpp"
 #include "components/ground_component.hpp"
 #include "components/gravity_component.hpp"
+#include "components/alignment_proxy_component.hpp"
 #include "components/motion_attachment_proxy_component.hpp"
-#include "components/alignment_component.hpp"
 #include "components/deceleration_component.hpp"
+#include "components/focus_component.hpp"
+#include "components/orbit_component.hpp"
+#include "components/direction_component.hpp"
+#include "components/orientation_component.hpp"
+#include "components/rotate_component.hpp"
 
 #include <math/types.hpp>
 #include <math/bullet.hpp>
+#include <math/comparison.hpp>
 
 #include <engine/transform.hpp>
 #include <engine/components/transform_component.hpp>
@@ -22,6 +28,8 @@
 #include <engine/world/physics/ground.hpp>
 #include <engine/world/physics/physics_system.hpp>
 #include <engine/world/physics/components/collision_component.hpp>
+
+#include <algorithm>
 
 namespace engine
 {
@@ -54,6 +62,12 @@ namespace engine
 		apply_velocity(delta);
 		update_gravity(delta);
 		handle_deceleration(delta);
+		update_focus(delta);
+		update_turning_objects(delta);
+
+		// TODO: Look into whether it makes more sense to only update
+		// orbiting objects during transform changes.
+		update_orbiting_objects(delta);
 	}
 
 	void MotionSystem::apply_velocity(float delta)
@@ -127,6 +141,127 @@ namespace engine
 		);
 	}
 
+	void MotionSystem::update_focus(float delta)
+	{
+		auto& registry = get_registry();
+
+		update_transform<FocusComponent>
+		(
+			registry,
+
+			[delta, &registry](Entity entity, Transform& entity_transform, const FocusComponent& focus)
+			{
+				const auto& target = focus.target;
+
+				if (target == null)
+				{
+					return;
+				}
+
+				const auto& focus_offset = focus.focus_offset;
+
+				auto target_tform = Transform(registry, target);
+
+				const auto target_position = (target_tform.get_position() + focus_offset);
+
+				entity_transform.look_at(target_position, (focus.tracking_speed * delta));
+
+				/*
+				// Alternative implementation:
+				const auto focus_direction = glm::normalize(target_position - entity_position);
+
+				entity_transform.set_direction_vector(focus_direction, (focus.tracking_speed * delta));
+				*/
+			}
+		);
+	}
+
+	void MotionSystem::update_orbiting_objects(float delta)
+	{
+		auto& registry = get_registry();
+
+		registry.view<RelationshipComponent, TransformComponent, OrbitComponent>().each
+		(
+			[&](const Entity entity, const RelationshipComponent& relationship, TransformComponent& tform_comp, OrbitComponent& orbit)
+			{
+				auto target = relationship.get_parent();
+				auto focus_offset = math::Vector {};
+
+				if (const auto* focus = registry.try_get<FocusComponent>(entity))
+				{
+					if (focus->target != null)
+					{
+						target = focus->target;
+					}
+
+					focus_offset = focus->focus_offset;
+				}
+
+				if (target == null)
+				{
+					return;
+				}
+
+				auto target_tform = Transform(registry, target);
+
+				const auto target_position = (target_tform.get_position() + focus_offset);
+
+				// TODO: Move into update event for `OrbitComponent`.
+				orbit.distance = math::clamp(orbit.distance, orbit.min_distance, orbit.max_distance);
+
+				auto entity_tform = Transform(registry, entity, relationship, tform_comp);
+
+				//entity_tform.look_at(target_position);
+
+				entity_tform.set_position(target_position);
+				entity_tform.move({ 0.0f, 0.0f, orbit.distance }, true);
+			}
+		);
+	}
+
+	void MotionSystem::update_turning_objects(float delta)
+	{
+		auto& registry = get_registry();
+
+		update_transform<DirectionComponent>
+		(
+			registry,
+
+			[delta, &registry](Entity entity, Transform& entity_transform, const DirectionComponent& turn)
+			{
+				entity_transform.set_direction_vector
+				(
+					turn.direction,
+					(turn.turn_speed * delta),
+					(!turn.ignore_x), (!turn.ignore_y), (!turn.ignore_z)
+				);
+			}
+		);
+
+		update_transform<OrientationComponent>
+		(
+			registry,
+
+			[delta, &registry](Entity entity, Transform& entity_transform, const OrientationComponent& orientation_comp)
+			{
+				entity_transform.set_basis_q(orientation_comp.orientation, (orientation_comp.turn_speed * delta));
+			}
+		);
+
+		update_transform<RotateComponent>
+		(
+			registry,
+
+			[delta, &registry](Entity entity, Transform& entity_transform, const RotateComponent& rotate_comp)
+			{
+				entity_transform.apply_basis_q(rotate_comp.relative_orientation, (rotate_comp.turn_speed * delta));
+
+				// Alternative implementation:
+				//entity_transform.set_basis_q(rotate_comp.get_next_basis(entity_transform, delta));
+			}
+		);
+	}
+
 	void MotionSystem::on_surface_contact(const OnSurfaceContact& surface)
 	{
 		auto& registry = world.get_registry();
@@ -192,7 +327,7 @@ namespace engine
 			{
 				Entity alignment_entity = entity; // null;
 
-				if (auto* alignment_proxy = registry.try_get<AlignmentComponent>(entity))
+				if (auto* alignment_proxy = registry.try_get<AlignmentProxyComponent>(entity))
 				{
 					if (alignment_proxy->entity != null)
 					{

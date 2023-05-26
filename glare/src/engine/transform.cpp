@@ -49,7 +49,9 @@ namespace engine
 
 	math::RotationMatrix Transform::orientation(const math::Vector& origin, const math::Vector& target, const math::Vector& up)
 	{
-		auto k = glm::normalize(origin - target);
+		//return math::RotationMatrix { quat_orientation(origin, target, up) };
+
+		auto k = glm::normalize(target - origin); // origin - target
 		auto i = glm::normalize(glm::cross(up, k));
 		auto j = glm::cross(k, i);
 
@@ -58,7 +60,10 @@ namespace engine
 
 	math::Quaternion Transform::quat_orientation(const math::Vector& origin, const math::Vector& target, const math::Vector& up)
 	{
-		return glm::quatLookAt((origin - target), up);
+		// Alternative implementation:
+		//return math::Quaternion { orientation(origin, target, up) };
+
+		return glm::quatLookAt(glm::normalize(target - origin), up); // (origin - target)
 	}
 
 	std::optional<Transform> Transform::get_parent() const
@@ -91,24 +96,6 @@ namespace engine
 		update_local_matrix(force);
 		update_matrix(force);
 		update_inverse_matrix(force);
-
-		return *this;
-	}
-
-	Transform& Transform::apply_basis(const math::RotationMatrix& basis, bool local)
-	{
-		if (local)
-		{
-			auto local_basis = get_local_basis();
-
-			set_local_basis((basis * local_basis));
-		}
-		else
-		{
-			auto current_basis = get_basis();
-
-			set_basis((current_basis * basis));
-		}
 
 		return *this;
 	}
@@ -323,9 +310,75 @@ namespace engine
 		return (get_basis() * forward);
 	}
 
-	void Transform::set_direction_vector(const math::Vector& direction)
+	Transform& Transform::set_direction_vector(const math::Vector& direction)
 	{
-		set_basis(math::rotation_from_vector(direction));
+		set_basis(orientation({}, -direction));
+
+		return *this;
+	}
+
+	Transform& Transform::set_direction_vector(const math::Vector& direction, float turn_speed)
+	{
+		/*
+		// Alternative implementation:
+		const auto self_direction = get_direction_vector();
+
+		const auto updated_direction = math::nlerp(self_direction, direction, turn_speed); // lerp
+
+		return set_direction_vector(updated_direction);
+		*/
+
+		// Quaternion-based implementation:
+		return set_basis_q(Transform::quat_orientation({}, direction), turn_speed);
+	}
+
+	Transform& Transform::set_direction_vector(const math::Vector& direction, float turn_speed, bool apply_x, bool apply_y, bool apply_z)
+	{
+		const auto entity_basis = get_basis_q();
+		const auto direction_basis = Transform::quat_orientation({}, direction);
+
+		const auto destination_basis = math::Quaternion
+		{
+			math::Vector3D
+			{
+				(apply_x)
+				? glm::pitch(direction_basis)
+				: glm::pitch(entity_basis),
+				
+				(apply_y)
+				? glm::yaw(direction_basis)
+				: glm::yaw(entity_basis),
+						
+				(apply_z)
+				? glm::roll(direction_basis)
+				: glm::roll(entity_basis)
+			}
+		};
+
+		return set_basis_q(destination_basis, turn_speed);
+	}
+
+	math::Vector Transform::get_flat_direction_vector(const math::Vector& forward) const
+	{
+		auto direction_vector = get_direction_vector(forward);
+
+		direction_vector.y = 0.0f;
+
+		return glm::normalize(direction_vector);
+	}
+
+	Transform& Transform::set_flat_direction_vector(const math::Vector& direction)
+	{
+		const auto flat_direction = glm::normalize(math::Vector { direction.x, 0.0f, direction.y });
+
+		return set_direction_vector(flat_direction);
+	}
+
+	Transform& Transform::set_flat_direction_vector(const math::Vector& direction, float turn_speed)
+	{
+		const auto flat_direction = glm::normalize(math::Vector{ direction.x, 0.0f, direction.y });
+
+		return set_direction_vector(flat_direction, turn_speed);
 	}
 
 	math::TransformVectors Transform::get_vectors() const
@@ -404,10 +457,95 @@ namespace engine
 		return *this;
 	}
 
+	Transform& Transform::set_basis(const math::RotationMatrix& basis, float turn_speed)
+	{
+		// Use quaternion math for interpolation.
+		return set_basis_q(math::Quaternion { basis }, turn_speed);
+	}
+
 	Transform& Transform::set_basis_q(const math::Quaternion& basis)
 	{
+		// Use matrix to store the static value.
 		//return set_basis(glm::mat3_cast(basis));
 		return set_basis(math::to_rotation_matrix((basis))); // TODO: Review use of 'conjugate'. // glm::conjugate
+	}
+
+	Transform& Transform::set_basis_q(const math::Quaternion& basis, float turn_speed)
+	{
+		return set_basis_q(math::slerp(get_basis_q(), basis, turn_speed));
+	}
+
+	Transform& Transform::set_local_basis(const math::RotationMatrix& basis)
+	{
+		transform.basis = basis; // glm::orthonormalize(basis);
+
+		invalidate();
+
+		//update_local_matrix(get_local_position(), get_local_scale(), basis);
+
+		return *this;
+	}
+
+	Transform& Transform::set_local_basis(const math::RotationMatrix& basis, float turn_speed)
+	{
+		// Use quaternion math for interpolation.
+		return set_local_basis_q(math::Quaternion { basis }, turn_speed);
+	}
+
+	Transform& Transform::set_local_basis_q(const math::Quaternion& basis)
+	{
+		// Use matrix to store the static value.
+		//return set_local_basis(glm::mat3_cast(basis));
+		return set_local_basis(math::to_rotation_matrix(glm::conjugate(basis))); // TODO: Review use of 'conjugate'.
+	}
+
+	Transform& Transform::set_local_basis_q(const math::Quaternion& basis, float turn_speed)
+	{
+		return set_local_basis_q(math::slerp(get_local_basis_q(), basis, turn_speed));
+	}
+
+	Transform& Transform::apply_basis(const math::RotationMatrix& basis, bool local)
+	{
+		if (local)
+		{
+			auto local_basis = get_local_basis();
+
+			set_local_basis((basis * local_basis));
+		}
+		else
+		{
+			auto current_basis = get_basis();
+
+			set_basis((current_basis * basis));
+		}
+
+		return *this;
+	}
+
+	Transform& Transform::apply_basis(const math::RotationMatrix& relative_basis, float turn_extent, bool local)
+	{
+		// Use quaternion math for interpolation.
+		return apply_basis_q(math::Quaternion { relative_basis }, turn_extent, local);
+	}
+
+	Transform& Transform::apply_basis_q(const math::Quaternion& basis, bool local)
+	{
+		// Use matrix to store the static value.
+		return apply_basis(math::RotationMatrix { basis }, local);
+	}
+
+	Transform& Transform::apply_basis_q(const math::Quaternion& relative_basis, float turn_extent, bool local)
+	{
+		if (local)
+		{
+			const auto current_local_basis = get_local_basis_q();
+
+			return set_local_basis_q(math::slerp(current_local_basis, (current_local_basis * relative_basis), turn_extent));
+		}
+
+		const auto current_basis = get_basis_q();
+
+		return set_basis_q(math::slerp(current_basis, (current_basis * relative_basis), turn_extent));
 	}
 
 	Transform& Transform::set_rotation(const math::Vector& rv)
@@ -452,35 +590,119 @@ namespace engine
 		return set_rotation({ rotation.x, rotation.y, rz });
 	}
 
-	Transform& Transform::set_yaw(float yaw)
+	Transform& Transform::set_rx(float rx, float turn_speed)
 	{
-		return set_ry(yaw);
+		const auto relative_angle = (rx - this->rx());
+		const auto relative_basis = rotation_pitch_q(relative_angle);
+
+		const auto current_basis = get_basis_q();
+		const auto target_basis = (current_basis * relative_basis);
+
+		return set_basis_q(target_basis, turn_speed);
+	}
+	
+	Transform& Transform::set_ry(float ry, float turn_speed)
+	{
+		const auto relative_angle = (ry - this->ry()); // direction_to_yaw(this->get_flat_direction_vector());
+		const auto relative_basis = rotation_yaw_q(relative_angle);
+
+		const auto current_basis = get_basis_q();
+		const auto target_basis = (current_basis * relative_basis);
+
+		return set_basis_q(target_basis, turn_speed);
+	}
+	
+	Transform& Transform::set_rz(float rz, float turn_speed)
+	{
+		const auto relative_angle = (rz - this->rz());
+		const auto relative_basis = rotation_roll_q(relative_angle);
+
+		const auto current_basis = get_basis_q();
+		const auto target_basis = (current_basis * relative_basis);
+
+		return set_basis_q(target_basis, turn_speed);
 	}
 
-	// Computes the `yaw` angle of `direction`, then calls `set_ry`.
-	Transform& Transform::set_yaw(const math::Vector& direction)
+	Transform& Transform::set_ry(const math::Vector& direction)
 	{
 		return set_ry(math::direction_to_yaw(direction));
 	}
 
-	float Transform::get_pitch() const
+	Transform& Transform::set_ry(const math::Vector& direction, float turn_speed)
 	{
-		return rx();
+		return set_ry(math::direction_to_yaw(direction), turn_speed);
 	}
 
-	float Transform::get_yaw() const
+	Transform& Transform::set_local_rx(float rx)
 	{
-		return ry();
+		auto local_rotation = get_local_rotation();
+
+		return set_local_rotation({ rx, local_rotation.y, local_rotation.z });
+	}
+	
+	Transform& Transform::set_local_ry(float ry)
+	{
+		auto local_rotation = get_local_rotation();
+
+		return set_local_rotation({ local_rotation.x, ry, local_rotation.z });
 	}
 
-	float Transform::get_roll() const
+	Transform& Transform::set_local_rz(float rz)
 	{
-		return rz();
+		auto local_rotation = get_local_rotation();
+
+		return set_local_rotation({ local_rotation.x, local_rotation.y, rz });
 	}
 
-	math::Vector Transform::align_vector(const math::Vector& v) const
+	Transform& Transform::set_local_rx(float rx, float turn_speed)
 	{
-		auto basis = get_local_basis(); // get_basis();
+		const auto relative_angle = (rx - this->local_rx());
+		const auto relative_basis = rotation_pitch_q(relative_angle);
+
+		const auto current_basis = get_local_basis_q();
+		const auto target_basis = (current_basis * relative_basis);
+
+		return set_local_basis_q(target_basis, turn_speed);
+	}
+	
+	Transform& Transform::set_local_ry(float ry, float turn_speed)
+	{
+		const auto relative_angle = (ry - this->local_ry());
+		const auto relative_basis = rotation_yaw_q(relative_angle);
+
+		const auto current_basis = get_local_basis_q();
+		const auto target_basis = (current_basis * relative_basis);
+
+		return set_local_basis_q(target_basis, turn_speed);
+	}
+	
+	Transform& Transform::set_local_rz(float rz, float turn_speed)
+	{
+		const auto relative_angle = (rz - this->local_rz());
+		const auto relative_basis = rotation_roll_q(relative_angle);
+
+		const auto current_basis = get_local_basis_q();
+		const auto target_basis = (current_basis * relative_basis);
+
+		return set_local_basis_q(target_basis, turn_speed);
+	}
+
+	Transform& Transform::set_local_ry(const math::Vector& direction)
+	{
+		return set_local_ry(math::direction_to_yaw(direction));
+	}
+
+	Transform& Transform::set_local_ry(const math::Vector& direction, float turn_speed)
+	{
+		return set_local_ry(math::direction_to_yaw(direction), turn_speed);
+	}
+
+	math::Vector Transform::align_vector(const math::Vector& v, bool local) const
+	{
+		const auto basis = (local)
+			? get_local_basis()
+			: get_basis()
+		;
 
 		return (basis * v);
 	}
@@ -489,38 +711,71 @@ namespace engine
 	{
 		if (local)
 		{
-			return set_local_position(get_local_position() + align_vector(tv));
+			return set_local_position(get_local_position() + align_vector(tv, true));
 		}
 
 		return set_local_position(get_local_position() + tv);
 	}
 
-	math::RotationMatrix Transform::look_at(const math::Vector& target, const math::Vector& up)
+	Transform& Transform::look_at(const math::Vector& target_position, const math::Vector& up)
 	{
-		auto position = get_position();
+		const auto self_position = get_position();
 
-		auto m = orientation(position, target, up);
+		const auto focus_basis = orientation(self_position, target_position, up);
 
-		set_basis(m);
+		set_basis(focus_basis);
 
-		return m;
+		return *this;
 	}
 
-	math::RotationMatrix Transform::look_at(Transform& t, const math::Vector& up)
+	Transform& Transform::look_at(const math::Vector& target_position, float turn_speed, const math::Vector& up)
 	{
-		return look_at(t.get_position(), up);
+		const auto self_position = get_position();
+
+		const auto focus_basis = Transform::quat_orientation(self_position, target_position); // orientation
+		const auto self_basis = get_basis_q(); // get_basis();
+
+		const auto updated_basis = math::slerp(self_basis, focus_basis, turn_speed);
+
+		return set_basis_q(updated_basis);
 	}
 
-	math::RotationMatrix Transform::look_at(Entity entity, const math::Vector& up)
+	Transform& Transform::look_at(const Transform& target_tform, const math::Vector& up)
 	{
-		auto entity_tform = Transform(registry, entity);
+		const auto target_position = target_tform.get_position();
 
-		return look_at(entity_tform.get_position(), up);
+		return look_at(target_position, up);
+	}
+
+	Transform& Transform::look_at(const Transform& target_tform, float turn_speed, const math::Vector& up)
+	{
+		const auto target_position = target_tform.get_position();
+
+		return look_at(target_position, turn_speed, up);
+	}
+
+	Transform& Transform::look_at(Entity target, const math::Vector& up)
+	{
+		auto target_tform = Transform(registry, target);
+
+		return look_at(target_tform, up);
+	}
+
+	Transform& Transform::look_at(Entity target, float turn_speed, const math::Vector& up)
+	{
+		auto target_tform = Transform(registry, entity);
+
+		return look_at(target_tform, turn_speed, up);
 	}
 
 	Transform& Transform::rotate(const math::Vector& rv, bool local)
 	{
 		return apply_basis(math::rotation_from_vector(rv), local);
+	}
+
+	Transform& Transform::rotate(const math::Vector& rv, float turn_extent, bool local)
+	{
+		return apply_basis(math::rotation_from_vector(rv), turn_extent, local);
 	}
 
 	Transform& Transform::rotateX(float rx, bool local)
@@ -679,22 +934,5 @@ namespace engine
 		//update_local_matrix(get_local_position(), scale, get_local_basis());
 
 		return *this;
-	}
-
-	Transform& Transform::set_local_basis(const math::RotationMatrix& basis)
-	{
-		transform.basis = basis; // glm::orthonormalize(basis);
-
-		invalidate();
-
-		//update_local_matrix(get_local_position(), get_local_scale(), basis);
-
-		return *this;
-	}
-
-	Transform& Transform::set_local_basis_q(const math::Quaternion& basis)
-	{
-		//return set_local_basis(glm::mat3_cast(basis));
-		return set_local_basis(math::to_rotation_matrix(glm::conjugate(basis))); // TODO: Review use of 'conjugate'.
 	}
 }

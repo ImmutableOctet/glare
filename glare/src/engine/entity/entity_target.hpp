@@ -2,6 +2,7 @@
 
 #include "types.hpp"
 
+#include <engine/meta/types.hpp>
 #include <engine/meta/indirect_meta_any.hpp>
 
 #include <util/variant.hpp>
@@ -208,6 +209,10 @@ namespace engine
 			{
 				return (target_index() == TargetIndex::Null);
 			}
+
+			// NOTE: This method exists for compatibility with meta-indirection functionality.
+			// For the target type, please see the `type` field.
+			MetaType get_type() const;
 		private:
 			template <typename ...Args>
 			Entity get_impl(Registry& registry, Entity source, Args&&... args) const;

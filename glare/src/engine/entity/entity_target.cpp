@@ -2,8 +2,9 @@
 
 #include "components/instance_component.hpp"
 
-#include <engine/meta/hash.hpp>
+#include <engine/meta/types.hpp>
 #include <engine/meta/serial.hpp>
+#include <engine/meta/hash.hpp>
 
 #include <engine/components/relationship_component.hpp>
 #include <engine/components/name_component.hpp>
@@ -439,6 +440,11 @@ namespace engine
 	EntityTarget EntityTarget::from_string(const std::string& raw_value)
 	{
 		return from_string(std::string_view { raw_value });
+	}
+
+	MetaType EntityTarget::get_type() const
+	{
+		return engine::resolve<Entity>();
 	}
 
 	// EntityTarget::ChildTarget:

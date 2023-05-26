@@ -42,10 +42,16 @@ namespace app::input
 
 	const InputDevices& InputHandler::poll(entt::dispatcher* opt_event_handler)
 	{
-		const auto mk_event_handler = ((locked) ? opt_event_handler : nullptr);
-
-		devices.mouse.poll(mk_event_handler);
-		devices.keyboard.poll(mk_event_handler);
+		if (const auto mk_event_handler = ((locked) ? opt_event_handler : nullptr))
+		{
+			devices.mouse.poll(mk_event_handler);
+			devices.keyboard.poll(mk_event_handler);
+		}
+		else
+		{
+			devices.mouse.clear_state();
+			devices.keyboard.clear_state();
+		}
 
 		devices.gamepads.poll(opt_event_handler);
 

@@ -5,11 +5,9 @@ target_sources(
     
     PRIVATE
 
-    # Components:
-    # Nothing so far.
-
-    # Top-Level:
     "motion_system.cpp"
+    "components/orientation_component.cpp"
+    "components/rotate_component.cpp"
     "reflection.cpp"
 )
 

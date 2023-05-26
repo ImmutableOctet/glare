@@ -10,7 +10,7 @@ namespace app
 	static constexpr std::size_t DEFAULT_DELTALOG_SIZE = 20;
 
 	template <typename ScalarType=float, std::size_t log_size=DEFAULT_DELTALOG_SIZE>
-	class _DeltaTime
+	class DeltaTimeImpl
 	{
 		public:
 			using Scalar = ScalarType;
@@ -18,7 +18,7 @@ namespace app
 			using Time = Milliseconds;
 			using IndexType = int; // std::size_t;
 			using Interval = Scalar;
-		protected:
+
 			static constexpr Interval calculate_interval(Rate ideal_rate)
 			{
 				if (ideal_rate == 0)
@@ -34,6 +34,7 @@ namespace app
 				return (static_cast <Scalar>(1.0) / delta);
 			}
 
+		protected:
 			static constexpr Scalar LOG_SCALAR = ((static_cast<Scalar>(1.5) / static_cast<Scalar>(log_size)) * static_cast<Scalar>(0.75));
 			
 			static constexpr Scalar DEFAULT_DELTA = static_cast<Scalar>(1.0);
@@ -42,7 +43,7 @@ namespace app
 
 			static constexpr Interval INTERVAL_SECOND = (static_cast<Interval>(1) / static_cast <Interval>(1000));
 			static constexpr IndexType DEFAULT_NODE = static_cast<IndexType>(0);
-		protected:
+			
 			Rate ideal_rate;
 			Interval ideal_interval;
 
@@ -56,25 +57,26 @@ namespace app
 			IndexType delta_node = DEFAULT_NODE;
 
 			std::array<Scalar, log_size> delta_log;
+
 		public:
-			_DeltaTime(Rate ideal_rate, Time time_milliseconds=0, Scalar minimum_delta=DEFAULT_MINIMUM_DELTA)
+			DeltaTimeImpl(Rate ideal_rate, Time time_milliseconds=0, Scalar minimum_delta=DEFAULT_MINIMUM_DELTA)
 				: minimum_delta(minimum_delta)
 			{
 				set_rate(ideal_rate);
 				reset(time_milliseconds);
 			}
 
-			inline operator Scalar() const  { return delta;     }
-			inline Scalar operator~() const { return inv_delta; }
+			operator Scalar() const  { return delta;     }
+			Scalar operator~() const { return inv_delta; }
 
-			inline constexpr std::size_t size() const { return log_size; }
+			constexpr std::size_t size() const { return log_size; }
 
-			inline Scalar   get_delta()         const { return delta;          }
-			inline Scalar   get_inv_delta()     const { return inv_delta;      }
-			inline Interval get_interval()      const { return ideal_interval; }
-			inline Rate     get_rate()          const { return ideal_rate;     }
+			Scalar   get_delta()         const { return delta;          }
+			Scalar   get_inv_delta()     const { return inv_delta;      }
+			Interval get_interval()      const { return ideal_interval; }
+			Rate     get_rate()          const { return ideal_rate;     }
 
-			inline Time    current_frame_time() const { return time_current_frame; }
+			Time    current_frame_time() const { return time_current_frame; }
 
 			template <typename T>
 			T per_frame(const T& frame_diff)
@@ -138,14 +140,14 @@ namespace app
 				return delta;
 			}
 
-			inline friend _DeltaTime& operator<<(_DeltaTime& delta_time, Time time)
+			friend DeltaTimeImpl& operator<<(DeltaTimeImpl& delta_time, Time time)
 			{
 				delta_time.update(time);
 
 				return delta_time;
 			}
 
-			inline friend _DeltaTime& operator>>(_DeltaTime& delta_time, Scalar& delta_out)
+			friend DeltaTimeImpl& operator>>(DeltaTimeImpl& delta_time, Scalar& delta_out)
 			{
 				delta_out = delta_time.get_delta();
 
@@ -153,5 +155,5 @@ namespace app
 			}
 	};
 
-	using DeltaTime = _DeltaTime<float, 20U>;
+	using DeltaTime = DeltaTimeImpl<float, 20U>;
 }

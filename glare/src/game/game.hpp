@@ -35,13 +35,13 @@ namespace engine
 	//struct OnMouseState;
 	//struct OnKeyboardState;
 
-	using WorldSystemManager = SystemManager<World>;
-
 	class InputSystem;
 }
 
 namespace game
 {
+	using WorldSystemManager = engine::SystemManager<engine::World>;
+
 	using RenderState = engine::WorldRenderState;
 	using RenderBuffer = graphics::GBuffer;
 
@@ -58,7 +58,7 @@ namespace game
 			engine::ResourceManager resource_manager;
 			
 			engine::World world;
-			engine::WorldSystemManager systems;
+			WorldSystemManager systems;
 			engine::WorldRenderer renderer;
 		public:
 			Game
@@ -106,7 +106,7 @@ namespace game
 
 			void update(app::Milliseconds time) override;
 			void fixed_update(app::Milliseconds time) override;
-			void render() override;
+			void render(app::Milliseconds time) override;
 
 			entt::dispatcher* get_event_handler() override;
 		protected:
@@ -114,7 +114,7 @@ namespace game
 
 			// Implement Game-specific logic using these:
 			virtual void on_update(float delta) = 0;
-			virtual void on_fixed_update(float delta);
+			virtual void on_fixed_update();
 			virtual void on_render(RenderState& render_state);
 			virtual void on_resize(int width, int height);
 

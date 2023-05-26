@@ -19,6 +19,7 @@ namespace engine
     struct MetaFunctionCall;
     struct MetaTypeReference;
     struct MetaDataMember;
+    struct MetaProperty;
     struct IndirectMetaDataMember;
 
 	// Returns true if the `value` specified has a reflected indirection function.
@@ -38,6 +39,12 @@ namespace engine
 
     // Returns true if the `value` specified references a 'system'.
     bool value_is_system(const MetaAny& value);
+
+    // Returns true  if the `type` specified has the `global namespace` property.
+    bool type_has_global_namespace_flag(const MetaType& type);
+
+    // Returns true  if the type identified by `type_id` has the `global namespace` property.
+    bool type_has_global_namespace_flag(MetaTypeID type_id);
 
     // Returns a new `MetaAny` instance if `value` could supply an enclosed (indirect) value.
     // NOTE: Recursion.
@@ -443,7 +450,7 @@ namespace engine
 				}
 			}
 		}
-        else if constexpr (std::is_same_v<reference_t, MetaDataMember> || std::is_same_v<reference_t, IndirectMetaDataMember>)
+        else if constexpr (std::is_same_v<reference_t, MetaDataMember> || std::is_same_v<reference_t, IndirectMetaDataMember> || std::is_same_v<reference_t, MetaProperty>)
         {
             return get_underlying_or_direct_type(exact_type_reference_value.get_member_type());
         }

@@ -73,33 +73,3 @@ add_subdirectory("game")
 #add_library(glare STATIC) # OBJECT
 #add_library(${PROJECT_NAME}::glare ALIAS glare)
 #target_compile_features(glare PRIVATE cxx_std_23)
-
-target_link_libraries(
-    glare
-    
-    PUBLIC # PRIVATE
-
-    glare_core
-    glare_graphics
-    glare_engine
-)
-
-#target_link_libraries(
-#    glare
-#    
-#    PUBLIC
-#    
-#    glare_util
-#    glare_math
-#    glare_app
-#    glare_graphics
-#    glare_engine
-#    glare_game
-#
-#    #PRIVATE
-#    glare_third_party
-#
-#    #glare_common
-#)
-
-#target_compile_features(glare PRIVATE cxx_std_23) # INTERFACE

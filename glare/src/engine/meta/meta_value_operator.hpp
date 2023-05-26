@@ -68,6 +68,7 @@ namespace engine
 	bool is_unary_operation(MetaValueOperator operation);
 	bool is_assignment_operation(MetaValueOperator operation);
 	bool is_comparison_operation(MetaValueOperator operation);
+	bool is_isolated_operation(MetaValueOperator operation);
 
 	// For operation precedence rules, see: https://en.cppreference.com/w/cpp/language/operator_precedence
 	std::optional<std::tuple<MetaValueOperator, MetaOperatorPrecedence>>

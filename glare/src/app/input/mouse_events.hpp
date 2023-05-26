@@ -48,6 +48,12 @@ namespace app::input
 		int wheel_x, wheel_y;
 	};
 
+	// Triggered when the mouse's position changes in the game window.
+	struct OnMousePosition : public MouseStateEvent
+	{
+		int x, y;
+	};
+
 	// Triggered for virtual mouse analog inputs. (e.g. Hat simulation)
 	struct OnMouseVirtualAnalogInput : public MouseAnalogEvent
 	{

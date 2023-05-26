@@ -6,7 +6,7 @@ target_sources(
     PRIVATE
 
     "application.cpp"
-    "app_timer.cpp"
+    
     "graphics_application.cpp"
     "window.cpp"
 )

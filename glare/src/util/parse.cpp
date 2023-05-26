@@ -4,10 +4,14 @@
 
 #include <regex>
 
+#include <array>
+#include <string_view>
+
 namespace util
 {
 	std::tuple<std::size_t, std::string_view> find_accessor(std::string_view expr)
 	{
+		// TODO: Move access symbols to a dedicated/shared array.
 		return find_first_of_ex
 		(
 			expr,
@@ -22,6 +26,7 @@ namespace util
 
 	std::tuple<std::size_t, std::string_view> find_last_accessor(std::string_view expr)
 	{
+		// TODO: Move access symbols to a dedicated/shared array.
 		return find_last
 		(
 			expr,
@@ -619,7 +624,21 @@ namespace util
 
 		auto type_specifier_end = std::string_view::npos;
 
-		if (auto variable_type_begin = remainder.find(':'); variable_type_begin != std::string_view::npos)
+		constexpr auto assignment_operator_symbol = std::string_view { "=" };
+
+		auto assignment_operator = remainder.find(assignment_operator_symbol);
+
+		if ((assignment_operator != std::string_view::npos) && (variable_decl_end != std::string_view::npos))
+		{
+			if (assignment_operator < variable_decl_end)
+			{
+				variable_decl_end = assignment_operator;
+			}
+		}
+
+		constexpr auto type_specifier_symbol = std::string_view { ":" };
+
+		if (auto variable_type_begin = find_singular(remainder, type_specifier_symbol); ((variable_type_begin != std::string_view::npos) && ((assignment_operator == std::string_view::npos) || (variable_type_begin < assignment_operator))))
 		{
 			variable_name = util::trim(remainder.substr(0, variable_type_begin));
 
@@ -628,9 +647,38 @@ namespace util
 				return output;
 			}
 
-			remainder = util::trim_beginning(remainder.substr(variable_type_begin + 1));
+			if (assignment_operator == std::string_view::npos)
+			{
+				const auto type_subset = remainder.substr((variable_type_begin + type_specifier_symbol.length()));
 
-			type_specifier_end = remainder.find_first_of(whitespace_symbols);
+				if (!type_subset.empty())
+				{
+					const auto type_specifier_end = type_subset.find_first_of(whitespace_symbols);
+
+					if (type_specifier_end != std::string_view::npos)
+					{
+						variable_type = type_subset.substr(0, type_specifier_end);
+					}
+					else
+					{
+						variable_type = type_subset;
+					}
+				}
+			}
+			else
+			{
+				const auto type_subset_begin = (variable_type_begin + type_specifier_symbol.length());
+				const auto type_subset_length = (assignment_operator - type_subset_begin);
+
+				const auto type_subset = remainder.substr(type_subset_begin, type_subset_length);
+
+				if (!type_subset.empty())
+				{
+					variable_type = type_subset;
+				}
+			}
+
+			variable_type = util::trim(variable_type);
 		}
 		else
 		{
@@ -649,34 +697,40 @@ namespace util
 			}
 
 			remainder = remainder.substr(variable_decl_end);
+
+			if (assignment_operator != std::string_view::npos)
+			{
+				assignment_operator -= variable_decl_end;
+			}
 		}
 
-		if (auto assignment_operator = remainder.find('='); assignment_operator != std::string_view::npos)
+		if (assignment_operator == std::string_view::npos)
 		{
-			variable_type = util::trim(remainder.substr(0, assignment_operator), true);
-
-			if ((assignment_operator + 1) < remainder.size())
+			if (variable_type.empty())
 			{
-				assignment_expr = util::trim(remainder.substr(assignment_operator + 1));
+				trailing_expr = util::trim(remainder);
 			}
+			else
+			{
+				const auto variable_type_end = static_cast<std::size_t>((variable_type.data() + variable_type.length()) - remainder.data());
 
-			return output;
+				if (variable_type_end < remainder.length())
+				{
+					remainder = remainder.substr(variable_type_end);
+
+					trailing_expr = util::trim(remainder);
+				}
+			}
 		}
 		else
 		{
-			if (type_specifier_end == std::string_view::npos)
+			const auto assignment_expr_begin = (assignment_operator + assignment_operator_symbol.length());
+
+			if (assignment_expr_begin < remainder.size())
 			{
-				trailing_expr = remainder;
-
-				return output;
+				assignment_expr = util::trim(remainder.substr(assignment_expr_begin));
 			}
-
-			variable_type = util::trim(remainder.substr(0, type_specifier_end));
-
-			remainder = remainder.substr(type_specifier_end);
 		}
-
-		trailing_expr = remainder;
 
 		return output;
 	}
@@ -840,151 +894,72 @@ namespace util
 		return { key_name, value_type, trailing_expr, expression_syntax_used };
 	}
 
-	std::size_t find_scope_closing_symbol(std::string_view expr, std::string_view begin_symbol, std::string_view end_symbol, std::size_t position, std::string_view ignore_begin_symbol, std::string_view ignore_end_symbol)
-    {
-	    if (position == std::string_view::npos)
-	    {
-		    return std::string_view::npos;
-	    }
-
-	    std::size_t begin_symbols_found = 0;
-
-		const bool has_ignore_symbols = (!ignore_begin_symbol.empty() && !ignore_end_symbol.empty());
-
-	    while (position < expr.length())
-	    {
-			const auto nearest_scope_end = expr.find(end_symbol, position);
-
-			if (has_ignore_symbols)
-			{
-				const auto ignore_begin_position = expr.find(ignore_begin_symbol, position);
-
-				if ((ignore_begin_position != std::string_view::npos) && ((nearest_scope_end == std::string_view::npos) || (ignore_begin_position < nearest_scope_end)))
-				{
-					const auto ignore_end_position = expr.find(ignore_end_symbol, (ignore_begin_position + 1));
-
-					if (ignore_end_position != std::string_view::npos)
-					{
-						position = ignore_end_position;
-
-						continue;
-					}
-				}
-			}
-
-		    const auto nearest_scope_begin = expr.find(begin_symbol, position);
-
-		    if ((nearest_scope_begin != std::string_view::npos) && (nearest_scope_begin < nearest_scope_end))
-		    {
-			    begin_symbols_found++;
-
-			    position = (nearest_scope_begin + 1);
-
-			    continue;
-		    }
-
-		    if (nearest_scope_end == std::string_view::npos)
-		    {
-			    break;
-		    }
-
-		    if (begin_symbols_found > 0)
-		    {
-			    begin_symbols_found--;
-
-			    position = nearest_scope_end + 1;
-		    }
-		    else
-		    {
-			    return nearest_scope_end;
-		    }
-	    }
-
-	    return std::string_view::npos;
-    }
-
-    std::tuple<std::size_t, std::size_t> find_scope_symbols(std::string_view expr, std::string_view begin_symbol, std::string_view end_symbol, std::string_view ignore_begin_symbol, std::string_view ignore_end_symbol)
-    {
-		std::size_t scope_begin = std::string_view::npos;
-
-		const bool has_ignore_symbols = (!ignore_begin_symbol.empty() && !ignore_end_symbol.empty());
-
-		if (has_ignore_symbols)
-		{
-			std::size_t position = 0;
-
-			while (position < expr.length())
-			{
-				scope_begin = expr.find(begin_symbol, position);
-
-				const auto first_ignore_begin_symbol = expr.find(ignore_begin_symbol, position);
-
-				if ((first_ignore_begin_symbol != std::string_view::npos) && (scope_begin > first_ignore_begin_symbol))
-				{
-					const auto first_ignore_end_symbol = expr.find(ignore_end_symbol, (first_ignore_begin_symbol + 1));
-
-					if ((first_ignore_end_symbol != std::string_view::npos) && (scope_begin < first_ignore_end_symbol))
-					{
-						position = (first_ignore_end_symbol + 1);
-					}
-					else
-					{
-						break;
-					}
-				}
-				else
-				{
-					break;
-				}
-			}
-
-			if (position >= expr.length())
-			{
-				scope_begin = std::string_view::npos;
-			}
-		}
-		else
-		{
-			scope_begin = expr.find(begin_symbol);
-		}
-
-	    if (scope_begin == std::string_view::npos)
-	    {
-			return { std::string_view::npos, std::string_view::npos };
-	    }
-
-	    return
-		{
-			scope_begin,
-
-			find_scope_closing_symbol
-			(
-				expr,
-				begin_symbol, end_symbol,
-				(scope_begin + 1),
-				ignore_begin_symbol, ignore_end_symbol
-			)
-		};
-    }
-
     std::size_t find_closing_parenthesis(std::string_view expr, std::size_t position)
     {
-        return find_scope_closing_symbol(expr, "(", ")", position, "\"", "\"");
+        return find_scope_closing_symbol
+		(
+			expr,
+			
+			"(", ")",
+			
+			position,
+			
+			std::array
+			{
+				std::pair { "[", "]" },
+				std::pair { "\"", "\"" }
+			}
+		);
     }
 
     std::tuple<std::size_t, std::size_t> find_parentheses(std::string_view expr)
     {
-        return find_scope_symbols(expr, "(", ")", "\"", "\"");
+        return find_scope_symbols
+		(
+			expr,
+
+			"(", ")",
+			
+			std::array
+			{
+				std::pair { "[", "]" },
+				std::pair { "\"", "\"" }
+			}
+		);
     }
 
 	std::size_t find_closing_subscript(std::string_view expr, std::size_t position)
 	{
-		return find_scope_closing_symbol(expr, "[", "]", position, "\"", "\"");
+		return find_scope_closing_symbol
+		(
+			expr,
+
+			"[", "]",
+
+			position,
+
+			std::array
+			{
+				std::pair { "(", ")" },
+				std::pair { "\"", "\"" }
+			}
+		);
 	}
 
 	std::tuple<std::size_t, std::size_t> find_subscript(std::string_view expr)
 	{
-		return find_scope_symbols(expr, "[", "]", "\"", "\"");
+		return find_scope_symbols
+		(
+			expr,
+
+			"[", "]",
+
+			std::array
+			{
+				std::pair { "(", ")" },
+				std::pair { "\"", "\"" }
+			}
+		);
 	}
 
 	std::tuple<std::size_t, std::string_view>
@@ -1142,7 +1117,7 @@ namespace util
 
 		if (initial_result_index == std::string_view::npos)
 		{
-			return { initial_result_index, initial_result_symbol };
+			return { std::string_view::npos, {} }; // { initial_result_index, initial_result_symbol };
 		}
 
 		if ((initial_result_symbol.length() == 1) || (initial_result_symbol == "<<") || (initial_result_symbol == ">>"))
@@ -1166,7 +1141,7 @@ namespace util
 			return expandable_result(initial_result_index, initial_result_symbol.length(), '=');
 		}
 
-		return { initial_result_index, initial_result_symbol };
+		return { initial_result_index, expr.substr(initial_result_index, initial_result_symbol.length()) };
 	}
 
 	std::tuple<std::size_t, std::size_t>

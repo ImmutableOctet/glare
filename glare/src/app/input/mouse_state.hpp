@@ -20,6 +20,12 @@ namespace app::input
 		// Relative wheel motion on the Y-axis.
 		int wheel_y = 0;
 
+		// Window-local mouse position on the X-axis.
+		int position_x = 0;
+
+		// Window-local mouse position on the Y-axis.
+		int position_y = 0;
+
 		// Button states:
 		bool left    : 1 = false;
 		bool middle  : 1 = false;

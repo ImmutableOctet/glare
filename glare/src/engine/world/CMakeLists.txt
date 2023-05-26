@@ -5,18 +5,13 @@ target_sources(
     
     PRIVATE
 
-    # Top-Level:
     "world.cpp"
     "reflection.cpp"
     "world_system.cpp"
     "entity.cpp"
-
-    # TODO: Remove/rework.
-    "zones/zones.cpp"
-
     "graphics_entity.cpp"
     "light.cpp"
-    "stage.cpp"
+    "scene.cpp"
 )
 
 add_subdirectory("components")
@@ -28,9 +23,11 @@ add_subdirectory("meta_controls")
 
 add_subdirectory("animation")
 add_subdirectory("behaviors")
+add_subdirectory("camera")
 add_subdirectory("motion")
 add_subdirectory("physics")
 add_subdirectory("render")
+add_subdirectory("delta")
 
 #target_link_libraries(
 #    glare_engine_world

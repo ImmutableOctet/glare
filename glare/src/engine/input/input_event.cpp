@@ -60,19 +60,19 @@ namespace engine
 	bool InputEvent::is_mouse_event() const
 	{
 		//return get_mouse();
-		return source_is<app::input::Mouse>();
+		return source_is<const app::input::Mouse>();
 	}
 
 	bool InputEvent::is_keyboard_event() const
 	{
 		//return get_keyboard();
-		return source_is<app::input::Keyboard>();
+		return source_is<const app::input::Keyboard>();
 	}
 
 	bool InputEvent::is_gamepad_event() const
 	{
 		//return get_gamepad();
-		return source_is<app::input::Gamepad>();
+		return source_is<const app::input::Gamepad>();
 	}
 
 	bool InputEvent::is_monostate_event() const

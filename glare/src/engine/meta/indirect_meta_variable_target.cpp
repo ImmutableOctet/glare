@@ -113,7 +113,38 @@ namespace engine
 
 		auto variable_context = get_variable_context(registry, target_entity);
 
-		variable.set(value, registry, target_entity, MetaEvaluationContext { &variable_context });
+		variable.set
+		(
+			value, registry, target_entity,
+
+			MetaEvaluationContext
+			{
+				.variable_context = &variable_context,
+				.service          = {},
+				.system_manager   = {}
+			}
+		);
+
+		return *this;
+	}
+
+	IndirectMetaVariableTarget& IndirectMetaVariableTarget::set(MetaAny& value, Registry& registry, Entity source, const MetaEvaluationContext& external_context)
+	{
+		const auto target_entity = target.get(registry, source);
+
+		auto variable_context = get_variable_context(registry, target_entity);
+
+		variable.set
+		(
+			value, registry, target_entity,
+
+			MetaEvaluationContext
+			{
+				.variable_context = &variable_context,
+				.service          = external_context.service,
+				.system_manager   = external_context.system_manager
+			}
+		);
 
 		return *this;
 	}

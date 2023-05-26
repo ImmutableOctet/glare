@@ -50,7 +50,8 @@ namespace engine
 		bool allow_boolean_literals=true,
 		bool allow_entity_fallback=true,
 		bool allow_component_fallback=true,
-		bool allow_standalone_opaque_function=true
+		bool allow_standalone_opaque_function=true,
+		bool allow_remote_variables=true
 	);
 
 	// Attempts to resolve a native value from a raw string value, using reflection.
@@ -67,7 +68,8 @@ namespace engine
 		bool allow_boolean_literals=true,
 		bool allow_entity_fallback=true,
 		bool allow_component_fallback=true,
-		bool allow_standalone_opaque_function=true
+		bool allow_standalone_opaque_function=true,
+		bool allow_remote_variables=true
 	);
 
 	// Internal subroutine of `meta_any_from_string`.
@@ -89,6 +91,7 @@ namespace engine
 		bool allow_entity_fallback=true,
 		bool allow_component_fallback=true,
 		bool allow_standalone_opaque_function=true,
+		bool allow_remote_variables=true,
 
 		bool assume_static_type=false
 	);

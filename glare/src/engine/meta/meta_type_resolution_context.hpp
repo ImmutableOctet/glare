@@ -3,12 +3,14 @@
 #include "types.hpp"
 
 #include <util/hash_map.hpp>
+#include <util/small_vector.hpp>
 
 //#include <unordered_map>
 #include <map>
 #include <memory>
 #include <string>
 #include <string_view>
+#include <tuple>
 
 namespace engine
 {
@@ -152,16 +154,55 @@ namespace engine
 		MetaType get_type(std::string_view name, const MetaParsingInstructions& instructions) const;
 		MetaTypeID get_type_id(std::string_view name, const MetaParsingInstructions& instructions) const;
 
-		// Map of component aliases to their underlying type name.
+		// Returns true if `type`'s identifier is found in `global_namespace`.
+		bool type_in_global_namespace(const MetaType& type) const;
+
+		// Returns true if `type_id` is found in `global_namespace`.
+		bool type_in_global_namespace(MetaTypeID type_id) const;
+
+		/*
+			Attempts to resolve the function referenced by `function_id`
+			from one of the types referenced in `global_namespace`.
+			
+			If multiple types have functions matching the same ID,
+			this will return the first result found.
+			
+			The function returned will always be the first known overload available from a type (if any).
+		*/
+		std::tuple<MetaType, MetaFunction> resolve_global_function(MetaFunctionID function_id) const;
+
+		/*
+			Attempts to resolve the data member referenced by `member_id`
+			from one of the types referenced in `global_namespace`.
+			
+			If multiple types have data members matching the same ID,
+			this will return the first result found.
+		*/
+		std::tuple<MetaType, entt::meta_data> resolve_global_data_member(MetaSymbolID member_id) const;
+
+		/*
+			Attempts to resolve the property referenced by `property_id` from
+			one of the types referenced in `global_namespace`.
+			
+			If multiple types have properties matching the same ID,
+			this will return the first result found.
+		*/
+		std::tuple<MetaType, entt::meta_prop> resolve_global_property(MetaSymbolID property_id) const;
+
+		// A map of component aliases to their underlying type name.
 		AliasContainer component_aliases;
 
-		// Map of command aliases to their underlying type name.
+		// A map of command aliases to their underlying type name.
 		AliasContainer command_aliases;
 
-		// Map of entity instruction aliases to their underlying type name.
+		// A map of entity instruction aliases to their underlying type name.
 		AliasContainer instruction_aliases;
 
-		// Map of engine system aliases to their underlying type name.
+		// A map of engine system aliases to their underlying type name.
 		AliasContainer system_aliases;
+
+		// Type identifiers included in global symbol resolution.
+		// (Used for global function references, etc.)
+		util::small_vector<MetaTypeID, 4> global_namespace;
 	};
 }

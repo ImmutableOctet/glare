@@ -24,7 +24,7 @@ namespace app::input
 	{
 		if (force_clear)
 		{
-			next_state.clear_keys();
+			next_state.clear_keys(); // clear_state();
 		}
 
 		if (update_buttons)
@@ -105,6 +105,11 @@ namespace app::input
 	void Keyboard::flush()
 	{
 		//next_state.clear_keys();
+	}
+
+	void Keyboard::clear_state()
+	{
+		next_state.clear_keys();
 	}
 
 	bool Keyboard::process_event(const SDL_Event& e, entt::dispatcher* opt_event_handler)

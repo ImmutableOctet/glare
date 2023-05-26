@@ -2,6 +2,8 @@
 
 #include <type_traits>
 #include <optional>
+#include <array>
+#include <iterator>
 
 #include "function_traits.hpp"
 #include "member_traits.hpp"
@@ -23,6 +25,16 @@ namespace util
 
 		static_assert(is_complete_specialization<spec_test<int>>::value);
 		static_assert(!is_complete_specialization<spec_test<float>>::value);
+
+		template <typename>
+		struct array_size_trait;
+
+		template <typename T, std::size_t N>
+		struct array_size_trait<std::array<T, N>>
+		{
+			inline static constexpr std::size_t value = N;
+			//inline static constexpr std::size_t size = N;
+		};
 	}
 
 	template <typename T>
@@ -105,4 +117,62 @@ namespace util
 
 	template <typename T>
     inline constexpr bool is_convertible_to_bool = (std::is_constructible_v<bool, decltype((std::declval<const T&>()))>); // (std::is_constructible_v<bool, const T&>) // (std::is_convertible_v<T, bool>);
+
+	template <typename ArrayType>
+	inline constexpr auto array_size = impl::array_size_trait<ArrayType>::value;
+
+	static_assert(array_size<std::array<int, 3>> == 3);
+
+	template <typename T, typename=void>
+	struct is_iterable : std::false_type {};
+
+	template <typename T>
+	struct is_iterable
+	<
+		T,
+		
+		std::void_t
+		<
+			decltype(std::begin(std::declval<T&>())),
+			decltype(std::end(std::declval<T&>()))
+		>
+	> : std::true_type {};
+
+	template <typename T>
+	inline constexpr bool is_iterable_v = is_iterable<T>::value;
+
+	template <typename T, typename=void>
+	struct is_const_iterable : std::false_type {};
+
+	template <typename T>
+	struct is_const_iterable
+	<
+		T,
+
+		std::void_t
+		<
+			decltype(std::cbegin(std::declval<const T&>())),
+			decltype(std::cend(std::declval<const T&>()))
+		>
+	> : std::true_type {};
+
+	template <typename T>
+	inline constexpr bool is_const_iterable_v = is_const_iterable<T>::value;
+
+	template <typename T, typename=void>
+	struct is_iterator : std::false_type {};
+
+	template <typename T>
+	struct is_iterator
+	<
+		T,
+		
+		std::void_t
+		<
+			typename std::iterator_traits<T>::iterator_category
+		>
+	> : std::true_type {};
+
+	template <typename T>
+	inline constexpr bool is_iterator_v = is_iterator<T>::value;
 }

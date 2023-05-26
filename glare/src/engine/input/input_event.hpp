@@ -83,6 +83,9 @@ namespace engine
 		// Indicates whether the input source is unknown.
 		inline bool has_unknown_input_source() const { return is_monostate_event(); }
 
+		// An alias to the `state_index` field; represents the player that caused this input event.
+		inline PlayerIndex player_index() const { return static_cast<PlayerIndex>(state_index); }
+
 		// Indicates the internal variant-index of `source`.
 		std::size_t source_index() const;
 

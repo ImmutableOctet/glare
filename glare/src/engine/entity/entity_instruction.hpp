@@ -3,6 +3,7 @@
 #include "entity_state_action.hpp"
 #include "event_trigger_condition.hpp"
 #include "entity_descriptor_shared.hpp"
+#include "entity_thread_cadence.hpp"
 
 #include <engine/timer.hpp>
 
@@ -15,6 +16,7 @@
 
 #include <utility>
 #include <optional>
+#include <string>
 
 namespace engine
 {
@@ -63,7 +65,7 @@ namespace engine
 		struct ControlBlock
 		{
 			// Number of instructions included in this control-block.
-			EntityInstructionCount size;
+			EntityInstructionCount size = {};
 
 			bool operator==(const ControlBlock&) const noexcept = default;
 			bool operator!=(const ControlBlock&) const noexcept = default;
@@ -157,6 +159,7 @@ namespace engine
 		struct Sleep : Thread
 		{
 			Timer::Duration duration;
+
 			bool check_linked = true;
 
 			bool operator==(const Sleep&) const noexcept = default;
@@ -209,6 +212,19 @@ namespace engine
 			bool operator!=(const MultiControlBlock&) const noexcept = default;
 		};
 
+		struct CadenceControlBlock
+		{
+			EntityThreadCadence cadence; // = EntityThreadCadence::Default;
+			//EntityThreadCadence prev_cadence; // = EntityThreadCadence::Default;
+
+			// Number of subsequent instructions to be
+			// included in this 'cadence' block.
+			ControlBlock included_instructions = {};
+
+			bool operator==(const CadenceControlBlock&) const noexcept = default;
+			bool operator!=(const CadenceControlBlock&) const noexcept = default;
+		};
+
 		struct IfControlBlock : LocalConditionControlBlock
 		{
 			bool operator==(const IfControlBlock&) const noexcept = default;
@@ -221,6 +237,14 @@ namespace engine
 
 			bool operator==(const FunctionCall&) const noexcept = default;
 			bool operator!=(const FunctionCall&) const noexcept = default;
+		};
+
+		struct AdvancedMetaExpression
+		{
+			IndirectMetaAny expr;
+
+			bool operator==(const AdvancedMetaExpression&) const noexcept = default;
+			bool operator!=(const AdvancedMetaExpression&) const noexcept = default;
 		};
 
 		struct VariableDeclaration
@@ -250,6 +274,17 @@ namespace engine
 
 			bool operator==(const EventCapture&) const noexcept = default;
 			bool operator!=(const EventCapture&) const noexcept = default;
+		};
+
+		struct Assert
+		{
+			EntityDescriptorShared<EventTriggerCondition> condition; // IndirectMetaAny
+
+			std::optional<EntityDescriptorShared<std::string>> debug_message;
+			std::optional<EntityDescriptorShared<std::string>> condition_representation;
+
+			bool operator==(const Assert&) const noexcept = default;
+			bool operator!=(const Assert&) const noexcept = default;
 		};
 
 		using Instruction = std::variant
@@ -288,12 +323,15 @@ namespace engine
 			Rewind,
 
 			MultiControlBlock,
+			CadenceControlBlock,
 			IfControlBlock,
 
 			FunctionCall,
+			AdvancedMetaExpression,
 			VariableDeclaration,
 			VariableAssignment,
 			EventCapture,
+			Assert,
 
 			InstructionDescriptor
 		>;

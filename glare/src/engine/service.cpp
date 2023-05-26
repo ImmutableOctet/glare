@@ -6,10 +6,18 @@
 #include "meta/meta_type_descriptor.hpp"
 #include "meta/meta_evaluation_context.hpp"
 
+#include "components/relationship_component.hpp"
+#include "components/name_component.hpp"
+#include "components/player_component.hpp"
+
 #include "commands/indirect_component_patch_command.hpp"
 #include "commands/component_patch_command.hpp"
 #include "commands/component_replace_command.hpp"
 #include "commands/function_command.hpp"
+#include "commands/expr_command.hpp"
+#include "commands/set_parent_command.hpp"
+
+#include "events.hpp"
 
 #include "event_handler.hpp"
 
@@ -19,6 +27,8 @@
 
 #include <algorithm>
 
+#include <util/format.hpp>
+
 // Debugging related:
 #include <util/log.hpp>
 
@@ -27,17 +37,23 @@ namespace engine
 	Service::Service
 	(
 		Registry& registry,
+		SystemManagerInterface& systems,
+		const ServicePolicy& policy,
 
 		bool register_input_events,
 		bool register_timed_event_wrapper,
 		bool register_core_commands,
-		bool register_function_commands,
+		bool register_evaluation_commands,
 		bool allocate_root_entity,
 		bool allocate_universal_variables
 	) :
 		registry(registry),
-		active_event_handler(&standard_event_handler)
+		systems(systems),
+		active_event_handler(&standard_event_handler),
+		policy(policy)
 	{
+		registry.on_destroy<RelationshipComponent>().connect<&Service::relationship_destroyed_handler>(*this);
+
 		if (register_input_events)
 		{
 			// Only polled device states for now.
@@ -57,11 +73,13 @@ namespace engine
 			register_event<IndirectComponentPatchCommand, &Service::on_indirect_component_patch>(*this);
 			register_event<ComponentPatchCommand,         &Service::on_direct_component_patch>(*this);
 			register_event<ComponentReplaceCommand,       &Service::on_component_replace>(*this);
+			register_event<SetParentCommand,              &Service::on_set_parent>(*this);
 		}
 
-		if (register_function_commands)
+		if (register_evaluation_commands)
 		{
 			register_event<FunctionCommand, &Service::opaque_function_handler>(*this);
+			register_event<ExprCommand, &Service::opaque_expression_handler>(*this);
 		}
 
 		if (allocate_root_entity)
@@ -73,6 +91,13 @@ namespace engine
 		{
 			universal_variables = std::make_shared<UniversalVariables>();
 		}
+	}
+
+	Service::~Service()
+	{
+		registry.on_destroy<RelationshipComponent>().disconnect(*this);
+
+		//unregister_event(*this);
 	}
 
 	void Service::on_indirect_component_patch(const IndirectComponentPatchCommand& component_patch)
@@ -210,9 +235,72 @@ namespace engine
 		}
 	}
 
+	void Service::on_set_parent(const SetParentCommand& parent_command)
+	{
+		set_parent(parent_command.target, parent_command.parent);
+	}
+
 	void Service::opaque_function_handler(const FunctionCommand& function_command)
 	{
 		on_function_command(function_command);
+	}
+
+	void Service::opaque_expression_handler(const ExprCommand& expr_command)
+	{
+		on_expression_command(expr_command);
+	}
+
+	void Service::relationship_destroyed_handler(Registry& registry, Entity entity)
+	{
+		RelationshipComponent& relationship_comp = registry.get<RelationshipComponent>(entity);
+
+		if (policy.destroy_children_with_parent)
+		{
+			relationship_comp.enumerate_child_entities
+			(
+				registry,
+
+				[&registry](Entity child, Entity next_child)
+				{
+					registry.destroy(child);
+
+					return true;
+				}
+			);
+		}
+		else
+		{
+			const auto parent = relationship_comp.get_parent();
+
+			if (parent == null)
+			{
+				relationship_comp.enumerate_child_entities
+				(
+					registry,
+			
+					[this, &registry](Entity child, Entity next_child)
+					{
+						remove_parent(child);
+
+						return true;
+					}
+				);
+			}
+			else
+			{
+				relationship_comp.enumerate_child_entities
+				(
+					registry,
+			
+					[this, &registry, parent](Entity child, Entity next_child)
+					{
+						set_parent(child, parent);
+
+						return true;
+					}
+				);
+			}
+		}
 	}
 
 	void Service::on_function_command(const FunctionCommand& function_command)
@@ -223,6 +311,17 @@ namespace engine
 			get_registry(),
 			function_command.source, // function_command.target
 			function_command.context.get_context()
+		);
+	}
+
+	void Service::on_expression_command(const ExprCommand& expr_command)
+	{
+		execute_opaque_expression
+		(
+			expr_command.expr,
+			get_registry(),
+			expr_command.source, // expr_command.target
+			expr_command.context.get_context()
 		);
 	}
 
@@ -256,7 +355,7 @@ namespace engine
 
 	// TODO: Implement thread-safe locking/synchronization event-handler interface.
 	// TODO: Determine if some (or all) events should be handled in the fixed update function, rather than the continuous function.
-	void Service::update(float delta)
+	void Service::update(app::Milliseconds time, float delta)
 	{
 		// Handle standard events:
 		use_forwarding_events();
@@ -270,17 +369,17 @@ namespace engine
 		forwarding_event_handler.update();
 
 		// Trigger the standard update event for this service.
-		this->event<OnServiceUpdate>(this, delta);
+		this->event<OnServiceUpdate>(this, time, delta);
 
 		service_event_handler.update();
 
 		handle_deferred_operations();
 	}
 
-	void Service::fixed_update(float delta)
+	void Service::fixed_update(app::Milliseconds time, float delta)
 	{
 		// Trigger the fixed update event for this service.
-		this->event<OnServiceFixedUpdate>(this, delta);
+		this->event<OnServiceFixedUpdate>(this, time, delta);
 	}
 
 	void Service::handle_deferred_operations()
@@ -301,6 +400,199 @@ namespace engine
 	void Service::render(app::Graphics& gfx)
 	{
 		this->event<OnServiceRender>(this, &gfx);
+	}
+
+	Entity Service::get_parent(Entity entity) const
+	{
+		if (const auto relationship_comp = registry.try_get<RelationshipComponent>(entity))
+		{
+			return relationship_comp->get_parent();
+		}
+
+		return null;
+	}
+
+	Entity Service::set_parent(Entity entity, Entity parent)
+	{
+		auto prev_parent = RelationshipComponent::set_parent(registry, entity, parent);
+
+		// TODO: Look into automating this event.
+		event<OnParentChanged>(entity, prev_parent, parent);
+
+		return prev_parent;
+	}
+
+	bool Service::remove_child(Entity entity, Entity child)
+	{
+		if (auto child_relationship_comp = registry.try_get<RelationshipComponent>(child))
+		{
+			if (child_relationship_comp->get_parent() == entity)
+			{
+				remove_parent(child);
+
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	bool Service::remove_parent(Entity entity)
+	{
+		if (root != null)
+		{
+			set_parent(entity, root);
+
+			return true;
+		}
+
+		if (auto parent = get_parent(entity); parent != null)
+		{
+			if (RelationshipComponent* parent_relationship_comp = registry.try_get<RelationshipComponent>(parent))
+			{
+				parent_relationship_comp->remove_child(registry, entity, parent);
+
+				// TODO: Look into automating this event.
+				event<OnParentChanged>(entity, parent, null);
+			}
+		}
+
+		return false;
+	}
+
+	std::string Service::label(Entity entity) const
+	{
+		if (entity == null)
+		{
+			return "null";
+		}
+
+		const auto entity_raw = static_cast<EntityIDType>(entity);
+
+		if (const auto name_comp = registry.try_get<NameComponent>(entity))
+		{
+			return util::format("\"{}\" ({})", name_comp->get_name(), entity_raw);
+		}
+
+		return std::to_string(entity_raw);
+	}
+
+	std::string_view Service::get_name(Entity entity) const
+	{
+		if (const auto name_comp = registry.try_get<NameComponent>(entity))
+		{
+			return { name_comp->get_name() };
+		}
+
+		return {};
+	}
+
+	bool Service::has_name(Entity entity) const
+	{
+		return (!get_name(entity).empty());
+	}
+
+	bool Service::set_name(Entity entity, std::string_view name)
+	{
+		if (!name.empty())
+		{
+			registry.emplace_or_replace<NameComponent>(entity, std::string { name });
+
+			return true;
+		}
+
+		return false;
+	}
+
+	Entity Service::get_by_name(std::string_view name) const
+	{
+		auto view = registry.view<NameComponent>();
+
+		for (auto it = view.begin(); it != view.end(); it++)
+		{
+			Entity entity = *it;
+
+			const auto& name_comp = registry.get<NameComponent>(entity);
+
+			if (name_comp.get_name() == name)
+			{
+				return entity;
+			}
+		}
+
+		return null;
+	}
+
+	Entity Service::get_child_by_name(Entity entity, std::string_view child_name, bool recursive) const
+	{
+		if (child_name.empty())
+		{
+			return null;
+		}
+
+		const auto* relationship = registry.try_get<RelationshipComponent>(entity);
+
+		if (!relationship)
+		{
+			return null;
+		}
+
+		Entity out = null;
+
+		relationship->enumerate_child_entities
+		(
+			registry,
+
+			[&](Entity child, Entity next_child) -> bool
+			{
+				auto* name_comp = registry.try_get<NameComponent>(child);
+
+				if (name_comp)
+				{
+					//print("Comparing {} with {}", name_comp->name, child_name);
+
+					if (name_comp->get_name() == child_name)
+					{
+						out = child;
+
+						return false;
+					}
+				}
+			
+				if (recursive)
+				{
+					if (auto r_out = get_child_by_name(child, child_name, true); r_out != null)
+					{
+						out = r_out;
+
+						return false;
+					}
+				}
+
+				return true;
+			}
+		);
+
+		return out;
+	}
+
+	Entity Service::get_player(PlayerIndex player) const
+	{
+		auto view = registry.view<PlayerComponent>();
+
+		for (auto it = view.begin(); it != view.end(); it++)
+		{
+			Entity entity = *it;
+
+			const auto& player_state = registry.get<PlayerComponent>(entity);
+
+			if (player_state.player_index == player)
+			{
+				return entity;
+			}
+		}
+
+		return null;
 	}
 
 	EventHandler& Service::get_active_event_handler()

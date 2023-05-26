@@ -29,16 +29,35 @@ namespace app
 		canvas = std::make_unique<graphics::Canvas>(context);
 	}
 
-	void GraphicsApplication::begin_render()
+	void GraphicsApplication::begin_render(Milliseconds time)
 	{
 		graphics.canvas->begin();
 	}
 
-	void GraphicsApplication::end_render()
+	void GraphicsApplication::end_render(Milliseconds time)
 	{
 		graphics.canvas->end();
 
 		graphics.canvas->flip(*window);
+
+		update_framerate(time);
+	}
+
+	FrameCounter GraphicsApplication::update_framerate(Milliseconds time)
+	{
+		if (const auto framerate_time_elapsed = (time - framerate_timer); framerate_time_elapsed >= 1000) // ms
+		{
+			const auto framerate = (get_render_counter() - _prev_render_counter);
+
+			_prev_render_counter = get_render_counter();
+
+			graphics.framerate = framerate;
+
+			//framerate_timer += 1000;
+			framerate_timer = time;
+		}
+
+		return graphics.framerate;
 	}
 
 	bool GraphicsApplication::process_event(const SDL_Event& e)
@@ -47,16 +66,14 @@ namespace app
 		{
 			const auto& mouse = input.get_mouse();
 			
-			if (mouse.locked())
+			if (!mouse.locked())
 			{
-				return Application::process_event(e);
-			}
-
-			if (ImGui_ImplSDL2_ProcessEvent(&e))
-			{
-				if (e.type != SDL_WINDOWEVENT)
+				if (ImGui_ImplSDL2_ProcessEvent(&e))
 				{
-					return true;
+					if (e.type != SDL_WINDOWEVENT)
+					{
+						return true;
+					}
 				}
 			}
 		}

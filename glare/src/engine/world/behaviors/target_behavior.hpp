@@ -28,8 +28,8 @@ namespace engine
 
 		static void on_update(World& world, float delta);
 
-		math::Quaternion look_at(Transform& transform, Transform& target_transform, float delta);
-		math::RotationMatrix look_at_immediate(Transform& transform, Transform& target_transform);
+		Transform& look_at(Transform& transform, Transform& target_transform, float delta);
+		Transform& look_at_immediate(Transform& transform, Transform& target_transform);
 
 		float look_at_yaw(Transform& transform, Transform& target_transform, float delta);
 		float look_at_yaw_immediate(Transform& transform, Transform& target_transform);

@@ -43,6 +43,10 @@ namespace engine
 		// can be encoded into the expression.
 		bool allow_member_references          : 1 = true; // false;
 
+		// Controls whether static members found in 'global namespace' types
+		// may be referenced without explicitly specifying the type.
+		bool allow_global_member_references : 1 = true;
+
 		// Controls whether entity indirection statements
 		// (targets) can be encoded into the expression.
 		bool allow_entity_indirection         : 1 = false;
@@ -64,6 +68,11 @@ namespace engine
 		// Controls whether an expression can encode a deferred function or method call operation.
 		bool allow_function_call_semantics    : 1 = true;
 
+		// Controls whether usage of 'properties' can be converted to calls to getter and setter methods of a similar name.
+		// e.g. `position` -> `set_position` & `get_position`
+		// (Allows for function-call semantics and context to be passed to a seemingly regular member)
+		bool allow_property_translation       : 1 = true;
+
 		// Controls whether an expression can encode a subscript operation.
 		bool allow_subscript_semantics        : 1 = true;
 
@@ -83,6 +92,10 @@ namespace engine
 		// Controls whether opaque function references can be encoded.
 		// (i.e. when the type is not known ahead-of-time, but the function is)
 		bool allow_opaque_function_references : 1 = true;
+
+		// Controls whether static functions found in 'global namespace' types
+		// may be referenced without explicitly specifying the type.
+		bool allow_global_function_references : 1 = true;
 
 		// Controls whether value operations (Use of operators; `+`, `-`, etc.)
 		// can be performed by an expression during its evaluation step.

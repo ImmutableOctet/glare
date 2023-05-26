@@ -10,6 +10,7 @@
 #include <engine/meta/meta_function_call.hpp>
 #include <engine/meta/meta_value_operation.hpp>
 #include <engine/meta/indirect_meta_variable_target.hpp>
+//#include <engine/meta/meta_property.hpp>
 
 namespace engine
 {
@@ -23,6 +24,7 @@ namespace engine
 		MetaValueOperation,
 		IndirectMetaVariableTarget,
 
+		//MetaProperty,
 		//EntityTarget,
 
 		// Added due to most implementations being >16 bytes.

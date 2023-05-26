@@ -26,12 +26,15 @@ namespace app::input
 	struct OnGamepadButtonDown;
 	struct OnGamepadButtonUp;
 	struct OnGamepadAnalogInput;
+
+	struct OnMouseMove;
+	struct OnMousePosition;
 }
 
 namespace engine
 {
 	// Events:
-	struct OnStageLoaded;
+	struct OnSceneLoaded;
 	struct OnEntityCreated;
 	struct OnParentChanged;
 	struct OnGravityChanged;
@@ -53,6 +56,7 @@ namespace engine
 	struct OnThreadTerminated;
 	struct OnThreadPaused;
 	struct OnThreadResumed;
+	struct OnThreadVariableUpdate;
 
 	// Commands:
 	struct PrintCommand;
@@ -72,7 +76,7 @@ namespace engine
 
 			std::string label(Entity entity);
 
-			void operator()(const OnStageLoaded& data);
+			void operator()(const OnSceneLoaded& data);
 			void operator()(const OnEntityCreated& data);
 			void operator()(const OnParentChanged& data);
 			void operator()(const OnGravityChanged& data);
@@ -92,6 +96,10 @@ namespace engine
 			void operator()(const app::input::OnGamepadButtonUp& data);
 			void operator()(const app::input::OnGamepadAnalogInput& data);
 
+			// Mouse debugging:
+			void operator()(const app::input::OnMouseMove& data);
+			void operator()(const app::input::OnMousePosition& data);
+
 			// High-level input system:
 			void operator()(const OnButtonDown& data);
 			void operator()(const OnButtonReleased& data);
@@ -104,6 +112,7 @@ namespace engine
 			void operator()(const OnThreadTerminated& thread_details);
 			void operator()(const OnThreadPaused& thread_details);
 			void operator()(const OnThreadResumed& thread_details);
+			void operator()(const OnThreadVariableUpdate& thread_details);
 
 			// Commands:
 			void operator()(const PrintCommand& data);

@@ -8,6 +8,13 @@
 #include <vector>
 #include <tuple>
 
+TEST_CASE("util::find_unescaped", "[util:string]")
+{
+	REQUIRE(util::find_unescaped("A\\B\\BB", "B") == 5);
+	REQUIRE(util::find_unescaped("AB", "B") == 1);
+	REQUIRE(util::find_unescaped("ABCDB", "B", 2) == 4);
+}
+
 TEST_CASE("util::is_quoted", "[util:string]")
 {
 	REQUIRE(!util::is_quoted(std::string_view("\"Test\" == \"Test\"")));
@@ -235,4 +242,6 @@ TEST_CASE("util::find_singular", "[util:parse]")
 	REQUIRE(util::find_singular("::: ::: :", ":") == 8);
 	REQUIRE(util::find_singular("some::key::name unrelated_expression", ":") == std::string_view::npos);
 	REQUIRE(util::find_singular("some::key:::name:type", ":") == 16);
+
+	REQUIRE(util::find_singular("cursor_destination:Type = (CameraSystem::get_world_space_position_from_screen_coordinates(self.Transform2DComponent::position).normalize()):Vector", ":") == 18);
 }

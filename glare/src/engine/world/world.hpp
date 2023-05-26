@@ -5,11 +5,11 @@
 #include <engine/action.hpp>
 #include <engine/service.hpp>
 #include <engine/transform.hpp>
+#include <engine/delta_time.hpp>
 
 #include "world_properties.hpp"
 
 //#include <graphics/types.hpp> // Not actually needed. (`ColorRGB` is actually located in math)
-#include <app/delta_time.hpp>
 
 #include <math/types.hpp>
 #include <util/json.hpp>
@@ -42,42 +42,25 @@ namespace engine
 	class ResourceManager;
 	class Config;
 
-	struct CollisionComponent;
+	class DeltaSystem;
 
 	struct LightComponent;
 	struct DirectionalLightComponent;
 	struct PointLightComponent;
 	struct SpotLightComponent;
+	struct CollisionComponent;
 
 	struct OnTransformChanged;
-	struct OnEntityDestroyed;
 
 	class World : public Service
 	{
 		public:
-			using UpdateRate = app::DeltaTime::Rate;
-		protected:
-			// Ensure the relevant light (sub)-component is associated to `entity`.
-			// The return value is an opaque pointer to the component associated with `type`.
-			static void* ensure_light_sub_component(Registry& registry, Entity entity, LightType type);
-
-			// Removes all light components except for the component-type associated with `except_type` (if specified).
-			static std::size_t remove_light_sub_components(Registry& registry, Entity entity, std::optional<LightType> except_type=std::nullopt);
-
-			Config& config;
-			ResourceManager& resource_manager;
+			using UpdateRate = DeltaTime::Rate;
 			
-			app::DeltaTime delta_time;
-			app::DeltaTime fixed_delta_time;
-
-			// Currently-active/last-bound camera.
-			Entity camera = null;
-
-			WorldProperties properties;
-		public:
 			World
 			(
 				Registry& registry,
+				SystemManagerInterface& systems,
 				Config& config,
 				ResourceManager& resource_manager,
 				UpdateRate update_rate
@@ -87,6 +70,7 @@ namespace engine
 			World
 			(
 				Registry& registry,
+				SystemManagerInterface& systems,
 				Config& config,
 				ResourceManager& resource_manager,
 				UpdateRate update_rate,
@@ -121,14 +105,6 @@ namespace engine
 			);
 
 			void update(app::Milliseconds time);
-			void fixed_update(app::Milliseconds time);
-
-			void handle_transform_events(float delta);
-
-			//void on_child_removed(const Event_ChildRemoved& e);
-
-			// TODO: Look into reworking/replacing this. (Maybe a dedicated `CameraSystem`...?)
-			void update_camera_parameters(int width, int height);
 
 			// If `entity` has a `ForwardingComponent` attached, this returns the `root_entity` from that component.
 			// If no `ForwardingComponent` is found, `entity` is returned back to the caller.
@@ -201,48 +177,8 @@ namespace engine
 
 			math::Vector get_up_vector(math::Vector up={ 0.0f, 1.0f, 0.0f }) const;
 
-			Entity get_parent(Entity entity) const;
-
-			void set_parent
-			(
-				Entity entity, Entity parent,
-				bool defer_action=false,
-				
-				bool _null_as_root=true, bool _is_deferred=false
-			);
-
-			inline void remove_parent
-			(
-				Entity entity, Entity parent,
-				bool defer_action = false,
-
-				bool _null_as_root = true, bool _is_deferred = false
-			)
-			{
-				set_parent(entity, root, defer_action, _null_as_root, _is_deferred);
-			}
-
-			// Returns a label for the entity specified.
-			// If no `NameComponent` is associated with the entity, the entity number will be used.
-			std::string label(Entity entity);
-
-			// Returns the name associated to the `entity` specified.
-			// If no `NameComponent` is associated with the entity, an empty string will be returned.
-			std::string get_name(Entity entity); // const;
-
-			void set_name(Entity entity, const std::string& name);
-
-			bool has_name(Entity entity); // const;
-
-			// Retrieves the first entity found with the `name` specified.
-			// NOTE: Multiple entities can share the same name.
-			Entity get_by_name(std::string_view name); // const;
-
 			// Retrieves the first bone child-entity found with the name specified.
 			Entity get_bone_by_name(Entity entity, std::string_view name, bool recursive=true);
-
-			// Retrieves the first child-entity found with the name specified, regardless of other attributes/components. (includes both bone & non-bone children)
-			Entity get_child_by_name(Entity entity, std::string_view child_name, bool recursive=true);
 
 			ResourceManager& get_resource_manager() override;
 			virtual const ResourceManager& get_resource_manager() const override;
@@ -252,14 +188,17 @@ namespace engine
 			// Retrieves the root scene-node; parent to all world-scoped entities.
 			inline Entity get_root() const { return root; }
 
-			// The actively bound camera. (Does not always represent the rendering camera)
-			inline Entity get_camera() const { return camera; }
+			const DeltaSystem* get_delta_system() const;
+			DeltaSystem* get_delta_system();
+
+			const DeltaTime& get_delta_time() const;
+
+			float get_delta() const;
+
+			// The actively bound camera.
+			// NOTE: Does not always represent the rendering camera.
+			Entity get_camera() const;
 			void set_camera(Entity camera);
-
-			inline const app::DeltaTime& get_delta_time() const { return delta_time; }
-			inline const app::DeltaTime& get_fixed_delta_time() const { return fixed_delta_time; }
-
-			Entity get_player(PlayerIndex player=engine::PRIMARY_LOCAL_PLAYER) const;
 
 			math::Vector get_gravity() const;
 			void set_gravity(const math::Vector& gravity);
@@ -271,11 +210,9 @@ namespace engine
 			void set_properties(const WorldProperties& properties);
 			const WorldProperties& get_properties() const { return properties; }
 
-			inline float delta() const { return delta_time; }
 			inline operator Entity() const { return get_root(); }
 
-			void on_transform_change(const OnTransformChanged& tform_change);
-			void on_entity_destroyed(const OnEntityDestroyed& destruct);
+			void on_transform_changed(const OnTransformChanged& tform_change);
 
 			// Same as `defer`, but implicitly forwards `this` prior to any arguments following the target function; useful for deferring member functions.
 			template <typename fn_t, typename... arguments>
@@ -283,7 +220,22 @@ namespace engine
 			{
 				defer(std::forward<fn_t>(f), this, std::forward<arguments>(args)...);
 			}
+
 		protected:
+			// Ensure the relevant light (sub)-component is associated to `entity`.
+			// The return value is an opaque pointer to the component associated with `type`.
+			static void* ensure_light_sub_component(Registry& registry, Entity entity, LightType type);
+
+			// Removes all light components except for the component-type associated with `except_type` (if specified).
+			static std::size_t remove_light_sub_components(Registry& registry, Entity entity, std::optional<LightType> except_type=std::nullopt);
+
+			Config& config;
+			ResourceManager& resource_manager;
+
+			WorldProperties properties;
+
+			void handle_transform_events(float delta);
+
 			// Enforces explicit light-type rules, as well as handling shadow sub-components.
 			// (i.e. only one sub-component at a time unless `light_comp.type` == `LightType::Any`)
 			// 
@@ -321,11 +273,12 @@ namespace engine
 			void on_spot_light_destroyed(Registry& registry, Entity entity);
 
 		private:
+			// Cache for `DeltaSystem` instance. (NOTE: Unsafe)
+			mutable DeltaSystem* _delta_system = {};
+
 			CollisionComponent* get_collision_component(Entity entity);
 
 			bool _transform_and_reset_collision_store_active_state(CollisionComponent* collision);
 			void _transform_and_reset_collision_revert_active_state(CollisionComponent* collision, const math::Matrix& tform_matrix, bool collision_active);
 	};
-
-	using Scene = World;
 }

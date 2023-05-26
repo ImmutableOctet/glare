@@ -109,6 +109,18 @@ namespace engine
 			// TODO: Optimize via map lookup, etc.
 			const EntityThreadDescription& get_thread(EntityThreadIndex thread_index) const;
 
+			const EntityThreadDescription* get_thread_by_id(EntityThreadID thread_id) const;
+
+			const EntityThreadDescription* get_thread_by_id(std::optional<EntityThreadID> thread_id) const
+			{
+				if (!thread_id)
+				{
+					return {};
+				}
+
+				return get_thread_by_id(*thread_id);
+			}
+
 			inline EntityThreadIndex get_next_thread_index() const
 			{
 				return shared_storage.get_next_index<EntityThreadDescription>();
@@ -124,6 +136,21 @@ namespace engine
 				}
 
 				return get_thread_index(*thread_id);
+			}
+
+			inline bool has_thread(EntityThreadID thread_id) const
+			{
+				return get_thread_index(thread_id).has_value();
+			}
+
+			inline bool has_thread(std::optional<EntityThreadID> thread_id) const
+			{
+				if (!thread_id.has_value())
+				{
+					return false;
+				}
+
+				return has_thread(*thread_id);
 			}
 
 			std::optional<EntityThreadID> get_thread_id(EntityThreadIndex thread_index) const;
@@ -161,6 +188,16 @@ namespace engine
 			inline const EntityState* get_state_by_index(EntityStateIndex state_index) const
 			{
 				return states.get_state_by_index(*this, state_index);
+			}
+
+			inline std::optional<EntityStateID> get_state_name(EntityStateIndex state_index) const
+			{
+				if (const auto state = get_state_by_index(state_index))
+				{
+					return state->name;
+				}
+
+				return std::nullopt;
 			}
 
 			bool set_state(Registry& registry, Entity entity, std::optional<EntityStateIndex> previous_state, std::string_view state_name) const;

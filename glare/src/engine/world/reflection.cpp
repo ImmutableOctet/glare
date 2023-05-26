@@ -6,7 +6,6 @@
 #include "world_properties.hpp"
 #include "graphics_entity.hpp"
 
-#include "components/camera_component.hpp"
 #include "components/light_component.hpp"
 #include "components/directional_light_component.hpp"
 #include "components/directional_light_shadow_component.hpp"
@@ -64,38 +63,6 @@ namespace engine
 				//.ctor<...>()
 			;
 		}
-	}
-
-	template <>
-	void reflect<CameraComponent>()
-	{
-		auto camera_component = engine_meta_type<CameraComponent>()
-			//.data<&CameraComponent::fov>("fov"_hs)
-			.data<&CameraComponent::set_vertical_fov, &CameraComponent::get_vertical_fov>("fov"_hs)
-
-			.data<&CameraComponent::near_plane>("near_plane"_hs)
-			.data<&CameraComponent::far_plane>("far_plane"_hs)
-			.data<&CameraComponent::aspect_ratio>("aspect_ratio"_hs)
-			.data<&CameraComponent::projection_mode>("projection_mode"_hs)
-
-			.data<&CameraComponent::set_free_rotation, &CameraComponent::get_free_rotation>("free_rotation"_hs)
-			.data<&CameraComponent::set_dynamic_aspect_ratio, &CameraComponent::get_dynamic_aspect_ratio>("dynamic_aspect_ratio"_hs)
-
-			//.data<&CameraComponent::set_horizontal_fov, &CameraComponent::get_horizontal_fov>("h_fov"_hs)
-			//.data<&CameraComponent::set_vertical_fov, &CameraComponent::get_vertical_fov>("v_fov"_hs)
-
-			.ctor
-			<
-				decltype(CameraComponent::fov),
-				
-				decltype(CameraComponent::near_plane),
-				decltype(CameraComponent::far_plane),
-				decltype(CameraComponent::aspect_ratio),
-				decltype(CameraComponent::projection_mode),
-				
-				bool, bool
-			>()
-		;
 	}
 
 	template <>
@@ -234,7 +201,6 @@ namespace engine
 		reflect<LightProperties>();
 
 		// Components and behaviors:
-		reflect<CameraComponent>();
 
 		// NOTE: Handles several lighting-related types.
 		reflect<LightComponent>();
@@ -249,8 +215,10 @@ namespace engine
 
 		// Systems:
 		reflect<AnimationSystem>();
+		reflect<CameraSystem>();
 		reflect<PhysicsSystem>();
 		reflect<MotionSystem>();
+		reflect<DeltaSystem>();
 
 		// ...
 

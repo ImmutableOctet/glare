@@ -14,6 +14,7 @@
 #include <engine/meta/hash.hpp>
 #include <engine/meta/serial.hpp>
 #include <engine/meta/data_member.hpp>
+#include <engine/meta/enum.hpp>
 
 #include <engine/meta/meta_type_resolution_context.hpp>
 #include <engine/meta/meta_type_descriptor.hpp>
@@ -23,6 +24,7 @@
 #include <engine/meta/indirect_meta_variable_target.hpp>
 #include <engine/meta/meta_variable_context.hpp>
 #include <engine/meta/meta_variable_target.hpp>
+#include <engine/meta/meta_property.hpp>
 
 #include <tuple>
 
@@ -155,12 +157,14 @@ namespace engine
 		ThreadDescriptor thread,
 		const EntityFactoryContext* opt_factory_context,
 		const std::filesystem::path* opt_base_path,
-		const MetaParsingContext& parsing_context
+		const MetaParsingContext& parsing_context,
+		EntityThreadCadence cadence
 	) :
 		descriptor(descriptor),
 		opt_factory_context(opt_factory_context),
 		opt_base_path(opt_base_path),
 		parsing_context(parsing_context),
+		cadence(cadence),
 		thread(thread)
 	{}
 
@@ -172,6 +176,27 @@ namespace engine
 		EntityThreadBuilderContext(parent_context)
 	{
 		this->parsing_context = parsing_context;
+	}
+
+	EntityThreadBuilderContext::EntityThreadBuilderContext
+	(
+		const EntityThreadBuilderContext& parent_context,
+		EntityThreadCadence cadence
+	) :
+		EntityThreadBuilderContext(parent_context)
+	{
+		this->cadence = cadence;
+	}
+
+	EntityThreadBuilderContext::EntityThreadBuilderContext
+	(
+		const EntityThreadBuilderContext& parent_context,
+		const MetaParsingContext& parsing_context,
+		EntityThreadCadence cadence
+	) :
+		EntityThreadBuilderContext(parent_context, parsing_context)
+	{
+		this->cadence = cadence;
 	}
 
 	EntityThreadIndex EntityThreadBuilderContext::thread_index() const
@@ -239,7 +264,8 @@ namespace engine
 		std::string_view opt_thread_name,
 		const EntityFactoryContext* opt_factory_context,
 		const std::filesystem::path* opt_base_path,
-		const MetaParsingContext& parsing_context
+		const MetaParsingContext& parsing_context,
+		EntityThreadCadence cadence
 	)
 		: EntityThreadBuilder
 		(
@@ -249,7 +275,8 @@ namespace engine
 				thread,
 				opt_factory_context,
 				opt_base_path,
-				parsing_context
+				parsing_context,
+				cadence
 			),
 
 			opt_thread_name
@@ -262,7 +289,8 @@ namespace engine
 		std::string_view opt_thread_name,
 		const EntityFactoryContext* opt_factory_context,
 		const std::filesystem::path* opt_base_path,
-		const MetaParsingContext& parsing_context
+		const MetaParsingContext& parsing_context,
+		EntityThreadCadence cadence
 	)
 		: EntityThreadBuilder
 		(
@@ -271,13 +299,14 @@ namespace engine
 			ThreadDescriptor
 			(
 				descriptor,
-				descriptor.shared_storage.allocate<EntityThreadDescription>()
+				descriptor.shared_storage.allocate<EntityThreadDescription>(cadence)
 			),
 
 			opt_thread_name,
 			opt_factory_context,
 			opt_base_path,
-			parsing_context
+			parsing_context,
+			cadence
 		)
 	{}
 
@@ -496,7 +525,37 @@ namespace engine
 		std::string_view operator_symbol
 	)
 	{
+		const auto target = (entity_ref_expr.empty())
+			? EntityTarget { EntityTarget::SelfTarget {} }
+			: EntityTarget::from_string(entity_ref_expr)
+		;
+
+		return process_update_instruction_from_values
+		(
+			type_name,
+			member_name,
+			assignment_value_raw,
+			operator_symbol,
+			target
+		);
+	}
+
+	bool EntityThreadBuilder::process_update_instruction_from_values
+	(
+		std::string_view type_name,
+		std::string_view member_name,
+		std::string_view assignment_value_raw,
+		std::string_view operator_symbol,
+
+		const EntityTarget& target
+	)
+	{
 		using namespace engine::literals;
+
+		if (target.is_null_target())
+		{
+			return {};
+		}
 
 		if (type_name.empty())
 		{
@@ -527,11 +586,6 @@ namespace engine
 		{
 			return {};
 		}
-
-		auto target = (entity_ref_expr.empty())
-			? EntityTarget { EntityTarget::SelfTarget {} }
-			: EntityTarget::from_string(entity_ref_expr)
-		;
 
 		// Retrieve the current update instruction, or
 		// initialize a new one if one doesn't exist yet.
@@ -714,7 +768,13 @@ namespace engine
 		return process_update_instruction_from_values(type_name, member_name, assignment_value_raw, entity_ref_expr, operator_symbol);
 	};
 
-	EntityInstructionCount EntityThreadBuilder::process_meta_expression_instruction(std::string_view instruction)
+	EntityInstructionCount EntityThreadBuilder::process_meta_expression_instruction
+	(
+		std::string_view instruction,
+		
+		bool allow_first_symbol_entity_fallback,
+		bool allow_leading_remote_variable
+	)
 	{
 		using namespace engine::literals;
 		using namespace engine::instructions;
@@ -874,11 +934,17 @@ namespace engine
 			true, // allow_numeric_literals
 			true, // allow_boolean_literals
 			
-			// Disabled for initial value to allow for fallthrough to thread operations.
-			// (Similar to reasoning for `allow_string_fallback`)
-			false, // allow_entity_fallback
+			// Defaults to being disabled on the initial value to allow for fallthrough to thread operations.
+			// (Similar to reasoning for `allow_string_fallback` always being false)
+			allow_first_symbol_entity_fallback, // allow_entity_fallback
+
 			false, // allow_component_fallback
-			false  // allow_standalone_opaque_function
+			false, // allow_standalone_opaque_function
+
+			// NOTE: Generally speaking, this value should be the inverse of `allow_first_symbol_entity_fallback`
+			// to ensure entity names are resolved correctly. (see default argument)
+			// (This is because remote variables are detected earlier in the process and would take priority otherwise)
+			allow_leading_remote_variable // (!allow_first_symbol_entity_fallback) // allow_remote_variables
 		);
 
 		if (!deferred_operation)
@@ -918,15 +984,14 @@ namespace engine
 		{
 			if (const auto* as_operation = remote_instance.try_cast<MetaValueOperation>())
 			{
-				if (!as_operation->contains_function_call(storage, true))
+				// TODO: Look into expanding this check to only include function calls without non-`MetaValueOperator::Get` operators.
+				if (as_operation->contains_function_call(storage, true))
 				{
-					// TODO: Add deallocation routine.
-
-					return 0;
+					return instruct<FunctionCall>(std::move(*as_indirect));
 				}
 			}
 
-			return instruct<FunctionCall>(std::move(*as_indirect));
+			return instruct<AdvancedMetaExpression>(std::move(*as_indirect));
 		}
 	}
 
@@ -1416,7 +1481,13 @@ namespace engine
 						const auto full_assignment_expr_length = static_cast<std::size_t>(full_assignment_expr_end - full_assignment_expr_begin);
 						const auto full_assignment_expr = std::string_view { full_assignment_expr_begin, full_assignment_expr_length };
 
-						process_variable_assignment(variable_description->resolved_name, variable_description->scope, full_assignment_expr, variable_type, true);
+						process_variable_assignment
+						(
+							variable_description->resolved_name, variable_description->scope,
+							full_assignment_expr,
+							variable_type,
+							(variable_description->scope != MetaVariableScope::Local) // (variable_description->scope == MetaVariableScope::Global) // false
+						);
 
 						// Only one instruction processed, but several produced.
 						return 1;
@@ -1539,6 +1610,21 @@ namespace engine
 			case "begin_multi"_hs:
 				// See also: `multi` command.
 				return generate_multi_block(content_source, content_index);
+
+			case "fixed"_hs:
+			case "begin_fixed"_hs:
+				return generate_cadence_block(content_source, content_index, EntityThreadCadence::Fixed);
+
+			case "realtime"_hs:
+			case "begin_realtime"_hs:
+				return generate_cadence_block(content_source, content_index, EntityThreadCadence::Realtime);
+
+			//case "on_update"_hs:
+			case "update_driven"_hs:
+			case "begin_update_driven"_hs:
+			case "frame_driven"_hs:
+			case "begin_frame_driven"_hs:
+				return generate_cadence_block(content_source, content_index, EntityThreadCadence::Update);
 
 			//case "forever"_hs:
 			case "repeat"_hs:
@@ -1680,6 +1766,8 @@ namespace engine
 		return EntityThreadBuilderContext
 		{
 			scope_context(),
+
+			MetaParsingContext
 			{
 				get_type_context(),
 				&scope_local_variables
@@ -1727,7 +1815,12 @@ namespace engine
 		);
 	}
 
-	EntityThreadBuilderContext EntityThreadBuilder::sub_thread_context(ThreadDescriptor target_sub_thread, std::optional<MetaParsingContext> opt_parsing_context) const
+	EntityThreadBuilderContext EntityThreadBuilder::sub_thread_context
+	(
+		ThreadDescriptor target_sub_thread,
+		std::optional<MetaParsingContext> opt_parsing_context,
+		std::optional<EntityThreadCadence> opt_cadence
+	) const
 	{
 		return EntityThreadBuilderContext
 		{
@@ -1738,11 +1831,19 @@ namespace engine
 
 			(opt_parsing_context)
 				? *opt_parsing_context
-				: parsing_context
+				: parsing_context,
+
+			(opt_cadence)
+				? *opt_cadence
+				: cadence
 		};
 	}
 
-	EntityThreadBuilderContext EntityThreadBuilder::sub_thread_context(std::optional<MetaParsingContext> opt_parsing_context) const
+	EntityThreadBuilderContext EntityThreadBuilder::sub_thread_context
+	(
+		std::optional<MetaParsingContext> opt_parsing_context,
+		std::optional<EntityThreadCadence> opt_cadence
+	) const
 	{
 		return sub_thread_context
 		(
@@ -1750,18 +1851,25 @@ namespace engine
 			(
 				descriptor,
 
-				descriptor.shared_storage.allocate<EntityThreadDescription>()
+				descriptor.shared_storage.allocate<EntityThreadDescription>(this->cadence)
 			),
 
-			opt_parsing_context
+			opt_parsing_context,
+			opt_cadence
 		);
 	}
 
-	EntityThreadBuilder EntityThreadBuilder::sub_thread(std::string_view thread_name, std::optional<MetaParsingContext> opt_parsing_context)
+	EntityThreadBuilder EntityThreadBuilder::sub_thread
+	(
+		std::string_view thread_name,
+		
+		std::optional<MetaParsingContext> opt_parsing_context,
+		std::optional<EntityThreadCadence> opt_cadence
+	)
 	{
 		return EntityThreadBuilder
 		{
-			sub_thread_context(opt_parsing_context),
+			sub_thread_context(opt_parsing_context, opt_cadence),
 			thread_name
 		};
 	}
@@ -1833,6 +1941,8 @@ namespace engine
 
 				[this, &content_source, else_index, &condition_ref, &if_builder]()
 				{
+					// TODO: Look into whether it still makes sense to re-use `if_builder` here,
+					// since the variable context would also be shared.
 					return if_builder.process(content_source, else_index);
 				},
 				
@@ -2039,7 +2149,7 @@ namespace engine
 			}
 		);
 
-		imported_thread.from_file(path);
+		imported_thread.process_from_file(path);
 
 		if (launch_immediately)
 		{
@@ -2076,6 +2186,86 @@ namespace engine
 		);
 	}
 
+	EntityInstructionCount EntityThreadBuilder::generate_cadence_block
+	(
+		const ContentSource& content_source,
+		EntityInstructionCount content_index,
+		EntityThreadCadence cadence
+	)
+	{
+		using namespace engine::instructions;
+
+		auto& cadence_control_block = emit<CadenceControlBlock>
+		(
+			// Intended cadence for this control-block.
+			cadence,
+
+			ControlBlock { 0 }
+		);
+
+		return generate_cadence_block
+		(
+			content_source, content_index,
+			cadence,
+			cadence_control_block.included_instructions,
+			true
+		);
+	}
+
+	EntityInstructionCount EntityThreadBuilder::generate_cadence_block
+	(
+		const ContentSource& content_source,
+		EntityInstructionCount content_index,
+		EntityThreadCadence cadence,
+		instructions::ControlBlock& control_block_out,
+		bool generate_cadence_restore_instruction
+	)
+	{
+		using namespace engine::instructions;
+
+		const auto block_result = control_block
+		(
+			control_block_out,
+
+			[this, &content_source, content_index, cadence]()
+			{
+				auto scope_local_variables = scope_variable_store();
+				
+				auto cadence_builder = EntityThreadCadenceBuilder
+				{
+					EntityThreadBuilderContext
+					{
+						scope_context(),
+
+						// TODO: Look into whether we still want cadence to
+						// act as a separate variable/parsing context.
+						MetaParsingContext
+						{
+							get_type_context(),
+							&scope_local_variables
+						},
+						
+						cadence
+					}
+				};
+				
+				return cadence_builder.process(content_source, (content_index + 1));
+			}
+		);
+
+		if (generate_cadence_restore_instruction)
+		{
+			emit<CadenceControlBlock>
+			(
+				this->cadence,
+
+				ControlBlock { 0 }
+			);
+		}
+
+		return block_result;
+	}
+
 	std::optional<EntityInstructionCount> EntityThreadBuilder::process_instruction
 	(
 		const ContentSource& content_source,
@@ -2086,7 +2276,37 @@ namespace engine
 		using namespace engine::instructions;
 		using namespace engine::literals;
 
-		auto [instruction, thread_details] = parse_instruction_header(instruction_raw, &descriptor);
+		instruction_raw = util::trim(instruction_raw);
+
+		if (instruction_raw.empty() || util::is_whitespace(instruction_raw))
+		{
+			// Skip this line, it's whitespace.
+			return 1;
+		}
+
+		// TODO: Rework single-line comment implementation to account for strings.
+		// 
+		// Search for a single-line 'comment' symbol on this line:
+		const auto single_line_comment_symbol_index = util::find_unscoped(instruction_raw, "//");
+
+		switch (single_line_comment_symbol_index)
+		{
+			case 0:
+				// This line starts with a comment-symbol, skip processing this line.
+				return 1;
+			
+			case std::string_view::npos:
+				// No comment symbol found, continue normally.
+				break;
+
+			default:
+				// Truncate the current line at the comment-symbol we found.
+				instruction_raw = instruction_raw.substr(0, single_line_comment_symbol_index);
+
+				break;
+		}
+
+		auto [instruction, thread_details, thread_accessor_used] = parse_instruction_header(instruction_raw, &descriptor);
 
 		//instruction = instruction.substr(parse_offset);
 
@@ -2101,6 +2321,37 @@ namespace engine
 			instruction_parsed_length
 		] = util::parse_command(instruction);
 
+		auto error_impl = [content_index, &instruction_raw](bool continue_anyway, std::string_view message)
+		{
+			const auto line_number = (content_index + 1);
+
+			auto error_message_out = util::format("Error on Line #{}: {}", line_number, message);
+
+			print_error(error_message_out);
+			print_error("#{}: {}", line_number, instruction_raw);
+
+			if (continue_anyway)
+			{
+				print_warn("Continuing anyway...");
+			}
+			else
+			{
+				throw std::runtime_error(std::move(error_message_out));
+			}
+		};
+
+		auto error = [&error_impl](std::string_view message)
+		{
+			error_impl(false, message);
+		};
+
+		auto warn = [&error_impl](std::string_view message)
+		{
+			error_impl(true, message);
+		};
+
+		bool try_as_meta_expr = true;
+
 		if (instruction_name.empty())
 		{
 			auto
@@ -2111,99 +2362,234 @@ namespace engine
 				updated_offset
 			] = parse_qualified_assignment_or_comparison(instruction_raw);
 
+			bool meta_expr_allow_first_symbol_as_entity = false;
+			bool meta_expr_allow_leading_remote_variable = true;
+
+			bool try_as_directive                  = true;
+			bool try_as_remote_variable_assignment = true;
+
 			if (!type_or_variable_name.empty())
 			{
-				// Try to process the raw instruction as an inline-update.
-				const auto initial_update_instruction_result = process_update_instruction_from_values
-				(
-					type_or_variable_name,
-					member_name,
-					assignment_value_raw,
-					entity_ref_expr,
-					operator_symbol
-				);
+				const auto type_or_variable_id = hash(type_or_variable_name).value();
+				
+				const auto& possible_thread_id = type_or_variable_id;
 
-				if (initial_update_instruction_result)
+				if (descriptor.has_thread(possible_thread_id))
 				{
-					// Update the previous-instruction ID to reflect
-					// the inline-update operation we just processed.
-					this->prev_instruction_id = "update"_hs;
+					if ((!member_name.empty()) && (!assignment_value_raw.empty())) // && (!operator_symbol.empty())
+					{
+						meta_expr_allow_first_symbol_as_entity = false;
+						meta_expr_allow_leading_remote_variable = false;
 
-					// No further processing needed.
-					return 1;
+						try_as_directive = false;
+
+						// `try_as_meta_expr` is currently left enabled as a formality.
+						// (May change in the future)
+						//try_as_meta_expr = false;
+					}
 				}
-				// Workaround for informal entity syntax:
-				else if (entity_ref_expr.empty())
+				else if (!thread_accessor_used)
 				{
-					const auto opt_type_context = get_type_context();
-
-					const auto& member_as_type_name = member_name;
-
-					const auto member_as_type = (opt_type_context)
-						? opt_type_context->get_component_type(member_as_type_name)
-						: resolve(hash(member_as_type_name))
+					const auto entity_target = (entity_ref_expr.empty())
+						? EntityTarget { EntityTarget::SelfTarget {} }
+						: EntityTarget::from_string(entity_ref_expr)
 					;
 
-					if (member_as_type)
+					// Check for illegal `null` entity specification.
+					if (entity_target.is_null_target())
 					{
-						const auto& uncaptured_entity_ref = type_or_variable_name;
+						error("Illegal usage of `null`");
+					}
+					else
+					{
+						// Try to process the raw instruction as an inline-update.
+						const auto initial_update_instruction_result = process_update_instruction_from_values
+						(
+							type_or_variable_name,
+							member_name,
+							assignment_value_raw,
+							operator_symbol,
 
-						const auto corrected_instruction_subset_offset = static_cast<std::size_t>((member_as_type_name.data() - instruction_raw.data()));
-						const auto corrected_instruction_subset = instruction_raw.substr(corrected_instruction_subset_offset);
+							entity_target
+						);
 
-						auto
-						[
-							unlikely_nested_entity_ref_expr,
-							intended_type_name, actual_member_name,
-							intended_operator_symbol, intended_assignment_value_raw,
-							intended_updated_offset
-						] = parse_qualified_assignment_or_comparison(corrected_instruction_subset);
-
-						if (!intended_type_name.empty())
+						if (initial_update_instruction_result)
 						{
-							//assert(unlikely_nested_entity_ref_expr.empty());
+							// Update the previous-instruction ID to reflect
+							// the inline-update operation we just processed.
+							this->prev_instruction_id = "update"_hs;
 
-							const auto corrected_update_instruction_result = process_update_instruction_from_values
-							(
-								intended_type_name,
-								actual_member_name,
-								intended_assignment_value_raw,
-								
-								(unlikely_nested_entity_ref_expr.empty())
-									? uncaptured_entity_ref
-									: unlikely_nested_entity_ref_expr
-								,
+							// No further processing needed.
+							return 1;
+						}
+						
+						/*
+						if (!entity_ref_expr.empty())
+						{
+							meta_expr_allow_first_symbol_as_entity = true;
+						}
+						*/
 
-								intended_operator_symbol
-							);
+						// This clause is a workaround for informal entity syntax.
+						// i.e. this allows you to write `some_entity.some_property = some_value`,
+						// rather than `entity(some_entity).some_property = some_value`.
+						if (entity_ref_expr.empty()) // || entity_target.is_self_targeted()
+						{
+							bool leading_symbol_is_variable = false;
 
-							if (corrected_update_instruction_result)
+							// Make sure the symbol referenced isn't a variable:
+							if (auto opt_variable_context = parsing_context.get_variable_context())
 							{
-								// Update the previous-instruction ID to reflect
-								// the inline-update operation we just processed.
-								this->prev_instruction_id = "update"_hs;
+								if (opt_variable_context->retrieve_variable(type_or_variable_name))
+								{
+									leading_symbol_is_variable = true;
+								}
+							}
 
-								// No further processing needed.
-								return 1;
+							// NOTE: If this check was not present, any member-access from a variable could conflict with this logic.
+							// e.g. `my_var.member` could be seen as a entity-component access, rather than a variable member access.
+							if (!leading_symbol_is_variable)
+							{
+								auto member_as_type = MetaType {};
+								auto member_id = MetaSymbolID {};
+
+								const auto opt_type_context = get_type_context();
+
+								if (opt_type_context)
+								{
+									member_as_type = opt_type_context->get_component_type(member_name);
+								}
+								else
+								{
+									member_id = hash(member_name);
+									member_as_type = resolve(member_id);
+								}
+
+								if (member_as_type)
+								{
+									const auto& uncaptured_entity_ref = type_or_variable_name;
+
+									const auto corrected_instruction_subset_offset = static_cast<std::size_t>((member_name.data() - instruction_raw.data()));
+									const auto corrected_instruction_subset = instruction_raw.substr(corrected_instruction_subset_offset);
+
+									auto
+									[
+										unlikely_nested_entity_ref_expr,
+										intended_type_name, actual_member_name,
+										intended_operator_symbol, intended_assignment_value_raw,
+										intended_updated_offset
+									] = parse_qualified_assignment_or_comparison(corrected_instruction_subset);
+
+									if (!intended_type_name.empty() && !intended_operator_symbol.empty())
+									{
+										//assert(unlikely_nested_entity_ref_expr.empty());
+
+										const auto corrected_update_instruction_result = process_update_instruction_from_values
+										(
+											intended_type_name,
+											actual_member_name,
+											intended_assignment_value_raw,
+								
+											(unlikely_nested_entity_ref_expr.empty())
+												? uncaptured_entity_ref
+												: unlikely_nested_entity_ref_expr
+											,
+
+											intended_operator_symbol
+										);
+
+										if (corrected_update_instruction_result)
+										{
+											// Update the previous-instruction ID to reflect
+											// the inline-update operation we just processed.
+											this->prev_instruction_id = "update"_hs;
+
+											// No further processing needed.
+											return 1;
+										}
+									}
+								}
+								else
+								{
+									// TODO: Look into whether removing this step makes sense.
+									// (A similar validation step now happens in `meta_any_resolve_remote_variable_reference`)
+									auto
+									[
+										unlikely_nested_entity_ref_expr,
+										unqualified_entity_name, actual_member_name,
+										intended_operator_symbol, intended_assignment_value_raw,
+										intended_updated_offset
+									] = parse_qualified_assignment_or_comparison(instruction_raw);
+
+									if (!intended_operator_symbol.empty())
+									{
+										// Disable leading remote variables in favor of dedicated assignment logic.
+										meta_expr_allow_leading_remote_variable = false;
+
+										if (!unqualified_entity_name.empty() && !actual_member_name.empty())
+										{
+											if (const auto entity_type = resolve<Entity>())
+											{
+												if (!member_id)
+												{
+													member_id = hash(member_name);
+												}
+
+												if (entity_type.data(member_id))
+												{
+													// Found a valid data-member; treat this as an expression using an entity reference. (If applicable)
+													meta_expr_allow_first_symbol_as_entity = true;
+
+													// Don't bother processing this instruction as a directive or remote-variable assignment:
+													try_as_directive = false;
+													try_as_remote_variable_assignment = false;
+												}
+												else
+												{
+													const auto property_accessors = MetaProperty::generate_accessor_identifiers(member_name);
+													const auto& setter_id = std::get<1>(property_accessors);
+
+													if (auto setter_fn = entity_type.func(setter_id))
+													{
+														// Found a valid 'setter' function; treat this as a 'property' expression using an entity reference. (If applicable)
+														meta_expr_allow_first_symbol_as_entity = true;
+
+														// Don't bother processing this instruction as a directive or remote-variable assignment:
+														try_as_directive = false;
+														try_as_remote_variable_assignment = false;
+													}
+												}
+											}
+										}
+									}
+								}
 							}
 						}
 					}
 				}
 			}
 
-			// Fallback to treating the 'headerless' instruction as a directive:
-			auto directive_result = process_directive(content_source, content_index, thread_details, instruction);
+			if (try_as_directive)
+			{
+				// Fallback to treating the 'headerless' instruction as a directive:
+				auto directive_result = process_directive(content_source, content_index, thread_details, instruction);
 
-			if (!directive_result.has_value() || (*directive_result > 0))
-			{
-				// No further processing needed.
-				return directive_result;
+				if (!directive_result.has_value() || (*directive_result > 0))
+				{
+					// No further processing needed.
+					return directive_result;
+				}
 			}
-			else if (auto result = process_meta_expression_instruction(instruction_raw))
+
+			if (try_as_meta_expr)
 			{
-				return result;
+				if (auto result = process_meta_expression_instruction(instruction_raw, meta_expr_allow_first_symbol_as_entity, meta_expr_allow_leading_remote_variable))
+				{
+					return result;
+				}
 			}
-			else if (thread_details && !type_or_variable_name.empty()) // && (thread_details.target_entity.is_self_targeted() || thread_details.thread_id)
+
+			if (try_as_remote_variable_assignment && thread_details && !type_or_variable_name.empty()) // && (thread_details.target_entity.is_self_targeted() || thread_details.thread_id)
 			{
 				const auto& thread_name = type_or_variable_name;
 				const auto& thread_local_variable_name = member_name;
@@ -2217,14 +2603,17 @@ namespace engine
 			{
 				// All other resolution methods have been exhausted,
 				// log that we weren't able to handle the instruction.
-				print_warn("Failed to process instruction: {}", instruction);
+				warn("Failed to process instruction");
 
 				return 1; // std::nullopt;
 			}
 		}
-		else if (auto result = process_meta_expression_instruction(instruction_raw))
+		else if (try_as_meta_expr)
 		{
-			return result;
+			if (auto result = process_meta_expression_instruction(instruction_raw, false, true))
+			{
+				return result;
+			}
 		}
 
 		const auto instruction_id = hash(instruction_name).value();
@@ -2239,11 +2628,6 @@ namespace engine
 		// TODO: Reimplement part of this routine to utilize `MetaParsingContext::instruction_aliases` automatically.
 		auto handle_instruction = [&](auto instruction_id, std::string_view instruction_name) -> EntityInstructionCount // std::opitonal<EntityInstructionCount>
 		{
-			auto error = [&instruction_id, &instruction_name, &instruction_content, content_index](std::string_view message)
-			{
-				throw std::runtime_error(util::format("[Instruction #{} ({}) @ Line #{}]: {} | \"{}\"", instruction_id, instruction_name, content_index, message, instruction_content));
-			};
-
 			auto resolve_instruction = [this, &instruction_content]<typename InstructionType>
 			(const std::optional<EntityThreadInstruction>& opt_thread_instruction)
 			{
@@ -2257,11 +2641,11 @@ namespace engine
 				{
 					if (instruction_content.empty())
 					{
-						print_error("Unable to process `name` directive: No name specified.");
+						error("Unable to process `name` directive. (No name specified)");
 					}
 					else if (!set_thread_name(instruction_content, !is_string_content))
 					{
-						print_warn("Ignored `name` directive: Thread is already named.");
+						warn("Ignored `name` directive. (Thread is already named)");
 					}
 
 					return 1;
@@ -2414,19 +2798,156 @@ namespace engine
 				case "begin_multi"_hs:
 					return generate_multi_block(content_source, content_index);
 
+				// Cadence control-block instruction.
+				case "cadence"_hs:
+				case "begin_cadence"_hs:
+				{
+					if (instruction_content.empty())
+					{
+						error("Missing cadence specification.");
+					}
+					else
+					{
+						constexpr auto cadence_enum_prefix = std::string_view { "EntityThreadCadence" };
+
+						const auto [leading_symbol, trailing_symbol, parsed_length] = util::parse_member_reference(instruction_content);
+
+						auto cadence_value = std::string_view {};
+
+						if (leading_symbol == cadence_enum_prefix)
+						{
+							cadence_value = trailing_symbol;
+						}
+						else
+						{
+							cadence_value = instruction_content;
+						}
+
+						if (!cadence_value.empty())
+						{
+							if (auto target_cadence = try_string_to_enum_value<EntityThreadCadence>(cadence_value))
+							{
+								if (auto cadence_block_count = generate_cadence_block(content_source, content_index, *target_cadence))
+								{
+									return cadence_block_count;
+								}
+							}
+						}
+
+						if (auto remote_instruction = resolve_instruction.operator()<CadenceControlBlock>(std::nullopt))
+						{
+							instruct<InstructionDescriptor>(std::move(*remote_instruction));
+
+							auto cadence_block = ControlBlock { 0 };
+
+							const auto block_result = generate_cadence_block
+							(
+								content_source, content_index,
+								
+								// NOTE: Transitive cadence is not possible with dynamic values.
+								this->cadence,
+								
+								cadence_block,
+								true
+							);
+
+							// TODO: Add block-size encoding support for dynamic cadence blocks. (`cadence_block`)
+
+							return block_result;
+						}
+						else
+						{
+							error("Failed to resolve 'cadence' value.");
+						}
+					}
+
+					break;
+				}
+
+				// Manual cadence assignment instruction.
+				// (Unscoped / no control-block)
+				case "set_cadence"_hs:
+				{
+					if (instruction_content.empty())
+					{
+						error("Missing cadence specification.");
+					}
+					else
+					{
+						constexpr auto cadence_enum_prefix = std::string_view { "EntityThreadCadence" };
+
+						const auto [leading_symbol, trailing_symbol, parsed_length] = util::parse_member_reference(instruction_content);
+
+						auto cadence_value = std::string_view {};
+
+						if (leading_symbol == cadence_enum_prefix)
+						{
+							cadence_value = trailing_symbol;
+						}
+						else
+						{
+							cadence_value = instruction_content;
+						}
+
+						if (!cadence_value.empty())
+						{
+							if (auto target_cadence = try_string_to_enum_value<EntityThreadCadence>(cadence_value))
+							{
+								// Since this is a known cadence value, change our static cadence accordingly.
+								this->cadence = *target_cadence;
+
+								return instruct<CadenceControlBlock>
+								(
+									*target_cadence,
+
+									ControlBlock { 0 }
+								);
+							}
+						}
+
+						if (auto remote_instruction = resolve_instruction.operator()<CadenceControlBlock>(std::nullopt))
+						{
+							// NOTE: Static cadence configuration cannot be updated using dynamic values.
+
+							return instruct<InstructionDescriptor>(std::move(*remote_instruction));
+						}
+						else
+						{
+							error("Failed to resolve 'cadence' value.");
+						}
+					}
+
+					break;
+				}
+
+				case "fixed"_hs:
+				case "begin_fixed"_hs:
+					return generate_cadence_block(content_source, content_index, EntityThreadCadence::Fixed);
+
+				case "realtime"_hs:
+				case "begin_realtime"_hs:
+					return generate_cadence_block(content_source, content_index, EntityThreadCadence::Realtime);
+
+				//case "on_update"_hs:
+				case "update_driven"_hs:
+				case "begin_update_driven"_hs:
+				case "frame_driven"_hs:
+				case "begin_frame_driven"_hs:
+					return generate_cadence_block(content_source, content_index, EntityThreadCadence::Update);
+
 				// NOTE: We don't currently handle the `check_linked` field for `Pause`.
 				case "pause"_hs:
 				{
 					//const auto check_linked = util::from_string<bool>(instruction_content).value_or(true);
 
 					//return instruct_thread<Pause>(thread_details, check_linked);
-					return instruct_thread<Pause>(util::optional_or(parse_thread_details(instruction_content), thread_details));
+					return instruct_thread<Pause>(util::optional_or(std::get<0>(parse_thread_details(instruction_content)), thread_details));
 				}
 
 				case "wake"_hs:
 				case "resume"_hs:
 				{
-					return instruct_thread<Resume>(util::optional_or(parse_thread_details(instruction_content), thread_details));
+					return instruct_thread<Resume>(util::optional_or(std::get<0>(parse_thread_details(instruction_content)), thread_details));
 				}
 
 				case "link"_hs:
@@ -2437,7 +2958,7 @@ namespace engine
 				// This is due to the default assumption that threads are linked. As a consequence,
 				// re-linking a thread requires referencing local thread instances directly.
 				case "unlink"_hs:
-					return instruct_thread<Unlink>(util::optional_or(parse_thread_details(instruction_content), thread_details));
+					return instruct_thread<Unlink>(util::optional_or(std::get<0>(parse_thread_details(instruction_content)), thread_details));
 
 				// TODO: Determine if `attach` should take a state ID/name
 				// or allow for alternate thread-designation syntax.
@@ -2458,7 +2979,7 @@ namespace engine
 				// handles state IDs, we assume the alternate thread-designation is fine.
 				case "detach"_hs:
 					//return instruct_thread<Detach>(thread_details);
-					return instruct_thread<Detach>(util::optional_or(parse_thread_details(instruction_content), thread_details));
+					return instruct_thread<Detach>(util::optional_or(std::get<0>(parse_thread_details(instruction_content)), thread_details));
 
 				// NOTE: For `start`, we currently allow both boolean input (restart behavior)
 				// as well as the alternate thread-designation syntax.
@@ -2479,7 +3000,7 @@ namespace engine
 
 						target_thread_details = (restart_existing_as_first_parameter)
 							? thread_details
-							: util::optional_or(parse_thread_details(instruction_args[0]), thread_details)
+							: util::optional_or(std::get<0>(parse_thread_details(instruction_args[0])), thread_details)
 						;
 						
 						restart_existing = (restart_existing_as_first_parameter)
@@ -2531,6 +3052,7 @@ namespace engine
 				}
 
 				case "restart"_hs:
+				{
 					if (auto instruction_parse_result = util::split_from_ex<2>(instruction_content, ",", 0))
 					{
 						const auto& instruction_args = std::get<0>(*instruction_parse_result);
@@ -2539,7 +3061,7 @@ namespace engine
 
 						auto target_thread_details = (yield_result_as_first_parameter)
 							? thread_details
-							: util::optional_or(parse_thread_details(instruction_args[0]), thread_details)
+							: util::optional_or(std::get<0>(parse_thread_details(instruction_args[0])), thread_details)
 						;
 
 						// NOTE: This condition may be changed or removed at a later date.
@@ -2574,6 +3096,7 @@ namespace engine
 					}
 
 					return instruct_thread<Restart>(thread_details);
+				}
 
 				// NOTE: We don't currently handle the `check_linked` field for `Stop`.
 				case "terminate"_hs:
@@ -2582,11 +3105,130 @@ namespace engine
 					//const auto check_linked = util::from_string<bool>(instruction_content).value_or(true);
 
 					//return instruct_thread<Stop>(thread_details, check_linked);
-					return instruct_thread<Stop>(util::optional_or(parse_thread_details(instruction_content), thread_details));
+					return instruct_thread<Stop>(util::optional_or(std::get<0>(parse_thread_details(instruction_content)), thread_details));
 				}
 
+				case "assert"_hs:
+				{
+					if (instruction_content.empty())
+					{
+						error("Unable to generate assert instruction; condition missing.");
+					}
+					else
+					{
+						if (auto instruction_args = util::split_from<2>(instruction_content, ",", 1))
+						{
+							const auto& condition_content = (*instruction_args)[0];
+
+							assert(!condition_content.empty());
+
+							if (auto condition = process_immediate_trigger_condition(condition_content))
+							{
+								auto condition_ref = descriptor.allocate<EventTriggerCondition>(std::move(*condition));
+
+								using remote_message_t = decltype(instructions::Assert::debug_message);
+
+								remote_message_t debug_message;
+
+								if (auto& debug_message_raw = (*instruction_args)[1]; !debug_message_raw.empty())
+								{
+									debug_message = descriptor.allocate<std::string>(util::unquote_safe(debug_message_raw));
+								}
+
+								return instruct<Assert>
+								(
+									std::move(condition_ref),
+									std::move(debug_message),
+
+									descriptor.allocate<std::string>(condition_content)
+								);
+							}
+							else
+							{
+								error("Unable to resolve assert-condition while building thread.");
+							}
+						}
+						else
+						{
+							error("Unable to resolve assert-condition while building thread.");
+						}
+					}
+
+					break;
+				}
+
+				// NOTE:
+				// `sleep`, `wait` and `yield` have the same capabilities, but different prioritization for inputs.
+				// e.g. `sleep` will look for a duration first, whereas `yield` will look for a trigger condition first.
+				// 
+				// This allows `sleep` to take a variable as input for its duration, whereas
+				// `wait` and `yield` would assume the variable is a wake condition.
+				// 
+				// See also: `wait`, `yield`
 				case "sleep"_hs:
+				{
+					if (instruction_content.empty())
+					{
+						return instruct_thread<Pause>(thread_details);
+					}
+					else
+					{
+						if (auto sleep_duration = parse_time_duration(instruction_content))
+						{
+							return instruct_thread<Sleep>(thread_details, std::move(*sleep_duration));
+						}
+						else if (auto remote_instruction = resolve_instruction.operator()<Sleep>(thread_details))
+						{
+							return instruct<InstructionDescriptor>(std::move(*remote_instruction));
+						}
+						else if (auto condition = process_unified_condition_block(descriptor, instruction_content, parsing_context))
+						{
+							auto condition_ref = descriptor.allocate<EventTriggerCondition>(std::move(*condition));
+
+							return instruct_thread<Yield>(thread_details, std::move(condition_ref));
+						}
+						else
+						{
+							error("Failed to resolve `yield` expression.");
+						}
+					}
+
+					break;
+				}
+
+				// See also: `sleep`, `yield`
 				case "wait"_hs:
+				{
+					if (instruction_content.empty())
+					{
+						return instruct_thread<Pause>(thread_details);
+					}
+					else
+					{
+						if (auto sleep_duration = parse_time_duration(instruction_content))
+						{
+							return instruct_thread<Sleep>(thread_details, std::move(*sleep_duration));
+						}
+						else if (auto condition = process_unified_condition_block(descriptor, instruction_content, parsing_context, true))
+						{
+							auto condition_ref = descriptor.allocate<EventTriggerCondition>(std::move(*condition));
+
+							return instruct_thread<Yield>(thread_details, std::move(condition_ref));
+						}
+						else if (auto remote_instruction = resolve_instruction.operator()<Sleep>(thread_details))
+						{
+							return instruct<InstructionDescriptor>(std::move(*remote_instruction));
+						}
+						else
+						{
+							error("Failed to resolve `yield` expression.");
+						}
+					}
+
+					break;
+				}
+
+				// See also: `sleep`, `wait`
 				case "yield"_hs:
 				{
 					if (instruction_content.empty())
@@ -2635,9 +3277,11 @@ namespace engine
 
 				case "merge"_hs:
 				case "include"_hs:
+					// NOTE: Direct use of `from_file`.
 					return from_file(instruction_content);
 
 				case "embed"_hs:
+					// NOTE: Direct use of `from_lines`.
 					return from_lines(instruction_content);
 
 				case "import"_hs:
@@ -2675,7 +3319,17 @@ namespace engine
 			}
 		}
 
-		print_warn("Unknown instruction detected: {} [#{}] | \"{}\"", instruction_name, instruction_id, instruction);
+		// Try processing as a meta-expression again, but with entity-reference fallbacks turned on.
+		if (try_as_meta_expr)
+		{
+			if (auto result = process_meta_expression_instruction(instruction_raw, true, true)) // false
+			{
+				return result;
+			}
+		}
+
+		// If all else fails, notify the user and continue processing.
+		warn(util::format("Unknown instruction detected: `{}` (#{})", instruction_name, instruction_id));
 
 		// NOTE: We always return 1 on invalid instructions, since
 		// we don't (currently) stop processing when this happens.
@@ -2811,28 +3465,41 @@ namespace engine
 					return true;
 				}
 
-				const auto result = process_instruction(lines, content_index, instruction);
+				if (instruction.empty())
+				{
+					processed_instruction_count++;
+				}
+				else
+				{
+					const auto result = process_instruction(lines, content_index, instruction);
 				
-				if (!result.has_value())
-				{
-					return false;
+					if (!result.has_value())
+					{
+						return false;
+					}
+
+					const auto& processed = *result;
+
+					if (processed > 1)
+					{
+						// NOTE: When skipping, we ignore the number of instructions processed minus one,
+						// since the value of `processed` is inclusive of the instruction we began at.
+						active_skip_count += (processed - 1);
+					}
+
+					processed_instruction_count += processed;
 				}
-
-				const auto& processed = *result;
-
-				if (processed > 1)
-				{
-					// NOTE: When skipping, we ignore the number of instructions processed minus one,
-					// since the value of `processed` is inclusive of the instruction we began at.
-					active_skip_count += (processed - 1);
-				}
-
-				processed_instruction_count += *result;
 
 				content_index++;
 
 				return true;
-			}
+			},
+
+			false, // separator_required
+
+			util::whitespace_symbols, // trim_values
+
+			true // include_empty_substrings
 		);
 
 		return processed_instruction_count;
@@ -2844,7 +3511,7 @@ namespace engine
 
 		if (opt_factory_context)
 		{
-			resolved_path = opt_factory_context->resolve_path
+			resolved_path = opt_factory_context->resolve_script_reference
 			(
 				script_path,
 
@@ -2916,7 +3583,12 @@ namespace engine
 
 	EntityInstructionCount EntityThreadBuilder::process(std::string_view lines, EntityInstructionCount skip)
 	{
-		return from_lines(lines, "\n", skip);
+		const auto result = from_lines(lines, "\n", skip);
+
+		// Ensure to flush the current update instruction.
+		flush_update_instruction();
+
+		return result;
 	}
 
 	EntityInstructionCount EntityThreadBuilder::process(const ContentSource& content, EntityInstructionCount skip)
@@ -2926,15 +3598,29 @@ namespace engine
 		util::visit
 		(
 			content,
+
 			[this, skip, &result](std::string_view lines)
 			{
 				result = process(lines, skip);
 			},
+
 			[this, skip, &result](const util::json& data)
 			{
 				result = process(data, skip);
 			}
 		);
+
+		// NOTE: There's no need to call `flush_update_instruction` here since this is a delegating overload.
+
+		return result;
+	}
+
+	EntityInstructionCount EntityThreadBuilder::process_from_file(const std::filesystem::path& script_path, std::string_view separator, EntityInstructionCount skip)
+	{
+		const auto result = from_file(script_path, separator, skip);
+
+		// Ensure to flush the current update instruction.
+		flush_update_instruction();
 
 		return result;
 	}
@@ -3051,6 +3737,43 @@ namespace engine
 		{
 			case "end_multi"_hs:
 			case "end_group"_hs:
+				return std::nullopt;
+		}
+
+		return EntityThreadBuilder::process_directive_impl
+		(
+			content_source,
+			content_index,
+
+			thread_details,
+
+			instruction_raw,
+			directive_id,
+			directive_content
+		);
+	}
+
+	// EntityThreadCadenceBuilder:
+	std::optional<EntityInstructionCount> EntityThreadCadenceBuilder::process_directive_impl
+	(
+		const ContentSource& content_source,
+		EntityInstructionCount content_index,
+
+		const std::optional<EntityThreadInstruction>& thread_details,
+
+		std::string_view instruction_raw,
+		StringHash directive_id,
+		std::string_view directive_content
+	)
+	{
+		using namespace engine::literals;
+
+		switch (directive_id)
+		{
+			case "end_cadence"_hs:
+			case "end_fixed"_hs:
+			case "end_realtime"_hs:
+			case "end_frame_driven"_hs:
 				return std::nullopt;
 		}
 

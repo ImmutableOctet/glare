@@ -10,6 +10,7 @@ target_sources(
     "aabb.cpp"
     "bullet.cpp"
     "joyhat.cpp"
+    "conversion.cpp"
 )
 
 #target_include_directories(
@@ -18,7 +19,7 @@ target_sources(
 #    "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>"
 #)
 #
-#target_compile_features(glare_math PUBLIC cxx_std_23)
+#target_compile_features(glare_math PRIVATE cxx_std_23)
 #
 #add_dependencies(
 #    glare_math

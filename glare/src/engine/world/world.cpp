@@ -2,14 +2,13 @@
 
 #include "world_events.hpp"
 #include "entity.hpp"
-#include "stage.hpp"
+#include "scene.hpp"
 
 #include "light.hpp"
 
 //#include "animator.hpp"
 #include "graphics_entity.hpp"
 
-#include "components/camera_component.hpp"
 #include "components/light_component.hpp"
 #include "components/directional_light_component.hpp"
 #include "components/directional_light_shadow_component.hpp"
@@ -21,8 +20,11 @@
 #include "animation/components/bone_component.hpp"
 #include "physics/components/collision_component.hpp"
 
+#include "camera/camera_system.hpp"
+
+#include "delta/delta_system.hpp"
+
 #include <engine/components/model_component.hpp>
-#include <engine/components/player_component.hpp>
 
 #include <engine/entity/entity_descriptor.hpp>
 #include <engine/entity/components/instance_component.hpp>
@@ -46,8 +48,8 @@
 #include <engine/components/forwarding_component.hpp>
 
 #include <engine/components/type_component.hpp>
-#include <engine/components/name_component.hpp>
 #include <engine/components/transform_history_component.hpp>
+//#include <engine/components/name_component.hpp>
 
 #include <algorithm>
 #include <fstream>
@@ -105,21 +107,20 @@ namespace engine
 	World::World
 	(
 		Registry& registry,
+		SystemManagerInterface& systems,
 		Config& config,
 		ResourceManager& resource_manager,
 		UpdateRate update_rate
 	) :
-		Service(registry),
+		Service(registry, systems),
 		config(config),
-		resource_manager(resource_manager),
-		delta_time(update_rate),
-		fixed_delta_time(update_rate)
+		resource_manager(resource_manager)
 	{
 		registry.emplace<TransformComponent>(root);
-		registry.emplace<NameComponent>(root, "Root");
 
-		register_event<OnTransformChanged, &World::on_transform_change>(*this);
-		register_event<OnEntityDestroyed, &World::on_entity_destroyed>(*this);
+		set_name(root, "Root");
+
+		register_event<OnTransformChanged, &World::on_transform_changed>(*this);
 
 		registry.on_construct<InstanceComponent>().connect<&World::on_instance>(*this);
 
@@ -159,12 +160,13 @@ namespace engine
 	World::World
 	(
 		Registry& registry,
+		SystemManagerInterface& systems,
 		Config& config,
 		ResourceManager& resource_manager,
 		UpdateRate update_rate,
 		const filesystem::path& path
 	) :
-		World(registry, config, resource_manager, update_rate)
+		World(registry, systems, config, resource_manager, update_rate)
 	{
 		load(path);
 	}
@@ -195,7 +197,7 @@ namespace engine
 
 			print("Loading...");
 
-			auto map = Stage::Load
+			auto map = Scene::Load
 			(
 				*this,
 				root_path,
@@ -204,7 +206,7 @@ namespace engine
 				opt_system_manager
 			); // { .geometry = false }
 
-			event<OnStageLoaded>(map, root_path); // map_data_path
+			event<OnSceneLoaded>(map, root_path); // map_data_path
 
 			return map;
 		}
@@ -221,64 +223,18 @@ namespace engine
 
 	void World::update(app::Milliseconds time)
 	{
-		// Update the delta-timer.
-		delta_time << time;
+		float delta = 1.0f;
+		
+		if (auto delta_system = get_delta_system())
+		{
+			delta = delta_system->update_delta(time);
+		}
 
-		// Update systems:
-		Service::update(delta_time);
-
-		// TODO: Look into workarounds for collision objects updating a frame behind.
 		// Handle changes in entity transforms.
-		handle_transform_events(delta_time);
-	}
-
-	void World::fixed_update(app::Milliseconds time)
-	{
-		// Update the fixed delta-timer.
-		fixed_delta_time << time;
+		handle_transform_events(delta);
 
 		// Update systems:
-		Service::fixed_update(fixed_delta_time);
-	}
-
-	void World::handle_transform_events(float delta)
-	{
-		// Another pass is required, in order to ensure all of the hierarchy has a chance to validate collision representation:
-		registry.view<TransformComponent>().each([this](auto entity, auto& tf)
-		{
-			tf.on_flag(TransformComponent::Flag::EventFlag, [this, entity]()
-			{
-				//this->queue_event<OnTransformChanged>(entity);
-				this->event<OnTransformChanged>(entity);
-			});
-
-			// Already handled by `on_flag`.
-			//tf.validate(TransformComponent::Dirty::EventFlag);
-		});
-
-		/*
-		registry.view<TransformComponent, RelationshipComponent>().each([&](auto entity, auto& tf, auto& rel)
-		{
-			auto transform = Transform(registry, entity, rel, tf);
-
-			//transform.validate_collision();
-			transform.validate_collision_shallow();
-		});
-		*/
-	}
-
-	void World::update_camera_parameters(int width, int height)
-	{
-		registry.view<CameraComponent>().each([&](auto entity, auto& camera_component)
-		{
-			// TODO: Need to look into designating viewports to cameras at the component level.
-			// This would make this routine unnecessary for anything but the active camera/main viewport.
-			// For now, we just check for the `dynamic_aspect_ratio` flag.
-			if (camera_component.dynamic_aspect_ratio)
-			{
-				camera_component.update_aspect_ratio(width, height);
-			}
-		});
+		Service::update(time, delta);
 	}
 
 	Entity World::get_forwarded(Entity entity)
@@ -329,114 +285,6 @@ namespace engine
 		auto& m = registry.get<TransformComponent>(root);
 
 		return (m._w * math::Vector4D{ up, 1.0f });
-	}
-
-	Entity World::get_parent(Entity entity) const
-	{
-		auto* relationship = registry.try_get<RelationshipComponent>(entity);
-
-		if (relationship == nullptr)
-		{
-			return null;
-		}
-
-		return relationship->get_parent();
-	}
-
-	void World::set_parent
-	(
-		Entity entity, Entity parent,
-		bool defer_action,
-		
-		bool _null_as_root, bool _is_deferred
-	)
-	{
-		assert(entity != parent);
-
-		/*
-		if (_null_as_root)
-		{
-			if ((parent == null) && (entity != root))
-			{
-				parent = root;
-			}
-		}
-		*/
-
-		if (defer_action) // && (!_is_deferred)
-		{
-			//print("Deferring parental assignment for: {} to new parent {}", label(entity), label(parent));
-
-			later(&World::set_parent, entity, parent, false, _null_as_root, true);
-		}
-		else
-		{
-			auto prev_parent = RelationshipComponent::set_parent(registry, entity, parent);
-			event<OnParentChanged>(entity, prev_parent, parent);
-		}
-	}
-
-	std::string World::label(Entity entity)
-	{
-		if (entity == null)
-		{
-			return "null";
-		}
-
-		auto* name_comp = registry.try_get<NameComponent>(entity);
-
-		auto entity_raw = static_cast<EntityIDType>(entity);
-
-		if (name_comp)
-		{
-			return util::format("\"{}\" ({})", name_comp->get_name(), entity_raw);
-		}
-
-		return std::to_string(entity_raw);
-	}
-
-	std::string World::get_name(Entity entity)
-	{
-		auto* name_comp = registry.try_get<NameComponent>(entity);
-
-		if (name_comp)
-		{
-			return name_comp->get_name();
-		}
-
-		return {};
-	}
-
-	void World::set_name(Entity entity, const std::string& name)
-	{
-		if (!name.empty())
-		{
-			registry.emplace_or_replace<NameComponent>(entity, name);
-		}
-	}
-
-	bool World::has_name(Entity entity) // const
-	{
-		return (!get_name(entity).empty());
-	}
-
-	Entity World::get_by_name(std::string_view name)
-	{
-		auto view = registry.view<NameComponent>();
-
-		for (auto it = view.begin(); it != view.end(); it++)
-		{
-			Entity entity = *it;
-
-			const auto& name_comp = registry.get<NameComponent>(entity);
-
-			if (name_comp.get_name() == name)
-			{
-				return entity;
-			}
-		}
-
-		return null;
 	}
 
 	Entity World::get_bone_by_name(Entity entity, std::string_view name, bool recursive)
@@ -492,69 +340,77 @@ namespace engine
 		return resource_manager;
 	}
 
-	Entity World::get_child_by_name(Entity entity, std::string_view child_name, bool recursive)
+	// NOTE: Unsafe. (Assumes remote `DeltaSystem` object will always be valid)
+	const DeltaSystem* World::get_delta_system() const
 	{
-		if (child_name.empty())
-			return null;
-
-		auto* relationship = registry.try_get<RelationshipComponent>(entity);
-
-		if (!relationship)
-			return null;
-
-		Entity out = null;
-
-		relationship->enumerate_children(registry, [&](Entity child, RelationshipComponent& relationship, Entity next_child)
+		if (this->_delta_system)
 		{
-			auto* name_comp = registry.try_get<NameComponent>(child);
+			return this->_delta_system;
+		}
 
-			if (name_comp)
-			{
-				//print("Comparing {} with {}", name_comp->name, child_name);
+		if (const auto* delta_system = systems.get_system<DeltaSystem>())
+		{
+			//this->_delta_system = const_cast<DeltaSystem*>(delta_system);
 
-				if (name_comp->get_name() == child_name)
-				{
-					out = child;
+			return delta_system;
+		}
 
-					return false;
-				}
-			}
-			
-			if (recursive)
-			{
-				auto r_out = get_child_by_name(child, child_name, true);
-
-				if (r_out != null)
-				{
-					out = r_out;
-
-					return false;
-				}
-			}
-
-			return true;
-		});
-
-		return out;
+		return {};
 	}
 
-	Entity World::get_player(PlayerIndex player) const
+	// NOTE: Unsafe. (Assumes remote `DeltaSystem` object will always be valid)
+	DeltaSystem* World::get_delta_system()
 	{
-		auto view = registry.view<PlayerComponent>();
-
-		for (auto it = view.begin(); it != view.end(); it++)
+		if (this->_delta_system)
 		{
-			Entity entity = *it;
+			return this->_delta_system;
+		}
 
-			const auto& player_state = registry.get<PlayerComponent>(entity);
+		if (auto* delta_system = systems.get_system<DeltaSystem>())
+		{
+			this->_delta_system = delta_system;
+		}
 
-			if (player_state.player_index == player)
-			{
-				return entity;
-			}
+		return {};
+	}
+
+	const DeltaTime& World::get_delta_time() const
+	{
+		auto delta_system = get_delta_system();
+
+		assert(delta_system);
+
+		return delta_system->get_delta_time();
+	}
+	
+	float World::get_delta() const
+	{
+		if (auto delta_system = get_delta_system())
+		{
+			return delta_system->get_delta();
+		}
+
+		return 1.0f;
+	}
+
+	// The actively bound camera.
+	// NOTE: Does not always represent the rendering camera.
+	Entity World::get_camera() const
+	{
+		if (auto camera_system = systems.get_system<CameraSystem>())
+		{
+			return camera_system->get_active_camera();
 		}
 
 		return null;
+	}
+
+	void World::set_camera(Entity camera)
+	{
+		if (auto camera_system = systems.get_system<CameraSystem>())
+		{
+			camera_system->set_active_camera(camera);
+		}
 	}
 
 	math::Vector World::get_gravity() const
@@ -593,25 +449,9 @@ namespace engine
 		return glm::normalize(get_gravity());
 	}
 
-	void World::set_camera(Entity camera)
+	void World::on_transform_changed(const OnTransformChanged& tform_change)
 	{
-		assert(registry.try_get<CameraComponent>(camera));
-
-		this->camera = camera;
-	}
-
-	void World::on_transform_change(const OnTransformChanged& tform_change)
-	{
-		auto entity = tform_change.entity;
-
-		auto* tform_history = registry.try_get<TransformHistoryComponent>(entity);
-
-		if (tform_history)
-		{
-			auto tform = get_transform(entity);
-
-			*tform_history << tform;
-		}
+		const auto entity = tform_change.entity;
 
 		// TODO: Move this into a separate lighting system/event-handler...?
 		// Update shadow-maps for light entities.
@@ -635,45 +475,32 @@ namespace engine
 		*/
 	}
 
-	void World::on_entity_destroyed(const OnEntityDestroyed& destruct)
+	void World::handle_transform_events(float delta)
 	{
-		auto entity          = destruct.entity;
-		auto parent          = destruct.parent;
-		auto type            = destruct.type;
-		auto destroy_orphans = destruct.destroy_orphans;
+		auto& registry = get_registry();
 
-		// Handle entity relationships:
-		auto* relationship = registry.try_get<RelationshipComponent>(entity);
-
-		if (relationship) // <-- Null-check for 'relationship' isn't actually necessary. (MSVC complains)
+		// Another pass is required, in order to ensure all of the hierarchy has a chance to validate collision representation:
+		registry.view<TransformComponent>().each([this](auto entity, auto& tf)
 		{
-			// Make the assumption this object exists, as if it didn't, we would be in an invalid state.
-			auto* parent_relationship = registry.try_get<RelationshipComponent>(parent);
-
-			relationship->enumerate_child_entities(registry, [&](Entity child, Entity next_child) -> bool
+			tf.on_flag(TransformComponent::Flag::EventFlag, [this, entity]()
 			{
-				if (parent_relationship)
-				{
-					parent_relationship->add_child(registry, parent, child);
-				}
-				else
-				{
-					set_parent(child, null);
-				}
-
-				if (destroy_orphans)
-				{
-					// Queue orphans to be destroyed on next event cycle.
-					destory_entity(*this, child, true);
-				}
-
-				return true;
+				//this->queue_event<OnTransformChanged>(entity);
+				this->event<OnTransformChanged>(entity);
 			});
 
-			//registry.replace<RelationshipComponent>(parent, std::move(parent_relationship)); // [&](auto& r) { r = parent_relationship; }
-		}
+			// Already handled by `on_flag`.
+			//tf.validate(TransformComponent::Dirty::EventFlag);
+		});
 
-		registry.destroy(entity);
+		/*
+		registry.view<TransformComponent, RelationshipComponent>().each([&](auto entity, auto& tf, auto& rel)
+		{
+			auto transform = Transform(registry, entity, rel, tf);
+
+			//transform.validate_collision();
+			transform.validate_collision_shallow();
+		});
+		*/
 	}
 
 	std::size_t World::update_light_type(Entity entity, LightType light_type)

@@ -802,12 +802,12 @@ namespace engine
 		};
 	}
 
-	std::tuple<std::string_view, std::optional<EntityThreadInstruction>>
+	std::tuple<std::string_view, std::optional<EntityThreadInstruction>, bool>
 	parse_instruction_header(std::string_view instruction_raw, const EntityDescriptor* opt_descriptor)
 	{
 		if (instruction_raw.empty())
 		{
-			return { instruction_raw, std::nullopt };
+			return { instruction_raw, std::nullopt, false };
 		}
 
 		// Look for an initial level of indirection:
@@ -816,7 +816,7 @@ namespace engine
 		if (initial_ref.empty())
 		{
 			// There's no header, return the raw instruction data and nothing else.
-			return { instruction_raw, std::nullopt };
+			return { instruction_raw, std::nullopt, false };
 		}
 
 		std::string_view thread_ref;
@@ -852,7 +852,7 @@ namespace engine
 
 		// In the event `parse_thread_details` fails, it could mean that
 		// we mistook one reference type for the other.
-		if (!result) // && !thread_ref.empty() && entity_ref.empty()
+		if (!std::get<0>(result)) // && !thread_ref.empty() && entity_ref.empty()
 		{
 			// Try again, but with `entity_ref` and `thread_ref` swapped:
 			std::swap(entity_ref, thread_ref);
@@ -860,10 +860,15 @@ namespace engine
 			result = parse_thread_details(thread_ref, entity_ref, opt_descriptor);
 		}
 
-		return { instruction, std::move(result) };
+		if (std::get<0>(result))
+		{
+			return { instruction, std::move(std::get<0>(result)), std::get<1>(result) };
+		}
+
+		return { instruction, std::nullopt, false };
 	}
 
-	std::optional<EntityThreadInstruction>
+	std::tuple<std::optional<EntityThreadInstruction>, bool>
 	parse_thread_details
 	(
 		std::string_view combined_expr,
@@ -873,7 +878,7 @@ namespace engine
 	{
 		if (combined_expr.empty())
 		{
-			return std::nullopt;
+			return { std::nullopt, false };
 		}
 
 		if (auto [entity_ref, thread_ref, entity_ref_length_parsed] = util::parse_member_reference(combined_expr, true); !entity_ref.empty())
@@ -884,7 +889,7 @@ namespace engine
 		return parse_thread_details(combined_expr, {}, nullptr);
 	}
 
-	std::optional<EntityThreadInstruction>
+	std::tuple<std::optional<EntityThreadInstruction>, bool>
 	parse_thread_details
 	(
 		std::string_view thread_ref,
@@ -896,6 +901,8 @@ namespace engine
 		using namespace engine::literals;
 
 		EntityThreadInstruction thread_details;
+
+		bool accessor_used = false;
 
 		if (!entity_ref.empty())
 		{
@@ -918,6 +925,8 @@ namespace engine
 		}
 		else
 		{
+			accessor_used = true;
+
 			const auto thread_accessor_id = hash(thread_accessor).value();
 			const auto& thread_access_identifier = std::get<1>(thread_accessor_content);
 
@@ -953,12 +962,12 @@ namespace engine
 				default:
 				{
 					// Invalid/unsupported accessor.
-					return std::nullopt;
+					return { std::nullopt, false }; // true
 				}
 			}
 		}
 
-		return thread_details;
+		return { thread_details, accessor_used };
 	}
 
 	const EntityState* process_state

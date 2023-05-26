@@ -259,7 +259,7 @@ namespace engine
 				const auto& thread_data = descriptor.get_thread(thread.thread_index);
 
 				const auto& current_instruction = thread_data.get_instruction(thread.next_instruction);
-
+				
 				// Ensure this thread is actually yielding.
 				const auto& yield_instruction = std::get<Yield>(current_instruction.value);
 

@@ -3,6 +3,7 @@
 #include "types.hpp"
 #include "event_trigger_condition.hpp"
 #include "entity_variables.hpp"
+#include "entity_thread_cadence.hpp"
 
 #include <optional>
 #include <memory>
@@ -50,6 +51,9 @@ namespace engine
 
 		// Indicates whether this thread has reached a termination point.
 		bool is_complete : 1 = false;
+
+		// The cadence of this thread; used to control rate of execution.
+		EntityThreadCadence cadence = EntityThreadCadence::Default;
 
 		// A thread is considered suspended if it cannot continue
 		// work until an external operation takes place.

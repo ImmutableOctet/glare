@@ -667,25 +667,4 @@ namespace engine
 
 		return {};
 	}
-	
-	Entity attach_collision_impl(World& world, Entity entity, CollisionComponent&& col)
-	{
-		auto& registry = world.get_registry();
-		auto& component = registry.emplace<CollisionComponent>(entity, std::move(col));
-
-		auto* c_obj = component.get_collision_object();
-
-		assert(c_obj);
-
-		set_entity_for_collision_object(*c_obj, entity);
-
-		// Note: Unsafe due to entt's ability to move/reallocate this component. (Used for debugging purposes only)
-		#ifndef NDEBUG
-			c_obj->setUserPointer(&component);
-		#endif
-
-		// NOTE: `PhysicsSystem` hooks into entt's component events in order to add/remove `c_obj` from the collision world.
-
-		return entity;
-	}
 }

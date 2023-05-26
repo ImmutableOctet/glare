@@ -7,11 +7,9 @@
 
 namespace engine
 {
-	MetaAny MetaDataMember::get_instance(Registry& registry, Entity entity) const
+	MetaAny MetaDataMember::get_instance(const MetaType& type, Registry& registry, Entity entity)
 	{
 		using namespace engine::literals;
-
-		auto type = resolve(type_id);
 
 		if (!type)
 		{
@@ -57,6 +55,11 @@ namespace engine
 		}
 
 		return instance;
+	}
+
+	MetaAny MetaDataMember::get_instance(Registry& registry, Entity entity) const
+	{
+		return get_instance(get_type(), registry, entity);
 	}
 
 	MetaAny MetaDataMember::get(const MetaAny& instance) const
@@ -265,7 +268,7 @@ namespace engine
 		{
 			if (auto type = get_type())
 			{
-				return type.data(data_member_id);
+				return resolve_data_member_by_id(type, true, data_member_id);
 			}
 		}
 
