@@ -865,12 +865,30 @@ namespace engine
 				}
 				else
 				{
-					const auto subscript_begin = symbol.find(subscript_begin_symbol);
+					const auto subscript_begin = util::find_scope_beginning_symbol // symbol.find(subscript_begin_symbol);
+					(
+						symbol,
+						
+						subscript_begin_symbol,
+
+						std::array
+						{
+							std::pair { "(", ")" },
+							std::pair { "\"", "\"" }
+						}
+					);
 
 					if (subscript_begin != std::string_view::npos)
 					{
 						if (subscript_begin > 0)
 						{
+							// Trim the symbol down to remove the subscript portion.
+							// 
+							// NOTE: Since the end of `symbol` dictates the next iterations start point, performing this
+							// trim allows the below subscript logic to be executed in isolation. (i.e. on the next cycle)
+							// 
+							// This is advantageous, since if we didn't separate the symbol and the subscript operator,
+							// the subsequent processing steps would need dedicated logic to handle it.
 							symbol = symbol.substr(0, subscript_begin);
 						}
 						else
@@ -2072,7 +2090,7 @@ namespace engine
 
 						if (projected_operator_sub_position == std::string_view::npos)
 						{
-							projected_operator_sub_position = current_expr.find(',');
+							projected_operator_sub_position = util::find_unscoped(current_expr, ",");
 						}
 
 						if (projected_operator_sub_position != std::string_view::npos)
@@ -2092,7 +2110,7 @@ namespace engine
 
 					if (projected_operator_position == std::string_view::npos)
 					{
-						projected_operator_position = current_expr.find(',');
+						projected_operator_position = util::find_unscoped(current_expr, ",");
 					}
 				}
 
@@ -2258,7 +2276,7 @@ namespace engine
 
 						if (trailing_operator_position == std::string_view::npos)
 						{
-							trailing_operator_position = operator_area.find(',');
+							trailing_operator_position = util::find_unscoped(operator_area, ",");
 						}
 
 						if (trailing_operator_position == std::string_view::npos)
@@ -2337,7 +2355,7 @@ namespace engine
 
 			if (current_operator_symbol.empty())
 			{
-				if (auto exit_operator = remainder.find(','); exit_operator != std::string_view::npos)
+				if (auto exit_operator = util::find_unscoped(remainder, ","); exit_operator != std::string_view::npos)
 				{
 					constexpr std::size_t exit_operator_length = 1;
 
