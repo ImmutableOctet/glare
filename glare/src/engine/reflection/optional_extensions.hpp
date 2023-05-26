@@ -53,6 +53,8 @@ namespace engine::impl
     {
         if (self)
         {
+            //return MetaAny { self.value() };
+
             return entt::forward_as_meta(self.value()); // self.value();
         }
 
