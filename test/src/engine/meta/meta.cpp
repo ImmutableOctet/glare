@@ -45,6 +45,7 @@
 #include <variant>
 #include <unordered_map>
 #include <optional>
+#include <cstdint>
 
 // Debugging related:
 #include <util/parse.hpp>
@@ -176,6 +177,16 @@ namespace engine
 
 			return std::nullopt;
 		}
+
+		static std::string overloaded_function(std::int32_t value)
+		{
+			return "integer";
+		}
+
+		static std::string overloaded_function(const std::string& value)
+		{
+			return "string";
+		}
 	};
 
 	struct TestSystem
@@ -243,6 +254,8 @@ namespace engine
 			.func<&ReflectionTest::method_with_context>("method_with_context"_hs)
 			.func<&ReflectionTest::function_with_context>("function_with_context"_hs)
 			.func<&ReflectionTest::get_optional_value>("get_optional_value"_hs)
+			.func<static_cast<std::string (*)(std::int32_t value)>(&ReflectionTest::overloaded_function)>("overloaded_function"_hs)
+			.func<static_cast<std::string (*)(const std::string& value)>(&ReflectionTest::overloaded_function)>("overloaded_function"_hs)
 		;
 
 		engine_meta_type<ReflectionTest::Nested>()
@@ -370,6 +383,47 @@ TEST_CASE("engine::meta_any_from_string", "[engine:meta]")
 	engine::reflect<engine::ReflectionTest>();
 	engine::reflect<engine::TestSystem>();
 	
+	SECTION("Function overload resolution")
+	{
+		auto int_function_expr = engine::meta_any_from_string
+		(
+			std::string_view("ReflectionTest::overloaded_function(10)"),
+			{
+				.allow_function_call_semantics = true
+			}
+		);
+
+		REQUIRE(int_function_expr);
+
+		auto int_function_result = engine::try_get_underlying_value(int_function_expr);
+
+		REQUIRE(int_function_result);
+
+		auto int_function_result_raw = int_function_result.try_cast<std::string>();
+
+		REQUIRE(int_function_result_raw);
+		REQUIRE((*int_function_result_raw) == "integer");
+
+		auto string_function_expr = engine::meta_any_from_string
+		(
+			std::string_view("ReflectionTest::overloaded_function(\"Test\")"),
+			{
+				.allow_function_call_semantics = true
+			}
+		);
+
+		REQUIRE(string_function_expr);
+
+		auto string_function_result = engine::try_get_underlying_value(string_function_expr);
+
+		REQUIRE(string_function_result);
+
+		auto string_function_result_raw = string_function_result.try_cast<std::string>();
+
+		REQUIRE(string_function_result_raw);
+		REQUIRE((*string_function_result_raw) == "string");
+	}
+
 	SECTION("Subscript operator on variable")
 	{
 		engine::MetaVariableContext variable_declaration_context;
