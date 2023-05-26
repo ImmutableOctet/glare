@@ -11,5 +11,6 @@ namespace engine
 		bool is_container                           : 1 = false;
 		bool is_sequential_container                : 1 = false;
 		bool is_associative_container               : 1 = false;
+		bool is_wrapper_container                   : 1 = false;
 	};
 }
