@@ -38,6 +38,13 @@
 					"left":  "LEFT",
 					"down":  "DOWN",
 					"right": "RIGHT"
+				},
+
+				{
+					"name": "zoom",
+
+					"up": "PAGEDOWN",
+					"down": "PAGEUP"
 				}
 			],
 
@@ -54,7 +61,8 @@
 			"analogs":
 			{
 				"Movement": "movement",
-				"Camera":   "camera"
+				"Camera": "camera",
+				"Zoom": "zoom"
 			}
 		}
 	]
