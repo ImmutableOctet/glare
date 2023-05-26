@@ -61,6 +61,17 @@ namespace engine
 		return false;
 	}
 
+	bool is_isolated_operation(MetaValueOperator operation)
+	{
+		switch (operation)
+		{
+			case MetaValueOperator::Subscript:
+				return true;
+		}
+
+		return false;
+	}
+
 	std::optional<std::tuple<MetaValueOperator, MetaOperatorPrecedence>>
 	parse_value_operator(std::string_view symbol, bool symbol_is_leading, bool resolve_non_standard_symbols)
 	{
