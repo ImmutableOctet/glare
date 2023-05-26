@@ -4,7 +4,7 @@
 
 #include "format.hpp"
 #include "small_vector.hpp"
-#include "sampler.hpp"
+//#include "sampler.hpp"
 
 //#include <entt/meta/meta.hpp>
 #include <entt/entt.hpp>
@@ -147,6 +147,8 @@ namespace entt
         }
     };
 
+    /*
+    // Disabled for now; enables enumeration of sampler contents.
     template <typename KeyType, typename ValueType, typename... Args>
     struct meta_sequence_container_traits<util::SamplerImpl<KeyType, ValueType, Args...>>
     {
@@ -154,8 +156,11 @@ namespace entt
         using Type                  = util::SamplerImpl<KeyType, ValueType, Args...>;
         using EntryType             = typename Type::Entry;
 
-        using key_type              = typename Type::key_type;        // typename EntryType::first_type;
-        using value_type            = typename Type::value_type;      // typename EntryType::second_type;
+        //using key_type            = typename Type::key_type;        // typename EntryType::first_type;
+        //using value_type          = typename Type::value_type;      // typename EntryType::second_type;
+
+        using value_type            = EntryType;
+
         using const_reference       = typename Type::const_reference; // const EntryType&;
 
         using native_iterator       = typename Type::iterator;
@@ -215,6 +220,7 @@ namespace entt
             return iterator {};
         }
     };
+    */
 }
 
 namespace util
