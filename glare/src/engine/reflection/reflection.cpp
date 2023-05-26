@@ -14,6 +14,7 @@
 #include "string_conversion.hpp"
 
 #include "math.hpp"
+#include "util.hpp"
 
 #include <engine/components/reflection.hpp>
 #include <engine/commands/reflection.hpp>
@@ -760,6 +761,7 @@ namespace engine
         reflect_stl();
 
         reflect<engine::Math>();
+        reflect<engine::Util>();
     }
 
     void reflect_primitives()

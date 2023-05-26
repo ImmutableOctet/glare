@@ -5,5 +5,6 @@ target_sources(
 
     "reflection.cpp"
     "math.cpp"
+    "util.cpp"
     "context.cpp"
 )
