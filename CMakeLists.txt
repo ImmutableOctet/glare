@@ -22,67 +22,16 @@ project(
     LANGUAGES CXX
 )
 
-# ---- Declare executable ----
-
-add_executable(glare) # glare_exe
-
-target_sources(
-    glare # glare_exe
-
-    PUBLIC
-
-    "glare/game.cpp"
-)
-
-target_link_libraries(
-    glare # glare_exe
-    
-    PUBLIC
-    
-    glare_engine
-    
-    #glare_common
-    #glare_util
-)
-
-add_executable(glare::exe ALIAS glare) # glare_exe
-
-set_property(TARGET glare PROPERTY OUTPUT_NAME glare) # glare_exe
-
-if(MSVC)
-    #if($<CONFIG:Debug>)
-        target_link_options(glare PUBLIC /DEBUG:FASTLINK) # glare_exe
-    #endif()
-endif()
-
-target_compile_features(glare PRIVATE cxx_std_23) # glare_exe
-
+# Engine source code
 add_subdirectory("glare/src")
 
-#target_link_libraries(
-#    glare # glare_exe
-#    
-#    PUBLIC
-#    
-#    glare::glare
-#    
-#    #glare_common
-#    #glare_util
-#)
+# ---- Declare executables ----
 
-#if(MSVC)
-    add_custom_command(
-        TARGET glare # glare_exe
+# Game
+add_subdirectory("glare/project_glare")
 
-        POST_BUILD
-
-        #COMMAND ${CMAKE_COMMAND} -E xcopy ${PROJECT_SOURCE_DIR}/glare/assets ${CMAKE_BINARY_DIR}/assets /e /y /i /r /exclude:glare/exclude.txt
-
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-                ${CMAKE_SOURCE_DIR}/glare/glare/
-                $<TARGET_FILE_DIR:glare> # glare_exe
-    )
-#endif()
+# Scene Editor
+add_subdirectory("glare/scene_editor")
 
 # ---- Install rules ----
 
