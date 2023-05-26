@@ -4,6 +4,7 @@
 #include "indirection.hpp"
 
 #include <util/small_vector.hpp>
+#include <util/type_algorithms.hpp>
 
 #include <type_traits>
 
@@ -28,6 +29,10 @@ namespace engine
 	// Returns true if any of the overloads referenced by `function_overloads` reports true for `MetaFunction::is_const`.
 	bool function_has_const_overload(const MetaFunction& function_overloads);
 
+	// Returns true if `input_arg_type` meets the prioritization criteria for `function_arg_type`.
+	// If `exact_match` is enabled, this will only check if the two types are equal.
+	bool argument_has_invocation_priority(const MetaType& function_arg_type, const MetaType& input_arg_type, bool exact_match=false);
+
 	/*
 		Attempts to invoke `function` with the `args` specified.
 		
@@ -37,13 +42,53 @@ namespace engine
 		NOTE: This uses `entt::forward_as_meta` automatically when passing `args` to the active function's `invoke` method.
 	*/
 	template <typename InstanceType, typename ...Args>
-	MetaAny invoke_any_overload(MetaFunction function, InstanceType&& instance, Args&&... args)
+	MetaAny invoke_any_overload(const MetaFunction& first_overload, InstanceType&& instance, Args&&... args)
 	{
 		static_assert(std::is_same_v<std::decay_t<InstanceType>, MetaAny>, "The `instance` parameter must be a `MetaAny` object, or a reference to one.");
 
-		while (function)
+		// Try exact / very similar argument matches first:
+		for (auto function = first_overload; (function); function = function.next())
 		{
-			// NOTE: Function `arity` check added to avoid unnecessary object creation overhead.
+			// NOTE: Function `arity` check added to avoid unnecessary overhead from `entt::forward_as_meta`.
+			if (function.arity() == sizeof...(args)) // >=
+			{
+				bool skip_overload = false;
+
+				util::static_iota<sizeof...(args)>
+				(
+					[&]<std::size_t argument_index>()
+					{
+						using arg_t = util::get_type_by_index<argument_index, Args...>;
+
+						if (!skip_overload)
+						{
+							const auto function_arg_type = function.arg(argument_index);
+							const auto input_arg_type = resolve<arg_t>();
+
+							if (!argument_has_invocation_priority(function_arg_type, input_arg_type))
+							{
+								skip_overload = true;
+							}
+						}
+					}
+				);
+
+				if (skip_overload)
+				{
+					continue;
+				}
+
+				if (auto result = function.invoke(instance, entt::forward_as_meta(args)...))
+				{
+					return result;
+				}
+			}
+		}
+
+		// Fallback to trying every overload, regardless of possible conversions:
+		for (auto function = first_overload; (function); function = function.next())
+		{
+			// NOTE: Function `arity` check added to avoid unnecessary overhead from `entt::forward_as_meta`.
 			if (function.arity() == sizeof...(args)) // >=
 			{
 				if (auto result = function.invoke(instance, entt::forward_as_meta(args)...))
@@ -51,8 +96,6 @@ namespace engine
 					return result;
 				}
 			}
-
-			function = function.next();
 		}
 
 		return {};
@@ -69,6 +112,39 @@ namespace engine
 	{
 		static_assert(std::is_same_v<std::decay_t<InstanceType>, MetaAny>, "The `instance` parameter must be a `MetaAny` object, or a reference to one.");
 
+		// Try exact / very similar argument matches first:
+		for (auto function = function_overloads; (function); function = function.next())
+		{
+            if (arg_count == function.arity()) // >=
+            {
+				bool skip_overload = false;
+
+				for (std::size_t argument_index = 0; argument_index < arg_count; argument_index++) // function.arity()
+				{
+					const auto function_arg_type = function.arg(argument_index);
+					const auto input_arg_type = args[argument_index].type();
+
+					if (!argument_has_invocation_priority(function_arg_type, input_arg_type))
+					{
+						skip_overload = true;
+
+						break;
+					}
+				}
+
+				if (skip_overload)
+				{
+					continue;
+				}
+
+			    if (auto result = function.invoke(instance, args, arg_count))
+			    {
+				    return result;
+			    }
+            }
+		}
+
+		// Fallback to trying every overload, regardless of possible conversions:
 		for (auto function = function_overloads; (function); function = function.next())
 		{
 			// NOTE: We don't bother with the function `arity` check here,
