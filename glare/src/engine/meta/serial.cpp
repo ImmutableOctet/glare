@@ -1907,7 +1907,6 @@ namespace engine
 			return { meta_any_from_string(expr, instructions, type, try_string_fallback, try_arithmetic), expr.length() };
 		}
 
-		std::size_t offset = 0;
 		MetaValueOperation operation_out;
 
 		OperatorType prev_operator = std::nullopt;
@@ -1918,6 +1917,13 @@ namespace engine
 
 		std::string_view remainder;
 
+		// The current processing offset into `expr`.
+		std::size_t offset = 0;
+
+		// Updates `offset` to point to the greater of `current_expr` and the current offset value.
+		// 
+		// If `is_completed` is true, the attempted offset will point to the
+		// first character after `current_expr`, rather than `current_expr` itself.
 		auto update_offset = [&expr, &offset](std::string_view current_expr, bool is_completed)
 		{
 			if (current_expr.empty())
@@ -1935,7 +1941,14 @@ namespace engine
 			offset = std::max(offset, updated_offset);
 		};
 
+		// Adds `length_from_offset` to `offset`.
+		auto add_offset = [&offset](std::size_t length_from_offset)
+		{
+			offset += length_from_offset;
+		};
+
 		// Remove leading whitespace via offset.
+		// TODO: Look into making this more optimal.
 		update_offset(util::trim(expr, util::whitespace_symbols), false);
 
 		const auto initial_offset = offset;
@@ -1979,7 +1992,15 @@ namespace engine
 		{
 			const bool is_first_expr = (offset == initial_offset);
 
-			const auto current_expr = expr.substr(offset);
+			const auto current_expr_offset = offset;
+			const auto current_expr = expr.substr(current_expr_offset);
+
+			// Advances `offset` to a new `current_expr`-relative offset.
+			auto advance_offset_from_current_expr = [current_expr_offset, &offset](std::size_t relative_offset)
+			{
+				offset = std::max(offset, (current_expr_offset + relative_offset));
+			};
+
 			auto current_expr_cutoff = current_expr.length();
 
 			std::string_view current_value_raw;
@@ -2101,7 +2122,7 @@ namespace engine
 
 					// Update the offset to account for isolated value.
 					// NOTE: We add one to `scope_end` here to account for the closing symbol's length. (e.g. ')')
-					offset = std::max(offset, (scope_end + 1));
+					advance_offset_from_current_expr((scope_end + 1));
 				}
 				else
 				{
@@ -2360,7 +2381,7 @@ namespace engine
 					constexpr std::size_t exit_operator_length = 1;
 
 					// Update the offset to account for the exit (`,`) operator.
-					offset += (exit_operator + exit_operator_length);
+					add_offset((exit_operator + exit_operator_length));
 				}
 
 				exit_early = true;
@@ -2701,6 +2722,9 @@ namespace engine
 			prev_operator = current_operator;
 		}
 
+		// Ensure the processed length we report is no greater than the length of the input.
+		const auto length_processed = std::min(offset, expr.length());
+
 		if (operation_out.segments.empty())
 		{
 			if (cast_type && !cast_applied)
@@ -2711,19 +2735,19 @@ namespace engine
 				{
 					operation_out.segments.emplace_back(std::move(current_value), MetaValueOperator::Get);
 
-					return { allocate_meta_any(std::move(operation_out), instructions.storage), offset };
+					return { allocate_meta_any(std::move(operation_out), instructions.storage), length_processed };
 				}
 				else if (operation_out.segments.size() == 1)
 				{
 					// Cast encoded as the only entry.
-					return { std::move(operation_out.segments[0].value), offset };
+					return { std::move(operation_out.segments[0].value), length_processed };
 				}
 			}
 			else
 			{
 				if (current_value)
 				{
-					return { std::move(current_value), offset };
+					return { std::move(current_value), length_processed };
 				}
 			}
 		}
@@ -2748,10 +2772,10 @@ namespace engine
 
 			if ((operation_out.segments.size() == 1)) // && (operation_out.segments[0].operation == MetaValueOperator::Get)
 			{
-				return { std::move(operation_out.segments[0].value), offset };
+				return { std::move(operation_out.segments[0].value), length_processed };
 			}
 			
-			return { allocate_meta_any(std::move(operation_out), instructions.storage), offset };
+			return { allocate_meta_any(std::move(operation_out), instructions.storage), length_processed };
 		}
 
 		return {};
