@@ -21,6 +21,7 @@
 #include <util/algorithm.hpp>
 
 #include <optional>
+#include <utility>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -642,21 +643,4 @@ namespace engine
 
 		return (elements_processed > 0);
 	}
-
-	// NOTE: For best interoperability, `opt_parsing_context->variable_context` should not store a name.
-	// (This could lead to variable name conflicts between threads)
-	std::tuple
-	<
-		EntityThreadIndex, // initial_thread_index
-		EntityThreadCount, // top_level_processed_count
-		EntityThreadCount  // processed_count
-	>
-	process_thread_list
-	(
-		EntityDescriptor& descriptor,
-		const util::json& content,
-		const std::filesystem::path* opt_base_path=nullptr,
-		const MetaParsingContext& opt_parsing_context={},
-		const EntityFactoryContext* opt_factory_context=nullptr
-	);
 }
