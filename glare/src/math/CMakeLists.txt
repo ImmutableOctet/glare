@@ -5,12 +5,13 @@ target_sources(
     
     PRIVATE
     
-    "math.cpp"
-
+    
     "aabb.cpp"
     "bullet.cpp"
-    "joyhat.cpp"
     "conversion.cpp"
+    "joyhat.cpp"
+    "lerp.cpp"
+    "rotation.cpp"
 )
 
 #target_include_directories(
