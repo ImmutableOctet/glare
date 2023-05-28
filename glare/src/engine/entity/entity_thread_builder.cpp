@@ -379,7 +379,9 @@ namespace engine
 
 		if (thread_id_already_exists)
 		{
-			print_warn("Attempted to set thread ID to #{}, but an existing thread already has that name. (Input: \"{}\")", *thread_id_out, thread_name);
+			print_warn("Failed to set thread ID to #{}: An existing thread already has that name. (Input: \"{}\")", *thread_id_out, thread_name);
+
+			return std::nullopt;
 		}
 		//else
 		{
