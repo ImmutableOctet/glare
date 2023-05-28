@@ -814,7 +814,7 @@ TEST_CASE("engine::meta_any_from_string", "[engine:meta]")
 
 		auto setter_expr = engine::meta_any_from_string
 		(
-			std::string_view("self.position = Vector(100.0, 200.0, 300.0)"),
+			std::string_view("self.position = Vector(100.0, (100.0 * 2.0), (100.0 * 3.0))"),
 			{
 				.allow_entity_indirection      = true,
 				.allow_function_call_semantics = true,
