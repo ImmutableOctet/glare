@@ -139,6 +139,15 @@ namespace engine
 				std::string_view
 			>;
 
+			static std::string thread_name_from_script_reference
+			(
+				const std::filesystem::path& script_path,
+				const EntityFactoryContext* opt_factory_context=nullptr,
+				const std::filesystem::path* opt_base_path=nullptr
+			);
+
+			static std::string thread_name_from_resolved_path(const std::filesystem::path& resolved_path);
+
 			static bool is_yield_instruction(MetaSymbolID instruction_id);
 			static bool is_yield_instruction(std::string_view instruction_name);
 			static bool is_event_capture_instruction(MetaSymbolID instruction_id);
