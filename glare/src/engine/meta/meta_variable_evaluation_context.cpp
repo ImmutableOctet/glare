@@ -1,5 +1,7 @@
 #include "meta_variable_evaluation_context.hpp"
 
+#include "indirection.hpp"
+
 #include "meta_variable_storage_interface.hpp"
 #include "meta_variable_context.hpp"
 #include "meta_variable_description.hpp"
@@ -96,33 +98,56 @@ namespace engine
 
 	bool MetaVariableEvaluationContext::set(MetaVariableScope scope, MetaSymbolID name, MetaAny&& value, bool override_existing, bool allow_variable_allocation)
 	{
-		auto* scope_storage = get_storage(scope);
+		return set_impl
+		(
+			scope, name, std::move(value),
+			override_existing, allow_variable_allocation
+		);
+	}
 
-		if (!scope_storage)
-		{
-			return false;
-		}
+	bool MetaVariableEvaluationContext::set
+	(
+		MetaVariableScope scope, MetaSymbolID name, MetaAny&& value,
+		bool override_existing, bool allow_variable_allocation,
+		Registry& registry, Entity entity
+	)
+	{
+		return set_impl
+		(
+			scope, name, std::move(value),
+			override_existing, allow_variable_allocation,
+			registry, entity
+		);
+	}
 
-		auto* existing = scope_storage->get(name);
+	bool MetaVariableEvaluationContext::set
+	(
+		MetaVariableScope scope, MetaSymbolID name, MetaAny&& value,
+		bool override_existing, bool allow_variable_allocation,
+		Registry& registry, Entity entity, const MetaEvaluationContext& context
+	)
+	{
+		return set_impl
+		(
+			scope, name, std::move(value),
+			override_existing, allow_variable_allocation,
+			registry, entity, context
+		);
+	}
 
-		if (existing)
-		{
-			if (override_existing)
-			{
-				*existing = std::move(value);
-
-				return true;
-			}
-		}
-		else
-		{
-			if (allow_variable_allocation)
-			{
-				return scope_storage->set(name, std::move(value));
-			}
-		}
-
-		return false;
+	bool MetaVariableEvaluationContext::set
+	(
+		MetaVariableScope scope, MetaSymbolID name, MetaAny&& value,
+		bool override_existing, bool allow_variable_allocation,
+		const MetaEvaluationContext& context
+	)
+	{
+		return set_impl
+		(
+			scope, name, std::move(value),
+			override_existing, allow_variable_allocation,
+			context
+		);
 	}
 
 	bool MetaVariableEvaluationContext::exists(MetaVariableScope scope, MetaSymbolID name) const
@@ -199,6 +224,52 @@ namespace engine
 			if (entry)
 			{
 				return true;
+			}
+		}
+
+		return false;
+	}
+
+	template <typename ...EvaluationArgs>
+	bool MetaVariableEvaluationContext::set_impl(MetaVariableScope scope, MetaSymbolID name, MetaAny&& value, bool override_existing, bool allow_variable_allocation, EvaluationArgs&&... args)
+	{
+		auto* scope_storage = get_storage(scope);
+
+		if (!scope_storage)
+		{
+			return false;
+		}
+
+		auto* existing = scope_storage->get(name);
+
+		if (existing)
+		{
+			if (override_existing)
+			{
+				if (auto underlying = try_get_underlying_value(value, std::forward<EvaluationArgs>(args)...))
+				{
+					*existing = std::move(underlying);
+				}
+				else
+				{
+					*existing = std::move(value);
+				}
+
+				return true;
+			}
+		}
+		else
+		{
+			if (allow_variable_allocation)
+			{
+				if (auto underlying = try_get_underlying_value(value, std::forward<EvaluationArgs>(args)...))
+				{
+					return scope_storage->set(name, std::move(underlying));
+				}
+				else
+				{
+					return scope_storage->set(name, std::move(value));
+				}
 			}
 		}
 

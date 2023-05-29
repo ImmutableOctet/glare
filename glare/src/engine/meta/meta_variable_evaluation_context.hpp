@@ -10,6 +10,7 @@ namespace engine
 	class MetaVariableStorageInterface;
 	class MetaVariableContext;
 	
+	struct MetaEvaluationContext;
 	struct MetaVariableDescription;
 
 	class MetaVariableEvaluationContext
@@ -62,7 +63,32 @@ namespace engine
 			// NOTE: This overload does not preserve the constness of the requested variable.
 			MetaAny get(MetaVariableScope scope, MetaSymbolID name) const;
 
-			bool set(MetaVariableScope scope, MetaSymbolID name, MetaAny&& value, bool override_existing=true, bool allow_variable_allocation=true);
+			bool set
+			(
+				MetaVariableScope scope, MetaSymbolID name, MetaAny&& value,
+				bool override_existing=true, bool allow_variable_allocation=true
+			);
+
+			bool set
+			(
+				MetaVariableScope scope, MetaSymbolID name, MetaAny&& value,
+				bool override_existing, bool allow_variable_allocation,
+				Registry& registry, Entity entity
+			);
+
+			bool set
+			(
+				MetaVariableScope scope, MetaSymbolID name, MetaAny&& value,
+				bool override_existing, bool allow_variable_allocation,
+				Registry& registry, Entity entity, const MetaEvaluationContext& context
+			);
+
+			bool set
+			(
+				MetaVariableScope scope, MetaSymbolID name, MetaAny&& value,
+				bool override_existing, bool allow_variable_allocation,
+				const MetaEvaluationContext& context
+			);
 
 			// Checks if a variable named `name` exists within `scope`.
 			bool exists(MetaVariableScope scope, MetaSymbolID name) const;
@@ -80,7 +106,12 @@ namespace engine
 			MetaVariableEvaluationContext& operator=(MetaVariableEvaluationContext&&) noexcept = default;
 
 			explicit operator bool() const;
+
 		protected:
 			VariableStoreLookupTable variables = {};
+
+		private:
+			template <typename ...EvaluationArgs>
+			bool set_impl(MetaVariableScope scope, MetaSymbolID name, MetaAny&& value, bool override_existing, bool allow_variable_allocation, EvaluationArgs&&... args);
 	};
 }
