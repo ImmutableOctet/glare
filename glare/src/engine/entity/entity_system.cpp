@@ -1832,7 +1832,7 @@ namespace engine
 							step_stride = 0;
 						}
 
-						service.queue_event<EntityThreadRewindCommand>
+						service.event<EntityThreadRewindCommand> // queue_event
 						(
 							source_entity, target_entity,
 					
@@ -1873,8 +1873,21 @@ namespace engine
 							// Continue executing instructions until we reach the end of the multi-instruction block.
 							while ((thread.next_instruction < target_instruction_index) && !thread.is_suspended())
 							{
+								const auto active_instruction = thread.next_instruction;
+
 								// NOTE: Recursion.
 								step_thread(registry, entity, descriptor, source, thread_comp, thread);
+
+								const auto updated_instruction = thread.next_instruction;
+
+								// If the updated instruction index is less than the active instruction, we're processing a loop,
+								// and should therefore continue execution on the next update tick (`step_thread` call).
+								// 
+								// i.e. from here, it is up to the runtime environment to determine if we should continue looping.
+								if (updated_instruction < active_instruction)
+								{
+									break;
+								}
 							}
 
 							// Stride already handled via multi-instruction loop.
