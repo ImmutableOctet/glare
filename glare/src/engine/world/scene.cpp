@@ -97,28 +97,71 @@ namespace engine
 
 						if (auto* global_variables = thread_component.get_global_variables())
 						{
+							constexpr auto type_specifier_symbol = std::string_view { ":" };
+
+							const auto variable_declaration = std::string_view { key };
+							
+							auto variable_name = std::string_view {};
+
+							// NOTE: Global variables always use the direct
+							// hash of the variable name as their identifier.
+							auto variable_type_name = std::string_view {};
+
+							if (auto variable_type_begin = util::find_singular(variable_declaration, type_specifier_symbol); (variable_type_begin != std::string_view::npos))
+							{
+								variable_name = util::trim(variable_declaration.substr(0, variable_type_begin));
+								variable_type_name = util::trim(variable_declaration.substr(variable_type_begin + type_specifier_symbol.length()));
+							}
+							else
+							{
+								variable_name = variable_declaration;
+							}
+
+							const auto parsing_instructions = MetaParsingInstructions
+							{
+								.context                          = parsing_context,
+
+								.fallback_to_string               = true, // false,
+										
+								.fallback_to_component_reference  = true, // false,
+								.fallback_to_entity_reference     = false, // true,
+
+								.allow_member_references          = true,
+								.allow_entity_indirection         = true,
+
+								.allow_remote_variable_references = true
+							};
+
+							if (!variable_type_name.empty())
+							{
+								const auto type_context = parsing_context.get_type_context();
+
+								auto variable_type = (type_context)
+									? type_context->get_type(variable_type_name, parsing_instructions)
+									: resolve(hash(variable_type_name).value())
+								;
+
+								if (variable_type)
+								{
+									global_variables->set
+									(
+										MetaVariable
+										{
+											variable_name, value,
+											variable_type, parsing_instructions
+										}
+									);
+
+									return;
+								}
+							}
+
 							global_variables->set
 							(
 								MetaVariable
 								{
-									// NOTE: Global variables always use the direct
-									// hash of the variable name as their identifier.
-									key, value,
-
-									MetaParsingInstructions
-									{
-										.context                          = parsing_context,
-
-										.fallback_to_string               = true, // false,
-										
-										.fallback_to_component_reference  = true, // false,
-										.fallback_to_entity_reference     = false, // true,
-
-										.allow_member_references          = true,
-										.allow_entity_indirection         = true,
-
-										.allow_remote_variable_references = true
-									}
+									variable_name, value,
+									parsing_instructions
 								}
 							);
 						}
