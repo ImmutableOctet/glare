@@ -20,6 +20,7 @@
 #include "components/state_storage_component.hpp"
 #include "components/frozen_state_component.hpp"
 #include "components/entity_thread_component.hpp"
+#include "components/static_mutation_component.hpp"
 
 #include "commands/commands.hpp"
 
@@ -302,6 +303,38 @@ namespace engine
 	{
 		engine_meta_type<EntityThreadComponent>()
 			.data<&EntityThreadComponent::threads>("threads"_hs)
+		;
+	}
+
+	template <>
+	void reflect<StaticMutationComponent>()
+	{
+		engine_meta_type<StaticVariableMutation>()
+			.data<&StaticVariableMutation::variable_name>("variable_name"_hs) // get_name
+			.data<nullptr, &StaticVariableMutation::get_scope>("variable_scope"_hs)
+		;
+
+		engine_meta_type<StaticMutationComponent>()
+			.data<&StaticMutationComponent::mutated_components>("mutated_components"_hs)
+			.data<&StaticMutationComponent::mutated_variables>("mutated_variables"_hs)
+
+			.func<static_cast<bool(StaticMutationComponent::*)(MetaTypeID)>(&StaticMutationComponent::add_component)>("add_component"_hs)
+			.func<static_cast<bool(StaticMutationComponent::*)(const MetaType&)>(&StaticMutationComponent::add_component)>("add_component"_hs)
+
+			.func<static_cast<bool(StaticMutationComponent::*)(MetaTypeID)>(&StaticMutationComponent::remove_component)>("remove_component"_hs)
+			.func<static_cast<bool(StaticMutationComponent::*)(const MetaType&)>(&StaticMutationComponent::remove_component)>("remove_component"_hs)
+
+			.func<static_cast<bool(StaticMutationComponent::*)(MetaTypeID) const>(&StaticMutationComponent::contains_component)>("contains_component"_hs)
+			.func<static_cast<bool(StaticMutationComponent::*)(const MetaType&) const>(&StaticMutationComponent::contains_component)>("contains_component"_hs)
+
+			.func<static_cast<bool(StaticMutationComponent::*)(const StaticVariableMutation&)>(&StaticMutationComponent::add_variable)>("add_variable"_hs)
+
+			.func<static_cast<bool(StaticMutationComponent::*)(const StaticVariableMutation&)>(&StaticMutationComponent::remove_variable)>("remove_variable"_hs)
+			.func<static_cast<bool(StaticMutationComponent::*)(std::string_view, MetaVariableScope)>(&StaticMutationComponent::remove_variable)>("remove_variable"_hs)
+			.func<static_cast<bool(StaticMutationComponent::*)(std::string_view)>(&StaticMutationComponent::remove_variable)>("remove_variable"_hs)
+
+			.func<static_cast<bool(StaticMutationComponent::*)(std::string_view, MetaVariableScope) const>(&StaticMutationComponent::contains_variable)>("contains_variable"_hs)
+			.func<static_cast<bool(StaticMutationComponent::*)(std::string_view) const>(&StaticMutationComponent::contains_variable)>("contains_variable"_hs)
 		;
 	}
 
@@ -727,6 +760,7 @@ namespace engine
 		reflect<StateStorageComponent>();
 		reflect<FrozenStateComponent>();
 		reflect<EntityThreadComponent>();
+		reflect<StaticMutationComponent>();
 
 		// Events:
 		reflect<OnStateChange>();
