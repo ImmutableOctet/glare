@@ -137,9 +137,29 @@ namespace engine::impl
     }
 
     template <typename T>
+    T* get_or_default_construct_component(Registry& registry, Entity entity)
+    {
+        return &(registry.get_or_emplace<T>(entity));
+    }
+
+    template <typename T>
     T* get_component(Registry& registry, Entity entity)
     {
         return registry.try_get<T>(entity);
+    }
+
+    template <typename T>
+    T* emplace_default_component(Registry& registry, Entity entity)
+    {
+        // Alternative implementation (Doesn't fail on existing):
+        //return &(registry.get_or_emplace<T>(entity));
+
+        if (auto existing = get_component<T>(registry, entity))
+        {
+            return nullptr; // existing;
+        }
+
+        return &(registry.emplace<T>(entity));
     }
 
     template <typename T>

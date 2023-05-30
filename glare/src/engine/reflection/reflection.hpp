@@ -290,11 +290,11 @@ namespace engine
             type = type
                 .template func<&impl::has_component<T>>("has_component"_hs)
                 .template func<&impl::get_component<T>>("get_component"_hs)
+                .template func<&impl::get_or_emplace_component<T>, entt::as_ref_t>("get_or_emplace_component"_hs)
                 .template func<&impl::emplace_meta_component<T>, entt::as_ref_t>("emplace_meta_component"_hs)
                 .template func<&impl::store_meta_component<T>>("store_meta_component"_hs)
                 .template func<&impl::copy_meta_component<T>>("copy_meta_component"_hs)
                 .template func<&impl::remove_component<T>>("remove_component"_hs)
-                .template func<&impl::get_or_emplace_component<T>, entt::as_ref_t>("get_or_emplace_component"_hs)
                 .template func<&impl::direct_patch_meta_component<T>, entt::as_ref_t>("direct_patch_meta_component"_hs)
                 .template func<&impl::indirect_patch_meta_component<T>>("indirect_patch_meta_component"_hs)
                 .template func<&impl::mark_component_as_patched<T>>("mark_component_as_patched"_hs)
@@ -304,6 +304,14 @@ namespace engine
                 .template func<&MetaEventListener::connect<T>>("connect_meta_event"_hs)
                 .template func<&MetaEventListener::disconnect<T>>("disconnect_meta_event"_hs)
             ;
+
+            if constexpr (std::is_default_constructible_v<T>)
+            {
+                type = type
+                    .template func<&impl::emplace_default_component<T>>("emplace_default_component"_hs)
+                    .template func<&impl::get_or_default_construct_component<T>>("get_or_default_construct_component"_hs)
+                ;
+            }
         }
 
         if constexpr ((config.generate_json_constructor) && (std::is_default_constructible_v<T>))
