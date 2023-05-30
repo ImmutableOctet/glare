@@ -25,7 +25,9 @@ namespace engine
 			return {};
 		}
 
-		if (auto get_component_fn = component_type.func("get_component"_hs))
+		auto get_component_fn = component_type.func("get_component"_hs);
+
+		while (get_component_fn)
 		{
 			auto component_ptr = get_component_fn.invoke // invoke_any_overload
 			(
@@ -38,6 +40,8 @@ namespace engine
 			{
 				return *component_ptr;
 			}
+
+			get_component_fn = get_component_fn.next();
 		}
 
 		return {};
@@ -46,6 +50,99 @@ namespace engine
 	MetaAny get_component_ref(Registry& registry, Entity entity, MetaTypeID component_type_id)
 	{
 		return get_component_ref(registry, entity, resolve(component_type_id));
+	}
+
+	MetaAny get_or_emplace_component(Registry& registry, Entity entity, const MetaType& component_type)
+	{
+		using namespace engine::literals;
+
+		/*
+		// Alternative implementation:
+		if (auto existing_component = get_component_ref(registry, entity, component_type))
+		{
+			return existing_component;
+		}
+
+		return emplace_default_component(registry, entity, component_type);
+		*/
+
+		if (!component_type)
+		{
+			return {};
+		}
+
+		if (entity == null)
+		{
+			return {};
+		}
+
+		auto emplace_component_fn = component_type.func("get_or_default_construct_component"_hs);
+
+		while (emplace_component_fn)
+		{
+			auto component_ptr = emplace_component_fn.invoke // invoke_any_overload
+			(
+				{},
+				entt::forward_as_meta(registry),
+				entt::forward_as_meta(entity)
+			);
+
+			if (component_ptr)
+			{
+				return *component_ptr;
+			}
+
+			emplace_component_fn = emplace_component_fn.next();
+		}
+
+		return {};
+	}
+
+	MetaAny get_or_emplace_component(Registry& registry, Entity entity, MetaTypeID component_type_id)
+	{
+		return get_or_emplace_component(registry, entity, resolve(component_type_id));
+	}
+
+	// Attempts to emplace a default-constructed instance of `component_type` to `entity`.
+	MetaAny emplace_default_component(Registry& registry, Entity entity, const MetaType& component_type)
+	{
+		using namespace engine::literals;
+
+		if (!component_type)
+		{
+			return {};
+		}
+
+		if (entity == null)
+		{
+			return {};
+		}
+
+		auto default_component_fn = component_type.func("emplace_default_component"_hs);
+
+		while (default_component_fn)
+		{
+			auto component_ptr = default_component_fn.invoke // invoke_any_overload
+			(
+				{},
+				entt::forward_as_meta(registry),
+				entt::forward_as_meta(entity)
+			);
+
+			if (component_ptr)
+			{
+				return *component_ptr;
+			}
+
+			default_component_fn = default_component_fn.next();
+		}
+
+		return {};
+	}
+
+	MetaAny emplace_default_component(Registry& registry, Entity entity, MetaTypeID component_type_id)
+	{
+		return emplace_default_component(registry, entity, resolve(component_type_id));
 	}
 
 	MetaAny emplace_component
