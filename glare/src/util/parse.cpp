@@ -1061,10 +1061,19 @@ namespace util
 			(
 				[&expr](auto&&... operator_symbols)
 				{
+					/*
+					// Alternative implementation (does not account for expression scope):
 					return find_first_of_ex
 					(
 						expr,
 						std::string_view::npos,
+						std::forward<decltype(operator_symbols)>(operator_symbols)...
+					);
+					*/
+
+					return find_first_of_unscoped
+					(
+						expr, util::standard_scope_symbols,
 						std::forward<decltype(operator_symbols)>(operator_symbols)...
 					);
 				},
@@ -1078,10 +1087,19 @@ namespace util
 			(
 				[&expr](auto&&... operator_symbols)
 				{
+					/*
+					// Alternative implementation (does not account for expression scope):
 					return find_first_of_ex
 					(
 						expr,
 						std::string_view::npos,
+						std::forward<decltype(operator_symbols)>(operator_symbols)...
+					);
+					*/
+
+					return find_first_of_unscoped
+					(
+						expr, util::standard_scope_symbols,
 						std::forward<decltype(operator_symbols)>(operator_symbols)...
 					);
 				},
@@ -1098,7 +1116,6 @@ namespace util
 			return { std::string_view::npos, {} };
 		}
 
-		// TODO: Rework this subroutine into a regular function as part of the public API.
 		auto [initial_result_index, initial_result_symbol] = util::execute_as<std::string_view>
 		(
 			[&expr](auto&&... operator_symbols) -> std::tuple<std::size_t, std::string_view>
@@ -1113,34 +1130,11 @@ namespace util
 				);
 				*/
 
-				auto result_symbol = std::string_view {};
-
-				// NOTE: Unlike `result_symbol`, `result_index` needs to be translated to be `expr`-relative by `find_unscoped`.
-				// For this reason, we use the return value, rather than simply handling `result_index` as an out-parameter.
-				auto result_index = find_unscoped
+				return find_first_of_unscoped
 				(
-					expr, "", 0, util::standard_scope_symbols,
-
-					[&](const auto& substr, const auto& placeholder)
-					{
-						auto [sub_result_index, sub_result_symbol] = find_first_of_ex
-						(
-							substr,
-							std::string_view::npos,
-							std::forward<decltype(operator_symbols)>(operator_symbols)...
-						);
-
-						if (sub_result_index != std::string_view::npos)
-						{
-							// Store a view to the symbol we found.
-							result_symbol = sub_result_symbol;
-						}
-
-						return sub_result_index;
-					}
+					expr, util::standard_scope_symbols,
+					std::forward<decltype(operator_symbols)>(operator_symbols)...
 				);
-
-				return { result_index, result_symbol };
 			},
 
 			"&&", "||", "<<", ">>",
