@@ -1699,6 +1699,8 @@ namespace engine
 					first_symbol,
 					second_symbol,
 					access_operator,
+					first_symbol_is_command,
+					second_symbol_is_command,
 					updated_offset
 				] = parse_qualified_reference(value, 0, &instructions, true);
 
