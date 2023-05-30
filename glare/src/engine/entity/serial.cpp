@@ -120,6 +120,7 @@ namespace engine
 		return std::nullopt;
 	}
 
+	// TODO: Deprecate/remove. (No longer needed for `process_trigger_expression`)
 	std::tuple<std::string_view, std::size_t>
 	parse_event_type(const std::string& event_type, std::size_t offset) // std::string_view
 	{

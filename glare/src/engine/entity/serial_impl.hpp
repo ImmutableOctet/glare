@@ -401,7 +401,7 @@ namespace engine
 			] = parse_qualified_assignment_or_comparison
 			(
 				trigger_condition_expr, offset, {},
-				true, true, true, true
+				true, true, true, true, true
 			);
 
 			auto& type_name = first_symbol;
@@ -411,6 +411,9 @@ namespace engine
 
 			if (type_name.empty())
 			{
+				/*
+				// Disabled for now (No longer needed with current implementation of `parse_qualified_assignment_or_comparison`):
+				
 				// TODO: Optimize. (Temporary string created due to limitation of `std::regex`)
 				auto standalone_event_result = parse_event_type(std::string { trigger_condition_expr }, offset);
 
@@ -424,6 +427,19 @@ namespace engine
 				else
 				{
 					updated_offset = std::get<1>(standalone_event_result);
+
+					is_standalone_event_trigger = true;
+				}
+				*/
+
+				break;
+			}
+			else
+			{
+				// See above notes about behavior of `parse_qualified_assignment_or_comparison`.
+				if (second_symbol.empty() && compared_value_raw.empty())
+				{
+					assert(comparison_operator.empty());
 
 					is_standalone_event_trigger = true;
 				}
