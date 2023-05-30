@@ -2,6 +2,7 @@
 
 #include "math_extensions.hpp"
 #include "common_extensions.hpp"
+#include "tuple_extensions.hpp"
 #include "string_conversion.hpp"
 
 #include <engine/meta/hash.hpp>
@@ -21,6 +22,34 @@
 
 namespace engine
 {
+    namespace impl
+    {
+        static math::TransformVectors transform_vectors_from_position_and_rotation(const math::Vector3D& position={}, const math::Vector3D& rotation = {})
+        {
+            return { position, rotation, { 1.0f, 1.0f, 1.0f } };
+        }
+
+        static math::TransformVectors transform_vectors_from_position(const math::Vector3D& position={})
+        {
+            return transform_vectors_from_position_and_rotation(position);
+        }
+
+	    static math::Vector3D transform_vectors_get_by_index(const math::TransformVectors& instance, std::size_t index) // -> decltype(auto)
+	    {
+            switch (index)
+            {
+                case 0:
+                    return std::get<0>(instance);
+                case 1:
+                    return std::get<1>(instance);
+                case 2:
+                    return std::get<2>(instance);
+            }
+		    
+            return {};
+	    }
+    }
+
 	template
     <
         typename T,
@@ -177,6 +206,29 @@ namespace engine
             .func<&impl::quat_vec3_multiply_impl>("operator*"_hs)
             .func<&impl::quat_vec4_multiply_impl>("operator*"_hs)
             .func<&impl::inverse_impl<math::Quaternion>>("inverse"_hs)
+        ;
+    }
+
+    // NOTE: `math::TransformVectors` is currently an alias to an `std::tuple` specialization.
+    template <>
+    void reflect<math::TransformVectors>()
+    {
+        reflect_math_type<math::TransformVectors, true, false, false>("TransformVectors")
+            .ctor
+            <
+                std::tuple_element_t<0, math::TransformVectors>,
+                std::tuple_element_t<1, math::TransformVectors>,
+                std::tuple_element_t<2, math::TransformVectors>
+            >()
+
+            .ctor<&impl::transform_vectors_from_position>()
+            .ctor<&impl::transform_vectors_from_position_and_rotation>()
+
+            .data<&impl::set_tuple_element<0, math::TransformVectors>, &impl::get_tuple_element<0, math::TransformVectors>>("position"_hs)
+            .data<&impl::set_tuple_element<1, math::TransformVectors>, &impl::get_tuple_element<1, math::TransformVectors>>("rotation"_hs)
+            .data<&impl::set_tuple_element<2, math::TransformVectors>, &impl::get_tuple_element<2, math::TransformVectors>>("scale"_hs)
+
+            .func<&impl::transform_vectors_get_by_index>("operator[]"_hs)
         ;
     }
 
@@ -549,6 +601,8 @@ namespace engine
 
         reflect<math::Matrix4x4>();
         reflect<math::Matrix3x3>();
+
+        reflect<math::TransformVectors>();
 
         // ...
     }
