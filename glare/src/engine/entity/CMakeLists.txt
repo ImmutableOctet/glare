@@ -22,11 +22,12 @@ target_sources(
     "entity_state_action.cpp"
     "entity_thread_target.cpp"
     "meta_description.cpp"
+    "entity_context.cpp"
+    "parse.cpp"
     "components/entity_thread_component.cpp"
     "components/instance_component.cpp"
     "components/entity_context_component.cpp"
-    "entity_context.cpp"
-    "parse.cpp"
+    "components/static_mutation_component.cpp"
 )
 
 #target_link_libraries(
