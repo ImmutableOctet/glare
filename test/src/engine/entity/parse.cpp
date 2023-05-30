@@ -14,6 +14,30 @@
 
 TEST_CASE("engine::parse_qualified_assignment_or_comparison", "[engine:entity]")
 {
+	SECTION("Unwanted function call")
+	{
+		auto expr = std::string_view("InstanceComponent::has_component(hit_entity)");
+
+		auto
+		[
+			entity_ref_expr,
+			first_symbol, second_symbol,
+			operator_symbol, value_raw,
+			updated_offset
+		] = engine::parse_qualified_assignment_or_comparison
+		(
+			expr, 0, {},
+			true, true, true, true, true
+		);
+
+		REQUIRE(entity_ref_expr.empty());
+		REQUIRE(first_symbol.empty());
+		REQUIRE(second_symbol.empty());
+		REQUIRE(operator_symbol.empty());
+		REQUIRE(value_raw.empty());
+		REQUIRE(updated_offset == 0);
+	}
+
 	SECTION("Trigger condition after logical operator")
 	{
 		auto expr = std::string_view(" || OnButtonPressed::button == Button::Shield");
