@@ -30,6 +30,7 @@
 
 #include <engine/entity/components/entity_thread_component.hpp>
 #include <engine/entity/components/instance_component.hpp>
+#include <engine/entity/components/static_mutation_component.hpp>
 
 #include <engine/entity/commands/state_change_command.hpp>
 
@@ -54,23 +55,38 @@
 
 namespace engine
 {
-	// Scene:
+	// Internal routine for processing static entity mutations.
 	template <typename ...IgnoredKeys>
-	void Scene::process_data_entries
+	static void process_entity_mutations
 	(
 		Registry& registry, Entity entity, const util::json& object_data,
 		const MetaParsingContext& parsing_context,
 		Service* opt_service, SystemManagerInterface* opt_system_manager,
+		bool capture_static_mutations,
 		IgnoredKeys&&... ignored_keys
 	)
 	{
+		StaticMutationComponent* entity_mutation = nullptr;
+
+		auto get_mutation = [&registry, &entity_mutation, entity, capture_static_mutations]() -> StaticMutationComponent&
+		{
+			assert(capture_static_mutations);
+
+			if (!entity_mutation)
+			{
+				entity_mutation = &(registry.get_or_emplace<StaticMutationComponent>(entity));
+			}
+
+			return *entity_mutation;
+		};
+
 		util::enumerate_map_filtered_ex
 		(
 			object_data.items(),
 
 			[](auto&& value) { return hash(std::forward<decltype(value)>(value)); },
 
-			[&registry, entity, &parsing_context, &opt_service, &opt_system_manager](const auto& key, const auto& value)
+			[&registry, entity, &parsing_context, &opt_service, &opt_system_manager, capture_static_mutations, &get_mutation](const auto& key, const auto& value)
 			{
 				auto [component_name, allow_entry_update, constructor_arg_count] = parse_component_declaration(key, true);
 
@@ -85,7 +101,13 @@ namespace engine
 
 					if (!allow_entry_update || !update_component_fields(registry, entity, *component, true, true, &evaluation_context))
 					{
-						emplace_component(registry, entity, *component, &evaluation_context);
+						if (emplace_component(registry, entity, *component, &evaluation_context))
+						{
+							if (capture_static_mutations)
+							{
+								get_mutation().add_component(component->get_type_id());
+							}
+						}
 					}
 				}
 				else
@@ -132,6 +154,8 @@ namespace engine
 								.allow_remote_variable_references = true
 							};
 
+							auto variable_out = MetaVariable {};
+
 							if (!variable_type_name.empty())
 							{
 								const auto type_context = parsing_context.get_type_context();
@@ -143,27 +167,41 @@ namespace engine
 
 								if (variable_type)
 								{
-									global_variables->set
-									(
-										MetaVariable
-										{
-											variable_name, value,
-											variable_type, parsing_instructions
-										}
-									);
-
-									return;
+									variable_out = MetaVariable
+									{
+										variable_name, value,
+										variable_type, parsing_instructions
+									};
 								}
 							}
 
-							global_variables->set
-							(
-								MetaVariable
+							if (!variable_out)
+							{
+								variable_out = MetaVariable
 								{
 									variable_name, value,
 									parsing_instructions
-								}
-							);
+								};
+							}
+
+							if (variable_out)
+							{
+								global_variables->set(std::move(variable_out));
+							}
+
+							if (capture_static_mutations)
+							{
+								get_mutation().add_variable
+								(
+									StaticVariableMutation
+									{
+										//variable_out.name,
+										std::string(variable_name)//,
+
+										//MetaVariableScope::Global
+									}
+								);
+							}
 						}
 					}
 				}
@@ -183,40 +221,28 @@ namespace engine
 		);
 	}
 
-    Entity Scene::Load
-	(
-		World& world,
-		const filesystem::path& root_path,
-		const util::json& data,
-		Entity parent,
-		SystemManagerInterface* opt_system_manager,
-		const Scene::Loader::Config& cfg
-	)
-    {
-		auto state = Scene::Loader(world, root_path, data, null, opt_system_manager);
-
-		return state.load(cfg, parent);
-    }
-
-	math::TransformVectors Scene::get_transform_data(const util::json& cfg)
+	// SceneLoader:
+	math::TransformVectors SceneLoader::get_transform_data(const util::json& data)
 	{
 		auto position = math::Vector {};
 		auto rotation = math::Vector {};
 		auto scale    = math::Vector { 1.0f, 1.0f, 1.0f };
 
-		if (auto vector_data = cfg.find("position"); vector_data != cfg.end())
+		//return engine::load<math::TransformVectors>(data);
+
+		if (auto vector_data = data.find("position"); vector_data != data.end())
 		{
 			engine::load(position, *vector_data);
 		}
 
-		if (auto vector_data = cfg.find("rotation"); vector_data != cfg.end())
+		if (auto vector_data = data.find("rotation"); vector_data != data.end())
 		{
 			engine::load(rotation, *vector_data);
 
 			rotation = math::radians(rotation);
 		}
 
-		if (auto vector_data = cfg.find("scale"); vector_data != cfg.end())
+		if (auto vector_data = data.find("scale"); vector_data != data.end())
 		{
 			engine::load(scale, *vector_data);
 		}
@@ -224,127 +250,91 @@ namespace engine
 		return { position, rotation, scale };
 	}
 
-	void Scene::apply_transform(World& world, Entity entity, const util::json& cfg)
-	{
-		auto tform_data = get_transform_data(cfg);
-
-		//world.apply_transform(entity, tform_data);
-		world.apply_transform_and_reset_collision(entity, tform_data);
-	}
-
-	bool Scene::apply_state(World& world, Entity entity, const util::json& cfg)
-	{
-		if (const auto& state = util::find_any(cfg, "state", "default_state"); state != cfg.end())
-		{
-			const auto& state_name = state.value().get<std::string>();
-			const auto state_id = hash(state_name).value();
-
-			world.queue_event<StateChangeCommand>(entity, entity, state_id); // event
-
-			return true;
-		}
-
-		return false;
-	}
-
-	std::optional<graphics::ColorRGBA> Scene::apply_color(World& world, Entity entity, const util::json& cfg)
-	{
-		//auto color = util::get_color(cfg, "color");
-
-		if (!cfg.contains("color"))
-		{
-			return std::nullopt;
-		}
-
-		auto& registry = world.get_registry();
-
-		if (auto* model = registry.try_get<ModelComponent>(entity))
-		{
-			const auto color = util::to_color(cfg["color"], 1.0f);
-
-			model->color = color;
-
-			return color;
-		}
-
-		return std::nullopt;
-	}
-
-	// Scene::Loader:
-	Entity Scene::Loader::make_scene_pivot(World& world, Entity parent)
-	{
-		//parent = create_pivot(world, parent);
-		auto scene = create_pivot(world, parent);
-
-		return scene;
-	}
-
-	Scene::Loader::Loader
+	SceneLoader::SceneLoader
 	(
 		World& world,
 		const filesystem::path& root_path,
-		const util::json& data,
 		Entity scene,
+		const Config& cfg,
 		SystemManagerInterface* system_manager
 	) :
 		world(world),
 		root_path(root_path),
-		data(data),
 		scene(scene),
+		cfg(cfg),
 		system_manager(system_manager)
 	{}
 
-	bool Scene::Loader::ensure_scene(Entity parent)
+	bool SceneLoader::ensure_scene(Entity parent)
 	{
 		if (scene != null)
 		{
 			return false;
 		}
 
-		// Automatically generated scene pivot:
-		print("Creating scene pivot...");
-
-		scene = make_scene_pivot(world, parent);
-
-		return true;
-	}
-
-	Entity Scene::Loader::load(const Scene::Loader::Config& cfg, Entity parent)
-	{
-		auto scene = this->scene;
-
-		if (scene == null)
+		if (this->scene == null)
 		{
-			scene = make_scene_pivot(world, parent);
+			print("Creating scene pivot...");
+
+			this->scene = create_pivot(world, parent);
+
+			return true;
+		}
+		
+		if (parent != null)
+		{
+			world.set_parent(this->scene, parent);
 		}
 
-		return load(scene, cfg, parent);
+		return false;
 	}
 
-	Entity Scene::Loader::load(Entity scene, const Scene::Loader::Config& cfg, Entity parent, bool load_title)
+	Entity SceneLoader::load(const util::json& data, Entity parent)
 	{
-		assert(scene != null);
+		ensure_scene(parent);
 
-		this->scene = scene;
+		return load(data);
+	}
 
-		load_properties((scene == this->scene));
+	Entity SceneLoader::load(const util::json& data)
+	{
+		ensure_scene();
 
-		// Scene geometry:
+		if (cfg.title)
+		{
+			load_title(data);
+		}
+
+		if (cfg.properties)
+		{
+			if (auto properties = data.find("properties"); properties != data.end())
+			{
+				load_properties(*properties);
+			}
+		}
+
 		if (cfg.geometry)
 		{
-			load_geometry();
+			if (auto models = data.find("models"); models != data.end())
+			{
+				load_geometry(*models);
+			}
 		}
 
-		// Players:
 		if (cfg.players)
 		{
-			load_players();
+			if (auto players = data.find("players"); players != data.end())
+			{
+				load_players(*players);
+			}
 		}
 
-		// Objects:
 		if (cfg.objects)
 		{
-			load_objects();
+			if (auto objects = data.find("objects"); objects != data.end())
+			{
+				load_objects(*objects);
+			}
 		}
 
 		// Apply scene transform, etc.
@@ -352,53 +342,88 @@ namespace engine
 		{
 			print("Applying scene transform...");
 
-			apply_transform(world, scene, data);
+			apply_transform(scene, data);
 		}
 
 		return scene;
 	}
 
-	void Scene::Loader::load_properties(bool load_title, const std::string& default_title)
+	void SceneLoader::load_title(const util::json& data)
 	{
-		if ((load_title) && (scene != null))
-		{
-			world.set_name(scene, util::get_value<std::string>(data, "title", util::get_value<std::string>(data, "name", default_title)));
-		}
+		ensure_scene();
 
-		if (auto properties = data.find("properties"); properties != data.end())
+		if (auto title_entry = data.find("title"); title_entry != data.end())
 		{
-			print("Initializing scene properties...");
+			if (title_entry->is_string())
+			{
+				const auto& title = title_entry->get<std::string>();
 
-			world.set_properties(engine::load<WorldProperties>(*properties));
+				world.set_name(scene, std::string_view { title });
+			}
 		}
 	}
 
-	void Scene::Loader::load_geometry()
+	void SceneLoader::load_properties(const util::json& data)
 	{
+		if (data.empty())
+		{
+			return;
+		}
+
+		//ensure_scene();
+
+		print("Initializing world properties from scene...");
+
+		world.set_properties(engine::load<WorldProperties>(data));
+	}
+
+	void SceneLoader::load_geometry(const util::json& data)
+	{
+		if (data.empty())
+		{
+			return;
+		}
+
 		ensure_scene();
 
 		print("Loading scene geometry...");
 
-		ForEach(data["models"], [&](const auto& model_cfg)
-		{
-			auto model_path = (root_path / model_cfg["path"].get<std::string>()).string();
-
-			bool collision_enabled = util::get_value(model_cfg, "collision", true);
-
-			print("Loading geometry from \"{}\"...\n", model_path);
-
-			auto type = EntityType::Geometry;
+		util::json_for_each
+		(
+			data,
 			
-			auto model = load_model(world, model_path, scene, type, true, CollisionConfig(type, collision_enabled));
+			[&](const auto& model_entry)
+			{
+				const auto model_path = (root_path / model_entry["path"].get<std::string>()).string();
 
-			print("Applying transformation to scene geometry...");
+				print("Loading geometry from \"{}\"...\n", model_path);
 
-			apply_transform(world, model, model_cfg);
-		});
+				const bool collision_enabled = util::get_value(model_entry, "collision", true);
+
+				constexpr auto entity_type = EntityType::Geometry;
+				constexpr bool allow_multiple_models = true;
+
+				auto model = load_model
+				(
+					world, model_path, scene,
+					entity_type, allow_multiple_models,
+					CollisionConfig(entity_type, collision_enabled)
+				);
+
+				print("Applying transformation to scene geometry...");
+
+				apply_transform(model, model_entry);
+			}
+		);
 	}
 
-	void Scene::Loader::load_players()
+	void SceneLoader::load_players(const util::json& data)
 	{
+		if (data.empty())
+		{
+			return;
+		}
+
 		ensure_scene();
 
 		print("Loading players...");
@@ -408,82 +433,88 @@ namespace engine
 		auto& registry = world.get_registry();
 		const auto& config = world.get_config();
 
-		ForEach(data["players"], [&](const auto& player_cfg)
-		{
-			auto player_character = util::get_value<std::string>(player_cfg, "character", config.players.default_player.character);
+		util::json_for_each
+		(
+			data,
 
-			auto character_directory = (std::filesystem::path(config.players.character_path) / player_character);
-			auto character_path = (character_directory / util::format("{}.json", player_character));
+			[&](const auto& player_cfg)
+			{
+				auto player_character = util::get_value<std::string>(player_cfg, "character", config.players.default_player.character);
 
-			auto player = resource_manager.generate_entity
-			(
-				{
+				auto character_directory = (std::filesystem::path(config.players.character_path) / player_character);
+				auto character_path = (character_directory / util::format("{}.json", player_character));
+
+				auto player = resource_manager.generate_entity
+				(
 					{
-						.instance_path               = character_path,
-						.instance_directory          = character_directory,
-						.shared_directory            = config.players.character_path,
-						.service_archetype_root_path = (std::filesystem::path(config.entity.archetype_path) / "world"),
-						.archetype_root_path         = config.entity.archetype_path
+						{
+							.instance_path               = character_path,
+							.instance_directory          = character_directory,
+							.shared_directory            = config.players.character_path,
+							.service_archetype_root_path = (std::filesystem::path(config.entity.archetype_path) / "world"),
+							.archetype_root_path         = config.entity.archetype_path
+						}
+					},
+
+					{
+						.registry = registry,
+						.resource_manager = resource_manager,
+
+						.parent = scene,
+
+						.opt_entity_out = null,
+
+						.opt_service = &world,
+						.opt_system_manager = system_manager
 					}
-				},
+				);
 
+				resolve_parent(player, player_cfg, false);
+
+				//assert(player != null);
+
+				if (player == null)
 				{
-					.registry = registry,
-					.resource_manager = resource_manager,
+					print_warn("Failed to create player object for character: \"{}\"", player_character);
 
-					.parent = scene,
-
-					.opt_entity_out = null,
-
-					.opt_service = &world,
-					.opt_system_manager = system_manager
+					return;
 				}
-			);
 
-			resolve_parent(player, player_cfg, false);
+				process_entity_mutations
+				(
+					registry, player,
+					player_cfg,
+					resource_manager.get_parsing_context(),
+					&world, system_manager,
+					cfg.identify_static_mutations,
 
-			//assert(player != null);
+					"character"
+				);
 
-			if (player == null)
-			{
-				print_warn("Failed to create player object for character: \"{}\"", player_character);
+				auto player_idx = util::get_value<PlayerIndex>(player_cfg, "player", util::get_value<PlayerIndex>(player_cfg, "index", player_idx_counter));
 
-				return;
+				assert(player_idx != NO_PLAYER);
+
+				registry.emplace_or_replace<PlayerComponent>(player, player_idx);
+				registry.emplace_or_replace<InputComponent>(player, static_cast<InputStateIndex>(player_idx));
+
+				if (!config.players.default_player.name.empty())
+				{
+					registry.emplace_or_replace<NameComponent>(player, config.players.default_player.name);
+				}
+
+				apply_transform(player, player_cfg);
+
+				apply_state(player, player_cfg);
+
+				player_idx_counter = std::max((player_idx_counter + 1), (player_idx + 1));
+
+				world.event<OnPlayerLoaded>(player, character_path);
 			}
-
-			process_data_entries
-			(
-				registry, player,
-				player_cfg,
-				resource_manager.get_parsing_context(),
-				&world, system_manager,
-
-				"character"
-			);
-
-			auto player_idx = util::get_value<PlayerIndex>(player_cfg, "player", util::get_value<PlayerIndex>(player_cfg, "index", player_idx_counter));
-
-			assert(player_idx != NO_PLAYER);
-
-			registry.emplace_or_replace<PlayerComponent>(player, player_idx);
-			registry.emplace_or_replace<InputComponent>(player, static_cast<InputStateIndex>(player_idx));
-
-			if (!config.players.default_player.name.empty())
-			{
-				registry.emplace_or_replace<NameComponent>(player, config.players.default_player.name);
-			}
-
-			apply_transform(world, player, player_cfg);
-
-			apply_state(world, player, player_cfg);
-
-			player_idx_counter = std::max((player_idx_counter + 1), (player_idx + 1));
-
-			world.event<OnPlayerLoaded>(player, character_path);
-		});
+		);
 	}
 
-	void Scene::Loader::load_objects()
+	void SceneLoader::load_objects(const util::json& data)
 	{
 		auto& registry = world.get_registry();
 		auto& resource_manager = world.get_resource_manager();
@@ -494,9 +525,9 @@ namespace engine
 
 		print("Loading objects...");
 
-		ForEach
+		util::json_for_each
 		(
-			data["objects"],
+			data,
 			
 			[&](const auto& obj_cfg)
 			{
@@ -552,16 +583,18 @@ namespace engine
 				// (May actually make sense to call `get_matrix` before `resolve_parent` anyway)
 				resolve_parent(entity, obj_cfg);
 
-				process_data_entries
+				process_entity_mutations
 				(
 					registry, entity, obj_cfg,
 					resource_manager.get_parsing_context(),
 					&world, system_manager,
+					cfg.identify_static_mutations,
+
 					"make_active"
 				);
 
-				apply_color(world, entity, obj_cfg);
-				apply_transform(world, entity, obj_cfg);
+				apply_color(entity, obj_cfg);
+				apply_transform(entity, obj_cfg);
 
 				if (auto player_index = util::get_optional<PlayerIndex>(obj_cfg, "player"))
 				{
@@ -580,14 +613,14 @@ namespace engine
 					}
 				}
 
-				apply_state(world, entity, obj_cfg);
+				apply_state(entity, obj_cfg);
 
 				print("\"{}\" object created.", obj_type);
 			}
 		);
 	}
 
-	Entity Scene::Loader::entity_reference(std::string_view query) // const
+	Entity SceneLoader::entity_reference(std::string_view query) // const
 	{
 		if (auto target = EntityTarget::parse(query))
 		{
@@ -597,7 +630,7 @@ namespace engine
 		return null;
 	}
 
-	Entity Scene::Loader::resolve_parent(Entity entity, const util::json& data, bool fallback_to_scene)
+	Entity SceneLoader::resolve_parent(Entity entity, const util::json& data, bool fallback_to_scene)
 	{
 		const auto parent_query = util::get_value<std::string>(data, "parent"); // data["parent"].get<std::string>();
 
@@ -616,8 +649,54 @@ namespace engine
 		return parent;
 	}
 
-	ResourceManager& Scene::Loader::get_resource_manager() const
+	ResourceManager& SceneLoader::get_resource_manager() const
 	{
 		return world.get_resource_manager();
+	}
+
+	void SceneLoader::apply_transform(Entity entity, const util::json& cfg)
+	{
+		auto tform_data = get_transform_data(cfg);
+
+		//world.apply_transform(entity, tform_data);
+		world.apply_transform_and_reset_collision(entity, tform_data);
+	}
+
+	bool SceneLoader::apply_state(Entity entity, const util::json& data)
+	{
+		if (const auto& state = util::find_any(data, "state", "default_state"); state != data.end())
+		{
+			const auto& state_name = state.value().get<std::string>();
+			const auto state_id = hash(state_name).value();
+
+			world.queue_event<StateChangeCommand>(entity, entity, state_id); // event
+
+			return true;
+		}
+
+		return false;
+	}
+
+	std::optional<graphics::ColorRGBA> SceneLoader::apply_color(Entity entity, const util::json& data)
+	{
+		//auto color = util::get_color(data, "color");
+
+		if (!data.contains("color"))
+		{
+			return std::nullopt;
+		}
+
+		auto& registry = world.get_registry();
+
+		if (auto* model = registry.try_get<ModelComponent>(entity))
+		{
+			const auto color = util::to_color(data["color"], 1.0f);
+
+			model->color = color;
+
+			return color;
+		}
+
+		return std::nullopt;
 	}
 }
