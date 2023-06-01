@@ -345,8 +345,15 @@ namespace engine::impl
 
     // Notifies listeners that a component of type `T` has been patched.
     template <typename T>
-    void mark_component_as_patched(Registry& registry, Entity entity)
+    bool mark_component_as_patched(Registry& registry, Entity entity)
     {
-        registry.patch<T>(entity);
+        if (registry.try_get<T>(entity))
+        {
+            registry.patch<T>(entity);
+
+            return true;
+        }
+
+        return false;
     }
 }
