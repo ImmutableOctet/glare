@@ -3,6 +3,7 @@
 #include "types.hpp"
 #include "hash.hpp"
 #include "traits.hpp"
+#include "runtime_traits.hpp"
 
 #include <entt/meta/meta.hpp>
 //#include <entt/entt.hpp>
@@ -22,29 +23,72 @@ namespace engine
     struct MetaProperty;
     struct IndirectMetaDataMember;
 
-	// Returns true if the `value` specified has a reflected indirection function.
-    bool value_has_indirection(const MetaAny& value, bool bypass_indirect_meta_any=false);
+    // Calls `primitive_value_callback` with the underlying primitive value of `instance`, if possible.
+	// 
+	// The `instance` argument must be a valid `MetaAny` instance.
+	// 
+	// The return value of this function indicates if a call to `primitive_value_callback` was performed.
+	template <typename InstanceType, typename PrimitiveValueCallback>
+	bool try_get_primitive_value(InstanceType&& instance, PrimitiveValueCallback&& primitive_value_callback)
+	{
+        using namespace engine::literals;
 
-    // Returns true if the `type` specified has a reflected indirection function.
-    bool type_has_indirection(const MetaType& type);
+		static_assert(std::is_same_v<std::decay_t<InstanceType>, MetaAny>);
 
-    // Returns true if the the type referenced by `type_id` has a reflected indirection function.
-    bool type_has_indirection(MetaTypeID type_id);
+		if (!instance)
+		{
+			return false;
+		}
 
-    // Returns true if the `type` specified is a 'system' type.
-    bool type_is_system(const MetaType& type);
+		auto try_type = [&]<typename T>() -> bool
+		{
+			if (auto* raw_value = instance.try_cast<T>())
+			{
+                primitive_value_callback(*raw_value);
 
-    // Returns true if the type referenced by the `type_id` specified is a 'system' type.
-    bool type_is_system(const MetaTypeID type_id);
+				return true;
+			}
 
-    // Returns true if the `value` specified references a 'system'.
-    bool value_is_system(const MetaAny& value);
+			return false;
+		};
 
-    // Returns true  if the `type` specified has the `global namespace` property.
-    bool type_has_global_namespace_flag(const MetaType& type);
+        const auto type = instance.type();
+        const auto type_id = type.id();
 
-    // Returns true  if the type identified by `type_id` has the `global namespace` property.
-    bool type_has_global_namespace_flag(MetaTypeID type_id);
+		switch (type_id)
+		{
+			case entt::type_hash<bool>::value():
+				return try_type.operator()<bool>();
+			case entt::type_hash<std::int64_t>::value():
+				return try_type.operator()<std::int64_t>();
+			case entt::type_hash<std::int32_t>::value():
+				return try_type.operator()<std::int32_t>();
+			case entt::type_hash<std::int16_t>::value():
+				return try_type.operator()<std::int16_t>();
+			case entt::type_hash<std::int8_t>::value():
+				return try_type.operator()<std::int8_t>();
+			case entt::type_hash<std::uint64_t>::value():
+				return try_type.operator()<std::uint64_t>();
+			case entt::type_hash<std::uint32_t>::value():
+				return try_type.operator()<std::uint32_t>();
+			case entt::type_hash<std::uint16_t>::value():
+				return try_type.operator()<std::uint16_t>();
+			case entt::type_hash<std::uint8_t>::value():
+				return try_type.operator()<std::uint8_t>();
+			case entt::type_hash<long double>::value():
+				return try_type.operator()<long double>();
+			case entt::type_hash<double>::value():
+				return try_type.operator()<double>();
+			case entt::type_hash<float>::value():
+				return try_type.operator()<float>();
+			case "string"_hs: // entt::type_hash<std::string>::value():
+				return try_type.operator()<std::string>();
+			case "string_view"_hs: // entt::type_hash<std::string_view>::value():
+				return try_type.operator()<std::string_view>();
+		}
+
+		return false;
+	}
 
     // Returns a new `MetaAny` instance if `value` could supply an enclosed (indirect) value.
     // NOTE: Recursion.

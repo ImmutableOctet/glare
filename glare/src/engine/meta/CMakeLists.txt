@@ -5,6 +5,7 @@ target_sources(
     
     PRIVATE
 
+    "runtime_traits.cpp"
     "component.cpp"
     "serial.cpp"
 
