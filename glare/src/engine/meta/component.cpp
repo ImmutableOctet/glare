@@ -311,4 +311,45 @@ namespace engine
 
 		return false;
 	}
+
+	// Attempts to mark a component of type `component_type` as patched (i.e. updated).
+	// The return value of this function indicates if the operation was performed successfully.
+	bool mark_component_as_patched(Registry& registry, Entity entity, const MetaType& component_type)
+	{
+		using namespace engine::literals;
+
+		if (!component_type)
+		{
+			return false;
+		}
+
+		auto mark_fn = component_type.func("mark_component_as_patched"_hs);
+
+		while (mark_fn)
+		{
+			auto result = mark_fn.invoke
+			(
+				{},
+
+				entt::forward_as_meta(registry),
+				entt::forward_as_meta(entity)
+			);
+
+			if (result)
+			{
+				const auto result_raw = result.try_cast<bool>();
+
+				return (*result_raw);
+			}
+
+			mark_fn = mark_fn.next();
+		}
+
+		return false;
+	}
+
+	bool mark_component_as_patched(Registry& registry, Entity entity, MetaTypeID component_type_id)
+	{
+		return mark_component_as_patched(registry, entity, resolve(component_type_id));
+	}
 }

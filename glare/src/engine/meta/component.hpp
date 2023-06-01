@@ -57,4 +57,12 @@ namespace engine
 		bool value_assignment=true, bool direct_modify=false,
 		const MetaEvaluationContext* opt_evaluation_context=nullptr
 	);
+
+	// Attempts to mark a component of type `component_type` as patched (i.e. updated).
+	// The return value of this function indicates if the operation was performed successfully.
+	bool mark_component_as_patched(Registry& registry, Entity entity, const MetaType& component_type);
+
+	// Attempts to mark a component of the type referenced by `component_type_id` as patched (i.e. updated).
+	// The return value of this function indicates if the operation was performed successfully.
+	bool mark_component_as_patched(Registry& registry, Entity entity, MetaTypeID component_type_id);
 }
