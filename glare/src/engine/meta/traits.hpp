@@ -42,6 +42,9 @@ namespace engine
 	GENERATE_HAS_METHOD_TRAIT(has_type);
 	GENERATE_HAS_METHOD_TRAIT(get_type);
 
+	GENERATE_HAS_FUNCTION_TRAIT(from_json);
+	GENERATE_HAS_METHOD_TRAIT(to_json);
+
 	GENERATE_HAS_FUNCTION_TRAIT_EX(has_function_operator_plus, operator+);
 	GENERATE_HAS_METHOD_TRAIT_EX(has_method_operator_plus, operator+);
 	GENERATE_HAS_FUNCTION_TRAIT_EX(has_function_operator_minus, operator-);
