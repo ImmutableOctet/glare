@@ -82,6 +82,9 @@ namespace engine
 
 			// Internal shorthand for `world.down()`.
 			math::Vector down() const;
+
+			void accelerate(Entity entity, const math::Vector3D& direction, float influence);
+			void influence_motion_direction(Entity entity, const math::Vector3D& direction, float influence);
 		protected:
 			PhysicsSystem& physics;
 	};

@@ -8,7 +8,9 @@
 #include "components/gravity_component.hpp"
 #include "components/alignment_proxy_component.hpp"
 #include "components/motion_attachment_proxy_component.hpp"
+#include "components/acceleration_component.hpp"
 #include "components/deceleration_component.hpp"
+#include "components/directional_influence_component.hpp"
 #include "components/focus_component.hpp"
 #include "components/orbit_component.hpp"
 #include "components/direction_component.hpp"
@@ -80,7 +82,7 @@ namespace engine
 
 			[delta](Entity entity, Transform& transform, VelocityComponent& vel_comp)
 			{
-				transform.move((vel_comp.velocity * delta), true); // false
+				transform.move((vel_comp.velocity * delta), false);
 			}
 		);
 	}
@@ -91,6 +93,7 @@ namespace engine
 
 		auto apply = [this, delta](Entity entity, Transform& transform, const GravityComponent& gravity_comp)
 		{
+			// TODO: Look into reworking gravity to apply to velocity instead.
 			auto gravity = gravity_comp.get_vector(get_gravity(), delta);
 
 			transform.move(gravity, false); // true
@@ -117,26 +120,51 @@ namespace engine
 
 	void MotionSystem::handle_deceleration(float delta)
 	{
+		auto& registry = get_registry();
+
 		update_transform<VelocityComponent, DecelerationComponent>
 		(
 			get_registry(),
 
-			[delta](Entity entity, Transform& transform, VelocityComponent& vel_comp, DecelerationComponent& decel_comp)
+			[&registry, delta](Entity entity, Transform& transform, VelocityComponent& vel_comp, DecelerationComponent& decel_comp)
 			{
-				const auto decel_factor = math::abs(decel_comp.deceleration); // decel_comp.deceleration;
+				float ground_traction = 1.0f;
 
-				if (decel_factor > 0.0f)
+				bool on_ground = true;
+
+				if (auto ground_comp = registry.try_get<GroundComponent>(entity))
 				{
-					// TODO: Look into replacing statically defined minimum-speed value.
-					if (glm::length(vel_comp.velocity) > MIN_SPEED)
+					on_ground = ground_comp->on_ground();
+
+					/*
+					if (on_ground)
 					{
-						vel_comp.velocity -= ((vel_comp.velocity * decel_factor) * delta);
+						ground_traction = ...;
 					}
-					else
-					{
-						vel_comp.velocity = {};
-					}
+					*/
 				}
+
+				const auto speed = vel_comp.speed();
+
+				// TODO: Look into replacing statically defined minimum-speed value.
+				if (speed > MIN_SPEED) // 0.025f
+				{
+					auto deceleration = (on_ground)
+						? decel_comp.ground[speed]
+						: decel_comp.air[speed]
+					;
+
+					//vel_comp.velocity -= ((vel_comp.velocity * deceleration) * delta);
+
+					vel_comp.velocity = math::lerp(vel_comp.velocity, math::Vector { 0.0f, 0.0f, 0.0f }, (deceleration * delta));
+				}
+				else
+				{
+					vel_comp.velocity = {};
+				}
+
+				// Mark `VelocityComponent` as patched.
+				registry.patch<VelocityComponent>(entity);
 			}
 		);
 	}
@@ -574,5 +602,69 @@ namespace engine
 	math::Vector MotionSystem::down() const
 	{
 		return world.down();
+	}
+
+	void MotionSystem::accelerate(Entity entity, const math::Vector3D& direction, float influence)
+	{
+		auto& registry = get_registry();
+
+		auto [velocity_comp, accel_comp] = registry.get<VelocityComponent, AccelerationComponent>(entity);
+
+		bool on_ground = true; // false;
+
+		if (auto* ground_comp = registry.try_get<GroundComponent>(entity))
+		{
+			on_ground = ground_comp->on_ground();
+		}
+
+		const auto speed = velocity_comp.speed();
+
+		const auto acceleration = (on_ground)
+			? accel_comp.ground[speed]
+			: accel_comp.air[speed]
+		;
+
+		velocity_comp.velocity += (direction * (acceleration * influence));
+
+		// Mark `VelocityComponent` as patched.
+		registry.patch<VelocityComponent>(entity);
+	}
+
+	void MotionSystem::influence_motion_direction(Entity entity, const math::Vector3D& direction, float influence)
+	{
+		auto& registry = get_registry();
+
+		registry.patch<VelocityComponent>
+		(
+			entity,
+
+			[&](VelocityComponent& velocity_comp)
+			{
+				const auto velocity_length = velocity_comp.speed();
+				const auto velocity_direction = velocity_comp.direction();
+
+				auto turn_speed = influence;
+
+				if (auto directional_comp = registry.try_get<DirectionalInfluenceComponent>(entity))
+				{
+					bool on_ground = true; // false;
+
+					if (auto* ground_comp = registry.try_get<GroundComponent>(entity))
+					{
+						on_ground = ground_comp->on_ground();
+					}
+
+					turn_speed *= (on_ground)
+						? directional_comp->ground[velocity_length]
+						: directional_comp->air[velocity_length]
+					;
+				}
+
+				const auto influence_updated_direction = math::nlerp(velocity_direction, direction, turn_speed);
+				const auto influence_updated_velocity = (influence_updated_direction * velocity_length);
+
+				velocity_comp.velocity = influence_updated_velocity;
+			}
+		);
 	}
 }
