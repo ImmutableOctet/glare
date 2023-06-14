@@ -2963,6 +2963,26 @@ namespace engine
 
 			case jtype::string:
 				return meta_any_from_string(value, instructions, type);
+
+			case jtype::number_integer:
+				if (!type.is_signed())
+				{
+					const auto signed_value = value.get<std::int32_t>();
+
+					return static_cast<std::uint32_t>(signed_value);
+				}
+
+				break;
+
+			case jtype::number_unsigned:
+				if (type.is_signed())
+				{
+					const auto unsigned_value = value.get<std::uint32_t>();
+
+					return static_cast<std::int32_t>(unsigned_value);
+				}
+
+				break;
 		}
 
 		return resolve_meta_any(value, instructions);
