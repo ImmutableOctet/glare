@@ -99,14 +99,23 @@ namespace engine
 						.system_manager   = opt_system_manager
 					};
 
-					if (!allow_entry_update || !update_component_fields(registry, entity, *component, true, true, &evaluation_context))
+					bool component_processed = false;
+
+					if (allow_entry_update)
 					{
-						if (emplace_component(registry, entity, *component, &evaluation_context))
+						component_processed = update_component_fields(registry, entity, *component, true, true, &evaluation_context);
+					}
+
+					if (!component_processed)
+					{
+						component_processed = static_cast<bool>(emplace_component(registry, entity, *component, &evaluation_context));
+					}
+
+					if (component_processed)
+					{
+						if (capture_static_mutations)
 						{
-							if (capture_static_mutations)
-							{
-								get_mutation().add_component(component->get_type_id());
-							}
+							get_mutation().add_component(component->get_type_id());
 						}
 					}
 				}
