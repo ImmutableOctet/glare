@@ -14,7 +14,7 @@ namespace graphics
 			return {};
 		}
 
-		auto source_raw = util::io::load_string(path);
+		auto source_raw = util::load_string(path);
 
 		if (source_raw.empty())
 		{
