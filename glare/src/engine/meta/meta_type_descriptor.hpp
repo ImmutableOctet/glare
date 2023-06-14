@@ -105,6 +105,7 @@ namespace engine
 		protected:
 			// The type this descriptor is wrapping.
 			MetaTypeID type_id = {};
+
 		public:
 			Names field_names;
 			Values field_values;
@@ -120,6 +121,8 @@ namespace engine
 			inline bool can_forward_fields_to_constructor() const { return flags.allow_forwarding_fields_to_constructor; }
 			inline bool forces_field_assignment() const { return flags.force_field_assignment; }
 
+			bool to_json(util::json& data_out, bool encode_type_information) const;
+			
 			MetaType adopt_type(const MetaType& type);
 
 			bool set_type(const MetaType& type);
@@ -694,6 +697,9 @@ namespace engine
 			// Defined and only used in source file.
 			template <typename ...Args>
 			std::size_t apply_fields_associative_container_impl(MetaAny& instance, std::size_t field_count, std::size_t offset, Args&&... args) const;
+
+			bool to_json_array_impl(util::json& data_out) const;
+			bool to_json_object_impl(util::json& data_out, bool encode_type_information, bool skip_missing=true) const;
 	};
 
 	MetaTypeDescriptor load_descriptor

@@ -14,6 +14,8 @@
 
 #include <engine/entity/entity_target.hpp>
 
+#include <util/json.hpp>
+
 #include <string_view>
 #include <string>
 
@@ -160,6 +162,32 @@ namespace engine
 			0,
 			allow_nameless_fields
 		);
+	}
+
+	bool MetaTypeDescriptor::to_json(util::json& data_out, bool encode_type_information) const
+	{
+		const bool encode_as_array = has_anonymous_field_name();
+
+		util::json data = {};
+
+		bool result = false;
+
+		if (encode_as_array)
+		{
+			result = to_json_array_impl(data);
+		}
+		
+		if (!result)
+		{
+			result = to_json_object_impl(data, encode_type_information);
+		}
+
+		if (result)
+		{
+			data_out = std::move(data);
+		}
+
+		return result;
 	}
 
 	MetaType MetaTypeDescriptor::adopt_type(const MetaType& type)
@@ -995,7 +1023,7 @@ namespace engine
 				
 				print_warn("Failed to assign field: \"{}\" (#{}), for type: \"{}\" (#{})", _dbg_field_name, field_name, _dbg_type_name, type.id());
 
-				//auto test = try_get_underlying_value(field_value, args...);
+				auto test = try_get_underlying_value(field_value, args...);
 			}
 		}
 
@@ -1377,6 +1405,83 @@ namespace engine
 		}
 
 		return field_count;
+	}
+
+	bool MetaTypeDescriptor::to_json_array_impl(util::json& data_out) const
+	{
+		auto values_out = util::json::array_t {};
+
+		for (const auto& value : field_values)
+		{
+			auto encoded_value = engine::save(value);
+
+			if (encoded_value.empty())
+			{
+				return false;
+			}
+
+			values_out.emplace_back(std::move(encoded_value));
+		}
+
+		data_out = std::move(values_out);
+
+		return true;
+	}
+
+	bool MetaTypeDescriptor::to_json_object_impl(util::json& data_out, bool encode_type_information, bool skip_missing) const
+	{
+		//auto values_out = util::json::object_t {};
+
+		for (std::size_t index = 0; index < size(); index++)
+		{
+			if (index >= field_names.size())
+			{
+				if (skip_missing)
+				{
+					break;
+				}
+				else
+				{
+					return false;
+				}
+			}
+
+			const auto& field_name_id = field_names[index];
+			
+			const auto field_name_resolved = get_known_string_from_hash(field_name_id);
+
+			if (field_name_resolved.empty())
+			{
+				if (skip_missing)
+				{
+					continue;
+				}
+				else
+				{
+					return false;
+				}
+			}
+
+			const auto& field_value = field_values[index];
+
+			auto field_value_resolved = engine::save(field_value);
+
+			if (field_value_resolved.empty())
+			{
+				if (skip_missing)
+				{
+					continue;
+				}
+				else
+				{
+					return false;
+				}
+			}
+
+			data_out[util::json::string_t { field_name_resolved }] = std::move(field_value_resolved);
+		}
+
+		return true;
 	}
 
 	MetaTypeDescriptor load_descriptor
