@@ -4,6 +4,8 @@
 #include <engine/meta/types.hpp>
 
 #include <type_traits>
+#include <utility>
+
 //#include <cmath>
 
 namespace engine::impl
@@ -100,5 +102,11 @@ namespace engine::impl
         */
 
         return value.try_cast<T>();
+    }
+
+    template <typename T, typename ...ConstructorArgs>
+    T wrap_constructor(ConstructorArgs... args) // ConstructorArgs&&...
+    {
+        return T(args...); // std::forward<ConstructorArgs>(args)...
     }
 }
