@@ -2,13 +2,17 @@
 
 #include "reflection.hpp"
 
+#include "motion_system.hpp"
+
 #include "components/gravity_component.hpp"
 #include "components/ground_component.hpp"
 #include "components/alignment_proxy_component.hpp"
 #include "components/motion_attachment_proxy_component.hpp"
 #include "components/motion_component.hpp"
 #include "components/velocity_component.hpp"
+#include "components/acceleration_component.hpp"
 #include "components/deceleration_component.hpp"
+#include "components/directional_influence_component.hpp"
 #include "components/direction_component.hpp"
 #include "components/orientation_component.hpp"
 #include "components/rotate_component.hpp"
@@ -24,9 +28,47 @@ namespace engine
 	//struct Transform;
 
 	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(AlignmentProxyComponent, entity);
-	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(VelocityComponent, velocity);
 	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(GravityComponent, intensity); //GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(GravityComponent, ...);
-	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(DecelerationComponent, deceleration);
+	
+	template <>
+	void reflect<VelocityComponent>()
+	{
+		engine_meta_type<VelocityComponent>()
+			.data<&VelocityComponent::velocity>("velocity"_hs)
+
+			.data<nullptr, &VelocityComponent::speed>("speed"_hs)
+			.data<nullptr, &VelocityComponent::direction>("direction"_hs)
+
+			.conv<math::Vector>()
+		;
+	}
+
+	template <>
+	void reflect<AccelerationComponent>()
+	{
+		engine_meta_type<AccelerationComponent>()
+			.data<&AccelerationComponent::ground>("ground"_hs)
+			.data<&AccelerationComponent::air>("air"_hs)
+		;
+	}
+
+	template <>
+	void reflect<DecelerationComponent>()
+	{
+		engine_meta_type<DecelerationComponent>()
+			.data<&DecelerationComponent::ground>("ground"_hs)
+			.data<&DecelerationComponent::air>("air"_hs)
+		;
+	}
+
+	template <>
+	void reflect<DirectionalInfluenceComponent>()
+	{
+		engine_meta_type<DirectionalInfluenceComponent>()
+			.data<&DirectionalInfluenceComponent::ground>("ground"_hs)
+			.data<&DirectionalInfluenceComponent::air>("air"_hs)
+		;
+	}
 
 	template <>
 	void reflect<GroundComponent>()
@@ -256,12 +298,19 @@ namespace engine
 	template <>
 	void reflect<MotionSystem>()
 	{
+		auto motion = engine_system_type<MotionSystem>()
+			.func<&MotionSystem::accelerate>("accelerate"_hs)
+			.func<&MotionSystem::influence_motion_direction>("influence_motion_direction"_hs)
+		;
+
 		// Components:
 		reflect<MotionComponent>();
 		reflect<AlignmentProxyComponent>();
 		reflect<VelocityComponent>();
 		reflect<GravityComponent>();
+		reflect<AccelerationComponent>();
 		reflect<DecelerationComponent>();
+		reflect<DirectionalInfluenceComponent>();
 		reflect<GroundComponent>();
 		reflect<MotionAttachmentProxyComponent>();
 		reflect<DirectionComponent>();
