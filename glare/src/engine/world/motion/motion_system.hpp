@@ -35,7 +35,7 @@ namespace engine
 			// Wall threshold.
 			//static constexpr float WALL = ...; // (Dot-product value)
 
-			static constexpr float MIN_SPEED = 0.0025f;
+			static constexpr float MIN_SPEED = 0.025f;
 
 			MotionSystem(World& world, PhysicsSystem& physics);
 
