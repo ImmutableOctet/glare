@@ -32,6 +32,7 @@
 #include <util/string.hpp>
 #include <util/parse.hpp>
 #include <util/format.hpp>
+#include <util/io.hpp>
 
 #include <tuple>
 #include <vector>
@@ -40,6 +41,7 @@
 #include <algorithm>
 #include <iterator>
 #include <cctype>
+#include <cassert>
 
 // Debugging related:
 #include <util/log.hpp>
@@ -50,6 +52,145 @@ namespace engine
 {
 	namespace impl
 	{
+		// NOTE: This function currently has internal linkage; use `save_impl` instead.
+		template <typename ...EvaluationArgs>
+		static util::json& save_impl_ex(const MetaAny& instance, util::json& data_out, bool encode_type_information, EvaluationArgs&&... evaluation_args)
+		{
+			using namespace engine::literals;
+
+			const auto is_primitive_value = try_get_primitive_value
+			(
+				instance,
+
+				[&data_out](auto&& primitive_value)
+				{
+					data_out = primitive_value; // std::forward<decltype(primitive_value)>(primitive_value);
+				}
+			);
+
+			if (is_primitive_value)
+			{
+				return data_out;
+			}
+
+			auto make_field_name = [encode_type_information](std::string_view field_name, const MetaType& field_type) -> std::string
+			{
+				if (encode_type_information)
+				{
+					if (field_type)
+					{
+						const auto field_type_id = field_type.id();
+
+						if (const auto field_type_name = get_known_string_from_hash(field_type_id); !field_type_name.empty())
+						{
+							return util::format("{}:{}", field_name, field_type_name);
+						}
+					}
+				}
+
+				return std::string(field_name);
+			};
+
+			enumerate_primitive_member_values
+			(
+				instance,
+
+				[encode_type_information, &make_field_name, &data_out](const MetaAny& instance, MetaSymbolID field_id, const entt::meta_data& field, auto&& member_value)
+				{
+					using member_value_t = std::decay_t<decltype(member_value)>;
+
+					const auto field_name = get_known_string_from_hash(field_id);
+
+					if (field_name.empty())
+					{
+						return;
+					}
+
+					auto field_name_out = make_field_name(field_name, field.type());
+
+					if constexpr (std::is_same_v<member_value_t, std::string_view>)
+					{
+						data_out[std::move(field_name_out)] = std::string { std::forward<decltype(member_value)>(member_value) };
+					}
+					else
+					{
+						data_out[std::move(field_name_out)] = std::forward<decltype(member_value)>(member_value);
+					}
+				},
+			
+				[encode_type_information, &make_field_name, &data_out](const MetaAny& instance, MetaSymbolID field_id, const entt::meta_data& field, const MetaAny& member_value) -> bool
+				{
+					const auto field_type = field.type();
+
+					if (!field_type)
+					{
+						return false;
+					}
+
+					const auto field_name = get_known_string_from_hash(field_id);
+
+					if (field_name.empty())
+					{
+						return false;
+					}
+
+					auto json_object_out = util::json {};
+
+					if (const auto to_json_fn = field_type.func("to_json"_hs))
+					{
+						if (auto result = invoke_any_overload(to_json_fn, member_value, json_object_out, encode_type_information)) // invoke_any_overload_with_indirection_context
+						{
+							data_out[make_field_name(field_name, field_type)] = std::move(json_object_out);
+
+							// Operation handled by reflected implementation.
+							return false;
+						}
+					}
+
+					assert(json_object_out.empty());
+
+					if (auto underlying = try_get_underlying_value(member_value, std::forward<EvaluationArgs>(evaluation_args)...))
+					{
+						if (const auto underlying_type = underlying.type())
+						{
+							if (const auto to_json_fn = underlying_type.func("to_json"_hs))
+							{
+								if (auto result = invoke_any_overload(to_json_fn, underlying, json_object_out, encode_type_information)) // invoke_any_overload_with_indirection_context
+								{
+									data_out[make_field_name(field_name, underlying_type)] = std::move(json_object_out);
+
+									// Operation handled by reflected implementation.
+									return false;
+								}
+							}
+						}
+					}
+
+					assert(json_object_out.empty());
+
+					// NOTE: Recursion.
+					// Fallback to processing the object using this implementation.
+					if (save(member_value, json_object_out, encode_type_information))
+					{
+						data_out[make_field_name(field_name, field_type)] = std::move(json_object_out);
+					}
+
+					return false;
+				},
+
+				[](auto&&...) {},
+
+				true, true, true, false
+			);
+
+			return data_out;
+		}
+
+		util::json& save_impl(const MetaAny& instance, util::json& data_out, bool encode_type_information)
+		{
+			return save_impl_ex(instance, data_out, encode_type_information);
+		}
+
 		static std::size_t resolve_meta_any_sequence_container_impl
 		(
 			const util::json& content,
@@ -2987,12 +3128,12 @@ namespace engine
 			case jtype::number_integer:
 				if (type.is_integral())
 				{
-				if (!type.is_signed())
-				{
-					const auto signed_value = value.get<std::int32_t>();
+					if (!type.is_signed())
+					{
+						const auto signed_value = value.get<std::int32_t>();
 
-					return static_cast<std::uint32_t>(signed_value);
-				}
+						return static_cast<std::uint32_t>(signed_value);
+					}
 				}
 				else if (type.is_arithmetic())
 				{
@@ -3009,12 +3150,12 @@ namespace engine
 			case jtype::number_unsigned:
 				if (type.is_integral())
 				{
-				if (type.is_signed())
-				{
-					const auto unsigned_value = value.get<std::uint32_t>();
+					if (type.is_signed())
+					{
+						const auto unsigned_value = value.get<std::uint32_t>();
 
-					return static_cast<std::int32_t>(unsigned_value);
-				}
+						return static_cast<std::int32_t>(unsigned_value);
+					}
 				}
 				else if (type.is_arithmetic())
 				{
@@ -3287,6 +3428,74 @@ namespace engine
 		{
 			read_aliases(*aliases, context.instruction_aliases);
 		}
+	}
+
+	bool save(const MetaAny& instance, util::json& data_out, bool encode_type_information)
+	{
+		using namespace engine::literals;
+
+		if (!instance)
+		{
+			return false;
+		}
+
+		const auto instance_type = instance.type();
+
+		if (const auto to_json_fn = instance_type.func("to_json"_hs))
+		{
+			if (const auto result = invoke_any_overload(to_json_fn, instance, data_out, encode_type_information)) // invoke_any_overload_with_indirection_context
+			{
+				const auto result_as_bool = result.try_cast<bool>();
+
+				assert(result_as_bool);
+
+				if ((result_as_bool) && (*result_as_bool))
+				{
+					return true;
+				}
+
+				return false;
+			}
+		}
+
+		impl::save_impl(instance, data_out, encode_type_information);
+
+		return true;
+	}
+
+	util::json save(const MetaAny& instance, bool encode_type_information)
+	{
+		auto data = util::json {};
+
+		save(instance, data, encode_type_information);
+
+		return data;
+	}
+
+	bool save(const MetaAny& instance, std::string_view path, bool encode_type_information)
+	{
+		return save(instance, std::filesystem::path { path }, encode_type_information);
+	}
+
+	bool save(const MetaAny& instance, const std::filesystem::path& path, bool encode_type_information)
+	{
+		auto result_json = save(instance, encode_type_information);
+
+		return save(result_json, path);
+	}
+
+	bool save(const util::json& data, const std::filesystem::path& path)
+	{
+		const auto data_as_string = data.dump();
+
+		if (data_as_string.empty())
+		{
+			return false;
+		}
+
+		util::save_string(data_as_string, path);
+
+		return true;
 	}
 
 	MetaAny load

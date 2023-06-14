@@ -2,8 +2,11 @@
 
 #include "types.hpp"
 
+#include "hash.hpp"
 #include "indirection.hpp"
 #include "string.hpp"
+#include "data_member.hpp"
+#include "function.hpp"
 
 #include "meta_parsing_instructions.hpp"
 #include "meta_data_member.hpp"
@@ -358,6 +361,61 @@ namespace engine
 				}
 			}
 		}
+	}
+
+	namespace impl
+	{
+		// Internal interface for default `save` implementation.
+		util::json& save_impl(const MetaAny& instance, util::json& data_out, bool encode_type_information);
+
+		// Wrapper for default `save` implementation(s).
+		// (Useful for reflection bindings)
+		template
+		<
+			typename T, typename... Args,
+			typename=std::enable_if_t<!std::is_same_v<std::decay_t<T>, MetaAny>>
+		>
+		bool default_save_impl
+		(
+			const T& native_instance,
+			Args... args // Args&&...
+		)
+		{
+			save_impl
+			(
+				entt::forward_as_meta(native_instance),
+				args... // std::forward<Args>(args)...
+			);
+
+			return true;
+		}
+	}
+
+	bool save(const MetaAny& instance, util::json& data_out, bool encode_type_information=false);
+	util::json save(const MetaAny& instance, bool encode_type_information=false);
+
+	bool save(const MetaAny& instance, std::string_view path, bool encode_type_information=false);
+	bool save(const MetaAny& instance, const std::filesystem::path& path, bool encode_type_information=false);
+
+	bool save(const util::json& data, const std::filesystem::path& path);
+
+	// Executes an overload of `save` using an instance of a native object.
+	template
+	<
+		typename T, typename... Args,
+		typename=std::enable_if_t<!std::is_same_v<std::decay_t<T>, MetaAny>>
+	>
+	auto save // decltype(auto)
+	(
+		const T& native_instance,
+		Args... args // Args&&...
+	)
+	{
+		return save
+		(
+			entt::forward_as_meta(native_instance),
+			args... // std::forward<Args>(args)...
+		);
 	}
 
 	MetaAny load
