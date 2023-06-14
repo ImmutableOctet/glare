@@ -35,6 +35,17 @@ namespace util
 			inline static constexpr std::size_t value = N;
 			//inline static constexpr std::size_t size = N;
 		};
+
+		struct constructible_from_float_or_int
+		{
+			constructible_from_float_or_int(float);
+			constructible_from_float_or_int(int);
+		};
+
+		struct constructible_from_float
+		{
+			constructible_from_float(float);
+		};
 	}
 
 	template <typename T>
@@ -175,4 +186,68 @@ namespace util
 
 	template <typename T>
 	inline constexpr bool is_iterator_v = is_iterator<T>::value;
+
+	template <bool apply_decay, typename T, typename... AllowedProxies>
+	struct constructor_proxy_ex
+	{
+		template <typename AttemptedProxyType>
+		inline static constexpr bool is_compatible =
+		(
+			(
+				(apply_decay)
+					? (std::is_same_v<std::decay_t<AttemptedProxyType>, std::decay_t<T>>)
+					: (std::is_same_v<AttemptedProxyType, T>)
+			)
+			||
+			(
+				(sizeof...(AllowedProxies) > 0)
+				&&
+				(
+					(apply_decay)
+						? ((std::is_same_v<std::decay_t<AttemptedProxyType>, std::decay_t<AllowedProxies>>) || ...)
+						: ((std::is_same_v<AttemptedProxyType, AllowedProxies>) || ...)
+				)
+			)
+		);
+
+		inline static constexpr bool value = (std::is_convertible_v<AllowedProxies, T> || ...);
+
+		template<typename AttemptedProxyType, typename=std::enable_if_t<is_compatible<AttemptedProxyType>>>
+		operator AttemptedProxyType() const
+		{
+			return AttemptedProxyType {};
+		}
+	};
+
+	template <typename T, typename... AllowedProxies>
+	struct constructor_proxy : constructor_proxy_ex<true, T, AllowedProxies...> {};
+
+	//template <typename T>
+	//using disable_narrowing = constructor_proxy<T>;
+
+	template <typename T, typename InputType>
+	using is_constructible_without_conversion = std::is_constructible<T, constructor_proxy_ex<false, InputType>>;
+
+	template <typename T, typename InputType>
+	inline constexpr bool is_constructible_without_conversion_v = is_constructible_without_conversion<T, InputType>::value;
+
+	template <typename T, typename InputType, typename... OtherInputTypes>
+	using is_constructible_without_conversion_or = std::is_constructible<T, constructor_proxy_ex<false, InputType, OtherInputTypes...>>;
+
+	template <typename T, typename InputType, typename... OtherInputTypes>
+	inline constexpr bool is_constructible_without_conversion_or_v = is_constructible_without_conversion_or<T, InputType, OtherInputTypes...>::value;
+
+	template <typename T, typename... InputTypes>
+	using is_constructible_without_conversion_and = std::conjunction<std::is_constructible<T, constructor_proxy_ex<false, InputTypes>>...>;
+
+	template <typename T, typename... InputTypes>
+	inline constexpr bool is_constructible_without_conversion_and_v = is_constructible_without_conversion_and<T, InputTypes...>::value;
+
+	static_assert(is_constructible_without_conversion_v<impl::constructible_from_float, float>);
+	static_assert(!is_constructible_without_conversion_v<impl::constructible_from_float, double>);
+	static_assert(!is_constructible_without_conversion_v<impl::constructible_from_float, long double>);
+
+	static_assert(is_constructible_without_conversion_or_v<impl::constructible_from_float, float, double, int>);
+	static_assert(is_constructible_without_conversion_and_v<impl::constructible_from_float_or_int, float, int>);
+	static_assert(!is_constructible_without_conversion_and_v<impl::constructible_from_float_or_int, float, double, int>);
 }
