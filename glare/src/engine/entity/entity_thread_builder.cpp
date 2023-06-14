@@ -3567,7 +3567,7 @@ namespace engine
 			);
 		}
 
-		const auto script_data = util::io::load_string
+		const auto script_data = util::load_string
 		(
 			(resolved_path.empty())
 			? script_path.string()
