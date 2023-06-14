@@ -5,7 +5,7 @@ target_sources(
     
     PRIVATE
 
-    "meta_controls.cpp"
+    "controls.cpp"
 )
 
 #target_link_libraries(
