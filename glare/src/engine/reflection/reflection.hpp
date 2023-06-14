@@ -11,6 +11,7 @@
 #include "function.hpp"
 #include "operators.hpp"
 #include "indirection.hpp"
+#include "json_bindings.hpp"
 
 #include "common_extensions.hpp"
 #include "component_extensions.hpp"
@@ -314,27 +315,10 @@ namespace engine
             }
         }
 
-        if constexpr ((config.generate_json_constructor) && (std::is_default_constructible_v<T>))
+        if constexpr (config.generate_json_bindings)
         {
-            type = type
-                .ctor
-                <
-                    static_cast<T (*)(const util::json&)>
-                    (&impl::from_json<T>)
-                >()
-                    
-                .ctor
-                <
-                    static_cast<T (*)(const util::json&, const MetaParsingInstructions&)>
-                    (&impl::from_json_with_instructions<T>) // from_json<T>
-                >()
-
-                .ctor
-                <
-                    static_cast<T (*)(const util::json&, const MetaParsingInstructions&, const MetaTypeDescriptorFlags&)>
-                    (&impl::from_json_with_instructions_and_descriptor_flags<T>) // impl::from_json<T>
-                >()
-            ;
+            type = define_from_json_bindings<T>(type);
+            type = define_to_json_bindings<T>(type);
         }
 
         if constexpr (config.generate_optional_reflection)

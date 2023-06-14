@@ -9,6 +9,6 @@ namespace engine
         bool generate_operator_wrappers    : 1 = true;
         bool generate_indirect_getters     : 1 = true;
         bool generate_indirect_setters     : 1 = true;
-        bool generate_json_constructor     : 1 = true;
+        bool generate_json_bindings        : 1 = true;
     };
 }
