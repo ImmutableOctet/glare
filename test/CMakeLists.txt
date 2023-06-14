@@ -19,6 +19,7 @@ add_executable(
     "src/util/algorithm.cpp"
     "src/util/sampler.cpp"
     "src/math/conversion.cpp"
+    "src/engine/meta/reflection_test.cpp"
 )
 
 target_compile_features(glare_test PRIVATE cxx_std_23)
