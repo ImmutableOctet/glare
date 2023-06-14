@@ -1,10 +1,30 @@
 #include "editor.hpp"
 
+#include "components/editor_properties_component.hpp"
+
 #include <engine/service.hpp>
 #include <engine/config.hpp>
+
 #include <engine/resource_manager/resource_manager.hpp>
+
 #include <engine/entity/entity_factory_context.hpp>
 #include <engine/entity/entity_construction_context.hpp>
+
+#include <engine/meta/meta_type_descriptor.hpp>
+#include <engine/meta/data_member.hpp>
+#include <engine/meta/component.hpp>
+#include <engine/meta/hash.hpp>
+
+#include <engine/world/controls/controls.hpp>
+
+#include <util/imgui.hpp>
+
+// MOVE THESE INCLUDES:
+#include <string>
+#include <string_view>
+
+// Debugging related:
+#include <util/log.hpp>
 
 namespace engine
 {
@@ -55,6 +75,48 @@ namespace engine
 	bool Editor::on_subscribe(Service& service)
 	{
 		return true;
+	}
+
+	void Editor::on_render()
+	{
+		auto& service = get_service();
+		auto& registry = get_registry();
+
+		ImGui::Begin("Properties");
+
+		registry.view<EditorPropertiesComponent>().each
+		(
+			[&](Entity entity, EditorPropertiesComponent& properties_comp)
+			{
+				if (!properties_comp.is_selected)
+				{
+					return;
+				}
+
+				const auto entity_name = service.label(entity);
+
+				if (entity_name.empty())
+				{
+					return;
+				}
+
+				if (ImGui::TreeNode(entity_name.data()))
+				{
+					if (ImGui::TreeNode("Components"))
+					{
+						display::components(registry, entity, true);
+
+						ImGui::TreePop();
+						ImGui::Spacing();
+					}
+
+					ImGui::TreePop();
+					ImGui::Spacing();
+				}
+			}
+		);
+
+		ImGui::End();
 	}
 
 	Entity Editor::get_root() const

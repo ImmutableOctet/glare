@@ -7,7 +7,7 @@
 
 #include <engine/debug/debug.hpp>
 
-#include <engine/world/meta_controls/meta_controls.hpp>
+#include <engine/world/controls/controls.hpp>
 
 #include <graphics/context.hpp>
 #include <graphics/native/opengl.hpp>
@@ -22,6 +22,8 @@
 
 #include <engine/input/input.hpp>
 #include <engine/input/buttons.hpp>
+
+#include <engine/history/history_system.hpp>
 
 #include <sdl2/SDL_video.h>
 #include <sdl2/SDL_events.h>
@@ -54,6 +56,8 @@ namespace glare
 				engine::generate_analog_map(input_handler.get_analogs());
 			}
 		);
+
+		system<engine::HistorySystem>(world);
 		
 		world_system<engine::DebugListener>();
 
@@ -62,7 +66,21 @@ namespace glare
 
 		const auto path = std::filesystem::path { "assets/maps/test01" };
 
-		world.load(path, "map.json", engine::null, &systems);
+		world.load
+		(
+			path, "map.json", engine::null,
+			
+			engine::SceneLoaderConfig
+			{
+				.identify_static_mutations = true
+			},
+
+			&systems
+		);
+
+		auto camera_tform = world.get_transform(world.get_camera());
+
+		camera_tform.set_position({ -60.0f, 70.0f, -12.0f });
 	}
 
 	engine::Editor* SceneEditor::get_editor()
@@ -77,7 +95,23 @@ namespace glare
 
 	void SceneEditor::on_render(RenderState& render_state)
 	{
+		render_editor_windows();
 		render_debug_controls();
+	}
+
+	void SceneEditor::render_editor_windows()
+	{
+		if (!imgui_enabled())
+			return;
+
+		auto editor = get_editor();
+
+		if (!editor)
+		{
+			return;
+		}
+
+		editor->on_render();
 	}
 
 	void SceneEditor::render_debug_controls()

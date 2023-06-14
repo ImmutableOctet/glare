@@ -23,6 +23,8 @@ namespace engine
 
 			bool on_subscribe(Service& service) override;
 
+			void on_render();
+
 			Entity get_root() const;
 
 		protected:

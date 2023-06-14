@@ -21,6 +21,7 @@ namespace glare
 			void on_update(float delta) override;
 			void on_render(RenderState& render_state) override;
 
+			void render_editor_windows();
 			void render_debug_controls();
 			void meta_controls();
 
