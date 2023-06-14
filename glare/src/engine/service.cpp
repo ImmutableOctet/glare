@@ -471,7 +471,7 @@ namespace engine
 
 		if (const auto name_comp = registry.try_get<NameComponent>(entity))
 		{
-			return util::format("\"{}\" ({})", name_comp->get_name(), entity_raw);
+			return util::format("{} ({})", name_comp->get_name(), entity_raw);
 		}
 
 		return std::to_string(entity_raw);
