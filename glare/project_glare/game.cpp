@@ -18,7 +18,7 @@
 
 #include <engine/debug/debug.hpp>
 
-#include <engine/world/meta_controls/meta_controls.hpp>
+#include <engine/world/controls/controls.hpp>
 
 #include <graphics/context.hpp>
 #include <graphics/native/opengl.hpp>
