@@ -18,8 +18,7 @@ add_subdirectory("components")
 
 add_subdirectory("common")
 
-# TODO: Rename `meta` subdirectory to something better. (`meta_controls`, etc.)
-add_subdirectory("meta_controls")
+add_subdirectory("controls")
 
 add_subdirectory("animation")
 add_subdirectory("behaviors")
@@ -36,7 +35,7 @@ add_subdirectory("delta")
 #
 #    glare_engine_world_common # PRIVATE
 #
-#    glare_engine_world_meta_controls
+#    glare_engine_world_controls
 #
 #    glare_engine_world_animation
 #    glare_engine_world_behaviors
