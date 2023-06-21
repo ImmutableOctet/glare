@@ -20,7 +20,8 @@ add_executable(
     "src/util/sampler.cpp"
     "src/math/conversion.cpp"
     "src/engine/meta/reflection_test.cpp"
-)
+    "src/engine/meta/meta_type_descriptor.cpp"
+ "src/util/history_log.cpp")
 
 target_compile_features(glare_test PRIVATE cxx_std_23)
 
