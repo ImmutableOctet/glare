@@ -44,7 +44,10 @@ namespace util
 				{
 					if constexpr (std::is_arithmetic_v<T> && is_little_endian())
 					{
-						out = network_to_host_byte_order(out);
+						if (use_network_byte_order)
+						{
+							out = network_to_host_byte_order(out);
+						}
 					}
 				}
 				else

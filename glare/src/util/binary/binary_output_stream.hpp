@@ -24,11 +24,15 @@ namespace util
 
 				if constexpr (std::is_arithmetic_v<T> && is_little_endian())
 				{
-					const auto value_byte_swapped = host_to_network_byte_order(value);
+					if (use_network_byte_order)
+					{
+						const auto value_byte_swapped = host_to_network_byte_order(value);
 
-					result = write_bytes(reinterpret_cast<const Byte*>(&value_byte_swapped), bytes_to_copy);
+						result = write_bytes(reinterpret_cast<const Byte*>(&value_byte_swapped), bytes_to_copy);
+					}
 				}
-				else
+
+				if (!result)
 				{
 					result = write_bytes(reinterpret_cast<const Byte*>(&value), bytes_to_copy);
 				}
