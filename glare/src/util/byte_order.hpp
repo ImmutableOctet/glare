@@ -1,13 +1,18 @@
 #pragma once
 
+#include <version>
+
 #include <type_traits>
-#include <bit>
+
+#if (defined(__cpp_lib_endian) || defined(__cpp_lib_byteswap))
+    #include <bit>
+#endif
 
 #include <cstddef>
 
 namespace util
 {
-    // TODO: Implement pre-C++20 versions of these functions as fallbacks:
+#ifdef __cpp_lib_endian
     constexpr bool is_big_endian()
     {
         return (std::endian::native == std::endian::big);
@@ -22,10 +27,74 @@ namespace util
     {
         return ((!is_big_endian()) && (!is_little_endian()));
     }
+#else
+    // NOTE: Prior to C++20 there is no portable way to check endianness at compile-time.
+    // With that in mind, however, type-punning still technically works on the major compilers.
+    constexpr bool is_big_endian() // inline bool is_big_endian()
+    {
+        using byte_t = char; // unsigned char; // std::int8_t;
+
+        /*
+        // `reinterpret_cast` approach:
+        std::uint32_t integer_value = 0x01020304;
+
+        const auto* raw_bytes = reinterpret_cast<byte_t*>(&integer_value);
+
+        const auto& left_byte = raw_bytes[0];
+
+        return (left_byte == 1);
+        */
+    
+        /*
+        // Safe/portable approach, but doesn't work under `constexpr`:
+        std::uint32_t integer_value = 0x01020304;
+
+        byte_t raw_bytes[sizeof(integer_value)];
+
+        std::memcpy(raw_bytes, &integer_value, sizeof(integer_value));
+
+        const auto& left_byte = raw_bytes[0];
+
+        return (left_byte == 1);
+        */
+
+        // Type-punning approach (technically UB):
+        union
+        {
+            std::uint32_t integer_value;
+            byte_t raw_bytes[sizeof(integer_value)];
+        } value = { 0x01020304 };
+
+        const auto& left_byte = value.raw_bytes[0];
+
+        return (left_byte == 1);
+    }
+
+    constexpr bool is_little_endian() // inline bool is_little_endian()
+    {
+        return !is_big_endian();
+    }
+
+    constexpr bool is_mixed_endian()
+    {
+        //return ((!is_big_endian()) && (!is_little_endian()));
+
+        return false;
+    }
+#endif
 
     template <typename T, typename=std::enable_if_t<std::is_arithmetic_v<T>>>
     T byte_swap(T value_in)
     {
+#ifdef __cpp_lib_byteswap
+        // If `std::byteswap` is available, use that implementation instead.
+        // (Usually faster/safer)
+        if constexpr (std::is_integral_v<T>)
+        {
+            return std::byteswap(value_in);
+        }
+#endif
+
         using byte_t = char; // unsigned char; // std::uint8_t;
 
         T value_out; // = {};
