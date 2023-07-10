@@ -27,6 +27,7 @@
 //#include <engine/meta/meta.hpp>
 #include <engine/meta/types.hpp>
 #include <engine/meta/hash.hpp>
+#include <engine/meta/listen.hpp>
 #include <engine/meta/events.hpp>
 #include <engine/meta/traits.hpp>
 #include <engine/meta/indirection.hpp>
@@ -384,6 +385,52 @@ namespace engine
 		}
 
 		return false;
+	}
+
+	EntityListener* EntitySystem::listen(MetaTypeID event_type_id)
+	{
+		if (!event_type_id)
+		{
+			return {};
+		}
+
+		const auto event_type = resolve(event_type_id);
+
+		return listen(event_type);
+	}
+
+	EntityListener* EntitySystem::listen(const MetaType& event_type)
+	{
+		if (!event_type)
+		{
+			return {};
+		}
+
+		const auto event_type_id = event_type.id();
+
+		auto& listener = listeners[event_type_id];
+
+		if (listener.is_active())
+		{
+			return &listener;
+		}
+
+		const auto connection_result = connect_listener
+		(
+			listener,
+			event_type,
+
+			*this->service,
+			
+			this->system_manager
+		);
+
+		if (!connection_result)
+		{
+			print_error("Failed to connect listener for type: {}", get_known_string_from_hash(event_type_id));
+		}
+
+		return &listener;
 	}
 
 	bool EntitySystem::activate_state(Entity entity, StringHash state_id) const
@@ -2388,64 +2435,5 @@ namespace engine
 
 		// Return the next instruction index to the caller.
 		return updated_instruction_index;
-	}
-
-	EntityListener* EntitySystem::listen(MetaTypeID event_type_id)
-	{
-		using namespace engine::literals;
-
-		if (!event_type_id)
-		{
-			return nullptr;
-		}
-
-		auto& listener = listeners[event_type_id];
-
-		if (listener.is_active())
-		{
-			return &listener;
-		}
-
-		auto event_type = resolve(event_type_id);
-
-		if (!event_type)
-		{
-			//print_warn("Unable to resolve meta-type for event: #{}", event_type_id);
-
-			return nullptr;
-		}
-
-		auto connect_fn = event_type.func("connect_meta_event"_hs);
-
-		if (!connect_fn)
-		{
-			print_warn("Unable to resolve connection function for meta event-listener -- type: #{}", event_type_id);
-
-			return nullptr;
-		}
-
-		auto& listener_ref = reinterpret_cast<MetaEventListener&>(listener);
-
-		auto result = connect_fn.invoke
-		(
-			{},
-
-			entt::forward_as_meta(listener_ref),
-			entt::forward_as_meta(this->service),
-			entt::forward_as_meta(this->system_manager),
-
-			// NOTE: We need to manually specify a type-qualified `std::nullopt`
-			// to handle the (normally defaulted) `flags` parameter.
-			entt::forward_as_meta(std::optional<MetaEventListenerFlags>(std::nullopt))
-		);
-
-		if (!result)
-		{
-			print_warn("Failed to invoke meta event-listener connection routine. -- type: #{}", event_type_id);
-
-			//return nullptr;
-		}
-
-		return &listener;
 	}
 }

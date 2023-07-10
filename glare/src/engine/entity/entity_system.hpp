@@ -87,6 +87,10 @@ namespace engine
 			bool set_state(Entity entity, std::string_view state_name) const;
 			bool set_state(Entity entity, StringHash state_name) const;
 			bool set_state_by_id(Entity entity, StringHash state_id) const;
+
+			EntityListener* listen(MetaTypeID event_type_id);
+			EntityListener* listen(const MetaType& event_type);
+
 		protected:
 			std::unordered_map<MetaTypeID, EntityListener> listeners;
 
@@ -159,8 +163,6 @@ namespace engine
 
 			template <bool allow_emplace, typename EventType=void, typename ThreadCommandType=void, typename RangeCallback=void, typename IDCallback=void, typename ...EventArgs>
 			bool thread_command_impl(const ThreadCommandType& thread_command, RangeCallback&& range_callback, IDCallback&& id_callback, std::string_view dbg_name, std::string_view dbg_name_past_tense, EventArgs&&... event_args);
-
-			EntityListener* listen(MetaTypeID event_type_id);
 
 			void on_state_update_impl(Registry& registry, Entity entity, bool handle_existing=true);
 	};
