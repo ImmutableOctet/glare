@@ -2,15 +2,20 @@
 
 #include "types.hpp"
 
+#include "binary_format_config.hpp"
+#include "string_binary_format.hpp"
+
 #include "hash.hpp"
 #include "indirection.hpp"
 #include "string.hpp"
 #include "data_member.hpp"
 #include "function.hpp"
+//#include "runtime_traits.hpp"
 
 #include "meta_parsing_instructions.hpp"
 #include "meta_data_member.hpp"
 #include "indirect_meta_data_member.hpp"
+#include "meta_type_descriptor.hpp"
 #include "meta_type_descriptor_flags.hpp"
 #include "meta_type_resolution_context.hpp"
 #include "meta_variable_scope.hpp"
@@ -25,177 +30,401 @@
 #include <util/reflection.hpp>
 #include <util/parse.hpp>
 
+#include <util/binary/binary_input_stream.hpp>
+#include <util/binary/binary_output_stream.hpp>
+
 //#include <entt/meta/meta.hpp>
 //#include <entt/entt.hpp>
 
+#include <utility>
+#include <type_traits>
 #include <optional>
 #include <string>
 #include <string_view>
-#include <type_traits>
 #include <filesystem>
 #include <stdexcept>
 #include <tuple>
-#include <utility>
+
+#include <cassert>
+
+//#include <ostream>
 
 namespace engine
 {
-	// JSON-shorthand overload for string-to-any resolution function.
-	MetaAny meta_any_from_string
-	(
-		const util::json& value,
-		
-		const MetaParsingInstructions& instructions={},
-		
-		MetaType type={},
-		
-		bool allow_string_fallback=true,
-		bool allow_numeric_literals=true,
-		bool allow_boolean_literals=true,
-		bool allow_entity_fallback=true,
-		bool allow_component_fallback=true,
-		bool allow_standalone_opaque_function=true,
-		bool allow_remote_variables=true
-	);
-
-	// Attempts to resolve a native value from a raw string value, using reflection.
-	MetaAny meta_any_from_string
-	(
-		std::string_view value,
-		
-		const MetaParsingInstructions& instructions={},
-		
-		MetaType type={},
-
-		bool allow_string_fallback=true,
-		bool allow_numeric_literals=true,
-		bool allow_boolean_literals=true,
-		bool allow_entity_fallback=true,
-		bool allow_component_fallback=true,
-		bool allow_standalone_opaque_function=true,
-		bool allow_remote_variables=true
-	);
-
-	// Internal subroutine of `meta_any_from_string`.
-	std::tuple
-	<
-		MetaAny,    // result
-		std::size_t // length_processed
-	>
-	meta_any_from_string_compound_expr_impl
-	(
-		std::string_view expr,
-		
-		const MetaParsingInstructions& instructions,
-		MetaType type={},
-		
-		bool try_arithmetic=true,
-		bool try_string_fallback=true,
-		bool try_boolean=true,
-		bool allow_entity_fallback=true,
-		bool allow_component_fallback=true,
-		bool allow_standalone_opaque_function=true,
-		bool allow_remote_variables=true,
-
-		bool assume_static_type=false
-	);
-
-	// Attempts to resolve the value indicated by `string_reference` as a string.
-	// 
-	// If the value is a string, `string_callback` will be executed.
-	// If the value is not a string, `non_string_callback` will be called instead.
-	// 
-	// NOTE: Although the return value of `string_callback` is ignored, the return-value of
-	// `non_string_callback` is used to determine if the `MetaAny` instance
-	// retrieved should be returned back to the initial caller.
-	template <typename StringCallback, typename NonStringCallback>
-	inline MetaAny peek_string_value(std::string_view string_reference, StringCallback&& string_callback, NonStringCallback&& non_string_callback, const MetaParsingInstructions& instructions={}, MetaType type={}) // { .fallback_to_string=true }
+	namespace impl
 	{
-		const auto resolved_value = meta_any_from_string(string_reference, instructions, type);
+		// Internal interface for default `save` implementation.
+		util::json& save_impl(const MetaAny& instance, util::json& data_out, bool encode_type_information);
 
-		if (!resolved_value)
+		// Internal interface for default `save_binary` implementation.
+		bool save_binary_impl
+		(
+			const MetaAny& instance,
+			util::BinaryOutputStream& data_out,
+			const BinaryFormatConfig& binary_format
+		);
+
+		template <typename StreamType, typename StringType>
+		bool save_binary_encode_string_impl(StreamType& data_out, const StringType& primitive_value, const BinaryFormatConfig& binary_format)
 		{
-			return {};
+			using primitive_t = std::decay_t<StringType>;
+
+			constexpr bool is_string = (std::is_same_v<primitive_t, std::string>);
+			constexpr bool is_string_view = (std::is_same_v<primitive_t, std::string_view>);
+
+			static_assert(is_string || is_string_view);
+
+			// Only UTF8 (ASCII subset) strings are supported at this time.
+			if (binary_format.string_format != StringBinaryFormat::UTF8) // StringBinaryFormat::Default
+			{
+				return false;
+			}
+
+			return static_cast<bool>((data_out << primitive_value));
 		}
 
-		if (try_string_value(resolved_value, string_callback))
+		template <typename StreamType, typename PrimitiveType>
+		bool save_binary_encode_primitive_impl(StreamType& data_out, const PrimitiveType& primitive_value, const BinaryFormatConfig& binary_format={}) // PrimitiveType&&
 		{
-			if constexpr (std::is_invocable_r_v<bool, NonStringCallback, decltype(resolved_value)>)
+			using primitive_t = std::decay_t<PrimitiveType>;
+
+			if constexpr ((std::is_same_v<primitive_t, std::string>) || (std::is_same_v<primitive_t, std::string_view>))
 			{
-				if (!non_string_callback(resolved_value))
-				{
-					return {};
-				}
+				return save_binary_encode_string_impl(data_out, primitive_value, binary_format); // std::forward<PrimitiveType>(primitive_value);
 			}
 			else
 			{
-				non_string_callback(resolved_value);
+				return static_cast<bool>((data_out << primitive_value)); // std::forward<PrimitiveType>(primitive_value);
 			}
 		}
 
-		return resolved_value;
-	}
-
-	// Convenience overload for `peek_string_value` without the need to specify a non-string callback.
-	template <typename Callback>
-	inline bool peek_string_value(std::string_view string_reference, Callback&& callback, const MetaParsingInstructions& instructions={}) // { .fallback_to_string=true }
-	{
-		auto result = peek_string_value
+		// Reads a compatible binary format configuration from `data_in`.
+		// If the format is unsupported, or the version is mismatched, this will return an empty object.
+		std::optional<BinaryFormatConfig> read_binary_format
 		(
-			string_reference,
-			std::forward<Callback>(callback),
-			
-			[](const MetaAny& non_string_value)
-			{
-				return false;
-			},
-
-			instructions
+			util::BinaryInputStream& data_in,
+			const BinaryFormatConfig& binary_format
 		);
 
-		return static_cast<bool>(result);
-	}
+		std::optional<BinaryFormatConfig> read_binary_format(util::BinaryInputStream& data_in);
 
-	MetaAny resolve_meta_any
-	(
-		const util::json& value,
-		MetaTypeID type_id,
-		const MetaParsingInstructions& instructions={}
-	);
+		// Attempts to load a `MetaTypeDescriptor` instance from a binary input stream.
+		// 
+		// This implementation handles the standard header and type ID header automatically.
+		std::optional<MetaTypeDescriptor> load_descriptor_from_binary
+		(
+			util::BinaryInputStream& data_in,
+			const BinaryFormatConfig& binary_format,
+			const MetaType& default_type={}
+		);
 
-	MetaAny resolve_meta_any
-	(
-		const util::json& value,
-		MetaType type,
-		const MetaParsingInstructions& instructions={}
-	);
+		// Wrapper for default `save` implementation(s).
+		// (Useful for reflection bindings)
+		template
+		<
+			typename T, typename... Args,
+			typename=std::enable_if_t<!std::is_same_v<std::decay_t<T>, MetaAny>>
+		>
+		bool default_save_impl
+		(
+			const T& native_instance,
+			Args... args // Args&&...
+		)
+		{
+			save_impl
+			(
+				entt::forward_as_meta(native_instance),
+				args... // std::forward<Args>(args)...
+			);
 
-	// NOTE: This overload cannot handle non-primitive values.
-	// (see overload taking a native-type identifier)
-	MetaAny resolve_meta_any
-	(
-		const util::json& value,
-		const MetaParsingInstructions& instructions={}
-	);
+			return true;
+		}
 
-	// Attempts to resolve a `MetaDataMember` from `value`.
-	// NOTE: Does not support indirection. (i.e. other entities from the initial source)
-	std::optional<MetaDataMember> meta_data_member_from_string(std::string_view value);
+		// Wrapper for default `save_binary` implementation(s).
+		// (Useful for reflection bindings)
+		template
+		<
+			typename T, typename... Args,
+			typename=std::enable_if_t<!std::is_same_v<std::decay_t<T>, MetaAny>>
+		>
+		bool default_save_binary_impl
+		(
+			const T& native_instance,
+			Args... args // Args&&...
+		)
+		{
+			save_binary_impl
+			(
+				entt::forward_as_meta(native_instance),
+				args... // std::forward<Args>(args)...
+			);
 
-	// Attempts to resolve `type_name` and `data_member_name`, then returns a
-	// `MetaDataMember` instance using the corresponding reflection data.
-	std::optional<MetaDataMember> process_meta_data_member(std::string_view type_name, std::string_view data_member_name);
+			return true;
+		}
 
-	// Attempts to resolve an `IndirectMetaDataMember` from `value`.
-	std::optional<IndirectMetaDataMember> indirect_meta_data_member_from_string(std::string_view value, EntityTarget target = { EntityTarget::SelfTarget {} });
+		template <typename MetaAnyInstance>
+		std::enable_if_t
+		<
+			std::is_same_v<std::decay_t<MetaAnyInstance>, MetaAny>,
+			bool
+		>
+		load_binary_to_existing
+		(
+			MetaAnyInstance& instance_out,
+			util::BinaryInputStream& data_in,
+			const BinaryFormatConfig& binary_format
+		)
+		{
+			if (!instance_out)
+			{
+				return false;
+			}
 
-	EntityTarget::TargetType parse_target_type(const util::json& target_data);
+			bool handled_as_primitive = false;
 
-	std::optional<MetaVariableScope> parse_variable_scope(std::string_view scope_qualifier);
+			// Handle runtime dispatch for primitive value types:
+			bool is_primitive_value = try_get_primitive_value
+			(
+				instance_out,
+			
+				[&](auto& uninitialized_primitive_value)
+				{
+					using primitive_t = std::decay_t<decltype(uninitialized_primitive_value)>;
 
-	void read_type_context(MetaTypeResolutionContext& context, const util::json& data);
+					if constexpr (std::is_same_v<primitive_t, std::string_view>)
+					{
+						// NOTE: This control path requires that this routine is used with an actual `MetaAny` handle/instance.
+						// Generally speaking, `load_binary` cannot/should-not be used with an actual lvalue reference to `std::string_view`.
+						if constexpr (!std::is_rvalue_reference_v<MetaAnyInstance>)
+						{
+							// Promote (i.e. reinitialize) `instance_out` to be an `std::string`,
+							// since `std::string_view` cannot be used in this manor.
+							instance_out = std::string {};
 
-	namespace impl
-	{
+							// Retrieve the newly constructed string object.
+							auto as_string = instance_out.try_cast<std::string>();
+						
+							// Populate the string object.
+							handled_as_primitive = load_binary_to_existing(*as_string, data_in, binary_format);
+						}
+					}
+					else
+					{
+						// Execute the native type's implementation of `load_binary`.
+						load_binary_to_existing(uninitialized_primitive_value, data_in, binary_format);
+
+						handled_as_primitive = true;
+					}
+				}
+			);
+
+			if (is_primitive_value)
+			{
+				return handled_as_primitive;
+			}
+
+			const auto instance_type = instance_out.type();
+			const auto instance_type_id = instance_type.id();
+
+			if (auto descriptor = load_descriptor_from_binary(data_in, binary_format, instance_type_id))
+			{
+				const auto fields_applied = descriptor->apply_fields(instance_out);
+
+				return static_cast<bool>(fields_applied); // (fields_applied == descriptor->size());
+			}
+
+			return false;
+		}
+
+		// Loads an arithmetic value from `data_in` to `primitive_out`.
+		// 
+		// This implementation is equivalent to using the `data_in` stream directly.
+		// 
+		// NOTE: This implementation is not called by the `load_binary` overload that returns by value.
+		template <typename PrimitiveType>
+		std::enable_if_t
+		<
+			std::is_arithmetic_v<std::decay_t<PrimitiveType>>,
+			bool
+		>
+		load_binary_to_existing
+		(
+			PrimitiveType& primitive_out,
+			util::BinaryInputStream& data_in,
+			const BinaryFormatConfig& binary_format
+		)
+		{
+			return static_cast<bool>((data_in >> primitive_out));
+		}
+
+		// Loads a string from its binary representation, found in `data_in`.
+		// 
+		// For the saving/encoding equivalent, see `save_binary_encode_string_impl`.
+		// 
+		// This routine currently only supports UTF8 encoding.
+		inline bool load_binary_to_existing
+		(
+			std::string& data_out,
+			util::BinaryInputStream& data_in,
+			const BinaryFormatConfig& binary_format
+		)
+		{
+			// Only UTF8 (ASCII subset) strings are supported at this time.
+			if (binary_format.string_format != StringBinaryFormat::UTF8)
+			{
+				return false;
+			}
+
+			// NOTE: Handling of the string's `length` header is included in this operation.
+			return static_cast<bool>((data_in >> data_out));
+		}
+
+		// This overload handles general support for binary deserialization of types.
+		template <typename T>
+		std::enable_if_t
+		<
+			(
+				(!std::is_arithmetic_v<std::decay_t<T>>)
+				&&
+				(!std::is_same_v<std::decay_t<T>, std::string>)
+				&&
+				(!std::is_same_v<std::decay_t<T>, std::string_view>)
+				&&
+				(!std::is_same_v<std::decay_t<T>, MetaAny>)
+			),
+
+			bool
+		>
+		load_binary_to_existing
+		(
+			T& instance_out,
+			util::BinaryInputStream& data_in,
+			const BinaryFormatConfig& binary_format
+		)
+		{
+			if (!load_binary_to_existing(entt::forward_as_meta(instance_out), data_in, binary_format))
+			{
+				if constexpr ((std::is_default_constructible_v<T>) && (std::is_copy_assignable_v<T> || std::is_move_assignable_v<T>))
+				{
+					instance_out = T {};
+				}
+
+				return false;
+			}
+
+			return true;
+		}
+
+		// Loads an instance of `T` from `data_in` using the `binary_format` specified, then converts to `ReturnType`.
+		template
+		<
+			typename T,
+			typename ReturnType=std::conditional_t
+			<
+				std::is_same_v
+				<
+					std::decay_t<T>,
+					std::string_view
+				>,
+				
+				std::string,
+				
+				T
+			>
+		>
+		ReturnType load_binary
+		(
+			util::BinaryInputStream& data_in,
+			const BinaryFormatConfig& binary_format
+		)
+		{
+			static_assert(!std::is_same_v<std::decay_t<ReturnType>, std::string_view>);
+
+			if constexpr (std::is_arithmetic_v<std::decay_t<T>>)
+			{
+				return data_in.read<std::decay_t<T>, ReturnType>();
+			}
+			else if constexpr (std::is_same_v<std::decay_t<ReturnType>, std::string>)
+			{
+				// Only UTF8 (ASCII subset) strings are supported at this time.
+				if (binary_format.string_format != StringBinaryFormat::UTF8)
+				{
+					return {};
+				}
+
+				return data_in.read<std::decay_t<T>, ReturnType>();
+			}
+			else
+			{
+				if constexpr (std::is_constructible_v<ReturnType, const T&> || std::is_constructible_v<ReturnType, T&&>)
+				{
+					if (auto descriptor = load_descriptor_from_binary(data_in, binary_format, resolve<T>()))
+					{
+						if (auto instance = descriptor->instance())
+						{
+							if (auto as_native = instance.try_cast<T>())
+							{
+								if constexpr (std::is_constructible_v<ReturnType, T&&>)
+								{
+									return ReturnType { std::move(*as_native) };
+								}
+								else
+								{
+									return ReturnType { *as_native };
+								}
+							}
+						}
+					}
+
+					if constexpr (std::is_default_constructible_v<ReturnType>)
+					{
+						return ReturnType {};
+					}
+				}
+				else if constexpr (std::is_default_constructible_v<T>)
+				{
+					auto instance_out = T {};
+
+					auto result = load_binary(instance_out, data_in, binary_format);
+
+					if constexpr (std::is_same_v<std::decay_t<T>, std::decay_t<ReturnType>>)
+					{
+						return instance_out;
+					}
+					else if constexpr (std::is_constructible_v<ReturnType, T&&>)
+					{
+						return ReturnType { std::move(instance_out) };
+					}
+					else if constexpr (std::is_constructible_v<ReturnType, const T&>)
+					{
+						return ReturnType { instance_out };
+					}
+					else if constexpr (std::is_default_constructible_v<ReturnType>)
+					{
+						if (!result)
+						{
+							return ReturnType {};
+						}
+					}
+				}
+
+				//assert(false);
+
+				// Unable to continue due to lack of default constructor.
+				throw std::runtime_error("Unable to load object from binary stream");
+			}
+		}
+
+		template
+		<
+			typename T,
+			typename ReturnType=T
+		>
+		ReturnType load_binary_any_format(util::BinaryInputStream& data_in)
+		{
+			return impl::load_binary<T, ReturnType>(data_in, BinaryFormatConfig::any_format());
+		}
+
 		template <typename ContainerType, typename ValueType=typename ContainerType::value_type>
 		void load_sequence_container_impl
 		(
@@ -363,31 +592,242 @@ namespace engine
 		}
 	}
 
-	namespace impl
+	template <typename T>
+	auto load_binary
+	(
+		util::BinaryInputStream& data_in,
+		const BinaryFormatConfig& binary_format
+	)
 	{
-		// Internal interface for default `save` implementation.
-		util::json& save_impl(const MetaAny& instance, util::json& data_out, bool encode_type_information);
+		return engine::impl::load_binary<T>(data_in, binary_format);
+	}
 
-		// Wrapper for default `save` implementation(s).
-		// (Useful for reflection bindings)
-		template
-		<
-			typename T, typename... Args,
-			typename=std::enable_if_t<!std::is_same_v<std::decay_t<T>, MetaAny>>
-		>
-		bool default_save_impl
+	template <typename T>
+	auto load_binary(util::BinaryInputStream& data_in)
+	{
+		return engine::impl::load_binary<T>(data_in, BinaryFormatConfig::any_format());
+	}
+
+	template <typename T>
+	auto load_binary
+	(
+		T& instance_out,
+		util::BinaryInputStream& data_in,
+		const BinaryFormatConfig& binary_format
+	)
+	{
+		return engine::impl::load_binary_to_existing(instance_out, data_in, binary_format);
+	}
+
+	template <typename T>
+	auto load_binary
+	(
+		T& instance_out,
+		util::BinaryInputStream& data_in
+	)
+	{
+		return engine::impl::load_binary_to_existing(instance_out, data_in, BinaryFormatConfig::any_format());
+	}
+
+	// JSON-shorthand overload for string-to-any resolution function.
+	MetaAny meta_any_from_string
+	(
+		const util::json& value,
+		
+		const MetaParsingInstructions& instructions={},
+		
+		MetaType type={},
+		
+		bool allow_string_fallback=true,
+		bool allow_numeric_literals=true,
+		bool allow_boolean_literals=true,
+		bool allow_entity_fallback=true,
+		bool allow_component_fallback=true,
+		bool allow_standalone_opaque_function=true,
+		bool allow_remote_variables=true
+	);
+
+	// Attempts to resolve a native value from a raw string value, using reflection.
+	MetaAny meta_any_from_string
+	(
+		std::string_view value,
+		
+		const MetaParsingInstructions& instructions={},
+		
+		MetaType type={},
+
+		bool allow_string_fallback=true,
+		bool allow_numeric_literals=true,
+		bool allow_boolean_literals=true,
+		bool allow_entity_fallback=true,
+		bool allow_component_fallback=true,
+		bool allow_standalone_opaque_function=true,
+		bool allow_remote_variables=true
+	);
+
+	// Internal subroutine of `meta_any_from_string`.
+	std::tuple
+	<
+		MetaAny,    // result
+		std::size_t // length_processed
+	>
+	meta_any_from_string_compound_expr_impl
+	(
+		std::string_view expr,
+		
+		const MetaParsingInstructions& instructions,
+		MetaType type={},
+		
+		bool try_arithmetic=true,
+		bool try_string_fallback=true,
+		bool try_boolean=true,
+		bool allow_entity_fallback=true,
+		bool allow_component_fallback=true,
+		bool allow_standalone_opaque_function=true,
+		bool allow_remote_variables=true,
+
+		bool assume_static_type=false
+	);
+
+	// Attempts to resolve the value indicated by `string_reference` as a string.
+	// 
+	// If the value is a string, `string_callback` will be executed.
+	// If the value is not a string, `non_string_callback` will be called instead.
+	// 
+	// NOTE: Although the return value of `string_callback` is ignored, the return-value of
+	// `non_string_callback` is used to determine if the `MetaAny` instance
+	// retrieved should be returned back to the initial caller.
+	template <typename StringCallback, typename NonStringCallback>
+	inline MetaAny peek_string_value(std::string_view string_reference, StringCallback&& string_callback, NonStringCallback&& non_string_callback, const MetaParsingInstructions& instructions={}, MetaType type={}) // { .fallback_to_string=true }
+	{
+		const auto resolved_value = meta_any_from_string(string_reference, instructions, type);
+
+		if (!resolved_value)
+		{
+			return {};
+		}
+
+		if (try_string_value(resolved_value, string_callback))
+		{
+			if constexpr (std::is_invocable_r_v<bool, NonStringCallback, decltype(resolved_value)>)
+			{
+				if (!non_string_callback(resolved_value))
+				{
+					return {};
+				}
+			}
+			else
+			{
+				non_string_callback(resolved_value);
+			}
+		}
+
+		return resolved_value;
+	}
+
+	// Convenience overload for `peek_string_value` without the need to specify a non-string callback.
+	template <typename Callback>
+	inline bool peek_string_value(std::string_view string_reference, Callback&& callback, const MetaParsingInstructions& instructions={}) // { .fallback_to_string=true }
+	{
+		auto result = peek_string_value
 		(
-			const T& native_instance,
-			Args... args // Args&&...
+			string_reference,
+			std::forward<Callback>(callback),
+			
+			[](const MetaAny& non_string_value)
+			{
+				return false;
+			},
+
+			instructions
+		);
+
+		return static_cast<bool>(result);
+	}
+
+	MetaAny resolve_meta_any
+	(
+		const util::json& value,
+		MetaTypeID type_id,
+		const MetaParsingInstructions& instructions={}
+	);
+
+	MetaAny resolve_meta_any
+	(
+		const util::json& value,
+		MetaType type,
+		const MetaParsingInstructions& instructions={}
+	);
+
+	// NOTE: This overload cannot handle non-primitive values.
+	// (see overload taking a native-type identifier)
+	MetaAny resolve_meta_any
+	(
+		const util::json& value,
+		const MetaParsingInstructions& instructions={}
+	);
+
+	// Attempts to resolve a `MetaDataMember` from `value`.
+	// NOTE: Does not support indirection. (i.e. other entities from the initial source)
+	std::optional<MetaDataMember> meta_data_member_from_string(std::string_view value);
+
+	// Attempts to resolve `type_name` and `data_member_name`, then returns a
+	// `MetaDataMember` instance using the corresponding reflection data.
+	std::optional<MetaDataMember> process_meta_data_member(std::string_view type_name, std::string_view data_member_name);
+
+	// Attempts to resolve an `IndirectMetaDataMember` from `value`.
+	std::optional<IndirectMetaDataMember> indirect_meta_data_member_from_string(std::string_view value, EntityTarget target = { EntityTarget::SelfTarget {} });
+
+	EntityTarget::TargetType parse_target_type(const util::json& target_data);
+
+	std::optional<MetaVariableScope> parse_variable_scope(std::string_view scope_qualifier);
+
+	void read_type_context(MetaTypeResolutionContext& context, const util::json& data);
+
+	bool save_binary
+	(
+		const MetaAny& instance,
+		util::BinaryOutputStream& data_out,
+		const BinaryFormatConfig& binary_format={}
+	);
+
+	// Executes an overload of `save_binary` using an instance of a native object.
+	template
+	<
+		typename T, typename... Args,
+		typename=std::enable_if_t<!std::is_same_v<std::decay_t<T>, MetaAny>>
+	>
+	bool save_binary // decltype(auto)
+	(
+		const T& native_instance,
+		util::BinaryOutputStream& data_out,
+		Args&&... args
+	)
+	{
+		if constexpr
+		(
+			(std::is_same_v<std::decay_t<T>, std::string>)
+			||
+			(std::is_same_v<std::decay_t<T>, std::string_view>)
+			||
+			(std::is_arithmetic_v<std::decay_t<T>>)
 		)
 		{
-			save_impl
+			return impl::save_binary_encode_primitive_impl
+			(
+				data_out,
+				native_instance,
+				std::forward<Args>(args)...
+			);
+		}
+		else
+		{
+			return save_binary
 			(
 				entt::forward_as_meta(native_instance),
-				args... // std::forward<Args>(args)...
+				data_out,
+				std::forward<Args>(args)...
 			);
-
-			return true;
 		}
 	}
 

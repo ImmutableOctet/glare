@@ -1,5 +1,7 @@
 #include "serial.hpp"
 
+#include "string_binary_format.hpp"
+
 #include "hash.hpp"
 #include "function.hpp"
 #include "indirection.hpp"
@@ -34,6 +36,9 @@
 #include <util/format.hpp>
 #include <util/io.hpp>
 
+#include <util/binary/binary_input_stream.hpp>
+#include <util/binary/binary_output_stream.hpp>
+
 #include <tuple>
 #include <vector>
 #include <optional>
@@ -42,6 +47,7 @@
 #include <iterator>
 #include <cctype>
 #include <cassert>
+#include <stdexcept>
 
 // Debugging related:
 #include <util/log.hpp>
@@ -189,6 +195,434 @@ namespace engine
 		util::json& save_impl(const MetaAny& instance, util::json& data_out, bool encode_type_information)
 		{
 			return save_impl_ex(instance, data_out, encode_type_information);
+		}
+
+		template <typename StreamType, typename Callback>
+		bool save_binary_format_value_impl
+		(
+			StreamType& data_out,
+			const BinaryFormatConfig& binary_format,
+			MetaTypeID type_id,
+			
+			Callback&& callback,
+			
+			bool try_encode_standard_header=true,
+			bool try_encode_type_header=true,
+			bool try_encode_length_header=true
+		)
+		{
+			auto execute_callback = [&]() -> bool
+			{
+				if constexpr (std::is_invocable_r_v<bool, Callback, decltype(data_out), decltype(binary_format)>)
+				{
+					if (!callback(data_out, binary_format))
+					{
+						return false;
+					}
+				}
+				else if constexpr (std::is_invocable_v<Callback, decltype(data_out), decltype(binary_format)>)
+				{
+					callback(data_out, binary_format);
+				}
+				else if constexpr (std::is_invocable_r_v<bool, Callback, decltype(data_out)>)
+				{
+					if (!callback(data_out))
+					{
+						return false;
+					}
+				}
+				else if constexpr (std::is_invocable_v<Callback, decltype(data_out)>)
+				{
+					callback(data_out);
+				}
+				else if constexpr (std::is_invocable_r_v<bool, Callback>)
+				{
+					if (!callback())
+					{
+						return false;
+					}
+				}
+				else if constexpr (std::is_invocable_v<Callback>)
+				{
+					callback(data_out);
+				}
+
+				return true;
+			};
+
+			if ((try_encode_standard_header) && (binary_format.standard_header()))
+			{
+				data_out << binary_format.format_version;
+				data_out << binary_format.format;
+				data_out << binary_format.string_format;
+			}
+
+			if ((try_encode_type_header) && (binary_format.type_id_header()))
+			{
+				data_out << type_id;
+			}
+
+			if ((try_encode_length_header) && (binary_format.length_header()))
+			{
+				const auto length_header_position = data_out.tellp();
+
+				auto value_length = BinaryFormatConfig::LengthType {};
+
+				data_out << value_length;
+
+				const auto value_begin_position = data_out.tellp();
+
+				if (!execute_callback())
+				{
+					return false;
+				}
+
+				const auto value_end_position = data_out.tellp();
+
+				value_length = static_cast<BinaryFormatConfig::LengthType>(value_end_position - value_begin_position);
+
+				data_out.seekp(length_header_position);
+
+				data_out << value_length;
+
+				data_out.seekp(value_end_position);
+
+				return true;
+			}
+			else
+			{
+				return execute_callback();
+			}
+		}
+
+		template <typename StreamType, typename PrimitiveType>
+		bool save_binary_nested_primitive_impl
+		(
+			StreamType& data_out,
+			const BinaryFormatConfig& binary_format,
+			const PrimitiveType& primitive_value,
+			MetaTypeID type_id
+		)
+		{
+			return save_binary_format_value_impl
+			(
+				data_out, binary_format, type_id,
+
+				[&primitive_value](StreamType& data_out, const BinaryFormatConfig& binary_format)
+				{
+					return save_binary_encode_primitive_impl(data_out, primitive_value, binary_format);
+				},
+
+				// A primitive may not encode a standard header.
+				false,
+
+				// Primitives may encode explicit type information, but only if an ID is specified.
+				static_cast<bool>(type_id),
+
+				// Primitives do not have explicit length headers,
+				// unless encoded inside the primitive value itself. (e.g. strings)
+				false
+			);
+		}
+
+		template <typename ...EvaluationArgs>
+		bool save_binary_impl_ex
+		(
+			const MetaAny& instance,
+			util::BinaryOutputStream& data_out,
+			const BinaryFormatConfig& binary_format,
+
+			EvaluationArgs&&... evaluation_args
+		)
+		{
+			using namespace engine::literals;
+
+			using StreamType = util::BinaryOutputStream;
+
+			const auto instance_type = instance.type();
+			const auto instance_type_id = instance_type.id();
+
+			const auto is_primitive_value = try_get_primitive_value
+			(
+				instance,
+
+				[instance_type_id, &binary_format, &data_out](auto&& primitive_value)
+				{
+					//const auto& primitive_type_id = instance_type_id;
+					//const auto primitive_type_id = resolve<std::decay_t<decltype(primitive_value)>>().id();
+
+					save_binary_nested_primitive_impl
+					(
+						data_out, binary_format,
+						primitive_value, // std::forward<decltype(primitive_value)>(primitive_value),
+
+						// Type information is not forwarded when the top-level type is a primitive.
+						// (i.e. not nested in a member)
+						MetaTypeID {} // primitive_type_id
+					);
+				}
+			);
+
+			if (is_primitive_value)
+			{
+				return true;
+			}
+
+			return save_binary_format_value_impl
+			(
+				data_out, binary_format, instance_type_id,
+
+				[&](StreamType& data_out, const BinaryFormatConfig& binary_format)
+				{
+					auto member_count = BinaryFormatConfig::SmallLengthType {};
+
+					const bool report_member_count = binary_format.count_members();
+
+					// TODO: Optimize.
+					const auto member_count_position = data_out.tellp();
+
+					if (report_member_count)
+					{
+						data_out << member_count;
+					}
+
+					const bool read_only_members_included = binary_format.read_only_members();
+
+					auto member_binary_format = binary_format.decay();
+
+					enumerate_primitive_member_values
+					(
+						instance,
+
+						[&](const MetaAny& instance, MetaSymbolID data_member_id, const entt::meta_data& data_member, auto&& member_value)
+						{
+							if (!read_only_members_included)
+							{
+								if (data_member_is_read_only(data_member))
+								{
+									return;
+								}
+							}
+
+							const auto data_member_type = data_member.type();
+
+							if (!data_member_type)
+							{
+								return;
+							}
+
+							const auto data_member_type_id = data_member_type.id();
+
+							if (binary_format.member_ids())
+							{
+								data_out << data_member_id;
+							}
+
+							auto result = save_binary_nested_primitive_impl
+							(
+								data_out, member_binary_format,
+								member_value,
+
+								data_member_type_id
+							);
+
+							// Primitive values shouldn't fail unless an exception is thrown.
+							assert(result);
+
+							if (result)
+							{
+								member_count++;
+							}
+						},
+			
+						[&](const MetaAny& instance, MetaSymbolID data_member_id, const entt::meta_data& data_member, const MetaAny& member_value) -> bool
+						{
+							const auto data_member_type = data_member.type();
+
+							if (!data_member_type)
+							{
+								return false;
+							}
+
+							const auto member_position = data_out.tellp();
+
+							if (binary_format.member_ids())
+							{
+								data_out << data_member_id;
+							}
+
+							const auto value_position = data_out.tellp();
+
+							if (auto underlying = try_get_underlying_value(member_value, std::forward<EvaluationArgs>(evaluation_args)...))
+							{
+								if (save_binary(underlying, data_out, member_binary_format))
+								{
+									member_count++;
+
+									// Operation handled by reflected implementation.
+									return false;
+								}
+
+								// Previous attempt failed, ensure we seek back to the beginning of the value segment.
+								data_out.seekp(value_position);
+							}
+
+							// NOTE: Recursion.
+							// Fallback to processing the object using this implementation.
+							if (save_binary(member_value, data_out, member_binary_format))
+							{
+								member_count++;
+							}
+							else
+							{
+								// All attempts failed, seek back to the beginning of this member's segment.
+								data_out.seekp(member_position);
+
+								const auto data_member_name = get_known_string_from_hash(data_member_id);
+
+								const auto debug_message = util::format("Failed to encode member: {}", data_member_name);
+
+								if (binary_format.member_ids())
+								{
+									print_warn(debug_message);
+								}
+								else
+								{
+									// TODO: Change this to a better exception type.
+									throw std::runtime_error(debug_message);
+								}
+							}
+
+							return false;
+						},
+
+						[](auto&&...) {},
+
+						true, true, true, false
+					);
+
+					if (!member_count)
+					{
+						// NOTE: Seeking back to `member_count_position` is not required here, since
+						// `save_binary_format_value_impl` will already seek back appropriately on failure.
+						return false;
+					}
+
+					if (report_member_count)
+					{
+						const auto current_position = data_out.tellp();
+
+						data_out.seekp(member_count_position);
+
+						data_out << member_count;
+
+						data_out.seekp(current_position);
+					}
+
+					return true;
+				}
+			);
+		}
+
+		bool save_binary_impl
+		(
+			const MetaAny& instance,
+			util::BinaryOutputStream& data_out,
+			const BinaryFormatConfig& binary_format
+		)
+		{
+			return save_binary_impl_ex(instance, data_out, binary_format);
+		}
+
+		std::optional<BinaryFormatConfig> read_binary_format
+		(
+			util::BinaryInputStream& data_in,
+			const BinaryFormatConfig& binary_format
+		)
+		{
+			auto binary_format_used = binary_format;
+
+			if (binary_format.standard_header())
+			{
+				const auto intended_format_version = data_in.read<BinaryFormatConfig::FormatVersion>();
+
+				if (binary_format.format_version == BinaryFormatConfig::any_format_version)
+				{
+					binary_format_used.format_version = intended_format_version;
+				}
+				else
+				{
+					if (intended_format_version != binary_format.format_version)
+					{
+						// Format mismatch.
+						return std::nullopt;
+					}
+				}
+
+				const auto intended_binary_format = data_in.read<BinaryFormatConfig::Format>();
+
+				binary_format_used.format = intended_binary_format;
+
+				binary_format_used.string_format = data_in.read<StringBinaryFormat>();
+			}
+
+			return binary_format_used;
+		}
+
+		std::optional<BinaryFormatConfig> read_binary_format(util::BinaryInputStream& data_in)
+		{
+			return read_binary_format(data_in, BinaryFormatConfig::any_format());
+		}
+
+		std::optional<MetaTypeDescriptor> load_descriptor_from_binary
+		(
+			util::BinaryInputStream& data_in,
+			const BinaryFormatConfig& binary_format,
+			const MetaType& default_type
+		)
+		{
+			const auto binary_format_used = read_binary_format(data_in, binary_format);
+
+			if (!binary_format_used)
+			{
+				return {};
+			}
+
+			auto type = default_type;
+
+			if (binary_format_used->type_id_header())
+			{
+				const auto specified_type_id = data_in.read<MetaTypeID>();
+
+				if (const auto specified_type = resolve(specified_type_id))
+				{
+					type = specified_type;
+				}
+			}
+
+			if (binary_format_used->length_header())
+			{
+				const auto descriptor_length = data_in.read<BinaryFormatConfig::LengthType>();
+				const auto descriptor_begin_position = data_in.get_input_position();
+				const auto descriptor_end_position = (descriptor_begin_position + descriptor_length);
+
+				auto descriptor = MetaTypeDescriptor { type };
+
+				descriptor.set_variables(data_in, *binary_format_used);
+
+				if (const auto end_position = data_in.get_input_position(); end_position != descriptor_end_position)
+				{
+					data_in.set_input_position(descriptor_end_position);
+
+					return std::nullopt;
+				}
+
+				return descriptor;
+			}
+			else
+			{
+				return MetaTypeDescriptor { type, data_in, *binary_format_used };
+			}
 		}
 
 		static std::size_t resolve_meta_any_sequence_container_impl
@@ -3428,6 +3862,54 @@ namespace engine
 		{
 			read_aliases(*aliases, context.instruction_aliases);
 		}
+	}
+
+	bool save_binary
+	(
+		const MetaAny& instance,
+		util::BinaryOutputStream& data_out,
+		const BinaryFormatConfig& binary_format
+	)
+	{
+		using namespace engine::literals;
+
+		if (!instance)
+		{
+			return false;
+		}
+
+		const auto instance_type = instance.type();
+
+		if (!instance_type)
+		{
+			return false;
+		}
+
+		if (const auto to_binary_fn = instance_type.func("to_binary"_hs))
+		{
+			if (const auto result = invoke_any_overload(to_binary_fn, instance, data_out, binary_format)) // invoke_any_overload_with_indirection_context
+			{
+				const auto result_as_bool = result.try_cast<bool>();
+
+				assert(result_as_bool);
+
+				if ((result_as_bool) && (*result_as_bool))
+				{
+					return true;
+				}
+
+				return false;
+			}
+		}
+
+		impl::save_binary_impl
+		(
+			instance,
+			data_out,
+			binary_format
+		);
+
+		return true;
 	}
 
 	bool save(const MetaAny& instance, util::json& data_out, bool encode_type_information)
