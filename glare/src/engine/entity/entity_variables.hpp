@@ -19,7 +19,7 @@ namespace engine
 	struct MetaVariable;
 
 	template <std::size_t preallocated=8>
-	struct EntityVariables : MetaVariableStorageInterface
+	class EntityVariables : public MetaVariableStorageInterface
 	{
 		public:
 			using Names  = util::small_vector<MetaSymbolID, preallocated>;
