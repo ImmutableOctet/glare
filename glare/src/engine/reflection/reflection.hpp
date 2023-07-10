@@ -286,6 +286,7 @@ namespace engine
             type = type.template func<&T::get_type>("get_type"_hs);
         }
 
+        // NOTE: A type must be non-empty to qualify for usage as a component.
         if constexpr (!std::is_empty_v<T>)
         {
             type = type
@@ -319,6 +320,12 @@ namespace engine
         {
             type = define_from_json_bindings<T>(type);
             type = define_to_json_bindings<T>(type);
+        }
+
+        if constexpr (config.generate_binary_bindings)
+        {
+            type = define_from_binary_bindings<T>(type);
+            type = define_to_binary_bindings<T>(type);
         }
 
         if constexpr (config.generate_optional_reflection)
