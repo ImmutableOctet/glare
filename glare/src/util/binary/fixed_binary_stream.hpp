@@ -7,6 +7,7 @@
 #include <utility>
 #include <type_traits>
 
+#include <cstdint>
 #include <cstring>
 
 namespace util
@@ -40,16 +41,26 @@ namespace util
 
 			bool sync_input_and_output : 1 = true;
 
-			bool read_bytes(Byte* data_out, std::size_t count) const override
+			const Byte* read_byte_segment(std::size_t count) const
 			{
-				if (const auto bytes_in = buffer.get(input_position, count))
+				if (const auto byte_segment = buffer.get(input_position, count))
 				{
 					if (set_input_position(input_position + static_cast<StreamPosition>(count)))
 					{
-						std::memcpy(data_out, bytes_in, count);
-
-						return true;
+						return byte_segment;
 					}
+				}
+
+				return {};
+			}
+
+			bool read_bytes(Byte* data_out, std::size_t count) const override
+			{
+				if (const auto bytes_in = read_byte_segment(count))
+				{
+					std::memcpy(data_out, bytes_in, count);
+
+					return true;
 				}
 
 				return false;
@@ -68,6 +79,31 @@ namespace util
 				}
 
 				return false;
+			}
+
+			// Optimal buffer-to-string copy routine. (Avoids temporary buffer creation)
+			const BinaryInputStream& read_to(std::string& out) const override
+			{
+				auto as_input_stream = static_cast<const BinaryInputStream*>(this);
+
+				const auto length = as_input_stream->read<std::uint32_t>(); // std::uint16_t
+
+				if (length)
+				{
+					const auto buffer_size = static_cast<std::size_t>(length);
+					const auto buffer_segment = read_byte_segment(buffer_size);
+
+					//out.clear();
+					out.resize(buffer_size);
+
+					std::copy(buffer_segment, (buffer_segment + buffer_size), out.begin());
+				}
+				else
+				{
+					out.clear();
+				}
+
+				return *this;
 			}
 
 		public:
