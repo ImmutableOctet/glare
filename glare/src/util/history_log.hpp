@@ -101,7 +101,7 @@ namespace util
 				* The `output` argument may be a callable taking an instance of `T` (or `const T&`) as its only parameter,
 				or it may be a non-const lvalue-reference to an object that is capable of copy-assignment from `T`.
 
-				* The `on_first_undo` argument must be a callable taking either no arguments, or a single lvale-reference to this object as input.
+				* The `on_first_undo` argument must be a callable taking either no arguments, or a single lvalue-reference to this object as input.
 				
 				`on_first_undo` is executed when this log reports true for `can_undo` (i.e. historical data is available),
 				and the `cursor` field points to the live state of `T` (see `live_value_cursor`).
@@ -320,6 +320,27 @@ namespace util
 				return store_impl(value);
 			}
 
+			// Takes a snapshot, using the result of `input_callable` as its contents.
+			template
+			<
+				typename Input,
+
+				typename=std::enable_if_t
+				<
+					(!std::is_same_v<std::decay_t<Input>, std::decay_t<T>>)
+					&&
+					(
+						(std::is_invocable_v<Input>)
+						||
+						(std::is_invocable_v<Input, HistoryLog&>)
+					)
+				>
+			>
+			auto store(Input&& input_callable)
+			{
+				return store_impl(std::forward<Input>(input_callable));
+			}
+
 			// Truncates the internal `snapshots` collection to the current position of `cursor`.
 			// (i.e. erases all historical data from `cursor` onward)
 			bool truncate()
@@ -330,6 +351,30 @@ namespace util
 				}
 
 				snapshots.resize(static_cast<SizeType>(cursor));
+
+				return true;
+			}
+
+			// Removes the most recent snapshot taken.
+			// If `update_cursor` is enabled, the cursor will be updated to `live_value_cursor`.
+			bool truncate_back(bool update_cursor=false)
+			{
+				if (!pop_back())
+				{
+					return false;
+				}
+
+				if (update_cursor)
+				{
+					auto cursor_result = set_latest();
+
+					assert(cursor_result);
+
+					if (!cursor_result)
+					{
+						return false;
+					}
+				}
 
 				return true;
 			}
@@ -348,6 +393,73 @@ namespace util
 				cursor = {};
 
 				return true;
+			}
+
+			// Updates `cursor` to point to `live_value_cursor`.
+			bool set_latest()
+			{
+				cursor = live_value_cursor();
+
+				return true;
+			}
+
+			// Updates `cursor` to point to `live_value_cursor`, then stores `input`.
+			template <typename Input>
+			bool set_latest(Input&& input)
+			{
+				if (!set_latest())
+				{
+					return false;
+				}
+
+				return store(std::forward<Input>(input));
+			}
+			
+			// This is a wrapper for the overload of `set_latest` taking `input`.
+			template <typename Input>
+			bool store_latest(Input&& input)
+			{
+				return set_latest(std::forward<Input>(input));
+			}
+
+			/*
+				Emplaces the value retrieved from `input` to the end
+				of the history log without altering the cursor.
+				
+				See also: `store`
+			*/
+			template <typename Input>
+			decltype(auto) store_back(Input&& input)
+			{
+				if constexpr (std::is_same_v<std::decay_t<Input>, std::decay_t<T>> || std::is_constructible_v<T, Input>)
+				{
+					return emplace(std::forward<Input>(input));
+				}
+				else if constexpr (std::is_invocable_v<Input, decltype(*this)>)
+				{
+					return emplace(input(*this));
+				}
+				else if constexpr (std::is_invocable_v<Input>)
+				{
+					return emplace(input());
+				}
+			}
+
+			// Stores `input` at the end of the history log,
+			// then 'restores' to the state immediately behind it.
+			// 
+			// (Equivalent to calling `store_latest`, then calling `undo` twice)
+			template <typename Input, typename ...UndoArgs>
+			decltype(auto) store_and_restore(Input&& input, UndoArgs&&... undo_args)
+			{
+				if (!store_latest(std::forward<Input>(input)))
+				{
+					return false;
+				}
+
+				undo();
+
+				return undo(std::forward<UndoArgs>(undo_args)...);
 			}
 
 			// Returns true if truncation can be performed.
@@ -540,18 +652,30 @@ namespace util
 
 		private:
 			// Internal subroutine; use `store` instead.
-			template <typename ValueRef>
-			bool store_impl(ValueRef&& value)
+			template <typename Input>
+			bool store_impl(Input&& input)
 			{
 				if (!can_store())
 				{
 					return false;
 				}
 
-				truncate();
+				bool log_truncated = false;
 
-				if (!emplace(std::forward<ValueRef>(value)))
+				if (can_truncate())
 				{
+					log_truncated = truncate();
+
+					if (!log_truncated)
+					{
+						return false;
+					}
+				}
+
+				if (!store_back(std::forward<Input>(input)))
+				{
+					assert(!log_truncated);
+
 					return false;
 				}
 
@@ -569,6 +693,18 @@ namespace util
 			bool emplace(ValueRef&& value)
 			{
 				snapshots.emplace_back(std::forward<ValueRef>(value));
+
+				return true;
+			}
+
+			bool pop_back()
+			{
+				if (snapshots.empty())
+				{
+					return false;
+				}
+
+				snapshots.pop_back();
 
 				return true;
 			}
