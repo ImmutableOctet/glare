@@ -1,6 +1,12 @@
 #pragma once
 
 #include "types.hpp"
+#include "hash.hpp"
+
+#include <string>
+#include <string_view>
+
+#include <cstdint>
 
 namespace engine
 {
@@ -18,6 +24,95 @@ namespace engine
     // The `strings_as_primitives` parameter controls whether `std::string`
     // and `std::string_view` are considered primitive as well.
     bool value_is_primitive(const MetaAny& value, bool strings_as_primitives=true);
+
+	// Executes the generic call operator of `callback` using the primitive `type` specified.
+	// If `type` does not represent a primitive, this will return false and `callback` will not be executed.
+	// 
+	// The `strings_as_primitives` parameter controls whether `std::string`
+	// and `std::string_view` are considered primitive as well.
+    template <typename GenericLambdaCallback>
+	bool observe_primitive_type(const MetaType& type, GenericLambdaCallback&& callback, bool strings_as_primitives=true)
+	{
+		using namespace engine::literals;
+
+		if (!type)
+		{
+			return false;
+		}
+
+		auto notify = [&callback]<typename T>()
+		{
+			callback.operator()<T>();
+
+			return true;
+		};
+
+		const auto type_id = type.id();
+
+		switch (type_id)
+		{
+			case entt::type_hash<bool>::value():
+				return notify.operator()<bool>();
+
+			case entt::type_hash<std::int64_t>::value():
+				return notify.operator()<std::int64_t>();
+
+			case entt::type_hash<std::int32_t>::value():
+				return notify.operator()<std::int32_t>();
+
+			case entt::type_hash<std::int16_t>::value():
+				return notify.operator()<std::int16_t>();
+
+			case entt::type_hash<std::int8_t>::value():
+				return notify.operator()<std::int8_t>();
+
+			case entt::type_hash<std::uint64_t>::value():
+				return notify.operator()<std::uint64_t>();
+
+			case entt::type_hash<std::uint32_t>::value():
+				return notify.operator()<std::uint32_t>();
+			
+			case entt::type_hash<std::uint16_t>::value():
+				return notify.operator()<std::uint16_t>();
+			
+			case entt::type_hash<std::uint8_t>::value():
+				return notify.operator()<std::uint8_t>();
+			
+			case entt::type_hash<long double>::value():
+				return notify.operator()<long double>();
+			
+			case entt::type_hash<double>::value():
+				return notify.operator()<double>();
+			
+			case entt::type_hash<float>::value():
+				return notify.operator()<float>();
+		}
+
+		if (strings_as_primitives)
+		{
+			switch (type_id)
+			{
+				case "string"_hs: // entt::type_hash<std::string>::value():
+					return notify.operator()<std::string>();
+
+				case "string_view"_hs: // entt::type_hash<std::string_view>::value():
+					return notify.operator()<std::string_view>();
+			}
+		}
+
+		return false;
+	}
+
+	// Executes the generic call operator of `callback` using the primitive type referenced by `type_id`.
+	// If `type_id` does not represent a primitive, this will return false and `callback` will not be executed.
+	// 
+	// The `strings_as_primitives` parameter controls whether `std::string`
+	// and `std::string_view` are considered primitive as well.
+	template <typename GenericLambdaCallback>
+	bool observe_primitive_type(MetaTypeID type_id, GenericLambdaCallback&& callback, bool strings_as_primitives=true)
+	{
+		return observe_primitive_type(resolve(type_id), std::forward<GenericLambdaCallback>(callback), strings_as_primitives);
+	}
 
 	// Returns true if the `value` specified has a reflected indirection function.
     bool value_has_indirection(const MetaAny& value, bool bypass_indirect_meta_any=false);
