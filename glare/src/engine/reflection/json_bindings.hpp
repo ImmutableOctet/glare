@@ -22,7 +22,7 @@ namespace engine
     namespace impl
     {
         template <typename T>
-        auto define_basic_to_json_binding(auto type)
+        auto define_basic_to_json_bindings(auto type)
         {
             using namespace engine::literals;
 
@@ -139,7 +139,7 @@ namespace engine
 
         if constexpr (is_arithmetic)
         {
-            type = impl::define_basic_to_json_binding<T>(type);
+            type = impl::define_basic_to_json_bindings<T>(type);
         }
         else
         {
@@ -154,13 +154,13 @@ namespace engine
                 (has_method_to_json_v<T, util::json, bool>)
             );
 
-            if (has_custom_to_json_impl)
+            if constexpr (has_custom_to_json_impl)
             {
                 type = impl::define_exact_to_json_bindings<T>(type);
             }
             else
             {
-                type = impl::define_basic_to_json_binding<T>(type);
+                type = impl::define_basic_to_json_bindings<T>(type);
             }
         }
 
