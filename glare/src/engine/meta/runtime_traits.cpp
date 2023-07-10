@@ -135,12 +135,7 @@ namespace engine
 	{
 		using namespace engine::literals;
 
-		if (!type)
-		{
-			return false;
-		}
-
-		return static_cast<bool>(type.prop("system"_hs));
+		return ((type) && (type.prop("system"_hs)));
 	}
 
 	bool type_is_system(const MetaTypeID type_id)
@@ -173,15 +168,7 @@ namespace engine
 	{
 		using namespace engine::literals;
 
-		if (type)
-		{
-			if (type.prop("global namespace"_hs))
-			{
-				return true;
-			}
-		}
-
-		return false;
+		return ((type) && (type.prop("global namespace"_hs)));
 	}
 
 	bool type_has_global_namespace_flag(MetaTypeID type_id)
@@ -191,6 +178,46 @@ namespace engine
 			if (auto type = resolve(type_id))
 			{
 				return type_has_global_namespace_flag(type);
+			}
+		}
+
+		return false;
+	}
+
+	bool type_is_component(const MetaType& type)
+	{
+		using namespace engine::literals;
+
+		return ((type) && (type.prop("component"_hs)));
+	}
+
+	bool type_is_component(MetaTypeID type_id)
+	{
+		if (type_id)
+		{
+			if (auto type = resolve(type_id))
+			{
+				return type_is_component(type);
+			}
+		}
+
+		return false;
+	}
+
+	bool type_is_history_component(const MetaType& type)
+	{
+		using namespace engine::literals;
+
+		return ((type) && (type.prop("history_component"_hs)));
+	}
+
+	bool type_is_history_component(MetaTypeID type_id)
+	{
+		if (type_id)
+		{
+			if (auto type = resolve(type_id))
+			{
+				return type_is_history_component(type);
 			}
 		}
 

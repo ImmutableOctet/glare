@@ -132,9 +132,21 @@ namespace engine
     // Returns true if the `value` specified references a 'system'.
     bool value_is_system(const MetaAny& value);
 
-    // Returns true  if the `type` specified has the `global namespace` property.
+    // Returns true if the `type` specified has the `global namespace` property.
     bool type_has_global_namespace_flag(const MetaType& type);
 
-    // Returns true  if the type identified by `type_id` has the `global namespace` property.
+    // Returns true if the type identified by `type_id` has the `global namespace` property.
     bool type_has_global_namespace_flag(MetaTypeID type_id);
+
+    // Returns true if the `type` specified has the `component` property.
+    bool type_is_component(const MetaType& type);
+
+    // Returns true if the type identified by `type_id` has the `component` property.
+    bool type_is_component(MetaTypeID type_id);
+
+    // Returns true if the `type` specified has the `history_component` property.
+    bool type_is_history_component(const MetaType& type);
+
+    // Returns true if the type identified by `type_id` has the `history_component` property.
+    bool type_is_history_component(MetaTypeID type_id);
 }
