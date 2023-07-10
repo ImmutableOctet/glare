@@ -86,33 +86,40 @@ namespace util
     template <typename T, typename=std::enable_if_t<std::is_arithmetic_v<T>>>
     T byte_swap(T value_in)
     {
-#ifdef __cpp_lib_byteswap
-        // If `std::byteswap` is available, use that implementation instead.
-        // (Usually faster/safer)
-        if constexpr (std::is_integral_v<T>)
+        if constexpr (sizeof(value_in) > 1)
         {
-            return std::byteswap(value_in);
-        }
+#ifdef __cpp_lib_byteswap
+            // If `std::byteswap` is available, use that implementation instead.
+            // (Usually faster/safer)
+            if constexpr (std::is_integral_v<T>)
+            {
+                return std::byteswap(value_in);
+            }
 #endif
 
-        using byte_t = char; // unsigned char; // std::uint8_t;
+            using byte_t = char; // unsigned char; // std::uint8_t;
 
-        T value_out; // = {};
+            T value_out; // = {};
     
-        const auto value_in_as_bytes = reinterpret_cast<const byte_t*>(&value_in);
+            const auto value_in_as_bytes = reinterpret_cast<const byte_t*>(&value_in);
     
-        auto value_out_as_bytes = reinterpret_cast<byte_t*>(&value_out);
+            auto value_out_as_bytes = reinterpret_cast<byte_t*>(&value_out);
 
-        constexpr auto value_size = sizeof(T);
+            constexpr auto value_size = sizeof(T);
 
-        for (std::size_t byte_index = 0; byte_index < value_size; byte_index++)
-        {
-            const auto opposite_byte_index = ((value_size - 1) - byte_index);
+            for (std::size_t byte_index = 0; byte_index < value_size; byte_index++)
+            {
+                const auto opposite_byte_index = ((value_size - 1) - byte_index);
 
-            value_out_as_bytes[opposite_byte_index] = value_in_as_bytes[byte_index];
+                value_out_as_bytes[opposite_byte_index] = value_in_as_bytes[byte_index];
+            }
+
+            return value_out;
         }
-
-        return value_out;
+        else
+        {
+            return value_in;
+        }
     }
 
     template <typename T, typename=std::enable_if_t<std::is_arithmetic_v<T>>>
