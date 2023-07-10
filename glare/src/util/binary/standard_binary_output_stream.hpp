@@ -42,6 +42,21 @@ namespace util
 				return static_cast<bool>(output_stream->seekp(position));
 			}
 
+			bool can_write(std::size_t count) const override
+			{
+				if (!output_stream)
+				{
+					return false;
+				}
+
+				return static_cast<bool>(*output_stream);
+			}
+
+			bool can_write() const override
+			{
+				return can_write(static_cast<std::size_t>(1));
+			}
+
 		protected:
 			bool write_bytes(const Byte* data_in, std::size_t count) override
 			{
