@@ -7,6 +7,7 @@
 
 #include <engine/meta/types.hpp>
 #include <engine/meta/cast.hpp>
+#include <engine/meta/short_name.hpp>
 #include <engine/meta/meta_type_descriptor.hpp>
 
 #include <utility>
@@ -355,5 +356,17 @@ namespace engine::impl
         }
 
         return false;
+    }
+
+    template <typename T>
+    MetaTypeID get_component_type_id_impl()
+    {
+        return short_name_hash<T>();
+    }
+
+    template <typename T>
+    MetaTypeID get_history_component_type_id_impl()
+    {
+        return history_component_short_name_hash<T>();
     }
 }
