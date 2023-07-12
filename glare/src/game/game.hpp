@@ -17,6 +17,9 @@
 
 #include <engine/world/world.hpp>
 #include <engine/world/world_system.hpp>
+
+#include <engine/world/delta/delta_system_mode.hpp>
+
 #include <engine/system_manager.hpp>
 
 #include <engine/world/render/world_renderer.hpp>
@@ -45,6 +48,8 @@ namespace game
 	using RenderState = engine::WorldRenderState;
 	using RenderBuffer = graphics::GBuffer;
 
+	using DeltaSystemMode = engine::DeltaSystemMode;
+
 	class Game : public app::GraphicsApplication
 	{
 		protected:
@@ -66,11 +71,14 @@ namespace game
 				std::string_view title,
 				
 				int width=1600, int height=900,
+
 				UpdateRate update_rate=DEFAULT_FRAMERATE,
+				DeltaSystemMode delta_mode=DeltaSystemMode::FixedUpdate,
 
 				bool vsync=true, bool input_lock_status=true,
 
 				app::WindowFlags window_flags=(app::WindowFlags::OpenGL|app::WindowFlags::Resizable),
+
 				bool imgui_enabled=true,
 
 				std::unique_ptr<engine::RenderPipeline>&& rendering_pipeline=nullptr
@@ -109,8 +117,9 @@ namespace game
 			void render(app::Milliseconds time) override;
 
 			entt::dispatcher* get_event_handler() override;
+
 		protected:
-			void init_default_systems(bool init_renderer=true);
+			void init_default_systems(DeltaSystemMode delta_mode, bool init_renderer=true);
 
 			// Implement Game-specific logic using these:
 			virtual void on_update(float delta) = 0;

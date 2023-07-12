@@ -39,9 +39,17 @@ namespace game
 {
 	Game::Game
 	(
-		std::string_view title, int width, int height,
-		UpdateRate update_rate, bool vsync, bool input_lock_status,
+		std::string_view title,
+		
+		int width, int height,
+		
+		UpdateRate update_rate,
+		DeltaSystemMode delta_mode,
+		
+		bool vsync, bool input_lock_status,
+		
 		app::WindowFlags window_flags,
+
 		bool imgui_enabled,
 
 		std::unique_ptr<engine::RenderPipeline>&& rendering_pipeline
@@ -69,7 +77,7 @@ namespace game
 
 		set_input_lock(input_lock_status);
 
-		init_default_systems((!renderer));
+		init_default_systems(delta_mode, (!renderer));
 	}
 
 	void Game::set_title(std::string_view title)
@@ -277,13 +285,14 @@ namespace game
 		return &(world.get_active_event_handler());
 	}
 
-	void Game::init_default_systems(bool init_renderer)
+	void Game::init_default_systems(DeltaSystemMode delta_mode, bool init_renderer)
 	{
 		//auto& resource_manager = world.get_resource_manager();
 
-		world_system<engine::DeltaSystem>(get_update_rate());
+		auto& entity_system = world_system<engine::EntitySystem>(systems);
 
-		world_system<engine::EntitySystem>(systems);
+		world_system<engine::DeltaSystem>(entity_system, get_update_rate(), delta_mode);
+
 		world_system<engine::CameraSystem>();
 
 		auto& physics = world_system<engine::PhysicsSystem>();
