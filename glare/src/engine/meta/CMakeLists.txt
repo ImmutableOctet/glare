@@ -8,6 +8,7 @@ target_sources(
     "runtime_traits.cpp"
     "component.cpp"
     "serial.cpp"
+    "listen.cpp"
 
     "meta_type_resolution_context.cpp"
     "component_storage.cpp"
