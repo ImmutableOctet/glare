@@ -65,4 +65,63 @@ namespace engine
 	// Attempts to mark a component of the type referenced by `component_type_id` as patched (i.e. updated).
 	// The return value of this function indicates if the operation was performed successfully.
 	bool mark_component_as_patched(Registry& registry, Entity entity, MetaTypeID component_type_id);
+
+	// Retrieves a `MetaTypeID` referencing a specialization of `HistoryComponent`, based on `component_type`.
+	MetaTypeID get_history_component_type_id(const MetaType& component_type);
+
+	// Retrieves a `MetaTypeID` referencing a specialization of `HistoryComponent`,
+	// based on the type identified by `component_type_id`.
+	MetaTypeID get_history_component_type_id(MetaTypeID component_type_id);
+
+	// Retrieves a `MetaType` for a specialization of `HistoryComponent`, based on `component_type`.
+	MetaType get_history_component_type(const MetaType& component_type);
+
+	// Retrieves a `MetaType` for a specialization of `HistoryComponent`,
+	// based on the type identified by `component_type_id`.
+	MetaType get_history_component_type(MetaTypeID component_type_id);
+
+	// Attempts to retrieve a `HistoryComponent` instance based on `component_type`, attached to `entity`.
+	// 
+	// If an instance could not be resolved, this will try to emplace
+	// a default-constructed instance, then return a reference to that object.
+	// 
+	// If default construction fails, this will return an empty `MetaAny` object.
+	MetaAny get_or_emplace_history_component(Registry& registry, Entity entity, const MetaType& component_type);
+
+	// Attempts to retrieve a `HistoryComponent` instance based on the type
+	// identified by `component_type_id`, attached to `entity`.
+	// 
+	// If an instance could not be resolved, this will try to emplace
+	// a default-constructed instance, then return a reference to that object.
+	// 
+	// If default construction fails, this will return an empty `MetaAny` object.
+	MetaAny get_or_emplace_history_component(Registry& registry, Entity entity, MetaTypeID component_type_id);
+
+	// Attempts to retrieve a `HistoryComponent` instance based on `component_type`, attached to `entity`.
+	MetaAny get_history_component_ref(Registry& registry, Entity entity, const MetaType& component_type);
+
+	// Attempts to retrieve a `HistoryComponent` instance based on the type
+	// identified by `component_type_id`, attached to `entity`.
+	MetaAny get_history_component_ref(Registry& registry, Entity entity, MetaTypeID component_type_id);
+
+	// Wrapper function for invocation of the `undo` command of a `HistoryComponent`.
+	bool undo_component_change(Registry& registry, Entity entity, MetaAny& history_component);
+
+	// Wrapper function for invocation of the `redo` command of a `HistoryComponent`.
+	bool redo_component_change(Registry& registry, Entity entity, MetaAny& history_component);
+
+	// Wrapper function for invocation of the `store` command of a `HistoryComponent`.
+	bool store_component_history(Registry& registry, Entity entity, MetaAny& history_component);
+
+	// Wrapper function for invocation of the `truncate` command of a `HistoryComponent`.
+	bool truncate_component_history(Registry& registry, Entity entity, MetaAny& history_component);
+
+	// Wrapper function for invocation of the `store_back` command of a `HistoryComponent`.
+	bool component_history_store_back(Registry& registry, Entity entity, MetaAny& history_component);
+
+	// Wrapper function for invocation of the `truncate_back` command of a `HistoryComponent`.
+	bool component_history_truncate_back(Registry& registry, Entity entity, MetaAny& history_component, bool update_cursor);
+
+	// Wrapper function for invocation of the `truncate_back` command of a `HistoryComponent`.
+	bool component_history_truncate_back(Registry& registry, Entity entity, MetaAny& history_component);
 }

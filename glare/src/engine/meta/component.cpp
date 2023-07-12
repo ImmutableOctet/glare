@@ -11,6 +11,48 @@
 
 namespace engine
 {
+	namespace impl
+	{
+		static bool history_component_action(MetaAny& history_component, MetaSymbolID function_id, auto&&... args)
+		{
+			if (!history_component)
+			{
+				return false;
+			}
+
+			const auto history_component_type = history_component.type();
+
+			if (!history_component_type)
+			{
+				return false;
+			}
+
+			auto store_fn = history_component_type.func(function_id);
+
+			while (store_fn)
+			{
+				auto result = store_fn.invoke // invoke_any_overload
+				(
+					history_component,
+
+					entt::forward_as_meta(args)...
+				);
+
+				if (result)
+				{
+					if (const auto result_as_bool = result.try_cast<bool>())
+					{
+						return *result_as_bool;
+					}
+				}
+
+				store_fn = store_fn.next();
+			}
+
+			return false;
+		}
+	}
+
 	MetaAny get_component_ref(Registry& registry, Entity entity, const MetaType& component_type)
 	{
 		using namespace engine::literals;
@@ -351,5 +393,153 @@ namespace engine
 	bool mark_component_as_patched(Registry& registry, Entity entity, MetaTypeID component_type_id)
 	{
 		return mark_component_as_patched(registry, entity, resolve(component_type_id));
+	}
+
+	// Retrieves a `MetaTypeID` referencing a specialization of `HistoryComponent`, based on `component_type`.
+	MetaTypeID get_history_component_type_id(const MetaType& component_type)
+	{
+		using namespace engine::literals;
+
+		if (!component_type)
+		{
+			return {};
+		}
+
+		if (auto lookup_fn = component_type.func("get_history_component_type_id"_hs))
+		{
+			if (auto result = lookup_fn.invoke({}))
+			{
+				if (const auto as_type_id = result.try_cast<MetaTypeID>())
+				{
+					return (*as_type_id);
+				}
+			}
+		}
+		
+		return {};
+	}
+
+	// Retrieves a `MetaTypeID` referencing a specialization of `HistoryComponent`,
+	// based on the type identified by `component_type_id`.
+	MetaTypeID get_history_component_type_id(MetaTypeID component_type_id)
+	{
+		return get_history_component_type_id(resolve(component_type_id));
+	}
+
+	MetaType get_history_component_type(const MetaType& component_type)
+	{
+		if (!component_type)
+		{
+			return {};
+		}
+
+		if (auto history_component_type_id = get_history_component_type_id(component_type))
+		{
+			return resolve(history_component_type_id);
+		}
+
+		return {};
+	}
+
+	MetaType get_history_component_type(MetaTypeID component_type_id)
+	{
+		return get_history_component_type(resolve(component_type_id));
+	}
+
+	MetaAny get_or_emplace_history_component(Registry& registry, Entity entity, const MetaType& component_type)
+	{
+		if (!component_type)
+		{
+			return {};
+		}
+
+		if (const auto history_component_type = get_history_component_type(component_type))
+		{
+			return get_or_emplace_component(registry, entity, history_component_type);
+		}
+		
+		return {};
+	}
+
+	MetaAny get_or_emplace_history_component(Registry& registry, Entity entity, MetaTypeID component_type_id)
+	{
+		/*
+		// Alternative implementation:
+		if (const auto history_component_type_id = get_history_component_type_id(component_type_id))
+		{
+			return get_or_emplace_component(registry, entity, history_component_type_id);
+		}
+		*/
+
+		return get_or_emplace_history_component(registry, entity, resolve(component_type_id));
+	}
+
+	MetaAny get_history_component_ref(Registry& registry, Entity entity, const MetaType& component_type)
+	{
+		if (!component_type)
+		{
+			return {};
+		}
+
+		if (const auto history_component_type = get_history_component_type(component_type))
+		{
+			return get_component_ref(registry, entity, history_component_type);
+		}
+
+		return {};
+	}
+
+	MetaAny get_history_component_ref(Registry& registry, Entity entity, MetaTypeID component_type_id)
+	{
+		return get_history_component_ref(registry, entity, resolve(component_type_id));
+	}
+
+	bool undo_component_change(Registry& registry, Entity entity, MetaAny& history_component)
+	{
+		using namespace engine::literals;
+
+		return impl::history_component_action(history_component, "undo"_hs, registry, entity);
+	}
+
+	bool redo_component_change(Registry& registry, Entity entity, MetaAny& history_component)
+	{
+		using namespace engine::literals;
+
+		return impl::history_component_action(history_component, "redo"_hs, registry, entity);
+	}
+
+	bool store_component_history(Registry& registry, Entity entity, MetaAny& history_component)
+	{
+		using namespace engine::literals;
+
+		return impl::history_component_action(history_component, "store"_hs, registry, entity);
+	}
+
+	bool truncate_component_history(MetaAny& history_component)
+	{
+		using namespace engine::literals;
+
+		return impl::history_component_action(history_component, "truncate"_hs);
+	}
+
+	bool component_history_store_back(Registry& registry, Entity entity, MetaAny& history_component)
+	{
+		using namespace engine::literals;
+
+		return impl::history_component_action(history_component, "store_back"_hs, registry, entity);
+	}
+
+	bool component_history_truncate_back(Registry& registry, Entity entity, MetaAny& history_component, bool update_cursor)
+	{
+		using namespace engine::literals;
+
+		return impl::history_component_action(history_component, "truncate_back"_hs, update_cursor);
+	}
+
+	bool component_history_truncate_back(Registry& registry, Entity entity, MetaAny& history_component)
+	{
+		using namespace engine::literals;
+
+		return impl::history_component_action(history_component, "truncate_back"_hs);
 	}
 }
