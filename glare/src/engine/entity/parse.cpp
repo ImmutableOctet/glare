@@ -67,10 +67,12 @@ namespace engine
 	std::tuple
 	<
 		std::optional<EntityTarget::ParseResult>, // entity_target_parse_result (optional)
-		std::string_view, // first_symbol (e.g. thread_name)
-		std::string_view, // second_symbol (e.g. variable_name)
-		std::string_view, // access_operator
-		std::size_t       // updated_offset
+		std::string_view,                         // first_symbol (e.g. thread_name)
+		std::string_view,                         // second_symbol (e.g. variable_name)
+		std::string_view,                         // access_operator
+		bool,                                     // first_symbol_is_command
+		bool,                                     // second_symbol_is_command
+		std::size_t                               // updated_offset
 	>
 	parse_qualified_reference
 	(
@@ -132,7 +134,8 @@ namespace engine
 			get_access_operator();
 		}
 
-		auto get_symbol = [disallow_command_as_symbol, &remainder, &seek_forward](bool allow_operator_symbol_in_command_name=false, bool truncate_value_at_operator_symbol=true)
+		auto get_symbol = [disallow_command_as_symbol, &remainder, &seek_forward]
+		(bool allow_operator_symbol_in_command_name=false, bool truncate_value_at_operator_symbol=true) -> std::tuple<std::string_view, bool>
 		{
 			const auto
 			[
@@ -153,18 +156,18 @@ namespace engine
 				truncate_value_at_operator_symbol
 			);
 
-			auto symbol = std::string_view {};
-
 			if (symbol_identifier.empty())
 			{
-				return symbol; // {};
+				return {};
 			}
+
+			auto symbol = std::string_view {};
 
 			if (symbol_is_command)
 			{
 				if (disallow_command_as_symbol)
 				{
-					return symbol; // {};
+					return {};
 				}
 
 				symbol = remainder.substr(0, symbol_parsed_length);
@@ -182,10 +185,10 @@ namespace engine
 				seek_forward(symbol_content_end_point);
 			}
 
-			return symbol;
+			return { symbol, symbol_is_command };
 		};
 
-		const auto first_symbol = get_symbol();
+		const auto [first_symbol, first_symbol_is_command] = get_symbol();
 
 		if (first_symbol.empty())
 		{
@@ -195,13 +198,17 @@ namespace engine
 		auto access_operator = get_access_operator();
 
 		auto second_symbol = std::string_view {};
+		auto second_symbol_is_command = false;
 
 		if (!access_operator.empty())
 		{
-			second_symbol = get_symbol();
+			const auto second_symbol_result = get_symbol();
+
+			second_symbol = std::get<0>(second_symbol_result);
+			second_symbol_is_command = std::get<1>(second_symbol_result);
 		}
 
-		return { entity_target_parse_result, first_symbol, second_symbol, access_operator, offset };
+		return { entity_target_parse_result, first_symbol, second_symbol, access_operator, first_symbol_is_command, second_symbol_is_command, offset };
 	}
 
 	std::tuple
@@ -218,10 +225,13 @@ namespace engine
 		std::string_view condition_or_assignment,
 		std::size_t initial_offset,
 		std::string_view allowed_operators,
+		
 		bool allow_missing_operator,
 		bool allow_empty_trailing_value,
 		bool allow_scope_as_implied_operator,
 		bool truncate_at_logical_operators,
+		bool disallow_command_as_symbol,
+
 		const MetaParsingInstructions* opt_parsing_instructions
 	)
 	{
@@ -271,7 +281,23 @@ namespace engine
 			}
 		}
 
-		auto [entity_target_parse_result, first_symbol, second_symbol, access_operator, qualified_reference_offset] = parse_qualified_reference(content, offset, opt_parsing_instructions);
+		auto
+		[
+			entity_target_parse_result,
+			first_symbol, second_symbol,
+			access_operator,
+			first_symbol_is_command,
+			second_symbol_is_command,
+			qualified_reference_offset
+		] = parse_qualified_reference(content, offset, opt_parsing_instructions, false);
+
+		if (disallow_command_as_symbol)
+		{
+			if (((!first_symbol.empty()) && first_symbol_is_command) || ((!second_symbol.empty()) && second_symbol_is_command))
+			{
+				return {};
+			}
+		}
 
 		offset = qualified_reference_offset;
 

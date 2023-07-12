@@ -1,0 +1,9 @@
+{
+	"import": "camera",
+	
+	"states": ["editor_camera_common", "editor_camera_freelook"],
+	
+	"default_state": "editor_camera_common"//,
+
+	//"position": [0.0, 60.0, 0.0]
+}

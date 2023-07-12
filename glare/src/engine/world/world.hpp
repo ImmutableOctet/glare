@@ -8,6 +8,7 @@
 #include <engine/delta_time.hpp>
 
 #include "world_properties.hpp"
+#include "scene_loader_config.hpp"
 
 //#include <graphics/types.hpp> // Not actually needed. (`ColorRGB` is actually located in math)
 
@@ -97,10 +98,10 @@ namespace engine
 
 			Entity load
 			(
-				const filesystem::path& root_path,
-				const std::string_view json_file="map.json",
+				const filesystem::path& scene_root_path,
+				const std::string_view scene_filename="map.json",
 				Entity parent=null,
-
+				const SceneLoaderConfig& cfg={},
 				SystemManagerInterface* opt_system_manager=nullptr
 			);
 

@@ -605,6 +605,11 @@ namespace util
 			{
 				return !empty();
 			}
+
+			ValueType operator[](const KeyType& key) const
+			{
+				return get_value(key);
+			}
 		protected:
 			// Sorts the internal sample data in ascending order, along the 'X' axis.
 			void sort()

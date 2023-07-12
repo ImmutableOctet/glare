@@ -10,6 +10,8 @@
 
 #include <util/small_vector.hpp>
 
+//#include <util/binary/binary_input_stream.hpp>
+
 // TODO: Forward declare JSON type.
 #include <util/json.hpp>
 
@@ -21,9 +23,16 @@
 // Debugging related:
 #include <util/log.hpp>
 
+namespace util
+{
+	class BinaryInputStream;
+}
+
 namespace engine
 {
 	struct MetaEvaluationContext;
+
+	struct BinaryFormatConfig;
 
 	struct MetaTypeConstructionFlags
 	{
@@ -84,11 +93,27 @@ namespace engine
 
 			MetaTypeDescriptor
 			(
-				const MetaType& meta_type,
+				const MetaType& type,
 
 				const util::json& content,
 				const MetaParsingInstructions& instructions={},
-				//std::size_t argument_offset = 0,
+				//std::size_t argument_offset=0,
+
+				std::optional<SmallSize> constructor_argument_count=std::nullopt,
+				const MetaTypeDescriptorFlags& flags={},
+
+				bool allow_nameless_fields=true
+			);
+
+			MetaTypeDescriptor
+			(
+				const MetaType& type,
+
+				util::BinaryInputStream& content,
+				const BinaryFormatConfig& binary_format,
+
+				const MetaParsingInstructions& instructions={},
+				//std::size_t argument_offset=0,
 
 				std::optional<SmallSize> constructor_argument_count=std::nullopt,
 				const MetaTypeDescriptorFlags& flags={},
@@ -105,6 +130,7 @@ namespace engine
 		protected:
 			// The type this descriptor is wrapping.
 			MetaTypeID type_id = {};
+
 		public:
 			Names field_names;
 			Values field_values;
@@ -113,13 +139,16 @@ namespace engine
 
 			Flags flags;
 
-			inline auto data() const { return field_values.data(); }
-			inline auto size() const { return field_values.size(); }
+			inline const MetaAny* data() const { return field_values.data(); }
+			inline std::size_t size() const { return field_values.size(); }
+			inline bool empty() const { return (field_values.empty()); }
 
 			inline bool can_default_construct() const { return flags.allow_default_construction; }
 			inline bool can_forward_fields_to_constructor() const { return flags.allow_forwarding_fields_to_constructor; }
 			inline bool forces_field_assignment() const { return flags.force_field_assignment; }
 
+			bool to_json(util::json& data_out, bool encode_type_information) const;
+			
 			MetaType adopt_type(const MetaType& type);
 
 			bool set_type(const MetaType& type);
@@ -154,6 +183,18 @@ namespace engine
 				const util::json& content,
 				const MetaParsingInstructions& instructions={},
 				std::size_t argument_offset=0,
+				bool allow_nameless_fields=true
+			);
+
+			// Reads binary data from `content`, populating this meta-type descriptor.
+			std::size_t set_variables
+			(
+				util::BinaryInputStream& content,
+				const BinaryFormatConfig& binary_format,
+				const MetaParsingInstructions& instructions={},
+
+				std::size_t argument_offset=0,
+
 				bool allow_nameless_fields=true
 			);
 
@@ -626,6 +667,11 @@ namespace engine
 			{
 				return instance(true);
 			}
+
+			inline explicit operator bool() const
+			{
+				return (!empty());
+			}
 		private:
 			static std::size_t populate_sequential_container_raw(MetaAny& instance, const MetaAny* field_values, std::size_t field_count);
 			static std::size_t populate_sequential_container_raw(entt::meta_sequence_container& sequence_container, const MetaAny* field_values, std::size_t field_count);
@@ -639,6 +685,19 @@ namespace engine
 				const util::json& content,
 				const MetaParsingInstructions& instructions={},
 				std::size_t argument_offset=0,
+				bool allow_nameless_fields=true
+			);
+
+			std::size_t set_variables_impl
+			(
+				const MetaType& type,
+				
+				util::BinaryInputStream& content,
+				const BinaryFormatConfig& binary_format,
+				
+				const MetaParsingInstructions& instructions={},
+				std::size_t argument_offset=0,
+				
 				bool allow_nameless_fields=true
 			);
 
@@ -694,6 +753,9 @@ namespace engine
 			// Defined and only used in source file.
 			template <typename ...Args>
 			std::size_t apply_fields_associative_container_impl(MetaAny& instance, std::size_t field_count, std::size_t offset, Args&&... args) const;
+
+			bool to_json_array_impl(util::json& data_out) const;
+			bool to_json_object_impl(util::json& data_out, bool encode_type_information, bool skip_missing=true) const;
 	};
 
 	MetaTypeDescriptor load_descriptor

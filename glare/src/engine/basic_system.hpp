@@ -1,5 +1,9 @@
 #pragma once
 
+#include "types.hpp"
+
+#include <cassert>
+
 namespace engine
 {
 	// Simple system base-class to handle setup boilerplate.
@@ -230,6 +234,15 @@ namespace engine
 				}
 
 				return unsubscribe(*this->service);
+			}
+
+			// Retrieves a registry from `world`.
+			// Equivalent to: `service->get_registry()`
+			Registry& get_registry() const
+			{
+				assert(service);
+				
+				return service->get_registry();
 			}
 
 			// The intended service for this system, if applicable.

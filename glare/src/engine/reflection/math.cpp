@@ -1,12 +1,16 @@
 #include "math.hpp"
+
 #include "math_extensions.hpp"
 #include "common_extensions.hpp"
+#include "tuple_extensions.hpp"
 #include "string_conversion.hpp"
 
 #include <engine/meta/hash.hpp>
 
 #include <math/math.hpp>
 #include <math/reflection.hpp>
+#include <math/lerp.hpp>
+#include <math/surface.hpp>
 #include <math/format.hpp>
 #include <math/types.hpp>
 #include <math/joyhat.hpp>
@@ -18,6 +22,34 @@
 
 namespace engine
 {
+    namespace impl
+    {
+        static math::TransformVectors transform_vectors_from_position_and_rotation(const math::Vector3D& position={}, const math::Vector3D& rotation = {})
+        {
+            return { position, rotation, { 1.0f, 1.0f, 1.0f } };
+        }
+
+        static math::TransformVectors transform_vectors_from_position(const math::Vector3D& position={})
+        {
+            return transform_vectors_from_position_and_rotation(position);
+        }
+
+	    static math::Vector3D transform_vectors_get_by_index(const math::TransformVectors& instance, std::size_t index) // -> decltype(auto)
+	    {
+            switch (index)
+            {
+                case 0:
+                    return std::get<0>(instance);
+                case 1:
+                    return std::get<1>(instance);
+                case 2:
+                    return std::get<2>(instance);
+            }
+		    
+            return {};
+	    }
+    }
+
 	template
     <
         typename T,
@@ -177,6 +209,29 @@ namespace engine
         ;
     }
 
+    // NOTE: `math::TransformVectors` is currently an alias to an `std::tuple` specialization.
+    template <>
+    void reflect<math::TransformVectors>()
+    {
+        reflect_math_type<math::TransformVectors, true, false, false>("TransformVectors")
+            .ctor
+            <
+                std::tuple_element_t<0, math::TransformVectors>,
+                std::tuple_element_t<1, math::TransformVectors>,
+                std::tuple_element_t<2, math::TransformVectors>
+            >()
+
+            .ctor<&impl::transform_vectors_from_position>()
+            .ctor<&impl::transform_vectors_from_position_and_rotation>()
+
+            .data<&impl::set_tuple_element<0, math::TransformVectors>, &impl::get_tuple_element<0, math::TransformVectors>>("position"_hs)
+            .data<&impl::set_tuple_element<1, math::TransformVectors>, &impl::get_tuple_element<1, math::TransformVectors>>("rotation"_hs)
+            .data<&impl::set_tuple_element<2, math::TransformVectors>, &impl::get_tuple_element<2, math::TransformVectors>>("scale"_hs)
+
+            .func<&impl::transform_vectors_get_by_index>("operator[]"_hs)
+        ;
+    }
+
     // Wraps math free-functions from the C/C++ standard library.
     template <typename T, bool special_functions=true>
     static auto reflect_cmath(auto math_type)
@@ -185,7 +240,8 @@ namespace engine
             .func<util::lambda_as_function_ptr<[](T value) { return std::abs(value); }>()>("abs"_hs)
             .func<util::lambda_as_function_ptr<[](T x, T y) { return std::remainder(x, y); }>()>("remainder"_hs)
 
-            .func<util::lambda_as_function_ptr<[](T a, T b, T t) { return std::lerp(a, b, t); }>()>("lerp"_hs)
+            // Disabled in favor of `math` module's implementation.
+            //.func<util::lambda_as_function_ptr<[](T a, T b, T t) { return std::lerp(a, b, t); }>()>("lerp"_hs)
 
             .func<util::lambda_as_function_ptr<[](T value) { return std::exp(value); }>()>("exp"_hs)
             .func<util::lambda_as_function_ptr<[](T value) { return std::exp2(value); }>()>("exp2"_hs)
@@ -308,7 +364,16 @@ namespace engine
 
     auto reflect_engine_math_functions(auto math_type)
     {
-        // `math:math`:
+        // `math:constants`:
+        math_type = math_type
+            .prop("Pi"_hs, math::Pi)
+            .prop("Tau"_hs, math::Tau)
+            
+            .func<&math::_Pi<float>>("Pi"_hs)
+            .func<&math::_Tau<float>>("Tau"_hs)
+        ;
+
+        // `math:common`:
         math_type = math_type
             /*
             // Disabled for now. (Due to ICE on MSVC compiler)
@@ -391,10 +456,27 @@ namespace engine
             .func<&math::sq<double>>("square"_hs) // "sq"_hs
             .func<&math::sq<float>>("square"_hs) // "sq"_hs
 
-            .func<&math::get_translation<math::Matrix4x4>>("get_translation"_hs)
-            .func<&math::get_scaling<math::Matrix4x4>>("get_scaling"_hs)
             .func<&math::identity_matrix>("identity_matrix"_hs)
 
+            .func<&math::clamp<std::int64_t>>("clamp"_hs)
+            .func<&math::clamp<std::int32_t>>("clamp"_hs)
+            .func<&math::clamp<double>>("clamp"_hs)
+            .func<&math::clamp<float>>("clamp"_hs)
+
+            // Vector extension for `abs`.
+            .func<static_cast<math::Vector4D(*)(const math::Vector4D&)>(&math::abs)>("abs"_hs)
+            .func<static_cast<math::Vector2D(*)(const math::Vector2D&)>(&math::abs)>("abs"_hs)
+            .func<static_cast<math::Vector3D(*)(const math::Vector3D&)>(&math::abs)>("abs"_hs)
+        ;
+
+        // `math:decompose`:
+        math_type = math_type
+            .func<&math::get_translation<math::Matrix4x4>>("get_translation"_hs)
+            .func<&math::get_scaling<math::Matrix4x4>>("get_scaling"_hs)
+        ;
+
+        // `math:rotation`:
+        math_type = math_type
             .func<&math::get_vector_pitch>("get_vector_pitch"_hs)
             .func<&math::get_vector_yaw>("get_vector_yaw"_hs)
 
@@ -421,14 +503,6 @@ namespace engine
             .func<static_cast<math::RotationMatrix(*)(const math::Vector&, const math::Vector&)>(&math::rotation_from_orthogonal)>("rotation_from_orthogonal"_hs)
             .func<static_cast<math::RotationMatrix(*)(const math::OrthogonalVectors&)>(&math::rotation_from_orthogonal)>("rotation_from_orthogonal"_hs)
 
-            // Vector extension for `abs`.
-            .func<static_cast<math::Vector(*)(const math::Vector&)>(&math::abs)>("abs"_hs)
-
-            .func<&math::clamp<std::int64_t>>("clamp"_hs)
-            .func<&math::clamp<std::int32_t>>("clamp"_hs)
-            .func<&math::clamp<double>>("clamp"_hs)
-            .func<&math::clamp<float>>("clamp"_hs)
-
             .func<&math::direction_to_angle>("direction_to_angle"_hs)
             .func<&math::direction_to_angle_90_degrees>("direction_to_angle_90_degrees"_hs)
             .func<&math::direction_to_yaw>("direction_to_yaw"_hs)
@@ -436,12 +510,16 @@ namespace engine
             .func<&math::wrap_angle<double>>("wrap_angle"_hs)
             .func<&math::wrap_angle<float>>("wrap_angle"_hs)
 
-            // Now part of the C standard library.
-            // (May later replace with `math` implementation anyway)
-            //.func<&math::lerp<double, double>>("lerp"_hs)
-            //.func<&math::lerp<float, float>>("lerp"_hs)
+            .func<&math::lerp<double, double, double>>("lerp"_hs)
+            .func<&math::lerp<float, float, float>>("lerp"_hs)
+            .func<&math::lerp<math::Vector2D, math::Vector2D, float>>("lerp"_hs)
+            .func<&math::lerp<math::Vector3D, math::Vector3D, float>>("lerp"_hs)
+        ;
 
-            .func<&math::nlerp>("nlerp"_hs)
+        // `math:lerp`:
+        math_type = math_type
+            .func<&math::nlerp<math::Vector2D, math::Vector2D, float>>("nlerp"_hs)
+            .func<&math::nlerp<math::Vector3D, math::Vector3D, float>>("nlerp"_hs)
 
             .func<static_cast<float(*)(const math::Vector&, const math::Vector&, float)>(&math::nlerp_radians)>("nlerp_radians"_hs)
             .func<static_cast<float(*)(float, float, float)>(&math::nlerp_radians)>("nlerp_radians"_hs)
@@ -453,6 +531,7 @@ namespace engine
             .func<&math::slerp_unnormalized>("slerp_unnormalized"_hs)
         ;
 
+        // `math:surface`:
         math_type = make_overloads
 		<
 			&math::get_surface_forward,
@@ -475,12 +554,6 @@ namespace engine
 
         // `math:conversion`:
         math_type = math_type
-            .prop("Pi"_hs, math::Pi)
-            .prop("Tau"_hs, math::Tau)
-            
-            .func<&math::_Pi<float>>("Pi"_hs)
-            .func<&math::_Tau<float>>("Tau"_hs)
-
             .func<&math::degrees<double>>("degrees"_hs)
             .func<&math::degrees<float>>("degrees"_hs)
 
@@ -528,6 +601,8 @@ namespace engine
 
         reflect<math::Matrix4x4>();
         reflect<math::Matrix3x3>();
+
+        reflect<math::TransformVectors>();
 
         // ...
     }

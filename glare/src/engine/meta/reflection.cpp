@@ -287,7 +287,16 @@ namespace engine
 	template <>
 	void reflect<IndirectMetaAny>()
 	{
-		engine_meta_type<IndirectMetaAny>()
+		auto type = engine_meta_type
+		<
+			IndirectMetaAny,
+
+			MetaTypeReflectionConfig
+			{
+				// Disabled to avoid conflicts with templated constructor.
+				.generate_json_bindings = false
+			}
+		>()
 			.data<nullptr, &IndirectMetaAny::get_type>("type"_hs)
 			.data<nullptr, &IndirectMetaAny::get_type_id>("type_id"_hs)
 			.data<nullptr, &IndirectMetaAny::get_checksum>("checksum"_hs)
@@ -304,6 +313,8 @@ namespace engine
 			.ctor<const SharedStorageInterface&, const MetaAny&>()
 			.ctor<SharedStorageInterface&, MetaAny&&>()
 		;
+
+		//type = define_to_json_bindings<IndirectMetaAny>(type);
 	}
 
 	GENERATE_EMPTY_DERIVED_TYPE_REFLECTION(OnComponentCreate,  ComponentEvent);

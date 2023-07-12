@@ -48,6 +48,17 @@ namespace engine
         return optional_name(short_name<T>());
     }
 
+    constexpr std::string history_component_name(const auto& type_name)
+    {
+        return util::format("HistoryComponent<{}>", type_name);
+    }
+
+    template <typename T>
+    constexpr std::string history_component_short_name()
+    {
+        return history_component_name(short_name<T>());
+    }
+
     constexpr std::string_view as_short_name(std::string_view name_view)
     {
         return std::apply
@@ -76,6 +87,12 @@ namespace engine
     constexpr auto optional_short_name_hash()
     {
         return hash(optional_short_name<T>());
+    }
+
+    template <typename T>
+    constexpr auto history_component_short_name_hash()
+    {
+        return hash(history_component_short_name<T>());
     }
 
     // Resolves the meta-type for `type_name` as if it were part of the `engine` namespace.

@@ -1,22 +1,25 @@
 #pragma once
 
 #include <engine/meta/types.hpp>
+#include <engine/meta/indirection.hpp>
 #include <engine/meta/meta_variable.hpp>
 #include <engine/meta/meta_variable_storage_interface.hpp>
 
 #include <util/small_vector.hpp>
 
-#include <cstddef>
+#include <utility>
 #include <optional>
 #include <type_traits>
-#include <utility>
+
+#include <cstddef>
+#include <cassert>
 
 namespace engine
 {
 	struct MetaVariable;
 
 	template <std::size_t preallocated=8>
-	struct EntityVariables : MetaVariableStorageInterface
+	class EntityVariables : public MetaVariableStorageInterface
 	{
 		public:
 			using Names  = util::small_vector<MetaSymbolID, preallocated>;
@@ -77,10 +80,8 @@ namespace engine
 
 			MetaAny* set(MetaSymbolID name, MetaAny&& value) override
 			{
-				if (auto* existing = get(name))
+				if (auto existing = set_existing_impl(name, std::move(value)))
 				{
-					*existing = std::move(value);
-
 					return existing;
 				}
 				
@@ -89,16 +90,7 @@ namespace engine
 
 			bool set_existing(MetaSymbolID name, MetaAny&& value) override
 			{
-				auto* existing = get(name);
-
-				if (!existing)
-				{
-					return false;
-				}
-
-				*existing = std::move(value);
-
-				return true;
+				return static_cast<bool>(set_existing_impl(name, std::move(value)));
 			}
 
 			bool set_missing(MetaSymbolID name, MetaAny&& value) override
@@ -202,19 +194,55 @@ namespace engine
 			{
 				return enumerate_variables(std::forward<Callback>(callback), size(), 0);
 			}
+
 		protected:
-			MetaAny* emplace(MetaSymbolID name, MetaAny&& value)
+			Names names;
+			Values values;
+
+		private:
+			template <typename ...EvaluationArgs>
+			MetaAny* emplace(MetaSymbolID name, MetaAny&& value, EvaluationArgs&&... args)
 			{
 				names.emplace_back(name);
 
-				auto& value_out = values.emplace_back(std::move(value));
+				MetaAny* value_ptr_out = nullptr;
+
+				if (auto underlying = try_get_underlying_value(value, std::forward<EvaluationArgs>(args)...))
+				{
+					value_ptr_out = &(values.emplace_back(std::move(underlying)));
+				}
+				else
+				{
+					assert(!value_has_indirection(value));
+
+					value_ptr_out = &(values.emplace_back(std::move(value)));
+				}
 
 				assert(names.size() == values.size());
 
-				return &value_out;
+				return value_ptr_out;
 			}
 
-			Names names;
-			Values values;
+			template <typename ...EvaluationArgs>
+			MetaAny* set_existing_impl(MetaSymbolID name, MetaAny&& value, EvaluationArgs&&... args) // MetaAny&
+			{
+				auto* existing = get(name);
+
+				if (existing)
+				{
+					if (auto underlying = try_get_underlying_value(value, std::forward<EvaluationArgs>(args)...))
+					{
+						*existing = std::move(underlying);
+					}
+					else
+					{
+						assert(!value_has_indirection(value));
+
+						*existing = std::move(value);
+					}
+				}
+
+				return existing;
+			}
 	};
 }

@@ -1,0 +1,15 @@
+{
+	//"import": []
+
+	"components":
+	{
+		"Transform2DComponent": {}
+	},
+
+	"states":
+	[
+		"states/cursor_mode_select"
+	],
+
+	"default_state": "cursor_mode_select"
+}

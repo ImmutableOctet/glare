@@ -4,6 +4,11 @@
 
 namespace engine
 {
+    bool data_member_is_read_only(const entt::meta_data& data_member)
+    {
+        return (data_member.is_const() || (data_member.arity() == 0));
+    }
+
 	std::optional<std::pair<entt::id_type, entt::meta_data>>
 	get_local_data_member_by_index(const entt::meta_type& type, std::size_t variable_index)
     {

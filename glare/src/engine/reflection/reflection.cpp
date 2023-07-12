@@ -61,7 +61,14 @@ namespace engine
         // ...
     }
 
-    template <typename PrimitiveType, bool generate_optional_type=true, bool generate_operators=false>
+    template
+    <
+        typename PrimitiveType,
+        
+        bool generate_optional_type=true,
+        bool generate_operators=false,
+        bool generate_json_bindings=true
+    >
     static auto extend_language_primitive_type(bool sync_context=true)
     {
         if (sync_context)
@@ -102,6 +109,12 @@ namespace engine
                 .func<&impl::operator_unary_plus_impl<PrimitiveType>>("+operator"_hs)
                 .func<&impl::operator_unary_minus_impl<PrimitiveType>>("-operator"_hs)
             ;
+        }
+
+        if constexpr (generate_json_bindings)
+        {
+            type = define_from_json_bindings<PrimitiveType>(type);
+            type = define_to_json_bindings<PrimitiveType>(type);
         }
 
         if constexpr (generate_optional_type)
@@ -391,7 +404,7 @@ namespace engine
                 .generate_operator_wrappers    = true,  // TODO: Revisit operator bindings for strings.
                 .generate_indirect_getters     = false, // Indirection unsupported.
                 .generate_indirect_setters     = false, // Indirection unsupported.
-                .generate_json_constructor     = true   // May change this later.
+                .generate_json_bindings        = true   // May change this later.
             }
         >
         ("string"_hs) // "std::string"_hs // "String"_hs
@@ -466,7 +479,7 @@ namespace engine
                 .generate_operator_wrappers    = true,  // TODO: Revisit operator bindings for strings.
                 .generate_indirect_getters     = false, // Indirection unsupported.
                 .generate_indirect_setters     = false, // Indirection unsupported.
-                .generate_json_constructor     = true   // May change this later.
+                .generate_json_bindings        = true   // May change this later.
             }
         >
         ("string_view"_hs) // "std::string_view"_hs // "StringView"_hs

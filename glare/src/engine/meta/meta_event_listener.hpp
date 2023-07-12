@@ -1,8 +1,10 @@
 #pragma once
 
 #include "types.hpp"
-//#include <engine/types.hpp>
 
+#include "meta_event_listener_flags.hpp"
+
+//#include <engine/types.hpp>
 #include <engine/service.hpp>
 
 #include <util/small_vector.hpp>
@@ -16,14 +18,6 @@ namespace engine
 {
 	class Service;
 	class SystemManagerInterface;
-
-	struct MetaEventListenerFlags
-	{
-		bool events                : 1 = true;
-		bool component_creation    : 1 = true;
-		bool component_update      : 1 = true;
-		bool component_destruction : 1 = true;
-	};
 
 	// Abstract base-type used to build opaque event listeners via `MetaAny`.
 	class MetaEventListener
@@ -314,6 +308,7 @@ namespace engine
 			virtual void on_component_create(Registry& registry, Entity entity, const MetaAny& component);
 			virtual void on_component_update(Registry& registry, Entity entity, const MetaAny& component);
 			virtual void on_component_destroy(Registry& registry, Entity entity, const MetaAny& component);
+
 		private:
 			bool unregister();
 	};

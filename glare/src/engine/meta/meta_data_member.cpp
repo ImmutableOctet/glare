@@ -4,57 +4,13 @@
 #include "data_member.hpp"
 #include "indirection.hpp"
 //#include "function.hpp"
+#include "component.hpp"
 
 namespace engine
 {
 	MetaAny MetaDataMember::get_instance(const MetaType& type, Registry& registry, Entity entity)
 	{
-		using namespace engine::literals;
-
-		if (!type)
-		{
-			return {};
-		}
-
-		auto get_fn = type.func("get_component"_hs);
-
-		if (!get_fn)
-		{
-			return {};
-		}
-
-		auto instance_ptr = MetaAny {};
-
-		do
-		{
-			instance_ptr = get_fn.invoke
-			(
-				{},
-				entt::forward_as_meta(registry),
-				entt::forward_as_meta(entity)
-			);
-
-			if (instance_ptr)
-			{
-				break;
-			}
-
-			get_fn = get_fn.next();
-		} while (get_fn);
-
-		if (!instance_ptr)
-		{
-			return {};
-		}
-
-		auto instance = *instance_ptr;
-
-		if (!instance)
-		{
-			return {};
-		}
-
-		return instance;
+		return get_component_ref(registry, entity, type);
 	}
 
 	MetaAny MetaDataMember::get_instance(Registry& registry, Entity entity) const
@@ -202,13 +158,16 @@ namespace engine
 			return {};
 		}
 
-		//assert(type.id() == type_id);
-
-		if (type.id() != type_id)
+		if (this->type_id)
 		{
-			//return destination.as_ref();
-			//return entt::forward_as_meta(*this);
-			return {};
+			//assert(type.id() == this->type_id);
+
+			if (type.id() != this->type_id)
+			{
+				//return destination.as_ref();
+				//return entt::forward_as_meta(*this);
+				return {};
+			}
 		}
 
 		if (auto data_member = resolve_data_member_by_id(type, true, data_member_id))
@@ -222,7 +181,7 @@ namespace engine
 
 		return {};
 	}
-	
+
 	MetaAny MetaDataMember::set(MetaAny& source, MetaAny& destination, Registry& registry, Entity entity, const MetaEvaluationContext& context)
 	{
 		return set(source, destination, registry, entity);
@@ -230,6 +189,54 @@ namespace engine
 	
 	MetaAny MetaDataMember::set(MetaAny& source, MetaAny& destination, Registry& registry, Entity entity)
 	{
+		using namespace engine::literals;
+
+		if (!destination)
+		{
+			//return entt::forward_as_meta(*this);
+			return {};
+		}
+
+		if (!source)
+		{
+			//return destination.as_ref();
+			//return entt::forward_as_meta(*this);
+			return {};
+		}
+
+		auto destination_type = destination.type();
+
+		if (!destination_type)
+		{
+			//return destination.as_ref();
+			//return entt::forward_as_meta(*this);
+			return {};
+		}
+
+		if (this->type_id)
+		{
+			if (destination_type.id() != this->type_id)
+			{
+				switch (destination_type.id())
+				{
+					case "Entity"_hs: // entt::type_hash<Entity>::value(): // resolve<Entity>().id():
+					{
+						if (const auto* as_entity = destination.try_cast<Entity>())
+						{
+							if (auto component = get_or_emplace_component(registry, *as_entity, get_type())) // get_instance(registry, *as_entity)
+							{
+								return set(source, component);
+							}
+						}
+
+						//return {};
+
+						break;
+					}
+				}
+			}
+		}
+
 		return set(source, destination);
 	}
 

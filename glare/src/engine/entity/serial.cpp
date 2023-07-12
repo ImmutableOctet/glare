@@ -15,6 +15,7 @@
 //#include <engine/meta/meta.hpp>
 #include <engine/meta/types.hpp>
 #include <engine/meta/serial.hpp>
+#include <engine/meta/hash.hpp>
 #include <engine/meta/data_member.hpp>
 #include <engine/meta/short_name.hpp>
 
@@ -119,6 +120,7 @@ namespace engine
 		return std::nullopt;
 	}
 
+	// TODO: Deprecate/remove. (No longer needed for `process_trigger_expression`)
 	std::tuple<std::string_view, std::size_t>
 	parse_event_type(const std::string& event_type, std::size_t offset) // std::string_view
 	{
@@ -1246,10 +1248,17 @@ namespace engine
 
 		if (auto threads = util::find_any(data, "do", "threads", "execute"); threads != data.end())
 		{
-			if (auto [initial_thread_index, top_level_threads_processed, threads_and_sub_threads_processed] = process_thread_list(descriptor, *threads, &base_path, opt_parsing_context, opt_factory_context); (top_level_threads_processed > 0))
-			{
-				state.immediate_threads.emplace_back(initial_thread_index, top_level_threads_processed);
-			}
+			process_thread_list
+			(
+				descriptor, *threads,
+				
+				[&state](EntityThreadIndex thread_index, EntityThreadCount threads_processed)
+				{
+					state.immediate_threads.emplace_back(thread_index, threads_processed);
+				},
+
+				&base_path, opt_parsing_context, opt_factory_context
+			);
 		}
 
 		if (auto rules = util::find_any(data, "rule", "rules", "trigger", "triggers"); rules != data.end())
@@ -1753,25 +1762,28 @@ namespace engine
 
 				if (auto threads = util::find_any(content, "do", "threads", "execute"); threads != content.end())
 				{
-					auto
-					[
-						initial_thread_index,
-						top_level_threads_processed,
-						threads_and_sub_threads_processed
-					] = process_thread_list(descriptor, *threads, opt_base_path, opt_parsing_context, opt_factory_context);
-
-					process_rule
+					process_thread_list
 					(
-						EntityThreadSpawnAction
+						descriptor, *threads,
+						
+						[&process_rule](EntityThreadIndex thread_index, EntityThreadCount threads_processed)
 						{
-							EntityThreadRange
-							{
-								initial_thread_index,
-								top_level_threads_processed
-							},
+							process_rule
+							(
+								EntityThreadSpawnAction
+								{
+									EntityThreadRange
+									{
+										thread_index,
+										threads_processed
+									},
 							
-							false
-						}
+									false
+								}
+							);
+						},
+
+						opt_base_path, opt_parsing_context, opt_factory_context
 					);
 				}
 
@@ -2207,10 +2219,17 @@ namespace engine
 		
 		if (auto threads = util::find_any(data, "do", "threads", "execute"); threads != data.end())
 		{
-			if (auto [initial_thread_index, top_level_threads_processed, threads_and_sub_threads_processed] = process_thread_list(descriptor, *threads, &base_path, opt_parsing_context, opt_factory_context); (top_level_threads_processed > 0))
-			{
-				descriptor.immediate_threads.emplace_back(initial_thread_index, top_level_threads_processed);
-			}
+			process_thread_list
+			(
+				descriptor, *threads,
+
+				[&descriptor](EntityThreadIndex thread_index, EntityThreadCount threads_processed)
+				{
+					descriptor.immediate_threads.emplace_back(thread_index, threads_processed);
+				},
+
+				&base_path, opt_parsing_context, opt_factory_context
+			);
 		}
 
 		if (opt_default_state_index_out)
@@ -2304,140 +2323,5 @@ namespace engine
 			false,
 			opt_default_state_index_out
 		);
-	}
-
-	//std::size_t
-	std::tuple<EntityThreadIndex, EntityThreadCount, EntityThreadCount>
-	process_thread_list
-	(
-		EntityDescriptor& descriptor,
-		const util::json& content,
-		const std::filesystem::path* opt_base_path,
-		const MetaParsingContext& opt_parsing_context,
-		const EntityFactoryContext* opt_factory_context
-	)
-	{
-		auto shared_thread_context = MetaVariableContext { opt_parsing_context };
-
-		const auto initial_thread_index = descriptor.get_next_thread_index();
-
-		EntityThreadCount top_level_threads_processed = 0;
-
-		auto allocate_top_level_threads = [&descriptor](std::size_t threads_to_allocate) -> std::size_t
-		{
-			if (!threads_to_allocate)
-			{
-				return {};
-			}
-
-			const auto& thread_storage = descriptor.shared_storage.get_storage<EntityThreadDescription>();
-			const auto initial_thread_count = thread_storage.data().size();
-
-			// TODO: Implement bulk allocation interface for `shared_storage`.
-			for (std::size_t i = 0; i < threads_to_allocate; i++)
-			{
-				descriptor.shared_storage.allocate<EntityThreadDescription>();
-			}
-
-			assert(thread_storage.data().size() == (initial_thread_count + threads_to_allocate));
-
-			return threads_to_allocate;
-		};
-
-		const auto top_level_threads_allocated = allocate_top_level_threads(content.size());
-		const auto top_level_thread_max_index_allowed = (initial_thread_index + static_cast<EntityThreadCount>(top_level_threads_allocated));
-
-		auto process_thread = [&descriptor, opt_factory_context, opt_base_path, &opt_parsing_context, &shared_thread_context, top_level_thread_max_index_allowed, &top_level_threads_processed]
-		(
-			const util::json& content,
-			std::string_view opt_thread_name
-		)
-		{
-			auto thread_variable_context = MetaVariableContext
-			{
-				&shared_thread_context,
-
-				(opt_thread_name.empty())
-					? static_cast<MetaSymbolID>(descriptor.get_threads().size()) // MetaSymbolID {}
-					: hash(opt_thread_name).value()
-			};
-
-			const auto top_level_thread_index = static_cast<EntityThreadIndex>(top_level_threads_processed);
-
-			assert(top_level_thread_index <= top_level_thread_max_index_allowed);
-
-			//auto& thread_description = descriptor.shared_storage.get<EntityThreadDescription>(top_level_thread_index);
-
-			auto thread_builder = EntityThreadBuilder
-			{
-				descriptor,
-				
-				EntityThreadBuilder::ThreadDescriptor
-				(
-					top_level_thread_index // descriptor, thread_description
-				),
-
-				opt_thread_name,
-
-				opt_factory_context,
-				opt_base_path,
-				
-				MetaParsingContext
-				{
-					opt_parsing_context.get_type_context(),
-					&thread_variable_context
-				}
-			};
-
-			thread_builder << content;
-
-			top_level_threads_processed++;
-
-			//return thread_builder;
-		};
-
-		switch (content.type())
-		{
-			case util::json::value_t::array:
-			{
-				util::json_for_each
-				(
-					content,
-
-					[&process_thread](const util::json& thread_content)
-					{
-						process_thread(thread_content, {});
-					}
-				);
-
-				break;
-			}
-
-			case util::json::value_t::object:
-			{
-				for (const auto& proxy : content.items())
-				{
-					const auto& thread_name = proxy.key();
-					const auto& thread_content = proxy.value();
-
-					process_thread(thread_content, thread_name);
-				}
-
-				break;
-			}
-
-			default:
-			{
-				process_thread(content, {});
-
-				break;
-			}
-		}
-
-		const auto processed_count = static_cast<EntityThreadCount>(descriptor.get_next_thread_index() - initial_thread_index);
-
-		assert(top_level_threads_processed == top_level_threads_allocated);
-
-		return { initial_thread_index, top_level_threads_processed, processed_count };
 	}
 }

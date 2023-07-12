@@ -8,6 +8,7 @@
 #include "entity_descriptor.hpp"
 #include "entity_thread_target.hpp"
 #include "entity_thread_range.hpp"
+#include "entity_thread_builder.hpp"
 
 #include "events.hpp"
 
@@ -400,7 +401,7 @@ namespace engine
 			] = parse_qualified_assignment_or_comparison
 			(
 				trigger_condition_expr, offset, {},
-				true, true, true, true
+				true, true, true, true, true
 			);
 
 			auto& type_name = first_symbol;
@@ -410,6 +411,9 @@ namespace engine
 
 			if (type_name.empty())
 			{
+				/*
+				// Disabled for now (No longer needed with current implementation of `parse_qualified_assignment_or_comparison`):
+				
 				// TODO: Optimize. (Temporary string created due to limitation of `std::regex`)
 				auto standalone_event_result = parse_event_type(std::string { trigger_condition_expr }, offset);
 
@@ -423,6 +427,19 @@ namespace engine
 				else
 				{
 					updated_offset = std::get<1>(standalone_event_result);
+
+					is_standalone_event_trigger = true;
+				}
+				*/
+
+				break;
+			}
+			else
+			{
+				// See above notes about behavior of `parse_qualified_assignment_or_comparison`.
+				if (second_symbol.empty() && compared_value_raw.empty())
+				{
+					assert(comparison_operator.empty());
 
 					is_standalone_event_trigger = true;
 				}
@@ -1028,5 +1045,335 @@ namespace engine
 		);
 
 		return condition_out;
+	}
+
+	/*
+		Processes multiple threads from `content`, calling `thread_range_callback` for the top-level
+		thread range(s) generated, and `existing_thread_callback` for any threads found that have already been defined.
+
+		Both `thread_range_callback` and `existing_thread_callback` take an `EntityThreadIndex`
+		as the first parameter, and an `EntityThreadCount` as the second.
+
+		NOTE: For best interoperability, `opt_parsing_context->variable_context` should not store a name.
+		(This could lead to variable name conflicts between threads)
+	*/
+	template <typename ThreadRangeCallback, typename ExistingThreadCallback>
+	EntityThreadCount process_thread_list
+	(
+		EntityDescriptor& descriptor,
+		const util::json& content,
+		
+		ThreadRangeCallback&& thread_range_callback,
+		ExistingThreadCallback&& existing_thread_callback,
+
+		const std::filesystem::path* opt_base_path=nullptr,
+		const MetaParsingContext& opt_parsing_context={},
+		const EntityFactoryContext* opt_factory_context=nullptr
+	)
+	{
+		const auto initial_thread_index = descriptor.get_next_thread_index();
+
+		auto shared_thread_context = MetaVariableContext { opt_parsing_context };
+
+		auto allocate_top_level_threads = [&descriptor](std::size_t threads_to_allocate) -> std::size_t
+		{
+			if (!threads_to_allocate)
+			{
+				return {};
+			}
+
+			const auto& thread_storage = descriptor.shared_storage.get_storage<EntityThreadDescription>();
+			const auto initial_thread_count = thread_storage.data().size();
+
+			// TODO: Implement bulk allocation interface for `shared_storage`.
+			for (std::size_t i = 0; i < threads_to_allocate; i++)
+			{
+				descriptor.shared_storage.allocate<EntityThreadDescription>();
+			}
+
+			assert(thread_storage.data().size() == (initial_thread_count + threads_to_allocate));
+
+			return threads_to_allocate;
+		};
+
+		// NOTE: We determine the number of threads to allocate ahead-of-time
+		// to avoid conflicts with embedded thread allocations. (e.g. sub-threads)
+		EntityThreadCount top_level_threads_to_allocate = 0; // static_cast<EntityThreadCount>(content.size());
+
+		// Ensure we don't allocate space for threads we're not going to process
+		// (e.g. already processed threads):
+		switch (content.type())
+		{
+			case util::json::value_t::array:
+			{
+				util::json_for_each
+				(
+					content,
+
+					[&](const util::json& thread_content)
+					{
+						if (!thread_content.empty() && thread_content.is_string())
+						{
+							const auto& thread_path = thread_content.get<std::string>();
+
+							if (thread_path.empty())
+							{
+								return;
+							}
+							else
+							{
+								const auto thread_name = EntityThreadBuilder::thread_name_from_script_reference(thread_path, opt_factory_context, opt_base_path);
+								const auto thread_id = hash(thread_name).value();
+
+								if (auto thread_index = descriptor.get_thread_index(thread_id))
+								{
+									existing_thread_callback(*thread_index, 1);
+
+									return;
+								}
+							}
+						}
+
+						// NOTE: For script paths, we assume they point to a valid file.
+						top_level_threads_to_allocate++;
+					}
+				);
+
+				break;
+			}
+
+			case util::json::value_t::object:
+			{
+				for (const auto& proxy : content.items())
+				{
+					const auto& thread_content = proxy.value();
+
+					if (!thread_content.empty())
+					{
+						const auto& thread_name = proxy.key();
+						const auto thread_id = hash(thread_name).value();
+
+						if (auto thread_index = descriptor.get_thread_index(thread_id))
+						{
+							existing_thread_callback(*thread_index, 1);
+						}
+						else
+						{
+							// NOTE: For script paths, we assume they point to a valid file.
+							top_level_threads_to_allocate++;
+						}
+					}
+				}
+
+				break;
+			}
+
+			default:
+			{
+				if (!content.empty())
+				{
+					if (content.is_string())
+					{
+						const auto& thread_path = content.get<std::string>();
+
+						if (thread_path.empty())
+						{
+							break;
+						}
+
+						const auto thread_name = EntityThreadBuilder::thread_name_from_script_reference(thread_path, opt_factory_context, opt_base_path);
+						const auto thread_id = hash(thread_name).value();
+
+						if (auto thread_index = descriptor.get_thread_index(thread_id))
+						{
+							existing_thread_callback(*thread_index, 1);
+
+							break;
+						}
+					}
+
+					// NOTE: For script paths, we assume they point to a valid file.
+					top_level_threads_to_allocate++;
+				}
+
+				break;
+			}
+		}
+		
+		const auto top_level_threads_allocated = allocate_top_level_threads(top_level_threads_to_allocate);
+
+		assert(top_level_threads_allocated == top_level_threads_to_allocate);
+
+		if (!top_level_threads_allocated)
+		{
+			return 0;
+		}
+
+		const auto top_level_thread_max_index_allowed = (static_cast<EntityThreadIndex>(initial_thread_index) + static_cast<EntityThreadIndex>(top_level_threads_allocated));
+
+		EntityThreadCount top_level_threads_processed = 0;
+
+		auto process_thread = [&descriptor, opt_factory_context, opt_base_path, &opt_parsing_context, &shared_thread_context, initial_thread_index, top_level_thread_max_index_allowed, &top_level_threads_processed]
+		(
+			const util::json& content,
+			std::string_view opt_thread_name
+		) -> bool
+		{
+			if (content.empty())
+			{
+				return false;
+			}
+
+			if (opt_thread_name.empty())
+			{
+				if (content.is_string())
+				{
+					const auto& thread_path = content.get<std::string>();
+
+					if (thread_path.empty())
+					{
+						return false;
+					}
+
+					const auto thread_name = EntityThreadBuilder::thread_name_from_script_reference(thread_path, opt_factory_context, opt_base_path);
+					const auto thread_id = hash(thread_name).value();
+
+					if (descriptor.has_thread(thread_id))
+					{
+						return false;
+					}
+				}
+			}
+			else
+			{
+				const auto thread_id = hash(opt_thread_name).value();
+
+				if (descriptor.has_thread(thread_id))
+				{
+					return false;
+				}
+			}
+
+			auto thread_variable_context = MetaVariableContext
+			{
+				&shared_thread_context,
+
+				(opt_thread_name.empty())
+					? static_cast<MetaSymbolID>(descriptor.get_threads().size()) // MetaSymbolID {}
+					: hash(opt_thread_name).value()
+			};
+
+			const auto top_level_thread_index = static_cast<EntityThreadIndex>((initial_thread_index + top_level_threads_processed));
+
+			assert(top_level_thread_index <= top_level_thread_max_index_allowed);
+
+			//auto& thread_description = descriptor.shared_storage.get<EntityThreadDescription>(top_level_thread_index);
+
+			auto thread_builder = EntityThreadBuilder
+			{
+				descriptor,
+				
+				EntityThreadBuilder::ThreadDescriptor
+				(
+					top_level_thread_index // descriptor, thread_description
+				),
+
+				opt_thread_name,
+
+				opt_factory_context,
+				opt_base_path,
+				
+				MetaParsingContext
+				{
+					opt_parsing_context.get_type_context(),
+					&thread_variable_context
+				}
+			};
+
+			if (thread_builder.process(content))
+			{
+				top_level_threads_processed++;
+
+				return true;
+			}
+
+			return false;
+		};
+
+		switch (content.type())
+		{
+			case util::json::value_t::array:
+			{
+				util::json_for_each
+				(
+					content,
+
+					[&process_thread](const util::json& thread_content)
+					{
+						process_thread(thread_content, {});
+					}
+				);
+
+				break;
+			}
+
+			case util::json::value_t::object:
+			{
+				for (const auto& proxy : content.items())
+				{
+					const auto& thread_name = proxy.key();
+					const auto& thread_content = proxy.value();
+
+					process_thread(thread_content, thread_name);
+				}
+
+				break;
+			}
+
+			default:
+			{
+				process_thread(content, {});
+
+				break;
+			}
+		}
+
+		// NOTE: The total processed may be greater than `top_level_threads_processed`, since this includes sub-threads.
+		const auto total_processed_count = static_cast<EntityThreadCount>(descriptor.get_next_thread_index() - initial_thread_index);
+
+		assert(top_level_threads_processed == top_level_threads_allocated);
+		assert(total_processed_count >= top_level_threads_processed);
+
+		thread_range_callback(initial_thread_index, top_level_threads_processed);
+
+		return total_processed_count;
+	}
+
+	// This overload uses `thread_range_callback` for both existing and new thread ranges.
+	// 
+	// For more details, please see the primary overload.
+	template <typename ThreadRangeCallback>
+	EntityThreadCount process_thread_list
+	(
+		EntityDescriptor& descriptor,
+		const util::json& content,
+
+		ThreadRangeCallback&& thread_range_callback,
+		
+		const std::filesystem::path* opt_base_path=nullptr,
+		const MetaParsingContext& opt_parsing_context={},
+		const EntityFactoryContext* opt_factory_context=nullptr
+	)
+	{
+		return process_thread_list
+		(
+			descriptor,
+			content,
+			thread_range_callback,
+			thread_range_callback,
+			opt_base_path,
+			opt_parsing_context,
+			opt_factory_context
+		);
 	}
 }

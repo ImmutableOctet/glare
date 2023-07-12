@@ -2,6 +2,8 @@
 
 #define GLM_FORCE_CTOR_INIT
 
+//#include "common.hpp"
+
 #include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
 //#include <glm/gtc/quaternion.hpp>
@@ -13,7 +15,6 @@
 
 namespace math
 {
-	// Types:
 	using Vector2D = glm::vec2; using vec2f = Vector2D; using vec2 = vec2f;
 	using Vector3D = glm::vec3; using vec3f = Vector3D; using vec3 = vec3f;
 	using Vector4D = glm::vec4; using vec4f = Vector4D; using vec4 = vec4f;
@@ -39,4 +40,15 @@ namespace math
 
 	using TransformVectors = std::tuple<Vector, Vector, Vector>; // Position, Rotation, Scale
 	using OrthogonalVectors = std::tuple<Vector, Vector, Vector>; // Left, Up, Forward
+
+	/*
+	// Disabled for now:
+	inline Vector3D operator*(const Matrix4x4& m, const Vector3D& v)
+	{
+		const auto v4d = Vector4D(v, 0.0f); // 1.0f
+		const auto mv = (m * v4d);
+
+		return Vector3D(mv);
+	}
+	*/
 }

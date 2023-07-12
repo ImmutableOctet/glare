@@ -6,6 +6,55 @@
 
 namespace util
 {
+	namespace impl
+	{
+		template <typename T, typename TupleType>
+		struct tuple_contains_impl;
+
+		template <typename T>
+		struct tuple_contains_impl<T, std::tuple<>>
+			: std::false_type {};
+
+		template <typename T, typename U, typename ...Ts>
+		struct tuple_contains_impl<T, std::tuple<U, Ts...>>
+			: tuple_contains_impl<T, std::tuple<Ts...>> {};
+
+		template <typename T, typename ...Ts>
+		struct tuple_contains_impl<T, std::tuple<T, Ts...>>
+			: std::true_type {};
+	}
+
+	template <typename TupleType, typename T>
+	using tuple_contains = impl::tuple_contains_impl<T, TupleType>;
+
+	template <typename TupleType, typename T>
+	inline constexpr bool tuple_contains_v = tuple_contains<TupleType, T>::value;
+
+	template <typename TupleType, typename ...Ts>
+	using tuple_contains_any = std::disjunction<tuple_contains<TupleType, Ts>...>;
+
+	template <typename TupleType, typename ...Ts>
+	inline constexpr bool tuple_contains_any_v = tuple_contains_any<TupleType, Ts...>::value;
+
+	template <typename TupleType, typename ...Ts>
+	using tuple_contains_all = std::conjunction<tuple_contains<TupleType, Ts>...>;
+
+	template <typename TupleType, typename ...Ts>
+	inline constexpr bool tuple_contains_all_v = tuple_contains_all<TupleType, Ts...>::value;
+
+	static_assert(tuple_contains_any_v<std::tuple<int, short>, char, int>);
+	static_assert(!tuple_contains_any_v<std::tuple<int, float, short>, char, double>);
+
+	static_assert(tuple_contains_all_v<std::tuple<int, short>, int>);
+	static_assert(tuple_contains_all_v<std::tuple<int, short>, int, short>);
+	static_assert(!tuple_contains_all_v<std::tuple<short>, char, short>);
+	static_assert(!tuple_contains_all_v<std::tuple<short, int>, char, short>);
+
+	static_assert(tuple_contains_v<std::tuple<int, float, short>, int>);
+	static_assert(tuple_contains_v<std::tuple<int, float, short>, float>);
+	static_assert(tuple_contains_v<std::tuple<int, float, short>, short>);
+	static_assert(!tuple_contains_v<std::tuple<int, float, short>, double>);
+
 	template <typename ...TupleTypes>
 	using concat_tuple_types = decltype(std::tuple_cat(std::declval<TupleTypes>()...));
 

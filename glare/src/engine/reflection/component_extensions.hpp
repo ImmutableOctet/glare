@@ -7,6 +7,7 @@
 
 #include <engine/meta/types.hpp>
 #include <engine/meta/cast.hpp>
+#include <engine/meta/short_name.hpp>
 #include <engine/meta/meta_type_descriptor.hpp>
 
 #include <utility>
@@ -137,9 +138,29 @@ namespace engine::impl
     }
 
     template <typename T>
+    T* get_or_default_construct_component(Registry& registry, Entity entity)
+    {
+        return &(registry.get_or_emplace<T>(entity));
+    }
+
+    template <typename T>
     T* get_component(Registry& registry, Entity entity)
     {
         return registry.try_get<T>(entity);
+    }
+
+    template <typename T>
+    T* emplace_default_component(Registry& registry, Entity entity)
+    {
+        // Alternative implementation (Doesn't fail on existing):
+        //return &(registry.get_or_emplace<T>(entity));
+
+        if (auto existing = get_component<T>(registry, entity))
+        {
+            return nullptr; // existing;
+        }
+
+        return &(registry.emplace<T>(entity));
     }
 
     template <typename T>
@@ -325,8 +346,27 @@ namespace engine::impl
 
     // Notifies listeners that a component of type `T` has been patched.
     template <typename T>
-    void mark_component_as_patched(Registry& registry, Entity entity)
+    bool mark_component_as_patched(Registry& registry, Entity entity)
     {
-        registry.patch<T>(entity);
+        if (registry.try_get<T>(entity))
+        {
+            registry.patch<T>(entity);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    template <typename T>
+    MetaTypeID get_component_type_id_impl()
+    {
+        return short_name_hash<T>();
+    }
+
+    template <typename T>
+    MetaTypeID get_history_component_type_id_impl()
+    {
+        return history_component_short_name_hash<T>();
     }
 }

@@ -35,7 +35,7 @@ namespace engine
 			// Wall threshold.
 			//static constexpr float WALL = ...; // (Dot-product value)
 
-			static constexpr float MIN_SPEED = 0.0025f;
+			static constexpr float MIN_SPEED = 0.025f;
 
 			MotionSystem(World& world, PhysicsSystem& physics);
 
@@ -82,6 +82,9 @@ namespace engine
 
 			// Internal shorthand for `world.down()`.
 			math::Vector down() const;
+
+			void accelerate(Entity entity, const math::Vector3D& direction, float influence);
+			void influence_motion_direction(Entity entity, const math::Vector3D& direction, float influence);
 		protected:
 			PhysicsSystem& physics;
 	};

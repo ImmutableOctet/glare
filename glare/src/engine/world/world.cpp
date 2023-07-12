@@ -178,42 +178,38 @@ namespace engine
 
 	Entity World::load
 	(
-		const filesystem::path& root_path,
-		std::string_view json_file,
+		const filesystem::path& scene_root_path,
+		std::string_view scene_filename,
 		Entity parent,
-
+		const SceneLoaderConfig& cfg,
 		SystemManagerInterface* opt_system_manager
 	)
 	{
-		auto map_data_path = (root_path / json_file);
+		auto scene_data_path = (scene_root_path / scene_filename);
 		
-		print("Loading map from \"{}\"...", map_data_path.string());
+		print("Loading scene from \"{}\"...", scene_data_path.string());
 
 		//try
 		{
-			print("Parsing JSON...");
+			print("Parsing scene JSON...");
 
-			auto map_data = util::load_json(map_data_path);
+			auto scene_data = util::load_json(scene_data_path);
 
-			print("Loading...");
+			print("Loading scene contents...");
 
-			auto map = Scene::Load
-			(
-				*this,
-				root_path,
-				map_data,
-				parent,
-				opt_system_manager
-			); // { .geometry = false }
+			auto scene_loader = SceneLoader(*this, scene_root_path, null, cfg, opt_system_manager);
 
-			event<OnSceneLoaded>(map, root_path); // map_data_path
+			auto scene = scene_loader.load(scene_data, parent);
 
-			return map;
+			event<OnSceneLoaded>(scene, scene_root_path); // scene_data_path
+
+			return scene;
 		}
 		/*
 		catch (std::exception& e)
 		{
-			print_warn("Error parsing JSON file: {}", e.what());
+			print_warn("Error parsing scene JSON file: {}", e.what());
+
 			assert(false);
 		}
 		*/
@@ -233,7 +229,7 @@ namespace engine
 		// Handle changes in entity transforms.
 		handle_transform_events(delta);
 
-		// Update systems:
+		// Update systems.
 		Service::update(time, delta);
 	}
 

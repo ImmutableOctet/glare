@@ -11,6 +11,8 @@
 #include "function.hpp"
 #include "operators.hpp"
 #include "indirection.hpp"
+#include "json_bindings.hpp"
+#include "binary_bindings.hpp"
 
 #include "common_extensions.hpp"
 #include "component_extensions.hpp"
@@ -39,6 +41,8 @@
 #include <engine/service.hpp>
 #include <engine/system_manager_interface.hpp>
 #include <engine/command.hpp>
+
+#include <engine/history/components/history_component.hpp>
 
 #include <util/reflection.hpp>
 #include <util/json.hpp>
@@ -232,6 +236,106 @@ namespace engine
     }
 
     template <typename T>
+    auto history_component_meta_type(auto history_type, bool sync_context=true)
+    {
+        using history_component_t = HistoryComponent<T>;
+        using history_log_t = typename history_component_t::LogType; // util::HistoryLog<T>;
+
+        history_type = history_type
+            .prop("history"_hs)
+            .prop("history_component"_hs)
+            .prop("component"_hs)
+        ;
+
+        /*
+            NOTE: This check is a workaround for EnTT's `is_dynamic_sequence_container` trait,
+            which checks for the existence of the `clear` member-function to enable
+            manipulation of dynamic sequence containers (e.g. `std::vector`).
+            
+            Although `clear` isn't necessarily a problem for many types, `resize` can be,
+            since it requires default construction and move construction.
+            
+            EnTT currently allows `resize` to be used if `is_dynamic_sequence_container` reports true,
+            so for this reason we have to avoid reflecting the `history` member
+            if we're unable to resize the underlying container.
+            
+             This makes sense at a meta-level as well, since `truncate` (which uses `resize` internally)
+            is a critical feature of `util::HistoryLog`.
+        */
+        if constexpr (std::is_default_constructible_v<T> && std::is_move_constructible_v<T>)
+        {
+            history_type = history_type
+                .func<static_cast<bool(history_component_t::*)(const T&)>(&history_component_t::store)>("store"_hs)
+                .func<static_cast<bool(history_component_t::*)(Registry&, Entity)>(&history_component_t::store)>("store"_hs)
+
+                .func<static_cast<bool(history_component_t::*)(const T&)>(&history_component_t::store_back)>("store_back"_hs)
+                .func<static_cast<bool(history_component_t::*)(Registry&, Entity)>(&history_component_t::store_back)>("store_back"_hs)
+
+                .func<static_cast<bool(history_component_t::*)(T&)>(&history_component_t::undo)>("undo"_hs)
+                .func<static_cast<bool(history_component_t::*)(Registry&, Entity)>(&history_component_t::undo)>("undo"_hs)
+
+                .func<static_cast<bool(history_component_t::*)(T&)>(&history_component_t::redo)>("redo"_hs)
+                .func<static_cast<bool(history_component_t::*)(Registry&, Entity)>(&history_component_t::redo)>("redo"_hs)
+
+                .func<static_cast<bool(history_component_t::*)(bool)>(&history_component_t::truncate_back)>("truncate_back"_hs)
+                .func<static_cast<bool(history_component_t::*)()>(&history_component_t::truncate_back)>("truncate_back"_hs)
+
+                .func<&history_component_t::truncate>("truncate"_hs)
+
+                .func<&history_component_t::cursor_out_of_bounds>("cursor_out_of_bounds"_hs)
+                .func<&history_component_t::get_snapshot>("get_snapshot"_hs)
+            ;
+
+            history_type = history_type
+                .data<&history_component_t::history>("history"_hs)
+            ;
+
+            history_type = history_type
+                .data<nullptr, &history_component_t::get_active_snapshot>("active_snapshot"_hs)
+                .data<nullptr, &history_component_t::get_cursor>("cursor"_hs)
+                .data<nullptr, &history_component_t::size>("size"_hs)
+                .data<nullptr, &history_component_t::empty>("empty"_hs)
+                .data<nullptr, &history_component_t::can_undo>("can_undo"_hs)
+                .data<nullptr, &history_component_t::can_redo>("can_redo"_hs)
+                .data<nullptr, &history_component_t::can_truncate>("can_truncate"_hs)
+                .data<nullptr, &history_component_t::can_store>("can_store"_hs)
+                .data<nullptr, &history_component_t::can_clear>("can_clear"_hs)
+                .data<nullptr, &history_component_t::can_copy_value>("can_copy_value"_hs)
+                .data<nullptr, &history_component_t::can_move_value>("can_move_value"_hs)
+                .data<nullptr, &history_component_t::has_default_cursor>("has_default_cursor"_hs)
+                .data<nullptr, &history_component_t::has_live_value_cursor>("has_live_value_cursor"_hs)
+                .data<nullptr, &history_component_t::get_default_cursor>("default_cursor"_hs)
+                .data<nullptr, &history_component_t::get_live_value_cursor>("live_value_cursor"_hs)
+            ;
+        }
+
+        return history_type;
+    }
+
+    template <typename T>
+    auto history_component_engine_meta_type(bool sync_context=true)
+    {
+        using history_component_t = HistoryComponent<T>;
+
+        if (sync_context)
+        {
+            // Ensure that we're using the correct context.
+            sync_reflection_context();
+        }
+
+        auto history_type = entt::meta<history_component_t>()
+            .type(history_component_short_name_hash<T>())
+
+            .func<&impl::get_component_type_id_impl<T>>("get_component_type_id"_hs)
+
+            //.data<nullptr, &impl::get_component_type_id_impl<T>>("component_type_id"_hs)
+            //.prop<get_component_type_id_impl<T>()>("component_type_id"_hs)
+        ;
+
+        return history_component_meta_type<T>(history_type, false);
+    }
+
+    template <typename T>
     auto optional_custom_meta_type(MetaTypeID type_id, bool sync_context=true)
     {
         using optional_t = std::optional<T>;
@@ -285,16 +389,17 @@ namespace engine
             type = type.template func<&T::get_type>("get_type"_hs);
         }
 
+        // NOTE: A type must be non-empty to qualify for usage as a component.
         if constexpr (!std::is_empty_v<T>)
         {
             type = type
                 .template func<&impl::has_component<T>>("has_component"_hs)
                 .template func<&impl::get_component<T>>("get_component"_hs)
+                .template func<&impl::get_or_emplace_component<T>, entt::as_ref_t>("get_or_emplace_component"_hs)
                 .template func<&impl::emplace_meta_component<T>, entt::as_ref_t>("emplace_meta_component"_hs)
                 .template func<&impl::store_meta_component<T>>("store_meta_component"_hs)
                 .template func<&impl::copy_meta_component<T>>("copy_meta_component"_hs)
                 .template func<&impl::remove_component<T>>("remove_component"_hs)
-                .template func<&impl::get_or_emplace_component<T>, entt::as_ref_t>("get_or_emplace_component"_hs)
                 .template func<&impl::direct_patch_meta_component<T>, entt::as_ref_t>("direct_patch_meta_component"_hs)
                 .template func<&impl::indirect_patch_meta_component<T>>("indirect_patch_meta_component"_hs)
                 .template func<&impl::mark_component_as_patched<T>>("mark_component_as_patched"_hs)
@@ -304,29 +409,40 @@ namespace engine
                 .template func<&MetaEventListener::connect<T>>("connect_meta_event"_hs)
                 .template func<&MetaEventListener::disconnect<T>>("disconnect_meta_event"_hs)
             ;
+
+            if constexpr (std::is_default_constructible_v<T>)
+            {
+                type = type
+                    .template func<&impl::emplace_default_component<T>>("emplace_default_component"_hs)
+                    .template func<&impl::get_or_default_construct_component<T>>("get_or_default_construct_component"_hs)
+                ;
+            }
+
+            if constexpr (config.generate_history_component_reflection)
+            {
+                if constexpr (std::is_copy_constructible_v<T>) // || (std::is_default_constructible_v<T> && std::is_copy_assignable_v<T>)
+                {
+                    history_component_engine_meta_type<T>(false);
+
+                    type = type
+                        .template func<&impl::get_history_component_type_id_impl<T>>("get_history_component_type_id"_hs)
+                    ;
+
+                    //"get_history_component_type_id"_hs
+                }
+            }
         }
 
-        if constexpr ((config.generate_json_constructor) && (std::is_default_constructible_v<T>))
+        if constexpr (config.generate_json_bindings)
         {
-            type = type
-                .ctor
-                <
-                    static_cast<T (*)(const util::json&)>
-                    (&impl::from_json<T>)
-                >()
-                    
-                .ctor
-                <
-                    static_cast<T (*)(const util::json&, const MetaParsingInstructions&)>
-                    (&impl::from_json_with_instructions<T>) // from_json<T>
-                >()
+            type = define_from_json_bindings<T>(type);
+            type = define_to_json_bindings<T>(type);
+        }
 
-                .ctor
-                <
-                    static_cast<T (*)(const util::json&, const MetaParsingInstructions&, const MetaTypeDescriptorFlags&)>
-                    (&impl::from_json_with_instructions_and_descriptor_flags<T>) // impl::from_json<T>
-                >()
-            ;
+        if constexpr (config.generate_binary_bindings)
+        {
+            type = define_from_binary_bindings<T>(type);
+            type = define_to_binary_bindings<T>(type);
         }
 
         if constexpr (config.generate_optional_reflection)
@@ -488,7 +604,19 @@ namespace engine
     template <typename T, MetaTypeReflectionConfig config={}>
     auto engine_meta_type(bool sync_context=true)
     {
-        return custom_meta_type<T, config>(short_name_hash<T>(), sync_context);
+        constexpr auto type_name = short_name<T>();
+        constexpr auto type_id = hash(type_name);
+
+        auto type = custom_meta_type<T, config>(type_id, sync_context);
+
+        if constexpr (type_name.ends_with("Component"))
+        {
+            type = type
+                .prop("component"_hs)
+            ;
+        }
+
+        return type;
     }
 
     template <typename T> // MetaTypeReflectionConfig config={}

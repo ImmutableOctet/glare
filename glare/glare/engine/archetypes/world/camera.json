@@ -6,7 +6,7 @@
 		"type": "EntityType::Camera",
 		//"name": "Camera",
 
-		"camera": 
+		"CameraComponent": 
 		{
 			"fov": 75.0,
 			"near_plane": 0.1,

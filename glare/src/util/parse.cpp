@@ -1061,10 +1061,19 @@ namespace util
 			(
 				[&expr](auto&&... operator_symbols)
 				{
+					/*
+					// Alternative implementation (does not account for expression scope):
 					return find_first_of_ex
 					(
 						expr,
 						std::string_view::npos,
+						std::forward<decltype(operator_symbols)>(operator_symbols)...
+					);
+					*/
+
+					return find_first_of_unscoped
+					(
+						expr, util::standard_scope_symbols,
 						std::forward<decltype(operator_symbols)>(operator_symbols)...
 					);
 				},
@@ -1078,10 +1087,19 @@ namespace util
 			(
 				[&expr](auto&&... operator_symbols)
 				{
+					/*
+					// Alternative implementation (does not account for expression scope):
 					return find_first_of_ex
 					(
 						expr,
 						std::string_view::npos,
+						std::forward<decltype(operator_symbols)>(operator_symbols)...
+					);
+					*/
+
+					return find_first_of_unscoped
+					(
+						expr, util::standard_scope_symbols,
 						std::forward<decltype(operator_symbols)>(operator_symbols)...
 					);
 				},
@@ -1100,12 +1118,21 @@ namespace util
 
 		auto [initial_result_index, initial_result_symbol] = util::execute_as<std::string_view>
 		(
-			[&expr](auto&&... operator_symbols)
+			[&expr](auto&&... operator_symbols) -> std::tuple<std::size_t, std::string_view>
 			{
+				/*
+				// Alternative implementation (does not account for expression scope):
 				return find_first_of_ex
 				(
 					expr,
 					std::string_view::npos,
+					std::forward<decltype(operator_symbols)>(operator_symbols)...
+				);
+				*/
+
+				return find_first_of_unscoped
+				(
+					expr, util::standard_scope_symbols,
 					std::forward<decltype(operator_symbols)>(operator_symbols)...
 				);
 			},

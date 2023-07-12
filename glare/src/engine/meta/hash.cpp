@@ -6,6 +6,11 @@ namespace engine
 
 	std::string_view get_known_string_from_hash(StringHash hash_value)
 	{
+		if (!hash_value)
+		{
+			return {};
+		}
+
 		auto it = known_string_hashes.find(hash_value);
 
 		if (it == known_string_hashes.end())

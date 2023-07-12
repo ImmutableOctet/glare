@@ -1,6 +1,7 @@
 #pragma once
 
 #include "string.hpp"
+#include "find.hpp"
 #include "type_traits.hpp"
 
 #include <type_traits>
@@ -724,6 +725,45 @@ namespace util
 			str, target_symbol, offset,
 			standard_scope_symbols
 		);
+	}
+
+	// Searches for the earliest instance of a `target_symbols` entry in `expr`, where
+	// the entry in question is not within a scope found in the `scope_symbols` container.
+	template <typename ScopeSymbols, typename ...TargetSymbols>
+	std::tuple<std::size_t, std::string_view> find_first_of_unscoped
+	(
+		std::string_view expr, const ScopeSymbols& scope_symbols,
+		TargetSymbols&&... target_symbols
+	)
+	{
+		auto result_symbol = std::string_view {};
+
+		// NOTE: Unlike `result_symbol`, `result_index` needs to be translated to be `expr`-relative by `find_unscoped`.
+		// For this reason, we use the return value, rather than simply handling `result_index` as an out-parameter.
+		auto result_index = find_unscoped
+		(
+			expr, "", 0, scope_symbols,
+
+			[&](const auto& substr, const auto& placeholder)
+			{
+				auto [sub_result_index, sub_result_symbol] = find_first_of_ex
+				(
+					substr,
+					std::string_view::npos,
+					std::forward<TargetSymbols>(target_symbols)...
+				);
+
+				if (sub_result_index != std::string_view::npos)
+				{
+					// Store a view to the symbol we found.
+					result_symbol = sub_result_symbol;
+				}
+
+				return sub_result_index;
+			}
+		);
+
+		return { result_index, result_symbol };
 	}
 
 	// Finds the first closing parenthesis (')') that doesn't already satisfy an enclosed expression.

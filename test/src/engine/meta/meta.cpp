@@ -1,5 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "reflection_test.hpp"
+
 #include <util/json.hpp>
 
 #include <engine/meta/meta.hpp>
@@ -56,139 +58,6 @@
 
 namespace engine
 {
-	struct ReflectionTest
-	{
-		struct Nested
-		{
-			static Nested make_nested(float value)
-			{
-				return { value };
-			}
-
-			float get() const { return value; }
-
-			Nested(float value={}) : value(value) {}
-
-			float value;
-
-			bool operator==(const Nested&) const noexcept = default;
-			bool operator!=(const Nested&) const noexcept = default;
-		};
-
-		std::int32_t x = {};
-		std::int32_t y = {};
-		std::int32_t z = {};
-
-		Nested nested_value = {};
-
-		ReflectionTest(std::int32_t x, std::int32_t y, std::int32_t z, const Nested& nested_value={})
-			: x(x), y(y), z(z), nested_value(nested_value)
-		{}
-
-		ReflectionTest() {}
-
-		/*
-		ReflectionTest(const ReflectionTest& r)
-			: ReflectionTest(r.x, r.y, r.z, r.nested_value)
-		{
-			print("Copy created.");
-		}
-		*/
-
-		ReflectionTest(const ReflectionTest&) = default;
-
-		ReflectionTest(ReflectionTest&&) noexcept = default;
-
-		ReflectionTest& operator=(const ReflectionTest&) = default;
-		ReflectionTest& operator=(ReflectionTest&&) noexcept = default;
-
-		bool operator==(const ReflectionTest&) const noexcept = default;
-		bool operator!=(const ReflectionTest&) const noexcept = default;
-
-		inline bool operator>(const ReflectionTest& instance) const // noexcept
-		{
-			return (static_cast<std::int32_t>(*this) > static_cast<std::int32_t>(instance));
-		}
-
-		inline bool operator<(const ReflectionTest& instance) const // noexcept
-		{
-			return (static_cast<std::int32_t>(*this) < static_cast<std::int32_t>(instance));
-		}
-
-		inline operator std::int32_t() const noexcept { return (x + y + z); }
-
-		inline std::int32_t get_property_x() const
-		{
-			return x;
-		}
-
-		inline void set_property_x(std::int32_t value)
-		{
-			x = value;
-		}
-
-		static ReflectionTest fn(std::int32_t value=1)
-		{
-			return { value*1, value*2, value*3 };
-		}
-
-		inline ReflectionTest operator+(const ReflectionTest& instance) const
-		{
-			return { (x + instance.x), (y + instance.y), (z + instance.z), { nested_value.value + instance.nested_value.value } };
-		}
-
-		std::int32_t const_method_test() const { return y; }
-		std::int32_t non_const_method_test() { return z; }
-
-		std::int32_t const_opaque_method() const
-		{
-			const auto sum_value = static_cast<std::int32_t>(*this);
-
-			return (sum_value * sum_value);
-		}
-
-		std::int32_t non_const_opaque_method()
-		{
-			x++;
-			y++;
-			z++;
-
-			return static_cast<std::int32_t>(*this);
-		}
-
-		static std::int32_t function_with_context(Registry& registry, Entity entity)
-		{
-			return static_cast<std::int32_t>(entity);
-		}
-
-		Entity method_with_context(Registry& registry, Entity entity)
-		{
-			return entity;
-		}
-
-		Nested& get_nested() { return nested_value; }
-
-		static std::optional<ReflectionTest> get_optional_value(bool provide_value)
-		{
-			if (provide_value)
-			{
-				return ReflectionTest { 10, 20, 30, { 40.0f  } };
-			}
-
-			return std::nullopt;
-		}
-
-		static std::string overloaded_function(std::int32_t value)
-		{
-			return "integer";
-		}
-
-		static std::string overloaded_function(const std::string& value)
-		{
-			return "string";
-		}
-	};
-
 	struct TestSystem
 	{
 		bool value = false;
@@ -198,73 +67,6 @@ namespace engine
 			return value;
 		}
 	};
-
-	std::int32_t free_function_as_member(const ReflectionTest& instance)
-	{
-		return (instance.z * 2);
-	}
-
-	template <>
-	void reflect<ReflectionTest>()
-	{
-		engine_meta_type
-		<
-			ReflectionTest,
-
-			MetaTypeReflectionConfig
-			{
-				.capture_standard_data_members = true,
-				.generate_optional_reflection  = true,
-				.generate_operator_wrappers    = true, // false;
-				.generate_indirect_getters     = true,
-				.generate_indirect_setters     = true,
-				.generate_json_constructor     = true
-			}
-		>()
-			.data<&ReflectionTest::x>("x"_hs)
-			.data<&ReflectionTest::y>("y"_hs)
-			.data<&ReflectionTest::z>("z"_hs)
-			.data<&ReflectionTest::nested_value>("nested_value"_hs)
-			
-			.ctor
-			<
-				decltype(ReflectionTest::x),
-				decltype(ReflectionTest::y),
-				decltype(ReflectionTest::z)
-			>()
-
-			.ctor
-			<
-				decltype(ReflectionTest::x),
-				decltype(ReflectionTest::y),
-				decltype(ReflectionTest::z),
-				decltype(ReflectionTest::nested_value)
-			>()
-
-			.func<&ReflectionTest::get_property_x>("get_property_x"_hs)
-			.func<&ReflectionTest::set_property_x>("set_property_x"_hs)
-
-			.func<&ReflectionTest::fn>("fn"_hs)
-			.func<&ReflectionTest::const_method_test>("const_method_test"_hs)
-			.func<&ReflectionTest::non_const_method_test>("non_const_method_test"_hs)
-			.func<&free_function_as_member>("free_function_as_member"_hs)
-			.func<&ReflectionTest::get_nested>("get_nested"_hs)
-			.func<&ReflectionTest::const_opaque_method>("const_opaque_method"_hs)
-			.func<&ReflectionTest::non_const_opaque_method>("non_const_opaque_method"_hs)
-			.func<&ReflectionTest::method_with_context>("method_with_context"_hs)
-			.func<&ReflectionTest::function_with_context>("function_with_context"_hs)
-			.func<&ReflectionTest::get_optional_value>("get_optional_value"_hs)
-			.func<static_cast<std::string (*)(std::int32_t value)>(&ReflectionTest::overloaded_function)>("overloaded_function"_hs)
-			.func<static_cast<std::string (*)(const std::string& value)>(&ReflectionTest::overloaded_function)>("overloaded_function"_hs)
-		;
-
-		engine_meta_type<ReflectionTest::Nested>()
-			.data<&ReflectionTest::Nested::value>("value"_hs)
-			.func<&ReflectionTest::Nested::make_nested>("make_nested"_hs)
-			.func<&ReflectionTest::Nested::get>("get"_hs)
-			.ctor<decltype(ReflectionTest::Nested::value)>()
-		;
-	}
 
 	template <>
 	void reflect<TestSystem>()
@@ -814,7 +616,7 @@ TEST_CASE("engine::meta_any_from_string", "[engine:meta]")
 
 		auto setter_expr = engine::meta_any_from_string
 		(
-			std::string_view("self.position = Vector(100.0, 200.0, 300.0)"),
+			std::string_view("self.position = Vector(100.0, (100.0 * 2.0), (100.0 * 3.0))"),
 			{
 				.allow_entity_indirection      = true,
 				.allow_function_call_semantics = true,
@@ -2786,75 +2588,6 @@ TEST_CASE("engine::meta_any_from_string", "[engine:meta]")
 
 		REQUIRE(result);
 		REQUIRE(result == engine::hash("Button::Jump").value());
-	}
-}
-
-TEST_CASE("engine::MetaTypeDescriptor", "[engine:meta]")
-{
-	using namespace engine::literals;
-	using namespace util::literals;
-
-	util::log::init();
-
-	engine::reflect<engine::ReflectionTest>();
-
-	SECTION("Direct value assignment")
-	{
-		auto descriptor = engine::MetaTypeDescriptor { "ReflectionTest"_hs };
-
-		descriptor.set_variables_direct(10, 20, 30);
-
-		auto instance = descriptor();
-
-		REQUIRE(instance);
-		
-		auto* raw_instance = instance.try_cast<engine::ReflectionTest>();
-
-		REQUIRE(raw_instance);
-
-		REQUIRE(raw_instance->x == 10);
-		REQUIRE(raw_instance->y == 20);
-		REQUIRE(raw_instance->z == 30);
-	}
-
-	SECTION("CSV assignment")
-	{
-		auto descriptor = engine::MetaTypeDescriptor{ "ReflectionTest"_hs };
-
-		descriptor.set_variables(std::string_view("1,2,3"));
-
-		auto instance = descriptor();
-
-		REQUIRE(instance);
-
-		auto* raw_instance = instance.try_cast<engine::ReflectionTest>();
-
-		REQUIRE(raw_instance);
-
-		REQUIRE(raw_instance->x == 1);
-		REQUIRE(raw_instance->y == 2);
-		REQUIRE(raw_instance->z == 3);
-	}
-
-	SECTION("JSON assignment")
-	{
-		auto descriptor = engine::MetaTypeDescriptor{ "ReflectionTest"_hs };
-
-		auto content = util::json::parse("[123,456,789]");
-
-		descriptor.set_variables(content);
-
-		auto instance = descriptor();
-
-		REQUIRE(instance);
-		
-		auto* raw_instance = instance.try_cast<engine::ReflectionTest>();
-
-		REQUIRE(raw_instance);
-
-		REQUIRE(raw_instance->x == 123);
-		REQUIRE(raw_instance->y == 456);
-		REQUIRE(raw_instance->z == 789);
 	}
 }
 

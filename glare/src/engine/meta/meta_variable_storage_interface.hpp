@@ -11,6 +11,8 @@ namespace engine
 	class MetaVariableStorageInterface
 	{
 		public:
+			inline virtual ~MetaVariableStorageInterface() {}
+
 			virtual std::optional<std::size_t> get_index(MetaSymbolID name) const = 0;
 			
 			virtual bool contains(MetaSymbolID name) const = 0;

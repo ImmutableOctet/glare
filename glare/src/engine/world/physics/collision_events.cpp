@@ -1,6 +1,8 @@
 #include "collision_events.hpp"
 
-#include <math/math.hpp>
+#include <math/common.hpp>
+#include <math/surface.hpp>
+#include <math/rotation.hpp>
 
 #include <tuple>
 
@@ -15,12 +17,12 @@ namespace engine
 
 	float OnSurfaceContact::contact_speed() const
 	{
-		return glm::length(impact_velocity);
+		return math::length(impact_velocity);
 	}
 
 	math::Vector OnSurfaceContact::direction() const
 	{
-		return glm::normalize(impact_velocity);
+		return math::normalize(impact_velocity);
 	}
 
 	math::Vector OnSurfaceContact::penetration_vector() const
@@ -30,7 +32,7 @@ namespace engine
 
 	float OnSurfaceContact::dot_product() const
 	{
-		return glm::dot(collision.normal, direction());
+		return math::dot(collision.normal, direction());
 	}
 
 	float OnSurfaceContact::force_applied() const
@@ -81,7 +83,7 @@ namespace engine
 
 	float OnSurfaceContact::slope(const math::Vector& surface_forward) const
 	{
-		return glm::dot(direction(), surface_forward);
+		return math::dot(direction(), surface_forward);
 	}
 
 	float OnSurfaceContact::slope() const
@@ -98,7 +100,7 @@ namespace engine
 
 	math::OrthogonalVectors OnSurfaceContact::surface_orientation_vectors(const math::Vector& forward) const
 	{
-		auto right = math::cross(collision.normal, forward); // glm::normalize(...)
+		auto right = math::cross(collision.normal, forward); // math::normalize(...)
 
 		return { right, collision.normal, forward };
 	}
@@ -113,12 +115,12 @@ namespace engine
 
 	math::RotationMatrix OnSurfaceContact::alignment(const math::Vector& forward) const
 	{
-		return glm::inverse(math::rotation_from_orthogonal(surface_orientation_vectors(-forward)));
+		return math::inverse(math::rotation_from_orthogonal(surface_orientation_vectors(-forward)));
 	}
 
 	math::Quaternion OnSurfaceContact::alignment_q(const math::Vector& forward) const
 	{
-		return glm::inverse(math::quaternion_from_orthogonal(surface_orientation_vectors(-forward)));
+		return math::inverse(math::quaternion_from_orthogonal(surface_orientation_vectors(-forward)));
 	}
 
 	float OnSurfaceContact::vertical_sign() const

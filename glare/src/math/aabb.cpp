@@ -1,6 +1,6 @@
 #include "aabb.hpp"
 
-#include <glm/glm.hpp>
+#include "common.hpp"
 
 namespace math
 {
@@ -11,7 +11,7 @@ namespace math
 
 	float AABB::length() const
 	{
-		return glm::length(dim_lengths());
+		return math::length(dim_lengths());
 	}
 
 	float AABB::average_length() const

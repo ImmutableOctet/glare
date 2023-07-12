@@ -1,0 +1,15 @@
+{
+	"add":
+	{
+		"FreeLookBehavior": {},
+		"DebugMoveBehavior": {}
+	},
+
+	"triggers":
+	{
+		"OnButtonPressed|Button::Interact":
+		{
+			"state": "editor_camera_common"
+		}
+	}
+}

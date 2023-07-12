@@ -1,26 +1,13 @@
 #pragma once
 
 #include "types.hpp"
+#include "constants.hpp"
+#include "common.hpp"
 
 #include <type_traits>
 
 namespace math
 {
-	template <typename T>
-	inline constexpr T _Pi()
-	{
-		return T(3.141592653589793); // M_PI
-	}
-
-	template <typename T>
-	inline constexpr T _Tau()
-	{
-		return (static_cast<T>(2) * _Pi<T>());
-	}
-
-	constexpr auto Pi = _Pi<float>();
-	constexpr auto Tau = _Tau<float>();
-
 	template <typename T>
 	inline constexpr T degrees(T r)
 	{
@@ -41,6 +28,13 @@ namespace math
 	inline constexpr Vector radians(const Vector& d)
 	{
 		return { radians(d.x), radians(d.y), radians(d.z) };
+	}
+
+	// This is here primarily as a placeholder overload, in case
+	// a templated function needs to convert between vector types.
+	inline Vector3D to_vector(const Vector3D& v)
+	{
+		return v;
 	}
 
 	inline RotationMatrix to_rotation_matrix(const Quaternion& q)
@@ -81,13 +75,9 @@ namespace math
 		}
 		else
 		{
-			return glm::identity<MatrixType>(); // {};
+			return identity<MatrixType>(); // {};
 		}
 	}
-	
-	// This is mainly here as a placeholder overload, in case
-	// a templated function needs to convert between vector types.
-	inline Vector3D to_vector(const Vector3D& v) { return v; }
 
 	math::vec2f to_normalized_device_coordinates_ex(const math::vec2f& half_display_size, const math::vec2f& position);
 	math::vec2f to_normalized_device_coordinates(const math::vec2f& display_size, const math::vec2f& position);

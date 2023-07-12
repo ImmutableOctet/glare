@@ -207,6 +207,48 @@ namespace engine
 	}
 
 	// EntityThreadBuilder:
+	std::string EntityThreadBuilder::thread_name_from_script_reference
+	(
+		const std::filesystem::path& script_path,
+		const EntityFactoryContext* opt_factory_context,
+		const std::filesystem::path* opt_base_path
+	)
+	{
+		/*
+		// Alternative implementation
+		// (Disabled for now; path resolution does not change the trailing filename at this time):
+		if (opt_factory_context)
+		{
+			auto resolved_path = opt_factory_context->resolve_script_reference
+			(
+				script_path,
+
+				(
+					(opt_base_path)
+					? *opt_base_path
+					: std::filesystem::path {}
+				)
+			);
+
+			return thread_name_from_resolved_path(resolved_path);
+		}
+
+		return thread_name_from_resolved_path(script_path);
+		*/
+
+		// Most optimal control-path currently is to skip path resolution. (See notes above)
+		return thread_name_from_resolved_path(script_path);
+	}
+
+	std::string EntityThreadBuilder::thread_name_from_resolved_path(const std::filesystem::path& resolved_path)
+	{
+		auto filename = resolved_path.filename();
+		
+		filename.replace_extension();
+
+		return filename.string();
+	}
+
 	bool EntityThreadBuilder::is_yield_instruction(std::string_view instruction_name)
 	{
 		return is_yield_instruction(hash(instruction_name).value());
@@ -379,7 +421,9 @@ namespace engine
 
 		if (thread_id_already_exists)
 		{
-			print_warn("Attempted to set thread ID to #{}, but an existing thread already has that name. (Input: \"{}\")", *thread_id_out, thread_name);
+			print_warn("Failed to set thread ID to #{}: An existing thread already has that name. (Input: \"{}\")", *thread_id_out, thread_name);
+
+			return std::nullopt;
 		}
 		//else
 		{
@@ -3523,19 +3567,23 @@ namespace engine
 			);
 		}
 
-		const auto script_data = util::io::load_string
+		const auto script_data = util::load_string
 		(
 			(resolved_path.empty())
 			? script_path.string()
 			: resolved_path.string()
 		);
 
+		if (script_data.empty())
+		{
+			return 0;
+		}
+
 		if (!thread_has_name())
 		{
-			auto filename = resolved_path.filename(); filename.replace_extension();
-			auto filename_str = filename.string();
+			auto thread_name = thread_name_from_resolved_path(resolved_path);
 
-			set_thread_name(filename_str);
+			set_thread_name(thread_name);
 		}
 
 		return from_lines(script_data, separator, skip); // process(std::string_view(script_data), skip);

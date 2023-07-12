@@ -31,6 +31,7 @@ namespace engine
 			bool contains(Entity entity) const;
 
 			void on_event(const MetaType& type, MetaAny event_instance) override;
+
 		protected:
 			struct Reference
 			{
@@ -49,6 +50,7 @@ namespace engine
 			// A collection of entities listening for the
 			// event-type encapsulated by this listener instance.
 			util::small_vector<Reference, 8> listening_entities; // 16
+
 		private:
 			void update_entity
 			(

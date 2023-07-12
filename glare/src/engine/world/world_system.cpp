@@ -8,8 +8,23 @@
 
 namespace engine
 {
-	WorldSystem::WorldSystem(World& world, bool allow_multiple_subscriptions)
-		: world(world), subscribed(false), allow_multiple_subscriptions(allow_multiple_subscriptions) {}
+	WorldSystem::WorldSystem
+	(
+		World& world,
+		
+		bool allow_multiple_subscriptions,
+
+		bool allow_update,
+		bool allow_fixed_update,
+		bool allow_render
+	) :
+		world(world),
+		subscribed(false),
+		allow_multiple_subscriptions(allow_multiple_subscriptions),
+		allow_update(allow_update),
+		allow_fixed_update(allow_fixed_update),
+		allow_render(allow_render)
+	{}
 
 	WorldSystem::~WorldSystem()
 	{
@@ -19,6 +34,13 @@ namespace engine
 
 	void WorldSystem::update(const OnServiceUpdate& update_event)
 	{
+		//assert(allow_update);
+
+		if (!allow_update)
+		{
+			return;
+		}
+
 		auto world_ptr = resolve_world(update_event);
 
 		if (!world_ptr)
@@ -29,8 +51,34 @@ namespace engine
 		on_update(*world_ptr, update_event.delta);
 	}
 
+	void WorldSystem::fixed_update(const OnServiceFixedUpdate& fixed_update_event)
+	{
+		//assert(allow_fixed_update);
+
+		if (!allow_fixed_update)
+		{
+			return;
+		}
+
+		auto world_ptr = resolve_world(fixed_update_event);
+
+		if (!world_ptr)
+		{
+			return;
+		}
+
+		on_fixed_update(*world_ptr, fixed_update_event.time); // fixed_update_event.delta
+	}
+
 	void WorldSystem::render(const OnServiceRender& render_event)
 	{
+		//assert(allow_render);
+
+		if (!allow_render)
+		{
+			return;
+		}
+
 		auto world_ptr = resolve_world(render_event);
 
 		if (!world_ptr)
@@ -41,15 +89,9 @@ namespace engine
 		on_render(*world_ptr, *render_event.graphics);
 	}
 
-	void WorldSystem::on_render(World& world, app::Graphics& graphics)
-	{
-		// Empty implementation.
-	}
-
-	void WorldSystem::on_update(World& world, float delta)
-	{
-		// Empty implementation.
-	}
+	void WorldSystem::on_render(World& world, app::Graphics& graphics) {}
+	void WorldSystem::on_update(World& world, float delta) {}
+	void WorldSystem::on_fixed_update(World& world, app::Milliseconds time) {}
 
 	bool WorldSystem::subscribe(World& world)
 	{
@@ -67,8 +109,20 @@ namespace engine
 
 		//assert(&world == &this->world);
 
-		world.register_event<OnServiceUpdate, &WorldSystem::update>(*this);
-		world.register_event<OnServiceRender, &WorldSystem::render>(*this);
+		if (allow_update)
+		{
+			world.register_event<OnServiceUpdate, &WorldSystem::update>(*this);
+		}
+
+		if (allow_fixed_update)
+		{
+			world.register_event<OnServiceFixedUpdate, &WorldSystem::fixed_update>(*this);
+		}
+
+		if (allow_render)
+		{
+			world.register_event<OnServiceRender, &WorldSystem::render>(*this);
+		}
 
 		on_subscribe(world);
 

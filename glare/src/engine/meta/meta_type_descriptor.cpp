@@ -3,6 +3,7 @@
 #include "meta_type_resolution_context.hpp"
 #include "meta_value_operation.hpp"
 #include "meta_evaluation_context.hpp"
+#include "shared_storage_interface.hpp"
 
 #include "serial.hpp"
 #include "hash.hpp"
@@ -11,14 +12,19 @@
 #include "indirection.hpp"
 #include "data_member.hpp"
 #include "container.hpp"
+#include "runtime_traits.hpp"
 
 #include <engine/entity/entity_target.hpp>
 
-#include <string_view>
-#include <string>
+#include <util/json.hpp>
 
 #include <util/string.hpp>
 #include <util/parse.hpp>
+
+#include <util/binary/binary_input_stream.hpp>
+
+#include <string_view>
+#include <string>
 
 // Debugging related:
 #include <util/log.hpp>
@@ -160,6 +166,62 @@ namespace engine
 			0,
 			allow_nameless_fields
 		);
+	}
+
+	MetaTypeDescriptor::MetaTypeDescriptor
+	(
+		const MetaType& type,
+
+		util::BinaryInputStream& content,
+		const BinaryFormatConfig& binary_format,
+
+		const MetaParsingInstructions& instructions,
+		//std::size_t argument_offset,
+
+		std::optional<SmallSize> constructor_argument_count,
+		const MetaTypeDescriptorFlags& flags,
+
+		bool allow_nameless_fields
+	) :
+		type_id(0),
+		constructor_argument_count(constructor_argument_count),
+		flags(flags)
+	{
+		set_variables_impl
+		(
+			adopt_type(type),
+			content,
+			binary_format,
+			instructions,
+			0,
+			allow_nameless_fields
+		);
+	}
+
+	bool MetaTypeDescriptor::to_json(util::json& data_out, bool encode_type_information) const
+	{
+		const bool encode_as_array = has_anonymous_field_name();
+
+		util::json data = {};
+
+		bool result = false;
+
+		if (encode_as_array)
+		{
+			result = to_json_array_impl(data);
+		}
+		
+		if (!result)
+		{
+			result = to_json_object_impl(data, encode_type_information);
+		}
+
+		if (result)
+		{
+			data_out = std::move(data);
+		}
+
+		return result;
 	}
 
 	MetaType MetaTypeDescriptor::adopt_type(const MetaType& type)
@@ -521,6 +583,177 @@ namespace engine
 		}
 
 		return count;
+	}
+
+	std::size_t MetaTypeDescriptor::set_variables
+	(
+		util::BinaryInputStream& content,
+		const BinaryFormatConfig& binary_format,
+		const MetaParsingInstructions& instructions,
+
+		std::size_t argument_offset,
+
+		bool allow_nameless_fields
+	)
+	{
+		return set_variables_impl
+		(
+			get_type(),
+			content, binary_format,
+			instructions,
+			argument_offset,
+			allow_nameless_fields
+		);
+	}
+
+	std::size_t MetaTypeDescriptor::set_variables_impl
+	(
+		const MetaType& type,
+				
+		util::BinaryInputStream& content,
+		const BinaryFormatConfig& binary_format,
+				
+		const MetaParsingInstructions& instructions,
+		std::size_t argument_offset,
+				
+		bool allow_nameless_fields
+	)
+	{
+		const bool members_are_named = binary_format.member_ids();
+
+		if ((!members_are_named) && (!allow_nameless_fields))
+		{
+			return {};
+		}
+
+		auto member_binary_format = binary_format.decay();
+
+		const bool explicit_member_count_present = binary_format.count_members();
+		const bool read_only_members_included = binary_format.read_only_members();
+
+		const auto member_count = (explicit_member_count_present)
+			? content.read<BinaryFormatConfig::SmallLengthType>() // + static_cast<BinaryFormatConfig::LengthType>(argument_offset)
+			: count_data_members(type, true)
+		;
+
+		std::size_t members_processed = {};
+
+		for (std::size_t member_index = argument_offset; member_index < member_count; member_index++)
+		{
+			auto data_member = entt::meta_data {};
+
+			auto member_id = MetaSymbolID {};
+
+			if (members_are_named)
+			{
+				member_id = content.read<MetaSymbolID>();
+
+				data_member = resolve_data_member_by_id(type, true, member_id);
+			}
+			else
+			{
+				if (auto member_by_index = get_data_member_by_index(type, member_index, true))
+				{
+					data_member = std::get<1>(*member_by_index);
+				}
+			}
+
+			if (!data_member)
+			{
+				break;
+			}
+
+			if (!read_only_members_included)
+			{
+				if (data_member_is_read_only(data_member))
+				{
+					break;
+				}
+			}
+
+			auto member_type = MetaType {};
+			auto member_value = MetaAny {};
+
+			bool type_is_primitive = false;
+
+			if (member_binary_format.type_id_header()) // || binary_format.primitives_have_header()
+			{
+				const auto member_type_id = content.read<MetaTypeID>();
+
+				member_type = resolve(member_type_id);
+			}
+			else
+			{
+				member_type = data_member.type();
+			}
+
+			if (!member_type)
+			{
+				break;
+			}
+
+			type_is_primitive = observe_primitive_type
+			(
+				member_type,
+				
+				[&content, &member_binary_format, &member_value]<typename PrimitiveType>()
+				{
+					member_value = load_binary<PrimitiveType>(content, member_binary_format);
+				},
+				
+				true
+			);
+
+			if (!type_is_primitive)
+			{
+				const bool member_length_specified = member_binary_format.length_header();
+
+				auto member_length = BinaryFormatConfig::LengthType {};
+
+				if (member_length_specified)
+				{
+					content >> member_length;
+				}
+
+				const auto member_begin_position = content.get_input_position();
+
+				member_value = allocate_meta_any
+				(
+					MetaTypeDescriptor
+					{
+						member_type,
+						content,
+						member_binary_format,
+						instructions
+					},
+
+					instructions.storage
+				);
+
+				if (member_length_specified)
+				{
+					const auto intended_member_end_position = (member_begin_position + member_length);
+
+					const auto member_processed_position = content.get_input_position();
+
+					if (member_processed_position != intended_member_end_position)
+					{
+						break;
+					}
+				}
+			}
+
+			if (!member_value)
+			{
+				break;
+			}
+
+			set_variable(MetaVariable(member_id, std::move(member_value)));
+
+			members_processed++;
+		}
+
+		return members_processed;
 	}
 
 	std::size_t MetaTypeDescriptor::set_variables
@@ -995,7 +1228,7 @@ namespace engine
 				
 				print_warn("Failed to assign field: \"{}\" (#{}), for type: \"{}\" (#{})", _dbg_field_name, field_name, _dbg_type_name, type.id());
 
-				//auto test = try_get_underlying_value(field_value, args...);
+				auto test = try_get_underlying_value(field_value, args...);
 			}
 		}
 
@@ -1377,6 +1610,83 @@ namespace engine
 		}
 
 		return field_count;
+	}
+
+	bool MetaTypeDescriptor::to_json_array_impl(util::json& data_out) const
+	{
+		auto values_out = util::json::array_t {};
+
+		for (const auto& value : field_values)
+		{
+			auto encoded_value = engine::save(value);
+
+			if (encoded_value.empty())
+			{
+				return false;
+			}
+
+			values_out.emplace_back(std::move(encoded_value));
+		}
+
+		data_out = std::move(values_out);
+
+		return true;
+	}
+
+	bool MetaTypeDescriptor::to_json_object_impl(util::json& data_out, bool encode_type_information, bool skip_missing) const
+	{
+		//auto values_out = util::json::object_t {};
+
+		for (std::size_t index = 0; index < size(); index++)
+		{
+			if (index >= field_names.size())
+			{
+				if (skip_missing)
+				{
+					break;
+				}
+				else
+				{
+					return false;
+				}
+			}
+
+			const auto& field_name_id = field_names[index];
+			
+			const auto field_name_resolved = get_known_string_from_hash(field_name_id);
+
+			if (field_name_resolved.empty())
+			{
+				if (skip_missing)
+				{
+					continue;
+				}
+				else
+				{
+					return false;
+				}
+			}
+
+			const auto& field_value = field_values[index];
+
+			auto field_value_resolved = engine::save(field_value);
+
+			if (field_value_resolved.empty())
+			{
+				if (skip_missing)
+				{
+					continue;
+				}
+				else
+				{
+					return false;
+				}
+			}
+
+			data_out[util::json::string_t { field_name_resolved }] = std::move(field_value_resolved);
+		}
+
+		return true;
 	}
 
 	MetaTypeDescriptor load_descriptor

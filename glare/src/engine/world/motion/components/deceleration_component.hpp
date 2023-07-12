@@ -1,9 +1,12 @@
 #pragma once
 
+#include <util/sampler.hpp>
+
 namespace engine
 {
 	struct DecelerationComponent
 	{
-		float deceleration = 0.0f;
+		util::Sampler1D ground;
+		util::Sampler1D air;
 	};
 }
