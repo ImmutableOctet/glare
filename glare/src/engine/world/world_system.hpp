@@ -3,6 +3,8 @@
 #include <engine/types.hpp>
 //#include <engine/basic_system.hpp>
 
+#include <app/types.hpp>
+
 // If this macro is defined, we will always assume an inbound service-event is coming from a `World` object.
 // This can act as a minor speedup as we won't have to use RTTI (`dynamic_cast`) in order to determine the exact `Service` type.
 //#define WORLD_SYSTEM_ASSUME_SERVICE_IS_ALWAYS_WORLD 1
@@ -20,6 +22,7 @@ namespace engine
 
 	// Event types:
 	struct OnServiceUpdate;
+	struct OnServiceFixedUpdate;
 	struct OnServiceRender;
 
 	// Utility class for systems within a `World`.
@@ -28,7 +31,17 @@ namespace engine
 		public:
 			// NOTE: Subscription is deferred until the system is fully constructed.
 			// See also: `SystemManager`.
-			WorldSystem(World& world, bool allow_multiple_subscriptions=false);
+			WorldSystem
+			(
+				World& world,
+
+				bool allow_multiple_subscriptions=false,
+
+				bool allow_update=true,
+				bool allow_fixed_update=true,
+				bool allow_render=true
+			);
+
 			virtual ~WorldSystem();
 
 			//WorldSystem(WorldSystem&&) = delete;
@@ -79,6 +92,7 @@ namespace engine
 			World* resolve_world(const ServiceEventType& event_obj);
 
 			void update(const OnServiceUpdate& update_event);
+			void fixed_update(const OnServiceFixedUpdate& fixed_update_event);
 			void render(const OnServiceRender& render_event);
 
 			// Implementation of `unsubscribe`. (Used internally)
@@ -102,6 +116,9 @@ namespace engine
 			virtual void on_update(World& world, float delta);
 
 			// Default implementation; blank.
+			virtual void on_fixed_update(World& world, app::Milliseconds time);
+
+			// Default implementation; blank.
 			virtual void on_render(World& world, app::Graphics& graphics);
 
 			// Empty implementation provided by default.
@@ -121,5 +138,9 @@ namespace engine
 
 			// Whether we allow for multiple subscriptions concurrently.
 			bool allow_multiple_subscriptions : 1;
+
+			bool allow_update                 : 1;
+			bool allow_fixed_update           : 1;
+			bool allow_render                 : 1;
 	};
 }
