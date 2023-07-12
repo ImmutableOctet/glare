@@ -252,9 +252,15 @@ namespace engine
 
 			if ((try_encode_standard_header) && (binary_format.standard_header()))
 			{
+				// NOTE: Network byte-order is always used for the standard header segment.
+				data_out.set_network_byte_order(true);
+
 				data_out << binary_format.format_version;
 				data_out << binary_format.format;
 				data_out << binary_format.string_format;
+
+				// From this point onward, use the prescribed byte-order.
+				data_out.set_network_byte_order(binary_format.big_endian());
 			}
 
 			if ((try_encode_type_header) && (binary_format.type_id_header()))
@@ -544,6 +550,9 @@ namespace engine
 
 			if (binary_format.standard_header())
 			{
+				// NOTE: Network byte-order is always used for the standard header segment.
+				data_in.set_network_byte_order(true);
+
 				const auto intended_format_version = data_in.read<BinaryFormatConfig::FormatVersion>();
 
 				if (binary_format.format_version == BinaryFormatConfig::any_format_version)
@@ -565,6 +574,9 @@ namespace engine
 
 				binary_format_used.string_format = data_in.read<StringBinaryFormat>();
 			}
+
+			// From this point onward, use the prescribed byte-order.
+			data_in.set_network_byte_order(binary_format_used.big_endian());
 
 			return binary_format_used;
 		}
