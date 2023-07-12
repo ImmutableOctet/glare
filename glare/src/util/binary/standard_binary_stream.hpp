@@ -32,9 +32,10 @@ namespace util
 
 			using GenericNativeIOStream = std::iostream;
 
-			StandardBinaryStreamImpl(NativeInputStream& input_stream, NativeOutputStream& output_stream) : 
-				InputStreamWrapper(input_stream),
-				OutputStreamWrapper(output_stream)
+			template <typename ...SharedArgs>
+			StandardBinaryStreamImpl(NativeInputStream& input_stream, NativeOutputStream& output_stream, SharedArgs&&... shared_args) :
+				InputStreamWrapper(input_stream, shared_args...),
+				OutputStreamWrapper(output_stream, shared_args...)
 			{}
 
 			template
