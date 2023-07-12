@@ -13,6 +13,9 @@
 namespace util
 {
 	// Implements simple I/O operations for a fixed-size memory buffer.
+	// 
+	// TODO: Look into having the `sync_input_and_output` flag control
+	// whether network byte-order remains in sync.
 	template <typename BufferType, typename SuperStreamType=BinaryStream>
 	class FixedBinaryStreamImpl : public SuperStreamType
 	{
@@ -107,15 +110,27 @@ namespace util
 			}
 
 		public:
-			FixedBinaryStreamImpl(BufferType&& buffer, bool sync_input_and_output=true) :
+			template <typename ...SharedArgs>
+			FixedBinaryStreamImpl(BufferType&& buffer, bool sync_input_and_output, SharedArgs&&... shared_args) :
+				SuperStreamType(std::forward<SharedArgs>(shared_args)...),
+
 				buffer(std::move(buffer)),
 				sync_input_and_output(sync_input_and_output)
 			{}
 
-			template<typename=std::enable_if_t<std::is_default_constructible_v<BufferType>>>
-			FixedBinaryStreamImpl(bool sync_input_and_output=true)
-				: sync_input_and_output(sync_input_and_output)
+			FixedBinaryStreamImpl(BufferType&& buffer) :
+				FixedBinaryStreamImpl(std::move(buffer), true) {}
+
+			template <typename SharedArgs..., typename=std::enable_if_t<std::is_default_constructible_v<BufferType>>>
+			FixedBinaryStreamImpl(bool sync_input_and_output, SharedArgs&&... shared_args) :
+				SuperStreamType(std::forward<SharedArgs>(shared_args)...),
+
+				sync_input_and_output(sync_input_and_output)
 			{}
+
+			template <typename=std::enable_if_t<std::is_default_constructible_v<BufferType>>>
+			FixedBinaryStreamImpl() :
+				FixedBinaryStreamImpl(true) {}
 
 			FixedBinaryStreamImpl(const FixedBinaryStreamImpl&) = delete;
 			FixedBinaryStreamImpl(FixedBinaryStreamImpl&&) noexcept = default;
