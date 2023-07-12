@@ -229,7 +229,7 @@ namespace engine
 		// Handle changes in entity transforms.
 		handle_transform_events(delta);
 
-		// Update systems:
+		// Update systems.
 		Service::update(time, delta);
 	}
 
