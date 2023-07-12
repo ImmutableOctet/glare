@@ -63,8 +63,14 @@
 
 namespace glare
 {
-	Glare::Glare():
-		Game("Project Glare", 1600, 900, 60, false, false) // true
+	Glare::Glare() :
+		Game
+		(
+			"Project Glare",
+			1600, 900,
+			60, DeltaSystemMode::FixedUpdate,
+			false, false // true
+		)
 	{
 		using namespace graphics;
 		
@@ -103,7 +109,7 @@ namespace glare
 		//const auto path = std::filesystem::path { "assets/maps/room" };
 		//const auto path = std::filesystem::path { "assets/maps/collision_test" };
 
-		world.load(path, "map.json", engine::null, &systems);
+		world.load(path, "map.json", engine::null, engine::SceneLoaderConfig {}, &systems);
 	}
 
 	engine::Transform Glare::get_named_transform(std::string_view name)
