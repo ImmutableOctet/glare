@@ -11,6 +11,8 @@
 #include <stdexcept>
 #include <algorithm>
 
+//#include <bit>
+
 #include <cstdint>
 #include <cstring>
 
@@ -168,9 +170,8 @@ namespace util
 				<
 					// Allows for use of `std::string_view` as `T`, while providing `std::string` as output:
 					(std::is_same_v<std::decay_t<T>, std::string_view>),
-						std::string,
-						
-						T
+					std::string,
+					T
 				>
 			>
 			OutputType read() const
@@ -271,6 +272,28 @@ namespace util
 				return false;
 			}
 
+			// Sets the intended byte order; true is network byte order (i.e. big-endian),
+			// false is the system's native byte order.
+			// 
+			// NOTE: May change this to virtual later.
+			inline void set_network_byte_order(bool value)
+			{
+				this->use_network_byte_order = value;
+			}
+
+			// Retrieves a boolean value indicating if the stream will handle conversion of
+			// incoming integral and floating-point values as having network byte-order.
+			// 
+			// If enabled, byte-swapping may need to be performed on every primitive value operation.
+			// 
+			// The network byte-order configuration does not affect non-primitive value operations.
+			// 
+			// NOTE: May change this to virtual later.
+			inline bool get_network_byte_order() const
+			{
+				return this->use_network_byte_order;
+			}
+
 			// This acts as shorthand for `get_input_position`.
 			inline StreamPosition tellg() const
 			{
@@ -293,6 +316,12 @@ namespace util
 			inline bool eof() const
 			{
 				return end_of_file();
+			}
+
+			// This acts as an alias to `get_network_byte_order`.
+			inline bool is_network_byte_order() const
+			{
+				return get_network_byte_order();
 			}
 
 			inline explicit operator bool() const

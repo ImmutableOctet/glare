@@ -122,6 +122,28 @@ namespace util
 				return can_write(static_cast<std::size_t>(1));
 			}
 
+			// Sets the intended byte order; true is network byte order (i.e. big-endian),
+			// false is the system's native byte order.
+			// 
+			// NOTE: May change this to virtual later.
+			inline void set_network_byte_order(bool value)
+			{
+				this->use_network_byte_order = value;
+			}
+
+			// Retrieves a boolean value indicating if the stream will handle conversion of
+			// incoming integral and floating-point values as having network byte-order.
+			// 
+			// If enabled, byte-swapping may need to be performed on every primitive value operation.
+			// 
+			// The network byte-order configuration does not affect non-primitive value operations.
+			// 
+			// NOTE: May change this to virtual later.
+			inline bool get_network_byte_order() const
+			{
+				return this->use_network_byte_order;
+			}
+
 			template <typename T>
 			bool can_write_value() const
 			{
@@ -164,6 +186,12 @@ namespace util
 			BinaryOutputStream& write(T&& value)
 			{
 				return write_from(std::forward<T>(value));
+			}
+
+			// This acts as an alias to `get_network_byte_order`.
+			inline bool is_network_byte_order() const
+			{
+				return get_network_byte_order();
 			}
 
 			// Utility operator for `write_from`.
