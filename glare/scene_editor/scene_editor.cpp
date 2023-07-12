@@ -38,8 +38,14 @@
 
 namespace glare
 {
-	SceneEditor::SceneEditor():
-		Game("Glare Scene Editor", 1600, 900, 60, false, false) // true
+	SceneEditor::SceneEditor() :
+		Game
+		(
+			"Glare Scene Editor",
+			1600, 900,
+			60, DeltaSystemMode::OnDemand,
+			false, false // true
+		)
 	{
 		using namespace graphics;
 
