@@ -1,0 +1,7 @@
+{
+	"children":
+	[
+		"editor_camera/editor_camera",
+		"cursor"
+	]
+}

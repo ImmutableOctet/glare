@@ -1,0 +1,9 @@
+{
+	"triggers":
+	{
+		"OnButtonPressed|Button::Interact":
+		{
+			"state": "editor_camera_freelook"
+		}
+	}
+}

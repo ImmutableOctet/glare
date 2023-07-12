@@ -1,0 +1,12 @@
+{
+	"merge": "track_mouse_2d",
+
+	"triggers":
+	[
+		{
+			"trigger": "OnButtonPressed|Button::Shield", // MediumAttack // Button::EditorSelect
+
+			"do": "select_entity.es"
+		}
+	]
+}

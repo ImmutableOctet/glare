@@ -1,0 +1,13 @@
+{
+	"triggers":
+	[
+		{
+			"trigger": "OnMousePosition",
+			
+			"Transform2DComponent":
+			{
+				"position": ["(OnMousePosition::x):float", "(OnMousePosition::y):float"]
+			}
+		}
+	]
+}
