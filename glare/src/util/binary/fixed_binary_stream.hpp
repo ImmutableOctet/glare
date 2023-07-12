@@ -121,7 +121,7 @@ namespace util
 			FixedBinaryStreamImpl(BufferType&& buffer) :
 				FixedBinaryStreamImpl(std::move(buffer), true) {}
 
-			template <typename SharedArgs..., typename=std::enable_if_t<std::is_default_constructible_v<BufferType>>>
+			template <typename ...SharedArgs, typename=std::enable_if_t<std::is_default_constructible_v<BufferType>>>
 			FixedBinaryStreamImpl(bool sync_input_and_output, SharedArgs&&... shared_args) :
 				SuperStreamType(std::forward<SharedArgs>(shared_args)...),
 
