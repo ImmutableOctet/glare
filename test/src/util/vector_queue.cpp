@@ -11,21 +11,26 @@ TEST_CASE("util::vector_queue", "[util]")
 
 	auto data = util::vector_queue<T> {};
 
-	data.emplace(100);
-	data.emplace(200);
-	data.emplace(300);
-	data.emplace(424);
-
-	auto sum = T {};
-
-	while (!data.empty())
+	// Run twice to ensure determinism.
+	for (auto i = 1; i <= 2; i++)
 	{
-		sum += data.front();
+		data.emplace(100);
+		data.emplace(200);
+		data.emplace(300);
+		data.emplace(424);
 
-		data.pop();
+		auto sum = T {};
+
+		while (!data.empty())
+		{
+			sum += data.front();
+
+			data.pop();
+		}
+
+		REQUIRE(data.size() == static_cast<std::size_t>(0));
+		REQUIRE(sum == 1024);
 	}
-
-	REQUIRE(sum == 1024);
 }
 
 TEST_CASE("util::small_vector_queue", "[util]")
@@ -34,21 +39,26 @@ TEST_CASE("util::small_vector_queue", "[util]")
 
 	auto data = util::small_vector_queue<T, 6> {};
 
-	data.emplace(16);
-	data.emplace(32);
-	data.emplace(64);
-	data.emplace(128);
-	data.emplace(256);
-	data.emplace(512);
-
-	auto sum = T {};
-
-	while (!data.empty())
+	// Run twice to ensure determinism.
+	for (auto i = 1; i <= 2; i++)
 	{
-		sum += data.front();
+		data.emplace(16);
+		data.emplace(32);
+		data.emplace(64);
+		data.emplace(128);
+		data.emplace(256);
+		data.emplace(512);
 
-		data.pop();
+		auto sum = T {};
+
+		while (!data.empty())
+		{
+			sum += data.front();
+
+			data.pop();
+		}
+
+		REQUIRE(data.size() == static_cast<std::size_t>(0));
+		REQUIRE(sum == 1008);
 	}
-
-	REQUIRE(sum == 1008);
 }
