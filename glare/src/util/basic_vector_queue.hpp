@@ -48,8 +48,10 @@ namespace util
 
 				constexpr void pop_front()
 				{
-					if (VectorType::empty())
+					if (empty())
 					{
+						queue_front_index = {};
+
 						return;
 					}
 
@@ -66,6 +68,13 @@ namespace util
 					}
 
 					queue_front_index = next_front_index;
+				}
+
+				constexpr size_type size() const
+				{
+					assert(static_cast<size_type>(queue_front_index) <= VectorType::size());
+
+					return (VectorType::size() - static_cast<size_type>(queue_front_index));
 				}
 
 				constexpr bool empty() const
