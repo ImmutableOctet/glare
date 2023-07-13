@@ -2,6 +2,7 @@
 
 #include <queue>
 #include <type_traits>
+#include <utility>
 
 #include <cassert>
 
@@ -22,7 +23,10 @@ namespace util
 		class vector_to_queue_interface : public VectorType
 		{
 			public:
-				using size_type = std::size_t; // typename VectorType::size_type;
+				using value_type = typename VectorType::value_type;
+				using size_type = typename VectorType::size_type; // std::size_t;
+				using reference = typename VectorType::reference;
+				using const_reference = typename VectorType::const_reference;
 
 			private:
 				using IndexType = size_type; // typename VectorType::size_type;
@@ -50,24 +54,85 @@ namespace util
 				{
 					if (empty())
 					{
-						queue_front_index = {};
-
 						return;
 					}
 
 					const auto next_front_index = (queue_front_index + static_cast<IndexType>(1));
 
+					/*
 					if (next_front_index > static_cast<IndexType>(VectorType::size()))
 					{
 						return;
 					}
+					*/
 
 					if constexpr (assign_popped_to_default_constructed)
 					{
-						(*this)[queue_front_index] = typename VectorType::value_type {};
+						(*this)[queue_front_index] = value_type {};
 					}
 
-					queue_front_index = next_front_index;
+					if (next_front_index >= static_cast<IndexType>(VectorType::size()))
+					{
+						clear();
+					}
+					else
+					{
+						queue_front_index = next_front_index;
+					}
+				}
+
+				constexpr void push_back
+				(
+					std::enable_if_t
+					<
+						std::is_copy_constructible_v<value_type>,
+						const value_type& // typename VectorType::const_reference
+					>
+					value
+				)
+				{
+					if (empty())
+					{
+						clear();
+					}
+
+					VectorType::push_back(value);
+				}
+
+				constexpr void push_back
+				(
+					std::enable_if_t
+					<
+						std::is_move_constructible_v<value_type>,
+						value_type&&
+					>
+					value
+				)
+				{
+					if (empty())
+					{
+						clear();
+					}
+
+					VectorType::push_back(std::move(value));
+				}
+
+				template <typename ...Args>
+				constexpr reference emplace_back(Args&&... args)
+				{
+					if (empty())
+					{
+						clear();
+					}
+
+					return VectorType::emplace_back(std::forward<Args>(args)...);
+				}
+
+				constexpr void clear()
+				{
+					VectorType::clear();
+
+					queue_front_index = {};
 				}
 
 				constexpr size_type size() const
