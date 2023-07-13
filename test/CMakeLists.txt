@@ -25,6 +25,7 @@ add_executable(
     "src/util/history_log.cpp"
     
     "src/math/conversion.cpp"
+    "src/util/vector_queue.cpp"
 )
 
 target_compile_features(glare_test PRIVATE cxx_std_23)
