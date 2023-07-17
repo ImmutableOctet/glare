@@ -35,6 +35,8 @@ namespace engine
 				};
 			};
 
+			ButtonStates(ButtonsRaw bits={});
+
 			bool get_button(Button button) const;
 			void set_button(Button button, bool value);
 

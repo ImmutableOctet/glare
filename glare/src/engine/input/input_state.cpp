@@ -2,6 +2,10 @@
 
 namespace engine
 {
+	InputState::ButtonStates::ButtonStates(ButtonsRaw bits) :
+		bits(bits)
+	{}
+
 	bool InputState::ButtonStates::get_button(Button button) const
 	{
 		auto button_raw = static_cast<ButtonsRaw>(button);
@@ -25,6 +29,6 @@ namespace engine
 
 	void InputState::ButtonStates::clear()
 	{
-		bits = 0;
+		bits = {};
 	}
 }
