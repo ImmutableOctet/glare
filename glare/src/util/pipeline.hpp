@@ -1,12 +1,25 @@
 #pragma once
 
+#include "function_traits.hpp"
+
 #include <utility>
 #include <type_traits>
 
-#include "function_traits.hpp"
-
 namespace util
 {
+    namespace impl
+    {
+        template <typename in_type, typename out_type>
+        inline constexpr bool pipeline_output_same_type_as_input =
+        (
+            (std::is_same_v<std::decay_t<in_type>, std::decay_t<out_type>>)
+            &&
+            (std::is_const_v<std::remove_reference_t<in_type>>)
+            &&
+            (std::is_const_v<std::remove_reference_t<out_type>>)
+        );
+    }
+
 	// Retrieves details on the input type and the phase that accepts it.
     template<typename... Phases>
     struct pipeline_input
@@ -26,39 +39,90 @@ namespace util
         using type = std::invoke_result_t<final_phase, first_arg_type>;
     };
 
-    // Last recursive pipeline phase. (1:1)
-    template<typename CurrentPhase>
-    auto execute_phases(typename first_argument_type<CurrentPhase> input_value, CurrentPhase& last_phase)
-    {
-        return last_phase(input_value);
-    }
-
     // Execute each phase in the pipeline, forwarding the remaining phases to each iteration.
     // The last recursive execution will simply execute the last phase. (see above)
-    template<typename CurrentPhase, typename... NextPhases>
-    typename std::enable_if
-    <
-        (sizeof...(NextPhases) > 0),
-        typename pipeline_output<CurrentPhase, NextPhases...>::type
-    >::type
-    execute_phases(typename pipeline_input<CurrentPhase, NextPhases...>::type input_value, CurrentPhase current_phase, NextPhases&... next_phases)
+    template <typename CurrentPhase, typename... NextPhases>
+    constexpr decltype(auto) execute_phases
+    (
+        typename pipeline_input<CurrentPhase, NextPhases...>::type input_value,
+        CurrentPhase& current_phase,
+        NextPhases&... next_phases
+    )
     {
-        return execute_phases(current_phase(input_value), next_phases...);
+        using ReturnType = std::conditional_t
+        <
+            impl::pipeline_output_same_type_as_input
+            <
+                typename pipeline_input<CurrentPhase, NextPhases...>::type,
+                typename pipeline_output<CurrentPhase, NextPhases...>::type
+            >,
+
+            void,
+
+            typename pipeline_output<CurrentPhase, NextPhases...>::type
+        >;
+
+        if constexpr (std::is_void_v<decltype(current_phase(input_value))>)
+        {
+            current_phase(input_value);
+
+            if constexpr (sizeof...(next_phases) > 0)
+            {
+                if constexpr (std::is_void_v<ReturnType>)
+                {
+                    execute_phases(input_value, next_phases...);
+                }
+                else
+                {
+                    return execute_phases(input_value, next_phases...);
+                }
+            }
+        }
+        else
+        {
+            if constexpr (sizeof...(next_phases) > 0)
+            {
+                return execute_phases(current_phase(std::forward<decltype(input_value)>(input_value)), next_phases...);
+            }
+            else
+            {
+                if constexpr (std::is_void_v<ReturnType>)
+                {
+                    current_phase(std::forward<decltype(input_value)>(input_value));
+                }
+                else
+                {
+                    return current_phase(std::forward<decltype(input_value)>(input_value));
+                }
+            }
+        }
     }
 
     // Expand a tuple into variadic arguments, and apply `execute_phases`.
     template <typename InputValue, typename Phases, size_t... PhaseIndices>
-    constexpr auto execute_phases_expansion(InputValue&& input_value, Phases& phases, std::index_sequence<PhaseIndices...>)
+    constexpr decltype(auto) execute_phases_expansion(InputValue&& input_value, Phases& phases, std::index_sequence<PhaseIndices...>)
     {
-        //return execute_phases(input_value, std::get<PhaseIndices>(phases)...);
-        //return execute_phases(input_value, std::forward<PhaseIndices>(std::get<PhaseIndices>(phases))...);
-        return execute_phases(std::forward<InputValue>(input_value), std::get<PhaseIndices>(phases)...);
+        if constexpr (std::is_void_v<decltype(execute_phases(std::forward<InputValue>(input_value), std::get<PhaseIndices>(phases)...))>)
+        {
+            execute_phases(std::forward<InputValue>(input_value), std::get<PhaseIndices>(phases)...);
+        }
+        else
+        {
+            return execute_phases(std::forward<InputValue>(input_value), std::get<PhaseIndices>(phases)...);
+        }
     }
 
     template <typename InputValue, typename Phases>
-    constexpr auto execute_phases_tuple(InputValue&& input_value, Phases& phases)
+    constexpr decltype(auto) execute_phases_tuple(InputValue&& input_value, Phases& phases)
     {
-        return execute_phases_expansion(std::forward<InputValue>(input_value), phases, std::make_index_sequence<std::tuple_size<Phases>::value>{});
+        if constexpr (std::is_void_v<decltype(execute_phases_expansion(std::forward<InputValue>(input_value), phases, std::make_index_sequence<std::tuple_size<Phases>::value> {}))>)
+        {
+            execute_phases_expansion(std::forward<InputValue>(input_value), phases, std::make_index_sequence<std::tuple_size<Phases>::value> {});
+        }
+        else
+        {
+            return execute_phases_expansion(std::forward<InputValue>(input_value), phases, std::make_index_sequence<std::tuple_size<Phases>::value> {});
+        }
     }
 
     // Creates a pipeline from multiple phases, supplied as template parameters. (see also: `make_pipeline`)
@@ -69,16 +133,47 @@ namespace util
         using in_type = typename pipeline_input<Phases...>::type;
         using out_type = typename pipeline_output<Phases...>::type;
 
+        using in_value_type = std::remove_const_t<std::remove_reference_t<in_type>>;
+        using in_rvalue_type = in_value_type&&;
+
         // Tuple holding the current state of each phase.
         std::tuple<Phases...> phases;
         
         pipeline(std::tuple<Phases...>&& phases) : phases(std::forward<std::tuple<Phases...>>(phases)) {};
         pipeline(Phases&&... phases) : phases(std::tuple<Phases...>(std::forward<Phases>(phases)...)) {};
-        
+
         // Call operator; `pipeline` objects are lazy and will not execute until this is invoked.
-        out_type operator()(in_type input_value)
+        template
+        <
+            typename InputArgType,
+
+            bool bypass_return_value =
+            (
+                (std::is_rvalue_reference_v<InputArgType>)
+                ||
+                (
+                    (impl::pipeline_output_same_type_as_input<in_type, out_type>)
+                    &&
+                    (
+                        (std::is_same_v<std::decay_t<InputArgType>, std::decay_t<in_type>>)
+                        ||
+                        (std::is_constructible_v<std::decay_t<in_type>, InputArgType>)
+                    )
+                )
+            )
+        >
+        decltype(auto) operator()(InputArgType&& input_value) // -> out_type
         {
-            return execute_phases_tuple(input_value, phases);
+            if constexpr (bypass_return_value || std::is_void_v<decltype(execute_phases_tuple(input_value, phases))>)
+            {
+                execute_phases_tuple(input_value, phases);
+            }
+            else
+            {
+                //static_assert(std::is_same_v<decltype(execute_phases_tuple(input_value, phases)), out_type>); // std::is_convertible_v<...>
+
+                return execute_phases_tuple(input_value, phases);
+            }
         }
     };
 

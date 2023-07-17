@@ -52,17 +52,14 @@ namespace engine
 	{
 		protected:
 			util::pipeline<RenderPhases...> phases;
+
 		public:
 			RenderPipelineImpl(RenderPhases&&... phases)
 				: phases(std::forward<RenderPhases>(phases)...) {}
 
-			virtual const RenderParameters& render(const RenderParameters& parameters) override
+			virtual void render(const RenderParameters& parameters) override
 			{
-				//return phases(parameters);
-				
 				phases(parameters);
-
-				return parameters;
 			}
 	};
 
