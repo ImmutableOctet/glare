@@ -38,7 +38,7 @@ namespace engine
 			{
 				if (resolve_instance_path)
 				{
-					this->paths.instance_path = resolve_path(this->paths.instance_path, base_path);
+					this->paths.instance_path = resolve_reference(this->paths.instance_path, base_path); // resolve_path(...);
 				}
 			}
 
