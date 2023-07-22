@@ -435,6 +435,11 @@ namespace engine
             // Scale:
             .func<util::lambda_as_function_ptr<[](const math::Matrix4x4& m, const math::Vector3D& v) { return math::scale(m, v); }>()>("scale"_hs)
 
+            // Mix:
+            .func<util::lambda_as_function_ptr<[](const math::Quaternion& x, const math::Quaternion& y, float a) { return math::mix(x, y, a); }>()>("mix"_hs)
+            .func<util::lambda_as_function_ptr<[](const math::Vector3D& x, const math::Vector3D& y, const math::Vector3D& a) { return math::mix(x, y, a); }>()>("mix"_hs)
+            .func<util::lambda_as_function_ptr<[](const math::Vector3D& x, const math::Vector3D& y, float a) { return math::mix(x, y, a); }>()>("mix"_hs)
+
             // General:
             .func<&math::positive<std::int64_t>>("positive"_hs)
             .func<&math::positive<std::int32_t>>("positive"_hs)
