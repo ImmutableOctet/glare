@@ -16,6 +16,7 @@ namespace math
 	using glm::translate;
 	using glm::rotate;
 	using glm::scale;
+	using glm::mix;
 
 	// Standard math functions:
 	using std::abs;
