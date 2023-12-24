@@ -15,7 +15,7 @@
 // TODO: Look into removing this from the main 'types' header.
 namespace graphics
 {
-	struct Animation;
+	struct AnimationData;
 }
 
 namespace engine
@@ -46,9 +46,9 @@ namespace engine
 	using Sink = entt::sink<sink_parameters...>;
 	*/
 
-	using Animation    = graphics::Animation;
-	using AnimationID  = graphics::AnimationID;
-	using BoneID       = graphics::BoneID;
+	using AnimationID    = entt::id_type; // graphics::AnimationID;
+	using BoneID         = entt::id_type; // graphics::BoneID;
+	using BoneIndex      = graphics::BoneIndex;
 
 	// NOTE: Must be equivalent to `app::input::PlayerInputID`.
 	using PlayerIndex = std::uint16_t;
