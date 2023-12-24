@@ -14,6 +14,7 @@
 #include <math/format.hpp>
 #include <math/types.hpp>
 #include <math/joyhat.hpp>
+#include <math/oscillate.hpp>
 
 #include <util/lambda.hpp>
 
@@ -534,6 +535,14 @@ namespace engine
 
             .func<&math::slerp>("slerp"_hs)
             .func<&math::slerp_unnormalized>("slerp_unnormalized"_hs)
+        ;
+
+        // `math:oscillate`:
+        math_type = math_type
+            .func<static_cast<float(*)(float, float, float)>(&math::oscillate<float>)>("oscillate"_hs)
+            .func<static_cast<float(*)(float)>(&math::oscillate<float>)>("oscillate"_hs)
+
+            .func<static_cast<float(*)(float)>(&math::oscillate_normalized<float>)>("oscillate_normalized"_hs)
         ;
 
         // `math:surface`:
