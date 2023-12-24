@@ -28,6 +28,8 @@
 #include <engine/meta/meta_parsing_context.hpp>
 #include <engine/meta/indirect_meta_data_member.hpp>
 
+#include <engine/world/animation/animation_slice.hpp>
+
 #include <util/algorithm.hpp>
 #include <util/string.hpp>
 #include <util/parse.hpp>
@@ -258,6 +260,95 @@ namespace engine
 		return result;
 	}
 
+	std::size_t process_animation_list
+	(
+		EntityDescriptor& descriptor,
+		AnimationRepository& animations_out,
+		const util::json& animation_content,
+
+		const MetaParsingContext& opt_parsing_context
+	)
+	{
+		if (!animation_content.is_object())
+		{
+			return {};
+		}
+
+		auto animations_processed = std::size_t {};
+
+		auto furthest_frame_index = animations_out.get_furthest_frame_sliced();
+
+		auto& animation_slices = animations_out.slices;
+
+		for (const auto& animation_proxy : animation_content.items())
+		{
+			const auto& animation_name = animation_proxy.key();
+			const auto& animation_description = animation_proxy.value();
+
+			auto animation_begin = (furthest_frame_index + static_cast<FrameIndex>(1));
+			auto animation_end   = animation_begin; // FrameIndex {};
+
+			switch (animation_description.type())
+			{
+				case util::json::value_t::object:
+				{
+					if (const auto manual_frame_begin = util::find_any(animation_description, "from", "begin", "start", "first", "left"); manual_frame_begin != animation_description.end())
+					{
+						if (manual_frame_begin->is_number_integer() || manual_frame_begin->is_number_unsigned())
+						{
+							animation_begin = manual_frame_begin->get<FrameIndex>();
+						}
+
+						if (const auto manual_frame_end = util::find_any(animation_description, "to", "end", "stop", "last", "second", "right"); manual_frame_end != animation_description.end())
+						{
+							if (manual_frame_end->is_number_integer() || manual_frame_end->is_number_unsigned())
+							{
+								animation_end = manual_frame_end->get<FrameIndex>();
+							}
+						}
+					}
+
+					if (animation_end <= animation_begin)
+					{
+						if (const auto length_specification = util::find_any(animation_description, "length", "size", "frames"); length_specification != animation_description.end())
+						{
+							if (length_specification->is_number_integer() || length_specification->is_number_unsigned())
+							{
+								animation_end = (animation_begin + length_specification->get<FrameIndex>());
+							}
+						}
+					}
+
+					break;
+				}
+
+				case util::json::value_t::number_integer:
+				case util::json::value_t::number_unsigned:
+				{
+					const auto animation_length = animation_description.get<FrameIndex>();
+
+					animation_begin  = furthest_frame_index;
+					animation_end    = (animation_begin + animation_length);
+
+					break;
+				}
+			}
+
+			if (animation_end > animation_begin)
+			{
+				const auto animation_id = hash(animation_name).value();
+
+				animation_slices[animation_id] = AnimationSlice { animation_begin, animation_end };
+
+				furthest_frame_index = std::max(furthest_frame_index, animation_end);
+
+				animations_processed++;
+			}
+		}
+
+		return animations_processed;
+	}
+
 	std::size_t process_component_list
 	(
 		EntityDescriptor& descriptor,
@@ -304,7 +395,11 @@ namespace engine
 
 		std::size_t count = 0;
 
-		util::json_for_each(components, [&as_component, &count](const util::json& comp)
+		util::json_for_each
+		(
+			components,
+
+			[&as_component, &count](const util::json& comp)
 		{
 			switch (comp.type())
 			{
@@ -335,7 +430,8 @@ namespace engine
 					break;
 				}
 			}
-		});
+			}
+		);
 
 		return count;
 	}
