@@ -496,7 +496,9 @@ namespace engine
 	{
 		// Use matrix to store the static value.
 		//return set_local_basis(glm::mat3_cast(basis));
-		return set_local_basis(math::to_rotation_matrix(glm::conjugate(basis))); // TODO: Review use of 'conjugate'.
+
+		// TODO: Review use of 'conjugate'.
+		return set_local_basis(math::to_rotation_matrix(glm::conjugate(basis)));
 	}
 
 	Transform& Transform::set_local_basis_q(const math::Quaternion& basis, float turn_speed)
@@ -878,7 +880,7 @@ namespace engine
 	Transform& Transform::set_local_matrix(const math::Matrix& matrix)
 	{
 		/*
-		// Unused: Alternative implementation.
+		// Alternative implementation:
 		glm::vec3 scale;
 		glm::vec3 translation;
 		glm::vec3 skew;
@@ -891,25 +893,24 @@ namespace engine
 		transform._m = m;
 
 		set_local_position(translation);
-		set_local_scale(scale);
 		set_local_basis_q(rotation);
+		set_local_scale(scale);
 
 		return invalidate();
 		*/
 
-		auto scale = math::get_scaling(matrix);
+		const auto translation = math::get_translation(matrix); // matrix[3]
+		const auto scale = math::get_scaling(matrix);
 
-		math::Vector translation = math::get_translation(matrix); // matrix[3]
+		const auto inverse_scale = math::Vector3D { (1.0f / scale.x), (1.0f / scale.y), (1.0f / scale.z) };
+		const auto rotation = glm::scale(matrix, inverse_scale);
 
 		set_local_position(translation);
-
-		//set_basis(glm::scale(matrix, { (1.0 / scale.x), (1.0 / scale.y), (1.0 / scale.z) }));
-		//set_scale(scale);
-
-		set_local_basis(glm::scale(matrix, { (1.0 / scale.x), (1.0 / scale.y), (1.0 / scale.z) }));
+		set_local_basis(rotation);
 		set_local_scale(scale);
 
-		//invalidate(); // <-- Already handled by local-coordinate setters, used above.
+		// NOTE: Invalidation is already handled by local-coordinate setters, used above.
+		//invalidate();
 
 		return *this;
 	}
