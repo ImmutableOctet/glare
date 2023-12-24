@@ -85,7 +85,7 @@ namespace engine
 
 		ModelData model_data_out;
 
-		std::shared_ptr<AnimationData> animations;
+		std::shared_ptr<AnimationData> remote_animation_store;
 
 		model_loader.on_model = [&](ModelLoader& loader, ModelLoader::ModelData& model_data) -> void
 		{
@@ -104,12 +104,13 @@ namespace engine
 
 			if (loader.get_config().is_animated.value_or(false) || (loader.has_skeleton()))
 			{
-				if (!animations)
+				if (!remote_animation_store)
 				{
-					animations = std::make_shared<AnimationData>();
+					// NOTE: Shared `remote_animation_store` variable used here to allow usage outside of this routine.
+					remote_animation_store = std::make_shared<AnimationData>();
 				}
 
-				animation_data[loaded_model] = animations;
+				animation_data[loaded_model] = remote_animation_store;
 			}
 
 			model_data_out.models.push_back
@@ -125,14 +126,17 @@ namespace engine
 
 		//auto& model_data = model_loader.get_model_storage();
 
-		if (model_loader.has_animations() && (animations))
+		if (remote_animation_store)
 		{
-			animations->animations = std::move(model_loader.get_animations());
-		}
+			if (model_loader.has_skeleton())
+			{
+				remote_animation_store->skeleton = std::move(model_loader.get_skeleton());
+			}
 
-		if (model_loader.has_skeleton() && (animations))
-		{
-			animations->skeleton = std::move(model_loader.get_skeleton());
+			if (model_loader.has_animations())
+			{
+				remote_animation_store->frames = std::move(model_loader.get_animations());
+			}
 		}
 
 		if (cache_result)
@@ -183,16 +187,24 @@ namespace engine
 		return nullptr;
 	}
 
-	const std::shared_ptr<AnimationData> ResourceManager::get_animation_data(const WeakModelRef model) const
+	std::shared_ptr<const AnimationData> ResourceManager::get_animation_data(const WeakModelRef model) const
 	{
-		auto it = animation_data.find(model);
-
-		if (it != animation_data.end())
+		if (auto it = animation_data.find(model); it != animation_data.end())
 		{
 			return it->second;
 		}
 
-		return nullptr;
+		return {};
+	}
+
+	const AnimationData* ResourceManager::peek_animation_data(const WeakModelRef model) const
+	{
+		if (auto it = animation_data.find(model); it != animation_data.end())
+		{
+			return it->second.get();
+		}
+
+		return {};
 	}
 
 	// NOTE: Implementation may not be thread-safe due to use of `erase`.
