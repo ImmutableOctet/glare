@@ -483,36 +483,36 @@ namespace engine
 			components,
 
 			[&as_component, &count](const util::json& comp)
-		{
-			switch (comp.type())
 			{
-				case util::json::value_t::object:
+				switch (comp.type())
 				{
-					for (const auto& proxy : comp.items())
+					case util::json::value_t::object:
 					{
-						const auto& component_declaration = proxy.key();
-						const auto& component_content = proxy.value();
+						for (const auto& proxy : comp.items())
+						{
+							const auto& component_declaration = proxy.key();
+							const auto& component_content = proxy.value();
 
-						if (as_component(component_declaration, &component_content))
+							if (as_component(component_declaration, &component_content))
+							{
+								count++;
+							}
+						}
+
+						break;
+					}
+					case util::json::value_t::string:
+					{
+						const auto component_declaration = comp.get<std::string>();
+
+						if (as_component(component_declaration))
 						{
 							count++;
 						}
+
+						break;
 					}
-
-					break;
 				}
-				case util::json::value_t::string:
-				{
-					const auto component_declaration = comp.get<std::string>();
-
-					if (as_component(component_declaration))
-					{
-						count++;
-					}
-
-					break;
-				}
-			}
 			}
 		);
 
@@ -2456,6 +2456,7 @@ namespace engine
 			// See below.
 			"model", "models",
 			"animation", "animations",
+			"sequence", "sequences", "animation_sequence", "animation_sequences",
 
 			// Handled in callback-based implementation of `process_archetype`.
 			"children"
@@ -2477,12 +2478,17 @@ namespace engine
 				{
 					descriptor.model_details.path = path_raw.string();
 				}
+			}
 		}
 
 		if (auto animations = util::find_any(data, "animation", "animations"); animations != data.end())
 		{
 			process_animation_list(descriptor, descriptor.animations, *animations, opt_parsing_context);
-			}
+		}
+
+		if (auto sequences = util::find_any(data, "sequence", "sequences", "animation_sequence", "animation_sequences"); sequences != data.end())
+		{
+			process_animation_sequence_list(descriptor, descriptor.animations, *sequences, opt_parsing_context);
 		}
 	}
 
