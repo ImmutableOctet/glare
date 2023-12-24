@@ -2372,6 +2372,7 @@ namespace engine
 
 			// See below.
 			"model", "models",
+			"animation", "animations",
 
 			// Handled in callback-based implementation of `process_archetype`.
 			"children"
@@ -2393,6 +2394,11 @@ namespace engine
 				{
 					descriptor.model_details.path = path_raw.string();
 				}
+		}
+
+		if (auto animations = util::find_any(data, "animation", "animations"); animations != data.end())
+		{
+			process_animation_list(descriptor, descriptor.animations, *animations, opt_parsing_context);
 			}
 		}
 	}
