@@ -135,6 +135,15 @@ namespace engine
 		const MetaParsingContext& opt_parsing_context={}
 	);
 
+	std::size_t process_animation_sequence_list
+	(
+		EntityDescriptor& descriptor,
+		AnimationRepository& animations_out,
+		const util::json& sequence_list_content,
+
+		const MetaParsingContext& opt_parsing_context={}
+	);
+
 	std::size_t process_component_list
 	(
 		EntityDescriptor& descriptor,

@@ -349,6 +349,89 @@ namespace engine
 		return animations_processed;
 	}
 
+	std::size_t process_animation_sequence_list
+	(
+		EntityDescriptor& descriptor,
+		AnimationRepository& animations_out,
+		const util::json& sequence_list_content,
+
+		const MetaParsingContext& opt_parsing_context
+	)
+	{
+		auto sequences_processed = std::size_t {};
+
+		for (const auto& sequence_proxy : sequence_list_content.items())
+		{
+			const auto& sequence_name = sequence_proxy.key();
+			const auto& sequence_values = sequence_proxy.value();
+
+			const auto sequence_id = hash(sequence_name).value();
+
+			auto& sequences_out = animations_out.sequences[sequence_id];
+
+			// A temporary non-owning pointer to the animation that is actively being processed. (If any)
+			AnimationSequenceEntry* active_animation = {};
+
+			util::json_for_each
+			(
+				sequence_values,
+				
+				[&sequences_out, &active_animation](const util::json& sequence_entry)
+				{
+					switch (sequence_entry.type())
+					{
+						case util::json::value_t::object:
+						{
+							if (const auto animation_as_object = util::find_any(sequence_entry, "animation", "animation_name", "name"); animation_as_object != sequence_entry.end())
+							{
+								const auto animation_name = animation_as_object->get<std::string>();
+								const auto animation_id = hash(animation_name).value();
+
+								active_animation = &(sequences_out.animations.emplace_back(animation_id));
+
+								if (active_animation)
+								{
+									if (const auto rate_specified = util::find_any(sequence_entry, "rate", "speed"); rate_specified != sequence_entry.end())
+									{
+										active_animation->rate = rate_specified->get<float>();
+									}
+
+									if (const auto embedded_transition = util::find_any(sequence_entry, "transition", "animation_transition"); embedded_transition != sequence_entry.end())
+									{
+										engine::load(active_animation->transition, *embedded_transition);
+
+										active_animation = {};
+									}
+								}
+							}
+							else if (active_animation)
+							{
+								engine::load(active_animation->transition, sequence_entry);
+
+								active_animation = {};
+							}
+
+							break;
+						}
+						case util::json::value_t::string:
+						{
+							const auto animation_name = sequence_entry.get<std::string>();
+							const auto animation_id = hash(animation_name).value();
+
+							active_animation = &(sequences_out.animations.emplace_back(animation_id));
+
+							break;
+						}
+					}
+				}
+			);
+
+			sequences_processed++;
+		}
+
+		return sequences_processed;
+	}
+
 	std::size_t process_component_list
 	(
 		EntityDescriptor& descriptor,
