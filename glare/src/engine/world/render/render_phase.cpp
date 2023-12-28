@@ -9,7 +9,7 @@
 
 #include <engine/world/world.hpp>
 #include <engine/world/camera/components/camera_component.hpp>
-#include <engine/world/animation/animation.hpp>
+#include <engine/world/animation/components/skeletal_pose_component.hpp>
 
 #include <engine/config.hpp>
 #include <engine/transform.hpp>
@@ -118,16 +118,12 @@ namespace engine
 		}
 		*/
 
-		auto* animator = registry.try_get<AnimationComponent>(entity);
-
-		if (animator)
+		if (const auto pose = registry.try_get<SkeletalPoseComponent>(entity))
 		{
-			bool is_animated = ((animator->animated()) && model_component.model->is_animated());
-					
+			const bool is_animated = (model_component.model->is_animated());
+			
 			shader["animated"] = is_animated;
-			//shader["animated"] = false;
-
-			shader["bone_matrices"] = animator->get_pose();
+			shader["bone_matrices"] = pose->get_pose();
 		}
 		else
 		{
