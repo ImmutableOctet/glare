@@ -129,6 +129,9 @@ namespace engine
 	// Mask with no bits set.
 	inline constexpr AnimationLayerMask ANIMATION_LAYER_MASK_NO_LAYER = {};
 
+	// Maximum number of concurrent animation layers. (Number of bits)
+	inline constexpr std::size_t MAX_ANIMATION_LAYERS = (sizeof(AnimationLayerMask) * 8);
+
 	// The number of frames per-second targeted by default.
 	inline constexpr FramerateType DEFAULT_FRAMERATE = 60;
 

@@ -15,8 +15,6 @@ namespace engine
 	class AnimationRepository
 	{
 		public:
-			inline static constexpr std::size_t animation_layer_bits = (sizeof(AnimationLayerMask) * 8);
-
 			//using SliceContainer = std::vector<std::pair<AnimationID, AnimationSlice>>
 			using SliceContainer = std::unordered_map<AnimationID, AnimationSlice>;
 

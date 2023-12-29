@@ -59,7 +59,7 @@ namespace engine
 	{
 		if (layer_index < layers.size())
 		{
-			assert(layer_index < animation_layer_bits);
+			assert(layer_index < MAX_ANIMATION_LAYERS);
 
 			return static_cast<AnimationLayerMask>(static_cast<AnimationLayerMask>(1) << static_cast<AnimationLayerMask>(layer_index));
 		}
@@ -87,7 +87,7 @@ namespace engine
 			return std::nullopt;
 		}
 
-		if (layers.size() >= animation_layer_bits)
+		if (layers.size() >= MAX_ANIMATION_LAYERS)
 		{
 			return std::nullopt;
 		}
@@ -103,7 +103,7 @@ namespace engine
 
 		const auto layer_index = static_cast<AnimationLayerIndex>(std::distance(layers.cbegin(), layer_iterator));
 
-		assert(layer_index < animation_layer_bits);
+		assert(layer_index < MAX_ANIMATION_LAYERS);
 
 		return layer_index;
 	}
