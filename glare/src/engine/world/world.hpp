@@ -178,8 +178,14 @@ namespace engine
 
 			math::Vector get_up_vector(math::Vector up={ 0.0f, 1.0f, 0.0f }) const;
 
+			// Retrieves the first bone child-entity found with the ID specified.
+			Entity get_bone_by_id(Entity entity, BoneID bone_id, bool recursive=true);
+
 			// Retrieves the first bone child-entity found with the name specified.
 			Entity get_bone_by_name(Entity entity, std::string_view name, bool recursive=true);
+
+			// Retrieves the first bone child-entity found with the index specified.
+			Entity get_bone_by_index(Entity entity, BoneIndex bone_index, bool recursive=true);
 
 			ResourceManager& get_resource_manager() override;
 			virtual const ResourceManager& get_resource_manager() const override;
