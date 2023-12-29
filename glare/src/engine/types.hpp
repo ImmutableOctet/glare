@@ -46,9 +46,13 @@ namespace engine
 	using Sink = entt::sink<sink_parameters...>;
 	*/
 
-	using AnimationID    = entt::id_type; // graphics::AnimationID;
-	using BoneID         = entt::id_type; // graphics::BoneID;
-	using BoneIndex      = graphics::BoneIndex;
+	using AnimationID      = entt::id_type; // graphics::AnimationID;
+	using AnimationLayerID = entt::id_type;
+	using BoneID           = entt::id_type; // graphics::BoneID;
+	using BoneIndex        = graphics::BoneIndex;
+
+	// A type representing a bitmask used to filter which bones an animation is applied to.
+	using AnimationLayerMask = std::uint8_t;
 
 	// NOTE: Must be equivalent to `app::input::PlayerInputID`.
 	using PlayerIndex = std::uint16_t;
@@ -115,6 +119,12 @@ namespace engine
 	inline constexpr PlayerIndex PRIMARY_LOCAL_PLAYER = 1;
 	inline constexpr PlayerIndex NO_PLAYER            = 0;
 	inline constexpr PlayerIndex ANY_PLAYER           = 0;
+
+	// Mask with all bits set.
+	inline constexpr AnimationLayerMask ANIMATION_LAYER_MASK_ALL = static_cast<AnimationLayerMask>(-1);
+
+	// Mask with no bits set.
+	inline constexpr AnimationLayerMask ANIMATION_LAYER_MASK_NO_LAYER = {};
 
 	// The number of frames per-second targeted by default.
 	inline constexpr FramerateType DEFAULT_FRAMERATE = 60;
