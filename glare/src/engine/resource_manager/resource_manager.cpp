@@ -52,7 +52,7 @@ namespace engine
 
 	const ModelData& ResourceManager::load_model(const std::string& path, bool load_collision, const std::shared_ptr<graphics::Shader>& shader, bool optimize_collision, bool force_reload, bool cache_result) const
 	{
-		auto path_resolved = resolve_path(path);
+		const auto path_resolved = resolve_path(path);
 
 		if (shader)
 		{
@@ -90,6 +90,7 @@ namespace engine
 		model_loader.on_model = [&](ModelLoader& loader, ModelLoader::ModelData& model_data) -> void
 		{
 			auto loaded_model = std::make_shared<graphics::Model>(); // ModelRef
+
 			*loaded_model = std::move(model_data.model);
 
 			assert(loaded_model->has_meshes());

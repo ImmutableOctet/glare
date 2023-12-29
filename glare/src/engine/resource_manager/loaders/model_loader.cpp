@@ -886,7 +886,9 @@ namespace engine
 				{
 					if (const auto bone_index = skeleton.get_index(bone_name))
 					{
-						load_key_sequence(frame_data[*bone_index], channel, tform);
+						auto& sequence_out = frame_data[*bone_index];
+
+						load_key_sequence(sequence_out, channel, tform);
 					}
 					else
 					{
