@@ -432,6 +432,35 @@ namespace engine
 		return sequences_processed;
 	}
 
+	std::size_t process_animation_layer_list
+	(
+		EntityDescriptor& descriptor,
+		AnimationRepository& animations_out,
+		const util::json& layer_list_content,
+
+		const MetaParsingContext& opt_parsing_context
+	)
+	{
+		auto layers_processed = std::size_t {};
+
+		util::json_for_each<util::json::value_t::string>
+		(
+			layer_list_content,
+
+			[&animations_out, &layers_processed](const util::json& layer_entry)
+			{
+				const auto layer_name = layer_entry.get<std::string>();
+				const auto layer_id = hash(layer_name).value();
+
+				if (animations_out.add_layer(layer_id))
+				{
+					layers_processed++;
+				}
+			}
+		);
+
+		return layers_processed;
+	}
 	std::size_t process_component_list
 	(
 		EntityDescriptor& descriptor,
@@ -2457,6 +2486,7 @@ namespace engine
 			"model", "models",
 			"animation", "animations",
 			"sequence", "sequences", "animation_sequence", "animation_sequences",
+			"layer", "layers", "animation_layer", "animation_layers",
 
 			// Handled in callback-based implementation of `process_archetype`.
 			"children"
@@ -2489,6 +2519,11 @@ namespace engine
 		if (auto sequences = util::find_any(data, "sequence", "sequences", "animation_sequence", "animation_sequences"); sequences != data.end())
 		{
 			process_animation_sequence_list(descriptor, descriptor.animations, *sequences, opt_parsing_context);
+		}
+
+		if (auto layers = util::find_any(data, "layer", "layers", "animation_layer", "animation_layers"); layers != data.end())
+		{
+			process_animation_layer_list(descriptor, descriptor.animations, *layers, opt_parsing_context);
 		}
 	}
 
