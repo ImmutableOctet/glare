@@ -153,6 +153,15 @@ namespace engine
 		const MetaParsingContext& opt_parsing_context={}
 	);
 
+	std::size_t process_bone_animation_layer_mapping
+	(
+		EntityDescriptor& descriptor,
+		AnimationRepository& animations_out,
+		const util::json& bone_mapping_content,
+
+		const MetaParsingContext& opt_parsing_context={}
+	);
+
 	std::size_t process_component_list
 	(
 		EntityDescriptor& descriptor,

@@ -461,6 +461,76 @@ namespace engine
 
 		return layers_processed;
 	}
+
+	std::size_t process_bone_animation_layer_mapping
+	(
+		EntityDescriptor& descriptor,
+		AnimationRepository& animations_out,
+		const util::json& bone_mapping_content,
+
+		const MetaParsingContext& opt_parsing_context
+	)
+	{
+		auto bones_processed = std::size_t {};
+
+		util::json_for_each<util::json::value_t::object, util::json::value_t::array>
+		(
+			bone_mapping_content,
+				
+			[&animations_out, &bones_processed](const util::json& bone_entry)
+			{
+				switch (bone_entry.type())
+				{
+					case util::json::value_t::object:
+					{
+						if (const auto layer_name_it = util::find_any(bone_entry, "layer", "animation_layer", "bone_layer", "value"); layer_name_it != bone_entry.end())
+						{
+							if (const auto bone_name_it = util::find_any(bone_entry, "bone", "bone_name", "id"); bone_name_it != bone_entry.end())
+							{
+								const auto layer_name = layer_name_it->get<std::string>();
+								const auto layer_id = hash(layer_name).value();
+
+								if (const auto layer_mask = animations_out.get_layer_mask(layer_id))
+								{
+									const auto bone_name = bone_name_it->get<std::string>();
+									const auto bone_id = hash(bone_name).value();
+
+									animations_out.bone_layers[bone_id] = *layer_mask;
+
+									bones_processed++;
+								}
+							}
+						}
+
+						break;
+					}
+					case util::json::value_t::array:
+					{
+						if (bone_entry.size() >= 2)
+						{
+							const auto layer_name = bone_entry[1].get<std::string>();
+							const auto layer_id = hash(layer_name).value();
+
+							if (const auto layer_mask = animations_out.get_layer_mask(layer_id))
+							{
+								const auto bone_name = bone_entry[0].get<std::string>();
+								const auto bone_id = hash(bone_name).value();
+
+								animations_out.bone_layers[bone_id] = *layer_mask;
+
+								bones_processed++;
+							}
+						}
+
+						break;
+					}
+				}
+			}
+		);
+
+		return bones_processed;
+	}
+
 	std::size_t process_component_list
 	(
 		EntityDescriptor& descriptor,
@@ -2487,6 +2557,7 @@ namespace engine
 			"animation", "animations",
 			"sequence", "sequences", "animation_sequence", "animation_sequences",
 			"layer", "layers", "animation_layer", "animation_layers",
+			"bone_layer", "bone_layers", "bone_animation_layer", "bone_animation_layers",
 
 			// Handled in callback-based implementation of `process_archetype`.
 			"children"
@@ -2524,6 +2595,11 @@ namespace engine
 		if (auto layers = util::find_any(data, "layer", "layers", "animation_layer", "animation_layers"); layers != data.end())
 		{
 			process_animation_layer_list(descriptor, descriptor.animations, *layers, opt_parsing_context);
+		}
+
+		if (auto bone_layers = util::find_any(data, "bone_layer", "bone_layers", "bone_animation_layer", "bone_animation_layers"); bone_layers != data.end())
+		{
+			process_bone_animation_layer_mapping(descriptor, descriptor.animations, *bone_layers, opt_parsing_context);
 		}
 	}
 
