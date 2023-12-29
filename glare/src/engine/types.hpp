@@ -54,6 +54,9 @@ namespace engine
 	// A type representing a bitmask used to filter which bones an animation is applied to.
 	using AnimationLayerMask = std::uint8_t;
 
+	// Index type used for animation layers.
+	using AnimationLayerIndex = std::size_t;
+
 	// NOTE: Must be equivalent to `app::input::PlayerInputID`.
 	using PlayerIndex = std::uint16_t;
 

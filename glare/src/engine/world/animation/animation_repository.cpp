@@ -67,7 +67,7 @@ namespace engine
 		return std::nullopt;
 	}
 
-	std::optional<AnimationRepository::AnimationLayerIndex> AnimationRepository::get_layer_index(AnimationLayerID layer_id) const
+	std::optional<AnimationLayerIndex> AnimationRepository::get_layer_index(AnimationLayerID layer_id) const
 	{
 		if (layer_id)
 		{
@@ -80,7 +80,7 @@ namespace engine
 		return std::nullopt;
 	}
 
-	std::optional<AnimationRepository::AnimationLayerIndex> AnimationRepository::add_layer(AnimationLayerID layer_id)
+	std::optional<AnimationLayerIndex> AnimationRepository::add_layer(AnimationLayerID layer_id)
 	{
 		if (!layer_id)
 		{
