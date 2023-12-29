@@ -587,13 +587,16 @@ namespace engine
 						{
 							{
 								.instance_path               = instance_path,
-								.instance_directory          = instance_directory,
+								.instance_directory          = {}, // <-- Derived from `instance_path`. (see below)
 								.shared_directory            = config.objects.object_path,
 								.service_archetype_root_path = (std::filesystem::path(config.entity.archetype_path) / "world"),
 								.archetype_root_path         = config.entity.archetype_path
 							},
 							
-							instance_directory
+							instance_directory,
+
+							// Resolve the instance path and directory.
+							true
 						},
 
 						{
