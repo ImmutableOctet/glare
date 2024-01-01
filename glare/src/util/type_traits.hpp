@@ -250,4 +250,10 @@ namespace util
 	static_assert(is_constructible_without_conversion_or_v<impl::constructible_from_float, float, double, int>);
 	static_assert(is_constructible_without_conversion_and_v<impl::constructible_from_float_or_int, float, int>);
 	static_assert(!is_constructible_without_conversion_and_v<impl::constructible_from_float_or_int, float, double, int>);
+
+	template <typename T>
+	using integral_or_size = std::conditional<std::is_integral_v<std::remove_reference_t<T>>, std::remove_reference_t<T>, std::size_t>;
+
+	template <typename T>
+	using integral_or_size_t = typename integral_or_size<T>::type;
 }
