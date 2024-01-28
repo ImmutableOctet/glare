@@ -1524,7 +1524,7 @@ namespace engine
 			state.activation_delay = parse_time_duration(*time_data);
 		}
 
-		if (auto threads = util::find_any(data, "do", "threads", "execute"); threads != data.end())
+		if (auto threads = util::find_any(data, "do", "threads", "execute", "on_enter"); threads != data.end())
 		{
 			process_thread_list
 			(
@@ -2038,7 +2038,7 @@ namespace engine
 					);
 				}
 
-				if (auto threads = util::find_any(content, "do", "threads", "execute"); threads != content.end())
+				if (auto threads = util::find_any(content, "do", "threads", "execute", "on_enter"); threads != content.end())
 				{
 					process_thread_list
 					(
@@ -2164,7 +2164,7 @@ namespace engine
 					"timer", "wait", "delay",
 					"state", "next", "next_state",
 					"update", "updates", "components", "change",
-					"do", "threads", "execute",
+					"do", "threads", "execute", "on_enter",
 					"command", "commands", "generate"
 				);
 
@@ -2495,7 +2495,7 @@ namespace engine
 			process_state_list(descriptor, descriptor.states, *states, base_path, opt_parsing_context, opt_factory_context);
 		}
 		
-		if (auto threads = util::find_any(data, "do", "threads", "execute"); threads != data.end())
+		if (auto threads = util::find_any(data, "do", "threads", "execute", "on_enter"); threads != data.end())
 		{
 			process_thread_list
 			(
@@ -2548,7 +2548,7 @@ namespace engine
 			// Handled in this function (see above):
 			"component", "components",
 			"state", "states",
-			"do", "threads", "execute",
+			"do", "threads", "execute", "on_enter",
 
 			"default_state",
 
