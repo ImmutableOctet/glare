@@ -9,6 +9,26 @@
 #include <type_traits>
 #include <cstddef>
 
+// Convenience macro for `engine::make_overloads`.
+#define REFLECT_MEMBER_FUNCTION_OVERLOADS(type_var, ClassName, FunctionName, MinArgCount, ReturnType, ...) \
+	type_var = engine::make_overloads                                                                  \
+	<                                                                                                  \
+		static_cast<ReturnType(ClassName::*)(__VA_ARGS__)>(&ClassName::FunctionName),                  \
+		[](auto& self, auto&&... args)                                                                 \
+		{                                                                                              \
+			if constexpr (std::is_same_v<std::decay_t<ReturnType>, void>)                              \
+			{                                                                                          \
+				self.FunctionName(std::forward<decltype(args)>(args)...);                              \
+			}                                                                                          \
+			else                                                                                       \
+			{                                                                                          \
+				                                                                                       \
+				return self.FunctionName(std::forward<decltype(args)>(args)...);                       \
+			}                                                                                          \
+		},                                                                                             \
+		MinArgCount                                                                                    \
+	> (type_var, engine::hash(#FunctionName));
+
 namespace engine
 {
 	// Generates a wrapper function for `lambda_instance`, allowing a captureless
