@@ -8,11 +8,6 @@
 #include <string>
 #include <string_view>
 
-namespace graphics
-{
-	struct Animation;
-}
-
 namespace engine
 {
 	struct RelationshipComponent;
@@ -45,8 +40,10 @@ namespace engine
 		// TODO: Implement optional mutation.
 		void transform(World& world, Entity entity); // bool allow_modification=false
 
-		// `display_name` must be NULL-terminated.
-		void animation(const graphics::Animation& a, std::string_view display_name="Animation");
+		// TODO: Reimplement
+		// NOTE: `display_name` must be NULL-terminated.
+		//void animation(const graphics::AnimationData& a, std::string_view display_name="AnimationData");
+
 		void animator(AnimationComponent& animator);
 
 		void child_tree(World& world, Entity entity);

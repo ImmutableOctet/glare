@@ -16,11 +16,11 @@
 #include <engine/meta/hash.hpp>
 
 #include <engine/world/world.hpp>
+
+#include <engine/world/animation/components/animation_component.hpp>
 #include <engine/world/animation/components/bone_component.hpp>
 
-#include <engine/world/animation/animation.hpp>
-
-#include <graphics/animation.hpp>
+//#include <engine/world/animation/XXX.hpp>
 
 #include <math/math.hpp>
 
@@ -149,7 +149,9 @@ namespace engine
 			transform(registry, entity);
 		}
 
-		void animation(const graphics::Animation& a, std::string_view display_name)
+		/*
+		// TODO: Reimplement
+		void animation(const graphics::AnimationData& a, std::string_view display_name)
 		{
 			if (ImGui::TreeNode(display_name.data()))
 			{
@@ -160,12 +162,15 @@ namespace engine
 				ImGui::TreePop();
 			}
 		}
+		*/
 
 		void animator(AnimationComponent& animator)
 		{
+			// TODO: Reimplement
+			/*
 			if (ImGui::TreeNode("AnimationComponent"))
 			{
-				const Animation* cur_anim = animator.get_current_animation();
+				const AnimationData* cur_anim = animator.get_current_animation();
 
 				if (cur_anim)
 				{
@@ -192,6 +197,7 @@ namespace engine
 
 				ImGui::TreePop();
 			}
+			*/
 		}
 
 		void child_tree(World& world, Entity entity)
@@ -485,23 +491,26 @@ namespace engine
 
 				display::animator(*animator);
 
-				const Animation* cur_anim = animator->get_current_animation();
-				const Animation* prev_anim = animator->get_prev_animation();
+				/*
+				// TODO: Reimplement
+				const AnimationData* cur_anim = animator->get_current_animation();
+				const AnimationData* prev_anim = animator->get_prev_animation();
 
 				if (cur_anim)
 				{
-					display::animation(*cur_anim, "Current Animation");
+					display::animation(*cur_anim, "Current AnimationData");
 				}
 
 				if ((prev_anim) && (cur_anim != prev_anim))
 				{
-					display::animation(*prev_anim, "Previous Animation");
+					display::animation(*prev_anim, "Previous AnimationData");
 				}
+				*/
 
 				display::skeletal_tree(world, entity, {});
 			},
 
-			"Animation Controls"
+			"AnimationData Controls"
 		);
 	}
 
