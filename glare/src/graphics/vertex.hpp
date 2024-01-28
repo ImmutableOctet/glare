@@ -12,6 +12,8 @@
 #include <string>
 #include <array>
 #include <algorithm>
+#include <optional>
+
 #include <cstddef>
 
 //#include <half/half.hpp>
@@ -161,7 +163,10 @@ namespace graphics
 
 	using SimpleColoredVertex = A_RGB<Vertex>;
 
-	static constexpr unsigned int VERTEX_MAX_BONE_INFLUENCE = 4;
+	inline constexpr BoneIndexVector::length_type VERTEX_MAX_BONE_INFLUENCE = 4;
 
-	int get_next_weight_channel(const StandardAnimationVertex& vertex);
+	// Constant used to represent an unused bone channel. (Used for mapping weights)
+	inline constexpr BoneIndexType VERTEX_BONE_CHANNEL_OPEN = static_cast<BoneIndexType>(-1);
+
+	std::optional<BoneIndexVector::length_type> get_next_weight_channel(const StandardAnimationVertex& vertex);
 }

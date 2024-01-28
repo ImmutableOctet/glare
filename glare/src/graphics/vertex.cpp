@@ -2,16 +2,18 @@
 
 namespace graphics
 {
-    int get_next_weight_channel(const StandardAnimationVertex& vertex)
+    std::optional<BoneIndexVector::length_type> get_next_weight_channel(const StandardAnimationVertex& vertex)
     {
-        for (int i = 0; i < VERTEX_MAX_BONE_INFLUENCE; i++)
+        using index_t = BoneIndexVector::length_type;
+
+        for (auto channel = index_t {}; channel < VERTEX_MAX_BONE_INFLUENCE; channel++)
         {
-            if (vertex.bone_indices[i] == -1) // && (vertex.bone_weights[i] == 0.0f)
+            if (vertex.bone_indices[channel] == VERTEX_BONE_CHANNEL_OPEN)
             {
-                return i;
+                return channel;
             }
         }
 
-        return -1;
+        return std::nullopt;
     }
 }

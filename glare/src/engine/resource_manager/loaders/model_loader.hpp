@@ -247,7 +247,7 @@ namespace engine
 			const Bone* process_bone(const aiScene& scene, Skeleton& skeleton, const aiString& bone_name, const aiMatrix4x4& offset_matrix); // std::string_view
 			
 			std::size_t process_bones(const aiScene& scene, const aiNode& node, const aiMesh& mesh, Skeleton& skeleton);
-			unsigned int handle_missing_bone(const aiScene& scene, Skeleton& skeleton, const std::string& bone_name, bool recursive=true);
+			std::size_t handle_missing_bone(const aiScene& scene, Skeleton& skeleton, BoneID bone_id, bool recursive=true);
 
 			SkeletalFrameData& process_animations(const aiScene* scene, Skeleton& skeleton, const _aiMatrix4x4* orientation=nullptr);
 		
