@@ -5,13 +5,17 @@ target_sources(
     
     PRIVATE
 
-    # Components:
     "components/animation_component.cpp"
     "components/bone_component.cpp"
     "components/skeletal_component.cpp"
 
-    # Top-Level:
     "animation_system.cpp"
+    "animation_layer.cpp"
+    "animation_state.cpp"
+    "animation_repository.cpp"
+    "skeletal_key_sequence.cpp"
+    "skeleton.cpp"
+
     "reflection.cpp"
 )
 
