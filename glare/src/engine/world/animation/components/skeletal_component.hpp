@@ -5,7 +5,7 @@
 namespace engine
 {
 	/*
-		Simple component indicating that this object has a skeleton attached and that
+		A simple component indicating that this object has a skeleton attached and that
 		`root_bone` is the top-most bone entity in the relationship tree.
 		
 		`SkeletalComponent` should only be applied to the owning entity,
@@ -18,7 +18,8 @@ namespace engine
 	*/
 	struct SkeletalComponent
 	{
-		Entity root_bone;
+		// An entity representing the root bone of the instantiated skeleton.
+		Entity root_bone = null;
 	};
 
 	/*
@@ -31,5 +32,5 @@ namespace engine
 		This routine is called automatically on the parent entity when a bone is added. (see `create_bone`)
 		Under normal circumstances, there is no need to manually attach a skeleton to an entity.
 	*/
-	bool attach_skeleton(World& world, Entity entity, Entity root_bone=null);
+	bool attach_skeleton(Registry& registry, Entity entity, Entity root_bone=null);
 }
