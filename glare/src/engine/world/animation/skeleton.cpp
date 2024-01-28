@@ -75,7 +75,7 @@ namespace engine
 			return bone;
 		}
 
-		const auto& bone_out = bones.emplace
+		const auto& bone_out = bones.emplace_back
 		(
 			bone_id,
 			parent_bone_id,
@@ -95,7 +95,7 @@ namespace engine
 		return add_bone(bone_id, math::identity_matrix(), math::identity_matrix(), parent_bone_id);
 	}
 
-	std::optional<BoneIndex> Skeleton::get_index(const Bone* bone) const
+	std::optional<BoneIndex> Skeleton::get_bone_index(const Bone* bone) const
 	{
 		if (!bone)
 		{
@@ -113,21 +113,21 @@ namespace engine
 		return static_cast<BoneIndex>(bone - bones_begin);
 	}
 
-	std::optional<BoneIndex> Skeleton::get_index(std::string_view bone_name) const
+	std::optional<BoneIndex> Skeleton::get_bone_index(std::string_view bone_name) const
 	{
 		if (const auto bone = get_bone_by_name(bone_name))
 		{
-			return get_index(bone);
+			return get_bone_index(bone);
 		}
 
 		return std::nullopt;
 	}
 
-	std::optional<BoneIndex> Skeleton::get_index(BoneID bone_id) const
+	std::optional<BoneIndex> Skeleton::get_bone_index(BoneID bone_id) const
 	{
 		if (const auto bone = get_bone_by_id(bone_id))
 		{
-			return get_index(bone);
+			return get_bone_index(bone);
 		}
 
 		return std::nullopt;

@@ -21,7 +21,7 @@ namespace engine
 	{
 		// We use a vector-type here instead of a hash-map (or similar) due to the relatively small number of elements per-skeleton on average.
 		// TODO: Review pros/cons of switching to map container.
-		using Container = std::vector<Bone>; // util::small_vector<...>
+		using BoneContainer = std::vector<Bone>; // util::small_vector<...>
 
 		// Attempts to retrieve a pointer to a `Bone` located at `bone_index`.
 		const Bone* get_bone_by_index(BoneIndex bone_index) const;
@@ -65,13 +65,13 @@ namespace engine
 
 		// Attempts to retrieve the index of the `bone` specified.
 		// If `bone` does not originate from this skeleton, this will return an empty optional.
-		std::optional<BoneIndex> get_index(const Bone* bone) const;
+		std::optional<BoneIndex> get_bone_index(const Bone* bone) const;
 
 		// Attempts to retrieve the index of the `bone_name` specified by computing a hash to act as an identifier.
-		std::optional<BoneIndex> get_index(std::string_view bone_name) const;
+		std::optional<BoneIndex> get_bone_index(std::string_view bone_name) const;
 
 		// Attempts to retrieve the index of the `bone_id` specified.
-		std::optional<BoneIndex> get_index(BoneID bone_id) const;
+		std::optional<BoneIndex> get_bone_index(BoneID bone_id) const;
 
 		// Returns true if there are no bones in this skeleton.
 		inline bool empty() const
@@ -97,6 +97,6 @@ namespace engine
 		}
 
 		// The bones owned by this skeleton.
-		Container bones;
+		BoneContainer bones;
 	};
 }
