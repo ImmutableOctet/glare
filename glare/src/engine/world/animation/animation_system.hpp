@@ -39,6 +39,8 @@ namespace engine
 
 			const SkeletalFrameData* get_frame_data(Registry& registry, Entity entity) const;
 
+			const AnimationData* get_data_from_asset(Registry& registry, Entity entity) const;
+
 			AnimationSlice get_slice(Registry& registry, Entity entity, AnimationID animation_id) const;
 			
 			AnimationSlice get_slice_from_asset(Registry& registry, Entity entity, AnimationID animation_id) const;
@@ -75,6 +77,5 @@ namespace engine
 
 			const AnimationRepository* get_repository(Registry& registry, Entity entity) const;
 			const AnimationData::AnimationContainer* get_slices_from_asset(Registry& registry, Entity entity) const;
-			const AnimationData* get_data_from_asset(Registry& registry, Entity entity) const;
 	};
 }

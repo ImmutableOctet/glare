@@ -443,17 +443,7 @@ namespace engine
 
 	const AnimationData* AnimationSystem::get_data_from_asset(Registry& registry, Entity entity) const
 	{
-		const auto model_comp = registry.try_get<ModelComponent>(entity);
-
-		if (!model_comp)
-		{
-			return {};
-		}
-
-		const auto& world = get_world();
-		const auto& resource_manager = world.get_resource_manager();
-
-		return resource_manager.peek_animation_data(model_comp->model);
+		return world.get_animation_data(registry, entity);
 	}
 
 	/*

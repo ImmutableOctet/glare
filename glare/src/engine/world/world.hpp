@@ -51,6 +51,8 @@ namespace engine
 	struct SpotLightComponent;
 	struct CollisionComponent;
 
+	struct AnimationData;
+
 	struct OnTransformChanged;
 
 	class World : public Service
@@ -177,6 +179,9 @@ namespace engine
 			}
 
 			math::Vector get_up_vector(math::Vector up={ 0.0f, 1.0f, 0.0f }) const;
+
+			const AnimationData* get_animation_data(Entity entity) const;
+			const AnimationData* get_animation_data(Registry& registry, Entity entity) const;
 
 			// Retrieves the first bone child-entity found with the ID specified.
 			Entity get_bone_by_id(Entity entity, BoneID bone_id, bool recursive=true);

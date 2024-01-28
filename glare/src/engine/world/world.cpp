@@ -289,6 +289,21 @@ namespace engine
 		return (m._w * math::Vector4D{ up, 1.0f });
 	}
 
+	const AnimationData* World::get_animation_data(Entity entity) const
+	{
+		return get_animation_data(get_registry(), entity);
+	}
+
+	const AnimationData* World::get_animation_data(Registry& registry, Entity entity) const
+	{
+		if (const auto model_comp = registry.try_get<ModelComponent>(entity))
+		{
+			return resource_manager.peek_animation_data(model_comp->model);
+		}
+
+		return {};
+	}
+
 	Entity World::get_bone_by_id(Entity entity, BoneID bone_id, bool recursive)
 	{
 		if (!bone_id)
@@ -296,26 +311,28 @@ namespace engine
 			return null;
 		}
 
-		auto relationship = registry.try_get<RelationshipComponent>(entity);
+		const auto relationship = registry.try_get<RelationshipComponent>(entity);
 
 		if (!relationship)
 		{
 			return null;
 		}
 
-		auto skeletal_comp = registry.try_get<SkeletalComponent>(entity);
+		const auto skeletal_comp = registry.try_get<SkeletalComponent>(entity);
 
 		if (!skeletal_comp)
 		{
 			return null;
 		}
 
-		if (!skeletal_comp->animation_data)
+		const auto animation_data = get_animation_data(entity);
+
+		if (!animation_data)
 		{
 			return null;
 		}
 
-		const auto& skeleton = skeletal_comp->animation_data->skeleton;
+		const auto& skeleton = animation_data->skeleton;
 
 		Entity bone_out = null;
 
@@ -323,7 +340,7 @@ namespace engine
 		(
 			registry,
 			
-			[&](Entity child, RelationshipComponent& relationship, Entity next_child)
+			[&](Entity child, const RelationshipComponent& relationship, Entity next_child)
 			{
 				const auto bone_comp = registry.try_get<BoneComponent>(child);
 
