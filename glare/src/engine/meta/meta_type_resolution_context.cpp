@@ -133,6 +133,9 @@ namespace engine
 		// Removed due to conflict with `Entity::direction` property.
 		components.erase("direction");
 
+		// Removed due to conflict with `AnimationSystem`.
+		components.erase("animation");
+
 		// Commands:
 		auto& commands = context.command_aliases;
 
@@ -202,9 +205,6 @@ namespace engine
 		// Ensure we don't have a name conflict between the built-in
 		// `entity` command (i.e. 'target' syntax) and the `EntitySystem` type.
 		systems.erase("entity");
-
-		// Removed alias due to name conflicts. (e.g. `AnimationComponent`)
-		systems.erase("animation");
 
 		systems["debug"] = systems["DebugListener"];
 
