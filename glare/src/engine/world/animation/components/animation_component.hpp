@@ -1,149 +1,123 @@
 #pragma once
 
-#include <engine/types.hpp>
-#include <engine/resource_manager/animation_data.hpp>
+#include <engine/world/animation/types.hpp>
+#include <engine/world/animation/animation_layer.hpp>
 
-#include <graphics/vertex.hpp>
+#include <array>
 
-#include <optional>
+#include <cstddef>
+#include <cassert>
 
 namespace engine
 {
-	class AnimationSystem;
-
 	struct AnimationComponent
 	{
-		public:
-			using Matrices = std::vector<math::Matrix>;
+		// NOTE: We preallocate to `MAX_ANIMATION_LAYERS` + 1 to account for the primary layer.
+		using LayerContainer = std::array<AnimationLayer, (MAX_ANIMATION_LAYERS + 1)>;
 
-			enum class State : std::uint8_t
+		inline static constexpr AnimationLayerIndex ANIMATION_LAYER_INDEX_NO_LAYER = static_cast<AnimationLayerIndex>(MAX_ANIMATION_LAYERS);
+
+		// Animation layers currently being applied.
+		LayerContainer layers = {};
+
+		std::size_t play
+		(
+			AnimationID animation_id,
+			AnimationSlice animation_slice,
+			AnimationLayerMask animation_layers=ANIMATION_LAYER_MASK_NO_LAYER
+		);
+
+		std::size_t pause(AnimationLayerMask animation_layers=ANIMATION_LAYER_MASK_NO_LAYER);
+
+		std::size_t stop(AnimationLayerMask animation_layers=ANIMATION_LAYER_MASK_NO_LAYER);
+
+		bool has_playing_layer() const;
+		bool has_paused_layer() const;
+		bool has_stopped_layer() const;
+
+		std::size_t layers_playing() const;
+		std::size_t layers_paused() const;
+		std::size_t layers_stopped() const;
+
+		AnimationLayerMask layers_playing_mask() const;
+		AnimationLayerMask layers_paused_mask() const;
+		AnimationLayerMask layers_stopped_mask() const;
+
+		constexpr AnimationLayer& get_layer(AnimationLayerIndex layer_index)
+		{
+			assert(layer_index < layers.size());
+
+			return layers[layer_index];
+		}
+
+		constexpr const AnimationLayer& get_layer(AnimationLayerIndex layer_index) const
+		{
+			assert(layer_index < layers.size());
+
+			return layers[layer_index];
+		}
+
+		constexpr AnimationLayer& get_primary_layer()
+		{
+			return get_layer(ANIMATION_LAYER_INDEX_NO_LAYER);
+		}
+
+		constexpr const AnimationLayer& get_primary_layer() const
+		{
+			return get_layer(ANIMATION_LAYER_INDEX_NO_LAYER);
+		}
+
+		constexpr const AnimationLayerData& get_primary_animation_data() const
+		{
+			return get_primary_layer().current;
+		}
+
+		constexpr AnimationID get_primary_animation_id() const
+		{
+			return get_primary_animation_data().name;
+		}
+
+		constexpr AnimationSlice get_primary_animation_area() const
+		{
+			return get_primary_animation_data().area;
+		}
+
+		constexpr const AnimationState& get_primary_animation_state() const
+		{
+			return get_primary_animation_data().state;
+		}
+
+		float get_primary_animation_time() const
+		{
+			return get_primary_animation_state().get_time();
+		}
+
+		inline bool playing() const
+		{
+			return has_playing_layer();
+		}
+
+		template <typename Callback>
+		AnimationLayerMask generate_layer_mask(Callback&& callback) const
+		{
+			auto layer_mask = ANIMATION_LAYER_MASK_NO_LAYER;
+
+			for (auto layer_index = AnimationLayerIndex {}; layer_index < static_cast<AnimationLayerIndex>(layers.size()); layer_index++)
 			{
-				Play,
-				Pause,
-				//Transition, // Not needed; see transition_state.
-			};
+				const auto& layer = get_layer(layer_index);
 
-			struct TransitionState
-			{
-				inline TransitionState(float duration, float prev_anim_time, float elapsed=0.0f)
-					: duration(duration), prev_time(prev_anim_time), elapsed(elapsed) {}
-
-				float duration;
-				float prev_time;
-				float elapsed;
-			};
-
-			friend AnimationSystem;
-
-			static constexpr auto MAX_CHANNELS = graphics::VERTEX_MAX_BONE_INFLUENCE;
-			static constexpr unsigned int MAX_BONES = 128; // 16; // 48;
-
-			static const Animation* resolve_animation(const std::shared_ptr<AnimationData>& animations, AnimationID id);
-			static std::optional<AnimationID> resolve_animation_id(const std::shared_ptr<AnimationData>& animations, const Animation* animation);
-
-			AnimationComponent() = default;
-
-			AnimationComponent(float rate);
-
-			inline AnimationComponent(const std::shared_ptr<AnimationData>& animations, AnimationID current_animation={}, float rate=1.0f, float time=0.0f)
-				: AnimationComponent(animations, resolve_animation(animations, current_animation), rate, time) {}
-
-			// Animation rate multiplier.
-			float rate = 1.0f;
-
-			// Current position/floating frame-position in the animation.
-			float time = 0.0f;
-
-			// Buffer containing the last updated state of each bone.
-			Matrices pose; // bone_matrices;
-		protected:
-			std::shared_ptr<AnimationData> animations;
-
-			const Animation* current_animation = nullptr;
-
-			// This indicates the previous animation.
-			const Animation* prev_animation = nullptr;
-
-			// This is used to track animation changes between updates.
-			// (Mainly used internally to ensure `OnAnimationChange` only fires once, and on the frame the change occurs)
-			const Animation* last_known_animation = nullptr;
-
-			State state = State::Play;
-
-			std::optional<TransitionState> transition_state = std::nullopt;
-			
-			AnimationComponent(const std::shared_ptr<AnimationData>& animations, const Animation* current_animation=nullptr, float rate=1.0f, float time=0.0f);
-
-			inline AnimationComponent& set_animation(const Animation* animation)
-			{
-				current_animation = animation;
-
-				return *this;
-			}
-
-			inline std::optional<AnimationID> resolve_id(const Animation* animation) const
-			{
-				return resolve_animation_id(this->animations, animation);
-			}
-		public:
-			inline const Animation* get_animation(AnimationID id) const
-			{
-				return resolve_animation(animations, id); //animations->animations[id];
-			}
-
-			inline std::optional<AnimationID> get_animation_id() const
-			{
-				return resolve_id(get_current_animation());
-			}
-
-			inline AnimationComponent& set_animation_id(AnimationID id)
-			{
-				const auto* animation = get_animation(id);
-
-				// TODO: Determine if a null-check still makes sense here.
-				if (!animation)
+				if (callback(layer))
 				{
-					return *this;
+					layer_mask |= compute_animation_layer_mask(layer_index);
 				}
-
-				return set_animation(animation);
 			}
 
-			// Alias for `set_animation_id`.
-			inline AnimationComponent& set_animation(AnimationID id)
-			{
-				return set_animation_id(id);
-			}
+			return layer_mask;
+		}
 
-			inline const auto& get_animations() const
-			{
-				return animations;
-			}
-
-			// TODO: Need to test this part of the public API.
-			AnimationComponent& set_animations(const std::shared_ptr<AnimationData>& animations, State new_state=State::Play);
-
-			inline const Animation* get_current_animation() const { return current_animation; }
-			inline const Animation* get_prev_animation() const { return prev_animation; }
-
-			inline State get_state() const { return state; }
-
-			inline bool paused() const { return (state == State::Pause); }
-			inline bool playing() const { return !paused(); }
-			inline bool transitioning() const { return transition_state.has_value(); }
-
-			inline bool animated() const { return ((current_animation) && (playing())); }
-			inline explicit operator bool() const { return animated(); }
-
-			inline const std::vector<math::Matrix>& get_pose() const
-			{
-				return pose;
-			}
-
-			inline std::size_t pose_size() const { return pose.size(); }
-
-			void play();
-			void pause();
-			bool toggle();
+		explicit operator bool() const
+		{
+			return playing();
+		}
 	};
 }
