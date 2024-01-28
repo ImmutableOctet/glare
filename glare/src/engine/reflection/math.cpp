@@ -238,61 +238,61 @@ namespace engine
     static auto reflect_cmath(auto math_type)
     {
         math_type = math_type
-            .func<util::lambda_as_function_ptr<[](T value) { return std::abs(value); }>()>("abs"_hs)
-            .func<util::lambda_as_function_ptr<[](T x, T y) { return std::remainder(x, y); }>()>("remainder"_hs)
+            .func<+[](T value) { return std::abs(value); }>("abs"_hs)
+            .func<+[](T x, T y) { return std::remainder(x, y); }>("remainder"_hs)
 
             // Disabled in favor of `math` module's implementation.
-            //.func<util::lambda_as_function_ptr<[](T a, T b, T t) { return std::lerp(a, b, t); }>()>("lerp"_hs)
+            //.func<+[](T a, T b, T t) { return std::lerp(a, b, t); }>("lerp"_hs)
 
-            .func<util::lambda_as_function_ptr<[](T value) { return std::exp(value); }>()>("exp"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::exp2(value); }>()>("exp2"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::expm1(value); }>()>("expm1"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::log(value); }>()>("log"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::log10(value); }>()>("log10"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::log2(value); }>()>("log2"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::log1p(value); }>()>("log1p"_hs)
+            .func<+[](T value) { return std::exp(value); }>("exp"_hs)
+            .func<+[](T value) { return std::exp2(value); }>("exp2"_hs)
+            .func<+[](T value) { return std::expm1(value); }>("expm1"_hs)
+            .func<+[](T value) { return std::log(value); }>("log"_hs)
+            .func<+[](T value) { return std::log10(value); }>("log10"_hs)
+            .func<+[](T value) { return std::log2(value); }>("log2"_hs)
+            .func<+[](T value) { return std::log1p(value); }>("log1p"_hs)
 
-            .func<util::lambda_as_function_ptr<[](T x, T y) { return std::pow(x, y); }>()>("pow"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::sqrt(value); }>()>("sqrt"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::cbrt(value); }>()>("cbrt"_hs)
-            .func<util::lambda_as_function_ptr<[](T x, T y) { return std::hypot(x, y); }>()>("hypot"_hs)
-            .func<util::lambda_as_function_ptr<[](T x, T y, T z) { return std::hypot(x, y, z); }>()>("hypot"_hs)
+            .func<+[](T x, T y) { return std::pow(x, y); }>("pow"_hs)
+            .func<+[](T value) { return std::sqrt(value); }>("sqrt"_hs)
+            .func<+[](T value) { return std::cbrt(value); }>("cbrt"_hs)
+            .func<+[](T x, T y) { return std::hypot(x, y); }>("hypot"_hs)
+            .func<+[](T x, T y, T z) { return std::hypot(x, y, z); }>("hypot"_hs)
 
-            .func<util::lambda_as_function_ptr<[](T value) { return std::sin(value); }>()>("sin"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::cos(value); }>()>("cos"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::tan(value); }>()>("tan"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::asin(value); }>()>("asin"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::acos(value); }>()>("acos"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::atan(value); }>()>("atan"_hs)
-            .func<util::lambda_as_function_ptr<[](T x, T y) { return std::atan2(x, y); }>()>("atan2"_hs)
+            .func<+[](T value) { return std::sin(value); }>("sin"_hs)
+            .func<+[](T value) { return std::cos(value); }>("cos"_hs)
+            .func<+[](T value) { return std::tan(value); }>("tan"_hs)
+            .func<+[](T value) { return std::asin(value); }>("asin"_hs)
+            .func<+[](T value) { return std::acos(value); }>("acos"_hs)
+            .func<+[](T value) { return std::atan(value); }>("atan"_hs)
+            .func<+[](T x, T y) { return std::atan2(x, y); }>("atan2"_hs)
 
-            .func<util::lambda_as_function_ptr<[](T value) { return std::sinh(value); }>()>("sinh"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::cosh(value); }>()>("cosh"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::tanh(value); }>()>("tanh"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::asinh(value); }>()>("asinh"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::acosh(value); }>()>("acosh"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::atanh(value); }>()>("atanh"_hs)
+            .func<+[](T value) { return std::sinh(value); }>("sinh"_hs)
+            .func<+[](T value) { return std::cosh(value); }>("cosh"_hs)
+            .func<+[](T value) { return std::tanh(value); }>("tanh"_hs)
+            .func<+[](T value) { return std::asinh(value); }>("asinh"_hs)
+            .func<+[](T value) { return std::acosh(value); }>("acosh"_hs)
+            .func<+[](T value) { return std::atanh(value); }>("atanh"_hs)
 
-            .func<util::lambda_as_function_ptr<[](T value) { return std::erf(value); }>()>("erf"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::erfc(value); }>()>("erfc"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::tgamma(value); }>()>("tgamma"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::lgamma(value); }>()>("lgamma"_hs)
+            .func<+[](T value) { return std::erf(value); }>("erf"_hs)
+            .func<+[](T value) { return std::erfc(value); }>("erfc"_hs)
+            .func<+[](T value) { return std::tgamma(value); }>("tgamma"_hs)
+            .func<+[](T value) { return std::lgamma(value); }>("lgamma"_hs)
 
-            .func<util::lambda_as_function_ptr<[](T value) { return std::ceil(value); }>()>("ceil"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::floor(value); }>()>("floor"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::trunc(value); }>()>("trunc"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::round(value); }>()>("round"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::nearbyint(value); }>()>("nearby_int"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::rint(value); }>()>("rint"_hs)
+            .func<+[](T value) { return std::ceil(value); }>("ceil"_hs)
+            .func<+[](T value) { return std::floor(value); }>("floor"_hs)
+            .func<+[](T value) { return std::trunc(value); }>("trunc"_hs)
+            .func<+[](T value) { return std::round(value); }>("round"_hs)
+            .func<+[](T value) { return std::nearbyint(value); }>("nearby_int"_hs)
+            .func<+[](T value) { return std::rint(value); }>("rint"_hs)
 
-            .func<util::lambda_as_function_ptr<[](T value, int exp) { return std::ldexp(value, exp); }>()>("ldexp"_hs)
-            .func<util::lambda_as_function_ptr<[](T value, int exp) { return std::scalbn(value, exp); }>()>("scalbn"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::ilogb(value); }>()>("ilogb"_hs)
-            .func<util::lambda_as_function_ptr<[](T value) { return std::logb(value); }>()>("logb"_hs)
-            .func<util::lambda_as_function_ptr<[](T from, T to) { return std::nextafter(from, to); }>()>("next_after"_hs)
-            .func<util::lambda_as_function_ptr<[](T mag, T sgn) { return std::copysign(mag, sgn); }>()>("copysign"_hs)
+            .func<+[](T value, int exp) { return std::ldexp(value, exp); }>("ldexp"_hs)
+            .func<+[](T value, int exp) { return std::scalbn(value, exp); }>("scalbn"_hs)
+            .func<+[](T value) { return std::ilogb(value); }>("ilogb"_hs)
+            .func<+[](T value) { return std::logb(value); }>("logb"_hs)
+            .func<+[](T from, T to) { return std::nextafter(from, to); }>("next_after"_hs)
+            .func<+[](T mag, T sgn) { return std::copysign(mag, sgn); }>("copysign"_hs)
 
-            //.func<util::lambda_as_function_ptr<[](T value) { return std::signbit(value); }>()>("signbit"_hs)
+            //.func<+[](T value) { return std::signbit(value); }>("signbit"_hs)
 
             // Workaround for missing integral overloads for `std::signbit`. (MSVC issue?)
             .func
@@ -319,33 +319,33 @@ namespace engine
                 >()
             >("signbit"_hs)
 
-            .func<util::lambda_as_function_ptr<[](T x, T y) { return std::isunordered(x, y); }>()>("is_unordered"_hs)
+            .func<+[](T x, T y) { return std::isunordered(x, y); }>("is_unordered"_hs)
         ;
 
         if constexpr (special_functions)
         {
             math_type = math_type
-                .func<util::lambda_as_function_ptr<[](unsigned int n, unsigned int m, T x) { return std::assoc_laguerre(n, m, x); }>()>("assoc_laguerre"_hs)
-                .func<util::lambda_as_function_ptr<[](unsigned int n, unsigned int m, T x) { return std::assoc_legendre(n, m, x); }>()>("assoc_legendre"_hs)
-                .func<util::lambda_as_function_ptr<[](T x, T y) { return std::beta(x, y); }>()>("beta"_hs)
-                .func<util::lambda_as_function_ptr<[](T value) { return std::comp_ellint_1(value); }>()>("comp_ellint_1"_hs)
-                .func<util::lambda_as_function_ptr<[](T value) { return std::comp_ellint_2(value); }>()>("comp_ellint_2"_hs)
-                .func<util::lambda_as_function_ptr<[](T k, T nu) { return std::comp_ellint_3(k, nu); }>()>("comp_ellint_3"_hs)
-                .func<util::lambda_as_function_ptr<[](T nu, T x) { return std::cyl_bessel_i(nu, x); }>()>("cyl_bessel_i"_hs)
-                .func<util::lambda_as_function_ptr<[](T nu, T x) { return std::cyl_bessel_j(nu, x); }>()>("cyl_bessel_j"_hs)
-                .func<util::lambda_as_function_ptr<[](T nu, T x) { return std::cyl_bessel_k(nu, x); }>()>("cyl_bessel_k"_hs)
-                .func<util::lambda_as_function_ptr<[](T nu, T x) { return std::cyl_neumann(nu, x); }>()>("cyl_neumann"_hs)
-                .func<util::lambda_as_function_ptr<[](T k, T phi) { return std::ellint_1(k, phi); }>()>("ellint_1"_hs)
-                .func<util::lambda_as_function_ptr<[](T k, T phi) { return std::ellint_2(k, phi); }>()>("ellint_2"_hs)
-                .func<util::lambda_as_function_ptr<[](T k, T nu, T phi) { return std::ellint_3(k, nu, phi); }>()>("ellint_3"_hs)
-                .func<util::lambda_as_function_ptr<[](T value) { return std::expint(value); }>()>("expint"_hs)
-                .func<util::lambda_as_function_ptr<[](unsigned n, T x) { return std::hermite(n, x); }>()>("hermite"_hs)
-                .func<util::lambda_as_function_ptr<[](unsigned n, T x) { return std::legendre(n, x); }>()>("legendre"_hs)
-                .func<util::lambda_as_function_ptr<[](unsigned int n, T x) { return std::laguerre(n, x); }>()>("laguerre"_hs)
-                .func<util::lambda_as_function_ptr<[](T value) { return std::riemann_zeta(value); }>()>("riemann_zeta"_hs)
-                .func<util::lambda_as_function_ptr<[](unsigned int n, T x) { return std::sph_bessel(n, x); }>()>("sph_bessel"_hs)
-                .func<util::lambda_as_function_ptr<[](unsigned l, unsigned m, T theta) { return std::sph_legendre(l, m, theta); }>()>("sph_legendre"_hs)
-                .func<util::lambda_as_function_ptr<[](unsigned n, T x) { return std::sph_neumann(n, x); }>()>("sph_neumann"_hs)
+                .func<+[](unsigned int n, unsigned int m, T x) { return std::assoc_laguerre(n, m, x); }>("assoc_laguerre"_hs)
+                .func<+[](unsigned int n, unsigned int m, T x) { return std::assoc_legendre(n, m, x); }>("assoc_legendre"_hs)
+                .func<+[](T x, T y) { return std::beta(x, y); }>("beta"_hs)
+                .func<+[](T value) { return std::comp_ellint_1(value); }>("comp_ellint_1"_hs)
+                .func<+[](T value) { return std::comp_ellint_2(value); }>("comp_ellint_2"_hs)
+                .func<+[](T k, T nu) { return std::comp_ellint_3(k, nu); }>("comp_ellint_3"_hs)
+                .func<+[](T nu, T x) { return std::cyl_bessel_i(nu, x); }>("cyl_bessel_i"_hs)
+                .func<+[](T nu, T x) { return std::cyl_bessel_j(nu, x); }>("cyl_bessel_j"_hs)
+                .func<+[](T nu, T x) { return std::cyl_bessel_k(nu, x); }>("cyl_bessel_k"_hs)
+                .func<+[](T nu, T x) { return std::cyl_neumann(nu, x); }>("cyl_neumann"_hs)
+                .func<+[](T k, T phi) { return std::ellint_1(k, phi); }>("ellint_1"_hs)
+                .func<+[](T k, T phi) { return std::ellint_2(k, phi); }>("ellint_2"_hs)
+                .func<+[](T k, T nu, T phi) { return std::ellint_3(k, nu, phi); }>("ellint_3"_hs)
+                .func<+[](T value) { return std::expint(value); }>("expint"_hs)
+                .func<+[](unsigned n, T x) { return std::hermite(n, x); }>("hermite"_hs)
+                .func<+[](unsigned n, T x) { return std::legendre(n, x); }>("legendre"_hs)
+                .func<+[](unsigned int n, T x) { return std::laguerre(n, x); }>("laguerre"_hs)
+                .func<+[](T value) { return std::riemann_zeta(value); }>("riemann_zeta"_hs)
+                .func<+[](unsigned int n, T x) { return std::sph_bessel(n, x); }>("sph_bessel"_hs)
+                .func<+[](unsigned l, unsigned m, T theta) { return std::sph_legendre(l, m, theta); }>("sph_legendre"_hs)
+                .func<+[](unsigned n, T x) { return std::sph_neumann(n, x); }>("sph_neumann"_hs)
             ;
         }
 
@@ -353,10 +353,10 @@ namespace engine
         {
             // Floating-point specific functions.
             math_type = math_type
-                .func<util::lambda_as_function_ptr<[](T value) { return std::isfinite(value); }>()>("is_finite"_hs)
-                .func<util::lambda_as_function_ptr<[](T value) { return std::isinf(value); }>()>("is_infinite"_hs)
-                .func<util::lambda_as_function_ptr<[](T value) { return std::isnormal(value); }>()>("is_normal"_hs)
-                .func<util::lambda_as_function_ptr<[](T value) { return std::isnan(value); }>()>("is_nan"_hs)
+                .func<+[](T value) { return std::isfinite(value); }>("is_finite"_hs)
+                .func<+[](T value) { return std::isinf(value); }>("is_infinite"_hs)
+                .func<+[](T value) { return std::isnormal(value); }>("is_normal"_hs)
+                .func<+[](T value) { return std::isnan(value); }>("is_nan"_hs)
             ;
         }
 
@@ -392,54 +392,54 @@ namespace engine
             // GLM:
 
             // Dot product:
-            .func<util::lambda_as_function_ptr<[](float x, float y) { return math::dot(x, y); }>()>("dot"_hs)
-            .func<util::lambda_as_function_ptr<[](const math::Quaternion& x, const math::Quaternion& y) { return math::dot(x, y); }>()>("dot"_hs)
-            .func<util::lambda_as_function_ptr<[](const math::Vector4D& x, const math::Vector4D& y) { return math::dot(x, y); }>()>("dot"_hs)
-            .func<util::lambda_as_function_ptr<[](const math::Vector2D& x, const math::Vector2D& y) { return math::dot(x, y); }>()>("dot"_hs)
-            .func<util::lambda_as_function_ptr<[](const math::Vector3D& x, const math::Vector3D& y) { return math::dot(x, y); }>()>("dot"_hs)
+            .func<+[](float x, float y) { return math::dot(x, y); }>("dot"_hs)
+            .func<+[](const math::Quaternion& x, const math::Quaternion& y) { return math::dot(x, y); }>("dot"_hs)
+            .func<+[](const math::Vector4D& x, const math::Vector4D& y) { return math::dot(x, y); }>("dot"_hs)
+            .func<+[](const math::Vector2D& x, const math::Vector2D& y) { return math::dot(x, y); }>("dot"_hs)
+            .func<+[](const math::Vector3D& x, const math::Vector3D& y) { return math::dot(x, y); }>("dot"_hs)
 
             // Cross product:
-            .func<util::lambda_as_function_ptr<[](const math::Vector3D& x, const math::Vector3D& y) { return math::cross(x, y); }>()>("cross"_hs)
-            .func<util::lambda_as_function_ptr<[](const math::Quaternion& q, const math::Vector3D& v) { return math::cross(q, v); }>()>("cross"_hs)
-            .func<util::lambda_as_function_ptr<[](const math::Vector3D& v, const math::Quaternion& q) { return math::cross(v, q); }>()>("cross"_hs)
-            .func<util::lambda_as_function_ptr<[](const math::Quaternion& q1, const math::Quaternion& q2) { return math::cross(q1, q2); }>()>("cross"_hs)
+            .func<+[](const math::Vector3D& x, const math::Vector3D& y) { return math::cross(x, y); }>("cross"_hs)
+            .func<+[](const math::Quaternion& q, const math::Vector3D& v) { return math::cross(q, v); }>("cross"_hs)
+            .func<+[](const math::Vector3D& v, const math::Quaternion& q) { return math::cross(v, q); }>("cross"_hs)
+            .func<+[](const math::Quaternion& q1, const math::Quaternion& q2) { return math::cross(q1, q2); }>("cross"_hs)
 
             // Normalize:
-            .func<util::lambda_as_function_ptr<[](const math::Vector3D& v) { return math::normalize(v); }>()>("normalize"_hs)
-            .func<util::lambda_as_function_ptr<[](const math::Quaternion& q) { return math::normalize(q); }>()>("normalize"_hs)
+            .func<+[](const math::Vector3D& v) { return math::normalize(v); }>("normalize"_hs)
+            .func<+[](const math::Quaternion& q) { return math::normalize(q); }>("normalize"_hs)
 
             // Length:
-            .func<util::lambda_as_function_ptr<[](float value) { return math::length(value); }>()>("length"_hs)
-            .func<util::lambda_as_function_ptr<[](const math::Quaternion& q) { return math::length(q); }>()>("length"_hs)
-            .func<util::lambda_as_function_ptr<[](const math::Vector4D& v) { return math::length(v); }>()>("length"_hs)
-            .func<util::lambda_as_function_ptr<[](const math::Vector2D& v) { return math::length(v); }>()>("length"_hs)
-            .func<util::lambda_as_function_ptr<[](const math::Vector3D& v) { return math::length(v); }>()>("length"_hs)
+            .func<+[](float value) { return math::length(value); }>("length"_hs)
+            .func<+[](const math::Quaternion& q) { return math::length(q); }>("length"_hs)
+            .func<+[](const math::Vector4D& v) { return math::length(v); }>("length"_hs)
+            .func<+[](const math::Vector2D& v) { return math::length(v); }>("length"_hs)
+            .func<+[](const math::Vector3D& v) { return math::length(v); }>("length"_hs)
 
             // Inverse:
-            .func<util::lambda_as_function_ptr<[](const math::Quaternion& q) { return math::inverse(q); }>()>("inverse"_hs)
-            .func<util::lambda_as_function_ptr<[](const math::Matrix4x4& m) { return math::inverse(m); }>()>("inverse"_hs)
-            .func<util::lambda_as_function_ptr<[](const math::Matrix3x3& m) { return math::inverse(m); }>()>("inverse"_hs)
+            .func<+[](const math::Quaternion& q) { return math::inverse(q); }>("inverse"_hs)
+            .func<+[](const math::Matrix4x4& m) { return math::inverse(m); }>("inverse"_hs)
+            .func<+[](const math::Matrix3x3& m) { return math::inverse(m); }>("inverse"_hs)
 
             // Transpose:
-            .func<util::lambda_as_function_ptr<[](const math::Matrix4x4& m) { return math::transpose(m); }>()>("transpose"_hs)
-            .func<util::lambda_as_function_ptr<[](const math::Matrix3x3& m) { return math::transpose(m); }>()>("transpose"_hs)
+            .func<+[](const math::Matrix4x4& m) { return math::transpose(m); }>("transpose"_hs)
+            .func<+[](const math::Matrix3x3& m) { return math::transpose(m); }>("transpose"_hs)
 
             // Translate:
-            .func<util::lambda_as_function_ptr<[](const math::Matrix4x4& m, const math::Vector3D& v) { return math::translate(m, v); }>()>("translate"_hs)
+            .func<+[](const math::Matrix4x4& m, const math::Vector3D& v) { return math::translate(m, v); }>("translate"_hs)
 
             // Rotate:
-            .func<util::lambda_as_function_ptr<[](const math::Matrix4x4& m, float angle, const math::Vector3D& v) { return math::rotate(m, angle, v); }>()>("rotate"_hs)
-            .func<util::lambda_as_function_ptr<[](const math::Quaternion& q, float angle, const math::Vector3D& v) { return math::rotate(q, angle, v); }>()>("rotate"_hs)
-            .func<util::lambda_as_function_ptr<[](const math::Quaternion& q, const math::Vector3D& v) { return math::rotate(q, v); }>()>("rotate"_hs)
-            .func<util::lambda_as_function_ptr<[](const math::Quaternion& q, const math::Vector4D& v) { return math::rotate(q, v); }>()>("rotate"_hs)
+            .func<+[](const math::Matrix4x4& m, float angle, const math::Vector3D& v) { return math::rotate(m, angle, v); }>("rotate"_hs)
+            .func<+[](const math::Quaternion& q, float angle, const math::Vector3D& v) { return math::rotate(q, angle, v); }>("rotate"_hs)
+            .func<+[](const math::Quaternion& q, const math::Vector3D& v) { return math::rotate(q, v); }>("rotate"_hs)
+            .func<+[](const math::Quaternion& q, const math::Vector4D& v) { return math::rotate(q, v); }>("rotate"_hs)
 
             // Scale:
-            .func<util::lambda_as_function_ptr<[](const math::Matrix4x4& m, const math::Vector3D& v) { return math::scale(m, v); }>()>("scale"_hs)
+            .func<+[](const math::Matrix4x4& m, const math::Vector3D& v) { return math::scale(m, v); }>("scale"_hs)
 
             // Mix:
-            .func<util::lambda_as_function_ptr<[](const math::Quaternion& x, const math::Quaternion& y, float a) { return math::mix(x, y, a); }>()>("mix"_hs)
-            .func<util::lambda_as_function_ptr<[](const math::Vector3D& x, const math::Vector3D& y, const math::Vector3D& a) { return math::mix(x, y, a); }>()>("mix"_hs)
-            .func<util::lambda_as_function_ptr<[](const math::Vector3D& x, const math::Vector3D& y, float a) { return math::mix(x, y, a); }>()>("mix"_hs)
+            .func<+[](const math::Quaternion& x, const math::Quaternion& y, float a) { return math::mix(x, y, a); }>("mix"_hs)
+            .func<+[](const math::Vector3D& x, const math::Vector3D& y, const math::Vector3D& a) { return math::mix(x, y, a); }>("mix"_hs)
+            .func<+[](const math::Vector3D& x, const math::Vector3D& y, float a) { return math::mix(x, y, a); }>("mix"_hs)
 
             // General:
             .func<&math::positive<std::int64_t>>("positive"_hs)
@@ -538,12 +538,15 @@ namespace engine
         ;
 
         // `math:oscillate`:
+        /*
+        // Disabled for now. (Due to ICE on MSVC compiler)
         math_type = math_type
             .func<static_cast<float(*)(float, float, float)>(&math::oscillate<float>)>("oscillate"_hs)
             .func<static_cast<float(*)(float)>(&math::oscillate<float>)>("oscillate"_hs)
 
             .func<static_cast<float(*)(float)>(&math::oscillate_normalized<float>)>("oscillate_normalized"_hs)
         ;
+        */
 
         // `math:surface`:
         math_type = make_overloads
