@@ -1,4 +1,5 @@
 #include "animation_repository.hpp"
+#include "animation_layer.hpp"
 
 #include <algorithm>
 #include <iterator>
@@ -45,6 +46,16 @@ namespace engine
 		return (std::find(layers.begin(), layers.end(), layer_id) != layers.end());
 	}
 
+	AnimationLayerMask AnimationRepository::get_layer_masks() const
+	{
+		return compute_mask_for_animation_layers(get_layer_count());
+	}
+
+	AnimationLayerCount AnimationRepository::get_layer_count() const
+	{
+		return static_cast<AnimationLayerCount>(layers.size());
+	}
+
 	std::optional<AnimationLayerMask> AnimationRepository::get_layer_mask(AnimationLayerID layer_id) const
 	{
 		if (auto layer_index = get_layer_index(layer_id))
@@ -59,9 +70,7 @@ namespace engine
 	{
 		if (layer_index < layers.size())
 		{
-			assert(layer_index < MAX_ANIMATION_LAYERS);
-
-			return static_cast<AnimationLayerMask>(static_cast<AnimationLayerMask>(1) << static_cast<AnimationLayerMask>(layer_index));
+			return compute_animation_layer_mask(layer_index);
 		}
 
 		return std::nullopt;

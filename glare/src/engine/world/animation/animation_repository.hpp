@@ -37,11 +37,14 @@ namespace engine
 
 			// Mapping of bone identifiers to their respective animation layer (bitmask).
 			BoneLayerMap bone_layers;
-
+			
 			const AnimationSlice* get_slice(AnimationID animation_id) const;
 			const AnimationSequence* get_sequence(AnimationID animation_id) const;
 
 			bool has_layer(AnimationLayerID layer_id) const;
+
+			AnimationLayerMask get_layer_masks() const;
+			AnimationLayerCount get_layer_count() const;
 
 			std::optional<AnimationLayerMask> get_layer_mask(AnimationLayerID layer_id) const;
 			std::optional<AnimationLayerMask> get_layer_mask_from_index(AnimationLayerIndex layer_index) const;
