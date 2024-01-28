@@ -4,7 +4,7 @@
 #include <tuple>
 #include <utility>
 
-#include "animation/animation.hpp"
+#include "animation/components/animation_component.hpp"
 #include "animation/components/skeletal_component.hpp"
 #include "animation/components/bone_component.hpp"
 
@@ -205,10 +205,14 @@ namespace engine
 
 			if (animation_data)
 			{
-				if (!animation_data->animations.empty())
+				if (animation_data->skeleton)
 				{
 					create_skeleton(entity);
-					attach_animator(world, entity, animation_data, 0.05f); // 0.01f
+				}
+
+				if (animation_data->frames)
+				{
+					registry.emplace_or_replace<AnimationComponent>(entity);
 				}
 			}
 
