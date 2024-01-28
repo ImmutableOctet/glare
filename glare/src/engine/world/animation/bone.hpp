@@ -2,6 +2,8 @@
 
 #include "types.hpp"
 
+#include <math/types.hpp>
+
 namespace engine
 {
 	// TODO: Review pros/cons of ID-based bone references.
