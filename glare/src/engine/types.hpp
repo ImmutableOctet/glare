@@ -57,6 +57,8 @@ namespace engine
 	// Index type used for animation layers.
 	using AnimationLayerIndex = std::size_t;
 
+	using AnimationLayerCount = AnimationLayerIndex;
+
 	// NOTE: Must be equivalent to `app::input::PlayerInputID`.
 	using PlayerIndex = std::uint16_t;
 
@@ -123,10 +125,6 @@ namespace engine
 	inline constexpr PlayerIndex NO_PLAYER            = 0;
 	inline constexpr PlayerIndex ANY_PLAYER           = 0;
 
-	// Mask with all bits set.
-	inline constexpr AnimationLayerMask ANIMATION_LAYER_MASK_ALL = static_cast<AnimationLayerMask>(-1);
-
-	// Mask with no bits set.
 	inline constexpr AnimationLayerMask ANIMATION_LAYER_MASK_NO_LAYER = {};
 
 	// Maximum number of concurrent animation layers. (Number of bits)
