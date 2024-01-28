@@ -300,6 +300,26 @@ namespace engine
 		return play(registry, entity, hash(animation_name), animation_layer);
 	}
 
+	const Skeleton* AnimationSystem::get_skeleton(Registry& registry, Entity entity) const
+	{
+		if (const auto asset_data = get_data_from_asset(registry, entity))
+		{
+			return &asset_data->skeleton;
+		}
+
+		return {};
+	}
+
+	const SkeletalFrameData* AnimationSystem::get_frame_data(Registry& registry, Entity entity) const
+	{
+		if (const auto asset_data = get_data_from_asset(registry, entity))
+		{
+			return &asset_data->frames;
+		}
+
+		return {};
+	}
+
 	std::size_t AnimationSystem::play_slice
 	(
 		Registry& registry, Entity entity,

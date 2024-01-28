@@ -35,6 +35,10 @@ namespace engine
 			std::size_t play(Registry& registry, Entity entity, AnimationID animation_id, AnimationLayerMask animation_layer=ANIMATION_LAYER_MASK_NO_LAYER);
 			std::size_t play(Registry& registry, Entity entity, std::string_view animation_name, AnimationLayerMask animation_layer=ANIMATION_LAYER_MASK_NO_LAYER);
 
+			const Skeleton* get_skeleton(Registry& registry, Entity entity) const;
+
+			const SkeletalFrameData* get_frame_data(Registry& registry, Entity entity) const;
+
 			AnimationSlice get_slice(Registry& registry, Entity entity, AnimationID animation_id) const;
 			
 			AnimationSlice get_slice_from_asset(Registry& registry, Entity entity, AnimationID animation_id) const;

@@ -46,7 +46,10 @@ namespace engine
 	template <>
 	void reflect<AnimationSystem>()
 	{
-		auto type = engine_system_type<AnimationSystem>();
+		auto type = engine_system_type<AnimationSystem>()
+			.func<&AnimationSystem::get_skeleton>("get_skeleton"_hs)
+			.func<&AnimationSystem::get_frame_data>("get_frame_data"_hs)
+		;
 
 		REFLECT_MEMBER_FUNCTION_OVERLOADS(type, AnimationSystem, play, 3, std::size_t, Registry&, Entity, AnimationID, AnimationLayerMask);
 		REFLECT_MEMBER_FUNCTION_OVERLOADS(type, AnimationSystem, play, 3, std::size_t, Registry&, Entity, std::string_view, AnimationLayerMask);
