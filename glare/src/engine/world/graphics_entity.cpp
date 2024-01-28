@@ -282,15 +282,4 @@ namespace engine
 	{
 		return load_model(world, "assets/geometry/cube.b3d", parent, type, false);
 	}
-
-	Entity attach_animator(World& world, Entity entity, const std::shared_ptr<AnimationData>& animations, float rate)
-	{
-		auto& registry = world.get_registry();
-
-		assert(!animations->animations.empty());
-
-		registry.emplace_or_replace<AnimationComponent>(entity, animations, AnimationID(0), rate);
-
-		return entity;
-	}
 }
