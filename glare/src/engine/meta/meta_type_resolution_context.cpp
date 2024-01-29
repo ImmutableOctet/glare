@@ -208,6 +208,12 @@ namespace engine
 
 		systems["debug"] = systems["DebugListener"];
 
+		// Services:
+		auto& services = context.service_aliases;
+
+		services["service"] = "Service";
+		services["world"] = "World";
+
 		// Global namespace:
 		auto& global_namespace = context.global_namespace;
 
@@ -335,7 +341,8 @@ namespace engine
 		bool resolve_components,
 		bool resolve_commands,
 		bool resolve_instructions,
-		bool resolve_systems
+		bool resolve_systems,
+		bool resolve_services
 	) const
 	{
 		if (resolve_instructions)
@@ -370,6 +377,14 @@ namespace engine
 			}
 		}
 
+		if (resolve_services)
+		{
+			if (auto as_service = get_service_type(name, true))
+			{
+				return as_service;
+			}
+		}
+
 		return get_type_raw(name);
 	}
 
@@ -380,7 +395,8 @@ namespace engine
 		bool resolve_components,
 		bool resolve_commands,
 		bool resolve_instructions,
-		bool resolve_systems
+		bool resolve_systems,
+		bool resolve_services
 	) const
 	{
 		auto type = get_type
@@ -390,7 +406,8 @@ namespace engine
 			resolve_components,
 			resolve_commands,
 			resolve_instructions,
-			resolve_systems
+			resolve_systems,
+			resolve_services
 		);
 
 		if (type)
@@ -410,7 +427,8 @@ namespace engine
 			instructions.resolve_component_aliases,
 			instructions.resolve_command_aliases,
 			instructions.resolve_instruction_aliases,
-			instructions.resolve_system_references
+			instructions.resolve_system_references,
+			instructions.resolve_service_references
 		);
 	}
 
@@ -423,7 +441,8 @@ namespace engine
 			instructions.resolve_component_aliases,
 			instructions.resolve_command_aliases,
 			instructions.resolve_instruction_aliases,
-			instructions.resolve_system_references
+			instructions.resolve_system_references,
+			instructions.resolve_service_references
 		);
 	}
 

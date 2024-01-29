@@ -131,6 +131,27 @@ namespace engine
 			return get_type_from_alias(system_aliases, system_alias);
 		}
 
+		// Attempts to resolve the input as a service alias.
+		// If the input is not a valid service alias, this will return an empty `std::string_view` instance.
+		inline std::string_view resolve_service_alias(std::string_view service_alias) const
+		{
+			return resolve_alias(service_aliases, service_alias);
+		}
+
+		// Attempts to resolve the type referenced by `service_name`.
+		// The `service_name` argument can be either an alias or a regular service name.
+		inline MetaType get_service_type(std::string_view service_name, bool is_known_alias = false) const
+		{
+			return get_type(service_aliases, service_name, is_known_alias);
+		}
+
+		// Attempts to resolve the underlying type for the service alias specified.
+		// If `service_alias` is not a registered alias, this will return an empty/invalid `MetaType` instance.
+		inline MetaType get_service_type_from_alias(std::string_view service_alias) const
+		{
+			return get_type_from_alias(service_aliases, service_alias);
+		}
+
 		MetaType get_type
 		(
 			std::string_view name,
@@ -138,7 +159,8 @@ namespace engine
 			bool resolve_components=true,
 			bool resolve_commands=true,
 			bool resolve_instructions=false,
-			bool resolve_systems=true
+			bool resolve_systems=true,
+			bool resolve_services=true
 		) const;
 
 		MetaTypeID get_type_id
@@ -148,7 +170,8 @@ namespace engine
 			bool resolve_components=true,
 			bool resolve_commands=true,
 			bool resolve_instructions=false,
-			bool resolve_systems=true
+			bool resolve_systems=true,
+			bool resolve_services=true
 		) const;
 
 		MetaType get_type(std::string_view name, const MetaParsingInstructions& instructions) const;
@@ -200,6 +223,9 @@ namespace engine
 
 		// A map of engine system aliases to their underlying type name.
 		AliasContainer system_aliases;
+
+		// A map of engine service aliases to their underlying type name.
+		AliasContainer service_aliases;
 
 		// Type identifiers included in global symbol resolution.
 		// (Used for global function references, etc.)

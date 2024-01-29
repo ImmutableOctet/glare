@@ -8,6 +8,9 @@
 
 #include <engine/system_manager_interface.hpp>
 
+// Test
+#include <engine/service.hpp>
+
 //#include <entt/meta/meta.hpp>
 
 #include <utility>
@@ -212,16 +215,11 @@ namespace engine
 
 	MetaAny MetaTypeReference::get(const MetaEvaluationContext& context) const
 	{
-		if (context.system_manager)
+		if (const auto type = get_type())
 		{
-			const auto type = get_type();
-
-			if (type_is_system(type))
+			if (auto result = context.resolve_singleton_from_type(type))
 			{
-				if (auto system_handle = context.system_manager->get_system_handle(type.id()))
-				{
-					return *system_handle.ptr;
-				}
+				return result;
 			}
 		}
 

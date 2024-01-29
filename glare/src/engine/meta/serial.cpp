@@ -1607,7 +1607,7 @@ namespace engine
 				{
 					// Forward usage of system-types in construction syntax to regular type references.
 					// (May remove this later)
-					if (type_is_system(type))
+					if (type_is_system(type) || type_is_service(type))
 					{
 						return replace(MetaTypeReference { type.id() });
 					}
@@ -1625,10 +1625,10 @@ namespace engine
 					return true;
 				}
 				
-				// NOTE: 'System' references are handled here, as opposed to the initial type-resolution
-				// phase to avoid complexity when handling sub-types of 'system' types.
-				// 
-				// If the system type is used as a standalone reference, it should be caught by
+				// NOTE: 'System' and `Service` references are handled here, as opposed to the initial type-resolution
+				// phase to avoid complexity when handling sub-types.
+				
+				// NOTE: If the system type is used as a standalone reference, it should be caught by
 				// the fallback `MetaTypeReference` control-path found below.
 				if (instructions.resolve_system_references)
 				{
@@ -1636,6 +1636,20 @@ namespace engine
 					{
 						// Reached the first non-type symbol and the type thus far is a 'system' reference.
 						// Enqueue the system reference before doing anything else, allowing other segments to reference it.
+						enqueue(MetaTypeReference { type.id() });
+
+						// Continue processing as usual.
+					}
+				}
+
+				// NOTE: If the service type is used as a standalone reference, it should be caught by
+				// the fallback `MetaTypeReference` control-path found below.
+				if (instructions.resolve_service_references)
+				{
+					if ((type) && (type != initial_type) && (output.empty()) && (type_is_service(type)))
+					{
+						// Reached the first non-type symbol and the type thus far is a 'service' reference.
+						// Enqueue the service reference before doing anything else, allowing other segments to reference it.
 						enqueue(MetaTypeReference { type.id() });
 
 						// Continue processing as usual.
@@ -1971,6 +1985,21 @@ namespace engine
 							}
 						}
 						
+						if (instructions.resolve_service_references)
+						{
+							// See previous `resolve_service_references` section for regular service-type deduction.
+							if (output.empty() && is_last_symbol)
+							{
+								if (auto as_type = get_as_type())
+								{
+									if (type_is_service(as_type)) // && allow_service_references
+									{
+										return enqueue(MetaTypeReference { as_type.id() });
+									}
+								}
+							}
+						}
+
 						if
 						(
 							((!output.empty()) && (output.segments[0].value.type().id() == "MetaVariableTarget"_hs)) // resolve<MetaVariableTarget>()

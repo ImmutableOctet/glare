@@ -29,6 +29,7 @@ target_sources(
     "meta_variable_target.cpp"
     "meta_any_wrapper.cpp"
     "meta_type_conversion.cpp"
+    "meta_evaluation_context.cpp"
     "meta_evaluation_context_store.cpp"
     "meta_value_operator.cpp"
     "indirect_meta_variable_target.cpp"
