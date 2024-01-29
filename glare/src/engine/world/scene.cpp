@@ -460,8 +460,8 @@ namespace engine
 							.instance_path               = character_path,
 							.instance_directory          = character_directory,
 							.shared_directory            = config.players.character_path,
-							.service_archetype_root_path = (std::filesystem::path(config.entity.archetype_path) / "world"),
-							.archetype_root_path         = config.entity.archetype_path
+							.service_archetype_root_path = (std::filesystem::path(config.entities.archetype_path) / "world"),
+							.archetype_root_path         = config.entities.archetype_path
 						}
 					},
 
@@ -589,8 +589,8 @@ namespace engine
 								.instance_path               = instance_path,
 								.instance_directory          = {}, // <-- Derived from `instance_path`. (see below)
 								.shared_directory            = config.objects.object_path,
-								.service_archetype_root_path = (std::filesystem::path(config.entity.archetype_path) / "world"),
-								.archetype_root_path         = config.entity.archetype_path
+								.service_archetype_root_path = (std::filesystem::path(config.entities.archetype_path) / "world"),
+								.archetype_root_path         = config.entities.archetype_path
 							},
 							
 							instance_directory,

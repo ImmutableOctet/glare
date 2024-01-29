@@ -617,6 +617,7 @@ namespace engine
             .data<&Config::graphics>("graphics"_hs)
             .data<&Config::objects>("objects"_hs)
             .data<&Config::players>("players"_hs)
+            .data<&Config::entities>("entities"_hs)
         ;
     }
 

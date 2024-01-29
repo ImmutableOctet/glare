@@ -46,9 +46,9 @@ namespace engine
 				{
 					.instance_path               = "engine/editor/editor.json",
 					.instance_directory          = "engine/editor",
-					.shared_directory            = (std::filesystem::path(config.entity.archetype_path) / "editor"),
-					.service_archetype_root_path = (std::filesystem::path(config.entity.archetype_path) / "world"),
-					.archetype_root_path         = config.entity.archetype_path
+					.shared_directory            = (std::filesystem::path(config.entities.archetype_path) / "editor"),
+					.service_archetype_root_path = (std::filesystem::path(config.entities.archetype_path) / "world"),
+					.archetype_root_path         = config.entities.archetype_path
 				}
 			},
 
