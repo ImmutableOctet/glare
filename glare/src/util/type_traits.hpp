@@ -256,4 +256,10 @@ namespace util
 
 	template <typename T>
 	using integral_or_size_t = typename integral_or_size<T>::type;
+
+	template <typename T>
+	struct is_const_ptr : std::is_const<std::remove_pointer_t<T>> {};
+
+	template <typename T>
+	inline constexpr bool is_const_ptr_v = is_const_ptr<T>::value;
 }
