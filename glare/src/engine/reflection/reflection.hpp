@@ -636,6 +636,14 @@ namespace engine
     }
 
     template <typename T>
+    auto engine_service_type(bool sync_context=true)
+    {
+        return static_engine_meta_type<T>(sync_context)
+            .prop("service"_hs)
+        ;
+    }
+
+    template <typename T>
     auto engine_system_type(bool sync_context=true)
     {
         return static_engine_meta_type<T>(sync_context)
