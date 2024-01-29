@@ -44,8 +44,8 @@ namespace engine
 
 			virtual ~WorldSystem();
 
-			//WorldSystem(WorldSystem&&) = delete;
-			//WorldSystem(const WorldSystem&) = delete;
+			WorldSystem(WorldSystem&&) noexcept = delete;
+			WorldSystem(const WorldSystem&) = delete;
 
 			/*
 				NOTES:
@@ -86,6 +86,7 @@ namespace engine
 
 			// Returns true if `world` points to the same object as `WorldSystem::world`.
 			inline bool is_bound_world(World& world) const { return is_bound_world(&world); }
+
 		private:
 			// Used internally. (Declared here, defined in source file)
 			template <typename ServiceEventType>
@@ -97,6 +98,7 @@ namespace engine
 
 			// Implementation of `unsubscribe`. (Used internally)
 			bool unsubscribe_impl(World& world, bool _dispatch=true);
+
 		protected:
 			// Safely retrieves a `World` pointer from a base `Service` pointer.
 			// NOTE: If `allow_multiple_subscriptions` is false, this will only
