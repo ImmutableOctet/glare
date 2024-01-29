@@ -380,6 +380,9 @@ namespace engine
             .template func<&short_name<T>>("get_type_name"_hs)
             .template func<&impl::trigger_event_from_meta_any<T>>("trigger_event_from_meta_any"_hs)
             .template func<&try_get_underlying_type<T>>("try_get_underlying_type"_hs)
+
+            // Disabled for now. (`std::is_polymorphic` doesn't seem reliable enough for use here)
+            //.template func<&impl::from_void_ptr<T>>("dynamic_cast"_hs)
         ;
 
         if constexpr (has_method_has_type_v<T, bool>)
@@ -533,11 +536,11 @@ namespace engine
             // `player` data member:
             if constexpr (has_method_player<T, Entity>::value) // std::decay_t<T>
             {
-                type = type.data<nullptr, &T::player>("player"_hs);
+                type = type.data<nullptr, has_method_player<T, Entity>::ptr<true>>("player"_hs);
             }
             else if constexpr (has_method_get_player<T, Entity>::value) // std::decay_t<T>
             {
-                type = type.data<nullptr, &T::get_player>("player"_hs);
+                type = type.data<nullptr, has_method_get_player<T, Entity>::ptr<true>>("player"_hs);
             }
             else if constexpr (has_field_player<T>::value) // std::decay_t<T>
             {
@@ -547,11 +550,11 @@ namespace engine
             // `player_index` data member:
             if constexpr (has_method_player_index<T, PlayerIndex>::value) // std::decay_t<T>
             {
-                type = type.data<nullptr, &T::player_index>("player_index"_hs);
+                type = type.data<nullptr, has_method_player_index<T, PlayerIndex>::ptr<true>>("player_index"_hs);
             }
             else if constexpr (has_method_get_player_index<T, PlayerIndex>::value) // std::decay_t<T>
             {
-                type = type.data<nullptr, &T::get_player_index>("player_index"_hs);
+                type = type.data<nullptr, has_method_get_player_index<T, PlayerIndex>::ptr<true>>("player_index"_hs);
             }
             else if constexpr (has_field_player_index<T>::value) // std::decay_t<T>
             {
@@ -561,24 +564,40 @@ namespace engine
             // `service` data member:
             if constexpr (has_method_service<T, Service*>::value)
             {
-                type = type.data<nullptr, &T::service>("service"_hs);
+                type = type.data<nullptr, has_method_service<T, Service*>::ptr<false>>("service"_hs);
             }
             else if constexpr (has_method_service<T, Service&>::value)
             {
-                type = type.data<nullptr, &T::service>("service"_hs);
+                type = type.data<nullptr, has_method_service<T, Service&>::ptr<false>>("service"_hs);
             }
             else if constexpr (has_method_get_service<T, Service*>::value)
             {
-                type = type.data<nullptr, &T::get_service>("service"_hs);
+                type = type.data<nullptr, has_method_get_service<T, Service*>::ptr<false>>("service"_hs);
             }
             else if constexpr (has_method_get_service<T, Service&>::value)
             {
-                type = type.data<nullptr, &T::get_service>("service"_hs);
+                type = type.data<nullptr, has_method_get_service<T, Service&>::ptr<false>>("service"_hs);
             }
             // NOTE: Requires full definition of `Service` type.
             else if constexpr (has_field_service<T>::value)
             {
                 type = type.data<&T::service>("service"_hs);
+            }
+            else if constexpr (has_method_service<T, const Service*>::value)
+            {
+                type = type.data<nullptr, has_method_service<T, const Service*>::ptr<true>>("service"_hs);
+            }
+            else if constexpr (has_method_service<T, const Service&>::value)
+            {
+                type = type.data<nullptr, has_method_service<T, const Service&>::ptr<true>>("service"_hs);
+            }
+            else if constexpr (has_method_get_service<T, const Service*>::value)
+            {
+                type = type.data<nullptr, has_method_get_service<T, const Service*>::ptr<true>>("service"_hs);
+            }
+            else if constexpr (has_method_get_service<T, const Service&>::value)
+            {
+                type = type.data<nullptr, has_method_get_service<T, const Service&>::ptr<true>>("service"_hs);
             }
         }
 
@@ -654,7 +673,7 @@ namespace engine
 
                 .template func<&impl::from_base_ptr<T, Service>>("dynamic_cast"_hs)
             ;
-    }
+        }
 
         return type;
     }
