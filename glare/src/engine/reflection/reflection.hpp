@@ -643,9 +643,20 @@ namespace engine
     template <typename T>
     auto engine_service_type(bool sync_context=true)
     {
-        return static_engine_meta_type<T>(sync_context)
+        auto type = static_engine_meta_type<T>(sync_context)
             .prop("service"_hs)
         ;
+
+        if constexpr ((!std::is_same_v<T, Service>) && (std::is_base_of_v<Service, T>))
+        {
+            type = type
+                .base<Service>()
+
+                .template func<&impl::from_base_ptr<T, Service>>("dynamic_cast"_hs)
+            ;
+    }
+
+        return type;
     }
 
     template <typename T>
