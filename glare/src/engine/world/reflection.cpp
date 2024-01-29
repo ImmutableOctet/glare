@@ -208,7 +208,7 @@ namespace engine
 			//.func<static_cast<ResourceManager& (World::*)()>(&World::get_resource_manager), entt::as_ref_t>("get_resource_manager"_hs)
 			//.func<static_cast<const ResourceManager& (World::*)() const>(&World::get_resource_manager), entt::as_cref_t>("get_resource_manager"_hs)
 
-			.data<nullptr, &World::get_config, entt::as_cref_t>("get_config"_hs)
+			.data<nullptr, &World::get_config, entt::as_cref_t>("config"_hs)
 		;
 
 		REFLECT_CONST_MEMBER_FUNCTION_OVERLOADS(type, World, get_bone_by_id,    2, Entity, Entity, BoneID, bool);
