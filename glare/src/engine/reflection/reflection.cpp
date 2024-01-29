@@ -462,6 +462,8 @@ namespace engine
             .conv<&impl::from_string_impl<bool>>()
             
             .conv<&impl::string_bool_impl<std::string>>()
+
+            .conv<std::string_view>()
         ;
     }
 
