@@ -595,6 +595,11 @@ namespace engine
 		return null;
 	}
 
+	Entity Service::get_player() const
+	{
+		return get_player(engine::PRIMARY_LOCAL_PLAYER);
+	}
+
 	EventHandler& Service::get_active_event_handler()
 	{
 		assert(active_event_handler);

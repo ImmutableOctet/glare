@@ -461,7 +461,10 @@ namespace engine
 			Entity get_child_by_name(Entity entity, std::string_view child_name, bool recursive=true) const;
 
 			// Attempts to retrieve an entity with the `player` index specified.
-			Entity get_player(PlayerIndex player=engine::PRIMARY_LOCAL_PLAYER) const;
+			Entity get_player(PlayerIndex player) const;
+
+			// Attempts to retrieve the primary local player.
+			Entity get_player() const;
 
 			// NOTE: Registering to this event handler is considered unsafe due to there
 			// being 'standard' and 'forwarding' event handlers internally. Use this method with caution.
