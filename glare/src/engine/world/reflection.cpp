@@ -13,7 +13,13 @@
 #include "components/point_light_shadow_component.hpp"
 #include "components/spot_light_component.hpp"
 
+#include <engine/config.hpp>
+
 #include <engine/components/model_component.hpp>
+
+//#include <engine/resource_manager/resource_manager.hpp>
+#include <engine/resource_manager/animation_data.hpp>
+
 #include <graphics/model.hpp>
 #include <graphics/shader.hpp>
 
@@ -196,6 +202,19 @@ namespace engine
 	template <>
 	void reflect<World>()
 	{
+		auto type = engine_service_type<World>()
+			.func<static_cast<const AnimationData* (World::*)(Registry&, Entity) const>(&World::get_animation_data)>("get_animation_data"_hs)
+
+			//.func<static_cast<ResourceManager& (World::*)()>(&World::get_resource_manager), entt::as_ref_t>("get_resource_manager"_hs)
+			//.func<static_cast<const ResourceManager& (World::*)() const>(&World::get_resource_manager), entt::as_cref_t>("get_resource_manager"_hs)
+
+			.data<nullptr, &World::get_config, entt::as_cref_t>("get_config"_hs)
+		;
+
+		REFLECT_CONST_MEMBER_FUNCTION_OVERLOADS(type, World, get_bone_by_id,    2, Entity, Entity, BoneID, bool);
+		REFLECT_CONST_MEMBER_FUNCTION_OVERLOADS(type, World, get_bone_by_name,  2, Entity, Entity, std::string_view, bool);
+		REFLECT_CONST_MEMBER_FUNCTION_OVERLOADS(type, World, get_bone_by_index, 2, Entity, Entity, BoneIndex, bool);
+
 		reflect<CameraProjection>();
 		reflect<WorldProperties>();
 		reflect<LightProperties>();
