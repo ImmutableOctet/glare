@@ -13,6 +13,7 @@
 #include "indirection.hpp"
 #include "json_bindings.hpp"
 #include "binary_bindings.hpp"
+#include "pfr_reflection.hpp"
 
 #include "common_extensions.hpp"
 #include "component_extensions.hpp"
@@ -134,6 +135,10 @@ namespace engine
         {
             // TODO: Determine if it makes sense to forward the return-value to the caller.
             T::reflect();
+        }
+        else if constexpr (util::is_pfr_reflective_v<T>)
+        {
+            reflect_aggregate_fields<T>();
         }
         else
         {

@@ -1,3 +1,14 @@
+include(FetchContent)
+
+FetchContent_Declare(
+  boost_pfr
+  GIT_REPOSITORY https://github.com/boostorg/pfr.git
+  GIT_TAG        294a497 # release-2.2.0 (Boost 1.84)
+  FIND_PACKAGE_ARGS NAMES Boost::pfr
+)
+
+FetchContent_MakeAvailable(boost_pfr)
+
 # Shared (core) utilities:
 add_library(glare_core OBJECT) # STATIC
 add_library(${PROJECT_NAME}::core ALIAS glare_core)
@@ -25,6 +36,13 @@ target_link_libraries(glare_core
     PRIVATE
     $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
     $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+)
+
+#find_package(Boost CONFIG REQUIRED Boost::pfr)
+
+target_link_libraries(glare_core
+    PUBLIC
+    Boost::pfr
 )
 
 add_subdirectory("third-party")
