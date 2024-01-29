@@ -127,7 +127,7 @@ namespace engine
 
         if constexpr (generate_optional_type)
         {
-            auto opt_type = optional_custom_meta_type<T>(type_name);
+            auto opt_type = custom_optional_type<T>(type_name);
         }
 
         return type;
@@ -598,9 +598,7 @@ namespace engine
     template <>
     void reflect<Math>()
     {
-        auto math_type = engine_empty_meta_type<Math>()
-            .prop("global namespace"_hs)
-        ;
+        auto math_type = engine_global_static_type<Math>();
         
         //math_type = reflect_cmath<std::int64_t>(math_type);
         math_type = reflect_cmath<std::int32_t>(math_type);

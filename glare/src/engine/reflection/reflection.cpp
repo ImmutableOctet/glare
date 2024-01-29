@@ -121,7 +121,7 @@ namespace engine
         {
             constexpr auto type_name = entt::type_name<PrimitiveType>::value();
 
-            auto opt_type = optional_custom_meta_type<PrimitiveType>(type_name);
+            auto opt_type = custom_optional_type<PrimitiveType>(type_name);
         }
 
         return type;
@@ -386,7 +386,7 @@ namespace engine
 
         if constexpr (generate_optional_type)
         {
-            auto opt_type = optional_custom_meta_type<Entity>(type_name);
+            auto opt_type = custom_optional_type<Entity>(type_name);
         }
     }
 
@@ -548,7 +548,7 @@ namespace engine
         {
             constexpr auto type_name = entt::type_name<T>::value(); // std::string_view { "Duration" };
 
-            auto opt_type = optional_custom_meta_type<T>(type_name);
+            auto opt_type = custom_optional_type<T>(type_name);
         }
     }
 

@@ -33,7 +33,7 @@ namespace engine
 
         if constexpr (generate_optional_type)
         {
-            auto opt_type = optional_custom_meta_type<T>(type_name);
+            auto opt_type = custom_optional_type<T>(type_name);
         }
 
         return type;
@@ -189,7 +189,7 @@ namespace engine
     template <>
     void reflect<Util>()
     {
-        auto util_type = engine_empty_meta_type<Util>()
+        auto util_type = engine_global_static_type<Util>()
             .prop("global namespace"_hs)
         ;
 

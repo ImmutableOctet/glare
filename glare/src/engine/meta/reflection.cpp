@@ -90,7 +90,7 @@ namespace engine
 	template <>
 	void reflect<MetaVariableContext>()
 	{
-		static_engine_meta_type<MetaVariableContext>()
+		engine_empty_type<MetaVariableContext>()
 			.func<static_cast<MetaSymbolID(*)(MetaSymbolID, std::string_view, MetaVariableScope)>(&MetaVariableContext::resolve_path)>("resolve_path"_hs)
 			.func<static_cast<MetaSymbolID(*)(MetaSymbolID, MetaSymbolID, MetaVariableScope)>(&MetaVariableContext::resolve_path)>("resolve_path"_hs)
 		;

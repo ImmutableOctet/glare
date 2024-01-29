@@ -195,14 +195,14 @@ namespace engine
 	template <>
 	void reflect<KinematicResolutionConfig>()
 	{
-		engine_empty_meta_type<KinematicResolutionConfig::SizeConfig>();
+		engine_empty_type<KinematicResolutionConfig::SizeConfig>();
 
 		// Automatic size types:
-		engine_empty_meta_type<KinematicResolutionConfig::AABBType>();
-		engine_empty_meta_type<KinematicResolutionConfig::AABBVectorType>();
-		engine_empty_meta_type<KinematicResolutionConfig::OrientedAABBVectorType>();
-		engine_empty_meta_type<KinematicResolutionConfig::SphereType>();
-		engine_empty_meta_type<KinematicResolutionConfig::InnerSphereType>();
+		engine_empty_type<KinematicResolutionConfig::AABBType>();
+		engine_empty_type<KinematicResolutionConfig::AABBVectorType>();
+		engine_empty_type<KinematicResolutionConfig::OrientedAABBVectorType>();
+		engine_empty_type<KinematicResolutionConfig::SphereType>();
+		engine_empty_type<KinematicResolutionConfig::InnerSphereType>();
 
 		// Manual size types:
 		auto manual_size_type = []<typename SizeType>()
