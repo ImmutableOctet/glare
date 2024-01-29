@@ -3,8 +3,10 @@
 #include <engine/types.hpp>
 #include <engine/meta/types.hpp>
 
-#include <type_traits>
+#include <util/type_traits.hpp>
+
 #include <utility>
+#include <type_traits>
 
 //#include <cmath>
 
@@ -102,6 +104,28 @@ namespace engine::impl
         */
 
         return value.try_cast<T>();
+    }
+
+    template <typename T, typename BaseType>
+    auto from_base_ptr(BaseType* base_ptr)
+    {
+        static_assert(std::is_base_of_v<BaseType, T>);
+
+        if constexpr (std::is_polymorphic_v<T>)
+        {
+            if constexpr (util::is_const_ptr_v<decltype(base_ptr)>)
+            {
+                return dynamic_cast<const T*>(base_ptr);
+            }
+            else
+            {
+                return dynamic_cast<T*>(base_ptr);
+            }
+        }
+        else
+        {
+            return static_cast<T*>(nullptr);
+        }
     }
 
     template <typename T, typename ...ConstructorArgs>
