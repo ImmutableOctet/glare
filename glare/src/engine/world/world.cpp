@@ -304,7 +304,7 @@ namespace engine
 		return {};
 	}
 
-	Entity World::get_bone_by_id(Entity entity, BoneID bone_id, bool recursive)
+	Entity World::get_bone_by_id(Entity entity, BoneID bone_id, bool recursive) const
 	{
 		if (!bone_id)
 		{
@@ -376,14 +376,14 @@ namespace engine
 		return bone_out;
 	}
 
-	Entity World::get_bone_by_name(Entity entity, std::string_view name, bool recursive)
+	Entity World::get_bone_by_name(Entity entity, std::string_view name, bool recursive) const
 	{
 		return get_bone_by_id(entity, hash(name), recursive);
 	}
 
-	Entity World::get_bone_by_index(Entity entity, BoneIndex bone_index, bool recursive)
+	Entity World::get_bone_by_index(Entity entity, BoneIndex bone_index, bool recursive) const
 	{
-		auto relationship = registry.try_get<RelationshipComponent>(entity);
+		const auto relationship = registry.try_get<RelationshipComponent>(entity);
 
 		if (!relationship)
 		{
@@ -396,7 +396,7 @@ namespace engine
 		(
 			registry,
 			
-			[&](Entity child, RelationshipComponent& relationship, Entity next_child)
+			[&](Entity child, const RelationshipComponent& relationship, Entity next_child)
 			{
 				const auto bone_comp = registry.try_get<BoneComponent>(child);
 
