@@ -111,11 +111,11 @@ namespace engine
         {
             reflect_enum<T>();
         }
-        else if constexpr (has_function_reflect<T, void>)
+        else if constexpr (has_function_reflect_v<T, void>)
         {
             T::reflect();
         }
-        else if constexpr (has_function_reflect<T, entt::meta_factory<T>>)
+        else if constexpr (has_function_reflect_v<T, entt::meta_factory<T>>)
         {
             // TODO: Determine if it makes sense to forward the return-value to the caller.
             T::reflect();
