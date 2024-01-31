@@ -123,6 +123,9 @@ namespace engine
 		// Controls whether some types can be used as references to systems.
 		bool resolve_system_references        : 1 = true; // false;
 
+		// Controls whether some types can be used as references to services.
+		bool resolve_service_references       : 1 = true;
+
 		// If enabled, container creation will be deferred to the evaluation phase.
 		// 
 		// NOTE: Deferral of associative containers has the drawback that

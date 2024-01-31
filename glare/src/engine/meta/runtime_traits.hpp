@@ -132,6 +132,15 @@ namespace engine
     // Returns true if the `value` specified references a 'system'.
     bool value_is_system(const MetaAny& value);
 
+	// Returns true if the `type` specified is a 'service' type.
+	bool type_is_service(const MetaType& type);
+
+	// Returns true if the type referenced by the `type_id` specified is a 'service' type.
+	bool type_is_service(const MetaTypeID type_id);
+
+	// Returns true if the `value` specified references a 'service'.
+	bool value_is_service(const MetaAny& value);
+
     // Returns true if the `type` specified has the `global namespace` property.
     bool type_has_global_namespace_flag(const MetaType& type);
 

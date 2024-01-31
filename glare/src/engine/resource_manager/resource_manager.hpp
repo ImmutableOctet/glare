@@ -137,7 +137,9 @@ namespace engine
 			//const CollisionData* get_collision(WeakModelRef model);
 
 			const CollisionData* get_collision(const WeakModelRef model) const;
-			const std::shared_ptr<AnimationData> get_animation_data(const WeakModelRef model) const;
+
+			std::shared_ptr<const AnimationData> get_animation_data(const WeakModelRef model) const;
+			const AnimationData* peek_animation_data(const WeakModelRef model) const;
 
 			std::shared_ptr<const EntityFactoryData> get_existing_factory(const std::string& path) const; // std::string_view
 			const EntityDescriptor* get_existing_descriptor(const std::string& path) const;

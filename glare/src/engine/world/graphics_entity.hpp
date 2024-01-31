@@ -85,6 +85,4 @@ namespace engine
 	);
 
 	Entity create_cube(World& world, Entity parent=null, EntityType type=EntityType::Default);
-
-	Entity attach_animator(World& world, Entity entity, const std::shared_ptr<AnimationData>& animations, float rate=1.0f);
 }

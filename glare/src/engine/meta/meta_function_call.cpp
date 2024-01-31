@@ -265,6 +265,11 @@ namespace engine
 				if (has_type())
 				{
 					self_type = get_type();
+
+					if ((!self) && (opt_evaluation_context))
+					{
+						self = opt_evaluation_context->resolve_singleton_from_type(self_type);
+					}
 				}
 				else
 				{

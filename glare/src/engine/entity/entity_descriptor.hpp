@@ -12,6 +12,8 @@
 
 #include <engine/world/physics/collision_config.hpp>
 
+#include <engine/world/animation/animation_repository.hpp>
+
 #include <math/types.hpp>
 
 #include <optional>
@@ -76,6 +78,8 @@ namespace engine
 			util::small_vector<ImmediateThreadDetails, 1> immediate_threads; // 2
 
 			ModelDetails model_details;
+
+			AnimationRepository animations;
 
 			SharedStorage shared_storage;
 

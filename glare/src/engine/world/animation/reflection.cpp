@@ -2,11 +2,11 @@
 
 #include "reflection.hpp"
 
+#include "animation_system.hpp"
+
 #include "components/animation_component.hpp"
 #include "components/skeletal_component.hpp"
 #include "components/bone_component.hpp"
-
-#include <graphics/animation.hpp>
 
 namespace engine
 {
@@ -14,26 +14,7 @@ namespace engine
 	void reflect<AnimationComponent>()
 	{
 		engine_meta_type<AnimationComponent>()
-			.data<&AnimationComponent::rate>("rate"_hs)
-			.data<&AnimationComponent::time>("time"_hs)
-			
-			// Read-only properties:
-			.data<nullptr, &AnimationComponent::get_state>("state"_hs)
-			.data<nullptr, &AnimationComponent::paused>("paused"_hs)
-			.data<nullptr, &AnimationComponent::playing>("playing"_hs)
-			.data<nullptr, &AnimationComponent::transitioning>("transitioning"_hs)
-			.data<nullptr, &AnimationComponent::animated>("animated"_hs)
-			.data<nullptr, &AnimationComponent::pose_size>("pose_size"_hs)
-			.data<nullptr, &AnimationComponent::get_animation_id>("animation_id"_hs)
-			.data<nullptr, &AnimationComponent::get_current_animation>("current_animation"_hs)
-			.data<nullptr, &AnimationComponent::get_prev_animation>("prev_animation"_hs)
-
-			.func<&AnimationComponent::play>("play"_hs)
-			.func<&AnimationComponent::pause>("pause"_hs)
-			.func<&AnimationComponent::toggle>("toggle"_hs)
-			.func<&AnimationComponent::get_animation>("get_animation_by_id"_hs)
-
-			.ctor<decltype(AnimationComponent::rate)>()
+			// TODO
 		;
 	}
 
@@ -50,16 +31,12 @@ namespace engine
 	{
 		engine_meta_type<BoneComponent>()
 			.data<&BoneComponent::skeleton>("skeleton"_hs)
-			.data<&BoneComponent::ID>("ID"_hs)
-			.data<&BoneComponent::name>("name"_hs)
-			.data<&BoneComponent::offset>("offset"_hs)
+			.data<&BoneComponent::bone_index>("bone_index"_hs)
 
 			.ctor
 			<
 				decltype(BoneComponent::skeleton),
-				decltype(BoneComponent::ID),
-				decltype(BoneComponent::name),
-				decltype(BoneComponent::offset)
+				decltype(BoneComponent::bone_index)
 			>()
 
 			//.ctor<&create_bone>()
@@ -69,6 +46,15 @@ namespace engine
 	template <>
 	void reflect<AnimationSystem>()
 	{
+		auto type = engine_system_type<AnimationSystem>()
+			.func<&AnimationSystem::get_skeleton>("get_skeleton"_hs)
+			.func<&AnimationSystem::get_frame_data>("get_frame_data"_hs)
+			.func<&AnimationSystem::get_data_from_asset>("get_animation_data"_hs)
+		;
+
+		REFLECT_MEMBER_FUNCTION_OVERLOADS(type, AnimationSystem, play, 3, std::size_t, Registry&, Entity, AnimationID, AnimationLayerMask);
+		REFLECT_MEMBER_FUNCTION_OVERLOADS(type, AnimationSystem, play, 3, std::size_t, Registry&, Entity, std::string_view, AnimationLayerMask);
+
 		reflect<AnimationComponent>();
 		reflect<SkeletalComponent>();
 		reflect<BoneComponent>();

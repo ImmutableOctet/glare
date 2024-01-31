@@ -1,47 +1,50 @@
 #pragma once
 
+#include <engine/types.hpp>
+
 //#include <engine/events.hpp>
 //#include <engine/world/events.hpp>
 
 namespace graphics
 {
-	struct Animation;
+	struct AnimationData;
 }
 
 namespace engine
 {
 	class World;
-	struct AnimationComponent;
-	struct TransformComponent;
 
-	/*
-		TODO:
-			* Ensure that usage of pointer-to-component does not cause any unintended side effects.
-			(e.g. pointer to moved/reallocated component could cause problems if events are queued)
-	*/
+	struct OnAnimationLayerActivated
+	{
+		AnimationID animation = {};
+	};
+
+	struct OnAnimationLayerDeactivated
+	{
+		AnimationID animation = {};
+	};
 
 	// Triggered any time an animation completes.
 	// (Happens repeatedly in the case of looping animations)
+	/*
 	struct OnAnimationComplete
 	{
-		Entity entity;
-
-		const AnimationComponent* animator;
-		const Animation* animation;
+		Entity entity = null;
+		
+		AnimationID current = {};
+		AnimationID previous = {};
 	};
+	*/
 
+	/*
 	struct OnAnimationChange
 	{
 		Entity entity;
-
-		const AnimationComponent* animator;
-		const Animation* prev_animation;
-		const Animation* current_animation;
-
-		float transition_length = 0.0f;
 	};
+	*/
 
 	// Executed each tick/frame an entity's animation updates.
+	/*
 	struct OnAnimationFrame
 	{
 		Entity entity;
@@ -50,8 +53,9 @@ namespace engine
 		float prev_time;
 
 		const AnimationComponent* animator;
-		const Animation* current_animation;
+		const AnimationData* current_animation;
 
 		std::uint16_t bones_changed;
 	};
+	*/
 }

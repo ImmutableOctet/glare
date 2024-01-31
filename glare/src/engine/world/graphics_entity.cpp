@@ -4,7 +4,7 @@
 #include <tuple>
 #include <utility>
 
-#include "animation/animation.hpp"
+#include "animation/components/animation_component.hpp"
 #include "animation/components/skeletal_component.hpp"
 #include "animation/components/bone_component.hpp"
 
@@ -205,10 +205,14 @@ namespace engine
 
 			if (animation_data)
 			{
-				if (!animation_data->animations.empty())
+				if (animation_data->skeleton)
 				{
 					create_skeleton(entity);
-					attach_animator(world, entity, animation_data, 0.05f); // 0.01f
+				}
+
+				if (animation_data->frames)
+				{
+					registry.emplace_or_replace<AnimationComponent>(entity);
 				}
 			}
 
@@ -281,16 +285,5 @@ namespace engine
 	Entity create_cube(World& world, Entity parent, EntityType type)
 	{
 		return load_model(world, "assets/geometry/cube.b3d", parent, type, false);
-	}
-
-	Entity attach_animator(World& world, Entity entity, const std::shared_ptr<AnimationData>& animations, float rate)
-	{
-		auto& registry = world.get_registry();
-
-		assert(!animations->animations.empty());
-
-		registry.emplace_or_replace<AnimationComponent>(entity, animations, AnimationID(0), rate);
-
-		return entity;
 	}
 }

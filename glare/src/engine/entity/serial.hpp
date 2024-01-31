@@ -16,6 +16,8 @@
 #include <engine/meta/serial.hpp>
 #include <engine/meta/meta_parsing_context.hpp>
 
+#include <engine/world/animation/types.hpp>
+
 #include <util/json.hpp>
 #include <util/parse.hpp>
 #include <util/algorithm.hpp>
@@ -39,6 +41,9 @@ namespace engine
 	struct MetaDescription;
 	struct EntityStateRule;
 	struct EntityThreadDescription;
+
+	struct AnimationRepository;
+	struct AnimationSlice;
 
 	// Offset used to account for the `source` and `target` arguments of a `Command` type.
 	inline constexpr std::size_t command_arg_offset = 2;
@@ -121,10 +126,47 @@ namespace engine
 		const MetaParsingContext& opt_parsing_context={}
 	);
 
+	std::size_t process_animation_list
+	(
+		EntityDescriptor& descriptor,
+		AnimationRepository& animations_out,
+		const util::json& animation_content,
+
+		const MetaParsingContext& opt_parsing_context={}
+	);
+
+	std::size_t process_animation_sequence_list
+	(
+		EntityDescriptor& descriptor,
+		AnimationRepository& animations_out,
+		const util::json& sequence_list_content,
+
+		const MetaParsingContext& opt_parsing_context={}
+	);
+
+	std::size_t process_animation_layer_list
+	(
+		EntityDescriptor& descriptor,
+		AnimationRepository& animations_out,
+		const util::json& layer_list_content,
+
+		const MetaParsingContext& opt_parsing_context={}
+	);
+
+	std::size_t process_bone_animation_layer_mapping
+	(
+		EntityDescriptor& descriptor,
+		AnimationRepository& animations_out,
+		const util::json& bone_mapping_content,
+
+		const MetaParsingContext& opt_parsing_context={}
+	);
+
 	std::size_t process_component_list
 	(
 		EntityDescriptor& descriptor,
 		MetaDescription& components_out, // EntityDescriptor::TypeInfo&
+
 		const util::json& components,
 
 		const MetaTypeDescriptorFlags& shared_component_flags={},

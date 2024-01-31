@@ -80,6 +80,7 @@ TEST_CASE("engine::reflect", "[engine:reflection]")
 	using namespace engine::literals;
 
 	engine::reflect<engine::ReflectionTest>();
+	engine::reflect_aggregate_fields<engine::PFRReflectionTest>();
 
 	SECTION("Resolve type")
 	{
@@ -91,5 +92,67 @@ TEST_CASE("engine::reflect", "[engine:reflection]")
 
 		REQUIRE(type == type_from_id);
 		REQUIRE(type_id == intended_type_id);
+	}
+
+	SECTION("Resolve PFR reflection type")
+	{
+		using namespace engine::literals;
+
+		const auto type = engine::resolve<engine::PFRReflectionTest>();
+		const auto type_id = type.id();
+
+		const auto intended_type_id = ("PFRReflectionTest"_hs).value();
+		const auto type_from_id = engine::resolve(intended_type_id);
+
+		REQUIRE(type == type_from_id);
+		REQUIRE(type_id == intended_type_id);
+
+		const auto nested_a = type.data("nested_a"_hs);
+
+		REQUIRE(static_cast<bool>(nested_a));
+
+		const auto nested_a_type = nested_a.type();
+
+		REQUIRE(static_cast<bool>(nested_a_type));
+		REQUIRE(static_cast<bool>(nested_a_type.data("a"_hs)));
+
+		const auto nested_b = type.data("nested_b"_hs);
+
+		REQUIRE(static_cast<bool>(nested_b));
+
+		const auto nested_b_type = nested_b.type();
+
+		REQUIRE(static_cast<bool>(nested_b_type));
+		REQUIRE(static_cast<bool>(nested_b_type.data("b"_hs)));
+
+		const auto nested_in_nested_b = nested_b_type.data("nested_in_nested_b"_hs);
+		
+		REQUIRE(static_cast<bool>(nested_in_nested_b));
+
+		const auto nested_in_nested_b_type = nested_in_nested_b.type();
+
+		REQUIRE(static_cast<bool>(nested_in_nested_b_type));
+		REQUIRE(static_cast<bool>(nested_in_nested_b_type.data("nested_b"_hs)));
+
+		const auto nested_c = type.data("nested_c"_hs);
+
+		REQUIRE(static_cast<bool>(nested_c));
+
+		const auto nested_c_type = nested_c.type();
+
+		REQUIRE(static_cast<bool>(nested_c_type));
+		REQUIRE(static_cast<bool>(nested_c_type.data("c"_hs)));
+
+		const auto nested_in_nested_c = nested_c_type.data("nested_in_nested_c"_hs);
+
+		REQUIRE(static_cast<bool>(nested_in_nested_c));
+
+		const auto nested_in_nested_c_type = nested_in_nested_c.type();
+
+		REQUIRE(static_cast<bool>(nested_in_nested_c_type));
+		REQUIRE(static_cast<bool>(nested_in_nested_c_type.data("nested_c"_hs)));
+
+		// Disabled for now. (See header; Boost PFR limitation)
+		//REQUIRE(static_cast<bool>(nested_in_nested_c_type.data("nested_b"_hs)));
 	}
 }

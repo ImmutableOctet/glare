@@ -1,16 +1,14 @@
 #include "skeletal_component.hpp"
 
-#include "bone_component.hpp"
+#include <engine/registry.hpp>
 
-#include <engine/world/world.hpp>
+#include <cassert>
 
 namespace engine
 {
-	bool attach_skeleton(World& world, Entity entity, Entity root_bone)
+	bool attach_skeleton(Registry& registry, Entity entity, Entity root_bone)
 	{
 		assert(entity != null);
-
-		auto& registry = world.get_registry();
 
 		// Check if we've already attached a skeleton to this entity.
 		auto* existing = registry.try_get<SkeletalComponent>(entity);
@@ -20,6 +18,9 @@ namespace engine
 			if (existing->root_bone == null)
 			{
 				existing->root_bone = root_bone;
+
+				// Mark skeletal component as patched.
+				registry.patch<SkeletalComponent>(entity);
 
 				return true;
 			}

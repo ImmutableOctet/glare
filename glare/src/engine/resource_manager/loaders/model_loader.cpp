@@ -1,35 +1,89 @@
 #include "model_loader.hpp"
 
+#include <engine/meta/hash.hpp>
+
+#include <util/memory.hpp>
+#include <util/string.hpp>
+
+#include <math/types.hpp>
 #include <math/assimp.hpp>
 
 #include <graphics/texture.hpp>
 #include <graphics/vertex.hpp>
-
-// Already included via header:
-//#include <graphics/collision_geometry.hpp>
-//#include <engine/world/physics/types.hpp>
-
-#include <util/memory.hpp>
-#include <util/string.hpp>
 
 #include <assimp/vector3.h>
 #include <assimp/matrix4x4.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <assimp/material.h>
+#include <assimp/anim.h>
 
 #include <bullet/btBulletCollisionCommon.h>
 
 #include <optional>
 //#include <type_traits>
 
-#include <util/log.hpp>
+#include <cassert>
 
 // Debugging related:
+#include <util/log.hpp>
+
 #include <iostream>
 
 namespace engine
 {
+	namespace impl
+	{
+		template <typename KeyTypeIn, typename SizeType, typename ContainerOut, typename ConversionFn>
+		static ContainerOut& load_skeletal_keys(const KeyTypeIn* keys, SizeType key_count, ContainerOut& out, ConversionFn&& cnv_fn)
+		{
+			using KeyTypeOut = typename ContainerOut::value_type;
+
+			for (SizeType key_index = 0; key_index < key_count; key_index++)
+			{
+				const auto& key_in = keys[key_index];
+
+				out.push_back(KeyTypeOut { cnv_fn(key_in.mValue), static_cast<float>(key_in.mTime) });
+				//out.emplace_back(cnv_fn(key_in.mValue), static_cast<float>(key_in.mTime));
+			}
+
+			return out;
+		}
+
+		template <typename ...Args>
+		decltype(auto) load_skeletal_vectors(const math::Matrix& orientation, Args&&... args)
+		{
+			return load_skeletal_keys
+			(
+				std::forward<Args>(args)...,
+
+				[&orientation](const aiVector3D& v)
+				{
+					auto vec = math::to_vector(v);
+
+					return math::Vector3D { (orientation * math::Vector4D {vec, 1.0f }) };
+				}
+			);
+		}
+
+		template <typename ...Args>
+		decltype(auto) load_skeletal_rotations(const math::Matrix& orientation, Args&&... args)
+		{
+			return load_skeletal_keys
+			(
+				std::forward<Args>(args)...,
+
+				[&orientation](const aiQuaternion& q)
+				{
+					//auto quat = math::to_quat_flipped(q);
+					auto quat = math::to_quat(q);
+
+					return quat; // orientation * ...;
+				}
+			);
+		}
+	}
+
 	// Internal TextureClasss are currently consistent with Assimp.
 	static aiTextureType to_aiTextureType(graphics::TextureClass type)
 	{
@@ -103,7 +157,7 @@ namespace engine
 	static MeshData process_mesh
 	(
 		const ModelLoader::Config& cfg, const aiScene* scene, const aiNode* node, const aiMesh* mesh,
-		const ModelLoader::Skeleton* skeleton=nullptr, const _aiMatrix4x4* orientation=nullptr
+		const Skeleton* skeleton=nullptr, const _aiMatrix4x4* orientation=nullptr
 	)
 	{
 		using VertexType = typename MeshData::Vertex;
@@ -123,7 +177,7 @@ namespace engine
 		// TODO: Review use of unsigned integer for indexing.
 		for (unsigned i = 0; i < vertex_count; i++)
 		{
-			VertexType vertex; // = {};
+			auto vertex = VertexType {};
 
 			//aiMatrix4x4 rm = node->mTransformation;
 			//aiMatrix4x4::Rotation(1.0f, { 1.0, 1.0, 1.0 }, rm);
@@ -201,8 +255,14 @@ namespace engine
 
 			if constexpr (MeshData::is_animated_vertex)
 			{
-				// `-1` is used to indicate no binding.
-				vertex.bone_indices = { -1, -1, -1, -1 };
+				vertex.bone_indices =
+				{
+					graphics::VERTEX_BONE_CHANNEL_OPEN,
+					graphics::VERTEX_BONE_CHANNEL_OPEN,
+					graphics::VERTEX_BONE_CHANNEL_OPEN,
+					graphics::VERTEX_BONE_CHANNEL_OPEN
+				};
+
 				vertex.bone_weights = {};
 			}
 
@@ -215,27 +275,27 @@ namespace engine
 			{
 				//int weight_channel = 0;
 
-				for (unsigned int i = 0; i < mesh->mNumBones; i++)
+				for (unsigned int bone_index = {}; bone_index < mesh->mNumBones; bone_index++)
 				{
-					auto* bone_raw = mesh->mBones[i];
-					auto* bone = skeleton->get_bone(bone_raw);
+					auto* bone_raw = mesh->mBones[bone_index];
+					
+					assert(bone_raw);
+
+					auto* bone = skeleton->get_bone(util::to_string_view(bone_raw->mName));
 
 					assert(bone);
 
-					for (unsigned int w = 0; w < bone_raw->mNumWeights; w++)
+					for (unsigned int weight_index = {}; weight_index < bone_raw->mNumWeights; weight_index++)
 					{
-						const aiVertexWeight& weight = bone_raw->mWeights[w];
+						const auto& weight = bone_raw->mWeights[weight_index];
+						
 						auto& vertex = data.vertices[weight.mVertexId];
 
-						auto weight_channel = get_next_weight_channel(vertex);
-
-						if (weight_channel == -1)
+						if (auto weight_channel = get_next_weight_channel(vertex))
 						{
-							continue;
+							vertex.bone_indices[*weight_channel] = static_cast<graphics::BoneIndexType>(bone_index);
+							vertex.bone_weights[*weight_channel] = weight.mWeight;
 						}
-
-						vertex.bone_indices[weight_channel] = static_cast<graphics::BoneIndexType>(bone->id);
-						vertex.bone_weights[weight_channel] = weight.mWeight;
 					}
 
 					/*
@@ -414,11 +474,11 @@ namespace engine
 		{
 			print("Generating missing bones...");
 
-			unsigned int additional_bones = 0;
+			auto additional_bones = std::size_t {};
 
 			for (const auto& bone_entry : skeleton.bones)
 			{
-				additional_bones += handle_missing_bone(*scene, skeleton, bone_entry.second.parent_name);
+				additional_bones += handle_missing_bone(*scene, skeleton, bone_entry.parent_name);
 			}
 
 			print("{} additional bone(s) generated.", additional_bones);
@@ -429,32 +489,41 @@ namespace engine
 		return get_model_storage();
 	}
 
-	unsigned int ModelLoader::handle_missing_bone(const aiScene& scene, Skeleton& skeleton, const std::string& bone_name, bool recursive)
+	std::size_t ModelLoader::handle_missing_bone(const aiScene& scene, Skeleton& skeleton, BoneID bone_id, bool recursive)
 	{
-		if (bone_name.empty())
+		if (!bone_id)
 		{
 			return 0;
 		}
 
-		unsigned int bones_generated = 0;
+		auto bones_generated = std::size_t {};
 
 		auto& bones = skeleton.bones;
-		auto bone_it = bones.find(bone_name);
+
+		const auto bone_it = std::find_if
+		(
+			bones.begin(), bones.end(),
+			[bone_id](const auto& bone) { return (bone.name == bone_id); }
+		);
 
 		if (bone_it == bones.end())
 		{
-			print("Generating missing bone: \"{}\"", bone_name);
+			print("Generating missing bone: \"{}\" ({})", get_known_string_from_hash(bone_id), bone_id);
 
-			auto* bone = process_bone(scene, skeleton, aiString(bone_name), {});
+			// TODO: Optimize. (Temporary string created + hash lookup, rather than having storage of bone names upfront)
+			auto bone_name = std::string { get_known_string_from_hash(bone_id) };
 
-			if (bone)
+			if (!bone_name.empty())
 			{
-				if (recursive)
+				if (auto* bone = process_bone(scene, skeleton, aiString(std::move(bone_name)), {}))
 				{
-					bones_generated += handle_missing_bone(scene, skeleton, bone->parent_name, true);
-				}
+					if (recursive)
+					{
+						bones_generated += handle_missing_bone(scene, skeleton, bone->parent_name, true);
+					}
 
-				bones_generated++;
+					bones_generated++;
+				}
 			}
 		}
 
@@ -467,7 +536,19 @@ namespace engine
 	}
 
 	template <typename MeshData>
-	static std::optional<graphics::Mesh> handle_mesh(ModelLoader& loader, const aiScene* scene, const aiNode* node, aiMesh* mesh, bool generate_graphical_mesh=true, CollisionGeometry::Container* collision_geometry=nullptr, const ModelLoader::Skeleton* skeleton=nullptr, const _aiMatrix4x4* scene_orientation=nullptr)
+	static std::optional<graphics::Mesh> handle_mesh
+	(
+		ModelLoader& loader,
+		
+		const aiScene* scene,
+		const aiNode* node,
+		aiMesh* mesh,
+		
+		bool generate_graphical_mesh=true,
+		CollisionGeometry::Container* collision_geometry=nullptr,
+		const Skeleton* skeleton=nullptr,
+		const _aiMatrix4x4* scene_orientation=nullptr
+	)
 	{
 		auto mesh_data = process_mesh<MeshData>(loader.get_config(), scene, node, mesh, skeleton, scene_orientation);
 
@@ -701,10 +782,8 @@ namespace engine
 		return get_recursive_transform(scene, *bone_node, true);
 	}
 
-	const graphics::Bone* ModelLoader::process_bone(const aiScene& scene, Skeleton& skeleton, const aiString& bone_name, const aiMatrix4x4& offset_matrix) // std::string_view bone_name
+	const Bone* ModelLoader::process_bone(const aiScene& scene, Skeleton& skeleton, const aiString& bone_name, const aiMatrix4x4& offset_matrix) // std::string_view bone_name
 	{
-		std::string parent_bone_name;
-
 		const auto* bone_node = scene.mRootNode->FindNode(bone_name);
 
 		if (!bone_node)
@@ -714,13 +793,12 @@ namespace engine
 			return nullptr;
 		}
 
-		if (bone_node->mParent)
-		{
-			if (bone_node->mParent->mName.length > 0)
-			{
-				parent_bone_name = std::string(util::to_string_view(bone_node->mParent->mName));
-			}
-		}
+		const auto parent_bone_node = bone_node->mParent;
+
+		const auto parent_bone_name = ((parent_bone_node) && (parent_bone_node->mName.length > 0))
+			? util::to_string_view(parent_bone_node->mName)
+			: std::string_view {}
+		;
 
 		/*
 		auto local_transform = bone_node->mTransformation;
@@ -735,66 +813,65 @@ namespace engine
 		//auto tform = get_bone_transform(*scene, bone_data->mName);
 		//auto tform = get_recursive_transform(scene, *bone_node, true);
 
-		const auto& tform = local_transform;
+		const auto& tform_raw = local_transform;
 		*/
 
-		///*
-		auto bt = bone_node->mTransformation;
+		auto tform_raw = bone_node->mTransformation;
 
 		if (parent_bone_name.empty())
 		{
 			auto inv_root_matrix = scene.mRootNode->mTransformation; inv_root_matrix.Inverse();
-			bt = inv_root_matrix * bt;
+			
+			tform_raw = inv_root_matrix * tform_raw;
 		}
-
-		const auto& tform = bt;
-		//*/
-
-		print("Creating bone: \"{}\" (parent: \"{}\")", util::to_string_view(bone_name), (parent_bone_name.empty()) ? "null" : parent_bone_name);
-
-		//return skeleton.add_bone(&bone_data, math::to_matrix(tform), parent_bone_name);
 
 		return skeleton.add_bone
 		(
-			util::to_string_view(bone_name),
-			math::to_matrix(tform),
+			hash(util::to_string_view(bone_name)),
+			
+			math::to_matrix(tform_raw),
 			math::to_matrix(offset_matrix),
-			parent_bone_name
-		);
 
-		//const Bone* add_bone(std::string_view name, const math::Matrix & node_transform, const math::Matrix & offset, const std::string & parent_bone_name = {});
-		//const Bone* add_bone(std::string_view name, const std::string & parent_bone_name = {});
-		//const Bone* add_bone(const aiBone * bone_raw, const math::Matrix & node_transform, const std::string & parent_bone_name = {});
+			(parent_bone_name.empty())
+				? BoneID {}
+				: hash(parent_bone_name)
+		);
 	}
 
-	unsigned int ModelLoader::process_bones(const aiScene& scene, const aiNode& node, const aiMesh& mesh, Skeleton& skeleton)
+	std::size_t ModelLoader::process_bones(const aiScene& scene, const aiNode& node, const aiMesh& mesh, Skeleton& skeleton)
 	{
-		unsigned int bones_processed = 0;
+		std::size_t bones_processed = {};
 
 		for (unsigned int i = 0; i < mesh.mNumBones; i++)
 		{
-			const aiBone* bone_data = mesh.mBones[i];
+			const auto& bone_data = mesh.mBones[i];
 
-			auto* bone_ptr = skeleton.get_bone(bone_data);
+			assert(bone_data);
 
-			if ((!bone_ptr) && (bone_data))
+			const auto existing_bone = skeleton.get_bone_by_name(util::to_string_view(bone_data->mName));
+
+			if (existing_bone)
 			{
-				if (process_bone(scene, skeleton, bone_data->mName, bone_data->mOffsetMatrix))
-				{
-					bones_processed++;
-				}
+				continue;
+			}
+
+			if (process_bone(scene, skeleton, bone_data->mName, bone_data->mOffsetMatrix))
+			{
+				bones_processed++;
 			}
 		}
 
 		return bones_processed;
 	}
 
-	const std::vector<ModelLoader::Animation> ModelLoader::process_animations(const aiScene* scene, Skeleton& skeleton, const _aiMatrix4x4* orientation)
+	SkeletalFrameData& ModelLoader::process_animations(const aiScene* scene, Skeleton& skeleton, const _aiMatrix4x4* orientation)
 	{
+		using index_t = std::uint32_t;
+
 		assert(scene);
 		assert(scene->mRootNode);
 
-		math::Matrix tform;
+		auto tform = math::Matrix {};
 
 		if (orientation)
 		{
@@ -805,41 +882,61 @@ namespace engine
 			tform = math::identity_matrix();
 		}
 
-		for (unsigned int a = 0; a < scene->mNumAnimations; a++)
+		auto duration = 0.0f;
+
+		const auto animation_count_raw = scene->mNumAnimations;
+
+		for (index_t animation_index = {}; animation_index < animation_count_raw; animation_index++)
 		{
-			auto* a_raw = scene->mAnimations[a];
+			const auto* animation_entry = scene->mAnimations[animation_index];
 
-			float duration = static_cast<float>(a_raw->mDuration);
-			float rate     = static_cast<float>(a_raw->mTicksPerSecond);
+			duration += static_cast<float>(animation_entry->mDuration);
+		}
 
-			Animation::FrameData frame_data;
+		auto& frame_data = animations.skeletal_sequences;
 
-			for (unsigned int c = 0; c < a_raw->mNumChannels; c++)
+		frame_data.resize(skeleton.bones.size());
+
+		for (index_t animation_index = {}; animation_index < animation_count_raw; animation_index++)
+		{
+			assert(scene->mAnimations[animation_index]);
+
+			const auto& animation_entry = *(scene->mAnimations[animation_index]);
+
+			//const auto animation_entry_duration = static_cast<float>(animation_entry.mDuration);
+
+			for (index_t channel_index = {}; channel_index < animation_entry.mNumChannels; channel_index++)
 			{
-				auto* channel = a_raw->mChannels[c];
-				auto bone_name = util::to_string_view(channel->mNodeName);
+				assert(animation_entry.mChannels[channel_index]);
 
-				auto* bone = skeleton.get_bone(bone_name);
-				//auto* bone = skeleton.get_or_create_bone(bone_name);
+				const auto& channel = *(animation_entry.mChannels[channel_index]);
 
-				//assert(bone);
-
-				if (!bone)
+				if (const auto bone_name = util::to_string_view(channel.mNodeName); !bone_name.empty())
 				{
-					print_warn("Unable to resolve bone: {}", bone_name);
+					if (const auto bone_index = skeleton.get_bone_index(bone_name))
+					{
+						auto& sequence_out = frame_data[*bone_index];
 
-					continue;
+						load_key_sequence(sequence_out, channel, tform);
+					}
+					else
+					{
+						print_warn("Unable to resolve bone: {}", bone_name);
+					}
 				}
-
-				auto bone_id = bone->id;
-
-				frame_data[bone_id] = Animation::KeySequence(*channel, tform);
 			}
-
-			animations.emplace_back(static_cast<AnimationID>(a), duration, rate, frame_data);
 		}
 
 		return animations;
+	}
+
+	SkeletalKeySequence& ModelLoader::load_key_sequence(SkeletalKeySequence& sequence_out, const aiNodeAnim& channel, const math::Matrix& tform)
+	{
+		impl::load_skeletal_vectors(tform, channel.mPositionKeys, channel.mNumPositionKeys, sequence_out.positions);
+		impl::load_skeletal_rotations(tform, channel.mRotationKeys, channel.mNumRotationKeys, sequence_out.rotations);
+		impl::load_skeletal_vectors(tform, channel.mScalingKeys, channel.mNumScalingKeys, sequence_out.scales);
+
+		return sequence_out;
 	}
 
 	std::shared_ptr<ModelLoader::Material> ModelLoader::process_material
@@ -850,7 +947,8 @@ namespace engine
 		bool load_textures
 	)
 	{
-		bool is_animated = cfg.is_animated.value_or(false);
+		const bool is_animated = cfg.is_animated.value_or(false);
+
 		auto material = std::make_shared<Material>((is_animated) ? default_animated_shader : default_shader);
 
 		//auto texture_types = 0;

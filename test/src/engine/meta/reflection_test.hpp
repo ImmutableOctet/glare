@@ -143,6 +143,42 @@ namespace engine
 		}
 	};
 
+	struct PFRReflectionTest
+	{
+		struct NestedA
+		{
+			int a;
+		};
+
+		struct NestedB
+		{
+			struct NestedInNestedB
+			{
+				char nested_b;
+			};
+
+			NestedInNestedB nested_in_nested_b;
+
+			int b;
+		};
+
+		struct NestedC
+		{
+			struct NestedInNestedC // : NestedB::NestedInNestedB // <-- Inherited type are not currently supported by Boost PFR.
+			{
+				float nested_c;
+			};
+
+			NestedInNestedC nested_in_nested_c;
+
+			short c;
+		};
+
+		NestedA nested_a;
+		NestedB nested_b;
+		NestedC nested_c;
+	};
+
 	template <typename T = void> void reflect();
 
 	extern template void reflect<ReflectionTest>();

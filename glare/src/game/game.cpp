@@ -12,7 +12,7 @@
 
 #include <engine/world/physics/physics.hpp>
 #include <engine/world/motion/motion.hpp>
-#include <engine/world/animation/animation.hpp>
+#include <engine/world/animation/animation_system.hpp>
 #include <engine/world/camera/camera_system.hpp>
 #include <engine/world/delta/delta_system.hpp>
 

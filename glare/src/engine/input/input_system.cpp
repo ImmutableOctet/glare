@@ -319,6 +319,13 @@ namespace engine
 
 	void InputSystem::on_button_down(InputSource source, StateIndex state_index, Button button)
 	{
+		if (states.empty())
+		{
+			return;
+		}
+
+		assert(state_index < states.size());
+
 		auto& state_data = states[state_index];
 		auto& state = state_data.next;
 
@@ -354,6 +361,13 @@ namespace engine
 
 	void InputSystem::on_button_up(InputSource source, StateIndex state_index, Button button)
 	{
+		if (states.empty())
+		{
+			return;
+		}
+
+		assert(state_index < states.size());
+
 		auto& state_data = states[state_index];
 		auto& state = state_data.next;
 
@@ -375,6 +389,13 @@ namespace engine
 
 	void InputSystem::on_analog_input(InputSource source, StateIndex state_index, Analog analog, const math::Vector2D& value, std::optional<float> angle)
 	{
+		if (states.empty())
+		{
+			return;
+		}
+
+		assert(state_index < states.size());
+
 		auto& state_data = states[state_index];
 		auto& state = state_data.next;
 

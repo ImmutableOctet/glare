@@ -15,7 +15,7 @@
 // TODO: Look into removing this from the main 'types' header.
 namespace graphics
 {
-	struct Animation;
+	struct AnimationData;
 }
 
 namespace engine
@@ -27,6 +27,8 @@ namespace engine
 
 	// TODO: Look into removing this from the main 'types' header.
 	struct AnimationData;
+
+	using FramerateType = std::uint32_t;
 
 	using SharedStorageIndex = std::uint16_t; // std::uint32_t; // std::size_t; // util::DefaultSharedStorageIndex;
 
@@ -44,9 +46,18 @@ namespace engine
 	using Sink = entt::sink<sink_parameters...>;
 	*/
 
-	using Animation    = graphics::Animation;
-	using AnimationID  = graphics::AnimationID;
-	using BoneID       = graphics::BoneID;
+	using AnimationID      = entt::id_type; // graphics::AnimationID;
+	using AnimationLayerID = entt::id_type;
+	using BoneID           = entt::id_type; // graphics::BoneID;
+	using BoneIndex        = graphics::BoneIndex;
+
+	// A type representing a bitmask used to filter which bones an animation is applied to.
+	using AnimationLayerMask = std::uint8_t;
+
+	// Index type used for animation layers.
+	using AnimationLayerIndex = std::size_t;
+
+	using AnimationLayerCount = AnimationLayerIndex;
 
 	// NOTE: Must be equivalent to `app::input::PlayerInputID`.
 	using PlayerIndex = std::uint16_t;
@@ -108,9 +119,20 @@ namespace engine
 		Other = Default
 	};
 
-	inline constexpr auto& null = entt::null;
+	inline constexpr const entt::null_t& null = entt::null;
 
 	inline constexpr PlayerIndex PRIMARY_LOCAL_PLAYER = 1;
 	inline constexpr PlayerIndex NO_PLAYER            = 0;
 	inline constexpr PlayerIndex ANY_PLAYER           = 0;
+
+	inline constexpr AnimationLayerMask ANIMATION_LAYER_MASK_NO_LAYER = {};
+
+	// Maximum number of concurrent animation layers. (Number of bits)
+	inline constexpr std::size_t MAX_ANIMATION_LAYERS = (sizeof(AnimationLayerMask) * 8);
+
+	// The number of frames per-second targeted by default.
+	inline constexpr FramerateType DEFAULT_FRAMERATE = 60;
+
+	// A fraction of a second representing the length of a 'frame'.
+	inline constexpr float DEFAULT_RATE = (1.0f / static_cast<float>(DEFAULT_FRAMERATE));
 }

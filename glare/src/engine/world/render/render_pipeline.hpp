@@ -21,8 +21,8 @@ namespace engine
 	{
 		public:
 			// Enable virtual destruction.
-			virtual ~RenderPipeline() = default;
+			inline virtual ~RenderPipeline() {}
 
-			virtual const RenderParameters& render(const RenderParameters& parameters) = 0;
+			virtual void render(const RenderParameters& parameters) = 0;
 	};
 }

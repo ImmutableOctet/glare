@@ -1,137 +1,140 @@
 #include "animation_component.hpp"
 
-#include <graphics/animation.hpp>
+#include <engine/world/animation/animation_layer.hpp>
+
+#include <util/bitfield.hpp>
 
 #include <algorithm>
 
 namespace engine
 {
-	const Animation* AnimationComponent::resolve_animation(const std::shared_ptr<AnimationData>& animations, AnimationID id)
+	namespace impl
 	{
-		//assert(animations);
-
-		if (!animations)
+		template <typename Callback>
+		static std::size_t modify_animation_layers_impl
+		(
+			AnimationComponent::LayerContainer& layers,
+			AnimationLayerMask layers_affected,
+			Callback&& callback
+		)
 		{
-			return nullptr;
-		}
+			auto layers_modified = std::size_t {};
 
-		//return &(animations->animations.at(id));
-		return &animations->animations[id];
-	}
-
-	std::optional<AnimationID> AnimationComponent::resolve_animation_id(const std::shared_ptr<AnimationData>& animations, const Animation* animation)
-	{
-		if ((!animations) || (!animation))
-		{
-			return std::nullopt;
-		}
-
-		// NOTE: Animation IDs are currently stored in `Animation` objects. This may change later.
-		return animation->id;
-
-		/*
-		// Alternative implementation:
-		const auto& animation_container = animations->animations;
-
-		AnimationID idx = 0;
-
-		for (const auto& element : animation_container)
-		{
-			//if (element.id == animation->id)
-			if (&element == animation)
+			auto on_layer = [&](auto layer_index)
 			{
-				//return element.id;
-				return idx;
-			}
+				auto& layer = layers[layer_index];
 
-			idx++;
-		}
+				if (callback(layer))
+				{
+					layers_modified++;
+				}
+			};
 
-		return std::nullopt;
-		*/
-	}
-
-	AnimationComponent::AnimationComponent(float rate)
-		: rate(rate) {}
-
-	AnimationComponent::AnimationComponent
-	(
-		const std::shared_ptr<AnimationData>& animations,
-		const Animation* current_animation,
-		float rate, float time
-	) :
-		animations(animations),
-		current_animation(current_animation),
-		prev_animation(current_animation), // prev_animation(nullptr)
-		last_known_animation(current_animation),
-		rate(rate), time(time)
-	{
-		assert(animations);
-
-		auto number_of_bones = animations->skeleton.size();
-
-		/*
-		pose.reserve(number_of_bones); // MAX_BONES
-
-		for (decltype(number_of_bones) i = 0; i < number_of_bones; i++)
-		{
-			const auto* bone = animations->skeleton.get_bone(i);
-
-			math::Matrix bone_matrix;
-
-			if (bone)
+			if (layers_affected == ANIMATION_LAYER_MASK_NO_LAYER)
 			{
-				bone_matrix = bone->offset;
+				on_layer(AnimationComponent::ANIMATION_LAYER_INDEX_NO_LAYER);
 			}
 			else
 			{
-				bone_matrix = math::identity_matrix();
+				util::enumerate_enabled_bits(layers_affected, on_layer);
 			}
 
-			pose.push_back(bone_matrix);
+			return layers_modified;
 		}
-		*/
-
-		pose = Matrices(number_of_bones);
 	}
 
-	AnimationComponent& AnimationComponent::set_animations(const std::shared_ptr<AnimationData>& animations, State new_state)
+	std::size_t AnimationComponent::play
+	(
+		AnimationID animation_id,
+		AnimationSlice animation_slice,
+		AnimationLayerMask animation_layers
+	)
 	{
-		this->animations = animations;
+		return impl::modify_animation_layers_impl
+		(
+			this->layers,
 
-		this->current_animation = nullptr;
-		this->prev_animation = nullptr;
-
-		//this->transition_state = std::nullopt;
-
-		state = new_state;
-
-		return *this;
+			animation_layers,
+			
+			[&](auto& layer)
+			{
+				return layer.play(animation_id, animation_slice);
+			}
+		);
 	}
 
-	void AnimationComponent::play()
+	std::size_t AnimationComponent::pause(AnimationLayerMask animation_layers)
 	{
-		state = State::Play;
+		return impl::modify_animation_layers_impl
+		(
+			this->layers,
+
+			animation_layers,
+			
+			[&](auto& layer)
+			{
+				return layer.pause();
+			}
+		);
 	}
 
-	void AnimationComponent::pause()
+	std::size_t AnimationComponent::stop(AnimationLayerMask animation_layers)
 	{
-		state = State::Pause;
+		return impl::modify_animation_layers_impl
+		(
+			this->layers,
+
+			animation_layers,
+			
+			[&](auto& layer)
+			{
+				return layer.stop();
+			}
+		);
 	}
 
-	bool AnimationComponent::toggle()
+	bool AnimationComponent::has_playing_layer() const
 	{
-		if (playing())
-		{
-			pause();
+		return (std::find_if(layers.begin(), layers.end(), [](const auto& layer) { return layer.playing(); }) != layers.end());
+	}
 
-			return true;
-		}
-		else // if (paused())
-		{
-			play();
+	bool AnimationComponent::has_paused_layer() const
+	{
+		return (std::find_if(layers.begin(), layers.end(), [](const auto& layer) { return layer.paused(); }) != layers.end());
+	}
 
-			return false;
-		}
+	bool AnimationComponent::has_stopped_layer() const
+	{
+		return (std::find_if(layers.begin(), layers.end(), [](const auto& layer) { return layer.stopped(); }) != layers.end());
+	}
+
+	std::size_t AnimationComponent::layers_playing() const
+	{
+		return std::count_if(layers.begin(), layers.end(), [](const auto& layer) { return layer.playing(); });
+	}
+
+	std::size_t AnimationComponent::layers_paused() const
+	{
+		return std::count_if(layers.begin(), layers.end(), [](const auto& layer) { return layer.paused(); });
+	}
+
+	std::size_t AnimationComponent::layers_stopped() const
+	{
+		return std::count_if(layers.begin(), layers.end(), [](const auto& layer) { return layer.stopped(); });
+	}
+
+	AnimationLayerMask AnimationComponent::layers_playing_mask() const
+	{
+		return generate_layer_mask([](const auto& layer) { return layer.playing(); });
+	}
+
+	AnimationLayerMask AnimationComponent::layers_paused_mask() const
+	{
+		return generate_layer_mask([](const auto& layer) { return layer.paused(); });
+	}
+
+	AnimationLayerMask AnimationComponent::layers_stopped_mask() const
+	{
+		return generate_layer_mask([](const auto& layer) { return layer.stopped(); });
 	}
 }

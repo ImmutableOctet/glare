@@ -148,7 +148,6 @@ namespace engine
 		return false;
 	}
 
-	// Returns true if the `value` specified references a 'system'.
 	bool value_is_system(const MetaAny& value)
 	{
 		if (!value)
@@ -159,6 +158,38 @@ namespace engine
 		if (auto type = value.type())
 		{
 			return type_is_system(type);
+		}
+
+		return false;
+	}
+
+	bool type_is_service(const MetaType& type)
+	{
+		using namespace engine::literals;
+
+		return ((type) && (type.prop("service"_hs)));
+	}
+
+	bool type_is_service(const MetaTypeID type_id)
+	{
+		if (auto type = resolve(type_id))
+		{
+			return type_is_service(type);
+		}
+
+		return false;
+	}
+
+	bool value_is_service(const MetaAny& value)
+	{
+		if (!value)
+		{
+			return false;
+		}
+
+		if (auto type = value.type())
+		{
+			return type_is_service(type);
 		}
 
 		return false;

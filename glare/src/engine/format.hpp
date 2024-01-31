@@ -31,7 +31,7 @@ struct fmt::formatter<engine::Entity>
     {
         if (e == engine::null)
         {
-            return format_to
+            return fmt::format_to
             (
                 ctx.out(),
                 "null",

@@ -18,6 +18,8 @@
 //#include "components/spot_light_shadow_component.hpp"
 
 #include "animation/components/bone_component.hpp"
+#include "animation/components/skeletal_component.hpp"
+
 #include "physics/components/collision_component.hpp"
 
 #include "camera/camera_system.hpp"
@@ -43,7 +45,11 @@
 
 #include <engine/config.hpp>
 
+#include <engine/meta/hash.hpp>
+
 #include <engine/resource_manager/resource_manager.hpp>
+#include <engine/resource_manager/animation_data.hpp>
+
 #include <engine/components/relationship_component.hpp>
 #include <engine/components/forwarding_component.hpp>
 
@@ -283,47 +289,145 @@ namespace engine
 		return (m._w * math::Vector4D{ up, 1.0f });
 	}
 
-	Entity World::get_bone_by_name(Entity entity, std::string_view name, bool recursive)
+	const AnimationData* World::get_animation_data(Entity entity) const
 	{
-		if (name.empty())
-			return null;
+		return get_animation_data(get_registry(), entity);
+	}
 
-		auto* relationship = registry.try_get<RelationshipComponent>(entity);
+	const AnimationData* World::get_animation_data(Registry& registry, Entity entity) const
+	{
+		if (const auto model_comp = registry.try_get<ModelComponent>(entity))
+		{
+			return resource_manager.peek_animation_data(model_comp->model);
+		}
+
+		return {};
+	}
+
+	Entity World::get_bone_by_id(Entity entity, BoneID bone_id, bool recursive) const
+	{
+		if (!bone_id)
+		{
+			return null;
+		}
+
+		const auto relationship = registry.try_get<RelationshipComponent>(entity);
 
 		if (!relationship)
-			return null;
-
-		Entity out = null;
-
-		relationship->enumerate_children(registry, [&](Entity child, RelationshipComponent& relationship, Entity next_child)
 		{
-			auto* bone = registry.try_get<BoneComponent>(child);
+			return null;
+		}
 
-			if (!bone)
-				return true;
+		const auto skeletal_comp = registry.try_get<SkeletalComponent>(entity);
 
-			if (bone->name == name)
+		if (!skeletal_comp)
+		{
+			return null;
+		}
+
+		const auto animation_data = get_animation_data(entity);
+
+		if (!animation_data)
+		{
+			return null;
+		}
+
+		const auto& skeleton = animation_data->skeleton;
+
+		Entity bone_out = null;
+
+		relationship->enumerate_children
+		(
+			registry,
+			
+			[&](Entity child, const RelationshipComponent& relationship, Entity next_child)
 			{
-				out = child;
+				const auto bone_comp = registry.try_get<BoneComponent>(child);
 
-				return false;
-			}
-			else if (recursive)
-			{
-				auto r_out = get_bone_by_name(child, name, true);
-
-				if (r_out != null)
+				if (!bone_comp)
 				{
-					out = r_out;
+					return true;
+				}
+
+				const auto bone = skeleton.get_bone_by_index(bone_comp->bone_index);
+
+				if ((bone) && (bone->name == bone_id))
+				{
+					bone_out = child;
 
 					return false;
 				}
+				else if (recursive)
+				{
+					const auto recursive_result = get_bone_by_id(child, bone_id, true);
+
+					if (recursive_result != null)
+					{
+						bone_out = recursive_result;
+
+						return false;
+					}
+				}
+
+				return true;
 			}
+		);
 
-			return true;
-		});
+		return bone_out;
+	}
 
-		return out;
+	Entity World::get_bone_by_name(Entity entity, std::string_view name, bool recursive) const
+	{
+		return get_bone_by_id(entity, hash(name), recursive);
+	}
+
+	Entity World::get_bone_by_index(Entity entity, BoneIndex bone_index, bool recursive) const
+	{
+		const auto relationship = registry.try_get<RelationshipComponent>(entity);
+
+		if (!relationship)
+		{
+			return null;
+		}
+
+		Entity bone_out = null;
+
+		relationship->enumerate_children
+		(
+			registry,
+			
+			[&](Entity child, const RelationshipComponent& relationship, Entity next_child)
+			{
+				const auto bone_comp = registry.try_get<BoneComponent>(child);
+
+				if (!bone_comp)
+				{
+					return true;
+				}
+
+				if (bone_comp->bone_index == bone_index)
+				{
+					bone_out = child;
+
+					return false;
+				}
+				else if (recursive)
+				{
+					const auto recursive_result = get_bone_by_index(child, bone_index, true);
+
+					if (recursive_result != null)
+					{
+						bone_out = recursive_result;
+
+						return false;
+					}
+				}
+
+				return true;
+			}
+		);
+
+		return bone_out;
 	}
 
 	ResourceManager& World::get_resource_manager()

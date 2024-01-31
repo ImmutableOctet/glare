@@ -18,8 +18,6 @@ target_sources(
     "point_rect.cpp"
     "vertex.cpp"
     "resource.cpp"
-    "skeleton.cpp"
-    "animation.cpp"
     "cubemap_transform.cpp"
     "framebuffer.cpp"
     "renderbuffer.cpp"
@@ -31,7 +29,8 @@ target_sources(
     "pixelmap.cpp"
     "shader.cpp"
     "shadow_map.cpp"
- "shader_source.cpp")
+    "shader_source.cpp"
+)
 
 add_subdirectory("drivers")
 

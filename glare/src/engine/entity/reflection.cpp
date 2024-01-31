@@ -111,7 +111,7 @@ namespace engine
 	template <>
 	void reflect<EntityDescriptor>()
 	{
-		//engine_empty_meta_type<EntityDescriptor>() // engine_meta_type
+		//engine_empty_type<EntityDescriptor>() // engine_meta_type
 			//.data<&EntityDescriptor::components>("components"_hs)
 			//.data<&EntityDescriptor::states>("states"_hs)
 			//.data<&EntityDescriptor::immediate_threads>("immediate_threads"_hs)
@@ -740,7 +740,7 @@ namespace engine
     template <>
 	void reflect<EntitySystem>()
 	{
-		static_engine_meta_type<EntitySystem>()
+		engine_system_type<EntitySystem>()
 			//.func<&EntitySystem::resolve_variable_context>("resolve_variable_context"_hs)
 		;
 

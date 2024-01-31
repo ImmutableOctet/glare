@@ -29,6 +29,13 @@ target_link_libraries(glare_core PUBLIC magic_enum::magic_enum) # glare_common
 find_package(spdlog CONFIG REQUIRED)
 target_link_libraries(glare_core PUBLIC spdlog::spdlog_header_only) # spdlog::spdlog # glare_common
 
+#find_package(Boost CONFIG REQUIRED Boost::pfr)
+
+target_link_libraries(glare_core
+    PUBLIC
+    Boost::pfr
+)
+
 #add_dependencies(
 #    glare_util
 #    glare_common

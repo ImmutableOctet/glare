@@ -9,7 +9,7 @@ target_sources(
     "loaders/model_loader.cpp"
 
     # Top-level:
-    "animation_data.cpp"
+    
     "collision_data.cpp"
     "entity_factory_data.cpp"
     "resource_manager.cpp"

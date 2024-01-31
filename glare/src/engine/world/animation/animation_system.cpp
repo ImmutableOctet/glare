@@ -1,19 +1,31 @@
 #include "animation_system.hpp"
+
 #include "animation_events.hpp"
+#include "animation_state.hpp"
+#include "animation_repository.hpp"
 
 #include "components/animation_component.hpp"
+#include "components/animation_transition_component.hpp"
 #include "components/bone_component.hpp"
 #include "components/skeletal_component.hpp"
+#include "components/skeletal_pose_component.hpp"
+
+#include <engine/entity/entity_descriptor.hpp>
+#include <engine/entity/components/instance_component.hpp>
 
 #include <engine/components/relationship_component.hpp>
 #include <engine/components/forwarding_component.hpp>
+#include <engine/components/model_component.hpp>
+
+#include <engine/resource_manager/animation_data.hpp>
+
+#include <engine/meta/hash.hpp>
 #include <engine/world/world.hpp>
 #include <engine/resource_manager/resource_manager.hpp>
 #include <engine/events.hpp>
 
-#include <graphics/animation.hpp>
-
 #include <cmath>
+#include <cstdint>
 
 namespace engine
 {
@@ -24,171 +36,300 @@ namespace engine
 	void AnimationSystem::on_subscribe(World& world)
 	{
 		world.register_event<OnParentChanged, &AnimationSystem::on_parent_changed>(*this);
+
+		auto& registry = world.get_registry();
+
+		//registry.on_construct<AnimationComponent>().connect<&AnimationSystem::on_animation_attached>(*this);
+		//registry.on_destroy<AnimationComponent>().connect<&AnimationSystem::on_animation_detached>(*this);
+		//registry.on_update<AnimationComponent>().connect<&AnimationSystem::on_animation_changed>(*this);
 	}
 
-	static std::uint16_t animate_bones(World& world, const math::Matrix& inv_root_matrix, AnimationComponent& animator, const Animation& current_animation, RelationshipComponent& relationship)
+	void AnimationSystem::on_unsubscribe(World& world)
 	{
 		auto& registry = world.get_registry();
 
-		std::uint16_t bones_animated = 0;
-
-		relationship.enumerate_children(registry, [&bones_animated, &world, &inv_root_matrix, &registry, &animator, &current_animation](Entity child, RelationshipComponent& relationship, Entity next_child) -> bool
-		{
-			auto* bone_detail = registry.try_get<BoneComponent>(child);
-
-			if (!bone_detail)
-			{
-				return true;
-			}
-
-			auto bone_id = bone_detail->ID;
-
-			const Animation::KeySequence* sequence = current_animation.get_sequence(bone_id);
-
-			if (!sequence)
-			{
-				return true;
-			}
-
-			auto local_bone_matrix = sequence->interpolated_matrix(animator.time, false);
-
-			auto bone_matrix = (local_bone_matrix * bone_detail->offset); // true
-			//auto bone_matrix = bone_detail->offset;
-			//auto bone_matrix = sequence->interpolated_matrix(animator.time);
-
-			//animator.pose[bone_id] = bone_matrix;
-			//animator.pose[bone_id] = local_bone_matrix;
-			
-			{
-				auto bone_tform = world.get_transform(child);
-				bone_tform.set_local_matrix(local_bone_matrix); // sequence->interpolated_matrix(animator.time, true)
-				//bone_tform.set_local_matrix(bone_matrix);
-
-				//animator.pose[bone_id] = glm::identity<glm::mat4>();
-				//animator.pose[bone_id] = bone_matrix;
-
-				//animator.pose[bone_id] = (bone_tform.get_matrix() * bone_detail->offset);
-				//animator.pose[bone_id] = (bone_tform.get_local_matrix() * bone_detail->offset * inv_root_matrix);
-
-				//animator.pose[bone_id] = bone_tform.get_matrix();
-
-				animator.pose[bone_id] = (inv_root_matrix * bone_tform.get_matrix() * bone_detail->offset);
-				//animator.pose[bone_id] = (bone_tform.get_matrix() * bone_detail->offset);
-				//animator.pose[bone_id] = bone_detail->offset;
-			}
-
-			// Get current bone state (matrix) based on ID, time, and data found in 'current_animation'.
-			// Update bone entity's transform in-engine to correspond to new matrix.
-			// Log matrix results according to bone ID in array or uniform buffer held in the AnimationComponent component.
-			// Check against AnimationComponent component's existence in render loop,
-			// bind already correct shader (see resource manager and co.),
-			// upload bone matrices to shader
-			// update vertex position based on matrices, weights and indices.
-			// ???
-			// PROFIT
-
-			auto* bone_rel = registry.try_get<RelationshipComponent>(child);
-
-			if (bone_rel)
-			{
-				bones_animated += animate_bones(world, inv_root_matrix, animator, current_animation, *bone_rel);
-			}
-
-			return true;
-		}, true);
-
-		return bones_animated;
+		//registry.on_construct<AnimationComponent>().disconnect(*this);
+		//registry.on_destroy<AnimationComponent>().disconnect(*this);
+		//registry.on_update<AnimationComponent>().disconnect(*this);
 	}
 
-	static std::uint16_t animate(World& world, Entity entity, AnimationComponent& animator, const Animation& current_animation, RelationshipComponent& relationship, TransformComponent& tform_comp)
+	void AnimationSystem::update_states(World& world, float delta_time)
 	{
-		// Retrieve the inverse world-space matrix of the root entity.
-		math::Matrix inv_root_matrix;
+		auto& registry = world.get_registry();
 
-		{
-			auto tform = Transform(world.get_registry(), entity, relationship, tform_comp);
+		registry.view<AnimationComponent>().each
+		(
+			[&](Entity entity, AnimationComponent& animation)
+			{
+				for (auto& layer : animation.layers)
+				{
+					auto& current = layer.current;
 
-			inv_root_matrix = tform.get_inverse_matrix();
-		}
+					if (current)
+					{
+						if (current.state.is_playing())
+						{
+							current.state.step(delta_time);
+						}
+					}
 
-		return animate_bones(world, inv_root_matrix, animator, current_animation, relationship);
+					auto& previous = layer.previous;
+
+					if (previous)
+					{
+						if (current.state.is_playing())
+						{
+							previous.state.step(delta_time);
+						}
+					}
+				}
+			}
+		);
+	}
+
+	std::size_t AnimationSystem::update_bones(World& world)
+	{
+		auto& registry = world.get_registry();
+
+		auto bones_updated = std::size_t {};
+
+		registry.view<RelationshipComponent, TransformComponent, AnimationComponent, SkeletalPoseComponent>().each
+		(
+			[&](Entity entity, RelationshipComponent& relationship, TransformComponent& transform_component, AnimationComponent& animation, SkeletalPoseComponent& skeletal_component)
+			{
+				auto& layer = animation.get_primary_layer();
+
+				if (!layer.current)
+				{
+					return;
+				}
+
+				if (const auto asset_data = get_data_from_asset(registry, entity))
+				{
+					if (const auto& frame_data = asset_data->frames)
+					{
+						auto& current = layer.current;
+
+						const auto& area = current.area;
+
+						const auto frames_begin = static_cast<float>(area.from);
+						const auto frames_end   = static_cast<float>(area.to);
+
+						const auto frame_count  = area.size();
+
+						// Normalized linear time elapsed along animation slice. (0.0 to 1.0)
+						const auto normalized_time_elapsed = current.state.get_time();
+
+						// Frame number/offset relative to `frames_begin`.
+						const auto local_frame_number = (static_cast<float>(frame_count) * normalized_time_elapsed);
+
+						// Frame number relative to all animations.
+						const auto current_frame = (frames_begin + local_frame_number);
+
+						// Retrieve the inverse world-space matrix of the root entity.
+						auto inverse_root_matrix = math::Matrix{};
+
+						{
+							auto root_transform = Transform(registry, entity, relationship, transform_component);
+
+							inverse_root_matrix = root_transform.get_inverse_matrix();
+						}
+
+						relationship.enumerate_children
+						(
+							registry,
+
+							[&](Entity child, const RelationshipComponent& child_relationship, Entity next_child) -> bool
+							{
+								if (const auto* bone_detail = registry.try_get<BoneComponent>(child))
+								{
+									const auto& bone_index = bone_detail->bone_index;
+
+									if (const auto key_sequence = frame_data.get_sequence(bone_index))
+									{
+										auto bone_transform = world.get_transform(child);
+
+										const auto local_bone_matrix = key_sequence->interpolated_matrix(current_frame, frames_begin, frames_end);
+
+										bone_transform.set_local_matrix(local_bone_matrix);
+
+										auto bone_offset = math::Matrix {};
+
+										if (const auto bone = asset_data->skeleton.get_bone_by_index(bone_index))
+										{
+											bone_offset = bone->offset;
+										}
+
+										skeletal_component.pose.bone_matrices[bone_index] = (inverse_root_matrix * bone_transform.get_matrix() * bone_offset);
+
+										bones_updated++;
+									}
+								}
+
+								return true;
+							},
+
+							true
+						);
+					}
+				}
+
+				/*
+				world.queue_event(OnAnimationFrame { entity, animator.time, prev_time, &animator, animator.current_animation, bones_changed });
+
+				if (prev_time > current_time)
+				{
+					//world.queue_event<OnAnimationRepeat>(...);
+				}
+				else if (current_animation.ended())
+				{
+
+				}
+				*/
+			}
+		);
+
+		return bones_updated;
 	}
 
 	void AnimationSystem::on_update(World& world, float delta_time)
 	{
-		return;
-
 		auto& registry = world.get_registry();
 
-		// Apply motion (gravity, velocity, deceleration, etc.):
-		registry.view<AnimationComponent, RelationshipComponent, TransformComponent>().each([&](auto entity, AnimationComponent& animator, RelationshipComponent& relationship, TransformComponent& tform_comp)
+		update_states(world, delta_time);
+		update_bones(world);
+	}
+
+	AnimationSlice AnimationSystem::get_slice(Registry& registry, Entity entity, AnimationID animation_id) const
+	{
+		if (auto slice_from_asset = get_slice_from_asset(registry, entity, animation_id))
 		{
-			if (!animator)
+			return slice_from_asset;
+		}
+
+		if (const auto slice_from_repository = get_slice_from_repository(registry, entity, animation_id))
+		{
+			return slice_from_repository;
+		}
+
+		return {};
+	}
+
+	AnimationSlice AnimationSystem::get_slice_from_asset(Registry& registry, Entity entity, AnimationID animation_id) const
+	{
+		if (const auto slices_from_asset = get_slices_from_asset(registry, entity))
+		{
+			return get_slice_from_asset(*slices_from_asset, animation_id);
+		}
+
+		return {};
+	}
+
+	AnimationSlice AnimationSystem::get_slice_from_asset(const AnimationData::AnimationContainer& animation_slices, AnimationID animation_id) const
+	{
+		if (const auto animation_it = animation_slices.find(animation_id); animation_it != animation_slices.end())
+		{
+			return animation_it->second;
+		}
+
+		return {};
+	}
+
+	AnimationSlice AnimationSystem::get_slice_from_repository(Registry& registry, Entity entity, AnimationID animation_id) const
+	{
+		if (const auto animation_repository = get_repository(registry, entity))
+		{
+			return get_slice_from_repository(*animation_repository, animation_id);
+		}
+
+		return {};
+	}
+
+	AnimationSlice AnimationSystem::get_slice_from_repository(const AnimationRepository& animation_repository, AnimationID animation_id) const
+	{
+		if (const auto stored_slice = animation_repository.get_slice(animation_id))
+		{
+			return *stored_slice;
+		}
+
+		return {};
+	}
+
+	const AnimationSequence* AnimationSystem::get_sequence(Registry& registry, Entity entity, AnimationID animation_id) const
+	{
+		if (const auto animation_repository = get_repository(registry, entity))
+		{
+			return get_sequence(*animation_repository, animation_id);
+		}
+
+		return {};
+	}
+
+	const AnimationSequence* AnimationSystem::get_sequence(const AnimationRepository& animation_repository, AnimationID animation_id) const
+	{
+		return animation_repository.get_sequence(animation_id);
+	}
+
+	std::size_t AnimationSystem::play(Registry& registry, Entity entity, AnimationID animation_id, AnimationLayerMask animation_layer)
+	{
+		if (const auto repository = get_repository(registry, entity))
+		{
+			if (const auto animation_sequence = get_sequence(*repository, animation_id))
 			{
-				return;
+				//return begin_playing_sequence();
 			}
 
-			// Indicates whether the current animation will advance.
-			bool frame_advance = true;
-
-			// Determine if the current animation has changed.
-			if (animator.current_animation != animator.last_known_animation)
+			if (const auto animation_slice = get_slice_from_repository(*repository, animation_id))
 			{
-				// Establish transition period between animations:
-				float transition_length = 0.0f;
-
-				if (animator.current_animation)
-				{
-					// NOTE: We could add an additional check here for foreign animations, but for now we'll assume the same transition behavior applies.
-					transition_length = animator.animations->get_transition(animator.last_known_animation->id, animator.current_animation->id);
-
-					if (transition_length > 0.0f)
-					{
-						animator.transition_state = { transition_length, animator.time };
-					}
-				}
-
-				world.queue_event(OnAnimationChange { entity, &animator, animator.current_animation, animator.prev_animation, transition_length });
-
-				// Keep track of the last known and previous animations:
-				animator.prev_animation = animator.last_known_animation;
-				animator.last_known_animation = animator.current_animation;
-
-				// Start the newly assigned animation at the first frame.
-				animator.time = 0.0f;
-
-				// We want to start displaying the new animation on the first frame,
-				// so we don't need to advance anything from here.
-				frame_advance = false;
+				return play_slice(registry, entity, animation_id, animation_slice, animation_layer);
 			}
-
-			const Animation& current_animation = *animator.current_animation;
-
-			auto bones_changed = animate(world, entity, animator, current_animation, relationship, tform_comp);
-
-			if (frame_advance)
+		}
+		else
+		{
+			if (const auto animation_slice = get_slice_from_asset(registry, entity, animation_id))
 			{
-				if (animator.state != AnimationComponent::State::Pause)
-				{
-					auto prev_time = animator.time;
-
-					//animator.time = std::fmod((animator.time + ((current_animation.rate * animator.rate) * delta_time)), current_animation.duration);
-			
-					animator.time += ((current_animation.rate * animator.rate) * delta_time);
-
-					if (animator.time >= current_animation.duration)
-					{
-						animator.time = 0.0f;
-						//animator.time = std::fmod(animator.time, current_animation.duration);
-						//animator.time -= current_animation.duration;
-
-						world.event(OnAnimationComplete { entity, &animator, &current_animation });
-					}
-
-					world.queue_event(OnAnimationFrame { entity, animator.time, prev_time, &animator, animator.current_animation, bones_changed });
-				}
+				return play_slice(registry, entity, animation_id, animation_slice, animation_layer);
 			}
-		});
+		}
+
+		return {};
+	}
+
+	std::size_t AnimationSystem::play(Registry& registry, Entity entity, std::string_view animation_name, AnimationLayerMask animation_layer)
+	{
+		return play(registry, entity, hash(animation_name), animation_layer);
+	}
+
+	const Skeleton* AnimationSystem::get_skeleton(Registry& registry, Entity entity) const
+	{
+		if (const auto asset_data = get_data_from_asset(registry, entity))
+		{
+			return &asset_data->skeleton;
+		}
+
+		return {};
+	}
+
+	const SkeletalFrameData* AnimationSystem::get_frame_data(Registry& registry, Entity entity) const
+	{
+		if (const auto asset_data = get_data_from_asset(registry, entity))
+		{
+			return &asset_data->frames;
+		}
+
+		return {};
+	}
+
+	std::size_t AnimationSystem::play_slice
+	(
+		Registry& registry, Entity entity,
+		AnimationID animation_id, AnimationSlice animation_slice,
+		AnimationLayerMask animation_layer
+	)
+	{
+		auto& animation_component = registry.get_or_emplace<AnimationComponent>(entity);
+
+		return animation_component.play(animation_id, animation_slice, animation_layer);
 	}
 
 	void AnimationSystem::set_bone_skeleton(Registry& registry, Entity entity, BoneComponent& bone_component, Entity new_skeleton)
@@ -235,7 +376,7 @@ namespace engine
 			set_bone_skeleton(registry, parent_changed.entity, *bone_component, parent_changed.to_parent);
 
 			// Attach a skeleton to the new parent.
-			if (!attach_skeleton(world, parent_changed.to_parent, parent_changed.entity)) // In the event of failure:
+			if (!attach_skeleton(registry, parent_changed.to_parent, parent_changed.entity)) // In the event of failure:
 			{
 				// A skeleton already exists, assign our parent to that skeleton's `root_bone` instead:
 				if (auto* skeleton = registry.try_get<SkeletalComponent>(parent_changed.to_parent); skeleton)
@@ -258,16 +399,82 @@ namespace engine
 		}
 		
 		// Update children recursively with our newly established skeleton entity:
-		relationship->enumerate_children(registry, [&](Entity child, RelationshipComponent& relationship, Entity next_child)
-		{
-			auto* bone = registry.try_get<BoneComponent>(child);
+		relationship->enumerate_children
+		(
+			registry,
+			[&](Entity child, RelationshipComponent& relationship, Entity next_child)
+			{
+				auto* bone = registry.try_get<BoneComponent>(child);
 
-			if (!bone)
+				if (!bone)
+					return true;
+
+				set_bone_skeleton(registry, child, *bone, parent_changed.to_parent);
+
 				return true;
-
-			set_bone_skeleton(registry, child, *bone, parent_changed.to_parent);
-
-			return true;
-		}, true);
+			},
+			true
+		);
 	}
+
+	const AnimationRepository* AnimationSystem::get_repository(Registry& registry, Entity entity) const
+	{
+		auto instance_comp = registry.try_get<InstanceComponent>(entity);
+
+		if (!instance_comp)
+		{
+			return {};
+		}
+
+		const auto& descriptor = instance_comp->get_descriptor();
+
+		return &(descriptor.animations);
+	}
+
+	const AnimationData::AnimationContainer* AnimationSystem::get_slices_from_asset(Registry& registry, Entity entity) const
+	{
+		if (const auto animation_data = get_data_from_asset(registry, entity))
+		{
+			return &(animation_data->animations);
+		}
+
+		return {};
+	}
+
+	const AnimationData* AnimationSystem::get_data_from_asset(Registry& registry, Entity entity) const
+	{
+		return world.get_animation_data(registry, entity);
+	}
+
+	/*
+	void AnimationSystem::on_animation_attached(Registry& registry, Entity entity)
+	{
+	}
+
+	void AnimationSystem::on_animation_detached(Registry& registry, Entity entity)
+	{
+	}
+
+	void AnimationSystem::on_animation_changed(Registry& registry, Entity entity)
+	{
+		auto& animation_comp = registry.get<AnimationComponent>(entity);
+
+		if (animation_comp.current == animation_comp.previous)
+		{
+			return;
+		}
+
+		auto& animation_state_comp = registry.get_or_emplace<AnimationStateComponent>(entity);
+
+		resolve_animation
+		(
+			registry, entity,
+
+			animation_comp,
+			animation_state_comp,
+
+			animation_comp.current
+		);
+	}
+	*/
 }

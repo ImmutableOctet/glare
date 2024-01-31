@@ -38,7 +38,12 @@ namespace engine
 			{
 				if (resolve_instance_path)
 				{
-					this->paths.instance_path = resolve_path(this->paths.instance_path, base_path);
+					this->paths.instance_path = resolve_reference(this->paths.instance_path, base_path); // resolve_path(...);
+
+					if (auto resolved_instance_directory = this->paths.instance_path.parent_path(); !resolved_instance_directory.empty())
+					{
+						this->paths.instance_directory = std::move(resolved_instance_directory);
+					}
 				}
 			}
 

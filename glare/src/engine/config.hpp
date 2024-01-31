@@ -53,13 +53,13 @@ namespace engine
 	struct Config
 	{
 		using Graphics = GraphicsConfig;
-		using Players  = PlayerConfig;
 		using Objects  = ObjectConfig;
+		using Players  = PlayerConfig;
 		using Entities = EntityConfig;
 
 		Graphics graphics;
 		Objects  objects;
 		Players  players;
-		Entities entity;
+		Entities entities;
 	};
 }

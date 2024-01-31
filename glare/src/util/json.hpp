@@ -11,7 +11,8 @@
 //#include <string_view>
 
 //#include <cstdint>
-//#include <cstddef>
+
+#include <cstddef>
 
 #include <optional>
 #include <filesystem>
@@ -197,16 +198,16 @@ namespace util
 	// If `element` is a non-array type, the `callback_fn` will be executed
 	// for the single element, given the type-filter is satisfied.
 	template <json::value_t... types>
-	unsigned int json_for_each(const auto& element, auto&& callback_fn)
+	std::size_t json_for_each(const auto& element, auto&& callback_fn)
 	{
 		using CallbackType = std::decay_t<decltype(callback_fn)>;
+
+		auto element_count = std::size_t {};
 
 		switch (element.type())
 		{
 			case json::value_t::array:
 			{
-				unsigned int i = 0;
-				
 				for (const auto& proxy : element.items())
 				{
 					const auto& value = proxy.value();
@@ -225,12 +226,12 @@ namespace util
 							callback_fn(value);
 						}
 
-						i++;
+						element_count++;
 					}
 
 				}
 
-				return i;
+				break;
 			}
 
 			default:
@@ -239,13 +240,13 @@ namespace util
 				{
 					callback_fn(element);
 
-					return 1;
+					element_count = 1;
 				}
 
 				break;
 			}
 		}
 
-		return 0;
+		return element_count;
 	}
 }

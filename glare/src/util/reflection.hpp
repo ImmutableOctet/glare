@@ -4,6 +4,7 @@
 
 #include "format.hpp"
 #include "small_vector.hpp"
+#include "pfr.hpp"
 //#include "sampler.hpp"
 
 //#include <entt/meta/meta.hpp>

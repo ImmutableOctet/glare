@@ -28,6 +28,8 @@
 #include <engine/meta/meta_parsing_context.hpp>
 #include <engine/meta/indirect_meta_data_member.hpp>
 
+#include <engine/world/animation/animation_slice.hpp>
+
 #include <util/algorithm.hpp>
 #include <util/string.hpp>
 #include <util/parse.hpp>
@@ -258,6 +260,277 @@ namespace engine
 		return result;
 	}
 
+	std::size_t process_animation_list
+	(
+		EntityDescriptor& descriptor,
+		AnimationRepository& animations_out,
+		const util::json& animation_content,
+
+		const MetaParsingContext& opt_parsing_context
+	)
+	{
+		if (!animation_content.is_object())
+		{
+			return {};
+		}
+
+		auto animations_processed = std::size_t {};
+
+		auto furthest_frame_index = animations_out.get_furthest_frame_sliced();
+
+		auto& animation_slices = animations_out.slices;
+
+		for (const auto& animation_proxy : animation_content.items())
+		{
+			const auto& animation_name = animation_proxy.key();
+			const auto& animation_description = animation_proxy.value();
+
+			auto animation_begin = (furthest_frame_index + static_cast<FrameIndex>(1));
+			auto animation_end   = animation_begin; // FrameIndex {};
+
+			switch (animation_description.type())
+			{
+				case util::json::value_t::object:
+				{
+					if (const auto manual_frame_begin = util::find_any(animation_description, "from", "begin", "start", "first", "left"); manual_frame_begin != animation_description.end())
+					{
+						if (manual_frame_begin->is_number_integer() || manual_frame_begin->is_number_unsigned())
+						{
+							animation_begin = manual_frame_begin->get<FrameIndex>();
+						}
+
+						if (const auto manual_frame_end = util::find_any(animation_description, "to", "end", "stop", "last", "second", "right"); manual_frame_end != animation_description.end())
+						{
+							if (manual_frame_end->is_number_integer() || manual_frame_end->is_number_unsigned())
+							{
+								animation_end = manual_frame_end->get<FrameIndex>();
+							}
+						}
+					}
+
+					if (animation_end <= animation_begin)
+					{
+						if (const auto length_specification = util::find_any(animation_description, "length", "size", "frames"); length_specification != animation_description.end())
+						{
+							if (length_specification->is_number_integer() || length_specification->is_number_unsigned())
+							{
+								animation_end = (animation_begin + length_specification->get<FrameIndex>());
+							}
+						}
+					}
+
+					break;
+				}
+
+				case util::json::value_t::number_integer:
+				case util::json::value_t::number_unsigned:
+				{
+					const auto animation_length = animation_description.get<FrameIndex>();
+
+					animation_begin  = furthest_frame_index;
+					animation_end    = (animation_begin + animation_length);
+
+					break;
+				}
+			}
+
+			if (animation_end > animation_begin)
+			{
+				const auto animation_id = hash(animation_name).value();
+
+				animation_slices[animation_id] = AnimationSlice { animation_begin, animation_end };
+
+				furthest_frame_index = std::max(furthest_frame_index, animation_end);
+
+				animations_processed++;
+			}
+		}
+
+		return animations_processed;
+	}
+
+	std::size_t process_animation_sequence_list
+	(
+		EntityDescriptor& descriptor,
+		AnimationRepository& animations_out,
+		const util::json& sequence_list_content,
+
+		const MetaParsingContext& opt_parsing_context
+	)
+	{
+		auto sequences_processed = std::size_t {};
+
+		for (const auto& sequence_proxy : sequence_list_content.items())
+		{
+			const auto& sequence_name = sequence_proxy.key();
+			const auto& sequence_values = sequence_proxy.value();
+
+			const auto sequence_id = hash(sequence_name).value();
+
+			auto& sequences_out = animations_out.sequences[sequence_id];
+
+			// A temporary non-owning pointer to the animation that is actively being processed. (If any)
+			AnimationSequenceEntry* active_animation = {};
+
+			util::json_for_each
+			(
+				sequence_values,
+				
+				[&sequences_out, &active_animation](const util::json& sequence_entry)
+				{
+					switch (sequence_entry.type())
+					{
+						case util::json::value_t::object:
+						{
+							if (const auto animation_as_object = util::find_any(sequence_entry, "animation", "animation_name", "name"); animation_as_object != sequence_entry.end())
+							{
+								const auto animation_name = animation_as_object->get<std::string>();
+								const auto animation_id = hash(animation_name).value();
+
+								active_animation = &(sequences_out.animations.emplace_back(animation_id));
+
+								if (active_animation)
+								{
+									if (const auto rate_specified = util::find_any(sequence_entry, "rate", "speed"); rate_specified != sequence_entry.end())
+									{
+										active_animation->rate = rate_specified->get<float>();
+									}
+
+									if (const auto embedded_transition = util::find_any(sequence_entry, "transition", "animation_transition"); embedded_transition != sequence_entry.end())
+									{
+										engine::load(active_animation->transition, *embedded_transition);
+
+										active_animation = {};
+									}
+								}
+							}
+							else if (active_animation)
+							{
+								engine::load(active_animation->transition, sequence_entry);
+
+								active_animation = {};
+							}
+
+							break;
+						}
+						case util::json::value_t::string:
+						{
+							const auto animation_name = sequence_entry.get<std::string>();
+							const auto animation_id = hash(animation_name).value();
+
+							active_animation = &(sequences_out.animations.emplace_back(animation_id));
+
+							break;
+						}
+					}
+				}
+			);
+
+			sequences_processed++;
+		}
+
+		return sequences_processed;
+	}
+
+	std::size_t process_animation_layer_list
+	(
+		EntityDescriptor& descriptor,
+		AnimationRepository& animations_out,
+		const util::json& layer_list_content,
+
+		const MetaParsingContext& opt_parsing_context
+	)
+	{
+		auto layers_processed = std::size_t {};
+
+		util::json_for_each<util::json::value_t::string>
+		(
+			layer_list_content,
+
+			[&animations_out, &layers_processed](const util::json& layer_entry)
+			{
+				const auto layer_name = layer_entry.get<std::string>();
+				const auto layer_id = hash(layer_name).value();
+
+				if (animations_out.add_layer(layer_id))
+				{
+					layers_processed++;
+				}
+			}
+		);
+
+		return layers_processed;
+	}
+
+	std::size_t process_bone_animation_layer_mapping
+	(
+		EntityDescriptor& descriptor,
+		AnimationRepository& animations_out,
+		const util::json& bone_mapping_content,
+
+		const MetaParsingContext& opt_parsing_context
+	)
+	{
+		auto bones_processed = std::size_t {};
+
+		util::json_for_each<util::json::value_t::object, util::json::value_t::array>
+		(
+			bone_mapping_content,
+				
+			[&animations_out, &bones_processed](const util::json& bone_entry)
+			{
+				switch (bone_entry.type())
+				{
+					case util::json::value_t::object:
+					{
+						if (const auto layer_name_it = util::find_any(bone_entry, "layer", "animation_layer", "bone_layer", "value"); layer_name_it != bone_entry.end())
+						{
+							if (const auto bone_name_it = util::find_any(bone_entry, "bone", "bone_name", "id"); bone_name_it != bone_entry.end())
+							{
+								const auto layer_name = layer_name_it->get<std::string>();
+								const auto layer_id = hash(layer_name).value();
+
+								if (const auto layer_mask = animations_out.get_layer_mask(layer_id))
+								{
+									const auto bone_name = bone_name_it->get<std::string>();
+									const auto bone_id = hash(bone_name).value();
+
+									animations_out.bone_layers[bone_id] = *layer_mask;
+
+									bones_processed++;
+								}
+							}
+						}
+
+						break;
+					}
+					case util::json::value_t::array:
+					{
+						if (bone_entry.size() >= 2)
+						{
+							const auto layer_name = bone_entry[1].get<std::string>();
+							const auto layer_id = hash(layer_name).value();
+
+							if (const auto layer_mask = animations_out.get_layer_mask(layer_id))
+							{
+								const auto bone_name = bone_entry[0].get<std::string>();
+								const auto bone_id = hash(bone_name).value();
+
+								animations_out.bone_layers[bone_id] = *layer_mask;
+
+								bones_processed++;
+							}
+						}
+
+						break;
+					}
+				}
+			}
+		);
+
+		return bones_processed;
+	}
+
 	std::size_t process_component_list
 	(
 		EntityDescriptor& descriptor,
@@ -304,38 +577,43 @@ namespace engine
 
 		std::size_t count = 0;
 
-		util::json_for_each(components, [&as_component, &count](const util::json& comp)
-		{
-			switch (comp.type())
-			{
-				case util::json::value_t::object:
-				{
-					for (const auto& proxy : comp.items())
-					{
-						const auto& component_declaration = proxy.key();
-						const auto& component_content = proxy.value();
+		util::json_for_each
+		(
+			components,
 
-						if (as_component(component_declaration, &component_content))
+			[&as_component, &count](const util::json& comp)
+			{
+				switch (comp.type())
+				{
+					case util::json::value_t::object:
+					{
+						for (const auto& proxy : comp.items())
+						{
+							const auto& component_declaration = proxy.key();
+							const auto& component_content = proxy.value();
+
+							if (as_component(component_declaration, &component_content))
+							{
+								count++;
+							}
+						}
+
+						break;
+					}
+					case util::json::value_t::string:
+					{
+						const auto component_declaration = comp.get<std::string>();
+
+						if (as_component(component_declaration))
 						{
 							count++;
 						}
+
+						break;
 					}
-
-					break;
-				}
-				case util::json::value_t::string:
-				{
-					const auto component_declaration = comp.get<std::string>();
-
-					if (as_component(component_declaration))
-					{
-						count++;
-					}
-
-					break;
 				}
 			}
-		});
+		);
 
 		return count;
 	}
@@ -1246,7 +1524,7 @@ namespace engine
 			state.activation_delay = parse_time_duration(*time_data);
 		}
 
-		if (auto threads = util::find_any(data, "do", "threads", "execute"); threads != data.end())
+		if (auto threads = util::find_any(data, "do", "threads", "execute", "on_enter"); threads != data.end())
 		{
 			process_thread_list
 			(
@@ -1760,7 +2038,7 @@ namespace engine
 					);
 				}
 
-				if (auto threads = util::find_any(content, "do", "threads", "execute"); threads != content.end())
+				if (auto threads = util::find_any(content, "do", "threads", "execute", "on_enter"); threads != content.end())
 				{
 					process_thread_list
 					(
@@ -1886,7 +2164,7 @@ namespace engine
 					"timer", "wait", "delay",
 					"state", "next", "next_state",
 					"update", "updates", "components", "change",
-					"do", "threads", "execute",
+					"do", "threads", "execute", "on_enter",
 					"command", "commands", "generate"
 				);
 
@@ -2217,7 +2495,7 @@ namespace engine
 			process_state_list(descriptor, descriptor.states, *states, base_path, opt_parsing_context, opt_factory_context);
 		}
 		
-		if (auto threads = util::find_any(data, "do", "threads", "execute"); threads != data.end())
+		if (auto threads = util::find_any(data, "do", "threads", "execute", "on_enter"); threads != data.end())
 		{
 			process_thread_list
 			(
@@ -2270,12 +2548,16 @@ namespace engine
 			// Handled in this function (see above):
 			"component", "components",
 			"state", "states",
-			"do", "threads", "execute",
+			"do", "threads", "execute", "on_enter",
 
 			"default_state",
 
 			// See below.
 			"model", "models",
+			"animation", "animations",
+			"sequence", "sequences", "animation_sequence", "animation_sequences",
+			"layer", "layers", "animation_layer", "animation_layers",
+			"bone_layer", "bone_layers", "bone_animation_layer", "bone_animation_layers",
 
 			// Handled in callback-based implementation of `process_archetype`.
 			"children"
@@ -2298,6 +2580,26 @@ namespace engine
 					descriptor.model_details.path = path_raw.string();
 				}
 			}
+		}
+
+		if (auto animations = util::find_any(data, "animation", "animations"); animations != data.end())
+		{
+			process_animation_list(descriptor, descriptor.animations, *animations, opt_parsing_context);
+		}
+
+		if (auto sequences = util::find_any(data, "sequence", "sequences", "animation_sequence", "animation_sequences"); sequences != data.end())
+		{
+			process_animation_sequence_list(descriptor, descriptor.animations, *sequences, opt_parsing_context);
+		}
+
+		if (auto layers = util::find_any(data, "layer", "layers", "animation_layer", "animation_layers"); layers != data.end())
+		{
+			process_animation_layer_list(descriptor, descriptor.animations, *layers, opt_parsing_context);
+		}
+
+		if (auto bone_layers = util::find_any(data, "bone_layer", "bone_layers", "bone_animation_layer", "bone_animation_layers"); bone_layers != data.end())
+		{
+			process_bone_animation_layer_mapping(descriptor, descriptor.animations, *bone_layers, opt_parsing_context);
 		}
 	}
 

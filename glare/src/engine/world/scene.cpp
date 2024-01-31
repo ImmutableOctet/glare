@@ -460,8 +460,8 @@ namespace engine
 							.instance_path               = character_path,
 							.instance_directory          = character_directory,
 							.shared_directory            = config.players.character_path,
-							.service_archetype_root_path = (std::filesystem::path(config.entity.archetype_path) / "world"),
-							.archetype_root_path         = config.entity.archetype_path
+							.service_archetype_root_path = (std::filesystem::path(config.entities.archetype_path) / "world"),
+							.archetype_root_path         = config.entities.archetype_path
 						}
 					},
 
@@ -538,7 +538,7 @@ namespace engine
 		(
 			data,
 			
-			[&](const auto& obj_cfg)
+			[&](const util::json& obj_cfg)
 			{
 				const auto obj_type = util::get_value<std::string>(obj_cfg, "type", "");
 				//const auto obj_type_id = hash(obj_type);
@@ -555,16 +555,48 @@ namespace engine
 				{
 					print("Creating object of type \"{}\"...", obj_type);
 
+					auto instance_path = std::filesystem::path {};
+
+					if (auto path_content = util::find_any(obj_cfg, "path", "local_path", "instance_path"); path_content != obj_cfg.end())
+					{
+						const auto user_specified_path = std::filesystem::path { path_content->get<std::string>() };
+
+						instance_path = (root_path / user_specified_path);
+					}
+					else
+					{
+						instance_path = std::filesystem::path { obj_type }; // std::filesystem::path { util::format("{}.json", obj_type) };
+					}
+
+					auto instance_directory = std::filesystem::path {};
+
+					if (auto directory_content = util::find_any(obj_cfg, "directory", "local_directory", "folder", "local_folder", "instance_directory"); directory_content != obj_cfg.end())
+					{
+						const auto user_specified_directory = std::filesystem::path { directory_content->get<std::string>() };
+
+						instance_directory = (root_path / user_specified_directory);
+					}
+					else
+					{
+						instance_directory = root_path;
+					}
+
 					entity = resource_manager.generate_entity
 					(
+						EntityFactoryContext
 						{
 							{
-								.instance_path               = util::format("{}.json", obj_type),
-								.instance_directory          = root_path,
+								.instance_path               = instance_path,
+								.instance_directory          = {}, // <-- Derived from `instance_path`. (see below)
 								.shared_directory            = config.objects.object_path,
-								.service_archetype_root_path = (std::filesystem::path(config.entity.archetype_path) / "world"),
-								.archetype_root_path         = config.entity.archetype_path
-							}
+								.service_archetype_root_path = (std::filesystem::path(config.entities.archetype_path) / "world"),
+								.archetype_root_path         = config.entities.archetype_path
+							},
+							
+							instance_directory,
+
+							// Resolve the instance path and directory.
+							true
 						},
 
 						{
