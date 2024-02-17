@@ -65,8 +65,8 @@ namespace engine
 	{
 		auto& registry = get_registry();
 
-		registry.on_construct<CameraComponent>().disconnect(*this);
-		registry.on_destroy<CameraComponent>().disconnect(*this);
+		registry.on_construct<CameraComponent>().disconnect(this);
+		registry.on_destroy<CameraComponent>().disconnect(this);
 
 		world.unregister(*this);
 	}

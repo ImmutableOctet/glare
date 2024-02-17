@@ -216,9 +216,9 @@ namespace engine
 	{
 		auto& registry = service.get_registry();
 
-		registry.on_construct<StateComponent>().disconnect(*this);
-		registry.on_update<StateComponent>().disconnect(*this);
-		registry.on_destroy<StateComponent>().disconnect(*this);
+		registry.on_construct<StateComponent>().disconnect(this);
+		registry.on_update<StateComponent>().disconnect(this);
+		registry.on_destroy<StateComponent>().disconnect(this);
 
 		service.unregister(*this);
 
