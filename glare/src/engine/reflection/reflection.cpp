@@ -735,12 +735,6 @@ namespace engine
 
             .func
             <
-                static_cast<bool(entt::meta_associative_container::*)(MetaAny)>
-                (&entt::meta_associative_container::insert)
-            >("insert"_hs)
-
-            .func
-            <
                 static_cast<bool(entt::meta_associative_container::*)(MetaAny, MetaAny)>
                 (&entt::meta_associative_container::insert)
             >("insert"_hs)
@@ -750,6 +744,13 @@ namespace engine
 
             .func<&entt::meta_associative_container::operator bool>("operator bool"_hs)
         ;
+
+        type = make_overloads
+        <
+            &entt::meta_associative_container::insert,
+            [](auto& self, auto&&... args) { return self.insert(std::forward<decltype(args)>(args)...); },
+            2
+        >(type, "insert"_hs);
     }
 
     template <>
