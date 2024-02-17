@@ -77,27 +77,46 @@ namespace engine
             sync_reflection_context();
         }
 
-        auto type = entt::meta<PrimitiveType>()
+        auto type = entt::meta<PrimitiveType>();
+
+        auto cast_construct_from = [&type]<typename T>()
+        {
+            if constexpr (!std::is_same_v<std::decay_t<T>, std::decay_t<PrimitiveType>>)
+            {
+                type = type.ctor<&impl::static_cast_impl<PrimitiveType, T>>();
+            }
+        };
+
+        auto cast_convert_to = [&type]<typename T>()
+        {
+            if constexpr (!std::is_same_v<std::decay_t<T>, std::decay_t<PrimitiveType>>)
+            {
+                type = type.conv<&impl::static_cast_impl<T, PrimitiveType>>();
+            }
+        };
+
+        cast_construct_from.operator()<bool>();
+        cast_construct_from.operator()<float>();
+        cast_construct_from.operator()<double>();
+        cast_construct_from.operator()<long double>();
+        cast_construct_from.operator()<std::int64_t>();
+        cast_construct_from.operator()<std::uint64_t>();
+        cast_construct_from.operator()<std::int32_t>();
+        cast_construct_from.operator()<std::uint32_t>();
+        cast_construct_from.operator()<std::int16_t>();
+        cast_construct_from.operator()<std::uint16_t>();
+
+        //cast_construct_from.operator()<std::int8_t>>();
+        //cast_construct_from.operator()<std::uint8_t>>();
+
+        cast_convert_to.operator()<std::int32_t>();
+        cast_convert_to.operator()<std::int64_t>();
+        cast_convert_to.operator()<float>();
+        cast_convert_to.operator()<double>();
+
+        type = type
             .ctor<&impl::from_string_view_impl<PrimitiveType>>()
             .ctor<&impl::from_string_impl<PrimitiveType>>()
-            .ctor<&impl::static_cast_impl<PrimitiveType, bool>>()
-            .ctor<&impl::static_cast_impl<PrimitiveType, float>>()
-            .ctor<&impl::static_cast_impl<PrimitiveType, double>>()
-            .ctor<&impl::static_cast_impl<PrimitiveType, long double>>()
-            .ctor<&impl::static_cast_impl<PrimitiveType, std::int64_t>>()
-            .ctor<&impl::static_cast_impl<PrimitiveType, std::uint64_t>>()
-            .ctor<&impl::static_cast_impl<PrimitiveType, std::int32_t>>()
-            .ctor<&impl::static_cast_impl<PrimitiveType, std::uint32_t>>()
-            .ctor<&impl::static_cast_impl<PrimitiveType, std::int16_t>>()
-            .ctor<&impl::static_cast_impl<PrimitiveType, std::uint16_t>>()
-            //.ctor<&impl::static_cast_impl<PrimitiveType, std::int8_t>>()
-            //.ctor<&impl::static_cast_impl<PrimitiveType, std::uint8_t>>()
-
-            .conv<&impl::static_cast_impl<float, PrimitiveType>>()
-            .conv<&impl::static_cast_impl<double, PrimitiveType>>()
-
-            .conv<&impl::static_cast_impl<std::int32_t, PrimitiveType>>()
-            .conv<&impl::static_cast_impl<std::int64_t, PrimitiveType>>()
 
             .conv<&impl::arithmetic_to_string_impl<PrimitiveType>>()
             .conv<&impl::operator_bool_impl<PrimitiveType>>()
