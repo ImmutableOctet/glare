@@ -829,7 +829,7 @@ namespace engine
 
         extend_language_primitive_type<bool>();
     }
-
+    
     void reflect_all(bool primitives, bool dependencies)
     {
         // NOTE: Not thread-safe. (Shouldn't matter for this use-case, though)
@@ -870,5 +870,11 @@ namespace engine
         // ...
 
         reflection_generated = true;
+    }
+
+    template <>
+    void reflect<void>()
+    {
+        reflect_all();
     }
 }

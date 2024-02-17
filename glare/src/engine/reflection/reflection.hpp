@@ -131,11 +131,5 @@ namespace engine
     }
 
     // Aliases the default configuration of `reflect` to the `reflect_all` free-function.
-    // 
-    // TODO: Determine if this is the best option for a generalized `reflect`.
-    template <>
-    inline void reflect<void>()
-    {
-        reflect_all();
-    }
+    extern template void reflect<void>();
 }
