@@ -261,9 +261,9 @@ namespace engine
 
 			if (state_index == thread.state_index.value_or(state_index))
 			{
-				if (auto updated_it = stop_thread_impl(thread))
+				if (auto updated_it = stop_thread_impl(it))
 				{
-					it = updated_it;
+					it = *updated_it;
 
 					terminated_thread_count++;
 
@@ -317,11 +317,11 @@ namespace engine
 
 		for (auto it = threads.begin(); it != threads.end();)
 		{
-			if (auto updated_it = stop_thread_impl(*it))
+			if (auto updated_it = stop_thread_impl(it))
 			{
-				it = updated_it;
-
 				terminated_thread_count++;
+
+				it = *updated_it;
 			}
 			else
 			{
@@ -332,11 +332,16 @@ namespace engine
 		return terminated_thread_count;
 	}
 
+	EntityThreadComponent::EntityThreadIterator EntityThreadComponent::erase_thread(EntityThreadIterator thread_it)
+	{
+		return threads.erase(thread_it);
+	}
+
 	bool EntityThreadComponent::erase_thread(EntityThreadIndex thread_index)
 	{
 		if (auto* thread = get_thread(thread_index, false))
 		{
-			threads.erase(thread);
+			erase_thread(get_thread_iterator(*thread));
 			
 			return true;
 		}
@@ -385,14 +390,11 @@ namespace engine
 
 			if (state_index == thread.state_index.value_or(state_index))
 			{
-				if (auto updated_it = threads.erase(&thread))
-				{
-					it = updated_it;
+				it = threads.erase(it);
 
-					erased_thread_count++;
+				erased_thread_count++;
 
-					continue;
-				}
+				continue;
 			}
 
 			++it;
@@ -881,6 +883,19 @@ namespace engine
 		return {};
 	}
 
+	// Retrieves an iterator for a given thread.
+	EntityThreadComponent::EntityThreadIterator EntityThreadComponent::get_thread_iterator(const EntityThread& thread)
+	{
+		const auto thread_ptr = &thread;
+
+		if ((thread_ptr >= threads.data()) && (thread_ptr < (threads.data() + threads.size())))
+		{
+			return (threads.begin() + (thread_ptr - threads.data()));
+		}
+
+		return threads.end();
+	}
+
 	void EntityThreadComponent::terminate_all()
 	{
 		threads.clear();
@@ -888,20 +903,45 @@ namespace engine
 
 	std::optional<EntityThreadComponent::LocalThreadIndex> EntityThreadComponent::get_local_index(const EntityThread& thread) const
 	{
-		//return static_cast<LocalThreadIndex>(&thread - threads.data());
-
-		const auto* thread_it = &thread;
+		// Alternative implementation:
+		/*
+		const auto thread_it = &thread;
 
 		if ((thread_it >= threads.cbegin()) && (thread_it < threads.cend()))
 		{
 			return static_cast<LocalThreadIndex>(std::distance(threads.cbegin(), thread_it));
 		}
+		*/
+
+		const auto thread_ptr = &thread;
+
+		if ((thread_ptr >= threads.data()) && (thread_ptr < (threads.data() + threads.size())))
+		{
+			return static_cast<LocalThreadIndex>(std::distance(threads.data(), thread_ptr));
+		}
 
 		return std::nullopt;
 	}
 
-	EntityThread* EntityThreadComponent::stop_thread_impl(EntityThread& thread)
+	std::optional<EntityThreadComponent::EntityThreadIterator> EntityThreadComponent::stop_thread_impl(EntityThread& thread)
 	{
+		if (auto thread_it = get_thread_iterator(thread); thread_it != threads.end())
+		{
+			return stop_thread_impl(thread_it);
+		}
+
+		return std::nullopt;
+	}
+
+	std::optional<EntityThreadComponent::EntityThreadIterator> EntityThreadComponent::stop_thread_impl(EntityThreadIterator thread_it)
+	{
+		if (thread_it == threads.end())
+		{
+			return threads.end();
+		}
+
+		auto& thread = *thread_it;
+
 		if (thread.is_detached)
 		{
 			// If this is a detached thread, make sure it's unlinked.
@@ -915,6 +955,6 @@ namespace engine
 		}
 
 		// Indicate that we terminated the thread.
-		return threads.erase(&thread);
+		return threads.erase(thread_it);
 	}
 }

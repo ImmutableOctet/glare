@@ -4,11 +4,13 @@
 #include <engine/entity/entity_thread_range.hpp>
 #include <engine/entity/entity_variables.hpp>
 
-#include <util/small_vector.hpp>
+//#include <util/small_vector.hpp>
 
 #include <utility>
 #include <optional>
 #include <type_traits>
+#include <vector>
+#include <optional>
 #include <memory>
 
 namespace engine
@@ -22,10 +24,27 @@ namespace engine
 			using LocalThreadIndex = std::size_t; // EntityThreadIndex;
 			using ThreadGlobalVariables = EntityVariables<8>;
 
-			util::small_vector<EntityThread, 4> threads;
+			using EntityThreadContainer = std::vector<EntityThread>; // util::small_vector<EntityThread, 4>;
+			using EntityThreadIterator = EntityThreadContainer::iterator; // EntityThread*;
+			using EntityThreadConstIterator = EntityThreadContainer::const_iterator; // EntityThread*;
 
-			// Optional pointer to a container of global variables shared between each thread of this entity.
-			std::shared_ptr<ThreadGlobalVariables> global_variables;
+			EntityThreadComponent() = default;
+
+			EntityThreadComponent(EntityThreadComponent&&) noexcept = default;
+			EntityThreadComponent(const EntityThreadComponent&) = delete;
+
+			EntityThreadComponent& operator=(EntityThreadComponent&&) noexcept = default;
+			EntityThreadComponent& operator=(const EntityThreadComponent&) = delete;
+
+			const EntityThreadContainer& get_threads() const
+			{
+				return threads;
+			}
+
+			EntityThreadContainer& get_threads()
+			{
+				return threads;
+			}
 
 			// Attempts to allocate a `ThreadGlobalVariables` object, managed internally.
 			// If a `ThreadGlobalVariables` object has already been allocated, this will return a pointer to the existing instance.
@@ -371,7 +390,18 @@ namespace engine
 			}
 
 			std::optional<LocalThreadIndex> get_local_index(const EntityThread& thread) const;
+
+			EntityThreadContainer threads;
+
+			// Optional pointer to a container of global variables shared between each thread of this entity.
+			std::shared_ptr<ThreadGlobalVariables> global_variables;
 		protected:
+			// NOTE: This method erases a thread without formally stopping it first, use at your own risk.
+			EntityThreadIterator erase_thread(EntityThreadIterator thread_it);
+
+			// Retrieves an iterator for a given thread.
+			EntityThreadIterator get_thread_iterator(const EntityThread& thread);
+
 			void terminate_all();
 
 			template <typename SelfType, typename Callback>
@@ -420,6 +450,7 @@ namespace engine
 				return resolved_count;
 			}
 
-			EntityThread* stop_thread_impl(EntityThread& thread);
+			std::optional<EntityThreadIterator> stop_thread_impl(EntityThread& thread);
+			std::optional<EntityThreadIterator> stop_thread_impl(EntityThreadIterator thread_it);
 	};
 }
