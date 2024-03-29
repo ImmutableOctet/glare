@@ -285,3 +285,4 @@ imgui.ini
 /docs
 /.github/workflows
 /build
+/glare/src/script/generated
