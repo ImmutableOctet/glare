@@ -30,6 +30,8 @@ namespace engine
 
 	//using EntityVector = util::small_vector<Entity, 16>; // std::vector<Entity>; // std::unordered_set<Entity>;
 
+	using PrecompiledScriptID = entt::id_type; // StringHash;
+
 	struct EntityStateInfo
 	{
 		EntityStateIndex index;
