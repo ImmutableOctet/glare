@@ -1388,6 +1388,21 @@ namespace engine
 			return {};
 		}
 
+		if (!state_name.empty())
+		{
+			process_state_default_threads
+			(
+				descriptor, state_name,
+				
+				[&state](EntityThreadIndex thread_index, EntityThreadCount threads_processed)
+				{
+					state.immediate_threads.emplace_back(thread_index, threads_processed);
+				},
+
+				&base_path, opt_parsing_context, opt_factory_context
+			);
+		}
+
 		// Check if `state`'s name has been changed from `state_id`.
 		// 
 		// NOTE: Control paths from the path-based overload of `process_state`
