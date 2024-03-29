@@ -2,8 +2,6 @@
 
 namespace engine
 {
-	std::unordered_map<StringHash, std::variant<std::string, std::string_view>> known_string_hashes;
-
 	std::string_view get_known_string_from_hash(StringHash hash_value)
 	{
 		if (!hash_value)
@@ -11,9 +9,9 @@ namespace engine
 			return {};
 		}
 
-		auto it = known_string_hashes.find(hash_value);
+		auto it = impl::known_string_hashes.find(hash_value);
 
-		if (it == known_string_hashes.end())
+		if (it == impl::known_string_hashes.end())
 		{
 			return {};
 		}

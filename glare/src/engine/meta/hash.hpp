@@ -14,7 +14,10 @@
 
 namespace engine
 {
-	extern std::unordered_map<StringHash, std::variant<std::string, std::string_view>> known_string_hashes;
+    namespace impl
+    {
+	    extern std::unordered_map<StringHash, std::variant<std::string, std::string_view>> known_string_hashes;
+    }
 
 	// Computes a hash for the string specified.
     template <typename StringType>
@@ -26,9 +29,9 @@ namespace engine
 
             if (!std::is_constant_evaluated()) // !consteval
             {
-                if (allow_result_storage) // && !known_string_hashes.contains(result)
+                if (allow_result_storage) // && !impl::known_string_hashes.contains(result)
                 {
-                    known_string_hashes[result] = std::string_view { str };
+                    impl::known_string_hashes[result] = std::string_view { str };
                 }
             }
 
@@ -51,9 +54,9 @@ namespace engine
             {
                 if (allow_result_storage)
                 {
-                    if (!known_string_hashes.contains(result)) // std::is_same_v<std::decay_t<StringType>, std::string> || ...
+                    if (!impl::known_string_hashes.contains(result)) // std::is_same_v<std::decay_t<StringType>, std::string> || ...
                     {
-                        known_string_hashes[result] = std::string(std::forward<StringType>(str));
+                        impl::known_string_hashes[result] = std::string(std::forward<StringType>(str));
                     }
                 }
             }
