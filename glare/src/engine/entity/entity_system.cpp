@@ -9,6 +9,9 @@
 #include "entity_state_action.hpp"
 #include "entity_context.hpp"
 
+#include "script_fiber.hpp"
+#include "script_fiber_response.hpp"
+
 #include "components/state_component.hpp"
 #include "components/entity_thread_component.hpp"
 #include "components/instance_component.hpp"
@@ -21,6 +24,7 @@
 
 #include <engine/service_events.hpp>
 #include <engine/events.hpp>
+#include <engine/concurrency.hpp>
 
 #include <engine/components/relationship_component.hpp>
 
@@ -249,16 +253,83 @@ namespace engine
 		return &(instance_details->get_descriptor());
 	}
 
-	std::optional<EntityStateIndex> EntitySystem::get_state(Entity entity) const
+	std::optional<EntityStateIndex> EntitySystem::get_state_index(Entity entity) const
 	{
 		auto& registry = get_registry();
 
-		if (const auto* current_state = registry.try_get<StateComponent>(entity))
+		if (const auto state_component = registry.try_get<StateComponent>(entity))
 		{
-			return current_state->state_index;
+			return state_component->state_index;
 		}
 
 		return std::nullopt;
+	}
+
+	std::optional<EntityStateIndex> EntitySystem::get_prev_state_index(Entity entity) const
+	{
+		auto& registry = get_registry();
+
+		if (const auto state_component = registry.try_get<StateComponent>(entity))
+		{
+			return state_component->prev_state_index;
+		}
+
+		return std::nullopt;
+	}
+
+	const EntityState* EntitySystem::get_state_by_index(Entity entity, EntityStateIndex entity_state_index) const
+	{
+		if (const auto descriptor = get_descriptor(entity))
+		{
+			// TODO: Implement multi-entity state descriptions. (use of `get(*descriptor)`)
+			return &(descriptor->states[entity_state_index].get(*descriptor));
+		}
+
+		return {};
+	}
+
+	const EntityState* EntitySystem::get_state(Entity entity) const
+	{
+		if (const auto current_state_index = get_state_index(entity))
+		{
+			return get_state_by_index(entity, *current_state_index);
+		}
+
+		return {};
+	}
+
+	const EntityState* EntitySystem::get_state(Entity entity, std::string_view state_name) const
+	{
+		return get_state(entity, hash(state_name));
+	}
+
+	const EntityState* EntitySystem::get_state(Entity entity, StringHash state_name) const
+	{
+		return get_state_by_id(entity, state_name);
+	}
+
+	const EntityState* EntitySystem::get_state_by_id(Entity entity, StringHash state_id) const
+	{
+		if (const auto descriptor = get_descriptor(entity))
+		{
+			if (const auto state_index = descriptor->get_state_index(state_id))
+			{
+				// TODO: Implement multi-entity state descriptions. (use of `get(*descriptor)`)
+				return &(descriptor->states[*state_index].get(*descriptor));
+			}
+		}
+
+		return {};
+	}
+
+	const EntityState* EntitySystem::get_prev_state(Entity entity) const
+	{
+		if (const auto prev_state_index = get_prev_state_index(entity))
+		{
+			return get_state_by_index(entity, *prev_state_index);
+		}
+
+		return {};
 	}
 
 	bool EntitySystem::set_state(Entity entity, std::string_view state_name) const
@@ -280,7 +351,7 @@ namespace engine
 			return false;
 		}
 
-		const auto current_state = get_state(entity);
+		const auto current_state = get_state_index(entity);
 
 		const auto& from_state_index = current_state;
 		
@@ -442,7 +513,7 @@ namespace engine
 			return false;
 		}
 
-		const auto target_state_index = get_state(entity);
+		const auto target_state_index = get_state_index(entity);
 
 		if (!target_state_index)
 		{
@@ -1399,20 +1470,20 @@ namespace engine
 
 						if (thread_entry.is_complete)
 						{
-							service->event<OnThreadComplete> // queue_event
-							(
-								entity,
-
-								thread_entry.thread_index,
-								thread_source.thread_id,
-
-								static_cast<EntityThreadIndex>
+							if (auto local_thread_index = thread_comp.get_local_index(thread_entry))
+							{
+								service->event<OnThreadComplete> // queue_event
 								(
-									std::distance(thread_comp.threads.begin(), &thread_entry)
-								),
+									entity,
 
-								thread_entry.next_instruction
-							);
+									thread_entry.thread_index,
+									thread_source.thread_id,
+
+									static_cast<OnThreadComplete::LocalThreadIndex>(*local_thread_index),
+
+									thread_entry.next_instruction
+								);
+							}
 						}
 
 						has_updated_thread = true;
@@ -1431,7 +1502,7 @@ namespace engine
 		return threads_updated;
 	}
 
-	EntityInstructionCount EntitySystem::step_thread
+	EntityInstructionIndex EntitySystem::step_thread
 	(
 		Registry& registry,
 		Entity entity,
@@ -1467,10 +1538,107 @@ namespace engine
 		const auto& instruction = source.instructions[thread.next_instruction];
 		const auto thread_index = thread.thread_index;
 
+		std::optional<IndirectMetaAny> coroutine_function = std::nullopt;
+
 		auto get_variable_context = [&service, &registry, entity, &thread, &thread_comp] // this
 		(std::optional<MetaVariableScope> referenced_scope=std::nullopt)
 		{
 			return resolve_variable_context(&service, &registry, entity, &thread_comp, &thread, {}, referenced_scope);
+		};
+
+		auto is_coroutine_expr = [](const auto& expr_content)
+		{
+			if (const auto as_direct_function_call = expr_content.try_cast<MetaFunctionCall>())
+			{
+				if (const auto target_function = as_direct_function_call->get_function())
+				{
+					const auto has_overloads = static_cast<bool>(target_function.next());
+
+					// Only allow coroutine forwarding on unambiguous calls.
+					if (!has_overloads)
+					{
+						return type_is_coroutine(target_function.ret());
+					}
+				}
+			}
+
+			return false;
+		};
+
+		auto handle_coroutine_result = [&thread](auto&& result)
+		{
+			if (auto fiber = result.try_cast<EntityThreadFiber>())
+			{
+				if (*fiber)
+				{
+					thread.active_fiber = std::move(*fiber);
+
+					return true;
+				}
+			}
+
+			return false;
+		};
+
+		auto execute_function_impl = [&registry, entity, &service, &system_manager, &get_variable_context, &handle_coroutine_result](auto&& expr_content)
+		{
+			auto variable_context = get_variable_context();
+
+			auto result = execute_opaque_function
+			(
+				expr_content,
+
+				registry,
+				entity,
+
+				MetaEvaluationContext
+				{
+					&variable_context,
+					&service,
+					system_manager
+				}
+			);
+
+			// Handle any resulting coroutines, if any.
+			handle_coroutine_result(result);
+
+			return result;
+		};
+
+		auto execute_function = [&descriptor, &execute_function_impl](auto&& expr)
+		{
+			if constexpr (std::is_same_v<std::decay_t<decltype(expr)>, IndirectMetaAny>)
+			{
+				return execute_function_impl(expr.get(descriptor.get_shared_storage()));
+			}
+			else
+			{
+				return execute_function_impl(std::forward<decltype(expr)>(expr));
+			}
+		};
+
+		auto start_fiber = [&thread, &execute_function](auto&& expr) -> EntityThreadFiber&
+		{
+			if (!thread.active_fiber.exists())
+			{
+				execute_function(std::forward<decltype(expr)>(expr));
+			}
+
+			return thread.active_fiber;
+		};
+
+		auto stop_fiber = [&thread]() -> EntityThreadFiber&
+		{
+			thread.active_fiber = {};
+
+			return thread.active_fiber;
+		};
+
+		auto restart_fiber = [&stop_fiber, &start_fiber](auto&& expr) -> EntityThreadFiber&
+		{
+			stop_fiber();
+
+			return start_fiber(std::forward<decltype(expr)>(expr));
 		};
 
 		// Forwards `action` to `execute_action` with the appropriate parameters.
@@ -1660,12 +1828,43 @@ namespace engine
 			);
 		};
 
+		auto is_coroutine_instruction = [](const auto& instruction) -> bool
+		{
+			switch (instruction.type_index())
+			{
+				case util::variant_index<EntityInstruction::InstructionType, CoroutineCall>():
+					return true;
+			}
+
+			return false;
+		};
+
 		EntityInstructionCount step_stride = 1;
 
 		auto exec = [&](auto&& instruction_value) -> void
 		{
 			auto exec_impl = [&](auto&& instruction_value, auto&& exec_impl_recursive) -> void
 			{
+				// Convenience wrapper for instruction delegation via recursion.
+				// Handles both wrapped (variant / visit-able) and unwrapped (direct usage) instruction values.
+				auto instruct = [&exec_impl_recursive](auto&& instruction)
+				{
+					using underlying_instruction_t = std::remove_reference_t<decltype(instruction)>;
+
+					if constexpr (std::is_same_v<underlying_instruction_t, EntityInstruction>)
+					{
+						exec_impl_recursive(instruction.value, exec_impl_recursive);
+					}
+					else if constexpr (std::is_same_v<underlying_instruction_t, EntityInstruction::InstructionType>)
+					{
+						exec_impl_recursive(std::forward<decltype(instruction)>(instruction), exec_impl_recursive);
+					}
+					else
+					{
+						exec_impl_recursive(EntityInstruction::InstructionType { std::forward<decltype(instruction)>(instruction) }, exec_impl_recursive);
+					}
+				};
+
 				util::visit
 				(
 					instruction_value,
@@ -1942,24 +2141,19 @@ namespace engine
 						}
 					},
 
-					[&](const CadenceControlBlock& control_block)
+					[&instruct, &thread](const CadenceControlBlock& control_block)
 					{
 						switch (control_block.cadence)
 						{
 							case EntityThreadCadence::Multi:
 								if (control_block.included_instructions.size > 0)
 								{
-									exec_impl_recursive
+									instruct
 									(
-										EntityInstruction::InstructionType
+										MultiControlBlock
 										{
-											MultiControlBlock
-											{
-												control_block.included_instructions
-											}
-										},
-
-										exec_impl_recursive
+											control_block.included_instructions
+										}
 									);
 								}
 
@@ -1974,40 +2168,33 @@ namespace engine
 						}
 					},
 
-					[&registry, &service, &system_manager, entity, &descriptor, &thread, &get_variable_context](const FunctionCall& function_call)
+					[&instruct](const FunctionCall& function_call)
 					{
-						service.event<FunctionCommand> // queue_event
-						(
-							entity, entity,
-							function_call.function.get(descriptor.get_shared_storage()),
-
-							MetaEvaluationContextStore
-							{
-								// NOTE: Unsafe due to raw pointer usage. (Will need to revisit this later)
-								get_variable_context(),
-
-								&service,
-								system_manager
-							}
-						);
+						// NOTE: Currently forwards to `AdvancedMetaExpression`. (This may change later)
+						instruct(AdvancedMetaExpression { function_call.function });
 					},
 
-					[&registry, &service, &system_manager, entity, &descriptor, &thread, &get_variable_context](const AdvancedMetaExpression& advanced_expr)
+					[&instruct, &registry, &service, &system_manager, entity, &descriptor, &thread, &start_fiber, &stop_fiber, &restart_fiber, &coroutine_function](const CoroutineCall& coroutine_call)
 					{
-						service.event<ExprCommand> // queue_event
-						(
-							entity, entity,
-							advanced_expr.expr.get(descriptor.get_shared_storage()),
+						if (auto& fiber = start_fiber(coroutine_call.coroutine_function); fiber.exists())
+						{
+							coroutine_function = coroutine_call.coroutine_function;
+						}
+					},
 
-							MetaEvaluationContextStore
-							{
-								// NOTE: Unsafe due to raw pointer usage. (Will need to revisit this later)
-								get_variable_context(),
+					[&descriptor, &is_coroutine_expr, &execute_function, &instruct](const AdvancedMetaExpression& advanced_expr)
+					{
+						auto expr_content = advanced_expr.expr.get(descriptor.get_shared_storage());
 
-								&service,
-								system_manager
-							}
-						);
+						if (is_coroutine_expr(expr_content))
+						{
+							// If this is a direct call to a coroutine, handle this as a `CoroutineCall` instruction instead.
+							instruct(CoroutineCall { advanced_expr.expr });
+						}
+						else
+						{
+							execute_function(expr_content);
+						}
 					},
 
 					[&registry, &service, entity, &descriptor, &thread, &get_variable_context](const VariableDeclaration& variable_declaration)
@@ -2372,7 +2559,7 @@ namespace engine
 						// NOTE: If the assert condition was met, we continue to the next instruction regularly.
 					},
 
-					[&exec_impl_recursive, &get_variable_context, &registry, entity, &service, &system_manager](const InstructionDescriptor& instruction_desc)
+					[&instruct, &get_variable_context, &registry, entity, &service, &system_manager](const InstructionDescriptor& instruction_desc)
 					{
 						auto result = MetaAny {};
 
@@ -2396,7 +2583,7 @@ namespace engine
 						{
 							if (auto new_instruction = EntityInstruction(std::move(result)))
 							{
-								exec_impl_recursive(new_instruction.value, exec_impl_recursive);
+								instruct(new_instruction.value);
 							}
 						}
 						else
@@ -2410,7 +2597,83 @@ namespace engine
 			exec_impl(std::forward<decltype(instruction_value)>(instruction_value), exec_impl);
 		};
 
-		exec(instruction.value);
+		auto sleep_for = [&exec](const Timer::Duration& duration)
+		{
+			exec(EntityInstruction::InstructionType { Sleep { EntityTarget {}, std::nullopt, duration } });
+		};
+
+		auto& fiber = thread.active_fiber;
+
+		if ((!fiber.exists()) || (is_coroutine_instruction(instruction)))
+		{
+			exec(instruction.value);
+		}
+
+		if (fiber.exists())
+		{
+			using ResponseToken = EntityThreadControlFlowToken;
+
+			auto control_flow_response = ResponseToken::Default;
+
+			const auto result = fiber();
+
+			if (fiber.done())
+			{
+				control_flow_response = ResponseToken::Complete;
+			}
+			else if (result)
+			{
+				util::visit
+				(
+					*result,
+
+					[](const std::monostate&) {},
+					[&control_flow_response](const ResponseToken& token) { control_flow_response = token; },
+					[&exec](const EntityInstruction& instruction) { exec(instruction.value); },
+
+					[&sleep_for](const Timer& timer)                   { sleep_for(timer.remaining());            },
+					[&sleep_for](const Timer::Duration& duration)      { sleep_for(duration);                     },
+					[&sleep_for](const Timer::Days& duration)          { sleep_for(Timer::to_duration(duration)); },
+					[&sleep_for](const Timer::Hours& duration)         { sleep_for(Timer::to_duration(duration)); },
+					[&sleep_for](const Timer::Minutes& duration)       { sleep_for(Timer::to_duration(duration)); },
+					[&sleep_for](const Timer::Seconds& duration)       { sleep_for(Timer::to_duration(duration)); },
+					[&sleep_for](const Timer::Milliseconds& duration)  { sleep_for(Timer::to_duration(duration)); },
+					[&sleep_for](const Timer::Microseconds& duration)  { sleep_for(Timer::to_duration(duration)); },
+					[&sleep_for](const Timer::FloatSeconds& duration)  { sleep_for(Timer::to_duration(duration)); },
+					[&sleep_for](const Timer::DoubleSeconds& duration) { sleep_for(Timer::to_duration(duration)); }
+				);
+			}
+							
+			switch (control_flow_response)
+			{
+				case ResponseToken::NextUpdate:
+					step_stride = 0;
+
+					break;
+
+				case ResponseToken::Restart:
+					step_stride = 0;
+
+					if (coroutine_function)
+					{
+						restart_fiber(*coroutine_function);
+					}
+
+					break;
+
+				case ResponseToken::UntilWake:
+					exec((EntityInstruction { Pause {} }).value);
+
+					step_stride = 0;
+
+					break;
+
+				case ResponseToken::Complete:
+					stop_fiber();
+
+					break;
+			}
+		}
 
 		auto updated_instruction_index = (thread.next_instruction + step_stride);
 

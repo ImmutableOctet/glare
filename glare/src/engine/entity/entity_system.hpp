@@ -20,6 +20,7 @@ namespace engine
 	class Service;
 
 	class EntityDescriptor;
+	class EntityState;
 
 	struct OnServiceUpdate;
 	struct OnServiceFixedUpdate;
@@ -84,6 +85,16 @@ namespace engine
 				bool subscribe_immediately=false
 			);
 
+			std::optional<EntityStateIndex> get_state_index(Entity entity) const;
+			std::optional<EntityStateIndex> get_prev_state_index(Entity entity) const;
+
+			const EntityState* get_state_by_index(Entity entity, EntityStateIndex entity_state_index) const;
+			const EntityState* get_state(Entity entity) const;
+			const EntityState* get_state(Entity entity, std::string_view state_name) const;
+			const EntityState* get_state(Entity entity, StringHash state_name) const;
+			const EntityState* get_state_by_id(Entity entity, StringHash state_id) const;
+			const EntityState* get_prev_state(Entity entity) const;
+
 			bool set_state(Entity entity, std::string_view state_name) const;
 			bool set_state(Entity entity, StringHash state_name) const;
 			bool set_state_by_id(Entity entity, StringHash state_id) const;
@@ -102,7 +113,6 @@ namespace engine
 			Registry& get_registry() const;
 
 			const EntityDescriptor* get_descriptor(Entity entity) const;
-			std::optional<EntityStateIndex> get_state(Entity entity) const;
 
 			// Triggered when this system subscribes to a service.
 			bool on_subscribe(Service& service) override;
