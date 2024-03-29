@@ -1,5 +1,6 @@
 #pragma once
 
+#include "api.hpp"
 #include "format.hpp"
 #include "magic_enum.hpp"
 
@@ -25,105 +26,107 @@ namespace util
 
 	namespace log
 	{
-        //Logger get_console();
-        //Logger get_error_logger();
-
-        extern Logger console;
-        extern Logger err_logger;
+        Logger& get_console();
+        Logger& get_error_logger();
 
         void init();
 
         template <typename ...Args>
-        inline Logger print(fmt::format_string<Args...> fmt, Args &&...args)
+        decltype(auto) print(fmt::format_string<Args...> fmt, Args &&...args)
         {
-            if (!console)
-            {
-                return {};
-            }
+            auto& console = get_console();
 
-            console->info(fmt, std::forward<Args>(args)...);
+            if (console)
+            {
+                console->info(fmt, std::forward<Args>(args)...);
+            }
 
             return console;
         }
 
         template <typename T>
-        inline Logger print(const T& msg)
+        decltype(auto) print(const T& msg)
         {
-            if (!console)
-            {
-                return {};
-            }
+            auto& console = get_console();
 
-            console->info(msg);
+            if (console)
+            {
+                console->info(msg);
+            }
 
             return console;
         }
 
         template <typename ...Args>
-        inline Logger print_warn(fmt::format_string<Args...> fmt, Args &&...args)
+        decltype(auto) print_warn(fmt::format_string<Args...> fmt, Args &&...args)
         {
-            if (!console)
-            {
-                return {};
-            }
+            auto& console = get_console();
 
-            console->warn(fmt, std::forward<Args>(args)...);
+            if (console)
+            {
+                console->warn(fmt, std::forward<Args>(args)...);
+            }
 
             return console;
         }
 
         template <typename T>
-        inline Logger print_warn(const T& msg)
+        decltype(auto) print_warn(const T& msg)
         {
-            if (!console)
-            {
-                return {};
-            }
+            auto& console = get_console();
 
-            console->warn(msg);
+            if (console)
+            {
+                console->warn(msg);
+            }
 
             return console;
         }
 
         template <typename ...Args>
-        inline Logger print_error(fmt::format_string<Args...> fmt, Args &&...args)
+        decltype(auto) print_error(fmt::format_string<Args...> fmt, Args &&...args)
         {
-            if (!console)
-            {
-                return {};
-            }
+            auto& console = get_console();
 
-            console->error(fmt, std::forward<Args>(args)...);
+            if (console)
+            {
+                console->error(fmt, std::forward<Args>(args)...);
+            }
 
             return console;
         }
 
         template <typename T>
-        inline Logger print_error(const T& msg)
+        decltype(auto) print_error(const T& msg)
         {
-            if (!console)
-            {
-                return {};
-            }
+            auto& console = get_console();
 
-            console->error(msg);
+            if (console)
+            {
+                console->error(msg);
+            }
 
             return console;
         }
 
         template <typename EnumType>
-        inline void print_enum_values()
+        decltype(auto) print_enum_values()
         {
-            magic_enum::enum_for_each<EnumType>([](EnumType value)
-            {
-                print
-                (
-                    "{}: {}",
+            magic_enum::enum_for_each<EnumType>
+            (
+                [](EnumType value)
+                {
+                    print
+                    (
+                        "{}: {}",
 
-                    magic_enum::enum_name<EnumType>(value),
-                    magic_enum::enum_integer<EnumType>(value) // static_cast<std::underlying_type<EnumType>>(value)
-                );
-            });
+                        magic_enum::enum_name<EnumType>(value),
+                        magic_enum::enum_integer<EnumType>(value) // static_cast<std::underlying_type<EnumType>>(value)
+                    );
+                }
+            );
+
+            return get_console();
         }
 	}
 }

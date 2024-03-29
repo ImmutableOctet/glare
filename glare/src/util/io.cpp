@@ -12,21 +12,18 @@ namespace util
 {
 	namespace log
 	{
-		// General debugging information.
 		Logger console;
-		Logger err_logger;
+		Logger error_logger;
 
-		/*
-		Logger get_console()
+		Logger& get_console()
 		{
-			return spdlog::get("console");
+			return console; // spdlog::get("console");
 		}
 
-		Logger get_error_logger()
+		Logger& get_error_logger()
 		{
-			return spdlog::get("stderr");
+			return error_logger; // return spdlog::get("stderr");
 		}
-		*/
 
 		void init()
 		{
@@ -35,9 +32,9 @@ namespace util
 				console = spdlog::stdout_color_mt("console");
 			}
 
-			if (!err_logger)
+			if (!error_logger)
 			{
-				err_logger = spdlog::stderr_color_mt("stderr");
+				error_logger = spdlog::stderr_color_mt("stderr");
 			}
 		}
 	}
