@@ -10,15 +10,33 @@ namespace engine
 	namespace impl
 	{
 		template <typename T>
-        auto engine_empty_meta_type()
+        auto engine_empty_meta_type(auto type_id)
         {
             auto type = entt::meta<T>()
-                .type(short_name_hash<T>())
+                .type(type_id)
             ;
 
             return type;
         }
+
+        template <typename T>
+        auto engine_empty_meta_type()
+        {
+            return engine_empty_meta_type<T>(short_name_hash<T>());
+        }
 	}
+
+    template <typename T>
+    auto engine_empty_type(auto type_id, bool sync_context=true)
+    {
+        if (sync_context)
+        {
+            // Ensure that we're using the correct context.
+            sync_reflection_context();
+        }
+
+        return impl::engine_empty_meta_type<T>(type_id);
+    }
 
     template <typename T>
     auto engine_empty_type(bool sync_context=true)
