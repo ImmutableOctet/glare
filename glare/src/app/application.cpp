@@ -1,7 +1,7 @@
 #include "application.hpp"
 #include "window.hpp"
 
-#include <lib.hpp>
+#include <third-party/lib.hpp>
 
 #include <cassert>
 #include <sdl2/SDL_events.h>
