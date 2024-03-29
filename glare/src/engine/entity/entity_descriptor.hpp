@@ -83,7 +83,7 @@ namespace engine
 
 			SharedStorage shared_storage;
 
-			// TODO: Optimize/bette integrate with `SharedStorage`.
+			// TODO: Optimize/better integrate with `SharedStorage`.
 			template <typename ResourceType, typename ...Args>
 			EntityDescriptorShared<ResourceType> allocate(Args&&... args)
 			{
