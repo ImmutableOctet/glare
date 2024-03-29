@@ -5,6 +5,8 @@
 #include "entity_variables.hpp"
 #include "entity_thread_cadence.hpp"
 
+#include "script_fiber.hpp"
+
 #include <optional>
 #include <memory>
 
@@ -58,12 +60,12 @@ namespace engine
 		// A thread is considered suspended if it cannot continue
 		// work until an external operation takes place.
 		// (e.g. a 'resume' operation or a yield-condition being met)
-		inline bool is_suspended() const
+		bool is_suspended() const
 		{
 			return (is_paused || is_yielding || is_complete);
 		}
 
-		inline bool is_sleeping() const
+		bool is_sleeping() const
 		{
 			return is_paused;
 		}
@@ -85,6 +87,12 @@ namespace engine
 				std::optional<EntityStateIndex> state_index=std::nullopt
 			);
 
+			EntityThread(EntityThread&&) noexcept = default;
+			EntityThread(const EntityThread&) = delete;
+
+			EntityThread& operator=(EntityThread&&) noexcept = default;
+			EntityThread& operator=(const EntityThread&) = delete;
+
 			bool pause();
 			bool resume();
 			bool link();
@@ -94,19 +102,39 @@ namespace engine
 			bool yield();
 			bool unyield(EntityInstructionCount instruction_advancement=1);
 
-			inline bool sleep()
+			bool sleep()
 			{
 				return pause();
 			}
 
-			inline bool wake()
+			bool wake()
 			{
 				return resume();
 			}
 
-			inline bool play()
+			bool play()
 			{
 				return resume();
+			}
+
+			void clear_fiber()
+			{
+				active_fiber = {};
+			}
+
+			void set_fiber(EntityThreadFiber&& fiber)
+			{
+				active_fiber = std::move(fiber);
+			}
+
+			EntityThreadFiber& get_fiber()
+			{
+				return active_fiber;
+			}
+
+			bool has_fiber() const
+			{
+				return active_fiber.exists();
 			}
 
 			// Attempts to allocate a `ThreadLocalVariables` object, managed internally.
@@ -127,6 +155,9 @@ namespace engine
 
 			// An index representing the state this thread was instantiated from.
 			std::optional<EntityStateIndex> state_index;
+
+			// The active fiber to be executed, if any.
+			EntityThreadFiber active_fiber;
 
 			// Optional pointer to a container of thread-local variables.
 			std::shared_ptr<ThreadLocalVariables> variables;
