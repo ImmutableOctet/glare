@@ -200,3 +200,17 @@
 	                                                                                        \
 	template <typename T>                                                                   \
 	inline constexpr bool has_field_##field_name##_v = has_field_##field_name<T>::value;
+
+// Generates a type trait for the existence of a type member named `type_member_name`. (e.g. `value_type`)
+#define GENERATE_HAS_TYPE_MEMBER_TRAIT(type_member_name)                                                           \
+    template <typename T>                                                                                          \
+    using has_type_member_##type_member_name##_t = std::void_t<typename T::type_member_name>;                      \
+                                                                                                                   \
+    template <typename, typename=void>                                                                             \
+    struct has_type_member_##type_member_name : std::false_type {};                                                \
+                                                                                                                   \
+    template <typename T>                                                                                          \
+    struct has_type_member_##type_member_name<T, has_type_member_##type_member_name##_t<T>> : std::true_type {};   \
+                                                                                                                   \
+    template <typename T>                                                                                          \
+    inline constexpr bool has_type_member_##type_member_name##_v = has_type_member_##type_member_name<T>::value;
