@@ -25,6 +25,14 @@ namespace util
 	std::string uppercase(std::string str);
 	std::string uppercase(std::string_view str);
 
+	// Modifies `str` in-place, replacing `from` with `to`, starting at `offset`,
+	// continuing to the end of the string if `exhaustive` is true.
+	std::size_t replace(std::string& str, std::string_view from, std::string_view to, std::size_t offset={}, bool exhaustive=true);
+
+	// Creates a new string from `view_of_original`, where `from` is replaced with `to`,
+	// starting at `offset`, continuing to the end of the string if `exhaustive` is true.
+	std::string replace(std::string_view view_of_original, std::string_view from, std::string_view to, std::size_t offset={}, bool exhaustive=true);
+
 	std::smatch get_regex_groups(const std::string& s, const std::regex& re);
 	std::smatch parse_regex(const std::string& str, const std::string& regex_str);
 
