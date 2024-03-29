@@ -302,7 +302,8 @@ namespace engine
 	void reflect<EntityThreadComponent>()
 	{
 		engine_meta_type<EntityThreadComponent>()
-			.data<&EntityThreadComponent::threads>("threads"_hs)
+			// Disabled for now; EnTT's having trouble detecting move-only types.
+			//.data<nullptr, static_cast<const EntityThreadComponent::EntityThreadContainer& (EntityThreadComponent::*)() const>(&EntityThreadComponent::get_threads), entt::as_cref_t>("threads"_hs)
 		;
 	}
 
@@ -675,6 +676,7 @@ namespace engine
 	GENERATE_SINGLE_FIELD_DERIVED_TYPE_REFLECTION(instructions::Yield, instructions::Thread, condition);
 	GENERATE_EMPTY_DERIVED_TYPE_REFLECTION(instructions::IfControlBlock, instructions::LocalConditionControlBlock);
 	GENERATE_SINGLE_FIELD_TYPE_REFLECTION(instructions::FunctionCall, function);
+	GENERATE_SINGLE_FIELD_TYPE_REFLECTION(instructions::CoroutineCall, coroutine_function);
 	GENERATE_SINGLE_FIELD_TYPE_REFLECTION(instructions::AdvancedMetaExpression, expr);
 	GENERATE_SINGLE_FIELD_TYPE_REFLECTION(instructions::VariableDeclaration, variable_details);
 
@@ -816,6 +818,7 @@ namespace engine
 		reflect<instructions::CadenceControlBlock>();
 		reflect<instructions::IfControlBlock>();
 		reflect<instructions::FunctionCall>();
+		reflect<instructions::CoroutineCall>();
 		reflect<instructions::AdvancedMetaExpression>();
 		reflect<instructions::VariableDeclaration>();
 		reflect<instructions::VariableAssignment>();
