@@ -1,6 +1,9 @@
 #pragma once
 
+#include "types.hpp"
+
 #include <filesystem>
+#include <optional>
 #include <utility>
 
 namespace engine
@@ -31,7 +34,12 @@ namespace engine
 			std::filesystem::path resolve_path(const std::filesystem::path& path, const std::filesystem::path& base_path) const;
 
 			std::filesystem::path resolve_reference(const std::filesystem::path& path, const std::filesystem::path& base_path) const;
-			std::filesystem::path resolve_script_reference(const std::filesystem::path& path, const std::filesystem::path& base_path) const;
+			std::filesystem::path resolve_entity_script_reference(const std::filesystem::path& path, const std::filesystem::path& base_path) const;
+
+			std::filesystem::path resolve_cpp_script_reference(const std::filesystem::path& path, const std::filesystem::path& base_path) const;
+			
+			std::optional<std::pair<std::filesystem::path, PrecompiledScriptID>>
+			resolve_cpp_script_reference_ex(const std::filesystem::path& path, const std::filesystem::path& base_path) const;
 
 			inline EntityFactoryContext(Paths&& paths, const std::filesystem::path& base_path, bool resolve_instance_path=true)
 				: paths(std::move(paths))
@@ -54,6 +62,14 @@ namespace engine
 			EntityFactoryContext() = default;
 
 		private:
+			template <typename ExistsFunction>
+			std::filesystem::path resolve_path_impl(const std::filesystem::path& path, const std::filesystem::path& base_path, ExistsFunction&& exists_fn) const;
+
+			std::filesystem::path resolve_path_impl(const std::filesystem::path& path, const std::filesystem::path& base_path) const;
+
+			template <typename ExistsFunction>
+			std::filesystem::path resolve_reference_impl(const std::filesystem::path& path, const std::filesystem::path& base_path, std::string_view file_extension, ExistsFunction&& exists_fn) const;
+
 			std::filesystem::path resolve_reference_impl(const std::filesystem::path& path, const std::filesystem::path& base_path, std::string_view file_extension) const;
 	};
 }
