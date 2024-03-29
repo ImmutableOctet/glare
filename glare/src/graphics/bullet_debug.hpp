@@ -24,7 +24,6 @@ namespace graphics
 {
 	class Context;
 
-	////GLuint VBO, VAO;
 	class BulletDebugDrawer : public btIDebugDraw
 	{
 		public:
