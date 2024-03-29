@@ -15,6 +15,7 @@
 
 #include "math.hpp"
 #include "util.hpp"
+#include "script.hpp"
 
 #include <engine/components/reflection.hpp>
 #include <engine/commands/reflection.hpp>
@@ -798,6 +799,7 @@ namespace engine
 
         reflect<engine::Math>();
         reflect<engine::Util>();
+        reflect<engine::Script>();
     }
 
     void reflect_primitives()
