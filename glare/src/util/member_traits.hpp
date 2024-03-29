@@ -38,7 +38,7 @@
                 }                                                                                                                    \
             }                                                                                                                        \
         public:                                                                                                                      \
-            static constexpr bool value = std::is_same_v<decltype(has_function<Type>(nullptr)), std::true_type>;                     \
+            inline static constexpr bool value = std::is_same_v<decltype(has_function<Type>(nullptr)), std::true_type>;              \
                                                                                                                                      \
             template <bool is_noexcept=false>                                                                                        \
             static constexpr auto ptr = get_ptr<is_noexcept>();                                                                      \
@@ -192,11 +192,11 @@
     GENERATE_EXACT_METHOD_TRAIT(has_##method_name, method_name, function_signature);
 
 #define GENERATE_HAS_FIELD_TRAIT(field_name)                                                \
-	template <typename T, typename = int>                                                   \
+	template <typename T, typename=int>                                                     \
 	struct has_field_##field_name : std::false_type {};                                     \
                                                                                             \
 	template <typename T>                                                                   \
 	struct has_field_##field_name<T, decltype((void)T::field_name, 0)> : std::true_type {}; \
 	                                                                                        \
 	template <typename T>                                                                   \
-	constexpr bool has_field_##field_name##_v = has_field_##field_name<T>::value;
+	inline constexpr bool has_field_##field_name##_v = has_field_##field_name<T>::value;
