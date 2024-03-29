@@ -15,7 +15,7 @@
 #include "indirection.hpp"
 #include "json_bindings.hpp"
 #include "binary_bindings.hpp"
-#include "pfr_reflection.hpp"
+#include "aggregate.hpp"
 #include "optional.hpp"
 #include "history.hpp"
 #include "enum.hpp"
