@@ -158,4 +158,13 @@ namespace engine
 
     // Returns true if the type identified by `type_id` has the `history_component` property.
     bool type_is_history_component(MetaTypeID type_id);
+
+	// Returns true if the type specified has the `coroutine` property.
+	bool type_is_coroutine(const MetaType& type);
+
+	// Returns true if the type identified by `type_id` has the `coroutine` property.
+	bool type_is_coroutine(MetaTypeID type_id);
+
+	// Returns true if the `value` specified references a 'coroutine'.
+	bool value_is_coroutine(const MetaAny& value);
 }
