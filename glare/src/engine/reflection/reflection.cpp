@@ -33,6 +33,8 @@
 #include <engine/config.hpp>
 #include <engine/timer.hpp>
 
+#include <engine/platform/reflection.hpp>
+
 //#include <math/format.hpp>
 //#include <math/types.hpp>
 
@@ -853,6 +855,8 @@ namespace engine
         {
             reflect_primitives();
         }
+
+        reflect_exported_functions();
 
         reflect_core_components();
         reflect_core_commands();
