@@ -5,6 +5,7 @@ target_sources(
     
     PRIVATE
 
+    "static_variables.cpp"
     "runtime_traits.cpp"
     "component.cpp"
     "serial.cpp"

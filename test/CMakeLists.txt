@@ -37,11 +37,21 @@ target_link_libraries(
     
     # glare
     glare_core
-    glare_graphics
+    #glare_graphics
     glare_engine
+
+    glare_script
 
     Catch2::Catch2WithMain
 )
+
+if (GLARE_SCRIPT_USE_CLING)
+    add_custom_command(
+        TARGET glare_test POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:glare_test> $<TARGET_FILE_DIR:glare_test>
+        COMMAND_EXPAND_LISTS
+    )
+endif()
 
 catch_discover_tests(glare_test)
 

@@ -5,7 +5,6 @@ target_sources(
     
     PRIVATE
     
-    
     "aabb.cpp"
     "bullet.cpp"
     "conversion.cpp"
@@ -36,4 +35,4 @@ target_sources(
 #)
 
 find_package(glm CONFIG REQUIRED)
-target_link_libraries(glare_core PUBLIC glm::glm) # glare_math
+target_link_libraries(glare_core PRIVATE glm::glm) # glare_math

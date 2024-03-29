@@ -4,7 +4,9 @@ target_sources(
     PRIVATE
 
     "reflection.cpp"
+
     "math.cpp"
     "util.cpp"
+    "script.cpp"
     "context.cpp"
 )
