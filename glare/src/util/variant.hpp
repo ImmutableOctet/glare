@@ -19,7 +19,7 @@ namespace util
 	// NOTE: You'll have to cover all possible variant types when declaring overloads.
 	// NOTE: This version of `visit` takes `variant_obj` as the first argument, rather than as a trailing argument.
 	template<typename variant_t, class... Callbacks>
-	constexpr auto visit(variant_t&& variant_obj, Callbacks&&... overloads)
+	constexpr decltype(auto) visit(variant_t&& variant_obj, Callbacks&&... overloads)
 	{
 		return std::visit(visit_overloaded_t<Callbacks...>(std::forward<Callbacks>(overloads)...), std::forward<variant_t>(variant_obj));
 	}
