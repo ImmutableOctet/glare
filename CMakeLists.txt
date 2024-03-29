@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.23) # 3.14
 
 include(cmake/prelude.cmake)
 
@@ -21,6 +21,13 @@ project(
     HOMEPAGE_URL "https://github.com/ImmutableOctet/glare"
     LANGUAGES CXX
 )
+
+if (MSVC)
+    #if($<CONFIG:Debug>)
+        add_compile_options(/ZI)
+        add_link_options(/DEBUG:FASTLINK /INCREMENTAL)
+    #endif()
+endif()
 
 # Engine source code
 add_subdirectory("glare/src")
