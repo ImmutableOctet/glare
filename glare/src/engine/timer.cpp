@@ -6,11 +6,6 @@
 
 namespace engine
 {
-	static constexpr Timer::Duration to_duration_seconds_impl(auto seconds)
-	{
-		return std::chrono::duration_cast<Timer::Duration>(std::chrono::round<std::chrono::nanoseconds>(seconds));
-	}
-
 	template <typename FloatType>
 	static std::optional<Timer::Duration> to_duration_float_impl(FloatType duration_raw, StringHash time_symbol_id)
 	{
