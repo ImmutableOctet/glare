@@ -1,5 +1,7 @@
 #pragma once
 
+#if GLARE_BOOST_PFR_ENABLED
+
 #include <engine/meta/hash.hpp>
 
 #include <boost/pfr.hpp>
@@ -62,3 +64,5 @@ namespace util
 		);
 	}
 }
+
+#endif // GLARE_BOOST_PFR_ENABLED
