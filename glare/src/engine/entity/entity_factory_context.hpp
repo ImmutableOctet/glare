@@ -11,37 +11,54 @@ namespace engine
 	struct EntityFactoryContext
 	{
 		public:
+			using PathType = std::filesystem::path;
+
+			// Normalizes a path so that forward slashes are used.
+			static PathType& normalize_path_inplace(PathType& path);
+
+			// Normalizes a path so that forward slashes are used.
+			static PathType normalize_path(const PathType& path);
+
 			struct Paths
 			{
 				// The path used to build this factory.
-				std::filesystem::path instance_path            = {};
+				PathType instance_path               = {};
 
 				// The root directory for instances created with this factory. (Directory of `instance_path`)
-				std::filesystem::path instance_directory          = {};
+				PathType instance_directory          = {};
 
 				// An optional shared directory to look for missing files.
-				std::filesystem::path shared_directory            = {};
+				PathType shared_directory            = {};
 
 				// The root directory for the type of service this entity is constructed for.
-				std::filesystem::path service_archetype_root_path = {};
+				PathType service_archetype_root_path = {};
 
 				// The root directory for archetypes.
-				std::filesystem::path archetype_root_path         = "engine/archetypes";
+				PathType archetype_root_path         = "engine/archetypes";
+
+				void normalize()
+				{
+					normalize_path_inplace(instance_path);
+					normalize_path_inplace(instance_directory);
+					normalize_path_inplace(shared_directory);
+					normalize_path_inplace(service_archetype_root_path);
+					normalize_path_inplace(archetype_root_path);
+				}
 			};
 
-			Paths paths;
+			PathType resolve_path(const PathType& path, const PathType& base_path) const;
 
-			std::filesystem::path resolve_path(const std::filesystem::path& path, const std::filesystem::path& base_path) const;
+			PathType resolve_reference(const PathType& path, const PathType& base_path) const;
+			PathType resolve_entity_script_reference(const PathType& path, const PathType& base_path) const;
 
-			std::filesystem::path resolve_reference(const std::filesystem::path& path, const std::filesystem::path& base_path) const;
-			std::filesystem::path resolve_entity_script_reference(const std::filesystem::path& path, const std::filesystem::path& base_path) const;
-
-			std::filesystem::path resolve_cpp_script_reference(const std::filesystem::path& path, const std::filesystem::path& base_path) const;
+			PathType resolve_cpp_script_reference(const PathType& path, const PathType& base_path) const;
 			
-			std::optional<std::pair<std::filesystem::path, PrecompiledScriptID>>
-			resolve_cpp_script_reference_ex(const std::filesystem::path& path, const std::filesystem::path& base_path) const;
+			std::optional<std::pair<PathType, PrecompiledScriptID>>
+			resolve_cpp_script_reference_ex(const PathType& path, const PathType& base_path) const;
 
-			inline EntityFactoryContext(Paths&& paths, const std::filesystem::path& base_path, bool resolve_instance_path=true)
+			EntityFactoryContext() = default;
+
+			inline EntityFactoryContext(Paths&& paths, const PathType& base_path, bool resolve_instance_path=true, bool normalize_paths=true)
 				: paths(std::move(paths))
 			{
 				if (resolve_instance_path)
@@ -53,23 +70,27 @@ namespace engine
 						this->paths.instance_directory = std::move(resolved_instance_directory);
 					}
 				}
+
+				if (normalize_paths)
+				{
+					this->paths.normalize();
+				}
 			}
 
-			inline EntityFactoryContext(Paths&& paths, bool resolve_instance_path=true)
-				: EntityFactoryContext(std::move(paths), {}, resolve_instance_path)
+			inline EntityFactoryContext(Paths&& paths, bool resolve_instance_path=true, bool normalize_paths=true)
+				: EntityFactoryContext(std::move(paths), {}, resolve_instance_path, normalize_paths)
 			{}
 
-			EntityFactoryContext() = default;
-
+			Paths paths;
 		private:
 			template <typename ExistsFunction>
-			std::filesystem::path resolve_path_impl(const std::filesystem::path& path, const std::filesystem::path& base_path, ExistsFunction&& exists_fn) const;
+			PathType resolve_path_impl(const PathType& path, const PathType& base_path, ExistsFunction&& exists_fn) const;
 
-			std::filesystem::path resolve_path_impl(const std::filesystem::path& path, const std::filesystem::path& base_path) const;
+			PathType resolve_path_impl(const PathType& path, const PathType& base_path) const;
 
 			template <typename ExistsFunction>
-			std::filesystem::path resolve_reference_impl(const std::filesystem::path& path, const std::filesystem::path& base_path, std::string_view file_extension, ExistsFunction&& exists_fn) const;
+			PathType resolve_reference_impl(const PathType& path, const PathType& base_path, std::string_view file_extension, ExistsFunction&& exists_fn) const;
 
-			std::filesystem::path resolve_reference_impl(const std::filesystem::path& path, const std::filesystem::path& base_path, std::string_view file_extension) const;
+			PathType resolve_reference_impl(const PathType& path, const PathType& base_path, std::string_view file_extension) const;
 	};
 }

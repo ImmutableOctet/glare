@@ -5,10 +5,47 @@
 	#include <engine/reflection/script.hpp>
 #endif
 
+#ifdef _WIN32
+	#include <algorithm>
+#endif // _WIN32
+
+#include <utility>
+
 namespace engine
 {
+	EntityFactoryContext::PathType& EntityFactoryContext::normalize_path_inplace(PathType& path)
+	{
+		// Alternative implementation (Slower, may not produce forward slashes on Windows anyway):
+		//path = path.lexically_normal();
+
+#ifdef _WIN32
+		// NOTE: Unfortunately, direct access to the internal buffer of `path` is not provided by the standard.
+		// We retrieve a copy of the path here just to perform the back slash -> slash conversion.
+		using path_symbol_t = PathType::value_type;
+
+		auto path_raw = path.string();
+
+		// Replace backslashes with slashes on Windows platforms.
+		std::replace(path_raw.begin(), path_raw.end(), static_cast<path_symbol_t>('\\'), static_cast<path_symbol_t>('/'));
+
+		path = path_raw;
+#endif // _WIN32
+
+		// NOTE: On all other platforms, we assume the projected path is normalized already.
+		return path;
+	}
+
+	EntityFactoryContext::PathType EntityFactoryContext::normalize_path(const PathType& path)
+	{
+		auto normalized_path = path;
+
+		normalize_path_inplace(normalized_path);
+
+		return normalized_path;
+	}
+
 	template <typename ExistsFunction>
-	std::filesystem::path EntityFactoryContext::resolve_path_impl(const std::filesystem::path& path, const std::filesystem::path& base_path, ExistsFunction&& exists_fn) const
+	EntityFactoryContext::PathType EntityFactoryContext::resolve_path_impl(const PathType& path, const PathType& base_path, ExistsFunction&& exists_fn) const
 	{
 		if (!base_path.empty())
 		{
@@ -58,28 +95,28 @@ namespace engine
 		return {};
 	}
 
-	std::filesystem::path EntityFactoryContext::resolve_path_impl(const std::filesystem::path& path, const std::filesystem::path& base_path) const
+	EntityFactoryContext::PathType EntityFactoryContext::resolve_path_impl(const PathType& path, const PathType& base_path) const
 	{
 		return resolve_path_impl(path, base_path, [](const auto& projected_path) { return std::filesystem::exists(projected_path); });
 	}
 
-	std::filesystem::path EntityFactoryContext::resolve_path(const std::filesystem::path& path, const std::filesystem::path& base_path) const
+	EntityFactoryContext::PathType EntityFactoryContext::resolve_path(const PathType& path, const PathType& base_path) const
 	{
 		return resolve_path_impl(path, base_path);
 	}
 
-	std::filesystem::path EntityFactoryContext::resolve_reference(const std::filesystem::path& path, const std::filesystem::path& base_path) const
+	EntityFactoryContext::PathType EntityFactoryContext::resolve_reference(const PathType& path, const PathType& base_path) const
 	{
 		return resolve_reference_impl(path, base_path, "json");
 	}
 
-	std::filesystem::path EntityFactoryContext::resolve_entity_script_reference(const std::filesystem::path& path, const std::filesystem::path& base_path) const
+	EntityFactoryContext::PathType EntityFactoryContext::resolve_entity_script_reference(const PathType& path, const PathType& base_path) const
 	{
 		return resolve_reference_impl(path, base_path, "es");
 	}
 
-	std::optional<std::pair<std::filesystem::path, PrecompiledScriptID>>
-	EntityFactoryContext::resolve_cpp_script_reference_ex(const std::filesystem::path& path, const std::filesystem::path& base_path) const
+	std::optional<std::pair<EntityFactoryContext::PathType, PrecompiledScriptID>>
+	EntityFactoryContext::resolve_cpp_script_reference_ex(const PathType& path, const PathType& base_path) const
 	{
 		auto script_id_out = PrecompiledScriptID {};
 
@@ -140,7 +177,7 @@ namespace engine
 		return {};
 	}
 
-	std::filesystem::path EntityFactoryContext::resolve_cpp_script_reference(const std::filesystem::path& path, const std::filesystem::path& base_path) const
+	EntityFactoryContext::PathType EntityFactoryContext::resolve_cpp_script_reference(const PathType& path, const PathType& base_path) const
 	{
 		if (auto result = resolve_cpp_script_reference_ex(path, base_path))
 		{
@@ -151,7 +188,7 @@ namespace engine
 	}
 
 	template <typename ExistsFunction>
-	std::filesystem::path EntityFactoryContext::resolve_reference_impl(const std::filesystem::path& path, const std::filesystem::path& base_path, std::string_view file_extension, ExistsFunction&& exists_fn) const
+	EntityFactoryContext::PathType EntityFactoryContext::resolve_reference_impl(const PathType& path, const PathType& base_path, std::string_view file_extension, ExistsFunction&& exists_fn) const
 	{
 		// TODO: Look into switching lookup order here.
 		// (Exact file extensions should resolve a lot faster than this)
@@ -178,7 +215,7 @@ namespace engine
 		return module_path;
 	}
 
-	std::filesystem::path EntityFactoryContext::resolve_reference_impl(const std::filesystem::path& path, const std::filesystem::path& base_path, std::string_view file_extension) const
+	EntityFactoryContext::PathType EntityFactoryContext::resolve_reference_impl(const PathType& path, const PathType& base_path, std::string_view file_extension) const
 	{
 		return resolve_reference_impl(path, base_path, file_extension, [](const auto& projected_path) { return std::filesystem::exists(projected_path); });
 	}
