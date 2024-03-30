@@ -68,7 +68,8 @@ namespace engine
 		std::string_view,                       // instruction
 		std::optional<EntityThreadInstruction>, // thread_details
 		bool                                    // thread_accessor_used
-	> parse_instruction_header
+	>
+	parse_instruction_header
 	(
 		std::string_view instruction_raw,
 		const EntityDescriptor* opt_descriptor=nullptr
@@ -518,21 +519,33 @@ namespace engine
 		bool allow_inline_import=true
 	);
 
+	EntityThreadCount process_state_default_threads
+	(
+		EntityDescriptor& descriptor,
+		EntityState& state,
+		
+		std::string_view state_name,
+
+		const std::filesystem::path* opt_base_path=nullptr,
+		const MetaParsingContext& opt_parsing_context={},
+		const EntityFactoryContext* opt_factory_context=nullptr
+	);
+
+	EntityThreadCount process_archetype_default_threads
+	(
+		EntityDescriptor& descriptor,
+
+		const std::filesystem::path& archetype_path,
+
+		const std::filesystem::path* opt_base_path=nullptr,
+		const MetaParsingContext& opt_parsing_context={},
+		const EntityFactoryContext* opt_factory_context=nullptr
+	);
+
 	void process_archetype
 	(
 		EntityDescriptor& descriptor,
 		const util::json& data,
-		const std::filesystem::path& base_path,
-		const MetaParsingContext& opt_parsing_context={},
-		const EntityFactoryContext* opt_factory_context=nullptr,
-		bool resolve_external_modules=true,
-		std::optional<EntityStateIndex>* opt_default_state_index_out=nullptr
-	);
-
-	bool resolve_archetypes
-	(
-		EntityDescriptor& descriptor,
-		const util::json& instance,
 		const std::filesystem::path& base_path,
 		const MetaParsingContext& opt_parsing_context={},
 		const EntityFactoryContext* opt_factory_context=nullptr,
@@ -621,6 +634,65 @@ namespace engine
 		}
 	}
 
+	void process_archetype
+	(
+		EntityDescriptor& descriptor,
+		const std::filesystem::path& archetype_path,
+		const std::filesystem::path& base_path,
+		const MetaParsingContext& opt_parsing_context={},
+		const EntityFactoryContext* opt_factory_context=nullptr,
+		bool resolve_external_modules=true,
+		std::optional<EntityStateIndex>* opt_default_state_index_out=nullptr
+	);
+
+	template <typename ChildFactoryCallback>
+	void process_archetype
+	(
+		EntityDescriptor& descriptor,
+		const std::filesystem::path& archetype_path,
+		const std::filesystem::path& base_path,
+		ChildFactoryCallback&& child_callback,
+		const MetaParsingContext& opt_parsing_context={},
+		const EntityFactoryContext* opt_factory_context=nullptr,
+		bool resolve_external_modules=true,
+		bool process_children=true,
+		std::optional<EntityStateIndex>* opt_default_state_index_out=nullptr
+	)
+	{
+		if (archetype_path.empty())
+		{
+			return;
+		}
+
+		// TODO: Optimize via caching, etc.
+		auto instance = util::load_json(archetype_path);
+
+		process_archetype
+		(
+			descriptor, instance, base_path, child_callback,
+			opt_parsing_context, opt_factory_context,
+			resolve_external_modules, process_children,
+			opt_default_state_index_out
+		);
+
+		process_archetype_default_threads
+		(
+			descriptor, archetype_path,
+			&base_path, opt_parsing_context, opt_factory_context
+		);
+	}
+
+	bool resolve_archetypes
+	(
+		EntityDescriptor& descriptor,
+		const util::json& instance,
+		const std::filesystem::path& base_path,
+		const MetaParsingContext& opt_parsing_context={},
+		const EntityFactoryContext* opt_factory_context=nullptr,
+		bool resolve_external_modules=true,
+		std::optional<EntityStateIndex>* opt_default_state_index_out=nullptr
+	);
+
 	// Resolves the contents of the `archetypes` field pointed to by `instance`.
 	// 
 	// If an `archetypes` field is not present in `instance`,
@@ -665,16 +737,14 @@ namespace engine
 				{
 					return;
 				}
-
-				// TODO: Optimize.
-				auto archetype = util::load_json(archetype_path);
 						
 				const auto base_path = archetype_path.parent_path();
 
 				process_archetype
 				(
 					descriptor,
-					archetype, base_path,
+					archetype_path,
+					base_path,
 					child_callback,
 					opt_parsing_context, opt_factory_context,
 					resolve_external_modules, process_children,

@@ -1392,13 +1392,7 @@ namespace engine
 		{
 			process_state_default_threads
 			(
-				descriptor, state_name,
-				
-				[&state](EntityThreadIndex thread_index, EntityThreadCount threads_processed)
-				{
-					state.immediate_threads.emplace_back(thread_index, threads_processed);
-				},
-
+				descriptor, state, state_name,
 				&base_path, opt_parsing_context, opt_factory_context
 			);
 		}
@@ -2483,6 +2477,57 @@ namespace engine
 		return nullptr;
 	}
 
+	EntityThreadCount process_state_default_threads
+	(
+		EntityDescriptor& descriptor,
+		EntityState& state,
+		
+		std::string_view state_name,
+
+		const std::filesystem::path* opt_base_path,
+		const MetaParsingContext& opt_parsing_context,
+		const EntityFactoryContext* opt_factory_context
+	)
+	{
+		return process_default_threads
+		(
+			descriptor, state_name,
+
+			[&state](EntityThreadIndex thread_index, EntityThreadCount threads_processed)
+			{
+				state.immediate_threads.emplace_back(thread_index, threads_processed);
+			},
+
+			opt_base_path, opt_parsing_context, opt_factory_context
+		);
+	}
+
+	EntityThreadCount process_archetype_default_threads
+	(
+		EntityDescriptor& descriptor,
+
+		const std::filesystem::path& archetype_path,
+
+		const std::filesystem::path* opt_base_path,
+		const MetaParsingContext& opt_parsing_context,
+		const EntityFactoryContext* opt_factory_context
+	)
+	{
+		const auto default_thread_name = archetype_path.stem();
+
+		return process_default_threads
+		(
+			descriptor, default_thread_name,
+
+			[&descriptor](EntityThreadIndex thread_index, EntityThreadCount threads_processed)
+			{
+				descriptor.immediate_threads.emplace_back(thread_index, threads_processed);
+			},
+
+			opt_base_path, opt_parsing_context, opt_factory_context
+		);
+	}
+
 	void process_archetype
 	(
 		EntityDescriptor& descriptor,
@@ -2616,6 +2661,44 @@ namespace engine
 		{
 			process_bone_animation_layer_mapping(descriptor, descriptor.animations, *bone_layers, opt_parsing_context);
 		}
+	}
+
+	void process_archetype
+	(
+		EntityDescriptor& descriptor,
+		
+		const std::filesystem::path& archetype_path,
+
+		const std::filesystem::path& base_path,
+		
+		const MetaParsingContext& opt_parsing_context,
+		const EntityFactoryContext* opt_factory_context,
+		bool resolve_external_modules,
+		
+		std::optional<EntityStateIndex>* opt_default_state_index_out
+	)
+	{
+		if (archetype_path.empty())
+		{
+			return;
+		}
+
+		// TODO: Optimize via caching, etc.
+		auto instance = util::load_json(archetype_path);
+
+		process_archetype
+		(
+			descriptor, instance, base_path,
+			opt_parsing_context, opt_factory_context,
+			resolve_external_modules,
+			opt_default_state_index_out
+		);
+
+		process_archetype_default_threads
+		(
+			descriptor, archetype_path,
+			&base_path, opt_parsing_context, opt_factory_context
+		);
 	}
 
 	bool resolve_archetypes

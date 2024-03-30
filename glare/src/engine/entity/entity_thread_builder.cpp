@@ -3685,18 +3685,21 @@ namespace engine
 			resolved_es_path = script_path;
 		}
 
-		const auto es_script_data = util::load_string(resolved_es_path.string());
-
-		if (!es_script_data.empty())
+		if (std::filesystem::exists(resolved_es_path))
 		{
-			if (!thread_has_name())
+			const auto es_script_data = util::load_string(resolved_es_path.string());
+
+			if (!es_script_data.empty())
 			{
-				const auto thread_name = thread_name_from_resolved_path(resolved_es_path);
+				if (!thread_has_name())
+				{
+					const auto thread_name = thread_name_from_resolved_path(resolved_es_path);
 
-				set_thread_name(thread_name);
+					set_thread_name(thread_name);
+				}
+
+				instructions_processed += from_lines(es_script_data, separator, skip); // process(std::string_view(es_script_data), skip);
 			}
-
-			instructions_processed += from_lines(es_script_data, separator, skip); // process(std::string_view(es_script_data), skip);
 		}
 
 		return instructions_processed;

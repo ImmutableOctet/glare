@@ -40,6 +40,7 @@
 namespace engine
 {
 	class EntityDescriptor;
+	class EntityState;
 
 	// Subroutine of `process_member_trigger_condition`, `process_standard_trigger_condition`, etc.
 	MetaAny process_trigger_condition_value
@@ -1525,10 +1526,11 @@ namespace engine
 	}
 
 	template <typename ThreadRangeCallback>
-	EntityThreadCount process_state_default_threads
+	EntityThreadCount process_default_threads
 	(
 		EntityDescriptor& descriptor,
-		std::string_view state_name,
+		
+		const auto& name_as_content,
 
 		ThreadRangeCallback&& thread_range_callback,
 		
@@ -1540,12 +1542,16 @@ namespace engine
 		return process_thread_list
 		(
 			descriptor,
-			state_name,
+			
+			name_as_content,
+			
 			thread_range_callback,
 			thread_range_callback,
 			opt_base_path,
 			opt_parsing_context,
 			opt_factory_context,
+
+			// Handle `name_as_content` as a reference to a script.
 			true
 		);
 	}
