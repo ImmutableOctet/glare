@@ -13,9 +13,13 @@ namespace engine
 {
 	class Service;
 	class ResourceManager;
-
 	class EntityState;
 	class EntityDescriptor;
+
+	struct EntityThread;
+	struct EntityThreadDescription;
+	struct EntityThreadComponent;
+	struct EntityInstruction;
 
 	class EntityListener : public MetaEventListener
 	{
@@ -35,7 +39,7 @@ namespace engine
 		protected:
 			struct Reference
 			{
-				Entity entity = null;
+				Entity         entity          = null;
 				ReferenceCount reference_count = 1;
 			};
 
@@ -59,12 +63,44 @@ namespace engine
 				const MetaAny& event_instance
 			);
 
+			void update_entity_conditional_yield
+			(
+				Registry& registry, Entity entity,
+				const EntityDescriptor& descriptor,
+
+				const EntityThreadDescription& thread_data,
+				const EntityInstruction& current_instruction,
+				
+				EntityThreadComponent& thread_comp, EntityThread& thread,
+
+				const MetaAny& event_instance,
+
+				const MetaEvaluationContext& evaluation_context={}
+			);
+
+			void update_entity_coroutine_yield
+			(
+				Registry& registry, Entity entity,
+				const EntityDescriptor& descriptor,
+
+				const EntityThreadDescription& thread_data,
+				const EntityInstruction& current_instruction,
+
+				EntityThreadComponent& thread_comp, EntityThread& thread,
+
+				const MetaAny& event_instance,
+
+				const MetaEvaluationContext& evaluation_context={}
+			);
+
 			void handle_state_rules
 			(
 				Registry& registry, Entity entity,
 				const EntityDescriptor& descriptor,
 				const EntityStateRuleCollection& rules,
+				
 				const MetaAny& event_instance,
+				
 				const MetaEvaluationContext& evaluation_context={}
 			);
 	};

@@ -4,7 +4,8 @@
 
 #include <engine/types.hpp>
 
-#include <engine/entity/script_fiber.hpp>
+#include <engine/script/script_fiber.hpp>
+#include <engine/script/script_handle.hpp>
 
 #include <util/log.hpp>
 
@@ -20,6 +21,7 @@ namespace glare
 	using ScriptFiber            = engine::ScriptFiber;
 	using ScriptFiberResponse    = engine::ScriptFiberResponse;
 	using ScriptControlFlowToken = engine::ScriptControlFlowToken;
+	using ScriptHandle           = engine::ScriptHandle;
 
 	using NativeScriptID = engine::StringHash;
 
@@ -31,6 +33,12 @@ namespace glare
 
 	template <NativeScriptID native_script_id>
 	ScriptFiber script(engine::Registry& registry, engine::Entity entity, const engine::MetaEvaluationContext& context)
+	{
+		co_yield ScriptControlFlowToken::Complete;
+	}
+
+	template <NativeScriptID native_script_id>
+	ScriptFiber script(engine::ScriptHandle& script_handle_out, engine::Registry& registry, engine::Entity entity, const engine::MetaEvaluationContext& context)
 	{
 		co_yield ScriptControlFlowToken::Complete;
 	}

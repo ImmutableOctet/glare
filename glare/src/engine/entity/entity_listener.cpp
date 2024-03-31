@@ -15,6 +15,9 @@
 #include <engine/meta/data_member.hpp>
 #include <engine/meta/events.hpp>
 
+#include <engine/script/script_handle.hpp>
+#include <engine/script/script.hpp>
+
 #include <engine/components/player_component.hpp>
 #include <engine/components/player_target_component.hpp>
 
@@ -260,97 +263,186 @@ namespace engine
 
 				const auto& current_instruction = thread_data.get_instruction(thread.next_instruction);
 				
-				// Ensure this thread is actually yielding.
-				const auto& yield_instruction = std::get<Yield>(current_instruction.value);
+				using InstructionVariant = EntityInstruction::InstructionType;
 
-				const auto& yield_condition = yield_instruction.condition.get(descriptor);
-
-				ReferenceCount condition_reference_count = 0;
-
-				bool yield_condition_met = false;
-
-				EventTriggerConditionType::visit_type_enabled
-				(
-					yield_condition,
-
-					[this, &registry, entity, &descriptor, &event_instance, &evaluation_context, &condition_reference_count, &yield_condition_met](const auto& condition)
-					{
-						if (condition.has_type_compatible(descriptor, this->type_id))
-						{
-							yield_condition_met = (yield_condition_met || condition.condition_met(event_instance, registry, entity, evaluation_context));
-
-							condition_reference_count++;
-						}
-					}
-				);
-
-				if (yield_condition_met)
+				switch (current_instruction.type_index())
 				{
-					// Advancement initially set to 1 to account for the active (yield) instruction.
-					EntityInstructionCount instruction_advance = 1;
+					case util::variant_index<InstructionVariant, Yield>():
+						update_entity_conditional_yield
+						(
+							registry, entity, descriptor,
+							thread_data, current_instruction,
+							*thread_comp, thread,
+							event_instance,
+							evaluation_context
+						);
 
-					if (event_instance)
+						break;
+
+					case util::variant_index<InstructionVariant, FunctionCall>():
+					case util::variant_index<InstructionVariant, CoroutineCall>():
+					case util::variant_index<InstructionVariant, AdvancedMetaExpression>():
+						update_entity_coroutine_yield
+						(
+							registry, entity, descriptor,
+							thread_data, current_instruction,
+							*thread_comp, thread,
+							event_instance,
+							evaluation_context
+						);
+
+						break;
+				}
+			}
+		}
+	}
+
+	void EntityListener::update_entity_conditional_yield
+	(
+		Registry& registry, Entity entity,
+		const EntityDescriptor& descriptor,
+
+		const EntityThreadDescription& thread_data,
+		const EntityInstruction& current_instruction,
+
+		EntityThreadComponent& thread_comp, EntityThread& thread,
+
+		const MetaAny& event_instance,
+
+		const MetaEvaluationContext& evaluation_context
+	)
+	{
+		using namespace engine::instructions;
+
+		// Ensure this thread is actually yielding.
+		const auto& yield_instruction = std::get<Yield>(current_instruction.value);
+
+		const auto& yield_condition = yield_instruction.condition.get(descriptor);
+
+		ReferenceCount condition_reference_count = 0;
+
+		bool yield_condition_met = false;
+
+		EventTriggerConditionType::visit_type_enabled
+		(
+			yield_condition,
+
+			[this, &registry, entity, &descriptor, &event_instance, &evaluation_context, &condition_reference_count, &yield_condition_met](const auto& condition)
+			{
+				if (condition.has_type_compatible(descriptor, this->type_id))
+				{
+					yield_condition_met = (yield_condition_met || condition.condition_met(event_instance, registry, entity, evaluation_context));
+
+					condition_reference_count++;
+				}
+			}
+		);
+
+		if (yield_condition_met)
+		{
+			// Advancement initially set to one to account for the active (yield) instruction.
+			EntityInstructionCount instruction_advance = 1;
+
+			if (event_instance)
+			{
+				auto projected_instruction_index = (thread.next_instruction + instruction_advance);
+
+				bool event_captured = false;
+
+				while (projected_instruction_index < thread_data.size())
+				{
+					const auto& instruction_after_yield = thread_data.get_instruction(projected_instruction_index);
+
+					if (const auto* event_capture = std::get_if<instructions::EventCapture>(&instruction_after_yield.value))
 					{
-						auto projected_instruction_index = (thread.next_instruction + instruction_advance);
-
-						bool event_captured = false;
-
-						while (projected_instruction_index < thread_data.size())
+						if ((!event_capture->intended_type) || (event_capture->intended_type == event_instance.type().id()))
 						{
-							const auto& instruction_after_yield = thread_data.get_instruction(projected_instruction_index);
-
-							if (const auto* event_capture = std::get_if<instructions::EventCapture>(&instruction_after_yield.value))
+							if (auto copy_of_event_instance = MetaAny { event_instance })
 							{
-								if ((!event_capture->intended_type) || (event_capture->intended_type == event_instance.type().id()))
+								auto variable_context = EntitySystem::resolve_variable_context
+								(
+									{}, // Service unavailable for variable assignment operations at this time.
+									&registry, entity,
+									&thread_comp, &thread,
+									{}, // Context to be retrieved automatically from `entity`.
+									event_capture->variable_details.scope
+								);
+
+								if (variable_context.set(event_capture->variable_details.scope, event_capture->variable_details.name, std::move(copy_of_event_instance)))
 								{
-									if (auto copy_of_event_instance = MetaAny { event_instance })
-									{
-										auto variable_context = EntitySystem::resolve_variable_context
-										(
-											{}, // Service unavailable for variable assignment operations at this time.
-											&registry, entity,
-											thread_comp, &thread,
-											{}, // Context to be retrieved automatically from `entity`.
-											event_capture->variable_details.scope
-										);
-
-										if (variable_context.set(event_capture->variable_details.scope, event_capture->variable_details.name, std::move(copy_of_event_instance)))
-										{
-											event_captured = true;
-										}
-									}
+									event_captured = true;
 								}
-
-								projected_instruction_index++;
-							}
-							else
-							{
-								break;
 							}
 						}
 
-						// NOTE: We only bypass the subsequent series of `EventCapture` instructions if
-						// at least one of them is compatible and can be 'executed' above.
-						// 
-						// Otherwise, we simply move forward one instruction (the initial yield)
-						// to prevent blocking the thread indefinitely.
-						// 
-						// i.e. incompatible `EventCapture` instructions are only bypassed when a compatible one is found.
-						// See `EntitySystem::step_thread` for the fallback implementation of `EventCapture`.
-						if (event_captured)
-						{
-							const auto projected_advance = (projected_instruction_index - thread.next_instruction);
-
-							instruction_advance = projected_advance;
-						}
+						projected_instruction_index++;
 					}
+					else
+					{
+						break;
+					}
+				}
 
-					// Awaken the thread past the active yield instruction + any subsequent event captures (see above).
+				// NOTE: We only bypass the subsequent series of `EventCapture` instructions if
+				// at least one of them is compatible and can be 'executed' above.
+				// 
+				// Otherwise, we simply move forward one instruction (the initial yield)
+				// to prevent blocking the thread indefinitely.
+				// 
+				// i.e. incompatible `EventCapture` instructions are only bypassed when a compatible one is found.
+				// See `EntitySystem::step_thread` for the fallback implementation of `EventCapture`.
+				if (event_captured)
+				{
+					const auto projected_advance = (projected_instruction_index - thread.next_instruction);
+
+					instruction_advance = projected_advance;
+				}
+			}
+
+			// Awaken the thread past the active yield instruction + any subsequent event captures (see above).
+			thread.unyield(instruction_advance);
+
+			// Remove a reference to this listener for `entity`.
+			// NOTE: See `EntitySystem::step_thread` for corresponding `add_entity` usage prior.
+			remove_entity(entity, condition_reference_count);
+		}
+	}
+
+	void EntityListener::update_entity_coroutine_yield
+	(
+		Registry& registry, Entity entity,
+		const EntityDescriptor& descriptor,
+
+		const EntityThreadDescription& thread_data,
+		const EntityInstruction& current_instruction,
+		
+		EntityThreadComponent& thread_comp, EntityThread& thread,
+
+		const MetaAny& event_instance,
+
+		const MetaEvaluationContext& evaluation_context
+	)
+	{
+		if (thread.has_fiber())
+		{
+			auto& active_fiber = thread.get_fiber();
+
+			if (active_fiber.script)
+			{
+				if (active_fiber.script->waiting_for_event(event_instance.type()))
+				{
+					// Advancement set to zero to continue execution of the active fiber/coroutine.
+					const EntityInstructionCount instruction_advance = 0;
+
+					// Create a copy of the event for the script to later observe.
+					active_fiber.script->set_captured_event(MetaAny { event_instance });
+
+					// Awaken the thread, allowing it to handle the event.
 					thread.unyield(instruction_advance);
 
 					// Remove a reference to this listener for `entity`.
 					// NOTE: See `EntitySystem::step_thread` for corresponding `add_entity` usage prior.
-					remove_entity(entity, condition_reference_count);
+					remove_entity(entity);
 				}
 			}
 		}

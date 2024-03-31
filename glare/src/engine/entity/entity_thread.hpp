@@ -5,7 +5,7 @@
 #include "entity_variables.hpp"
 #include "entity_thread_cadence.hpp"
 
-#include "script_fiber.hpp"
+#include "entity_thread_fiber.hpp"
 
 #include <optional>
 #include <memory>

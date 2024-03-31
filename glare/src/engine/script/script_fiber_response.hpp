@@ -1,20 +1,23 @@
 #pragma once
 
-#include "entity_instruction.hpp"
+#include "control_flow_token.hpp"
+#include "event_yield_request.hpp"
 
-#include <engine/control_flow_token.hpp>
 #include <engine/timer.hpp>
+
+#include <engine/entity/entity_instruction.hpp>
 
 #include <variant>
 
 namespace engine
 {
-	using ScriptControlFlowToken = ControlFlowToken;
-
 	using ScriptFiberResponse = std::variant
 	<
 		std::monostate,
+
 		ScriptControlFlowToken,
+		ScriptEventYieldRequest,
+
 		EntityInstruction,
 
 		Timer,

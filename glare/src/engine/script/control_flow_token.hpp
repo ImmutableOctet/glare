@@ -34,4 +34,6 @@ namespace engine
 		
 		complete    = Complete,
 	};
+
+	using ScriptControlFlowToken = ControlFlowToken;
 }

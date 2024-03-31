@@ -9,9 +9,6 @@
 #include "entity_state_action.hpp"
 #include "entity_context.hpp"
 
-#include "script_fiber.hpp"
-#include "script_fiber_response.hpp"
-
 #include "components/state_component.hpp"
 #include "components/entity_thread_component.hpp"
 #include "components/instance_component.hpp"
@@ -20,13 +17,17 @@
 #include "commands/commands.hpp"
 
 #include <engine/service.hpp>
-#include <engine/system_manager_interface.hpp>
-
 #include <engine/service_events.hpp>
 #include <engine/events.hpp>
 #include <engine/concurrency.hpp>
+#include <engine/system_manager_interface.hpp>
 
 #include <engine/components/relationship_component.hpp>
+
+#include <engine/script/script_handle.hpp>
+#include <engine/script/script.hpp>
+#include <engine/script/script_fiber.hpp>
+#include <engine/script/script_fiber_response.hpp>
 
 //#include <engine/meta/meta.hpp>
 #include <engine/meta/types.hpp>
@@ -52,6 +53,8 @@
 #include <type_traits>
 #include <tuple>
 #include <utility>
+
+#include <cassert>
 
 // Debugging related:
 #include <util/log.hpp>
@@ -1565,13 +1568,15 @@ namespace engine
 			return false;
 		};
 
-		auto handle_coroutine_result = [&thread](auto&& result)
+		auto handle_coroutine_result = [&thread](auto&& result, auto&& on_coroutine)
 		{
-			if (auto fiber = result.try_cast<EntityThreadFiber>())
+			if (auto fiber = result.try_cast<ScriptFiber>())
 			{
 				if (*fiber)
 				{
-					thread.active_fiber = std::move(*fiber);
+					thread.active_fiber = { std::move(*fiber), {} };
+
+					on_coroutine(thread.active_fiber);
 
 					return true;
 				}
@@ -1580,13 +1585,15 @@ namespace engine
 			return false;
 		};
 
-		auto execute_function_impl = [&registry, entity, &service, &system_manager, &get_variable_context, &handle_coroutine_result](auto&& expr_content)
+		auto execute_function_impl = [&registry, entity, &service, &system_manager, &get_variable_context, &handle_coroutine_result](auto&& expr_content, auto&& on_coroutine, auto&&... additional_args)
 		{
 			auto variable_context = get_variable_context();
 
 			auto result = execute_opaque_function
 			(
 				expr_content,
+
+				entt::forward_as_meta(std::forward<decltype(additional_args)>(additional_args))...,
 
 				registry,
 				entity,
@@ -1600,20 +1607,20 @@ namespace engine
 			);
 
 			// Handle any resulting coroutines, if any.
-			handle_coroutine_result(result);
+			handle_coroutine_result(result, std::forward<decltype(on_coroutine)>(on_coroutine));
 
 			return result;
 		};
 
-		auto execute_function = [&descriptor, &execute_function_impl](auto&& expr)
+		auto execute_function = [&descriptor, &execute_function_impl](auto&& expr, auto&& on_coroutine, auto&&... additional_args)
 		{
 			if constexpr (std::is_same_v<std::decay_t<decltype(expr)>, IndirectMetaAny>)
 			{
-				return execute_function_impl(expr.get(descriptor.get_shared_storage()));
+				return execute_function_impl(expr.get(descriptor.get_shared_storage()), std::forward<decltype(on_coroutine)>(on_coroutine), std::forward<decltype(additional_args)>(additional_args)...);
 			}
 			else
 			{
-				return execute_function_impl(std::forward<decltype(expr)>(expr));
+				return execute_function_impl(std::forward<decltype(expr)>(expr), std::forward<decltype(on_coroutine)>(on_coroutine), std::forward<decltype(additional_args)>(additional_args)...);
 			}
 		};
 
@@ -1621,7 +1628,19 @@ namespace engine
 		{
 			if (!thread.active_fiber.exists())
 			{
-				execute_function(std::forward<decltype(expr)>(expr));
+				execute_function
+				(
+					std::forward<decltype(expr)>(expr),
+
+					[](auto& fiber)
+					{
+						// Briefly resume the fiber to handle the initialization step,
+						// updating `fiber.script` in the process.
+						fiber();
+					},
+
+					thread.active_fiber.script
+				);
 			}
 
 			return thread.active_fiber;
@@ -1839,6 +1858,26 @@ namespace engine
 			return false;
 		};
 
+		auto start_listening = [this, entity](auto type_id) -> bool
+		{
+			auto listener = listen(type_id);
+								
+			if (!listener)
+			{
+				if (type_id)
+				{
+					print_warn("Failed locate listener while processing yield request.");
+				}
+
+				return false;
+			}
+
+			// See `EntityListener::update_entity` for corresponding `remove_entity` usage.
+			listener->add_entity(entity);
+
+			return true;
+		};
+
 		EntityInstructionCount step_stride = 1;
 
 		auto exec = [&](auto&& instruction_value) -> void
@@ -1990,7 +2029,7 @@ namespace engine
 						);
 					},
 
-					[this, entity, &descriptor, &thread, &condition_met, &step_stride](const Yield& yield)
+					[this, entity, &descriptor, &thread, &condition_met, &start_listening, &step_stride](const Yield& yield)
 					{
 						const auto& condition_raw = yield.condition.get(descriptor);
 						
@@ -2007,30 +2046,18 @@ namespace engine
 						(
 							condition_raw,
 
-							[this, entity, &descriptor, &yielded_successfully](const auto& condition)
+							[this, entity, &descriptor, &start_listening, &yielded_successfully](const auto& condition)
 							{
 								condition.enumerate_types
 								(
 									descriptor,
 
-									[this, entity, &yielded_successfully](MetaTypeID type_id)
+									[this, entity, &start_listening, &yielded_successfully](MetaTypeID type_id)
 									{
-										auto* listener = listen(type_id);
-								
-										if (!listener)
+										if (start_listening(type_id))
 										{
-											if (type_id)
-											{
-												print_warn("Failed locate listener while processing yield condition.");
-											}
-
-											return;
+											yielded_successfully = true;
 										}
-
-										// See `EntityListener::update_entity` for corresponding `remove_entity` usage.
-										listener->add_entity(entity);
-
-										yielded_successfully = true;
 									}
 								);
 							}
@@ -2193,7 +2220,7 @@ namespace engine
 						}
 						else
 						{
-							execute_function(expr_content);
+							execute_function(expr_content, [](auto&&...) {});
 						}
 					},
 
@@ -2628,7 +2655,28 @@ namespace engine
 					*result,
 
 					[](const std::monostate&) {},
+
 					[&control_flow_response](const ResponseToken& token) { control_flow_response = token; },
+
+					[this, entity, &fiber, &start_listening, &thread, &step_stride](const EventYieldRequest& yield_request)
+					{
+						const auto& type_id = yield_request.event_type_id;
+
+						if (start_listening(type_id))
+						{
+							assert(fiber.script);
+
+							if (fiber.script)
+							{
+								fiber.script->set_pending_event_type(type_id);
+							}
+
+							thread.yield();
+
+							step_stride = 0;
+						}
+					},
+					
 					[&exec](const EntityInstruction& instruction) { exec(instruction.value); },
 
 					[&sleep_for](const Timer& timer)                   { sleep_for(timer.remaining());            },

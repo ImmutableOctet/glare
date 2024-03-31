@@ -11,7 +11,6 @@ target_sources(
     PRIVATE
     
     "service.cpp"
-    "script.cpp"
     "timer.cpp"
     "transform.cpp"
 )
@@ -103,6 +102,7 @@ add_subdirectory("history")
 add_subdirectory("resource_manager")
 add_subdirectory("world")
 add_subdirectory("editor")
+add_subdirectory("script")
 add_subdirectory("platform")
 add_subdirectory("test")
 add_subdirectory("reflection")

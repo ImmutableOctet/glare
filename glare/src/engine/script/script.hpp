@@ -1,13 +1,16 @@
 #pragma once
 
-#include "types.hpp"
+#include <engine/types.hpp>
 
-#include "system_manager_interface.hpp"
+#include <engine/system_manager_interface.hpp>
 
-#include "meta/meta_evaluation_context.hpp"
-#include "entity/entity_instruction.hpp"
+#include <engine/meta/types.hpp>
+#include <engine/meta/meta_evaluation_context.hpp>
+#include <engine/entity/entity_instruction.hpp>
+#include <engine/script/script_fiber_response.hpp>
 
 #include <cassert>
+#include <stdexcept>
 
 namespace engine
 {
@@ -263,6 +266,20 @@ namespace engine
 				return get_prev_state_id();
 			}
 
+			MetaAny get_captured_event();
+			MetaAny get_captured_event() const;
+
+			void set_pending_event_type(const MetaType& event_type);
+			void set_pending_event_type(MetaTypeID event_type_id);
+			void set_captured_event(MetaAny&& newly_captured_event);
+			void clear_captured_event();
+
+			bool waiting_for_event(const MetaType& event_type) const;
+			bool waiting_for_event(MetaTypeID event_type_id) const;
+			bool waiting_for_event() const;
+
+			MetaTypeID pending_event_type_id() const;
+
 			World& get_world();
 			const World& get_world() const;
 
@@ -271,6 +288,39 @@ namespace engine
 
 			float get_delta() const;
 
+			template <typename EventType>
+			const EventType* try_get_event() const
+			{
+				if (captured_event)
+				{
+					return captured_event.try_cast<EventType>();
+				}
+
+				return {};
+			}
+
+			template <typename EventType>
+			const EventType& get_event() const
+			{
+				auto event_ptr = try_get_event<EventType>();
+
+				assert(event_ptr);
+
+				if (event_ptr)
+				{
+					return *event_ptr;
+				}
+				else
+				{
+					throw std::runtime_error { "Unable to resolve event object." };
+				}
+			}
+
+			template <typename EventType>
+			EventYieldRequest until_event() const
+			{
+				return { engine::resolve<EventType>().id() };
+			}
 		private:
 			void update_state_references();
 			void update_deltatime();
@@ -281,6 +331,10 @@ namespace engine
 			Entity                       _entity    = null;
 
 		protected:
+			// Stores the most recently captured event.
+			// While awaiting a captured event, this field may also be used to store the ID of the requested event type.
+			MetaAny       captured_event            = {};
+
 			EntityStateID state                     = {};
 			EntityStateID prev_state                = {};
 

@@ -224,7 +224,7 @@ if(GLARE_SCRIPT_PRECOMPILED)
                 #include <script/script_common.hpp>
 
                 #include <engine/types.hpp>
-                #include <engine/script.hpp>
+                #include <engine/script/script.hpp>
 
                 //#include <engine/meta/hash.hpp>
 
@@ -384,6 +384,33 @@ if(GLARE_SCRIPT_PRECOMPILED)
 
                         auto fiber = script_instance();
                         
+                        co_yield {};
+
+                        while (fiber)
+                        {
+                            script_instance.on_update();
+
+                            co_yield fiber;
+                        }
+                    }
+
+                    GLARE_SCRIPT_API
+                    ScriptFiber ${glare_script_file_library}(engine::ScriptHandle& script_handle_out, engine::Registry& registry, engine::Entity entity, const engine::MetaEvaluationContext context)
+                    {
+                        auto script_instance = impl::${glare_script_file_library}::script_t
+                        {
+                            context,
+                            registry,
+                            impl::${glare_script_file_library}::script_t::script_id,
+                            entity
+                        };
+                        
+                        auto fiber = script_instance();
+
+                        script_handle_out = &script_instance;
+
+                        co_yield {};
+                        
                         while (fiber)
                         {
                             script_instance.on_update();
@@ -395,22 +422,9 @@ if(GLARE_SCRIPT_PRECOMPILED)
                     GLARE_SCRIPT_API
                     ScriptFiber ${glare_script_file_library}(engine::Registry& registry, engine::Entity entity, const engine::MetaEvaluationContext context)
                     {
-                        auto script_instance = impl::${glare_script_file_library}::script_t
-                        {
-                            context,
-                            registry,
-                            impl::${glare_script_file_library}::script_t::script_id,
-                            entity
-                        };
-                        
-                        auto fiber = script_instance();
-                        
-                        while (fiber)
-                        {
-                            script_instance.on_update();
+                        auto unused_script_handle = engine::ScriptHandle {};
 
-                            co_yield fiber;
-                        }
+                        return ${glare_script_file_library}(unused_script_handle, registry, entity, context);
                     }
                     
                     template <>
@@ -426,6 +440,12 @@ if(GLARE_SCRIPT_PRECOMPILED)
                     }
 
                     template <>
+                    ScriptFiber script<impl::${glare_script_file_library}::script_t::script_id>(engine::ScriptHandle& script_handle_out, engine::Registry& registry, engine::Entity entity, const engine::MetaEvaluationContext& context)
+                    {
+                        return ${glare_script_file_library}(script_handle_out, registry, entity, context);
+                    }
+
+                    template <>
                     ScriptFiber script<impl::${glare_script_file_library}::script_t::script_no_base_path_id>(engine::Script& self, engine::Registry& registry, engine::Entity entity, const engine::MetaEvaluationContext& context)
                     {
                         return ${glare_script_file_library}(self, registry, entity, context);
@@ -436,6 +456,12 @@ if(GLARE_SCRIPT_PRECOMPILED)
                     {
                         return ${glare_script_file_library}(registry, entity, context);
                     }
+
+                    template <>
+                    ScriptFiber script<impl::${glare_script_file_library}::script_t::script_no_base_path_id>(engine::ScriptHandle& script_handle_out, engine::Registry& registry, engine::Entity entity, const engine::MetaEvaluationContext& context)
+                    {
+                        return ${glare_script_file_library}(script_handle_out, registry, entity, context);
+                    }
                 }
             ")
 
@@ -445,7 +471,7 @@ if(GLARE_SCRIPT_PRECOMPILED)
                 #include <script/script_static_decl.hpp>
 
                 #include <engine/types.hpp>
-                #include <engine/entity/script_fiber.hpp>
+                #include <engine/script/script_fiber.hpp>
                 #include <engine/meta/hash.hpp>
                 
                 namespace engine
@@ -467,16 +493,25 @@ if(GLARE_SCRIPT_PRECOMPILED)
                     ScriptFiber script<engine::hash(\"${glare_script_file_path}\")>(engine::Registry& registry, engine::Entity entity, const engine::MetaEvaluationContext& context);
 
                     extern template
+                    ScriptFiber script<engine::hash(\"${glare_script_file_path}\")>(engine::ScriptHandle& script_handle_out, engine::Registry& registry, engine::Entity entity, const engine::MetaEvaluationContext& context);
+
+                    extern template
                     ScriptFiber script<engine::hash(\"engine/${glare_script_file_path}\")>(engine::Script& self, engine::Registry& registry, engine::Entity entity, const engine::MetaEvaluationContext& context);
 
                     extern template
                     ScriptFiber script<engine::hash(\"engine/${glare_script_file_path}\")>(engine::Registry& registry, engine::Entity entity, const engine::MetaEvaluationContext& context);
+
+                    extern template
+                    ScriptFiber script<engine::hash(\"engine/${glare_script_file_path}\")>(engine::ScriptHandle& script_handle_out, engine::Registry& registry, engine::Entity entity, const engine::MetaEvaluationContext& context);
 
                     GLARE_SCRIPT_API
                     ScriptFiber ${glare_script_file_library}(engine::Script& self, engine::Registry& registry, engine::Entity entity, const engine::MetaEvaluationContext context);
 
                     GLARE_SCRIPT_API
                     ScriptFiber ${glare_script_file_library}(engine::Registry& registry, engine::Entity entity, const engine::MetaEvaluationContext context);
+
+                    GLARE_SCRIPT_API
+                    ScriptFiber ${glare_script_file_library}(engine::ScriptHandle& script_handle_out, engine::Registry& registry, engine::Entity entity, const engine::MetaEvaluationContext context);
 
                     namespace impl
                     {
@@ -513,7 +548,7 @@ if(GLARE_SCRIPT_PRECOMPILED)
             "
                 #pragma message(\"Building generated code for consumption of script: '${glare_script_local_file_no_ext}'...\")
                 
-                #include <engine/script.hpp>
+                #include <engine/script/script.hpp>
                 #include <engine/reflection/script.hpp>
 
                 #include <entt/meta/meta.hpp>
@@ -537,29 +572,39 @@ if(GLARE_SCRIPT_PRECOMPILED)
 
                     static constexpr auto script_impl_inplace    = static_cast<glare::ScriptFiber(*)(engine::Script&, engine::Registry&, engine::Entity, const engine::MetaEvaluationContext&)>(&glare::script<script_file_id>);
                     static constexpr auto script_impl_standalone = static_cast<glare::ScriptFiber(*)(engine::Registry&, engine::Entity, const engine::MetaEvaluationContext&)>(&glare::script<script_file_id>);
+                    static constexpr auto script_impl_handle     = static_cast<glare::ScriptFiber(*)(engine::ScriptHandle&, engine::Registry&, engine::Entity, const engine::MetaEvaluationContext&)>(&glare::script<script_file_id>);
 
                     static constexpr auto script_impl_no_base_path_inplace    = static_cast<glare::ScriptFiber(*)(engine::Script&, engine::Registry&, engine::Entity, const engine::MetaEvaluationContext&)>(&glare::script<script_file_no_base_path_id>);
                     static constexpr auto script_impl_no_base_path_standalone = static_cast<glare::ScriptFiber(*)(engine::Registry&, engine::Entity, const engine::MetaEvaluationContext&)>(&glare::script<script_file_no_base_path_id>);
+                    static constexpr auto script_impl_no_base_path_handle     = static_cast<glare::ScriptFiber(*)(engine::ScriptHandle&, engine::Registry&, engine::Entity, const engine::MetaEvaluationContext&)>(&glare::script<script_file_no_base_path_id>);
 
                     auto reflect_type = [&](auto& type)
                     {
                         type = type
-                            .func<script_impl_inplace>(script_file_id)
-                            .func<script_impl_inplace>(script_file_no_extension_id)
-                            .func<script_impl_inplace>(script_name_id)
-
-                            .func<script_impl_standalone>(script_file_id)
-                            .func<script_impl_standalone>(script_file_no_extension_id)
-                            .func<script_impl_standalone>(script_name_id)
-
-                            // NOTE: May be ambiguous due to name conflicts.
-                            .func<script_impl_standalone>(script_local_name_id)
-
-                            .func<script_impl_no_base_path_inplace>(script_file_no_base_path_id)
-                            .func<script_impl_no_base_path_inplace>(script_file_no_base_path_no_extension_id)
-
-                            .func<script_impl_no_base_path_standalone>(script_file_no_base_path_id)
-                            .func<script_impl_no_base_path_standalone>(script_file_no_base_path_no_extension_id)
+                            //.func<script_impl_inplace>(script_file_id)
+                            //.func<script_impl_inplace>(script_file_no_extension_id)
+                            //.func<script_impl_inplace>(script_name_id)
+                            //
+                            //.func<script_impl_standalone>(script_file_id)
+                            //.func<script_impl_standalone>(script_file_no_extension_id)
+                            //.func<script_impl_standalone>(script_name_id)
+                            //
+                            .func<script_impl_handle>(script_file_id)
+                            .func<script_impl_handle>(script_file_no_extension_id)
+                            .func<script_impl_handle>(script_name_id)
+                            //
+                            //.func<script_impl_no_base_path_inplace>(script_file_no_base_path_id)
+                            //.func<script_impl_no_base_path_inplace>(script_file_no_base_path_no_extension_id)
+                            //
+                            //.func<script_impl_no_base_path_standalone>(script_file_no_base_path_id)
+                            //.func<script_impl_no_base_path_standalone>(script_file_no_base_path_no_extension_id)
+                            //
+                            .func<script_impl_no_base_path_handle>(script_file_no_base_path_id)
+                            .func<script_impl_no_base_path_handle>(script_file_no_base_path_no_extension_id)
+                            //
+                            //// NOTE: `script_local_name_id` may be ambiguous due to name conflicts.
+                            //.func<script_impl_standalone>(script_local_name_id)
+                            .func<script_impl_handle>(script_local_name_id)
                         ;
 
                         return type;
@@ -575,6 +620,7 @@ if(GLARE_SCRIPT_PRECOMPILED)
 
                         .func<script_impl_inplace>(\"main\"_hs)
                         .func<script_impl_standalone>(\"main\"_hs)
+                        .func<script_impl_handle>(\"main\"_hs)
 
                         .prop(\"script_cpp\"_hs)
                         .prop(\"script\"_hs)
@@ -583,7 +629,7 @@ if(GLARE_SCRIPT_PRECOMPILED)
                     reflect_type(script_type);
 
                     #if GLARE_SCRIPT_IS_COROUTINE
-                        script_type = script_type.prop("coroutine"_hs);
+                        script_type = script_type.prop(\"coroutine\"_hs);
                     #endif // GLARE_SCRIPT_IS_COROUTINE
 
                     // Debugging related:
