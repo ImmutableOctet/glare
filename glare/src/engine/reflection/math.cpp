@@ -1,6 +1,7 @@
 #include "math.hpp"
 
 #include "reflection.hpp"
+#include "reflect.hpp"
 
 #include "math_extensions.hpp"
 #include "common_extensions.hpp"
@@ -68,7 +69,7 @@ namespace engine
             // Ensure that we're using the correct context.
             sync_reflection_context();
         }
-
+        
         auto type = math::reflect<T>(hash(type_name));
 
         if constexpr (generate_operators)
