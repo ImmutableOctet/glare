@@ -305,7 +305,6 @@ namespace engine
 		reflect<OrientationComponent>();
 		reflect<RotateComponent>();
 		reflect<FocusComponent>();
-		reflect<OrbitComponent>();
 
 		// Events:
 		reflect<OnAirToGround>();
