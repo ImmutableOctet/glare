@@ -8,6 +8,6 @@ namespace engine
 
 	class ScriptNamespace {};
 
-	extern template void reflect<ScriptNamespace>();
-	extern template void reflect<Script>();
+	template <> void reflect<ScriptNamespace>();
+	template <> void reflect<Script>();
 }

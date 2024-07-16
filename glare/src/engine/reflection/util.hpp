@@ -7,5 +7,5 @@ namespace engine
 	// Reserved type, used primarily for reflection.
 	struct Util {};
 
-	extern template void reflect<Util>();
+	template <> void reflect<Util>();
 }
