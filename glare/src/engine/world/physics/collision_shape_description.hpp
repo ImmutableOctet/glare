@@ -2,7 +2,7 @@
 
 #include "collision_shape_primitive.hpp"
 
-#include <math/types.hpp>
+#include <math/common.hpp>
 
 namespace engine
 {
@@ -22,7 +22,7 @@ namespace engine
 			//return ((size.x + size.y + size.z) / 3.0f);
 			//return size.x; // size.z;
 
-			return size.length();
+			return math::length(size);
 		}
 
 		inline void set_height(float height)
