@@ -27,6 +27,8 @@ namespace util
 		class fiber_promise
 		{
 			public:
+				friend class fiber<T>;
+
 				using value_type     = std::remove_reference_t<T>;
 
 				using pointer_type   = value_type*;
@@ -96,6 +98,7 @@ namespace util
 
 				pointer_type value_ptr = {};
 				std::exception_ptr exception_ptr = {};
+				fiber<T>* blocking_fiber_ptr = {};
 
 			protected:
 				using coroutine_handle_t = std::coroutine_handle<fiber_promise<T>>;
@@ -123,6 +126,14 @@ namespace util
 					{
 						if (!yield_ref.done())
 						{
+							if constexpr (!std::is_const_v<std::remove_reference_t<CoroutineType>>)
+							{
+								if constexpr (is_fiber_v<CoroutineType>)
+								{
+									set_blocker(yield_ref);
+								}
+							}
+
 							return set_value_ptr(yield_ref.coroutine_handle.promise().value_ptr);
 						}
 					}
@@ -147,6 +158,35 @@ namespace util
 					this->value_ptr = value_ptr;
 
 					return {};
+				}
+
+				bool set_blocker(fiber<T>& fiber)
+				{
+					if (blocking_fiber_ptr)
+					{
+						if (*blocking_fiber_ptr)
+						{
+							return false;
+						}
+					}
+
+					if (fiber)
+					{
+						blocking_fiber_ptr = &fiber;
+
+						return true;
+					}
+					else
+					{
+						clear_blocker();
+					}
+
+					return false;
+				}
+
+				void clear_blocker()
+				{
+					blocking_fiber_ptr = {};
 				}
 
 			public:
@@ -188,7 +228,7 @@ namespace util
 						(is_compatible_promise_v<YieldType>)
 					>
 				>
-				std::suspend_always yield_value(YieldType&& yield_ref) noexcept
+				decltype(auto) yield_value(YieldType&& yield_ref) noexcept
 				{
 					if constexpr (is_compatible_coroutine_v<YieldType>)
 					{
@@ -241,6 +281,16 @@ namespace util
 					{
 						std::rethrow_exception(exception_ptr);
 					}
+				}
+
+				fiber<T>* get_blocker() const
+				{
+					return blocking_fiber_ptr;
+				}
+
+				bool has_blocker() const
+				{
+					return static_cast<bool>(get_blocker());
 				}
 		};
 	}
@@ -427,11 +477,25 @@ namespace util
 			{
 				if (can_continue())
 				{
+					auto& coroutine_promise = promise();
+
+					if (auto blocker = coroutine_promise.get_blocker())
+					{
+						if (blocker->resume())
+						{
+							return true;
+						}
+						else
+						{
+							coroutine_promise.clear_blocker();
+						}
+					}
+					
 					coroutine_handle.resume();
 
 					if (coroutine_handle.done())
 					{
-						coroutine_handle.promise().throw_if_exception();
+						coroutine_promise.throw_if_exception();
 					}
 					else if (try_get_latest_value())
 					{
@@ -469,9 +533,44 @@ namespace util
 			std::suspend_always initial_suspend() const noexcept { return {}; }
 			std::suspend_always final_suspend() const noexcept { return {}; }
 
+			decltype(auto) promise() const noexcept
+			{
+				return coroutine_handle.promise();
+			}
+
+			coroutine_handle_t& get_coroutine_handle()
+			{
+				return coroutine_handle;
+			}
+
+			const coroutine_handle_t& get_coroutine_handle() const
+			{
+				return coroutine_handle;
+			}
+
+			decltype(auto) get_blocker() const
+			{
+				return promise().get_blocker();
+			}
+
+			bool has_blocker() const
+			{
+				return promise().has_blocker();
+			}
+
 			explicit operator bool() const noexcept
 			{
 				return can_continue();
+			}
+
+			constexpr operator coroutine_handle_t&() &
+			{
+				return get_coroutine_handle();
+			}
+
+			constexpr operator const coroutine_handle_t&() const&
+			{
+				return get_coroutine_handle();
 			}
 
 			constexpr operator fiber<void>() && noexcept
