@@ -9,5 +9,4 @@ namespace engine
 	using ScriptFiber = Fiber<ScriptFiberResponse>;
 
 	using EntityThreadFiberResponse    = ScriptFiberResponse;
-	using EntityThreadControlFlowToken = ScriptControlFlowToken;
 }

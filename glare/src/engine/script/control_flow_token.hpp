@@ -25,8 +25,8 @@ namespace engine
 		next_frame  = NextFrame,
 		next_update = NextUpdate,
 
-		until_wake  = UntilWake,
-		until_woken = UntilWoken,
+		//until_wake  = UntilWake,
+		//until_woken = UntilWoken,
 
 		restart     = Restart,
 		repeat      = Repeat,

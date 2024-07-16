@@ -6,6 +6,8 @@
 #include <engine/world/world.hpp>
 #include <engine/world/delta/delta_system.hpp>
 
+#include <engine/meta/meta_evaluation_context.hpp>
+
 namespace engine
 {
 	Script::Script
@@ -15,24 +17,16 @@ namespace engine
 		ScriptID script_id,
 		Entity entity
 	) :
-		_context(&context),
-		_registry(&registry),
-		_script_id(script_id),
-		_entity(entity)
+		ScriptBase(context, registry, script_id, entity)
 	{}
+
+	Script::~Script() {}
 
 	bool Script::on_update()
 	{
-		update_state_references();
 		update_deltatime();
 
 		return true;
-	}
-
-	void Script::update_state_references()
-	{
-		state      = get_state_id();
-		prev_state = get_prev_state_id();
 	}
 
 	void Script::update_deltatime()
@@ -40,40 +34,9 @@ namespace engine
 		delta = get_delta();
 	}
 
-	const EntityState* Script::get_state_description() const
+	engine::ScriptFiber Script::operator()()
 	{
-		return system<EntitySystem>().get_state(*this);
-	}
-
-	const EntityState* Script::get_prev_state_description() const
-	{
-		return system<EntitySystem>().get_prev_state(*this);
-	}
-
-	EntityStateID Script::get_state_id() const
-	{
-		if (const auto state = get_state_description())
-		{
-			if (state->name)
-			{
-				return *state->name;
-			}
-		}
-
-		return {};
-	}
-
-	EntityStateID Script::get_prev_state_id() const
-	{
-		if (const auto prev_state = get_prev_state_description())
-		{
-			if (prev_state->name)
-			{
-				return *prev_state->name;
-			}
-		}
-
-		return {};
+		return this->basic_call_operator_impl();
 	}
 
 	MetaAny Script::get_captured_event()
@@ -83,7 +46,7 @@ namespace engine
 			return {};
 		}
 
-		return captured_event.as_ref();
+		return _captured_event.as_ref();
 	}
 
 	MetaAny Script::get_captured_event() const
@@ -93,7 +56,7 @@ namespace engine
 			return {};
 		}
 
-		return captured_event.as_ref();
+		return _captured_event.as_ref();
 	}
 
 	void Script::set_pending_event_type(const MetaType& event_type)
@@ -106,7 +69,7 @@ namespace engine
 
 	void Script::set_pending_event_type(MetaTypeID event_type_id)
 	{
-		captured_event = event_type_id;
+		_captured_event = event_type_id;
 	}
 
 	void Script::set_captured_event(MetaAny&& newly_captured_event)
@@ -116,9 +79,9 @@ namespace engine
 			return;
 		}
 
-		if ((!captured_event) || waiting_for_event(newly_captured_event.type()))
+		if ((!_captured_event) || waiting_for_event(newly_captured_event.type()))
 		{
-			captured_event = std::move(newly_captured_event);
+			_captured_event = std::move(newly_captured_event);
 		}
 	}
 
@@ -126,7 +89,7 @@ namespace engine
 	{
 		if (!waiting_for_event())
 		{
-			captured_event = {};
+			_captured_event = {};
 		}
 	}
 
@@ -137,7 +100,7 @@ namespace engine
 
 	bool Script::waiting_for_event(MetaTypeID event_type_id) const
 	{
-		if (const auto pending_type_id = captured_event.try_cast<MetaTypeID>())
+		if (const auto pending_type_id = _captured_event.try_cast<MetaTypeID>())
 		{
 			return ((*pending_type_id == MetaTypeID {}) || (*pending_type_id == event_type_id));
 		}
@@ -147,24 +110,14 @@ namespace engine
 
 	bool Script::waiting_for_event() const
 	{
-		return static_cast<bool>(captured_event.try_cast<MetaTypeID>());
-	}
-
-	MetaTypeID Script::pending_event_type_id() const
-	{
-		if (const auto pending_type_id = captured_event.try_cast<MetaTypeID>())
-		{
-			return *pending_type_id;
-		}
-
-		return {};
+		return static_cast<bool>(_captured_event.try_cast<MetaTypeID>());
 	}
 
 	World& Script::get_world()
 	{
 		auto& service = get_service();
 
-		auto world = dynamic_cast<engine::World*>(&service);
+		auto world = dynamic_cast<World*>(&service);
 
 		assert(world);
 
@@ -175,25 +128,70 @@ namespace engine
 	{
 		auto& service = get_service();
 
-		auto world = dynamic_cast<const engine::World*>(&service);
+		auto world = dynamic_cast<const World*>(&service);
 
 		assert(world);
 
 		return *world;
 	}
 
-	DeltaSystem& Script::get_delta_system()
+	EntityThread* Script::get_executing_thread()
 	{
-		return system<engine::DeltaSystem>();
+		return _executing_thread;
 	}
 
-	const DeltaSystem& Script::get_delta_system() const
+	const EntityThread* Script::get_executing_thread() const
 	{
-		return system<engine::DeltaSystem>();
+		return _executing_thread;
 	}
 
-	float Script::get_delta() const
+	std::optional<EntityStateIndex> Script::get_executing_state_index() const
 	{
-		return get_delta_system().get_delta();
+		if (const auto thread = get_executing_thread())
+		{
+			return thread->state_index;
+		}
+
+		return std::nullopt;
+	}
+
+	EntityThreadID Script::get_executing_thread_name() const
+	{
+		if (const auto thread = get_executing_thread())
+		{
+			return thread->thread_id;
+		}
+				
+		return {};
+	}
+
+	MetaTypeID Script::get_pending_event_type_id() const
+	{
+		if (const auto pending_type_id = _captured_event.try_cast<MetaTypeID>())
+		{
+			return *pending_type_id;
+		}
+
+		return {};
+	}
+
+	bool Script::has_yield_continuation_predicate() const
+	{
+		return static_cast<bool>(_yield_continuation_predicate);
+	}
+
+	const Script::YieldContinuationPredicate& Script::get_yield_continuation_predicate() const
+	{
+		return _yield_continuation_predicate;
+	}
+
+	void Script::set_executing_thread(EntityThread& thread)
+	{
+		_executing_thread = &thread;
+	}
+
+	void Script::clear_executing_thread()
+	{
+		_executing_thread = {};
 	}
 }

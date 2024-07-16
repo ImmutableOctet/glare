@@ -1,41 +1,41 @@
 #pragma once
 
-#include <engine/types.hpp>
+#include "script_base.hpp"
 
-#include <engine/system_manager_interface.hpp>
+#include <engine/entity/types.hpp>
 
-#include <engine/meta/types.hpp>
-#include <engine/meta/meta_evaluation_context.hpp>
-#include <engine/entity/entity_instruction.hpp>
-#include <engine/script/script_fiber_response.hpp>
+#include <utility>
+#include <optional>
+#include <functional>
+#include <type_traits>
 
 #include <cassert>
-#include <stdexcept>
+
+namespace game
+{
+	class ScriptImpl;
+}
 
 namespace engine
 {
-	struct MetaEvaluationContext;
-
-	class Service;
-	class World;
-
 	class EntitySystem;
-	class EntityState;
-	class DeltaSystem;
+
+	struct EntityThread;
+	struct EntityThreadComponent;
 
 	// Shared API for C++ script functionality.
-	class Script
+	class Script : public ScriptBase
 	{
 		public:
-			using ScriptID = StringHash;
+			friend class EntitySystem;
+			friend struct EntityThreadComponent;
+
+			using Base = ScriptBase;
+			using CoreScriptType = Script;
+
+			using YieldContinuationPredicate = std::function<bool(const Script&, const MetaAny&)>;
 
 			Script() = default;
-
-			Script(const Script&) = delete;
-			Script(Script&&) noexcept = default;
-
-			Script& operator=(const Script&) = delete;
-			Script& operator=(Script&&) noexcept = default;
 
 			Script
 			(
@@ -45,260 +45,80 @@ namespace engine
 				Entity entity
 			);
 
-			const MetaEvaluationContext& get_context() const
-			{
-				assert(_context);
+			Script(const Script&) = delete;
+			Script(Script&&) noexcept = default;
 
-				return *_context;
-			}
+			virtual ~Script();
 
-			const Registry& get_registry() const
-			{
-				assert(_registry);
-
-				return *_registry;
-			}
-
-			Registry& get_registry()
-			{
-				assert(_registry);
-
-				return *_registry;
-			}
-
-			ScriptID get_script_id() const
-			{
-				return _script_id;
-			}
-
-			Entity get_entity() const
-			{
-				return _entity;
-			}
-
-			const Service& get_service() const
-			{
-				auto& context = get_context();
-
-				assert(context.service);
-
-				return *context.service;
-			}
-
-			Service& get_service()
-			{
-				auto& context = get_context();
-
-				assert(context.service);
-
-				return *context.service;
-			}
-
-			SystemManagerInterface& get_system_manager()
-			{
-				auto& context = get_context();
-
-				assert(context.system_manager);
-
-				return *context.system_manager;
-			}
-
-			const SystemManagerInterface& get_system_manager() const
-			{
-				auto& context = get_context();
-
-				assert(context.system_manager);
-
-				return *context.system_manager;
-			}
-
-			template <typename SystemType>
-			SystemType* try_get_system()
-			{
-				auto& system_manager = get_system_manager();
-
-				return system_manager.get_system<SystemType>();
-			}
-
-			template <typename SystemType>
-			const SystemType* try_get_system() const
-			{
-				auto& system_manager = get_system_manager();
-
-				return system_manager.get_system<SystemType>();
-			}
-
-			template <typename SystemType>
-			SystemType& system()
-			{
-				auto system_instance = try_get_system<SystemType>();
-
-				assert(system_instance);
-
-				return *system_instance;
-			}
-
-			template <typename SystemType>
-			const SystemType& system() const
-			{
-				auto system_instance = try_get_system<SystemType>();
-
-				assert(system_instance);
-
-				return *system_instance;
-			}
-
-			template <typename ComponentType>
-			ComponentType& get(Entity entity)
-			{
-				// Alternative implementation:
-				//return get_registry().get<ComponentType>(entity);
-
-				return get_registry().patch<ComponentType>(entity);
-			}
-
-			template <typename ComponentType>
-			const ComponentType& get(Entity entity) const
-			{
-				return get_registry().get<ComponentType>(entity);
-			}
-
-			template <typename ComponentType>
-			ComponentType& get()
-			{
-				return get<ComponentType>(get_entity());
-			}
-
-			template <typename ComponentType>
-			const ComponentType& get() const
-			{
-				return get<ComponentType>(get_entity());
-			}
-
-			template <typename ComponentType>
-			ComponentType* try_get(Entity entity)
-			{
-				auto& registry = get_registry();
-
-				auto component_instance = registry.try_get<ComponentType>(entity);
-
-				if (component_instance)
-				{
-					// Mark `ComponentType` as patched for `entity`.
-					registry.patch<ComponentType>(entity);
-				}
-
-				return component_instance;
-			}
-
-			template <typename ComponentType>
-			const ComponentType* try_get(Entity entity) const
-			{
-				return get_registry().try_get<ComponentType>(entity);
-			}
-
-			template <typename ComponentType>
-			ComponentType* try_get()
-			{
-				return try_get<ComponentType>(get_entity());
-			}
-
-			template <typename ComponentType>
-			const ComponentType* try_get() const
-			{
-				return try_get<ComponentType>(get_entity());
-			}
-
-			template <typename InstructionType, typename ...InstructionArgs>
-			[[nodiscard]] InstructionType instruct(const EntityTarget& target, InstructionArgs&&... instruction_args)
-			{
-				return InstructionType { target, std::nullopt, std::forward<InstructionArgs>(instruction_args)... };
-			}
-
-			template <typename InstructionType, typename ...InstructionArgs>
-			[[nodiscard]] InstructionType instruct(const EntityTarget& target, EntityThreadID thread_id, InstructionArgs&&... instruction_args)
-			{
-				return InstructionType { target, { thread_id }, std::forward<InstructionArgs>(instruction_args)... };
-			}
-
-			template <typename InstructionType, typename ...InstructionArgs>
-			[[nodiscard]] InstructionType instruct(InstructionArgs&&... instruction_args)
-			{
-				return InstructionType { EntityTarget {}, std::nullopt, std::forward<InstructionArgs>(instruction_args)... };
-			}
-
-			[[nodiscard]] decltype(auto) sleep(auto&&... args) { return instruct<instructions::Sleep>(std::forward<decltype(args)>(args)...); }
-
-			operator Entity() const
-			{
-				return get_entity();
-			}
-
-			explicit operator bool() const
-			{
-				return
-				(
-					(_context)
-					&&
-					(_registry)
-					&&
-					(_script_id)
-					&&
-					(_entity != null)
-				);
-			}
+			Script& operator=(const Script&) = delete;
+			Script& operator=(Script&&) noexcept = default;
 
 			virtual bool on_update();
 
-			const EntityState* get_state_description() const;
-			const EntityState* get_prev_state_description() const;
+			using ScriptBase::operator bool;
 
-			EntityStateID get_state_id() const;
-			EntityStateID get_prev_state_id() const;
+			using ScriptBase::operator();
 
-			EntityStateID get_state() const
-			{
-				return get_state_id();
-			}
-
-			EntityStateID get_prev_state() const
-			{
-				return get_prev_state_id();
-			}
-
-			MetaAny get_captured_event();
-			MetaAny get_captured_event() const;
+			engine::ScriptFiber operator()() override;
 
 			void set_pending_event_type(const MetaType& event_type);
 			void set_pending_event_type(MetaTypeID event_type_id);
+
 			void set_captured_event(MetaAny&& newly_captured_event);
+			
 			void clear_captured_event();
 
-			bool waiting_for_event(const MetaType& event_type) const;
-			bool waiting_for_event(MetaTypeID event_type_id) const;
-			bool waiting_for_event() const;
+			bool waiting_for_event(const MetaType& event_type) const override;
+			bool waiting_for_event(MetaTypeID event_type_id) const override;
+			bool waiting_for_event() const override;
 
-			MetaTypeID pending_event_type_id() const;
+			MetaAny get_captured_event() override;
+			MetaAny get_captured_event() const override;
 
-			World& get_world();
-			const World& get_world() const;
+			World& get_world() override;
+			const World& get_world() const override;
 
-			DeltaSystem& get_delta_system();
-			const DeltaSystem& get_delta_system() const;
+			EntityThread* get_executing_thread() override;
+			const EntityThread* get_executing_thread() const override;
 
-			float get_delta() const;
+			EntityThreadID get_executing_thread_name() const override;
 
+			std::optional<EntityStateIndex> get_executing_state_index() const override;
+
+			MetaTypeID get_pending_event_type_id() const;
+
+			bool has_yield_continuation_predicate() const;
+
+			const YieldContinuationPredicate& get_yield_continuation_predicate() const;
+
+			template <typename PredicateType>
+			void set_yield_continuation_predicate(PredicateType&& predicate)
+			{
+				if constexpr (std::is_same_v<std::remove_cvref_t<PredicateType>, std::nullptr_t>)
+				{
+					_yield_continuation_predicate = {};
+				}
+				else
+				{
+					_yield_continuation_predicate = std::forward<PredicateType>(predicate);
+				}
+			}
+
+			// Attempts to retrieve a pointer to the most recently captured event as `EventType`.
+			// NOTE: If the most recent event is not of type `EventType`, this will safely return a null value.
 			template <typename EventType>
 			const EventType* try_get_event() const
 			{
-				if (captured_event)
+				if (_captured_event)
 				{
-					return captured_event.try_cast<EventType>();
+					return _captured_event.try_cast<EventType>();
 				}
 
 				return {};
 			}
 
+			// Retrieves the most recently captured event as `EventType`.
+			// NOTE: If the most recent event is not of type `EventType`, this may throw or terminate.
 			template <typename EventType>
 			const EventType& get_event() const
 			{
@@ -306,38 +126,44 @@ namespace engine
 
 				assert(event_ptr);
 
-				if (event_ptr)
-				{
-					return *event_ptr;
-				}
-				else
-				{
-					throw std::runtime_error { "Unable to resolve event object." };
-				}
+				return *event_ptr;
 			}
 
-			template <typename EventType>
-			EventYieldRequest until_event() const
+			inline operator Entity() const
 			{
-				return { engine::resolve<EventType>().id() };
+				return ScriptBase::operator Entity();
 			}
-		private:
-			void update_state_references();
-			void update_deltatime();
 
-			const MetaEvaluationContext* _context   = {};
-			Registry*                    _registry  = {};
-			ScriptID                     _script_id = {};
-			Entity                       _entity    = null;
+			inline explicit operator bool() const
+			{
+				return ScriptBase::operator bool();
+			}
 
 		protected:
-			// Stores the most recently captured event.
+			// A floating-point value used to scale incremental updates.
+			// 
+			// This value is updated automatically when execution is resumed, but is
+			// indicative of the overall pace of the game, rather than the script itself.
+			// 
+			// This field exists primarily for ease-of-use when writing scripts.
+			float delta = 1.0f;
+
+		private:
+			void set_executing_thread(EntityThread& thread);
+
+			void clear_executing_thread();
+
+			// Retrieves the latest delta-time state.
+			void update_deltatime();
+
+			// The thread responsible for execution and ownership of this script.
+			EntityThread*              _executing_thread             = {};
+
+			// Stores a copy of the most recent event captured.
 			// While awaiting a captured event, this field may also be used to store the ID of the requested event type.
-			MetaAny       captured_event            = {};
+			MetaAny                    _captured_event               = {};
 
-			EntityStateID state                     = {};
-			EntityStateID prev_state                = {};
-
-			float                        delta      = 1.0f;
+			// A predicate used to determine if a yield operation should complete.
+			YieldContinuationPredicate _yield_continuation_predicate = {};
 	};
 }
