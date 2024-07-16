@@ -7,6 +7,7 @@
 #include <chrono>
 #include <optional>
 #include <string_view>
+#include <type_traits>
 
 namespace engine
 {
@@ -50,7 +51,8 @@ namespace engine
 			template
 			<
 				typename DurationType,
-				typename=std::enable_if_t<IsDurationType<DurationType>, DurationType>
+
+				std::enable_if<IsDurationType<DurationType>, int>::type=0
 			>
 			static Duration to_duration(DurationType duration_value)
 			{
@@ -66,7 +68,12 @@ namespace engine
 			// using the newly initialized `length` value.
 			Timer(Duration length, bool start_immediately=true);
 
-			template <typename DurationType>
+			template
+			<
+				typename DurationType,
+
+				std::enable_if<IsDurationType<DurationType>, int>::type=0
+			>
 			Timer(DurationType duration_value, bool start_immediately=true)
 				: Timer(to_duration(duration_value), start_immediately) {}
 
