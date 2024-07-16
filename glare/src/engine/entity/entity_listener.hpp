@@ -93,6 +93,18 @@ namespace engine
 				const MetaEvaluationContext& evaluation_context={}
 			);
 
+			void update_entity_coroutine_yield
+			(
+				Registry& registry, Entity entity,
+				const EntityDescriptor& descriptor,
+
+				EntityThreadComponent& thread_comp, EntityThread& thread,
+
+				const MetaAny& event_instance,
+
+				const MetaEvaluationContext& evaluation_context={}
+			);
+
 			void handle_state_rules
 			(
 				Registry& registry, Entity entity,
