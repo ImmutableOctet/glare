@@ -13,6 +13,7 @@
 #include <engine/meta/meta_data_member.hpp>
 #include <engine/meta/indirect_meta_data_member.hpp>
 #include <engine/meta/apply_operation.hpp>
+#include <engine/meta/data_member.hpp>
 
 #include <optional>
 #include <utility>
@@ -1075,5 +1076,16 @@ namespace engine
 	const EventTriggerConditionType& EventTriggerInverseCondition::get_inverse(Registry& registry, Entity entity) const
 	{
 		return get_inverse(get_descriptor(registry, entity));
+	}
+
+	std::tuple<MetaTypeID, entt::meta_data>
+	resolve_trigger_condition_member(const entt::meta_type& type, std::string_view member_name)
+	{
+		if (member_name.empty())
+		{
+			return resolve_data_member(type, true, "entity", "target", "button", "self", "value", "name");
+		}
+		
+		return resolve_data_member(type, true, member_name);
 	}
 }
