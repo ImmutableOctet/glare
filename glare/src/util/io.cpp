@@ -15,6 +15,26 @@ namespace util
 		Logger console;
 		Logger error_logger;
 
+		const DebugDataInterface* debug_data_ptr = {};
+
+		void register_debug_data(const DebugDataInterface& debug_data)
+		{
+			debug_data_ptr = &debug_data;
+		}
+
+		void unregister_debug_data(const DebugDataInterface& debug_data)
+		{
+			if ((&debug_data) == debug_data_ptr)
+			{
+				debug_data_ptr = {};
+			}
+		}
+
+		const DebugDataInterface* get_debug_data()
+		{
+			return debug_data_ptr;
+		}
+
 		Logger& get_console()
 		{
 			return console; // spdlog::get("console");
@@ -30,6 +50,21 @@ namespace util
 			if (!console)
 			{
 				console = spdlog::stdout_color_mt("console");
+
+				// Disable EOL character in favor of manually supplying it in `print` implementation, etc.
+				/*
+				console->set_formatter
+				(
+					std::make_unique<spdlog::pattern_formatter>
+					(
+						"%l %v",
+						
+						spdlog::pattern_time_type::local,
+
+						std::string {} // No EOL character.
+					)
+				);
+				*/
 			}
 
 			if (!error_logger)
