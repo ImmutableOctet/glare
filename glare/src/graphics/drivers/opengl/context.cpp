@@ -16,7 +16,7 @@
 
 #include <graphics/native/opengl.hpp>
 
-#include <lib.hpp>
+#include <third-party/lib.hpp>
 #include <app/window.hpp>
 #include <util/string.hpp>
 

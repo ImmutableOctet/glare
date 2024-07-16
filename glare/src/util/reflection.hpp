@@ -21,13 +21,12 @@
 
 namespace entt
 {
-    /*
     template <typename T, std::size_t preallocated, typename... Args>
     struct meta_sequence_container_traits<util::small_vector<T, preallocated, Args...>> // <util::small_vector<Args...>>
-        : internal::basic_meta_sequence_container_traits<util::small_vector<T, preallocated, Args...>> {};
-    */
+        : basic_meta_sequence_container_traits<util::small_vector<T, preallocated, Args...>> {};
 
     // Based on `basic_meta_sequence_container_traits` from EnTT's source code.
+    /*
     template <typename T, std::size_t preallocated, typename... Args>
     struct meta_sequence_container_traits<util::small_vector<T, preallocated, Args...>>
     {
@@ -44,17 +43,17 @@ namespace entt
         using iterator              = meta_sequence_container::iterator;
         using size_type             = std::size_t;
 
-        [[nodiscard]] static size_type size(const entt::any& container) noexcept
+        [[nodiscard]] static size_type size(const void* container) noexcept
         {
-            return any_cast<const Type&>(container).size();
+            return static_cast<const Type*>(container)->size();
         }
 
-        [[nodiscard]] static bool resize([[maybe_unused]] entt::any& container, [[maybe_unused]] size_type sz)
+        [[nodiscard]] static bool resize([[maybe_unused]] void* container, [[maybe_unused]] const size_type sz)
         {
             // NOTE: Added default-constructible check added due to conflict/limitation with Folly's small vector implementation.
             if constexpr (std::is_default_constructible_v<std::decay_t<value_type>>) // && entt::internal::is_dynamic_sequence_container<Type>::value
             {
-                if (auto* const underlying = any_cast<Type>(&container))
+                if (auto* const underlying = static_cast<Type*>(container))
                 {
                     underlying->resize(sz);
 
@@ -65,9 +64,21 @@ namespace entt
             return false;
         }
 
-        [[nodiscard]] static iterator iter(const entt::meta_ctx& ctx, entt::any& container, const bool as_end)
+        [[nodiscard]] static bool clear([[maybe_unused]] void* container)
         {
-            if (auto* const underlying = any_cast<Type>(&container))
+            if (auto* const underlying = static_cast<Type*>(container))
+            {
+                underlying->clear();
+
+                return true;
+            }
+
+            return false;
+        }
+
+        [[nodiscard]] static iterator iter(const entt::meta_ctx& ctx, void* container, const bool as_end)
+        {
+            if (auto* const underlying = static_cast<Type*>(container))
             {
                 return iterator
                 {
@@ -79,7 +90,7 @@ namespace entt
                 };
             }
 
-            const Type& as_const = any_cast<const Type&>(container);
+            const Type* as_const = static_cast<const Type*>(container);
 
             return iterator
             {
@@ -147,6 +158,7 @@ namespace entt
             return iterator {};
         }
     };
+    */
 
     /*
     // Disabled for now; enables enumeration of sampler contents.
@@ -179,6 +191,11 @@ namespace entt
         [[nodiscard]] static bool resize([[maybe_unused]] entt::any& container, [[maybe_unused]] size_type sz)
         {
             // Resizing is not allowed for sampler objects.
+            return false;
+        }
+
+        [[nodiscard]] static bool clear([[maybe_unused]] const entt::any& container)
+        {
             return false;
         }
 
@@ -241,7 +258,7 @@ namespace util
         const auto name_decl_rgx = std::regex("(struct|class|enum|union) ([\\w]+\\:\\:)(\\w+)");
         constexpr std::size_t type_name_index = 3;
 
-        std::smatch rgx_match;
+        std::match_results<decltype(name_view.data())> rgx_match;
 
         // TODO: Look into `std::regex` limitations with `std::string_view`.
         if (!std::regex_search(name_view.data(), rgx_match, name_decl_rgx)) // name_view.begin(), name_view.end()
@@ -251,7 +268,7 @@ namespace util
             return {};
         }
 
-        return { (name_view.data() + rgx_match.position(type_name_index)), rgx_match.length(type_name_index) };
+        return { (name_view.data() + rgx_match.position(type_name_index)), static_cast<std::string_view::size_type>(rgx_match.length(type_name_index)) };
     }
 
     inline entt::meta_type meta_type_from_name(std::string_view type_name, std::string_view namespace_symbol)

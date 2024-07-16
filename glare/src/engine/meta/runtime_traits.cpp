@@ -254,4 +254,39 @@ namespace engine
 
 		return false;
 	}
+
+	bool type_is_coroutine(const MetaType& type)
+	{
+		using namespace engine::literals;
+
+		return ((type) && (type.prop("coroutine"_hs)));
+	}
+
+	bool type_is_coroutine(MetaTypeID type_id)
+	{
+		if (type_id)
+		{
+			if (auto type = resolve(type_id))
+			{
+				return type_is_coroutine(type);
+			}
+		}
+
+		return false;
+	}
+
+	bool value_is_coroutine(const MetaAny& value)
+	{
+		if (!value)
+		{
+			return false;
+		}
+
+		if (auto type = value.type())
+		{
+			return type_is_coroutine(type);
+		}
+
+		return false;
+	}
 }

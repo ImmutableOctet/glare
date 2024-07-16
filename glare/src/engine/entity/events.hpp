@@ -44,7 +44,7 @@ namespace engine
 		EntityThreadIndex thread_index;
 
 		// The name/identifier associated with this thread.
-		std::optional<EntityThreadID> thread_id;
+		EntityThreadID thread_id;
 
 		// An index to this local thread-instance tied to `entity`.
 		// 
@@ -86,6 +86,12 @@ namespace engine
 		MetaVariableScope variable_scope;
 
 		MetaAny variable_update_result;
+	};
+
+	// Triggered when one or more of an entity's threads have been updated.
+	struct OnEntityThreadsUpdated
+	{
+		Entity entity;
 	};
 
 	using OnThreadStart = OnThreadSpawn;

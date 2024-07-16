@@ -302,7 +302,8 @@ namespace engine
 	void reflect<EntityThreadComponent>()
 	{
 		engine_meta_type<EntityThreadComponent>()
-			.data<&EntityThreadComponent::threads>("threads"_hs)
+			// Disabled for now; EnTT's having trouble detecting move-only types.
+			//.data<nullptr, static_cast<const EntityThreadComponent::EntityThreadContainer& (EntityThreadComponent::*)() const>(&EntityThreadComponent::get_threads), entt::as_cref_t>("threads"_hs)
 		;
 	}
 
@@ -435,6 +436,7 @@ namespace engine
 	{
 		engine_command_type<EntityThreadSpawnCommand>()
 			.data<&EntityThreadSpawnCommand::threads>("threads"_hs)
+			.data<&EntityThreadSpawnCommand::parent_thread_name>("parent_thread_name"_hs)
 			.data<&EntityThreadSpawnCommand::restart_existing>("restart_existing"_hs)
 			.ctor
 			<
@@ -442,6 +444,7 @@ namespace engine
 				decltype(EntityThreadSpawnCommand::target),
 				
 				decltype(EntityThreadSpawnCommand::threads),
+				decltype(EntityThreadSpawnCommand::parent_thread_name),
 				decltype(EntityThreadSpawnCommand::restart_existing)
 			>()
 		;
@@ -556,6 +559,39 @@ namespace engine
 	}
 	
 	template <>
+	void reflect<EntityThreadFiberSpawnCommand>()
+	{
+		// Constructor and `fiber` member disabled for now.
+		// (EnTT's trying to generate bindings for a non-existent copy constructor)
+		engine_command_type<EntityThreadFiberSpawnCommand>()
+			//.data<&EntityThreadFiberSpawnCommand::fiber, entt::as_ref_t>("fiber"_hs)
+			.data<&EntityThreadFiberSpawnCommand::state_index>("state_index"_hs)
+			.data<&EntityThreadFiberSpawnCommand::thread_name>("thread_name"_hs)
+			.data<&EntityThreadFiberSpawnCommand::parent_thread_name>("parent_thread_name"_hs)
+			.data<&EntityThreadFiberSpawnCommand::thread_flags>("thread_flags"_hs)
+
+			// Disabled for now; EnTT wants the full type definition for `Script`.
+			//.data<&EntityThreadFiberSpawnCommand::script_handle>("script_handle"_hs)
+
+			/*
+			.ctor
+			<
+				decltype(EntityThreadFiberSpawnCommand::source),
+				decltype(EntityThreadFiberSpawnCommand::target),
+
+				decltype(EntityThreadFiberSpawnCommand::fiber)&,
+				decltype(EntityThreadFiberSpawnCommand::state_index),
+				decltype(EntityThreadFiberSpawnCommand::thread_name),
+				decltype(EntityThreadFiberSpawnCommand::parent_thread_name),
+				decltype(EntityThreadFiberSpawnCommand::thread_flags)
+
+				//decltype(EntityThreadFiberSpawnCommand::script_handle)
+			>()
+			*/
+		;
+	}
+
+	template <>
 	void reflect<EntityInstruction>()
 	{
 		auto type = engine_meta_type<EntityInstruction>()
@@ -594,7 +630,7 @@ namespace engine
 			.ctor
 			<
 				decltype(EntityThreadInstruction::target_entity),
-				typename decltype(EntityThreadInstruction::thread_id)::value_type
+				decltype(EntityThreadInstruction::thread_id)
 			>()
 		;
 	}
@@ -675,6 +711,7 @@ namespace engine
 	GENERATE_SINGLE_FIELD_DERIVED_TYPE_REFLECTION(instructions::Yield, instructions::Thread, condition);
 	GENERATE_EMPTY_DERIVED_TYPE_REFLECTION(instructions::IfControlBlock, instructions::LocalConditionControlBlock);
 	GENERATE_SINGLE_FIELD_TYPE_REFLECTION(instructions::FunctionCall, function);
+	GENERATE_SINGLE_FIELD_TYPE_REFLECTION(instructions::CoroutineCall, coroutine_function);
 	GENERATE_SINGLE_FIELD_TYPE_REFLECTION(instructions::AdvancedMetaExpression, expr);
 	GENERATE_SINGLE_FIELD_TYPE_REFLECTION(instructions::VariableDeclaration, variable_details);
 
@@ -790,6 +827,7 @@ namespace engine
 		reflect<EntityThreadUnlinkCommand>();
 		reflect<EntityThreadSkipCommand>();
 		reflect<EntityThreadRewindCommand>();
+		reflect<EntityThreadFiberSpawnCommand>();
 
 		// Instructions:
 		reflect<EntityInstruction>();
@@ -816,6 +854,7 @@ namespace engine
 		reflect<instructions::CadenceControlBlock>();
 		reflect<instructions::IfControlBlock>();
 		reflect<instructions::FunctionCall>();
+		reflect<instructions::CoroutineCall>();
 		reflect<instructions::AdvancedMetaExpression>();
 		reflect<instructions::VariableDeclaration>();
 		reflect<instructions::VariableAssignment>();

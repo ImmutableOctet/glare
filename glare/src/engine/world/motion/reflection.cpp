@@ -17,7 +17,6 @@
 #include "components/orientation_component.hpp"
 #include "components/rotate_component.hpp"
 #include "components/focus_component.hpp"
-#include "components/orbit_component.hpp"
 
 #include "motion_events.hpp"
 
@@ -229,17 +228,6 @@ namespace engine
 	}
 
 	template <>
-	void reflect<OrbitComponent>()
-	{
-		engine_meta_type<OrbitComponent>()
-			.data<&OrbitComponent::movement_speed>("movement_speed"_hs)
-			.data<&OrbitComponent::distance>("distance"_hs)
-			.data<&OrbitComponent::min_distance>("min_distance"_hs)
-			.data<&OrbitComponent::max_distance>("max_distance"_hs)
-		;
-	}
-
-	template <>
 	void reflect<MotionComponent>()
 	{
 		// TODO: Add getter-methods for boolean data members.
@@ -317,7 +305,6 @@ namespace engine
 		reflect<OrientationComponent>();
 		reflect<RotateComponent>();
 		reflect<FocusComponent>();
-		reflect<OrbitComponent>();
 
 		// Events:
 		reflect<OnAirToGround>();

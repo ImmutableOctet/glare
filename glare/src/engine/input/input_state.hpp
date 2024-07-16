@@ -41,6 +41,13 @@ namespace engine
 			void set_button(Button button, bool value);
 
 			void clear();
+
+			bool any() const;
+
+			inline explicit operator bool() const
+			{
+				return any();
+			}
 		};
 
 		using AnalogStates = InputAnalogStates;

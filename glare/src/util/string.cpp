@@ -31,6 +31,38 @@ namespace util
         return uppercase(std::string(str));
     }
 
+    std::size_t replace(std::string& str, std::string_view from, std::string_view to, std::size_t offset, bool exhaustive)
+    {
+        auto occurrences = std::size_t {};
+
+        auto position = offset;
+
+        do
+        {
+            position = str.find(from, position);
+
+            if (position == std::string::npos)
+            {
+                break;
+            }
+
+            str.replace(position, from.length(), to);
+
+            occurrences++;
+        } while (exhaustive);
+
+        return occurrences;
+    }
+
+    std::string replace(std::string_view view_of_original, std::string_view from, std::string_view to, std::size_t offset, bool exhaustive)
+    {
+        auto output = std::string { view_of_original };
+
+        replace(output, from, to, offset, exhaustive);
+
+        return output;
+    }
+
     std::smatch get_regex_groups(const std::string& s, const std::regex& re)
     {
         if (std::regex_match(s, re))

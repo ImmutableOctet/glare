@@ -6,7 +6,7 @@ target_sources(
     PRIVATE
 
     "bridge.cpp"
-    "reflection.cpp"
+    #"reflection.cpp"
 
     "billboard_behavior.cpp"
     "debug_move_behavior.cpp"

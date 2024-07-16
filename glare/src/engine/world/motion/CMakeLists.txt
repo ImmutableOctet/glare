@@ -8,7 +8,7 @@ target_sources(
     "motion_system.cpp"
     "components/orientation_component.cpp"
     "components/rotate_component.cpp"
-    "reflection.cpp"
+    #"reflection.cpp"
 )
 
 #target_link_libraries(

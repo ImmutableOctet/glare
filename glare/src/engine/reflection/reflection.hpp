@@ -8,13 +8,14 @@
 #include "meta_type_reflection_config.hpp"
 
 #include "core.hpp"
+#include "reflect.hpp"
 #include "context.hpp"
 #include "function.hpp"
 #include "operators.hpp"
 #include "indirection.hpp"
 #include "json_bindings.hpp"
 #include "binary_bindings.hpp"
-#include "pfr_reflection.hpp"
+#include "aggregate.hpp"
 #include "optional.hpp"
 #include "history.hpp"
 #include "enum.hpp"
@@ -99,43 +100,3 @@
             .base<base_type_name>()                                       \
         ;                                                                 \
     }
-
-namespace engine
-{
-    // NOTE: In the default case of `T=void`, the overridden version of this template is used.
-    // TODO: Look into best way to handle multiple calls to reflect. (This is currently only managed in `reflect_all`)
-    template <typename T=void>
-    void reflect()
-    {
-        if constexpr (std::is_enum_v<T>)
-        {
-            reflect_enum<T>();
-        }
-        else if constexpr (has_function_reflect_v<T, void>)
-        {
-            T::reflect();
-        }
-        else if constexpr (has_function_reflect_v<T, entt::meta_factory<T>>)
-        {
-            // TODO: Determine if it makes sense to forward the return-value to the caller.
-            T::reflect();
-        }
-        else if constexpr (util::is_pfr_reflective_v<T>)
-        {
-            reflect_aggregate_fields<T>();
-        }
-        else
-        {
-            static_assert(std::integral_constant<T, false>::value, "Reflection definition missing for type `T`.");
-        }
-    }
-
-    // Aliases the default configuration of `reflect` to the `reflect_all` free-function.
-    // 
-    // TODO: Determine if this is the best option for a generalized `reflect`.
-    template <>
-    inline void reflect<void>()
-    {
-        reflect_all();
-    }
-}

@@ -6,5 +6,5 @@ namespace engine
 {
 	class ResourceManager;
 
-	extern template void reflect<ResourceManager>();
+	template <> void reflect<ResourceManager>();
 }

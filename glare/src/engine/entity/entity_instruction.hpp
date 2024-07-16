@@ -28,8 +28,8 @@ namespace engine
 		// Defaults to this entity.
 		EntityTarget target_entity = {};
 
-		// If empty, this refers to the current thread.
-		std::optional<EntityThreadID> thread_id = std::nullopt;
+		// If left default (0), this refers to the current thread.
+		EntityThreadID thread_id = {};
 
 		bool operator==(const EntityThreadInstruction&) const noexcept = default;
 		bool operator!=(const EntityThreadInstruction&) const noexcept = default;
@@ -158,7 +158,7 @@ namespace engine
 
 		struct Sleep : Thread
 		{
-			Timer::Duration duration;
+			Timer::Duration duration = {};
 
 			bool check_linked = true;
 
@@ -194,7 +194,7 @@ namespace engine
 		struct Rewind : Thread
 		{
 			// Number of instructions to be moved backward by.
-			EntityInstructionCount instructions_rewound; // ControlBlock
+			EntityInstructionCount instructions_rewound = {}; // ControlBlock
 
 			bool check_linked = true;
 
@@ -214,8 +214,8 @@ namespace engine
 
 		struct CadenceControlBlock
 		{
-			EntityThreadCadence cadence; // = EntityThreadCadence::Default;
-			//EntityThreadCadence prev_cadence; // = EntityThreadCadence::Default;
+			EntityThreadCadence cadence = EntityThreadCadence::Default;
+			//EntityThreadCadence prev_cadence = EntityThreadCadence::Default;
 
 			// Number of subsequent instructions to be
 			// included in this 'cadence' block.
@@ -224,6 +224,8 @@ namespace engine
 			bool operator==(const CadenceControlBlock&) const noexcept = default;
 			bool operator!=(const CadenceControlBlock&) const noexcept = default;
 		};
+
+		using ChangeCadence = CadenceControlBlock;
 
 		struct IfControlBlock : LocalConditionControlBlock
 		{
@@ -237,6 +239,14 @@ namespace engine
 
 			bool operator==(const FunctionCall&) const noexcept = default;
 			bool operator!=(const FunctionCall&) const noexcept = default;
+		};
+
+		struct CoroutineCall
+		{
+			IndirectMetaAny coroutine_function;
+
+			bool operator==(const CoroutineCall&) const noexcept = default;
+			bool operator!=(const CoroutineCall&) const noexcept = default;
 		};
 
 		struct AdvancedMetaExpression
@@ -327,6 +337,7 @@ namespace engine
 			IfControlBlock,
 
 			FunctionCall,
+			CoroutineCall,
 			AdvancedMetaExpression,
 			VariableDeclaration,
 			VariableAssignment,
@@ -339,85 +350,81 @@ namespace engine
 
 	struct EntityInstruction
 	{
-		public:
-			using InstructionType = instructions::Instruction;
+		using InstructionType = instructions::Instruction;
 
-			inline EntityInstruction()
-				: value(instructions::NoOp {}) {}
+		inline EntityInstruction()
+			: value(instructions::NoOp {}) {}
 
-			inline EntityInstruction(InstructionType&& value)
-				: value(std::move(value))
-			{}
+		inline EntityInstruction(InstructionType&& value)
+			: value(std::move(value))
+		{}
 
-			inline EntityInstruction(MetaAny opaque_value)
-				: value(instructions::NoOp {})
+		inline EntityInstruction(MetaAny opaque_value)
+			: value(instructions::NoOp {})
+		{
+			if (!opaque_value)
 			{
-				if (!opaque_value)
-				{
-					return;
-				}
-
-				util::for_each_variant_type<InstructionType>
-				(
-					[this, &opaque_value]<typename T>()
-					{
-						if (static_cast<bool>(*this))
-						{
-							return;
-						}
-
-						if (auto exact_type = opaque_value.try_cast<T>())
-						{
-							this->value = std::move(*exact_type); // *exact_type;
-						}
-					}
-				);
+				return;
 			}
 
-			template <typename T>
-			EntityInstruction
+			util::for_each_variant_type<InstructionType>
 			(
-				std::enable_if_t<util::variant_contains_v<InstructionType, T>, T>&& value
-			)
-				: value(std::move(value))
-			{}
+				[this, &opaque_value]<typename T>()
+				{
+					if (static_cast<bool>(*this))
+					{
+						return;
+					}
 
-			template <typename T>
-			static EntityInstruction from_type(T value)
-			{
-				return EntityInstruction(InstructionType(std::move(value)));
-			}
+					if (auto exact_type = opaque_value.try_cast<T>())
+					{
+						this->value = std::move(*exact_type); // *exact_type;
+					}
+				}
+			);
+		}
 
-			inline static EntityInstruction from_meta_any(MetaAny opaque_value)
-			{
-				return EntityInstruction(std::move(opaque_value));
-			}
+		template <typename T, typename=std::enable_if_t<util::variant_contains_v<InstructionType, T>, T>>
+		EntityInstruction(T&& value)
+			: value(std::move(value))
+		{}
 
-			EntityInstruction(const EntityInstruction&) = default;
-			EntityInstruction(EntityInstruction&&) noexcept = default;
+		template <typename T>
+		static EntityInstruction from_type(T value)
+		{
+			return EntityInstruction(InstructionType(std::move(value)));
+		}
 
-			EntityInstruction& operator=(const EntityInstruction&) = default;
-			EntityInstruction& operator=(EntityInstruction&&) noexcept = default;
+		inline static EntityInstruction from_meta_any(MetaAny opaque_value)
+		{
+			return EntityInstruction(std::move(opaque_value));
+		}
 
-			bool operator==(const EntityInstruction&) const noexcept = default;
-			bool operator!=(const EntityInstruction&) const noexcept = default;
+		EntityInstruction(const EntityInstruction&) = default;
+		EntityInstruction(EntityInstruction&&) noexcept = default;
 
-			inline std::size_t type_index() const
-			{
-				return value.index();
-			}
+		EntityInstruction& operator=(const EntityInstruction&) = default;
+		EntityInstruction& operator=(EntityInstruction&&) noexcept = default;
 
-			inline operator const InstructionType&() const
-			{
-				return value;
-			}
+		bool operator==(const EntityInstruction&) const noexcept = default;
+		bool operator!=(const EntityInstruction&) const noexcept = default;
 
-			inline explicit operator bool() const
-			{
-				return (type_index() != util::variant_index<InstructionType, instructions::NoOp>());
-			}
+		std::size_t type_index() const
+		{
+			return value.index();
+		}
 
-			InstructionType value;
+		operator const InstructionType&() const
+		{
+			return value;
+		}
+
+		explicit operator bool() const
+		{
+			return (type_index() != util::variant_index<InstructionType, instructions::NoOp>());
+		}
+
+		InstructionType value;
 	};
 
 	using EntityInstructionType = EntityInstruction::InstructionType;

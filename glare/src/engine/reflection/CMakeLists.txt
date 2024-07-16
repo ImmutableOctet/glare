@@ -1,10 +1,12 @@
 target_sources(
-    glare_engine # glare_engine_resource_manager
+    glare_engine_reflection
     
     PRIVATE
 
-    "reflection.cpp"
+    #"reflection.cpp"
+
     "math.cpp"
     "util.cpp"
+    "script.cpp"
     "context.cpp"
 )

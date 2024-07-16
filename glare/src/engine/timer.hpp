@@ -2,9 +2,12 @@
 
 #include "types.hpp"
 
+#include <util/type_traits.hpp>
+
 #include <chrono>
 #include <optional>
 #include <string_view>
+#include <type_traits>
 
 namespace engine
 {
@@ -27,6 +30,9 @@ namespace engine
 			using FloatSeconds = std::chrono::duration<float>;
 			using DoubleSeconds = std::chrono::duration<double>;
 
+			template <typename T>
+			inline static constexpr bool IsDurationType = util::is_specialization_v<T, std::chrono::duration>;
+
 			static std::optional<Duration> to_duration(DurationRaw duration_rep, StringHash time_symbol_id);
 			static std::optional<Duration> to_duration(DurationRaw duration_rep, std::string_view time_symbol);
 
@@ -42,6 +48,17 @@ namespace engine
 			static Duration to_duration(DoubleSeconds seconds);
 			static Duration to_duration(double seconds);
 
+			template
+			<
+				typename DurationType,
+
+				std::enable_if<IsDurationType<DurationType>, int>::type=0
+			>
+			static Duration to_duration(DurationType duration_value)
+			{
+				return std::chrono::duration_cast<Duration>(duration_value);
+			}
+
 			// Default initializes a timer with no specified length/duration.
 			Timer() = default;
 
@@ -49,7 +66,16 @@ namespace engine
 			//
 			// If `start_immediately` is true, this will immediately call `start`
 			// using the newly initialized `length` value.
-			Timer(Duration length, bool start_immediately=false);
+			Timer(Duration length, bool start_immediately=true);
+
+			template
+			<
+				typename DurationType,
+
+				std::enable_if<IsDurationType<DurationType>, int>::type=0
+			>
+			Timer(DurationType duration_value, bool start_immediately=true)
+				: Timer(to_duration(duration_value), start_immediately) {}
 
 			//virtual ~Timer();
 
@@ -190,7 +216,7 @@ namespace engine
 			// Alias for `active` method.
 			inline explicit operator bool() const
 			{
-				return active();
+				return ((active()) && (!completed()));
 			}
 
 			// Equivalent to calling `activate`, or `start` with no parameters.
@@ -198,7 +224,14 @@ namespace engine
 			{
 				return activate();
 			}
+
+			friend auto operator<=>(const Timer&, const Timer&) = default;
 		protected:
+			static constexpr Duration to_duration_seconds_impl(auto seconds)
+			{
+				return std::chrono::duration_cast<Duration>(std::chrono::round<std::chrono::nanoseconds>(seconds));
+			}
+
 			std::optional<TimePoint> start_point;
 			std::optional<TimePoint> pause_point;
 			std::optional<TimePoint> end_point;

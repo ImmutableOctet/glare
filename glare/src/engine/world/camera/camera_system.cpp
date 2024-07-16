@@ -1,34 +1,20 @@
 #include "camera_system.hpp"
 
 #include "components/camera_component.hpp"
-#include "components/camera_control_component.hpp"
-#include "components/camera_freelook_component.hpp"
 
 #include "commands/set_camera_command.hpp"
-
-#include "events.hpp"
 
 #include <engine/types.hpp>
 #include <engine/registry.hpp>
 #include <engine/transform.hpp>
 
-#include <engine/components/player_target_component.hpp>
-
 #include <engine/world/world.hpp>
 #include <engine/world/render/render_phase.hpp>
-
-#include <engine/world/motion/components/focus_component.hpp>
-#include <engine/world/motion/components/orbit_component.hpp>
-
-#include <engine/input/events.hpp>
 
 #include <math/math.hpp>
 #include <math/conversion.hpp>
 
 #include <cassert>
-
-// Debugging related:
-#include <glm/gtc/quaternion.hpp>
 
 namespace engine
 {
@@ -58,15 +44,14 @@ namespace engine
 		registry.on_destroy<CameraComponent>().connect<&CameraSystem::on_camera_destroy>(*this);
 
 		world.register_event<SetCameraCommand, &CameraSystem::on_set_camera_command>(*this);
-		world.register_event<OnAnalogInput, &CameraSystem::on_analog_input>(*this);
 	}
 
 	void CameraSystem::on_unsubscribe(World& world)
 	{
 		auto& registry = get_registry();
 
-		registry.on_construct<CameraComponent>().disconnect(*this);
-		registry.on_destroy<CameraComponent>().disconnect(*this);
+		registry.on_construct<CameraComponent>().disconnect(this);
+		registry.on_destroy<CameraComponent>().disconnect(this);
 
 		world.unregister(*this);
 	}
@@ -99,15 +84,10 @@ namespace engine
 		//auto& registry = get_registry();
 	}
 
-	void CameraSystem::on_analog_input(const OnAnalogInput& analog_input)
+	void CameraSystem::apply_analog_input(Transform& tform, const math::Vector2D& influence, float delta) const
 	{
-		const auto& delta_time = world.get_delta_time();
-		const auto delta = static_cast<float>(delta_time);
-
-		generate_camera_relative_input(analog_input);
-
-		handle_orbiting_camera_input(analog_input, delta);
-		handle_first_person_camera_input(analog_input, delta);
+		tform.rotate({ 0.0f, (influence.x * delta), 0.0f }, true);
+		tform.rotateX((influence.y * delta), false);
 	}
 
 	void CameraSystem::update_camera_parameters(int width, int height)
@@ -124,155 +104,6 @@ namespace engine
 				camera_component.update_aspect_ratio(width, height);
 			}
 		});
-	}
-
-	void CameraSystem::handle_orbiting_camera_input(const OnAnalogInput& analog_input, float delta)
-	{
-		auto& registry = get_registry();
-
-		registry.view<RelationshipComponent, TransformComponent, OrbitComponent, CameraControlComponent, PlayerTargetComponent>().each
-		(
-			[&](const auto entity, const RelationshipComponent& relationship, TransformComponent& tform_comp, OrbitComponent& orbit, const CameraControlComponent& camera_control, const PlayerTargetComponent& player_target)
-			{
-				if ((analog_input.player_index() == player_target.player_index))
-				{
-					if (analog_input.analog == camera_control.look)
-					{
-						auto target = relationship.get_parent();
-						auto focus_offset = math::Vector {};
-
-						if (const auto* focus = registry.try_get<FocusComponent>(entity))
-						{
-							if (focus->target != null)
-							{
-								target = focus->target;
-							}
-
-							focus_offset = focus->focus_offset;
-						}
-
-						if (target == null)
-						{
-							return;
-						}
-
-						auto entity_tform = Transform(registry, entity, relationship, tform_comp);
-						auto target_tform = Transform(registry, target);
-
-						const auto entity_initial_position = entity_tform.get_position();
-						const auto target_position = (target_tform.get_position() + focus_offset);
-
-						// TODO: Move into update event for `OrbitComponent`.
-						orbit.distance = math::clamp(orbit.distance, orbit.min_distance, orbit.max_distance);
-
-						const auto& input = analog_input.value;
-
-						const auto movement_speed = (analog_input.is_mouse_event())
-							? (orbit.movement_speed * mouse_movement_multiplier)
-							: (orbit.movement_speed)
-						;
-
-						//entity_tform.look_at(target_position);
-
-						apply_analog_input(entity_tform, (math::Vector2D { movement_speed } * input), delta);
-
-						entity_tform.set_position(target_position);
-						entity_tform.move({ 0.0f, 0.0f, orbit.distance }, true);
-					}
-					else if (analog_input.analog == camera_control.zoom)
-					{
-						orbit.distance += (analog_input.value.y * orbit.movement_speed.z);
-					}
-				}
-			}
-		);
-	}
-
-	void CameraSystem::handle_first_person_camera_input(const OnAnalogInput& analog_input, float delta)
-	{
-		auto& registry = get_registry();
-
-		registry.view<RelationshipComponent, TransformComponent, CameraFreeLookComponent, CameraControlComponent, PlayerTargetComponent>().each
-		(
-			[&](const auto entity, const RelationshipComponent& relationship, TransformComponent& tform_comp, CameraFreeLookComponent& free_look, const CameraControlComponent& camera_control, const PlayerTargetComponent& player_target)
-			{
-				if ((analog_input.player_index() == player_target.player_index))
-				{
-					if (analog_input.analog == camera_control.look)
-					{
-						const auto& input = analog_input.value;
-
-						const auto movement_speed = (analog_input.is_mouse_event())
-							? (free_look.movement_speed * mouse_movement_multiplier)
-							: (free_look.movement_speed)
-						;
-
-						auto tform = Transform(registry, entity, relationship, tform_comp);
-
-						apply_analog_input(tform, (movement_speed * input), delta);
-					}
-				}
-			}
-		);
-	}
-
-	void CameraSystem::apply_analog_input(Transform& tform, const math::Vector2D& influence, float delta)
-	{
-		tform.rotate({ 0.0f, (influence.x * delta), 0.0f }, true);
-		tform.rotateX((influence.y * delta), false);
-	}
-
-	void CameraSystem::generate_camera_relative_input(const OnAnalogInput& analog_input)
-	{
-		auto& registry = get_registry();
-
-		registry.view<RelationshipComponent, TransformComponent, CameraComponent, PlayerTargetComponent>().each
-		(
-			[&](const auto entity, const RelationshipComponent& relationship, TransformComponent& tform_comp, const CameraComponent& camera_comp, const PlayerTargetComponent& player_target)
-			{
-				if (analog_input.player_index() == player_target.player_index) // && (analog_input.value.length() > 0.0f)
-				{
-					const auto& input_direction = analog_input.value;
-
-					auto tform = Transform(registry, entity, relationship, tform_comp);
-
-					const auto basis = tform.get_basis_q();
-
-					// NOTE: Initial normalization may not be needed in the case of `Analog::Movement`,
-					// since we re-normalize after removing the `y` elements.
-					auto camera_forward = glm::normalize(basis * math::Vector3D { 0.0f, 0.0f, -1.0f });
-					auto camera_right = glm::normalize(basis * math::Vector3D { 1.0f, 0.0f, 0.0f });
-
-					if (analog_input.analog == Analog::Movement)
-					{
-						// Remove vertical movement, then re-normalize the 'xz' vectors:
-						camera_forward.y = 0.0f;
-						camera_right.y = 0.0f;
-
-						// NOTE: If we don't normalize after zeroing `y`, the portion of the length distributed to `y`
-						// would be missing, thus giving weaker 'xz' values at steep camera angles.
-						camera_forward = glm::normalize(camera_forward);
-						camera_right = glm::normalize(camera_right);
-					}
-
-					const auto relative_forward = (input_direction.y * camera_forward);
-					const auto relative_right   = (input_direction.x * camera_right);
-
-					const auto world_space_direction_3d = (relative_forward + relative_right);
-					const auto world_space_direction_2d = math::Vector2D { world_space_direction_3d.x, world_space_direction_3d.z };
-
-					auto relative_analog_input = OnRelativeAnalogInput { analog_input };
-
-					relative_analog_input.value = world_space_direction_2d;
-					relative_analog_input.angle = math::direction_to_angle_90_degrees(world_space_direction_2d);
-					relative_analog_input.direction = world_space_direction_3d;
-
-					relative_analog_input.source = entity;
-
-					world.event<OnRelativeAnalogInput>(std::move(relative_analog_input));
-				}
-			}
-		);
 	}
 
 	math::Vector2D CameraSystem::get_display_size_f() const
@@ -407,5 +238,12 @@ namespace engine
 		const auto* camera_parameters = registry.try_get<CameraComponent>(active_camera);
 
 		return *camera_parameters;
+	}
+
+	float CameraSystem::get_mouse_analog_movement_multiplier() const
+	{
+		constexpr float mouse_movement_multiplier = 20.0f;
+
+		return mouse_movement_multiplier;
 	}
 }

@@ -142,6 +142,23 @@ namespace engine
 			static std::string thread_name_from_script_reference
 			(
 				const std::filesystem::path& script_path,
+				
+				const EntityFactoryContext* opt_factory_context=nullptr,
+				const std::filesystem::path* opt_base_path=nullptr
+			);
+
+			static std::string thread_name_from_script_reference
+			(
+				const std::string& script_path_str,
+
+				const EntityFactoryContext* opt_factory_context=nullptr,
+				const std::filesystem::path* opt_base_path=nullptr
+			);
+
+			static std::string thread_name_from_script_reference
+			(
+				std::string_view script_path_str,
+
 				const EntityFactoryContext* opt_factory_context=nullptr,
 				const std::filesystem::path* opt_base_path=nullptr
 			);
@@ -186,7 +203,15 @@ namespace engine
 			EntityInstructionCount process(std::string_view lines, EntityInstructionCount skip=0);
 			EntityInstructionCount process(const ContentSource& content, EntityInstructionCount skip=0);
 
-			EntityInstructionCount process_from_file(const std::filesystem::path& script_path, std::string_view separator="\n", EntityInstructionCount skip=0);
+			EntityInstructionCount process_from_file(const auto& script_path, std::string_view separator="\n", EntityInstructionCount skip=0)
+			{
+				const auto result = from_file(script_path, separator, skip);
+
+				// Ensure to flush the current update instruction.
+				flush_update_instruction();
+
+				return result;
+			}
 
 			bool process_update_instruction_from_values
 			(
@@ -280,10 +305,10 @@ namespace engine
 			// 
 			// NOTE: If a name has already been assigned, the
 			// `force` argument must be true to ensure assignment.
-			std::optional<EntityThreadID> set_thread_name(std::string_view thread_name, bool resolve_name=false, bool force=false);
+			EntityThreadID set_thread_name(std::string_view thread_name, bool resolve_name=false, bool force=false);
 
 			// Attempts to retrieve the name (thread ID) associated with the targeted `thread`.
-			std::optional<EntityThreadID> get_thread_name() const;
+			EntityThreadID get_thread_name() const;
 
 			// Identifies if the target `thread` currently has a name associated.
 			bool thread_has_name() const;
@@ -388,7 +413,7 @@ namespace engine
 					EntityTarget {},
 
 					// This thread. (No thread ID)
-					std::optional<EntityThreadID>(std::nullopt),
+					EntityThreadID {},
 
 					std::forward<Args>(args)...
 				);
@@ -564,6 +589,15 @@ namespace engine
 				NOTE: This uses the `opt_base_path` field to better resolve the path specified.
 			*/
 			EntityInstructionCount from_file(const std::filesystem::path& script_path, std::string_view separator="\n", EntityInstructionCount skip=0);
+
+			// NOTE: This is a convenience overload that handles path type conversion for `script_path_str`.
+			EntityInstructionCount from_file(const std::string& script_path_str, std::string_view separator="\n", EntityInstructionCount skip=0);
+
+			// NOTE: This is a convenience overload that handles path type conversion for `script_path_str`.
+			EntityInstructionCount from_file(std::string_view script_path_str, std::string_view separator="\n", EntityInstructionCount skip=0);
+
+			// This is an internal subroutine. For the public API, please use `process`.
+			EntityInstructionCount from_precompiled_script(PrecompiledScriptID script_id);
 
 			EntityInstructionCount generate_if_block
 			(

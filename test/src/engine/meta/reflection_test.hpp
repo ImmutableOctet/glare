@@ -181,5 +181,5 @@ namespace engine
 
 	template <typename T = void> void reflect();
 
-	extern template void reflect<ReflectionTest>();
+	template <> void reflect<ReflectionTest>();
 }

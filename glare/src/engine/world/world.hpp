@@ -41,7 +41,6 @@ namespace engine
 {
 	class SystemManagerInterface;
 	class ResourceManager;
-	class Config;
 
 	class DeltaSystem;
 
@@ -51,6 +50,7 @@ namespace engine
 	struct SpotLightComponent;
 	struct CollisionComponent;
 
+	struct Config;
 	struct AnimationData;
 
 	struct OnTransformChanged;

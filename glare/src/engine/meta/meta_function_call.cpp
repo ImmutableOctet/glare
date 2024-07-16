@@ -6,6 +6,7 @@
 #include "container.hpp"
 #include "component.hpp"
 #include "traits.hpp"
+#include "runtime_traits.hpp"
 //#include "data_member.hpp"
 
 #include "meta_data_member.hpp"
@@ -298,7 +299,16 @@ namespace engine
 				}
 				else if (self_type_id != type_id)
 				{
-					return {};
+					auto type = get_type();
+
+					if (type_has_global_namespace_flag(type))
+					{
+						self_type = type;
+					}
+					else
+					{
+						return {};
+					}
 				}
 			}
 		}

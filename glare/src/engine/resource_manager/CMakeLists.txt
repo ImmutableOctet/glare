@@ -13,7 +13,7 @@ target_sources(
     "collision_data.cpp"
     "entity_factory_data.cpp"
     "resource_manager.cpp"
-    "reflection.cpp"
+    #"reflection.cpp"
 )
 
 #target_link_libraries(
@@ -26,4 +26,4 @@ target_sources(
 #)
 
 find_package(assimp CONFIG REQUIRED)
-target_link_libraries(glare_engine PUBLIC assimp::assimp) # glare_engine_resource_manager
+target_link_libraries(glare_engine PRIVATE assimp::assimp) # glare_engine_resource_manager

@@ -5,12 +5,12 @@ if(BUILD_TESTING)
   add_subdirectory(test)
 endif()
 
-add_custom_target(
-    run-exe
-    COMMAND glare # glare_exe
-    VERBATIM
-)
-add_dependencies(run-exe glare) # glare_exe
+#add_custom_target(
+#    run-exe
+#    COMMAND glare # glare_exe
+#    VERBATIM
+#)
+#add_dependencies(run-exe glare)
 
 option(BUILD_MCSS_DOCS "Build documentation using Doxygen and m.css" OFF)
 if(BUILD_MCSS_DOCS)

@@ -296,6 +296,9 @@ namespace engine
 			// (Used to update the `state_has_changed` flag, etc.)
 			void on_state_update(StateData& state_data);
 
+			// Emits events for continuous input polling.
+			void emit_continuous_input_events(const InputState& state, StateIndex state_index);
+
 			// Retrieves gamepad device mappings from `input_handler`.
 			// If `opt_state_index` is specified, this will only apply device mappings
 			// where the intended state-index/player is equal to the value provided.

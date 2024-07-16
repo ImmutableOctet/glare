@@ -8,14 +8,14 @@ namespace engine
 
 	bool InputState::ButtonStates::get_button(Button button) const
 	{
-		auto button_raw = static_cast<ButtonsRaw>(button);
+		const auto button_raw = static_cast<ButtonsRaw>(button);
 
 		return (bits & button_raw);
 	}
 
 	void InputState::ButtonStates::set_button(Button button, bool value)
 	{
-		auto button_raw = static_cast<ButtonsRaw>(button);
+		const auto button_raw = static_cast<ButtonsRaw>(button);
 
 		if (value)
 		{
@@ -30,5 +30,10 @@ namespace engine
 	void InputState::ButtonStates::clear()
 	{
 		bits = {};
+	}
+
+	bool InputState::ButtonStates::any() const
+	{
+		return static_cast<bool>(bits);
 	}
 }

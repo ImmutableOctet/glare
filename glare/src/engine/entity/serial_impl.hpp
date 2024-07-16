@@ -40,6 +40,7 @@
 namespace engine
 {
 	class EntityDescriptor;
+	class EntityState;
 
 	// Subroutine of `process_member_trigger_condition`, `process_standard_trigger_condition`, etc.
 	MetaAny process_trigger_condition_value
@@ -690,8 +691,8 @@ namespace engine
 					}
 
 					auto thread_id = (thread_name.empty())
-						? std::optional<EntityThreadID>(std::nullopt)
-						: std::optional<EntityThreadID>(hash(thread_name).value())
+						? (EntityThreadID {})
+						: (hash(thread_name).value())
 					;
 
 					auto entity_target = EntityTarget::parse(entity_ref);
@@ -735,10 +736,7 @@ namespace engine
 					{
 						resolved_variable_id = MetaVariableContext::resolve_path
 						(
-							(thread_id)
-								? (*thread_id)
-								: (MetaSymbolID {})
-							,
+							static_cast<MetaSymbolID>(thread_id),
 
 							variable_name,
 							variable_scope
@@ -900,10 +898,8 @@ namespace engine
 											resolved_variable_id,
 											variable_scope
 										},
-									
-										(thread_id)
-											? EntityThreadTarget { *thread_id }
-											: EntityThreadTarget {}
+										
+										EntityThreadTarget { thread_id }
 									},
 
 									&shared_storage
@@ -983,7 +979,7 @@ namespace engine
 			// Debugging related:
 			/*
 			auto remaining_length = (trigger_condition_expr.size() - static_cast<std::size_t>(updated_offset));
-			auto remaining = std::string_view{ (trigger_condition_expr.data() + updated_offset), remaining_length };
+			auto remaining = std::string_view { (trigger_condition_expr.data() + updated_offset), remaining_length };
 
 			print(remaining);
 			*/
@@ -1057,20 +1053,26 @@ namespace engine
 		NOTE: For best interoperability, `opt_parsing_context->variable_context` should not store a name.
 		(This could lead to variable name conflicts between threads)
 	*/
-	template <typename ThreadRangeCallback, typename ExistingThreadCallback>
+	template <typename ContentType, typename ThreadRangeCallback, typename ExistingThreadCallback>
 	EntityThreadCount process_thread_list
 	(
 		EntityDescriptor& descriptor,
-		const util::json& content,
+		const ContentType& content,
 		
 		ThreadRangeCallback&& thread_range_callback,
 		ExistingThreadCallback&& existing_thread_callback,
 
 		const std::filesystem::path* opt_base_path=nullptr,
 		const MetaParsingContext& opt_parsing_context={},
-		const EntityFactoryContext* opt_factory_context=nullptr
+		const EntityFactoryContext* opt_factory_context=nullptr,
+
+		bool parse_content_as_script_reference=false
 	)
 	{
+		using ContentValueType = std::remove_cvref_t<ContentType>;
+
+		constexpr bool base_content_is_json = std::is_same_v<ContentValueType, util::json>;
+
 		const auto initial_thread_index = descriptor.get_next_thread_index();
 
 		auto shared_thread_context = MetaVariableContext { opt_parsing_context };
@@ -1096,108 +1098,151 @@ namespace engine
 			return threads_to_allocate;
 		};
 
+		auto deallocate_top_level_thread = [&descriptor](EntityThreadIndex thread_index) -> std::size_t
+		{
+			const auto& thread_storage = descriptor.shared_storage.get_storage<EntityThreadDescription>();
+			const auto initial_thread_count = thread_storage.data().size();
+			const auto threads_to_deallocate = static_cast<decltype(initial_thread_count)>(1);
+
+			// TODO: Implement bulk deallocation interface for `shared_storage`.
+			descriptor.shared_storage.deallocate<EntityThreadDescription>(thread_index);
+
+			assert(thread_storage.data().size() == (initial_thread_count - threads_to_deallocate));
+
+			return threads_to_deallocate;
+		};
+
 		// NOTE: We determine the number of threads to allocate ahead-of-time
 		// to avoid conflicts with embedded thread allocations. (e.g. sub-threads)
 		EntityThreadCount top_level_threads_to_allocate = 0; // static_cast<EntityThreadCount>(content.size());
 
+		auto handle_existing_thread_path_impl = [&descriptor, opt_factory_context, opt_base_path](const auto& thread_path, auto&& callback) -> bool
+		{
+			if (thread_path.empty())
+			{
+				return true;
+			}
+
+			const auto thread_name = EntityThreadBuilder::thread_name_from_script_reference(thread_path, opt_factory_context, opt_base_path);
+			const auto thread_id = hash(thread_name).value();
+
+			if (auto thread_index = descriptor.get_thread_index(thread_id))
+			{
+				callback(*thread_index);
+
+				return true;
+			}
+
+			return false;
+		};
+
+		auto handle_existing_thread_path = [&handle_existing_thread_path_impl](const auto& thread_path)
+		{
+			return handle_existing_thread_path_impl(thread_path, [](auto&&...){});
+		};
+
+		auto on_top_level_thread_path = [&handle_existing_thread_path_impl, &existing_thread_callback, &top_level_threads_to_allocate](const auto& thread_path) -> bool
+		{
+			const bool thread_handled = handle_existing_thread_path_impl
+			(
+				thread_path,
+
+				[&existing_thread_callback](const auto& thread_index)
+				{
+					existing_thread_callback(thread_index, 1);
+				}
+			);
+
+			if (!thread_handled)
+			{
+				top_level_threads_to_allocate++;
+
+				return false;
+			}
+
+			return true;
+		};
+
 		// Ensure we don't allocate space for threads we're not going to process
 		// (e.g. already processed threads):
-		switch (content.type())
+		if constexpr (base_content_is_json)
 		{
-			case util::json::value_t::array:
+			switch (content.type())
 			{
-				util::json_for_each
-				(
-					content,
+				case util::json::value_t::array:
+				{
+					util::json_for_each
+					(
+						content,
 
-					[&](const util::json& thread_content)
-					{
-						if (!thread_content.empty() && thread_content.is_string())
+						[&](const util::json& thread_content)
 						{
-							const auto& thread_path = thread_content.get<std::string>();
-
-							if (thread_path.empty())
+							if (thread_content.empty() || !thread_content.is_string())
 							{
-								return;
+								// Make sure to allocate a top-level thread, even if the content is empty.
+								top_level_threads_to_allocate++;
 							}
 							else
 							{
-								const auto thread_name = EntityThreadBuilder::thread_name_from_script_reference(thread_path, opt_factory_context, opt_base_path);
-								const auto thread_id = hash(thread_name).value();
+								const auto& thread_path = thread_content.get<std::string>();
 
-								if (auto thread_index = descriptor.get_thread_index(thread_id))
-								{
-									existing_thread_callback(*thread_index, 1);
+								on_top_level_thread_path(thread_path);
+							}
+						}
+					);
 
-									return;
-								}
+					break;
+				}
+
+				case util::json::value_t::object:
+				{
+					for (const auto& proxy : content.items())
+					{
+						const auto& thread_content = proxy.value();
+
+						if (!thread_content.empty())
+						{
+							const auto& thread_name = proxy.key();
+							const auto thread_id = hash(thread_name).value();
+
+							if (auto thread_index = descriptor.get_thread_index(thread_id))
+							{
+								existing_thread_callback(*thread_index, 1);
+							}
+							else
+							{
+								top_level_threads_to_allocate++;
+							}
+						}
+					}
+
+					break;
+				}
+
+				default:
+				{
+					if (!content.empty())
+					{
+						if (content.is_string())
+						{
+							const auto& thread_path = content.get<std::string>();
+
+							if (on_top_level_thread_path(thread_path))
+							{
+								break;
 							}
 						}
 
-						// NOTE: For script paths, we assume they point to a valid file.
 						top_level_threads_to_allocate++;
 					}
-				);
 
-				break;
-			}
-
-			case util::json::value_t::object:
-			{
-				for (const auto& proxy : content.items())
-				{
-					const auto& thread_content = proxy.value();
-
-					if (!thread_content.empty())
-					{
-						const auto& thread_name = proxy.key();
-						const auto thread_id = hash(thread_name).value();
-
-						if (auto thread_index = descriptor.get_thread_index(thread_id))
-						{
-							existing_thread_callback(*thread_index, 1);
-						}
-						else
-						{
-							// NOTE: For script paths, we assume they point to a valid file.
-							top_level_threads_to_allocate++;
-						}
-					}
+					break;
 				}
-
-				break;
 			}
-
-			default:
-			{
-				if (!content.empty())
-				{
-					if (content.is_string())
-					{
-						const auto& thread_path = content.get<std::string>();
-
-						if (thread_path.empty())
-						{
-							break;
-						}
-
-						const auto thread_name = EntityThreadBuilder::thread_name_from_script_reference(thread_path, opt_factory_context, opt_base_path);
-						const auto thread_id = hash(thread_name).value();
-
-						if (auto thread_index = descriptor.get_thread_index(thread_id))
-						{
-							existing_thread_callback(*thread_index, 1);
-
-							break;
-						}
-					}
-
-					// NOTE: For script paths, we assume they point to a valid file.
-					top_level_threads_to_allocate++;
-				}
-
-				break;
-			}
+		}
+		else
+		{
+			on_top_level_thread_path(content);
 		}
 		
 		const auto top_level_threads_allocated = allocate_top_level_threads(top_level_threads_to_allocate);
@@ -1213,12 +1258,24 @@ namespace engine
 
 		EntityThreadCount top_level_threads_processed = 0;
 
-		auto process_thread = [&descriptor, opt_factory_context, opt_base_path, &opt_parsing_context, &shared_thread_context, initial_thread_index, top_level_thread_max_index_allowed, &top_level_threads_processed]
+		auto process_thread = [&descriptor, opt_factory_context, opt_base_path, &opt_parsing_context, &shared_thread_context, initial_thread_index, top_level_thread_max_index_allowed, parse_content_as_script_reference, &handle_existing_thread_path, &top_level_threads_processed]
 		(
-			const util::json& content,
-			std::string_view opt_thread_name
+			const auto& content,
+			const auto& opt_thread_name
 		) -> bool
 		{
+			using content_t = decltype(content);
+			using content_value_t = std::remove_cvref_t<content_t>;
+
+			constexpr bool content_is_json = std::is_same_v<content_value_t, util::json>;
+
+			constexpr bool content_is_string =
+			(
+				(std::is_same_v<content_value_t, std::string>)
+				||
+				(std::is_same_v<content_value_t, std::string_view>)
+			);
+
 			if (content.empty())
 			{
 				return false;
@@ -1226,21 +1283,28 @@ namespace engine
 
 			if (opt_thread_name.empty())
 			{
-				if (content.is_string())
+				if constexpr (content_is_json)
 				{
-					const auto& thread_path = content.get<std::string>();
-
-					if (thread_path.empty())
+					if (content.is_string())
 					{
-						return false;
+						const auto& thread_path = content.get<std::string>();
+
+						if (handle_existing_thread_path(thread_path))
+						{
+							return false;
+						}
 					}
-
-					const auto thread_name = EntityThreadBuilder::thread_name_from_script_reference(thread_path, opt_factory_context, opt_base_path);
-					const auto thread_id = hash(thread_name).value();
-
-					if (descriptor.has_thread(thread_id))
+				}
+				else
+				{
+					if constexpr (content_is_string)
 					{
-						return false;
+						const auto& thread_path = content;
+
+						if (handle_existing_thread_path(thread_path))
+						{
+							return false;
+						}
 					}
 				}
 			}
@@ -1290,59 +1354,138 @@ namespace engine
 				}
 			};
 
-			if (thread_builder.process(content))
+			if (parse_content_as_script_reference)
 			{
-				top_level_threads_processed++;
+				if constexpr (content_is_json)
+				{
+					if (content.is_string())
+					{
+						const auto& thread_path = content.get<std::string>();
 
-				return true;
+						if (!thread_path.empty())
+						{
+							if (thread_builder.process_from_file(thread_path))
+							{
+								top_level_threads_processed++;
+
+								return true;
+							}
+						}
+					}
+				}
+				else
+				{
+					constexpr bool content_is_filepath = (std::is_same_v<content_value_t, std::filesystem::path>);
+
+					if constexpr ((content_is_string) || (content_is_filepath))
+					{
+						if (thread_builder.process_from_file(content))
+						{
+							top_level_threads_processed++;
+
+							return true;
+						}
+					}
+				}
+			}
+			else
+			{
+				if (thread_builder.process(content))
+				{
+					top_level_threads_processed++;
+
+					return true;
+				}
 			}
 
 			return false;
 		};
 
-		switch (content.type())
+		if constexpr (base_content_is_json)
 		{
-			case util::json::value_t::array:
+			switch (content.type())
 			{
-				util::json_for_each
-				(
-					content,
-
-					[&process_thread](const util::json& thread_content)
-					{
-						process_thread(thread_content, {});
-					}
-				);
-
-				break;
-			}
-
-			case util::json::value_t::object:
-			{
-				for (const auto& proxy : content.items())
+				case util::json::value_t::array:
 				{
-					const auto& thread_name = proxy.key();
-					const auto& thread_content = proxy.value();
+					util::json_for_each
+					(
+						content,
 
-					process_thread(thread_content, thread_name);
+						[&process_thread](const util::json& thread_content)
+						{
+							process_thread(thread_content, std::string_view {});
+						}
+					);
+
+					break;
 				}
 
-				break;
+				case util::json::value_t::object:
+				{
+					for (const auto& proxy : content.items())
+					{
+						const auto& thread_name = proxy.key();
+						const auto& thread_content = proxy.value();
+
+						process_thread(thread_content, thread_name);
+					}
+
+					break;
+				}
+
+				default:
+				{
+					process_thread(content, std::string_view {});
+
+					break;
+				}
 			}
+		}
+		else
+		{
+			constexpr bool base_content_is_string =
+			(
+				(std::is_same_v<ContentValueType, std::string>)
+				||
+				(std::is_same_v<ContentValueType, std::string_view>)
+			);
 
-			default:
+			if constexpr (base_content_is_string)
 			{
-				process_thread(content, {});
+				if (parse_content_as_script_reference)
+				{
+					const auto& thread_name = content;
 
-				break;
+					process_thread(content, thread_name);
+				}
+				else
+				{
+					process_thread(content, std::string_view {});
+				}
+			}
+			else
+			{
+				process_thread(content, std::string_view {});
 			}
 		}
 
 		// NOTE: The total processed may be greater than `top_level_threads_processed`, since this includes sub-threads.
 		const auto total_processed_count = static_cast<EntityThreadCount>(descriptor.get_next_thread_index() - initial_thread_index);
 
-		assert(top_level_threads_processed == top_level_threads_allocated);
-		assert(total_processed_count >= top_level_threads_processed);
+		if (parse_content_as_script_reference)
+		{
+			if ((total_processed_count == 1) && (top_level_threads_processed == 0) && (top_level_threads_allocated == 1))
+			{
+				deallocate_top_level_thread(initial_thread_index);
+
+				return {};
+			}
+		}
+		else
+		{
+			assert(top_level_threads_processed == top_level_threads_allocated);
+			assert(total_processed_count >= top_level_threads_processed);
+		}
 
 		thread_range_callback(initial_thread_index, top_level_threads_processed);
 
@@ -1374,6 +1517,37 @@ namespace engine
 			opt_base_path,
 			opt_parsing_context,
 			opt_factory_context
+		);
+	}
+
+	template <typename ThreadRangeCallback>
+	EntityThreadCount process_default_threads
+	(
+		EntityDescriptor& descriptor,
+		
+		const auto& name_as_content,
+
+		ThreadRangeCallback&& thread_range_callback,
+		
+		const std::filesystem::path* opt_base_path=nullptr,
+		const MetaParsingContext& opt_parsing_context={},
+		const EntityFactoryContext* opt_factory_context=nullptr
+	)
+	{
+		return process_thread_list
+		(
+			descriptor,
+			
+			name_as_content,
+			
+			thread_range_callback,
+			thread_range_callback,
+			opt_base_path,
+			opt_parsing_context,
+			opt_factory_context,
+
+			// Handle `name_as_content` as a reference to a script.
+			true
 		);
 	}
 }

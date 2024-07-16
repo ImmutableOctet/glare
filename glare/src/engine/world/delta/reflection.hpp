@@ -6,5 +6,5 @@ namespace engine
 {
 	class DeltaSystem;
 
-	extern template void reflect<DeltaSystem>();
+	template <> void reflect<DeltaSystem>();
 }

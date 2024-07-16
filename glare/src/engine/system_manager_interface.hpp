@@ -63,8 +63,9 @@ namespace engine
 				}
 			};
 
-			using SystemCollection = std::vector<System>; // util::small_vector<System, 32>;
-			using SystemIterator   = SystemCollection::iterator;
+			using SystemCollection    = std::vector<System>; // util::small_vector<System, 32>;
+			using SystemIterator      = SystemCollection::iterator;
+			using ConstSystemIterator = SystemCollection::const_iterator;
 
 			/*
 				TODO: Look into scenarios where the underlying object of `system` could be moved as well.
@@ -152,7 +153,7 @@ namespace engine
 			// Retrieves an instance of `SystemType`, if one exists, as well as its iterator in the internal container.
 			// If a `SystemType` object has not been registered, this will return `nullptr`.
 			template <typename SystemType>
-			inline std::tuple<SystemIterator, SystemType*> get_system_ex()
+			std::tuple<SystemIterator, SystemType*> get_system_ex()
 			{
 				auto it = get_system_iterator(systems, key<SystemType>());
 
@@ -173,10 +174,40 @@ namespace engine
 				return { std::move(it), ptr };
 			}
 
+			// Retrieves an instance of `SystemType`, if one exists, as well as its iterator in the internal container.
+			// If a `SystemType` object has not been registered, this will return `nullptr`.
+			template <typename SystemType>
+			std::tuple<ConstSystemIterator, const SystemType*> get_system_ex() const
+			{
+				const auto it = get_system_iterator(systems, key<SystemType>());
+
+				if (it == systems.end())
+				{
+					return { systems.end(), nullptr };
+				}
+
+				const auto& system = *it;
+
+				const auto ptr = system.get<SystemType>();
+
+				if (!ptr)
+				{
+					return { systems.end(), nullptr };
+				}
+
+				return { std::move(it), ptr };
+			}
+
 			// Retrieves an instance of `SystemType`, if one exists.
 			// If a `SystemType` object has not been registered, this will return `nullptr`.
 			template <typename SystemType>
-			inline SystemType* get_system()
+			SystemType* get_system()
+			{
+				return std::get<1>(get_system_ex<SystemType>());
+			}
+
+			template <typename SystemType>
+			const SystemType* get_system() const
 			{
 				return std::get<1>(get_system_ex<SystemType>());
 			}

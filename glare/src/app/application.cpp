@@ -1,7 +1,7 @@
 #include "application.hpp"
 #include "window.hpp"
 
-#include <lib.hpp>
+#include <third-party/lib.hpp>
 
 #include <cassert>
 #include <sdl2/SDL_events.h>
@@ -146,6 +146,8 @@ namespace app
 
 		stop();
 
+		on_shutdown();
+
 		std::cout << "Done.\n";
 	}
 
@@ -213,6 +215,11 @@ namespace app
 	}
 
 	void Application::on_execute()
+	{
+		// Empty implementation.
+	}
+
+	void Application::on_shutdown()
 	{
 		// Empty implementation.
 	}

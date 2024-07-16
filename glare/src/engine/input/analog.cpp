@@ -1,27 +1,12 @@
-#include "analog.hpp"
-
 #include <math/math.hpp>
 
-#include <util/magic_enum.hpp>
+#include "analog.hpp"
 
-namespace engine
+namespace game
 {
-	InputAnalogStates::DirectionVector InputAnalogStates::get_analog(Analog analog) const
+	bool InputAnalogStates::has_analog_input(Analog analog, float minimum_threshold) const
 	{
-		const auto  offset        = static_cast<std::ptrdiff_t>(analog);
-		const auto* base_address  = reinterpret_cast<const unsigned char*>(this);
-		const auto* analog_values = reinterpret_cast<const DirectionVector*>(base_address + offset);
-
-		return *analog_values;
-	}
-
-	void InputAnalogStates::set_analog(Analog analog, const DirectionVector& value)
-	{
-		auto  offset        = static_cast<std::ptrdiff_t>(analog);
-		auto* base_address  = reinterpret_cast<unsigned char*>(this);
-		auto* analog_values = reinterpret_cast<DirectionVector*>(base_address + offset);
-
-		*analog_values = value;
+		return (math::length(get_analog(analog)) > minimum_threshold);
 	}
 
 	float InputAnalogStates::angle_of(const DirectionVector& analog) const
@@ -52,15 +37,5 @@ namespace engine
 	float InputAnalogStates::orientation_angle() const
 	{
 		return angle_of(orientation);
-	}
-
-	void generate_analog_map(EngineAnalogMap& analogs)
-	{
-		constexpr auto entries = magic_enum::enum_entries<Analog>();
-
-		for (const auto& enum_entry : entries)
-		{
-			analogs[std::string(enum_entry.second)] = static_cast<AnalogsRaw>(enum_entry.first);
-		}
 	}
 }

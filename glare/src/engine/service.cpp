@@ -95,7 +95,7 @@ namespace engine
 
 	Service::~Service()
 	{
-		registry.on_destroy<RelationshipComponent>().disconnect(*this);
+		registry.on_destroy<RelationshipComponent>().disconnect(this);
 
 		//unregister_event(*this);
 	}

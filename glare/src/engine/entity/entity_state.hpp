@@ -40,7 +40,8 @@ namespace engine
 			using ImmediateThreadDetails = EntityThreadRange;
 
 			// The name of this state.
-			std::optional<StringHash> name; // EntityStateHash
+			// TODO: Remove use of `std::optional` in favor of zero/default value.
+			std::optional<EntityStateHash> name;
 
 			struct
 			{

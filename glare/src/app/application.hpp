@@ -55,6 +55,7 @@ namespace app
 			std::int64_t milliseconds() const;
 
 			virtual void on_execute();
+			virtual void on_shutdown();
 
 			virtual bool handle_events();
 

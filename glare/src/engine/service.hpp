@@ -280,15 +280,14 @@ namespace engine
 			template <typename EventType, typename... Args>
 			inline void timed_event(Timer timer, Args&&... args)
 			{
-				queue_event<TimedEvent>(timer, EventType { std::forward<Args>(args)... });
+				queue_event<TimedEvent>(std::move(timer), EventType { std::forward<Args>(args)... });
 			}
 
 			template <typename EventType>
 			inline void timed_event(Timer timer, EventType&& event_obj)
 			{
-				queue_event<TimedEvent>(TimedEvent(timer, std::move(event_obj)));
+				queue_event<TimedEvent>(TimedEvent { std::move(timer), std::move(event_obj) });
 			}
-
 
 			template <typename EventType, typename... Args>
 			inline void timed_event(Timer::Duration timer_duration, Args&&... args)

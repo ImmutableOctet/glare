@@ -3,7 +3,7 @@
 namespace engine
 {
 	struct MetaTypeResolutionContext;
-	struct MetaVariableContext;
+	class MetaVariableContext;
 
 	class MetaParsingContext
 	{

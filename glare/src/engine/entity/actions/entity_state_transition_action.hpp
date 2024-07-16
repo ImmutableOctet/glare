@@ -10,8 +10,7 @@ namespace engine
 		bool operator==(const EntityStateTransitionAction&) const noexcept = default;
 		bool operator!=(const EntityStateTransitionAction&) const noexcept = default;
 
-		// The name of the state this `entity` will
-		// transition to upon activation of `condition`.
+		// The name of the state this `entity` will transition to.
 		StringHash state_name;
 	};
 }

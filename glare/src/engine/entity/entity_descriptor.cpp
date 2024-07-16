@@ -96,6 +96,11 @@ namespace engine
 	// TODO: Optimize via map lookup, etc.
 	std::optional<EntityThreadIndex> EntityDescriptor::get_thread_index(EntityThreadID thread_id) const
 	{
+		if (!thread_id)
+		{
+			return std::nullopt;
+		}
+
 		const auto& threads = get_threads();
 
 		//for (const auto& thread : threads)
@@ -112,7 +117,7 @@ namespace engine
 		return std::nullopt;
 	}
 
-	std::optional<EntityThreadID> EntityDescriptor::get_thread_id(EntityThreadIndex thread_index) const
+	EntityThreadID EntityDescriptor::get_thread_id(EntityThreadIndex thread_index) const
 	{
 		const auto& thread = get_thread(thread_index);
 

@@ -51,10 +51,7 @@ namespace engine
 			)
 				: EntityFactoryContext(factory_context), descriptor(factory_context)
 			{
-				// TODO: Optimize.
-				auto instance = util::load_json(paths.instance_path);
-
-				process_archetype(descriptor, instance, paths.instance_directory, child_callback, opt_parsing_context, this, resolve_external_modules, process_children, &default_state_index);
+				process_archetype(descriptor, paths.instance_path, paths.instance_directory, child_callback, opt_parsing_context, this, resolve_external_modules, process_children, &default_state_index);
 			}
 
 			inline EntityFactory
@@ -65,10 +62,7 @@ namespace engine
 			)
 				: EntityFactoryContext(factory_context), descriptor(factory_context)
 			{
-				// TODO: Optimize.
-				auto instance = util::load_json(paths.instance_path);
-
-				process_archetype(descriptor, instance, paths.instance_directory, opt_parsing_context, this, resolve_external_modules, &default_state_index);
+				process_archetype(descriptor, paths.instance_path, paths.instance_directory, opt_parsing_context, this, resolve_external_modules, &default_state_index);
 			}
 
 			EntityFactory(const EntityFactory&) = default;

@@ -8,6 +8,7 @@
 #include "graphics.hpp"
 
 #include <util/memory.hpp>
+#include <util/log.hpp>
 
 #include <graphics/types.hpp>
 
@@ -50,7 +51,7 @@ namespace game
 
 	using DeltaSystemMode = engine::DeltaSystemMode;
 
-	class Game : public app::GraphicsApplication
+	class Game : public app::GraphicsApplication, util::log::DebugDataInterface
 	{
 		protected:
 			engine::Registry registry;
@@ -118,6 +119,9 @@ namespace game
 
 			entt::dispatcher* get_event_handler() override;
 
+			std::uint64_t get_log_frame_number() const override;
+			std::uint64_t get_log_time_ms() const override;
+
 		protected:
 			void init_default_systems(DeltaSystemMode delta_mode, bool init_renderer=true);
 
@@ -130,6 +134,9 @@ namespace game
 			virtual void on_build_input_system(engine::InputSystem& input_system, app::input::EngineButtonMap& buttons_out) {}
 
 			virtual void on_window_resize(app::Window& window, int width, int height) override;
+
+			virtual void on_execute() override;
+			virtual void on_shutdown() override;
 
 			/*
 				This method is called during the `build_input_system` setup phase,

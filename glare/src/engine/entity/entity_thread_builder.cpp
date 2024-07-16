@@ -26,13 +26,15 @@
 #include <engine/meta/meta_variable_target.hpp>
 #include <engine/meta/meta_property.hpp>
 
-#include <tuple>
+#include <engine/reflection/script.hpp>
 
 #include <util/string.hpp>
 #include <util/parse.hpp>
 #include <util/io.hpp>
 #include <util/optional.hpp>
 #include <util/variant.hpp>
+
+#include <tuple>
 
 // Debugging related:
 #include <util/log.hpp>
@@ -88,7 +90,7 @@ namespace engine
 
 						(opt_thread_instruction)
 							? opt_thread_instruction->thread_id
-							: std::optional<EntityThreadID>(std::nullopt)
+							: EntityThreadID {}
 
 						//opt_thread_instruction->thread_id
 					}
@@ -210,6 +212,7 @@ namespace engine
 	std::string EntityThreadBuilder::thread_name_from_script_reference
 	(
 		const std::filesystem::path& script_path,
+
 		const EntityFactoryContext* opt_factory_context,
 		const std::filesystem::path* opt_base_path
 	)
@@ -238,6 +241,26 @@ namespace engine
 
 		// Most optimal control-path currently is to skip path resolution. (See notes above)
 		return thread_name_from_resolved_path(script_path);
+	}
+
+	std::string EntityThreadBuilder::thread_name_from_script_reference
+	(
+		const std::string& script_path_str,
+		const EntityFactoryContext* opt_factory_context,
+		const std::filesystem::path* opt_base_path
+	)
+	{
+		return thread_name_from_script_reference(std::filesystem::path { script_path_str }, opt_factory_context, opt_base_path);
+	}
+
+	std::string EntityThreadBuilder::thread_name_from_script_reference
+	(
+		std::string_view script_path_str,
+		const EntityFactoryContext* opt_factory_context,
+		const std::filesystem::path* opt_base_path
+	)
+	{
+		return thread_name_from_script_reference(std::string { script_path_str }, opt_factory_context, opt_base_path);
 	}
 
 	std::string EntityThreadBuilder::thread_name_from_resolved_path(const std::filesystem::path& resolved_path)
@@ -354,21 +377,21 @@ namespace engine
 
 	EntityThreadBuilder::~EntityThreadBuilder() {}
 
-	std::optional<EntityThreadID> EntityThreadBuilder::set_thread_name(std::string_view thread_name, bool resolve_name, bool force)
+	EntityThreadID EntityThreadBuilder::set_thread_name(std::string_view thread_name, bool resolve_name, bool force)
 	{
 		auto& thread = get_thread();
 
 		if ((!force) && (thread.thread_id))
 		{
-			return std::nullopt; // thread.thread_id;
+			return {}; // thread.thread_id;
 		}
 
 		if (thread_name.empty())
 		{
-			return std::nullopt;
+			return {};
 		}
 
-		std::optional<EntityThreadID> thread_id_out = std::nullopt;
+		EntityThreadID thread_id_out = {};
 
 		if (resolve_name)
 		{
@@ -421,9 +444,9 @@ namespace engine
 
 		if (thread_id_already_exists)
 		{
-			print_warn("Failed to set thread ID to #{}: An existing thread already has that name. (Input: \"{}\")", *thread_id_out, thread_name);
+			print_warn("Failed to set thread ID to #{}: An existing thread already has that name. (Input: \"{}\")", thread_id_out, thread_name);
 
-			return std::nullopt;
+			return {};
 		}
 		//else
 		{
@@ -433,7 +456,7 @@ namespace engine
 
 				if (auto opt_variable_context = parsing_context.get_variable_context())
 				{
-					opt_variable_context->set_name(*thread_id_out);
+					opt_variable_context->set_name(thread_id_out);
 				}
 			}
 		}
@@ -442,7 +465,7 @@ namespace engine
 		return thread.thread_id;
 	}
 
-	std::optional<EntityThreadID> EntityThreadBuilder::get_thread_name() const
+	EntityThreadID EntityThreadBuilder::get_thread_name() const
 	{
 		return get_thread().thread_id;
 	}
@@ -1062,10 +1085,7 @@ namespace engine
 		{
 			MetaVariableContext::resolve_path
 			(
-				(thread_instruction.thread_id)
-					? (*thread_instruction.thread_id)
-					: (MetaSymbolID {})
-				,
+				static_cast<MetaSymbolID>(thread_instruction.thread_id),
 
 				thread_local_variable_name,
 				thread_local_variable_scope
@@ -1129,7 +1149,7 @@ namespace engine
 					thread_local_variable_target,
 
 					(thread_instruction.thread_id)
-						? EntityThreadTarget { *thread_instruction.thread_id }
+						? EntityThreadTarget { thread_instruction.thread_id }
 						: EntityThreadTarget {}
 				},
 
@@ -1715,6 +1735,8 @@ namespace engine
 		(
 			EntityThreadRange { thread_index, 1 },
 
+			get_thread().name(),
+
 			// Restart existing instance(s), if linked.
 			true
 		);
@@ -1965,7 +1987,7 @@ namespace engine
 				EntityTarget {},
 
 				// This thread. (No thread ID)
-				std::optional<EntityThreadID>(std::nullopt),
+				EntityThreadID {},
 
 				ControlBlock{ 0 }
 			);
@@ -3491,9 +3513,9 @@ namespace engine
 
 	EntityInstructionCount EntityThreadBuilder::from_lines(std::string_view lines, std::string_view separator, EntityInstructionCount skip)
 	{
-		EntityInstructionCount content_index = 0;
-		EntityInstructionCount processed_instruction_count = 0;
-		EntityInstructionCount active_skip_count = skip;
+		auto content_index = static_cast<EntityInstructionCount>(0);
+		auto processed_instruction_count = EntityInstructionCount {};
+		auto active_skip_count = skip;
 
 		util::split
 		(
@@ -3549,13 +3571,61 @@ namespace engine
 		return processed_instruction_count;
 	}
 
+	EntityInstructionCount EntityThreadBuilder::from_precompiled_script(PrecompiledScriptID script_id)
+	{
+		using namespace engine::instructions;
+
+		if (const auto global_script_type = resolve<engine::ScriptNamespace>())
+		{
+			const auto& thread = get_thread();
+
+			const auto initial_instruction_count = thread.instructions.size();
+
+			auto& storage = descriptor.get_shared_storage();
+
+			auto& script_function_call = storage.allocate<MetaFunctionCall>
+			(
+				(global_script_type)
+					? global_script_type.id()
+					: MetaTypeID {}
+				,
+
+				script_id
+			);
+
+			const bool already_realtime = (this->cadence == EntityThreadCadence::Realtime);
+
+			if (!already_realtime)
+			{
+				// Use realtime cadence for scripts.
+				emit<ChangeCadence>(EntityThreadCadence::Realtime);
+			}
+
+			instruct<CoroutineCall>(IndirectMetaAny { storage, script_function_call });
+
+			if (!already_realtime)
+			{
+				// Restore standard cadence for subsequent instructions.
+				emit<ChangeCadence>(this->cadence);
+			}
+
+			const auto current_instruction_count = thread.instructions.size();
+
+			return static_cast<EntityInstructionCount>(current_instruction_count - initial_instruction_count);
+		}
+
+		return {};
+	}
+
 	EntityInstructionCount EntityThreadBuilder::from_file(const std::filesystem::path& script_path, std::string_view separator, EntityInstructionCount skip)
 	{
-		std::filesystem::path resolved_path;
+		auto instructions_processed = EntityInstructionCount {};
+
+		auto resolved_cpp_path = std::optional<std::pair<std::filesystem::path, PrecompiledScriptID>> {};
 
 		if (opt_factory_context)
 		{
-			resolved_path = opt_factory_context->resolve_script_reference
+			resolved_cpp_path = opt_factory_context->resolve_cpp_script_reference_ex
 			(
 				script_path,
 
@@ -3566,27 +3636,82 @@ namespace engine
 				)
 			);
 		}
-
-		const auto script_data = util::load_string
-		(
-			(resolved_path.empty())
-			? script_path.string()
-			: resolved_path.string()
-		);
-
-		if (script_data.empty())
+		else
 		{
-			return 0;
+#if (GLARE_SCRIPT_PRECOMPILED)
+			resolved_cpp_path = { { script_path, engine::hash(script_path.string()) } };
+#else
+			resolved_cpp_path = { { script_path, PrecompiledScriptID {} } };
+#endif
 		}
 
-		if (!thread_has_name())
+#if (GLARE_SCRIPT_PRECOMPILED)
+		if (resolved_cpp_path)
 		{
-			auto thread_name = thread_name_from_resolved_path(resolved_path);
+			const auto& [precompiled_script_path, precompiled_script_id] = *resolved_cpp_path;
 
-			set_thread_name(thread_name);
+			if (!thread_has_name())
+			{
+				const auto thread_name = thread_name_from_resolved_path(precompiled_script_path);
+
+				set_thread_name(thread_name);
+			}
+
+			instructions_processed += from_precompiled_script(precompiled_script_id);
+		}
+#else
+		// TODO: Implement Cling/Clang-REPL support.
+		static_assert(false, "Pre-compilation currently required for CPP script integration.")
+
+		//if (std::filesystem::exists(script_path)) ...
+#endif
+
+		auto resolved_es_path = std::filesystem::path {};
+
+		if (opt_factory_context)
+		{
+			resolved_es_path = opt_factory_context->resolve_entity_script_reference
+			(
+				script_path,
+
+				(opt_base_path)
+					? *opt_base_path
+					: std::filesystem::path {}
+			);
+		}
+		else
+		{
+			resolved_es_path = script_path;
 		}
 
-		return from_lines(script_data, separator, skip); // process(std::string_view(script_data), skip);
+		if (std::filesystem::exists(resolved_es_path))
+		{
+			const auto es_script_data = util::load_string(resolved_es_path.string());
+
+			if (!es_script_data.empty())
+			{
+				if (!thread_has_name())
+				{
+					const auto thread_name = thread_name_from_resolved_path(resolved_es_path);
+
+					set_thread_name(thread_name);
+				}
+
+				instructions_processed += from_lines(es_script_data, separator, skip); // process(std::string_view(es_script_data), skip);
+			}
+		}
+
+		return instructions_processed;
+	}
+
+	EntityInstructionCount EntityThreadBuilder::from_file(const std::string& script_path_str, std::string_view separator, EntityInstructionCount skip)
+	{
+		return from_file(std::filesystem::path { script_path_str }, separator, skip);
+	}
+
+	EntityInstructionCount EntityThreadBuilder::from_file(std::string_view script_path_str, std::string_view separator, EntityInstructionCount skip)
+	{
+		return from_file(std::string { script_path_str }, separator, skip);
 	}
 
 	EntityInstructionCount EntityThreadBuilder::process(const util::json& content, EntityInstructionCount skip)
@@ -3659,16 +3784,6 @@ namespace engine
 		);
 
 		// NOTE: There's no need to call `flush_update_instruction` here since this is a delegating overload.
-
-		return result;
-	}
-
-	EntityInstructionCount EntityThreadBuilder::process_from_file(const std::filesystem::path& script_path, std::string_view separator, EntityInstructionCount skip)
-	{
-		const auto result = from_file(script_path, separator, skip);
-
-		// Ensure to flush the current update instruction.
-		flush_update_instruction();
 
 		return result;
 	}

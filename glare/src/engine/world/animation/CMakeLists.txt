@@ -16,7 +16,7 @@ target_sources(
     "skeletal_key_sequence.cpp"
     "skeleton.cpp"
 
-    "reflection.cpp"
+    #"reflection.cpp"
 )
 
 #target_link_libraries(

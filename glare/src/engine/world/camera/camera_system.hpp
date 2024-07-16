@@ -61,19 +61,15 @@ namespace engine
 
 			// Retrieves a copy of the `CameraComponent` attached to the `active_camera`.
 			CameraComponent get_active_camera_parameters() const;
-		protected:
-			// A multiplier used to increase the influence of a mouse-based analog input.
-			inline static constexpr float mouse_movement_multiplier = 20.0f;
 
+			// A multiplier used to increase the influence of a mouse-based analog input.
+			float get_mouse_analog_movement_multiplier() const;
+
+			void apply_analog_input(Transform& tform, const math::Vector2D& influence, float delta) const;
+
+		protected:
 			// TODO: Look into reworking/replacing this.
 			void update_camera_parameters(int width, int height);
-
-			void handle_orbiting_camera_input(const OnAnalogInput& analog_input, float delta);
-			void handle_first_person_camera_input(const OnAnalogInput& analog_input, float delta);
-			
-			void apply_analog_input(Transform& tform, const math::Vector2D& influence, float delta);
-
-			void generate_camera_relative_input(const OnAnalogInput& analog_input);
 
 			math::Vector2D get_display_size_f() const;
 
@@ -85,8 +81,6 @@ namespace engine
 			void on_set_camera_command(const SetCameraCommand& camera_command);
 
 			void on_update(World& world, float delta) override;
-
-			void on_analog_input(const OnAnalogInput& analog_input);
 
 			// The active (primary) camera.
 			Entity active_camera = null;

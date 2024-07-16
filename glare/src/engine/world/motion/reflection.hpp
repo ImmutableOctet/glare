@@ -6,5 +6,5 @@ namespace engine
 {
 	class MotionSystem;
 
-	extern template void reflect<MotionSystem>();
+	template <> void reflect<MotionSystem>();
 }

@@ -6,5 +6,5 @@ namespace engine
 {
 	class DebugListener;
 
-	extern template void reflect<DebugListener>();
+	template <> void reflect<DebugListener>();
 }

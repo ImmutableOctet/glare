@@ -10,15 +10,36 @@
 #include <tuple>
 #include <array>
 
+#define GLARE_IMPL_GENERATE_SHORT_NAME_PREFIX_DATA(NamespaceForTypes) \
+    "struct " #NamespaceForTypes "::",                                \
+    "class "  #NamespaceForTypes "::",                                \
+    "enum "   #NamespaceForTypes "::",                                \
+    "union "  #NamespaceForTypes "::"
+
 namespace engine
 {
-    constexpr std::array short_name_prefixes =
+    namespace impl
     {
-        "struct engine::",
-         "class engine::",
-          "enum engine::",
-         "union engine::"
-    };
+        constexpr std::array short_name_prefixes =
+        {
+            GLARE_IMPL_GENERATE_SHORT_NAME_PREFIX_DATA(engine)
+            GLARE_IMPL_GENERATE_SHORT_NAME_PREFIX_DATA(game)
+        };
+
+        template <typename T, typename PrefixDataType>
+        constexpr std::string_view short_name_impl(PrefixDataType&& prefix_data)
+        {
+            return std::apply
+            (
+                [](auto&&... prefixes)
+                {
+                    return util::resolve_short_name<T>(std::forward<decltype(prefixes)>(prefixes)...);
+                },
+
+                std::forward<PrefixDataType>(prefix_data)
+            );
+        }
+    }
 
 	// Shortens the name of `T` if `T` belongs to the `engine` namespace.
     // 
@@ -26,15 +47,26 @@ namespace engine
 	template <typename T>
     constexpr std::string_view short_name()
     {
+        return impl::short_name_impl<T>(impl::short_name_prefixes);
+    }
+
+    template <typename PrefixContainerType>
+    constexpr std::string_view as_short_name(std::string_view name_view, const PrefixContainerType& short_name_prefixes)
+    {
         return std::apply
         (
-            [](auto&&... prefixes)
+            [&name_view](auto&&... names)
             {
-                return util::resolve_short_name<T>(std::forward<decltype(prefixes)>(prefixes)...);
+                return util::as_short_name(name_view, std::forward<decltype(names)>(names)...);
             },
 
             short_name_prefixes
         );
+    }
+
+    constexpr std::string_view as_short_name(std::string_view name_view)
+    {
+        return as_short_name(name_view, impl::short_name_prefixes);
     }
 
     constexpr std::string optional_name(const auto& type_name)
@@ -57,19 +89,6 @@ namespace engine
     constexpr std::string history_component_short_name()
     {
         return history_component_name(short_name<T>());
-    }
-
-    constexpr std::string_view as_short_name(std::string_view name_view)
-    {
-        return std::apply
-        (
-            [&name_view](auto&&... names)
-            {
-                return util::as_short_name(name_view, std::forward<decltype(names)>(names)...);
-            },
-
-            short_name_prefixes
-        );
     }
 
     // Computes the hash associated with a `short_name`.

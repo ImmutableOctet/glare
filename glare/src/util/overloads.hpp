@@ -76,7 +76,7 @@ namespace util
 		using traits = util::function_traits<decltype(fn_ptr)>;
 		using argument_types = typename traits::argument_types;
     
-		if constexpr (traits::is_dynamic_member_function)
+		if constexpr (traits::is_member_function)
 		{
 			using self_type_ref = typename traits::self_type_ref;
 

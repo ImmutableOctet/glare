@@ -1,11 +1,11 @@
 #pragma once
 
-#include "reflection.hpp"
+#include "reflect.hpp"
 
 namespace engine
 {
 	// Reserved type, used primarily for reflection.
 	struct Util {};
 
-	extern template void reflect<Util>();
+	template <> void reflect<Util>();
 }

@@ -274,6 +274,9 @@ CMakeUserPresets.json
 todo/
 dependencies/
 third-party/
+!third-party/CMakeLists.txt
+!third-party/lib.cpp
+!third-party/lib.hpp
 assets/
 
 # ImGui window layout
@@ -281,3 +284,5 @@ imgui.ini
 /glare/glare/assets
 /docs
 /.github/workflows
+/build
+/glare/src/script/generated

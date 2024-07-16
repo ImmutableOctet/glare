@@ -2,16 +2,6 @@
 
 // TODO: Move to a more appropriate submodule. (i.e. anywhere else but `graphics`)
 
-// Helper class; draws the world as seen by Bullet.
-// This is very handy to see it Bullet's world matches yours
-// How to use this class :
-// Declare an instance of the class :
-// 
-// dynamicsWorld->setDebugDrawer(&mydebugdrawer);
-// Each frame, call it :
-// mydebugdrawer.SetMatrices(ViewMatrix, ProjectionMatrix);
-// dynamicsWorld->debugDrawWorld();
-
 #include "vertex.hpp"
 
 #include "mesh.hpp"
@@ -24,7 +14,6 @@ namespace graphics
 {
 	class Context;
 
-	////GLuint VBO, VAO;
 	class BulletDebugDrawer : public btIDebugDraw
 	{
 		public:

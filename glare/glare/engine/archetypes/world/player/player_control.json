@@ -1,8 +1,0 @@
-{
-	"threads":
-	[
-		"control/analog_turn",
-		"control/accelerate",
-		"control/directional_influence"
-	]
-}

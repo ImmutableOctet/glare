@@ -83,7 +83,7 @@ namespace engine
 
 			SharedStorage shared_storage;
 
-			// TODO: Optimize/bette integrate with `SharedStorage`.
+			// TODO: Optimize/better integrate with `SharedStorage`.
 			template <typename ResourceType, typename ...Args>
 			EntityDescriptorShared<ResourceType> allocate(Args&&... args)
 			{
@@ -157,7 +157,7 @@ namespace engine
 				return has_thread(*thread_id);
 			}
 
-			std::optional<EntityThreadID> get_thread_id(EntityThreadIndex thread_index) const;
+			EntityThreadID get_thread_id(EntityThreadIndex thread_index) const;
 
 			inline const EntityState* get_state(EntityStateID name) const
 			{

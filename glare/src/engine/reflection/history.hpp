@@ -18,6 +18,8 @@ namespace engine
 		template <typename T>
         auto history_component_meta_type(auto history_type)
         {
+            using namespace engine::literals;
+
             using history_component_t = HistoryComponent<T>;
             using history_log_t = typename history_component_t::LogType; // util::HistoryLog<T>;
 
@@ -96,6 +98,8 @@ namespace engine
     template <typename T>
     auto engine_history_component_type(bool sync_context=true)
     {
+        using namespace engine::literals;
+
         using history_component_t = HistoryComponent<T>;
 
         if (sync_context)

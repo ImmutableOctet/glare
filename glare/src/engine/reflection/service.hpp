@@ -18,7 +18,8 @@ namespace engine
         if constexpr ((!std::is_same_v<T, Service>) && (std::is_base_of_v<Service, T>))
         {
             type = type
-                .base<Service>()
+                // Disabled for now.
+                //.base<Service>()
 
                 .template func<&impl::from_base_ptr<T, Service>>("dynamic_cast"_hs)
             ;

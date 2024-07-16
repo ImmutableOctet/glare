@@ -16,6 +16,7 @@
 #include <variant>
 #include <type_traits>
 #include <optional>
+#include <tuple>
 
 namespace engine
 {
@@ -1191,4 +1192,7 @@ namespace engine
 				return (value != value_in);
 			}
 	};
+
+	std::tuple<MetaTypeID, entt::meta_data>
+	resolve_trigger_condition_member(const entt::meta_type& type, std::string_view member_name={});
 }

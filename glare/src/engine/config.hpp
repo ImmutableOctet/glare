@@ -40,7 +40,7 @@ namespace engine
 			std::string character;
 		};
 
-		std::string character_path = "assets/characters"; // std::filesystem::path
+		std::string character_path = "characters"; // std::filesystem::path
 
 		Player default_player;
 	};

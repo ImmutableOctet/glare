@@ -119,7 +119,7 @@ namespace engine
 		Other = Default
 	};
 
-	inline constexpr const entt::null_t& null = entt::null;
+	inline constexpr Entity null = static_cast<Entity>(entt::null); // entt::null_t
 
 	inline constexpr PlayerIndex PRIMARY_LOCAL_PLAYER = 1;
 	inline constexpr PlayerIndex NO_PLAYER            = 0;

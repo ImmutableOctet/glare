@@ -38,7 +38,7 @@
                 }                                                                                                                    \
             }                                                                                                                        \
         public:                                                                                                                      \
-            static constexpr bool value = std::is_same_v<decltype(has_function<Type>(nullptr)), std::true_type>;                     \
+            inline static constexpr bool value = std::is_same_v<decltype(has_function<Type>(nullptr)), std::true_type>;              \
                                                                                                                                      \
             template <bool is_noexcept=false>                                                                                        \
             static constexpr auto ptr = get_ptr<is_noexcept>();                                                                      \
@@ -192,11 +192,53 @@
     GENERATE_EXACT_METHOD_TRAIT(has_##method_name, method_name, function_signature);
 
 #define GENERATE_HAS_FIELD_TRAIT(field_name)                                                \
-	template <typename T, typename = int>                                                   \
+	template <typename T, typename=int>                                                     \
 	struct has_field_##field_name : std::false_type {};                                     \
                                                                                             \
 	template <typename T>                                                                   \
 	struct has_field_##field_name<T, decltype((void)T::field_name, 0)> : std::true_type {}; \
 	                                                                                        \
 	template <typename T>                                                                   \
-	constexpr bool has_field_##field_name##_v = has_field_##field_name<T>::value;
+	inline constexpr bool has_field_##field_name##_v = has_field_##field_name<T>::value;
+
+// Generates a type trait for the existence of a type member named `type_member_name`. (e.g. `value_type`)
+#define GENERATE_HAS_TYPE_MEMBER_TRAIT(type_member_name)                                                          \
+    template <typename T>                                                                                         \
+    using has_type_member_##type_member_name##_void_t = std::void_t<typename T::type_member_name>;                \
+                                                                                                                  \
+    template <typename, typename=void>                                                                            \
+    struct has_type_member_##type_member_name : std::false_type                                                   \
+    {                                                                                                             \
+        using type = void;                                                                                        \
+    };                                                                                                            \
+                                                                                                                  \
+    template <typename T>                                                                                         \
+    struct has_type_member_##type_member_name<T, has_type_member_##type_member_name##_void_t<T>> : std::true_type \
+    {                                                                                                             \
+        using type = typename T::type_member_name;                                                                \
+    };                                                                                                            \
+                                                                                                                  \
+    template <typename T>                                                                                         \
+    inline constexpr bool has_type_member_##type_member_name##_v = has_type_member_##type_member_name<T>::value;  \
+                                                                                                                  \
+    template <typename T>                                                                                         \
+    using has_type_member_##type_member_name##_t = typename has_type_member_##type_member_name<T>::type;          \
+                                                                                                                  \
+    template <typename A, typename B>                                                                             \
+    inline constexpr bool type_member_##type_member_name##_is_same_v =                                            \
+    (                                                                                                             \
+        std::is_same_v                                                                                            \
+        <                                                                                                         \
+            has_type_member_##type_member_name##_t<A>,                                                            \
+            has_type_member_##type_member_name##_t<B>                                                             \
+        >                                                                                                         \
+    );                                                                                                            \
+                                                                                                                  \
+    template <typename A, typename B>                                                                             \
+    using type_member_##type_member_name##_is_same_t =                                                            \
+    std::conditional_t                                                                                            \
+    <                                                                                                             \
+        (type_member_##type_member_name##_is_same_v<A, B>),                                                       \
+        has_type_member_##type_member_name##_t<A>,                                                                \
+        void                                                                                                      \
+    >;

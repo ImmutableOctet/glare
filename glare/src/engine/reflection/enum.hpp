@@ -1,5 +1,7 @@
 #pragma once
 
+#include "enum_decl.hpp"
+
 #include "optional.hpp"
 
 #include <engine/types.hpp>
@@ -9,8 +11,8 @@ namespace engine
 {
 	// TODO: Look into this implementation again.
     // (Probably not very efficient to use properties for this)
-    template <typename EnumType, bool generate_optional_reflection=true>
-    auto reflect_enum(MetaTypeID type_id, bool values_as_properties=false)
+    template <typename EnumType, bool generate_optional_reflection>
+    auto reflect_enum(MetaTypeID type_id, bool values_as_properties)
     {
         auto type = custom_meta_type<EnumType>(type_id)
             .func<&string_to_enum_value<EnumType>>("string_to_value"_hs)
@@ -42,7 +44,7 @@ namespace engine
 
     // NOTE: This is called automatically via `reflect` when `T` is an enumeration type.
     template <typename EnumType>
-    void reflect_enum(bool values_as_properties=false)
+    void reflect_enum(bool values_as_properties)
     {
         reflect_enum<EnumType>(short_name_hash<EnumType>(), values_as_properties);
     }

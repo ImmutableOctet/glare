@@ -12,4 +12,6 @@ namespace engine
 
 		//EntityStateHash state_id;
 	};
+
+	using EntityStateComponent = StateComponent;
 }

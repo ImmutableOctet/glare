@@ -14,15 +14,65 @@ namespace engine
 	// Triggered once per-update/frame if the high-level input state has changed.
 	struct OnInput : public InputEvent
 	{
+		const InputState& get_current_input_state() const
+		{
+			return get_state();
+		}
+
+		const InputState& get_previous_input_state() const
+		{
+			return previous_state;
+		}
+
+		inline operator const InputState&() const
+		{
+			return get_current_input_state();
+		}
+
 		// The previous input state.
 		InputState previous_state;
 	};
+
+	// Triggered once per-update/frame regardless of any changes in state.
+	// Useful for code that needs to continually poll for input.
+	struct OnInputState : public OnInput
+	{
+		inline const InputState& get() const
+		{
+			return get_current_input_state();
+		}
+
+		inline operator const InputState&() const
+		{
+			return get_state();
+		}
+	};
+
+	using OnInputFrame = OnInputState;
 
 	// Abstract common base-type for button-related input events.
 	// This type is not used directly as a triggerred event, nor is it aliased.
 	struct ButtonEvent : public InputEvent
 	{
+		bool operator==(const ButtonEvent&) const = default;
+		bool operator!=(const ButtonEvent&) const = default;
+
+		bool operator==(Button button) const
+		{
+			return (this->button == button);
+		}
+
+		bool operator!=(Button button) const
+		{
+			return !operator==(button);
+		}
+
 		Button button;
+
+		operator Button() const
+		{
+			return button;
+		}
 	};
 
 	/*
@@ -71,4 +121,8 @@ namespace engine
 		// The angle of `value`. (if applicable)
 		float angle;
 	};
+
+	// Triggered once per-update/frame regardless of any changes in state.
+	// Useful for code that needs to continually poll for input.
+	struct OnAnalogInputState : public OnAnalogInput {};
 }

@@ -1,5 +1,5 @@
 target_sources(
-    glare_core # glare_app
+    glare_app # glare_core
     
     PRIVATE
 

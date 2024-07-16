@@ -42,7 +42,7 @@ namespace engine
 	struct EntityStateRule;
 	struct EntityThreadDescription;
 
-	struct AnimationRepository;
+	class AnimationRepository;
 	struct AnimationSlice;
 
 	// Offset used to account for the `source` and `target` arguments of a `Command` type.
@@ -68,7 +68,8 @@ namespace engine
 		std::string_view,                       // instruction
 		std::optional<EntityThreadInstruction>, // thread_details
 		bool                                    // thread_accessor_used
-	> parse_instruction_header
+	>
+	parse_instruction_header
 	(
 		std::string_view instruction_raw,
 		const EntityDescriptor* opt_descriptor=nullptr
@@ -98,6 +99,8 @@ namespace engine
 
 		const EntityDescriptor* opt_descriptor=nullptr
 	);
+
+	bool parse_implicit_component_settings(const util::json& data);
 
 	std::optional<EntityTarget> resolve_manual_target(const util::json& update_entry);
 
@@ -176,7 +179,9 @@ namespace engine
 		bool allow_default_entries=true,
 		bool forward_entry_update_condition_to_flags=false,
 
-		bool ignore_special_symbols=true
+		bool ignore_special_symbols=true,
+
+		std::optional<bool> allow_entry_updates=std::nullopt
 	);
 
 	// Attempts to process the `component_declaration` and `component_content` specified,
@@ -195,6 +200,7 @@ namespace engine
 		MetaDescription& components_out, // EntityDescriptor::TypeInfo&
 
 		const std::string& component_declaration, // std::string_view
+
 		const util::json* component_content=nullptr,
 
 		const MetaTypeDescriptorFlags& component_flags={},
@@ -205,7 +211,9 @@ namespace engine
 		bool allow_default_entries=true,
 		bool forward_entry_update_condition_to_flags=false,
 
-		bool ignore_special_symbols=true
+		bool ignore_special_symbols=true,
+
+		std::optional<bool> allow_entry_update=std::nullopt
 	);
 
 	// See simplified overload for details.
@@ -252,6 +260,14 @@ namespace engine
 		const MetaTypeDescriptorFlags& component_flags={},
 		const MetaParsingContext& opt_parsing_context={},
 		SharedStorageInterface* opt_storage=nullptr
+	);
+
+	std::size_t process_archetype_component_list
+	(
+		EntityDescriptor& descriptor,
+		const util::json& components,
+		const MetaParsingContext& opt_parsing_context={},
+		bool change_only_if_missing=false
 	);
 
 	// This overload resolves and processes a state from a raw path.
@@ -518,21 +534,55 @@ namespace engine
 		bool allow_inline_import=true
 	);
 
+	EntityThreadCount process_state_default_threads
+	(
+		EntityDescriptor& descriptor,
+		EntityState& state,
+		
+		std::string_view state_name,
+
+		const std::filesystem::path* opt_base_path=nullptr,
+		const MetaParsingContext& opt_parsing_context={},
+		const EntityFactoryContext* opt_factory_context=nullptr
+	);
+
+	EntityThreadCount process_archetype_default_threads
+	(
+		EntityDescriptor& descriptor,
+
+		const std::filesystem::path& archetype_path,
+
+		const std::filesystem::path* opt_base_path=nullptr,
+		const MetaParsingContext& opt_parsing_context={},
+		const EntityFactoryContext* opt_factory_context=nullptr
+	);
+
+	std::size_t process_archetype_add_implicit_component_from_path
+	(
+		EntityDescriptor& descriptor,
+
+		const std::filesystem::path& archetype_path,
+
+		const std::filesystem::path* opt_base_path=nullptr,
+		const MetaParsingContext& opt_parsing_context={},
+		const EntityFactoryContext* opt_factory_context=nullptr
+	);
+
+	std::size_t process_state_add_implicit_component_from_name
+	(
+		EntityDescriptor& descriptor,
+		EntityState& state,
+
+		std::string_view state_name,
+
+		const MetaParsingContext& opt_parsing_context={},
+		const EntityFactoryContext* opt_factory_context=nullptr
+	);
+
 	void process_archetype
 	(
 		EntityDescriptor& descriptor,
 		const util::json& data,
-		const std::filesystem::path& base_path,
-		const MetaParsingContext& opt_parsing_context={},
-		const EntityFactoryContext* opt_factory_context=nullptr,
-		bool resolve_external_modules=true,
-		std::optional<EntityStateIndex>* opt_default_state_index_out=nullptr
-	);
-
-	bool resolve_archetypes
-	(
-		EntityDescriptor& descriptor,
-		const util::json& instance,
 		const std::filesystem::path& base_path,
 		const MetaParsingContext& opt_parsing_context={},
 		const EntityFactoryContext* opt_factory_context=nullptr,
@@ -621,6 +671,71 @@ namespace engine
 		}
 	}
 
+	void process_archetype
+	(
+		EntityDescriptor& descriptor,
+		const std::filesystem::path& archetype_path,
+		const std::filesystem::path& base_path,
+		const MetaParsingContext& opt_parsing_context={},
+		const EntityFactoryContext* opt_factory_context=nullptr,
+		bool resolve_external_modules=true,
+		std::optional<EntityStateIndex>* opt_default_state_index_out=nullptr
+	);
+
+	template <typename ChildFactoryCallback>
+	void process_archetype
+	(
+		EntityDescriptor& descriptor,
+		const std::filesystem::path& archetype_path,
+		const std::filesystem::path& base_path,
+		ChildFactoryCallback&& child_callback,
+		const MetaParsingContext& opt_parsing_context={},
+		const EntityFactoryContext* opt_factory_context=nullptr,
+		bool resolve_external_modules=true,
+		bool process_children=true,
+		std::optional<EntityStateIndex>* opt_default_state_index_out=nullptr
+	)
+	{
+		if (archetype_path.empty())
+		{
+			return;
+		}
+
+		// TODO: Optimize via caching, etc.
+		auto instance = util::load_json(archetype_path);
+
+		process_archetype
+		(
+			descriptor, instance, base_path, child_callback,
+			opt_parsing_context, opt_factory_context,
+			resolve_external_modules, process_children,
+			opt_default_state_index_out
+		);
+
+		process_archetype_default_threads
+		(
+			descriptor, archetype_path,
+			&base_path, opt_parsing_context, opt_factory_context
+		);
+
+		process_archetype_add_implicit_component_from_path
+		(
+			descriptor, archetype_path,
+			&base_path, opt_parsing_context, opt_factory_context
+		);
+	}
+
+	bool resolve_archetypes
+	(
+		EntityDescriptor& descriptor,
+		const util::json& instance,
+		const std::filesystem::path& base_path,
+		const MetaParsingContext& opt_parsing_context={},
+		const EntityFactoryContext* opt_factory_context=nullptr,
+		bool resolve_external_modules=true,
+		std::optional<EntityStateIndex>* opt_default_state_index_out=nullptr
+	);
+
 	// Resolves the contents of the `archetypes` field pointed to by `instance`.
 	// 
 	// If an `archetypes` field is not present in `instance`,
@@ -647,14 +762,26 @@ namespace engine
 			return false;
 		}
 
+		auto elements_processed = std::size_t {};
+
+		const auto implicit_components = parse_implicit_component_settings(instance);
+
+		if (implicit_components)
+		{
+			const auto components_processed = process_archetype_component_list(descriptor, *archetypes, opt_parsing_context, true);
+
+			elements_processed += components_processed;
+		}
+
 		// TODO: Add support for JSON objects as input. (i.e. embedded archetypes)
-		auto elements_processed = util::json_for_each<util::json::value_t::string>
+		const auto archetypes_processed = util::json_for_each<util::json::value_t::string>
 		(
 			*archetypes,
 
 			[&descriptor, &base_path, &child_callback, opt_parsing_context, opt_factory_context, resolve_external_modules, process_children, &opt_default_state_index_out](const auto& value)
 			{
-				const auto archetype_path_raw = std::filesystem::path(value.get<std::string>());
+				const auto& archetype_path_raw_str = value.get<std::string>();
+				const auto archetype_path_raw = std::filesystem::path(archetype_path_raw_str);
 				
 				const auto archetype_path = (opt_factory_context)
 					? opt_factory_context->resolve_reference(archetype_path_raw, base_path)
@@ -663,25 +790,33 @@ namespace engine
 
 				if (archetype_path.empty())
 				{
-					return;
+					// If an archetype couldn't be found, try to process
+					// the reference as a path to a thread instead:
+					process_archetype_default_threads
+					(
+						descriptor, archetype_path_raw,
+						&base_path, opt_parsing_context, opt_factory_context
+					);
 				}
+				else
+				{	
+					const auto base_path = archetype_path.parent_path();
 
-				// TODO: Optimize.
-				auto archetype = util::load_json(archetype_path);
-						
-				const auto base_path = archetype_path.parent_path();
-
-				process_archetype
-				(
-					descriptor,
-					archetype, base_path,
-					child_callback,
-					opt_parsing_context, opt_factory_context,
-					resolve_external_modules, process_children,
-					opt_default_state_index_out
-				);
+					process_archetype
+					(
+						descriptor,
+						archetype_path,
+						base_path,
+						child_callback,
+						opt_parsing_context, opt_factory_context,
+						resolve_external_modules, process_children,
+						opt_default_state_index_out
+					);
+				}
 			}
 		);
+
+		elements_processed += archetypes_processed;
 
 		return (elements_processed > 0);
 	}

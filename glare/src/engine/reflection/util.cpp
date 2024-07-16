@@ -1,5 +1,7 @@
 #include "util.hpp"
 
+#include "reflection.hpp"
+
 #include "function.hpp"
 #include "sampler_extensions.hpp"
 
