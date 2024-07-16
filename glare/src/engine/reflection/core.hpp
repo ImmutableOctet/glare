@@ -2,6 +2,11 @@
 
 #include "context.hpp"
 #include "indirection.hpp"
+#include "operators.hpp"
+#include "optional.hpp"
+#include "history.hpp"
+#include "binary_bindings.hpp"
+
 
 #include "service_extensions.hpp"
 #include "component_extensions.hpp"
