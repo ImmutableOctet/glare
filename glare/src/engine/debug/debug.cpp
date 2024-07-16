@@ -157,7 +157,7 @@ namespace engine
 		//enable<OnButtonReleased>();
 		//enable<OnButtonPressed>();
 		
-		//enable<OnAnalogInput>();
+		enable<OnAnalogInput>();
 
 		//enable<app::input::OnMouseMove>();
 		//enable<app::input::OnMousePosition>();
@@ -169,7 +169,7 @@ namespace engine
 		enable<OnThreadTerminated>();
 		//enable<OnThreadPaused>();
 		//enable<OnThreadResumed>();
-		//enable<OnThreadVariableUpdate>();
+		enable<OnThreadVariableUpdate>();
 	}
 
 	void DebugListener::on_skeleton(Registry& registry, Entity entity)
@@ -360,66 +360,31 @@ namespace engine
 
 	void DebugListener::operator()(const OnThreadSpawn& thread_details)
 	{
-		if (thread_details.thread_id)
-		{
-			print("Entity #{}: Thread #{} Spawned (ID: #{})", thread_details.entity, thread_details.thread_index, *thread_details.thread_id);
-		}
-		else
-		{
-			print("Entity #{}: Thread #{} Spawned", thread_details.entity, thread_details.thread_index);
-		}
+		print("Entity #{}: Thread {} (#{}) Spawned - Index: {}", thread_details.entity, get_known_string_from_hash(thread_details.thread_id), thread_details.thread_id, thread_details.thread_index);
 	}
 
 	void DebugListener::operator()(const OnThreadComplete& thread_details)
 	{
-		if (thread_details.thread_id)
-		{
-			print("Entity #{}: Thread #{} Execution completed (ID: #{})", thread_details.entity, thread_details.thread_index, *thread_details.thread_id);
-		}
-		else
-		{
-			print("Entity #{}: Thread #{} Execution completed", thread_details.entity, thread_details.thread_index);
-		}
+		print("Entity #{}: Thread {} (#{}) Execution Completed - Index: {}", thread_details.entity, get_known_string_from_hash(thread_details.thread_id), thread_details.thread_id, thread_details.thread_index);
 	}
 
 	void DebugListener::operator()(const OnThreadTerminated& thread_details)
 	{
-		if (thread_details.thread_id)
-		{
-			print("Entity #{}: Thread #{} Execution terminated (ID: #{})", thread_details.entity, thread_details.thread_index, *thread_details.thread_id);
-		}
-		else
-		{
-			print("Entity #{}: Thread #{} Execution terminated", thread_details.entity, thread_details.thread_index);
-		}
+		print("Entity #{}: Thread {} (#{}) Execution Terminated - Index: {}", thread_details.entity, get_known_string_from_hash(thread_details.thread_id), thread_details.thread_id, thread_details.thread_index);
 	}
 
 	void DebugListener::operator()(const OnThreadPaused& thread_details)
 	{
-		if (thread_details.thread_id)
-		{
-			print("Entity #{}: Thread #{} Execution paused (ID: #{})", thread_details.entity, thread_details.thread_index, *thread_details.thread_id);
-		}
-		else
-		{
-			print("Entity #{}: Thread #{} Execution paused", thread_details.entity, thread_details.thread_index);
-		}
+		print("Entity #{}: Thread {} (#{}) Execution Paused - Index: {}", thread_details.entity, get_known_string_from_hash(thread_details.thread_id), thread_details.thread_id, thread_details.thread_index);
 	}
 
 	void DebugListener::operator()(const OnThreadResumed& thread_details)
 	{
-		if (thread_details.thread_id)
-		{
-			print("Entity #{}: Thread #{} Execution resumed (ID: #{})", thread_details.entity, thread_details.thread_index, *thread_details.thread_id);
-		}
-		else
-		{
-			print("Entity #{}: Thread #{} Execution resumed", thread_details.entity, thread_details.thread_index);
-		}
+		print("Entity #{}: Thread {} (#{}) Execution Resumed - Index: {}", thread_details.entity, get_known_string_from_hash(thread_details.thread_id), thread_details.thread_id, thread_details.thread_index);
 	}
 
 	void DebugListener::operator()(const OnThreadVariableUpdate& thread_details)
 	{
-		print("Entity #{}: Thread #{} Variable updated (ID: #{})", thread_details.entity, thread_details.thread_index, thread_details.resolved_variable_name);
+		print("Entity #{}: Thread {} (#{} - Index: {}) Variable Updated (ID: #{})", thread_details.entity, get_known_string_from_hash(thread_details.thread_id), thread_details.thread_id, thread_details.thread_index, thread_details.resolved_variable_name);
 	}
 }
