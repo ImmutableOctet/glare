@@ -1,11 +1,14 @@
 #pragma once
 
 // Default script includes:
-#include <math/types.hpp>
+#include <math/math.hpp>
 
 #include <engine/types.hpp>
 #include <engine/service.hpp>
+#include <engine/transform.hpp>
 
+#include <engine/script/script.hpp>
+#include <engine/script/script_state_interface.hpp>
 #include <engine/script/script_fiber_response.hpp>
 
 #include <engine/system_manager_interface.hpp>
@@ -14,6 +17,10 @@
 #include <engine/meta/hash.hpp>
 
 #include <engine/components/name_component.hpp>
+#include <engine/components/relationship_component.hpp>
+#include <engine/components/player_component.hpp>
+#include <engine/components/player_target_component.hpp>
+#include <engine/components/transform_component.hpp>
 
 #include <engine/entity/entity_system.hpp>
 #include <engine/entity/entity_state.hpp>
