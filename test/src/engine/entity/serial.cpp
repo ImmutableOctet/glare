@@ -32,8 +32,7 @@ TEST_CASE("engine::parse_instruction_header", "[engine:entity]")
 
 		REQUIRE(instruction == "yield(OnButtonPressed::button|Button::Jump)");
 		REQUIRE(opt_thread_details.has_value());
-		REQUIRE(opt_thread_details->thread_id.has_value());
-		REQUIRE(*opt_thread_details->thread_id == engine::hash("some_thread").value());
+		REQUIRE(opt_thread_details->thread_id == engine::hash("some_thread").value());
 		REQUIRE(!thread_accessor_used);
 	}
 
@@ -45,8 +44,7 @@ TEST_CASE("engine::parse_instruction_header", "[engine:entity]")
 
 		REQUIRE(instruction == "yield(OnButtonPressed::button|Button::Jump)");
 		REQUIRE(opt_thread_details.has_value());
-		REQUIRE(opt_thread_details->thread_id.has_value());
-		REQUIRE(*opt_thread_details->thread_id == engine::hash("some_thread").value());
+		REQUIRE(opt_thread_details->thread_id == engine::hash("some_thread").value());
 		REQUIRE(thread_accessor_used);
 	}
 
@@ -58,8 +56,7 @@ TEST_CASE("engine::parse_instruction_header", "[engine:entity]")
 
 		REQUIRE(instruction == "wait(OnButtonPressed::button == Button::Pause)");
 		REQUIRE(opt_thread_details.has_value());
-		REQUIRE(opt_thread_details->thread_id.has_value());
-		REQUIRE(*opt_thread_details->thread_id == engine::hash("some_thread").value());
+		REQUIRE(opt_thread_details->thread_id == engine::hash("some_thread").value());
 		REQUIRE(opt_thread_details->target_entity.is_child_target());
 		REQUIRE(thread_accessor_used);
 	}
