@@ -444,7 +444,7 @@ namespace engine
     {
         static_assert(std::is_same_v<std::decay_t<ValueType>, MetaAny>, "Argument `value` must be of type `MetaAny`.");
 
-        // NOTE: We purposefully don't forward `value` here, since a reference
+        // NOTE: We purposely don't forward `value` here, since a reference
         // to `value` is used if an underlying value couldn't be resolved.
         if (auto indirect = try_get_underlying_value(value, std::forward<Args>(args)...))
         {
