@@ -3,8 +3,6 @@
 #include "camera_system.hpp"
 
 #include "components/camera_component.hpp"
-#include "components/camera_control_component.hpp"
-#include "components/camera_freelook_component.hpp"
 
 #include "commands/set_camera_command.hpp"
 
@@ -51,37 +49,6 @@ namespace engine
 	}
 
 	template <>
-	void reflect<CameraFreeLookComponent>()
-	{
-		engine_meta_type<CameraFreeLookComponent>()
-			.data<&CameraFreeLookComponent::movement_speed>("movement_speed"_hs)
-		;
-	}
-
-	template <>
-	void reflect<CameraControlComponent>()
-	{
-		engine_meta_type<CameraControlComponent>()
-			.data<&CameraControlComponent::look>("look"_hs)
-			.data<&CameraControlComponent::zoom>("zoom"_hs)
-			.data<&CameraControlComponent::move>("move"_hs)
-		;
-	}
-
-	template <>
-	void reflect<OnRelativeAnalogInput>()
-	{
-		engine_meta_type<OnRelativeAnalogInput>()
-			.base<OnAnalogInput>()
-			.data<&OnRelativeAnalogInput::direction>("direction"_hs)
-			.data<&OnRelativeAnalogInput::source>("source"_hs)
-
-			// Alias to `source` field.
-			.data<&OnRelativeAnalogInput::source>("entity"_hs)
-		;
-	}
-
-	template <>
 	void reflect<SetCameraCommand>()
 	{
 		engine_command_type<SetCameraCommand>();
@@ -106,10 +73,10 @@ namespace engine
 		//reflect<graphics::Viewport>(); // graphics::PointRect
 
 		reflect<CameraComponent>();
-		reflect<CameraFreeLookComponent>();
-		reflect<CameraControlComponent>();
 
-		reflect<OnRelativeAnalogInput>();
+		// TODO: Remove.
+		//reflect<CameraFreeLookComponent>();
+		//reflect<CameraControlComponent>();
 
 		reflect<SetCameraCommand>();
 	}

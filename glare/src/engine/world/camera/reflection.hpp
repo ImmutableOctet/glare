@@ -6,5 +6,5 @@ namespace engine
 {
 	class CameraSystem;
 
-	extern template void reflect<CameraSystem>();
+	template <> void reflect<CameraSystem>();
 }
