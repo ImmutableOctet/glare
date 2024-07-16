@@ -58,7 +58,14 @@ namespace engine::impl
     template <typename T, typename OutputType=T>
     OutputType operator_unary_minus_impl(const T& value)
     {
-        return static_cast<OutputType>(-value);
+        if constexpr (std::is_same_v<std::decay_t<T>, bool>)
+        {
+            return static_cast<OutputType>(!value);
+        }
+        else
+        {
+            return static_cast<OutputType>(-value);
+        }
     }
 
     template <typename T, typename OutputType=T>
