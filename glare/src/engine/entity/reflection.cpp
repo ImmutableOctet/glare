@@ -436,6 +436,7 @@ namespace engine
 	{
 		engine_command_type<EntityThreadSpawnCommand>()
 			.data<&EntityThreadSpawnCommand::threads>("threads"_hs)
+			.data<&EntityThreadSpawnCommand::parent_thread_name>("parent_thread_name"_hs)
 			.data<&EntityThreadSpawnCommand::restart_existing>("restart_existing"_hs)
 			.ctor
 			<
@@ -443,6 +444,7 @@ namespace engine
 				decltype(EntityThreadSpawnCommand::target),
 				
 				decltype(EntityThreadSpawnCommand::threads),
+				decltype(EntityThreadSpawnCommand::parent_thread_name),
 				decltype(EntityThreadSpawnCommand::restart_existing)
 			>()
 		;
@@ -557,6 +559,39 @@ namespace engine
 	}
 	
 	template <>
+	void reflect<EntityThreadFiberSpawnCommand>()
+	{
+		// Constructor and `fiber` member disabled for now.
+		// (EnTT's trying to generate bindings for a non-existent copy constructor)
+		engine_command_type<EntityThreadFiberSpawnCommand>()
+			//.data<&EntityThreadFiberSpawnCommand::fiber, entt::as_ref_t>("fiber"_hs)
+			.data<&EntityThreadFiberSpawnCommand::state_index>("state_index"_hs)
+			.data<&EntityThreadFiberSpawnCommand::thread_name>("thread_name"_hs)
+			.data<&EntityThreadFiberSpawnCommand::parent_thread_name>("parent_thread_name"_hs)
+			.data<&EntityThreadFiberSpawnCommand::thread_flags>("thread_flags"_hs)
+
+			// Disabled for now; EnTT wants the full type definition for `Script`.
+			//.data<&EntityThreadFiberSpawnCommand::script_handle>("script_handle"_hs)
+
+			/*
+			.ctor
+			<
+				decltype(EntityThreadFiberSpawnCommand::source),
+				decltype(EntityThreadFiberSpawnCommand::target),
+
+				decltype(EntityThreadFiberSpawnCommand::fiber)&,
+				decltype(EntityThreadFiberSpawnCommand::state_index),
+				decltype(EntityThreadFiberSpawnCommand::thread_name),
+				decltype(EntityThreadFiberSpawnCommand::parent_thread_name),
+				decltype(EntityThreadFiberSpawnCommand::thread_flags)
+
+				//decltype(EntityThreadFiberSpawnCommand::script_handle)
+			>()
+			*/
+		;
+	}
+
+	template <>
 	void reflect<EntityInstruction>()
 	{
 		auto type = engine_meta_type<EntityInstruction>()
@@ -595,7 +630,7 @@ namespace engine
 			.ctor
 			<
 				decltype(EntityThreadInstruction::target_entity),
-				typename decltype(EntityThreadInstruction::thread_id)::value_type
+				decltype(EntityThreadInstruction::thread_id)
 			>()
 		;
 	}
@@ -792,6 +827,7 @@ namespace engine
 		reflect<EntityThreadUnlinkCommand>();
 		reflect<EntityThreadSkipCommand>();
 		reflect<EntityThreadRewindCommand>();
+		reflect<EntityThreadFiberSpawnCommand>();
 
 		// Instructions:
 		reflect<EntityInstruction>();
