@@ -8,7 +8,7 @@
 
 		"CameraComponent": 
 		{
-			"fov": 75.0,
+			"fov": 75.0, // 120.0,
 			"near_plane": 0.1,
 			"far_plane": 1000.0//,
 
