@@ -13,7 +13,7 @@ namespace graphics
 
 namespace engine
 {
-	class Config;
+	struct Config;
 
 	struct WorldRenderState;
 }
