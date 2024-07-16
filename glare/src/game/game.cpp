@@ -211,6 +211,16 @@ namespace game
 		on_resize(width, height);
 	}
 
+	void Game::on_execute()
+	{
+		util::log::register_debug_data(*this);
+	}
+
+	void Game::on_shutdown()
+	{
+		util::log::unregister_debug_data(*this);
+	}
+
 	RenderState& Game::initialize_render_state(RenderState& render_state)
 	{
 		//render_state = {};
@@ -283,6 +293,16 @@ namespace game
 	entt::dispatcher* Game::get_event_handler()
 	{
 		return &(world.get_active_event_handler());
+	}
+
+	std::uint64_t Game::get_log_frame_number() const
+	{
+		return static_cast<std::uint64_t>(get_update_counter());
+	}
+
+	std::uint64_t Game::get_log_time_ms() const
+	{
+		return static_cast<std::uint64_t>(milliseconds());
 	}
 
 	void Game::init_default_systems(DeltaSystemMode delta_mode, bool init_renderer)
