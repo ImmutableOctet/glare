@@ -8,13 +8,43 @@ namespace engine
 	(
 		const EntityThreadFlags& flags,
 		EntityThreadIndex thread_index,
-		InstructionIndex first_instruction,
-		std::optional<EntityStateIndex> state_index
+		EntityThreadID thread_name,
+		EntityThreadID parent_thread_name,
+		std::optional<EntityStateIndex> state_index,
+		InstructionIndex first_instruction
 	) :
 		EntityThreadFlags(flags),
 		thread_index(thread_index),
 		next_instruction(first_instruction),
-		state_index(state_index)
+		state_index(resolve_state_index(state_index)),
+		thread_id(thread_name),
+		parent_thread_id(parent_thread_name)
+	{}
+
+	EntityThread::EntityThread
+	(
+		const EntityThreadFlags& flags,
+		EntityThreadFiber&& fiber,
+		EntityThreadID thread_name,
+		EntityThreadID parent_thread_name,
+		std::optional<EntityStateIndex> state_index
+	) :
+		EntityThreadFlags(flags),
+		state_index(resolve_state_index(state_index)),
+		active_fiber(std::move(fiber)),
+		thread_id(thread_name),
+		parent_thread_id(parent_thread_name)
+	{}
+
+	EntityThread::EntityThread
+	(
+		const EntityThreadFlags& flags,
+		ScriptFiber&& fiber,
+		EntityThreadID thread_name,
+		EntityThreadID parent_thread_name,
+		std::optional<EntityStateIndex> state_index
+	) :
+		EntityThread(flags, EntityThreadFiber { std::move(fiber) }, thread_name, parent_thread_name, state_index)
 	{}
 
 	bool EntityThread::pause()

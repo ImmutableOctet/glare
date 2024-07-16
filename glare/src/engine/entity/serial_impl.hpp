@@ -691,8 +691,8 @@ namespace engine
 					}
 
 					auto thread_id = (thread_name.empty())
-						? std::optional<EntityThreadID>(std::nullopt)
-						: std::optional<EntityThreadID>(hash(thread_name).value())
+						? (EntityThreadID {})
+						: (hash(thread_name).value())
 					;
 
 					auto entity_target = EntityTarget::parse(entity_ref);
@@ -736,10 +736,7 @@ namespace engine
 					{
 						resolved_variable_id = MetaVariableContext::resolve_path
 						(
-							(thread_id)
-								? (*thread_id)
-								: (MetaSymbolID {})
-							,
+							static_cast<MetaSymbolID>(thread_id),
 
 							variable_name,
 							variable_scope
@@ -901,10 +898,8 @@ namespace engine
 											resolved_variable_id,
 											variable_scope
 										},
-									
-										(thread_id)
-											? EntityThreadTarget { *thread_id }
-											: EntityThreadTarget {}
+										
+										EntityThreadTarget { thread_id }
 									},
 
 									&shared_storage

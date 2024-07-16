@@ -83,7 +83,27 @@ namespace engine
 				const EntityThreadFlags& flags,
 
 				EntityThreadIndex thread_index,
-				InstructionIndex first_instruction=0,
+				EntityThreadID thread_name={},
+				EntityThreadID parent_thread_name={},
+				std::optional<EntityStateIndex> state_index=std::nullopt,
+				InstructionIndex first_instruction={}
+			);
+
+			EntityThread
+			(
+				const EntityThreadFlags& flags,
+				EntityThreadFiber&& fiber,
+				EntityThreadID thread_name={},
+				EntityThreadID parent_thread_name={},
+				std::optional<EntityStateIndex> state_index=std::nullopt
+			);
+
+			EntityThread
+			(
+				const EntityThreadFlags& flags,
+				ScriptFiber&& fiber,
+				EntityThreadID thread_name={},
+				EntityThreadID parent_thread_name={},
 				std::optional<EntityStateIndex> state_index=std::nullopt
 			);
 
@@ -155,6 +175,12 @@ namespace engine
 
 			// An index representing the state this thread was instantiated from.
 			std::optional<EntityStateIndex> state_index;
+
+			// An identifier used to represent this thread.
+			EntityThreadID thread_id = {};
+
+			// An identifier used to represent this thread's parent.
+			EntityThreadID parent_thread_id = {};
 
 			// The active fiber to be executed, if any.
 			EntityThreadFiber active_fiber;

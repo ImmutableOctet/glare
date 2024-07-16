@@ -5,6 +5,8 @@
 #include <engine/entity/entity_descriptor.hpp>
 #include <engine/entity/entity_state.hpp>
 
+#include <engine/script/script.hpp>
+
 #include <iterator>
 #include <algorithm>
 
@@ -20,14 +22,63 @@ namespace engine
 		return global_variables.get();
 	}
 
+	// NOTE: The `thread_id` argument is currently unused,
+	// since thread names/IDs normally correspond to `EntityDescriptor` entries.
+	EntityThread* EntityThreadComponent::start_thread
+	(
+		ScriptFiber&& fiber,
+
+		std::optional<EntityStateIndex> state_index,
+		
+		EntityThreadID thread_id,
+		EntityThreadID parent_thread_id,
+
+		const EntityThreadFlags& flags,
+
+		ScriptHandle script_handle
+	)
+	{
+		if (!fiber)
+		{
+			return {};
+		}
+
+		auto& thread_out = threads.emplace_back
+		(
+			flags,
+			std::move(fiber),
+			thread_id,
+			parent_thread_id,
+			state_index
+		);
+
+		if (script_handle)
+		{
+			auto& script = script_handle;
+
+			thread_out.active_fiber.script = script;
+
+			auto& thread_handle = thread_out;
+
+			script->set_executing_thread(thread_handle);
+		}
+
+		return &thread_out;
+	}
+
 	EntityThread* EntityThreadComponent::start_thread
 	(
 		EntityThreadIndex thread_index,
 
 		std::optional<EntityStateIndex> state_index,
+
 		bool check_existing,
 		bool check_linked,
 		bool restart_existing,
+		
+		EntityThreadID thread_id,
+		EntityThreadID parent_thread_id,
+
 		const EntityThreadFlags& flags
 	)
 	{
@@ -43,7 +94,8 @@ namespace engine
 					{
 						flags,
 						thread_index,
-						0,
+						thread_id,
+						parent_thread_id,
 						state_index
 					};
 
@@ -60,7 +112,8 @@ namespace engine
 		(
 			flags,
 			thread_index,
-			0,
+			thread_id,
+			parent_thread_id,
 			state_index
 		);
 
@@ -76,20 +129,20 @@ namespace engine
 		bool check_existing,
 		bool check_linked,
 		bool restart_existing,
+
+		EntityThreadID parent_thread_id,
+
 		const EntityThreadFlags& flags
 	)
 	{
-		if (auto thread_index = descriptor.get_thread_index(thread_id))
-		{
-			return start_thread
-			(
-				*thread_index, state_index,
-				check_existing, check_linked, restart_existing,
-				flags
-			);
-		}
-
-		return {};
+		return start_thread
+		(
+			descriptor.get_thread_index(thread_id).value_or(ENTITY_THREAD_INDEX_INVALID),
+			state_index,
+			check_existing, check_linked, restart_existing,
+			thread_id, parent_thread_id,
+			flags
+		);
 	}
 
 	EntityThread* EntityThreadComponent::start_thread
@@ -98,26 +151,30 @@ namespace engine
 		EntityThreadID thread_id,
 
 		std::optional<EntityStateIndex> state_index,
+		
 		bool check_existing,
 		bool check_linked,
-		bool restart_existing
+		bool restart_existing,
+
+		EntityThreadID parent_thread_id
 	)
 	{
-		if (const auto thread_description = descriptor.get_thread_by_id(thread_id))
-		{
-			return start_thread
-			(
-				descriptor, thread_id, state_index,
-				check_existing, check_linked, restart_existing,
+		const auto thread_description = descriptor.get_thread_by_id(thread_id);
 
-				EntityThreadFlags
-				{
-					.cadence = thread_description->cadence
-				}
-			);
-		}
+		return start_thread
+		(
+			descriptor, thread_id, state_index,
+			check_existing, check_linked, restart_existing,
 
-		return {};
+			parent_thread_id,
+
+			EntityThreadFlags
+			{
+				.cadence = (thread_description)
+					? thread_description->cadence
+					: EntityThreadCadence::Default
+			}
+		);
 	}
 
 	std::size_t EntityThreadComponent::start_threads
@@ -126,6 +183,9 @@ namespace engine
 		const EntityThreadRange& thread_range,
 		
 		std::optional<EntityStateIndex> state_index,
+
+		EntityThreadID parent_thread_id,
+
 		bool restart_existing
 	)
 	{
@@ -134,7 +194,7 @@ namespace engine
 		iterate_thread_range
 		(
 			thread_range,
-			[this, &descriptor, &state_index, restart_existing, &started_thread_count](EntityThreadIndex thread_index)
+			[this, &descriptor, &state_index, parent_thread_id, restart_existing, &started_thread_count](EntityThreadIndex thread_index)
 			{
 				const auto& thread_description = descriptor.get_thread(thread_index);
 
@@ -142,6 +202,9 @@ namespace engine
 				(
 					thread_index, state_index,
 					true, true, restart_existing,
+
+					thread_description.name(),
+					parent_thread_id,
 
 					EntityThreadFlags
 					{
@@ -163,6 +226,7 @@ namespace engine
 	(
 		const EntityDescriptor& descriptor,
 		EntityStateIndex state_index,
+		EntityThreadID parent_thread_id,
 		bool restart_existing
 	)
 	{
@@ -173,7 +237,7 @@ namespace engine
 			return 0;
 		}
 
-		return start_threads(descriptor, *state, state_index, restart_existing);
+		return start_threads(descriptor, *state, state_index, parent_thread_id, restart_existing);
 	}
 
 	std::size_t EntityThreadComponent::start_threads
@@ -181,6 +245,7 @@ namespace engine
 		const EntityDescriptor& descriptor,
 		const EntityState& state,
 		EntityStateIndex state_index,
+		EntityThreadID parent_thread_id,
 		bool restart_existing
 	)
 	{
@@ -188,7 +253,7 @@ namespace engine
 
 		for (const auto& threads : state.immediate_threads)
 		{
-			threads_started += start_threads(descriptor, threads, state_index, restart_existing);
+			threads_started += start_threads(descriptor, threads, state_index, parent_thread_id, restart_existing);
 		}
 
 		return threads_started;
@@ -209,26 +274,40 @@ namespace engine
 		if (!thread)
 		{
 			// Notify the user that the thread is already terminated.
-			// (Or wouldn't otherwise conflict creating a new one)
+			// (Or wouldn't otherwise conflict with creating a new one)
 			return true;
 		}
 
 		return static_cast<bool>(stop_thread_impl(*thread));
 	}
 
-	bool EntityThreadComponent::stop_thread
+	bool EntityThreadComponent::stop_thread_by_id(EntityThreadID thread_id, bool check_linked)
+	{
+		auto* thread = get_thread_by_id(thread_id, check_linked);
+
+		if (!thread)
+		{
+			// Notify the user that the thread is already terminated.
+			// (Or wouldn't otherwise conflict with creating a new one)
+			return true;
+		}
+
+		return static_cast<bool>(stop_thread_impl(*thread));
+	}
+
+	bool EntityThreadComponent::stop_thread_by_id
 	(
 		const EntityDescriptor& descriptor,
 		EntityThreadID thread_id,
 		bool check_linked
 	)
 	{
-		if (auto thread_index = descriptor.get_thread_index(thread_id))
+		if (const auto thread_index = descriptor.get_thread_index(thread_id))
 		{
 			return stop_thread(*thread_index, check_linked);
 		}
 
-		return true; // false;
+		return stop_thread_by_id(thread_id, check_linked);
 	}
 
 	std::size_t EntityThreadComponent::stop_threads(const EntityThreadRange& thread_range, bool check_linked)
@@ -253,13 +332,13 @@ namespace engine
 
 	std::size_t EntityThreadComponent::stop_threads(EntityStateIndex state_index)
 	{
-		std::size_t terminated_thread_count = 0;
+		auto terminated_thread_count = std::size_t {};
 
 		for (auto it = threads.begin(); it != threads.end();)
 		{
 			auto& thread = *it;
 
-			if (state_index == thread.state_index.value_or(state_index))
+			if (state_index == thread.get_state_index().value_or(state_index))
 			{
 				if (auto updated_it = stop_thread_impl(it))
 				{
@@ -350,14 +429,27 @@ namespace engine
 		return false;
 	}
 
-	bool EntityThreadComponent::erase_thread(const EntityDescriptor& descriptor, EntityThreadID thread_id)
+	bool EntityThreadComponent::erase_thread_by_id(EntityThreadID thread_id)
 	{
-		if (auto thread_index = descriptor.get_thread_index(thread_id))
+		if (auto* thread = get_thread_by_id(thread_id, false))
+		{
+			erase_thread(get_thread_iterator(*thread));
+			
+			return true;
+		}
+
+		// Notify the user that the thread has already been erased.
+		return false;
+	}
+
+	bool EntityThreadComponent::erase_thread_by_id(const EntityDescriptor& descriptor, EntityThreadID thread_id)
+	{
+		if (const auto thread_index = descriptor.get_thread_index(thread_id))
 		{
 			return erase_thread(*thread_index);
 		}
 
-		return false;
+		return erase_thread_by_id(thread_id);
 	}
 
 	std::size_t EntityThreadComponent::erase_threads(const EntityThreadRange& thread_range)
@@ -388,7 +480,7 @@ namespace engine
 		{
 			auto& thread = *it;
 
-			if (state_index == thread.state_index.value_or(state_index))
+			if (state_index == thread.get_state_index().value_or(state_index))
 			{
 				it = threads.erase(it);
 
@@ -447,9 +539,37 @@ namespace engine
 			(
 				threads.begin(), threads.end(),
 
-				[](const EntityThread& thread_entry)
+				[this](const EntityThread& thread_entry)
 				{
-					return (thread_entry.is_complete);
+					// If we're not complete, disregard this thread.
+					if (!thread_entry.is_complete)
+					{
+						return false;
+					}
+
+					// If we're not linked, don't worry about child threads.
+					if (!thread_entry.is_linked)
+					{
+						return true;
+					}
+
+					// When linked, only erase this thread if there are no sub-threads claiming us as their parent:
+					const auto child_thread_it = std::find_if
+					(
+						threads.begin(), threads.end(),
+
+						[&thread_entry](const EntityThread& child_thread)
+						{
+							return (child_thread.parent_thread_id == thread_entry.thread_id);
+						}
+					);
+
+					if (child_thread_it != threads.end())
+					{
+						return false;
+					}
+
+					return true;
 				}
 			),
 
@@ -461,26 +581,7 @@ namespace engine
 		return (initial_thread_count - updated_thread_count);
 	}
 
-	bool EntityThreadComponent::pause_thread
-	(
-		const EntityDescriptor& descriptor,
-		EntityThreadID thread_id,
-		bool check_linked
-	)
-	{
-		if (auto thread_index = descriptor.get_thread_index(thread_id))
-		{
-			return pause_thread(*thread_index, check_linked);
-		}
-
-		return false;
-	}
-
-	bool EntityThreadComponent::pause_thread
-	(
-		EntityThreadIndex thread_index,
-		bool check_linked
-	)
+	bool EntityThreadComponent::pause_thread(EntityThreadIndex thread_index, bool check_linked)
 	{
 		auto* thread = get_thread(thread_index, check_linked);
 
@@ -490,6 +591,28 @@ namespace engine
 		}
 
 		return thread->pause();
+	}
+
+	bool EntityThreadComponent::pause_thread_by_id(EntityThreadID thread_id, bool check_linked)
+	{
+		auto* thread = get_thread_by_id(thread_id, check_linked);
+
+		if (!thread)
+		{
+			return false;
+		}
+
+		return thread->pause();
+	}
+
+	bool EntityThreadComponent::pause_thread_by_id(const EntityDescriptor& descriptor, EntityThreadID thread_id, bool check_linked)
+	{
+		if (const auto thread_index = descriptor.get_thread_index(thread_id))
+		{
+			return pause_thread(*thread_index, check_linked);
+		}
+
+		return pause_thread_by_id(thread_id, check_linked);
 	}
 
 	std::size_t EntityThreadComponent::pause_threads(const EntityThreadRange& thread_range, bool check_linked)
@@ -512,26 +635,7 @@ namespace engine
 		return paused_count;
 	}
 
-	bool EntityThreadComponent::resume_thread
-	(
-		const EntityDescriptor& descriptor,
-		EntityThreadID thread_id,
-		bool check_linked
-	)
-	{
-		if (auto thread_index = descriptor.get_thread_index(thread_id))
-		{
-			return resume_thread(*thread_index, check_linked);
-		}
-
-		return false;
-	}
-
-	bool EntityThreadComponent::resume_thread
-	(
-		EntityThreadIndex thread_index,
-		bool check_linked
-	)
+	bool EntityThreadComponent::resume_thread(EntityThreadIndex thread_index, bool check_linked)
 	{
 		auto* thread = get_thread(thread_index, check_linked);
 
@@ -541,6 +645,28 @@ namespace engine
 		}
 
 		return thread->resume();
+	}
+
+	bool EntityThreadComponent::resume_thread_by_id(EntityThreadID thread_id, bool check_linked)
+	{
+		auto* thread = get_thread_by_id(thread_id, check_linked);
+
+		if (!thread)
+		{
+			return false;
+		}
+
+		return thread->resume();
+	}
+
+	bool EntityThreadComponent::resume_thread_by_id(const EntityDescriptor& descriptor, EntityThreadID thread_id, bool check_linked)
+	{
+		if (const auto thread_index = descriptor.get_thread_index(thread_id))
+		{
+			return resume_thread(*thread_index, check_linked);
+		}
+
+		return resume_thread_by_id(thread_id, check_linked);
 	}
 
 	std::size_t EntityThreadComponent::resume_threads(const EntityThreadRange& thread_range, bool check_linked)
@@ -565,22 +691,6 @@ namespace engine
 
 	bool EntityThreadComponent::attach_thread
 	(
-		const EntityDescriptor& descriptor,
-		EntityThreadID thread_id,
-		std::optional<EntityStateIndex> state_index,
-		bool check_linked
-	)
-	{
-		if (auto thread_index = descriptor.get_thread_index(thread_id))
-		{
-			return attach_thread(*thread_index, state_index, check_linked);
-		}
-
-		return false;
-	}
-
-	bool EntityThreadComponent::attach_thread
-	(
 		EntityThreadIndex thread_index,
 		std::optional<EntityStateIndex> state_index,
 		bool check_linked
@@ -594,6 +704,39 @@ namespace engine
 		}
 
 		return thread->attach(state_index);
+	}
+
+	bool EntityThreadComponent::attach_thread_by_id
+	(
+		EntityThreadID thread_id,
+		std::optional<EntityStateIndex> state_index,
+		bool check_linked
+	)
+	{
+		auto* thread = get_thread_by_id(thread_id, check_linked);
+
+		if (!thread)
+		{
+			return false;
+		}
+
+		return thread->attach(state_index);
+	}
+
+	bool EntityThreadComponent::attach_thread_by_id
+	(
+		const EntityDescriptor& descriptor,
+		EntityThreadID thread_id,
+		std::optional<EntityStateIndex> state_index,
+		bool check_linked
+	)
+	{
+		if (const auto thread_index = descriptor.get_thread_index(thread_id))
+		{
+			return attach_thread(*thread_index, state_index, check_linked);
+		}
+
+		return attach_thread_by_id(thread_id, state_index, check_linked);
 	}
 
 	std::size_t EntityThreadComponent::attach_threads
@@ -621,26 +764,7 @@ namespace engine
 		return attached_count;
 	}
 
-	bool EntityThreadComponent::detach_thread
-	(
-		const EntityDescriptor& descriptor,
-		EntityThreadID thread_id,
-		bool check_linked
-	)
-	{
-		if (auto thread_index = descriptor.get_thread_index(thread_id))
-		{
-			return detach_thread(*thread_index, check_linked);
-		}
-
-		return false;
-	}
-
-	bool EntityThreadComponent::detach_thread
-	(
-		EntityThreadIndex thread_index,
-		bool check_linked
-	)
+	bool EntityThreadComponent::detach_thread(EntityThreadIndex thread_index, bool check_linked)
 	{
 		auto* thread = get_thread(thread_index, check_linked);
 
@@ -650,6 +774,28 @@ namespace engine
 		}
 
 		return thread->detach();
+	}
+
+	bool EntityThreadComponent::detach_thread_by_id(EntityThreadID thread_id, bool check_linked)
+	{
+		auto* thread = get_thread_by_id(thread_id, check_linked);
+
+		if (!thread)
+		{
+			return false;
+		}
+
+		return thread->detach();
+	}
+
+	bool EntityThreadComponent::detach_thread_by_id(const EntityDescriptor& descriptor, EntityThreadID thread_id, bool check_linked)
+	{
+		if (const auto thread_index = descriptor.get_thread_index(thread_id))
+		{
+			return detach_thread(*thread_index, check_linked);
+		}
+
+		return detach_thread_by_id(thread_id, check_linked);
 	}
 
 	std::size_t EntityThreadComponent::detach_threads(const EntityThreadRange& thread_range, bool check_linked)
@@ -672,24 +818,7 @@ namespace engine
 		return detached_count;
 	}
 
-	bool EntityThreadComponent::unlink_thread
-	(
-		const EntityDescriptor& descriptor,
-		EntityThreadID thread_id
-	)
-	{
-		if (auto thread_index = descriptor.get_thread_index(thread_id))
-		{
-			return unlink_thread(*thread_index);
-		}
-
-		return false;
-	}
-
-	bool EntityThreadComponent::unlink_thread
-	(
-		EntityThreadIndex thread_index
-	)
+	bool EntityThreadComponent::unlink_thread(EntityThreadIndex thread_index)
 	{
 		auto* thread = get_thread(thread_index, true);
 
@@ -699,6 +828,28 @@ namespace engine
 		}
 
 		return thread->unlink();
+	}
+
+	bool EntityThreadComponent::unlink_thread_by_id(EntityThreadID thread_id)
+	{
+		auto* thread = get_thread_by_id(thread_id, true);
+
+		if (!thread)
+		{
+			return false;
+		}
+
+		return thread->unlink();
+	}
+
+	bool EntityThreadComponent::unlink_thread_by_id(const EntityDescriptor& descriptor, EntityThreadID thread_id)
+	{
+		if (const auto thread_index = descriptor.get_thread_index(thread_id))
+		{
+			return unlink_thread(*thread_index);
+		}
+
+		return unlink_thread_by_id(thread_id);
 	}
 
 	std::size_t EntityThreadComponent::unlink_threads(const EntityThreadRange& thread_range)
@@ -721,7 +872,7 @@ namespace engine
 		return unlinked_count;
 	}
 
-	bool EntityThreadComponent::link_thread(LocalThreadIndex local_thread_index)
+	bool EntityThreadComponent::link_local_thread(LocalThreadIndex local_thread_index)
 	{
 		auto& thread = threads.at(local_thread_index); // threads[local_thread_index];
 
@@ -741,28 +892,7 @@ namespace engine
 		return true;
 	}
 
-	bool EntityThreadComponent::skip_thread
-	(
-		const EntityDescriptor& descriptor,
-		EntityThreadID thread_id,
-		EntityInstructionCount instruction_count,
-		bool check_linked
-	)
-	{
-		if (auto thread_index = descriptor.get_thread_index(thread_id))
-		{
-			return skip_thread(*thread_index, instruction_count, check_linked);
-		}
-
-		return false;
-	}
-
-	bool EntityThreadComponent::skip_thread
-	(
-		EntityThreadIndex thread_index,
-		EntityInstructionCount instruction_count,
-		bool check_linked
-	)
+	bool EntityThreadComponent::skip_thread(EntityThreadIndex thread_index, EntityInstructionCount instruction_count, bool check_linked)
 	{
 		auto* thread = get_thread(thread_index, check_linked);
 
@@ -772,6 +902,28 @@ namespace engine
 		}
 
 		return (thread->skip(instruction_count) > 0); // == instruction_count
+	}
+
+	bool EntityThreadComponent::skip_thread_by_id(EntityThreadID thread_id, EntityInstructionCount instruction_count, bool check_linked)
+	{
+		auto* thread = get_thread_by_id(thread_id, check_linked);
+
+		if (!thread)
+		{
+			return false;
+		}
+
+		return (thread->skip(instruction_count) > 0); // == instruction_count
+	}
+
+	bool EntityThreadComponent::skip_thread_by_id(const EntityDescriptor& descriptor, EntityThreadID thread_id, EntityInstructionCount instruction_count, bool check_linked)
+	{
+		if (const auto thread_index = descriptor.get_thread_index(thread_id))
+		{
+			return skip_thread(*thread_index, instruction_count, check_linked);
+		}
+
+		return skip_thread_by_id(thread_id, instruction_count, check_linked);
 	}
 
 	std::size_t EntityThreadComponent::skip_threads(const EntityThreadRange& thread_range, EntityInstructionCount instruction_count, bool check_linked)
@@ -796,22 +948,6 @@ namespace engine
 
 	bool EntityThreadComponent::rewind_thread
 	(
-		const EntityDescriptor& descriptor,
-		EntityThreadID thread_id,
-		EntityInstructionCount instruction_count,
-		bool check_linked
-	)
-	{
-		if (auto thread_index = descriptor.get_thread_index(thread_id))
-		{
-			return rewind_thread(*thread_index, instruction_count, check_linked);
-		}
-
-		return false;
-	}
-
-	bool EntityThreadComponent::rewind_thread
-	(
 		EntityThreadIndex thread_index,
 		EntityInstructionCount instruction_count,
 		bool check_linked
@@ -825,6 +961,28 @@ namespace engine
 		}
 
 		return (thread->rewind(instruction_count) > 0); // == instruction_count
+	}
+
+	bool EntityThreadComponent::rewind_thread_by_id(EntityThreadID thread_id, EntityInstructionCount instruction_count, bool check_linked)
+	{
+		auto* thread = get_thread_by_id(thread_id, check_linked);
+
+		if (!thread)
+		{
+			return false;
+		}
+
+		return (thread->rewind(instruction_count) > 0); // == instruction_count
+	}
+
+	bool EntityThreadComponent::rewind_thread_by_id(const EntityDescriptor& descriptor, EntityThreadID thread_id, EntityInstructionCount instruction_count, bool check_linked)
+	{
+		if (const auto thread_index = descriptor.get_thread_index(thread_id))
+		{
+			return rewind_thread(*thread_index, instruction_count, check_linked);
+		}
+
+		return rewind_thread_by_id(thread_id, instruction_count, check_linked);
 	}
 
 	std::size_t EntityThreadComponent::rewind_threads(const EntityThreadRange& thread_range, EntityInstructionCount instruction_count, bool check_linked)
@@ -847,18 +1005,28 @@ namespace engine
 		return rewound_count;
 	}
 
-	bool EntityThreadComponent::thread_running(EntityThreadIndex thread_index) const
+	bool EntityThreadComponent::is_thread_running(EntityThreadIndex thread_index) const
 	{
 		return static_cast<bool>(get_thread(thread_index, true));
 	}
 
-	bool EntityThreadComponent::thread_running(const EntityDescriptor& descriptor, EntityThreadID thread_id) const
+	bool EntityThreadComponent::is_thread_with_id_running(EntityThreadID thread_id) const
 	{
-		return static_cast<bool>(get_thread(descriptor, thread_id, true));
+		return static_cast<bool>(get_thread_by_id(thread_id, true));
+	}
+
+	bool EntityThreadComponent::is_thread_with_id_running(const EntityDescriptor& descriptor, EntityThreadID thread_id) const
+	{
+		return static_cast<bool>(get_thread_by_id(descriptor, thread_id, true));
 	}
 
 	const EntityThread* EntityThreadComponent::get_thread(EntityThreadIndex thread_index, bool check_linked) const
 	{
+		if (thread_index == ENTITY_THREAD_INDEX_INVALID)
+		{
+			return {};
+		}
+
 		for (const auto& thread : threads)
 		{
 			if (thread.thread_index == thread_index)
@@ -873,11 +1041,42 @@ namespace engine
 		return {};
 	}
 
-	const EntityThread* EntityThreadComponent::get_thread(const EntityDescriptor& descriptor, EntityThreadID thread_id, bool check_linked) const
+	const EntityThread* EntityThreadComponent::get_thread_by_id(EntityThreadID thread_id, bool check_linked) const
 	{
-		if (auto thread_index = descriptor.get_thread_index(thread_id))
+		if (!thread_id)
+		{
+			return {};
+		}
+
+		for (const auto& thread : threads)
+		{
+			if (thread.thread_id == thread_id)
+			{
+				if (!check_linked || (thread.is_linked))
+				{
+					return &thread;
+				}
+			}
+		}
+
+		return {};
+	}
+
+	const EntityThread* EntityThreadComponent::get_thread_by_id(const EntityDescriptor& descriptor, EntityThreadID thread_id, bool check_linked) const
+	{
+		if (!thread_id)
+		{
+			return {};
+		}
+
+		if (const auto thread_index = descriptor.get_thread_index(thread_id))
 		{
 			return get_thread(*thread_index, check_linked);
+		}
+
+		if (const auto thread = get_thread_by_id(thread_id, check_linked))
+		{
+			return thread;
 		}
 
 		return {};

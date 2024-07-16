@@ -28,8 +28,8 @@ namespace engine
 		// Defaults to this entity.
 		EntityTarget target_entity = {};
 
-		// If empty, this refers to the current thread.
-		std::optional<EntityThreadID> thread_id = std::nullopt;
+		// If left default (0), this refers to the current thread.
+		EntityThreadID thread_id = {};
 
 		bool operator==(const EntityThreadInstruction&) const noexcept = default;
 		bool operator!=(const EntityThreadInstruction&) const noexcept = default;

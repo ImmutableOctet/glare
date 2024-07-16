@@ -157,7 +157,7 @@ namespace engine
 				return has_thread(*thread_id);
 			}
 
-			std::optional<EntityThreadID> get_thread_id(EntityThreadIndex thread_index) const;
+			EntityThreadID get_thread_id(EntityThreadIndex thread_index) const;
 
 			inline const EntityState* get_state(EntityStateID name) const
 			{

@@ -44,7 +44,7 @@ namespace engine
 		EntityThreadIndex thread_index;
 
 		// The name/identifier associated with this thread.
-		std::optional<EntityThreadID> thread_id;
+		EntityThreadID thread_id;
 
 		// An index to this local thread-instance tied to `entity`.
 		// 

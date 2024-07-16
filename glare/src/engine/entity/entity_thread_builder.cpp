@@ -90,7 +90,7 @@ namespace engine
 
 						(opt_thread_instruction)
 							? opt_thread_instruction->thread_id
-							: std::optional<EntityThreadID>(std::nullopt)
+							: EntityThreadID {}
 
 						//opt_thread_instruction->thread_id
 					}
@@ -377,21 +377,21 @@ namespace engine
 
 	EntityThreadBuilder::~EntityThreadBuilder() {}
 
-	std::optional<EntityThreadID> EntityThreadBuilder::set_thread_name(std::string_view thread_name, bool resolve_name, bool force)
+	EntityThreadID EntityThreadBuilder::set_thread_name(std::string_view thread_name, bool resolve_name, bool force)
 	{
 		auto& thread = get_thread();
 
 		if ((!force) && (thread.thread_id))
 		{
-			return std::nullopt; // thread.thread_id;
+			return {}; // thread.thread_id;
 		}
 
 		if (thread_name.empty())
 		{
-			return std::nullopt;
+			return {};
 		}
 
-		std::optional<EntityThreadID> thread_id_out = std::nullopt;
+		EntityThreadID thread_id_out = {};
 
 		if (resolve_name)
 		{
@@ -444,9 +444,9 @@ namespace engine
 
 		if (thread_id_already_exists)
 		{
-			print_warn("Failed to set thread ID to #{}: An existing thread already has that name. (Input: \"{}\")", *thread_id_out, thread_name);
+			print_warn("Failed to set thread ID to #{}: An existing thread already has that name. (Input: \"{}\")", thread_id_out, thread_name);
 
-			return std::nullopt;
+			return {};
 		}
 		//else
 		{
@@ -456,7 +456,7 @@ namespace engine
 
 				if (auto opt_variable_context = parsing_context.get_variable_context())
 				{
-					opt_variable_context->set_name(*thread_id_out);
+					opt_variable_context->set_name(thread_id_out);
 				}
 			}
 		}
@@ -465,7 +465,7 @@ namespace engine
 		return thread.thread_id;
 	}
 
-	std::optional<EntityThreadID> EntityThreadBuilder::get_thread_name() const
+	EntityThreadID EntityThreadBuilder::get_thread_name() const
 	{
 		return get_thread().thread_id;
 	}
@@ -1085,10 +1085,7 @@ namespace engine
 		{
 			MetaVariableContext::resolve_path
 			(
-				(thread_instruction.thread_id)
-					? (*thread_instruction.thread_id)
-					: (MetaSymbolID {})
-				,
+				static_cast<MetaSymbolID>(thread_instruction.thread_id),
 
 				thread_local_variable_name,
 				thread_local_variable_scope
@@ -1152,7 +1149,7 @@ namespace engine
 					thread_local_variable_target,
 
 					(thread_instruction.thread_id)
-						? EntityThreadTarget { *thread_instruction.thread_id }
+						? EntityThreadTarget { thread_instruction.thread_id }
 						: EntityThreadTarget {}
 				},
 
@@ -1738,6 +1735,8 @@ namespace engine
 		(
 			EntityThreadRange { thread_index, 1 },
 
+			get_thread().name(),
+
 			// Restart existing instance(s), if linked.
 			true
 		);
@@ -1988,7 +1987,7 @@ namespace engine
 				EntityTarget {},
 
 				// This thread. (No thread ID)
-				std::optional<EntityThreadID>(std::nullopt),
+				EntityThreadID {},
 
 				ControlBlock{ 0 }
 			);

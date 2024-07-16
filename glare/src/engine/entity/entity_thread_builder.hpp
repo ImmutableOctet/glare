@@ -305,10 +305,10 @@ namespace engine
 			// 
 			// NOTE: If a name has already been assigned, the
 			// `force` argument must be true to ensure assignment.
-			std::optional<EntityThreadID> set_thread_name(std::string_view thread_name, bool resolve_name=false, bool force=false);
+			EntityThreadID set_thread_name(std::string_view thread_name, bool resolve_name=false, bool force=false);
 
 			// Attempts to retrieve the name (thread ID) associated with the targeted `thread`.
-			std::optional<EntityThreadID> get_thread_name() const;
+			EntityThreadID get_thread_name() const;
 
 			// Identifies if the target `thread` currently has a name associated.
 			bool thread_has_name() const;
@@ -413,7 +413,7 @@ namespace engine
 					EntityTarget {},
 
 					// This thread. (No thread ID)
-					std::optional<EntityThreadID>(std::nullopt),
+					EntityThreadID {},
 
 					std::forward<Args>(args)...
 				);

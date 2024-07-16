@@ -6,10 +6,6 @@
 
 #include <util/small_vector.hpp>
 
-#include <optional>
-#include <memory>
-//#include <limits>
-
 namespace engine
 {
 	struct EntityThreadDescription
@@ -22,7 +18,7 @@ namespace engine
 		EntityThreadCadence cadence = EntityThreadCadence::Default;
 
 		// NOTE: May move this to another location later. (e.g. handle via map)
-		std::optional<EntityThreadID> thread_id;
+		EntityThreadID thread_id;
 
 		// A series of instructions to be executed in-order.
 		util::small_vector<EntityInstruction, 64> instructions; // 32 // 48
@@ -32,7 +28,7 @@ namespace engine
 			return instructions[index]; // .at(index);
 		}
 
-		inline std::optional<EntityThreadID> name() const
+		inline EntityThreadID name() const
 		{
 			return thread_id;
 		}
