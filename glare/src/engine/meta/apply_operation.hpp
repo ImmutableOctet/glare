@@ -201,15 +201,32 @@ namespace engine
 						return apply_unary_operation_exact<OutputType>(left, operation);
 
 					case MetaValueOperator::Multiply:
-						return (left * right);
+						if constexpr (std::is_same_v<std::decay_t<LeftType>, bool>)
+						{
+							return ((left) && static_cast<bool>(right));
+						}
+						else
+						{
+							return (left * right);
+						}
 
 					case MetaValueOperator::Divide:
-						return (left / right);
+						if constexpr (std::is_same_v<std::decay_t<LeftType>, bool>)
+						{
+							return ((left) && static_cast<bool>(right));
+						}
+						else
+						{
+							return (left / right);
+						}
 
 					case MetaValueOperator::Modulus:
 						if constexpr (std::is_integral_v<LeftType> && std::is_integral_v<RightType>)
 						{
-							return (left % right);
+							if constexpr (!std::is_same_v<std::decay_t<LeftType>, bool>)
+							{
+								return (left % right);
+							}
 						}
 						else
 						{
@@ -227,25 +244,34 @@ namespace engine
 
 				if constexpr (std::is_integral_v<LeftType> && std::is_integral_v<RightType>)
 				{
-					switch (operation)
+					if constexpr (std::is_same_v<std::decay_t<LeftType>, bool>)
 					{
-						case MetaValueOperator::ShiftLeft:
-							return (left << right);
-						case MetaValueOperator::ShiftRight:
-							return (left >> right);
-						case MetaValueOperator::BitwiseAnd:
-							return (left & right);
-						case MetaValueOperator::BitwiseXOR:
-							if constexpr (std::is_same_v<std::decay_t<OutputType>, bool>)
-							{
-								return (left != right);
-							}
-							else
-							{
+						switch (operation)
+						{
+							case MetaValueOperator::BitwiseAnd:
+								return (left && static_cast<bool>(right));
+							case MetaValueOperator::BitwiseOr:
+								return (left || static_cast<bool>(right));
+							case MetaValueOperator::BitwiseXOR:
+								return (left != static_cast<bool>(right));
+						}
+					}
+					else
+					{
+						switch (operation)
+						{
+							case MetaValueOperator::ShiftLeft:
+								return (left << right);
+							case MetaValueOperator::ShiftRight:
+								return (left >> right);
+
+							case MetaValueOperator::BitwiseAnd:
+								return (left & right);
+							case MetaValueOperator::BitwiseOr:
+								return (left | right);
+							case MetaValueOperator::BitwiseXOR:
 								return (left ^ right);
-							}
-						case MetaValueOperator::BitwiseOr:
-							return (left | right);
+						}
 					}
 				}
 			}
@@ -1120,7 +1146,14 @@ namespace engine
 			case MetaValueOperator::BitwiseNot:
 				if constexpr (std::is_integral_v<LeftType>)
 				{
-					return ~left;
+					if constexpr (std::is_same_v<std::decay_t<LeftType>, bool>)
+					{
+						return !left;
+					}
+					else
+					{
+						return ~left;
+					}
 				}
 
 				break;
