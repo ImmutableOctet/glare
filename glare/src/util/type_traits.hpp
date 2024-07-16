@@ -4,15 +4,18 @@
 #include <optional>
 #include <array>
 #include <iterator>
+#include <functional>
+#include <utility>
 
 #include "function_traits.hpp"
 #include "member_traits.hpp"
+#include "empty.hpp"
 
 namespace util
 {
 	namespace impl
 	{
-		template <class T, std::size_t=sizeof(T)>
+		template <typename T, std::size_t=sizeof(T)>
 		std::true_type is_complete_specialization_impl(T*);
 
 		std::false_type is_complete_specialization_impl(...);
@@ -46,6 +49,30 @@ namespace util
 		{
 			constructible_from_float(float);
 		};
+
+		template <template <typename...> typename C>
+		void get_base_template_type_impl(...);
+
+		template <template <typename...> typename Template, typename... TemplateArgs>
+		Template<TemplateArgs...>* get_base_template_type_impl(const Template<TemplateArgs...>*);
+
+		template <template <typename...> typename C>
+		std::false_type is_base_template_impl(...);
+
+		template <template <typename...> typename Template, typename... TemplateArgs>
+		std::true_type is_base_template_impl(const Template<TemplateArgs...>*);
+
+		template <template <typename...> typename Template, typename T>
+		struct is_base_template : decltype(is_base_template_impl<Template>(std::declval<T*>())) {};
+
+		template <bool result, template <typename...> typename Template, typename T>
+		struct base_template_type : is_base_template<Template, T> {};
+
+		template <template <typename...> typename Template, typename T>
+		struct base_template_type<true, Template, T> : is_base_template<Template, T>
+		{
+			using type = std::remove_pointer_t<decltype(get_base_template_type_impl<Template>(std::declval<T*>()))>;
+		};
 	}
 
 	template <typename T>
@@ -53,6 +80,21 @@ namespace util
 
 	template <typename T>
 	inline constexpr bool is_complete_specialization_v = is_complete_specialization<T>::value;
+
+	template <template <typename...> typename Template, typename T>
+	using is_base_template = impl::is_base_template<Template, T>;
+
+	template <template <typename...> typename Template, typename T>
+	inline constexpr bool is_base_template_v = is_base_template<Template, T>::value;
+
+	template <template <typename...> typename Template, typename T>
+	using base_template_type = impl::base_template_type<impl::is_base_template<Template, T>::value, Template, T>;
+
+	template <template <typename...> typename Template, typename T>
+	using base_template_type_t = base_template_type<Template, T>::type;
+
+	template <template <typename...> typename Template, typename T>
+	inline constexpr bool base_template_type_v = base_template_type<Template, T>::value;
 
 	template <typename T, template <typename...> typename Template>
 	struct is_specialization : std::false_type {};
@@ -262,4 +304,70 @@ namespace util
 
 	template <typename T>
 	inline constexpr bool is_const_ptr_v = is_const_ptr<T>::value;
+
+    template <typename T>
+    inline constexpr bool is_standard_function_type_v = is_specialization_v<T, std::function>;
+
+    template <typename T>
+    struct always_false_t : std::false_type {};
+
+    template <typename T>
+    inline constexpr bool always_false_v = always_false_t<T>::value;
+
+    template <typename T>
+    inline constexpr bool always_false = always_false_v<T>;
+
+	template <typename A, typename B>
+	using equality_comparison_result_t = decltype(std::declval<A>() == std::declval<B>());
+
+	template <typename A, typename B, typename=std::void_t<>>
+	struct is_equality_comparable : std::false_type {};
+
+	template <typename A, typename B>
+	struct is_equality_comparable<A, B, std::void_t<equality_comparison_result_t<A, B>>>
+		: std::is_same<equality_comparison_result_t<A, B>, bool> {};
+
+	template <typename A, typename B>
+	inline constexpr bool is_equality_comparable_v = is_equality_comparable<A, B>::value;
+
+	template <typename T, typename=void>
+	struct is_defined : std::false_type {};
+
+	template <typename T>
+	struct is_defined
+	<
+		T,
+
+		std::enable_if_t
+		<
+			(
+				(std::is_object<T>::value)
+				&&
+				(!std::is_pointer<T>::value)
+				&&
+				(sizeof(T) > 0)
+			)
+		>
+	> : std::true_type
+	{
+		using type = T;
+	};
+
+	template <typename T>
+	using is_defined_t = is_defined<T>::type;
+
+	template <typename T>
+	inline constexpr bool is_defined_v = is_defined<T>::value;
+
+	template <bool condition, typename T>
+	struct true_or_empty : std::conditional<condition, T, util::empty_type<T>> {};
+
+	template <bool condition, typename T>
+	using true_or_empty_t = true_or_empty<condition, T>::type;
+
+	template <typename T>
+	struct defined_or_empty : true_or_empty<is_defined_v<T>, T> {};
+
+	template <typename T>
+	using defined_or_empty_t = defined_or_empty<T>::type;
 }
