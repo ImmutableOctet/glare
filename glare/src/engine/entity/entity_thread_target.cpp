@@ -6,24 +6,33 @@
 
 namespace engine
 {
-	EntityThreadTarget::EntityThreadTarget(Type value)
-		: value(std::move(value)) {}
+	EntityThreadTarget::EntityThreadTarget(Type value) :
+		value(std::move(value))
+	{}
 
-	EntityThreadTarget::EntityThreadTarget(EntityThreadRange thread_range)
-		: value(thread_range) {}
+	EntityThreadTarget::EntityThreadTarget(EntityThreadRange thread_range) :
+		value(thread_range)
+	{}
 
-	EntityThreadTarget::EntityThreadTarget(EntityThreadID thread_id)
-		: value(thread_id) {}
+	EntityThreadTarget::EntityThreadTarget(EntityThreadID thread_id) :
+		value
+		(
+			(thread_id)
+				? Type { thread_id }
+				: Type { Empty {} }
+		)
+	{}
 
-	EntityThreadTarget::EntityThreadTarget(std::string_view thread_name)
-		: value(hash(thread_name).value())
+	EntityThreadTarget::EntityThreadTarget(std::string_view thread_name) :
+		value(hash(thread_name).value())
 	{
 		assert(!thread_name.empty());
 		//assert(hash(thread_name).value());
 	}
 
-	EntityThreadTarget::EntityThreadTarget(const std::string& thread_name)
-		: EntityThreadTarget(std::string_view(thread_name)) {}
+	EntityThreadTarget::EntityThreadTarget(const std::string& thread_name) :
+		EntityThreadTarget(std::string_view(thread_name))
+	{}
 
 	EntityThreadTarget& EntityThreadTarget::operator=(EntityThreadRange thread_range)
 	{

@@ -39,12 +39,17 @@ namespace engine
 		EntityThreadTarget& operator=(std::string_view thread_name);
 		EntityThreadTarget& operator=(const std::string& thread_name);
 
-		inline operator const Type& () const
+		bool empty() const;
+
+		inline operator const Type&() const
 		{
 			return value;
 		}
 
-		bool empty() const;
+		inline explicit operator bool() const
+		{
+			return (!empty());
+		}
 
 		bool operator==(const EntityThreadTarget&) const noexcept = default;
 		bool operator!=(const EntityThreadTarget&) const noexcept = default;
