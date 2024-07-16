@@ -17,7 +17,7 @@ target_sources(
     "collision_cast.cpp"
     "collision_motion_state.cpp"
     "kinematic_resolution_config.cpp"
-    "reflection.cpp"
+    #"reflection.cpp"
 )
 
 #set_property(TARGET glare_engine_world_physics PROPERTY CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
@@ -31,4 +31,4 @@ target_sources(
 #)
 
 find_package(Bullet CONFIG REQUIRED)
-target_link_libraries(glare_engine PUBLIC ${BULLET_LIBRARIES}) # glare_engine_world_physics
+target_link_libraries(glare_engine PRIVATE ${BULLET_LIBRARIES}) # glare_engine_world_physics

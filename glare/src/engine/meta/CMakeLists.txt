@@ -18,7 +18,7 @@ target_sources(
     "meta_event_listener.cpp"
     "meta_type_descriptor.cpp"
     "meta_variable.cpp"
-    "reflection.cpp"
+    #"reflection.cpp"
     "meta_value_operation.cpp"
     "meta_function_call.cpp"
     "meta_type_reference.cpp"
@@ -40,6 +40,7 @@ target_sources(
     "function.cpp"
     "cast.cpp"
     "meta_property.cpp"
+    "common_members.cpp"
 )
 
 #target_link_libraries(

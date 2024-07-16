@@ -6,7 +6,7 @@ target_sources(
     PRIVATE
 
     "delta_system.cpp"
-    "reflection.cpp"
+    #"reflection.cpp"
 
     "components/delta_component.cpp"
     "components/lifetime_delta_component.cpp"

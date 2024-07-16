@@ -4,4 +4,7 @@ target_sources(
     PRIVATE
 
     "script.cpp"
+    "script_interface.cpp"
+    "script_state_interface.cpp"
+    "script_runtime_impl.cpp"
 )

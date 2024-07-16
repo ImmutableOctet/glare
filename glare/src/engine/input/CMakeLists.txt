@@ -4,15 +4,15 @@ target_sources(
     glare_engine # glare_engine_input
     
     PRIVATE
-
-    "analog.cpp"
-    "buttons.cpp"
+    
     "input_event.cpp"
     "input_state.cpp"
     "input_system.cpp"
 
+    "analog.cpp"
+
     # TODO: Move to another target, etc.
-    "reflection.cpp"
+    #"reflection.cpp"
 )
 
 #target_link_libraries(

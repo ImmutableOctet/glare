@@ -1,9 +1,14 @@
-cmake_minimum_required(VERSION 3.23) # 3.14
+cmake_minimum_required(VERSION 3.28)
 
 include(cmake/prelude.cmake)
 
 include(cmake/project-is-top-level.cmake)
 include(cmake/variables.cmake)
+
+include(cmake/reflection.cmake)
+include(cmake/gather_shared_sources.cmake)
+include(cmake/ignore_list.cmake)
+include(cmake/unity-build.cmake)
 
 #set(CMAKE_BUILD_PARALLEL_LEVEL, 4)
 
@@ -16,35 +21,37 @@ endif()
 
 project(
     glare
-    VERSION 0.1.0
-    DESCRIPTION "WIP Game Engine"
+    VERSION 0.2.0
+    DESCRIPTION "Glare - Open Source Game Engine"
     HOMEPAGE_URL "https://github.com/ImmutableOctet/glare"
     LANGUAGES CXX
 )
 
-if (MSVC)
-    #if($<CONFIG:Debug>)
+# TODO: Revisit when we start using C++20 modules.
+# Disabled for now.
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+
+#if($<CONFIG:Debug>)
+    if (MSVC)
         add_compile_options(/ZI)
         add_link_options(/DEBUG:FASTLINK /INCREMENTAL)
-    #endif()
-endif()
+    endif()
 
-# Engine source code
+    add_compile_definitions(GLARE_DEBUG=1)
+#endif()
+
+# Glare Engine source code.
+# TODO: Remove to `src`, rather than `glare/src` subdirectory.
 add_subdirectory("glare/src")
 
-# ---- Declare executables ----
-
-# Game
-add_subdirectory("glare/project_glare")
-
-# Scene Editor
-add_subdirectory("glare/scene_editor")
+# ---- Post-build operations ----
+include(cmake/post-build.cmake)
 
 # ---- Install rules ----
 
-if(NOT CMAKE_SKIP_INSTALL_RULES)
-  include(cmake/install-rules.cmake)
-endif()
+#if(NOT CMAKE_SKIP_INSTALL_RULES)
+#  include(cmake/install-rules.cmake)
+#endif()
 
 # ---- Developer mode ----
 

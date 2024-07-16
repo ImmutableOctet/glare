@@ -73,14 +73,15 @@
       "name": "flags-windows",
       "description": "Note that all the flags after /W4 are required for MSVC to conform to the language standard",
       "hidden": true,
-      "cacheVariables": {
-        //"CMAKE_CXX_FLAGS": "/MP /Zm100 /utf-8 /w14165 /w44242 /w44254 /w44263 /w34265 /w34287 /w44296 /w44365 /w44388 /w44464 /w14545 /w14546 /w14547 /w14549 /w14555 /w34619 /w34640 /w24826 /w14905 /w14906 /w14928 /w45038 /W4 /permissive- /volatile:iso /Zc:preprocessor /Zc:__cplusplus /Zc:externConstexpr /Zc:throwingNew /EHsc /bigobj /D _SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING"
-        //"CMAKE_CXX_FLAGS": "/MP /Zm100 /W3 /WX- /permissive- /EHsc /sdl /JMC /ZI /bigobj /D _SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING" // /MP /Zm100
-        "CMAKE_CXX_FLAGS": "/JMC /ZI /MP16 /Zm200 /utf-8 /W3 /permissive- /volatile:iso /Zc:preprocessor /Zc:__cplusplus /Zc:externConstexpr /Zc:throwingNew /EHsc /bigobj /D _SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING", //, // /Zm100
-        "CMAKE_LINKER": "lld-link",
-        "CMAKE_CXX_LINK_EXECUTABLE": "<CMAKE_LINKER> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> <LINK_LIBRARIES> /out:<TARGET>"//,
-        //"CMAKE_VS_JUST_MY_CODE_DEBUGGING": "ON"
-      }
+        "cacheVariables": {
+            //"CMAKE_CXX_FLAGS": "/MP /Zm100 /utf-8 /w14165 /w44242 /w44254 /w44263 /w34265 /w34287 /w44296 /w44365 /w44388 /w44464 /w14545 /w14546 /w14547 /w14549 /w14555 /w34619 /w34640 /w24826 /w14905 /w14906 /w14928 /w45038 /W4 /permissive- /volatile:iso /Zc:preprocessor /Zc:__cplusplus /Zc:externConstexpr /Zc:throwingNew /EHsc /bigobj /D _SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING"
+            //"CMAKE_CXX_FLAGS": "/MP /Zm100 /W3 /WX- /permissive- /EHsc /sdl /JMC /ZI /bigobj /D _SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING" // /MP /Zm100
+            //"CMAKE_CXX_FLAGS": "/JMC /ZI /MP16 /Zm200 /utf-8 /W3 /volatile:iso /Zc:preprocessor /Zc:externConstexpr /Zc:throwingNew /EHsc /bigobj /D _SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING", //, // /Zm100 // /Zc:__cplusplus // /std:c++latest // /permissive-
+            "CMAKE_CXX_FLAGS": "/JMC /ZI /MP16 /Zm200 /utf-8 /W3 /permissive- /volatile:iso /Zc:preprocessor /Zc:__cplusplus /Zc:externConstexpr /Zc:throwingNew /EHsc /bigobj /D _SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING" //, // /Zm100
+            //"CMAKE_LINKER": "lld-link",
+            //"CMAKE_CXX_LINK_EXECUTABLE": "<CMAKE_LINKER> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> <LINK_LIBRARIES> /out:<TARGET>" //,
+            //"CMAKE_VS_JUST_MY_CODE_DEBUGGING": "ON"
+        }
     },
     {
       "name": "ci-unix",

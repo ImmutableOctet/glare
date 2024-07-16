@@ -6,7 +6,7 @@ target_sources(
     PRIVATE
 
     "world.cpp"
-    "reflection.cpp"
+    #"reflection.cpp"
     "world_system.cpp"
     "entity.cpp"
     "graphics_entity.cpp"

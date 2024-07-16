@@ -1,8 +1,26 @@
 project(glareTests LANGUAGES CXX)
 
+set(GLARE_USE_BOOST_PFR 1)
+#set(GLARE_USE_BOOST_REFLECT 1)
+
+if (GLARE_USE_BOOST_PFR)
+    add_compile_definitions(GLARE_BOOST_PFR_ENABLED=1)
+endif()
+
 # ---- Dependencies ----
 
-find_package(Catch2 REQUIRED)
+#find_package(Catch2 REQUIRED)
+
+include(FetchContent)
+
+FetchContent_Declare(
+  Catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG        v3.4.0 # or a later release
+)
+
+FetchContent_MakeAvailable(Catch2)
+
 include(Catch)
 
 # ---- Tests ----
@@ -26,6 +44,7 @@ add_executable(
     
     "src/math/conversion.cpp"
     "src/util/vector_queue.cpp"
+    "src/game/game_stub.cpp"
 )
 
 target_compile_features(glare_test PRIVATE cxx_std_23)
@@ -36,10 +55,11 @@ target_link_libraries(
     PRIVATE
     
     # glare
-    glare_core
-    #glare_graphics
+    glare_app
     glare_engine
-
+    glare_engine_reflection
+    glare_core
+    glare_graphics
     glare_script
 
     Catch2::Catch2WithMain

@@ -16,7 +16,7 @@ target_sources(
     "event_trigger_condition.cpp"
     "state_storage_manager.cpp"
 
-    "reflection.cpp"
+    #"reflection.cpp"
     "entity_factory_context.cpp"
     "serial.cpp"
     "entity_state_action.cpp"
