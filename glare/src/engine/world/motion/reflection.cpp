@@ -17,7 +17,6 @@
 #include "components/orientation_component.hpp"
 #include "components/rotate_component.hpp"
 #include "components/focus_component.hpp"
-#include "components/orbit_component.hpp"
 
 #include "motion_events.hpp"
 
@@ -225,17 +224,6 @@ namespace engine
 			.data<&FocusComponent::target>("target"_hs)
 			.data<&FocusComponent::focus_offset>("focus_offset"_hs)
 			.data<&FocusComponent::tracking_speed>("tracking_speed"_hs)
-		;
-	}
-
-	template <>
-	void reflect<OrbitComponent>()
-	{
-		engine_meta_type<OrbitComponent>()
-			.data<&OrbitComponent::movement_speed>("movement_speed"_hs)
-			.data<&OrbitComponent::distance>("distance"_hs)
-			.data<&OrbitComponent::min_distance>("min_distance"_hs)
-			.data<&OrbitComponent::max_distance>("max_distance"_hs)
 		;
 	}
 

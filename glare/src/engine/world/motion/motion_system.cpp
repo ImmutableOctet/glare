@@ -12,7 +12,6 @@
 #include "components/deceleration_component.hpp"
 #include "components/directional_influence_component.hpp"
 #include "components/focus_component.hpp"
-#include "components/orbit_component.hpp"
 #include "components/direction_component.hpp"
 #include "components/orientation_component.hpp"
 #include "components/rotate_component.hpp"
@@ -66,10 +65,6 @@ namespace engine
 		handle_deceleration(delta);
 		update_focus(delta);
 		update_turning_objects(delta);
-
-		// TODO: Look into whether it makes more sense to only update
-		// orbiting objects during transform changes.
-		update_orbiting_objects(delta);
 	}
 
 	void MotionSystem::apply_velocity(float delta)
@@ -200,49 +195,6 @@ namespace engine
 
 				entity_transform.set_direction_vector(focus_direction, (focus.tracking_speed * delta));
 				*/
-			}
-		);
-	}
-
-	void MotionSystem::update_orbiting_objects(float delta)
-	{
-		auto& registry = get_registry();
-
-		registry.view<RelationshipComponent, TransformComponent, OrbitComponent>().each
-		(
-			[&](const Entity entity, const RelationshipComponent& relationship, TransformComponent& tform_comp, OrbitComponent& orbit)
-			{
-				auto target = relationship.get_parent();
-				auto focus_offset = math::Vector {};
-
-				if (const auto* focus = registry.try_get<FocusComponent>(entity))
-				{
-					if (focus->target != null)
-					{
-						target = focus->target;
-					}
-
-					focus_offset = focus->focus_offset;
-				}
-
-				if (target == null)
-				{
-					return;
-				}
-
-				auto target_tform = Transform(registry, target);
-
-				const auto target_position = (target_tform.get_position() + focus_offset);
-
-				// TODO: Move into update event for `OrbitComponent`.
-				orbit.distance = math::clamp(orbit.distance, orbit.min_distance, orbit.max_distance);
-
-				auto entity_tform = Transform(registry, entity, relationship, tform_comp);
-
-				//entity_tform.look_at(target_position);
-
-				entity_tform.set_position(target_position);
-				entity_tform.move({ 0.0f, 0.0f, orbit.distance }, true);
 			}
 		);
 	}
