@@ -3,8 +3,8 @@
 #include "types.hpp"
 #include "event_trigger_condition.hpp"
 #include "entity_variables.hpp"
+#include "entity_thread_flags.hpp"
 #include "entity_thread_cadence.hpp"
-
 #include "entity_thread_fiber.hpp"
 
 #include <optional>
@@ -12,71 +12,14 @@
 
 namespace engine
 {
-	struct EntityThreadFlags
-	{
-		// If a thread is detached, it will continue to execute even when the active state changes.
-		// (By default, threads are terminated upon state change; i.e. attached)
-		//
-		// NOTES:
-		// 
-		// * A thread can be detached (meaning it'll run indefinitely), but still
-		//   be linked (meaning it can be referenced by name). This allows the user to control
-		//   when a thread stops execution, rather than being subjected to forced termination.
-		//
-		// * All threads (regardless of attachment or link status) are terminated when
-		//   the thread instance is destroyed or otherwise removed. (see: `EntityThreadComponent`)
-		//   
-		//   By definition, this means that a thread cannot outlive the entity that spawned it.
-		bool is_detached : 1 = false;
-
-		// By default, threads take on a 'linked' state, which ensures that
-		// only one instance of a given thread is executing per-entity.
-		//
-		// If a thread is unlinked, it will continue to execute until stopped/terminated, but will
-		// not block the creation of another instance pointing to the same `EntityThreadDescription` object.
-		//
-		// Linked threads are able to be referenced by name.
-		bool is_linked : 1 = true;
-
-		// Indicates if this thread has been paused.
-		// 
-		// A paused thread must be resumed by another thread (or rule-trigger) to proceed.
-		bool is_paused : 1 = false;
-
-		// Indicates if this thread is currently awaiting an event.
-		// 
-		// A thread that is yielding cannot continue execution
-		// until its trigger condition has been satisfied.
-		// 
-		// See also: `EntityListener`
-		bool is_yielding : 1 = false;
-
-		// Indicates whether this thread has reached a termination point.
-		bool is_complete : 1 = false;
-
-		// The cadence of this thread; used to control rate of execution.
-		EntityThreadCadence cadence = EntityThreadCadence::Default;
-
-		// A thread is considered suspended if it cannot continue
-		// work until an external operation takes place.
-		// (e.g. a 'resume' operation or a yield-condition being met)
-		bool is_suspended() const
-		{
-			return (is_paused || is_yielding || is_complete);
-		}
-
-		bool is_sleeping() const
-		{
-			return is_paused;
-		}
-	};
-
 	struct EntityThread : public EntityThreadFlags // protected
 	{
 		public:
 			using InstructionIndex = EntityInstructionIndex;
 
 			using ThreadLocalVariables = EntityVariables<8>;
+
+			EntityThread() = default;
 
 			EntityThread
 			(
@@ -122,39 +65,64 @@ namespace engine
 			bool yield();
 			bool unyield(EntityInstructionCount instruction_advancement=1);
 
-			bool sleep()
+			inline bool sleep()
 			{
 				return pause();
 			}
 
-			bool wake()
+			inline bool wake()
 			{
 				return resume();
 			}
 
-			bool play()
+			inline bool play()
 			{
 				return resume();
 			}
 
-			void clear_fiber()
+			inline void clear_fiber()
 			{
 				active_fiber = {};
 			}
 
-			void set_fiber(EntityThreadFiber&& fiber)
+			inline void set_fiber(EntityThreadFiber&& fiber)
 			{
 				active_fiber = std::move(fiber);
 			}
 
-			EntityThreadFiber& get_fiber()
+			inline void set_fiber(ScriptFiber&& fiber)
+			{
+				active_fiber = { std::move(fiber) };
+			}
+
+			inline EntityThreadFiber& get_fiber()
 			{
 				return active_fiber;
 			}
 
-			bool has_fiber() const
+			inline const EntityThreadFiber& get_fiber() const
+			{
+				return active_fiber;
+			}
+
+			inline bool has_fiber() const
 			{
 				return active_fiber.exists();
+			}
+
+			inline std::optional<EntityStateIndex> get_state_index() const
+			{
+				if (has_state_index())
+				{
+					return state_index;
+				}
+
+				return std::nullopt;
+			}
+
+			inline bool has_state_index() const
+			{
+				return (state_index != ENTITY_STATE_INDEX_INVALID);
 			}
 
 			// Attempts to allocate a `ThreadLocalVariables` object, managed internally.
@@ -167,14 +135,14 @@ namespace engine
 
 			// An identifier used to locate the underlying
 			// `EntityThreadDescription` data for this thread.
-			EntityThreadIndex thread_index;
+			EntityThreadIndex thread_index = ENTITY_THREAD_INDEX_INVALID;
 
 			// An index pointing to the next instruction,
 			// found in `EntityThreadDescription`.
-			InstructionIndex next_instruction = 0;
+			InstructionIndex next_instruction = ENTITY_INSTRUCTION_INDEX_INVALID;
 
 			// An index representing the state this thread was instantiated from.
-			std::optional<EntityStateIndex> state_index;
+			EntityStateIndex state_index = ENTITY_STATE_INDEX_INVALID;
 
 			// An identifier used to represent this thread.
 			EntityThreadID thread_id = {};
@@ -182,10 +150,21 @@ namespace engine
 			// An identifier used to represent this thread's parent.
 			EntityThreadID parent_thread_id = {};
 
+			// Optional pointer to a container of thread-local variables.
+			std::shared_ptr<ThreadLocalVariables> variables;
+
 			// The active fiber to be executed, if any.
 			EntityThreadFiber active_fiber;
 
-			// Optional pointer to a container of thread-local variables.
-			std::shared_ptr<ThreadLocalVariables> variables;
+		private:
+			static constexpr EntityStateIndex resolve_state_index(std::optional<EntityStateIndex> state_index)
+			{
+				if (state_index)
+				{
+					return *state_index;
+				}
+
+				return ENTITY_STATE_INDEX_INVALID;
+			}
 	};
 }

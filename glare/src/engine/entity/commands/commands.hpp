@@ -9,6 +9,7 @@
 #include "entity_thread_unlink_command.hpp"
 #include "entity_thread_skip_command.hpp"
 #include "entity_thread_rewind_command.hpp"
+#include "entity_thread_fiber_spawn_command.hpp"
 
 #include "state_activation_command.hpp"
 #include "state_change_command.hpp"

@@ -91,7 +91,7 @@ namespace engine
 
 		if (state_index)
 		{
-			if (!keep_existing_state || !this->state_index.has_value())
+			if ((!keep_existing_state) || (!has_state_index()))
 			{
 				this->state_index = *state_index;
 			}
