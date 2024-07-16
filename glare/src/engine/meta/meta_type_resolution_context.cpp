@@ -6,7 +6,6 @@
 #include "indirection.hpp"
 #include "data_member.hpp"
 
-#include <util/string.hpp>
 //#include <util/parse.hpp>
 
 #include <algorithm>
@@ -23,103 +22,15 @@ namespace engine
 		return resolve(name_id);
 	}
 
-	// TODO: Move to a different location.
-	template <typename Callback>
-    static void generate_simplified_type_names
-	(
-		Callback&& callback,
-
-		std::string_view prefix,
-		std::string_view suffix,
-		std::string_view opt_snake_prefix={}
-	)
-    {
-        for (const auto& type_entry : entt::resolve())
-        {
-            const auto& type_id = type_entry.first;
-            const auto& type = type_entry.second;
-
-            const auto& type_info = type.info();
-            const auto type_name = type_info.name();
-
-			if (!suffix.empty())
-			{
-				if (!type_name.ends_with(suffix))
-				{
-					continue;
-				}
-			}
-
-            auto short_name = as_short_name(type_name);
-
-			if (!prefix.empty())
-			{
-				if (!short_name.starts_with(prefix))
-				{
-					continue;
-				}
-			}
-
-			auto short_name_no_prefix = short_name.substr(prefix.length());
-            auto short_name_no_prefix_no_suffix = short_name_no_prefix.substr(0, short_name_no_prefix.length() - suffix.length());
-
-            auto snake_name = util::camel_to_snake_case(short_name_no_prefix_no_suffix);
-            auto snake_name_reversed = util::reverse_from_separator(snake_name, "_");
-
-            std::string snake_name_no_prefix; // std::string_view
-
-            if (!opt_snake_prefix.empty())
-            {
-                if (snake_name.starts_with(opt_snake_prefix))
-                {
-                    snake_name_no_prefix = snake_name.substr(opt_snake_prefix.length()+1);
-					snake_name_reversed = snake_name_reversed.substr(0, snake_name.length()-opt_snake_prefix.length()-1);
-                }
-            }
-
-            if constexpr
-            (
-                std::is_invocable_r_v
-                <
-                    bool, Callback,
-                    decltype(type_id), decltype(type),
-                    decltype(short_name), decltype(short_name_no_prefix_no_suffix),
-                    decltype(snake_name), decltype(snake_name_reversed), decltype(snake_name_no_prefix)
-                >
-            )
-            {
-                if (!callback(type_id, type, short_name, short_name_no_prefix_no_suffix, std::move(snake_name), std::move(snake_name_reversed), std::move(snake_name_no_prefix)))
-                {
-                    break;
-                }
-            }
-            else
-            {
-                callback(type_id, type, short_name, short_name_no_prefix_no_suffix, std::move(snake_name), std::move(snake_name_reversed), std::move(snake_name_no_prefix));
-            }
-        }
-    }
-
 	MetaTypeResolutionContext MetaTypeResolutionContext::generate(bool standard_mapping, bool reverse_mapping)
 	{
-		using namespace engine::literals;
+		return generate(standard_mapping, reverse_mapping, [](auto&& type_name) { return as_short_name(std::forward<decltype(type_name)>(type_name)); });
+	}
 
-		MetaTypeResolutionContext context;
-
+	MetaTypeResolutionContext& MetaTypeResolutionContext::cleanup_generated_aliases(MetaTypeResolutionContext& context)
+	{
 		// Components:
 		auto& components = context.component_aliases;
-
-		generate_aliases
-		(
-			components,
-			
-			{},
-			"Component",
-
-			standard_mapping,
-			reverse_mapping
-			//, "entity"
-		);
 
 		// Removed due to conflict with `Entity::state` property.
 		components.erase("state");
@@ -139,41 +50,11 @@ namespace engine
 		// Commands:
 		auto& commands = context.command_aliases;
 
-		generate_aliases
-		(
-			commands,
-			
-			{},
-			"Command",
-
-			standard_mapping,
-			reverse_mapping,
-
-			// Removes need for `entity` prefix on some commands.
-			// (e.g. `entity_thread_resume` becomes `thread_resume`)
-			"entity"
-		);
-
 		// Removed due to conflict with extension member-function of `Entity`.
 		commands.erase("set_parent");
 		
 		// Instructions:
 		auto& instructions = context.instruction_aliases;
-
-		generate_aliases
-		(
-			instructions,
-			
-			"instructions::",
-			{},
-
-			standard_mapping,
-			false, // reverse_mapping,
-
-			// Removes need for `entity` prefix on some instructions.
-			// (e.g. `entity_thread_instruction` becomes `thread_instruction`)
-			"entity"
-		);
 
 		instructions["terminate"] = instructions["stop"];
 		instructions["wait"]      = instructions["yield"];
@@ -190,18 +71,6 @@ namespace engine
 		// Systems:
 		auto& systems = context.system_aliases;
 
-		generate_aliases
-		(
-			systems,
-			
-			{},
-
-			"System",
-
-			standard_mapping,
-			reverse_mapping
-		);
-
 		// Ensure we don't have a name conflict between the built-in
 		// `entity` command (i.e. 'target' syntax) and the `EntitySystem` type.
 		systems.erase("entity");
@@ -214,84 +83,7 @@ namespace engine
 		services["service"] = "Service";
 		services["world"] = "World";
 
-		// Global namespace:
-		auto& global_namespace = context.global_namespace;
-
-		// Enumerate every reflected type, checking if the
-		// `global namespace` property has been set:
-		for (const auto& type_entry : entt::resolve())
-		{
-			const auto& type = type_entry.second;
-
-			if (type_has_global_namespace_flag(type))
-			{
-				// Alternative implementation:
-				// 
-				// NOTE: Unused due to differing identifier from what can be used with `resolve`.
-				// 
-				// EnTT may be reporting a hash of the original type name,
-				// rather than the "custom" (e.g. shortened) type name?
-				// 
-				//const auto& type_id = type_entry.first;
-
-				const auto type_id = type.id();
-
-				global_namespace.emplace_back(type_id);
-			}
-		}
-
 		return context;
-	}
-
-	std::size_t MetaTypeResolutionContext::generate_aliases
-	(
-		AliasContainer& container_out,
-		std::string_view prefix,
-		std::string_view suffix,
-		bool standard_mapping, bool reverse_mapping,
-		std::string_view opt_snake_prefix
-	)
-	{
-		std::size_t count = 0;
-
-		generate_simplified_type_names
-		(
-			[&container_out, standard_mapping, reverse_mapping, opt_snake_prefix, &count]
-			(
-				auto&& type_id, auto&& type,
-				std::string_view short_name, std::string_view short_name_no_prefix_no_suffix,
-				std::string&& snake_name, std::string&& snake_name_reversed, std::string&& snake_name_no_prefix
-			)
-			{
-				if (standard_mapping)
-				{
-					container_out[std::move(snake_name)] = short_name;
-
-					count++;
-
-					if (!snake_name_no_prefix.empty())
-					{
-						container_out[std::move(snake_name_no_prefix)] = short_name;
-
-						count++;
-					}
-				}
-
-				if (reverse_mapping)
-				{
-					container_out[std::move(snake_name_reversed)] = short_name;
-
-					count++;
-				}
-			},
-
-			prefix,
-			suffix,
-
-			opt_snake_prefix
-		);
-
-		return count;
 	}
 
 	std::string_view MetaTypeResolutionContext::resolve_alias(const AliasContainer& container, std::string_view alias)
