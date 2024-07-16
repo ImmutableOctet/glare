@@ -26,19 +26,19 @@ namespace glare
 	using NativeScriptID = engine::StringHash;
 
 	template <NativeScriptID native_script_id>
-	ScriptFiber script(engine::Script& self, engine::Registry& registry, engine::Entity entity, const engine::MetaEvaluationContext& context)
+	engine::ScriptFiber script(engine::Script& self, engine::Registry& registry, engine::Entity entity, const engine::MetaEvaluationContext& context)
 	{
 		co_yield ScriptControlFlowToken::Complete;
 	}
 
 	template <NativeScriptID native_script_id>
-	ScriptFiber script(engine::Registry& registry, engine::Entity entity, const engine::MetaEvaluationContext& context)
+	engine::ScriptFiber script(engine::Registry& registry, engine::Entity entity, const engine::MetaEvaluationContext& context)
 	{
 		co_yield ScriptControlFlowToken::Complete;
 	}
 
 	template <NativeScriptID native_script_id>
-	ScriptFiber script(engine::ScriptHandle& script_handle_out, engine::Registry& registry, engine::Entity entity, const engine::MetaEvaluationContext& context)
+	engine::ScriptFiber script(engine::ScriptHandle& script_handle_out, engine::Registry& registry, engine::Entity entity, const engine::MetaEvaluationContext& context)
 	{
 		co_yield ScriptControlFlowToken::Complete;
 	}
