@@ -158,7 +158,7 @@ namespace engine
 
 		struct Sleep : Thread
 		{
-			Timer::Duration duration;
+			Timer::Duration duration = {};
 
 			bool check_linked = true;
 
@@ -194,7 +194,7 @@ namespace engine
 		struct Rewind : Thread
 		{
 			// Number of instructions to be moved backward by.
-			EntityInstructionCount instructions_rewound; // ControlBlock
+			EntityInstructionCount instructions_rewound = {}; // ControlBlock
 
 			bool check_linked = true;
 
@@ -214,8 +214,8 @@ namespace engine
 
 		struct CadenceControlBlock
 		{
-			EntityThreadCadence cadence; // = EntityThreadCadence::Default;
-			//EntityThreadCadence prev_cadence; // = EntityThreadCadence::Default;
+			EntityThreadCadence cadence = EntityThreadCadence::Default;
+			//EntityThreadCadence prev_cadence = EntityThreadCadence::Default;
 
 			// Number of subsequent instructions to be
 			// included in this 'cadence' block.
