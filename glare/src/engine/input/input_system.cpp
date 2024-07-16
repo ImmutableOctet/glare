@@ -284,15 +284,17 @@ namespace engine
 		}
 
 		// State index counter.
-		StateIndex index = 0;
+		StateIndex state_index = 0;
 
 		// Enumerate all input states, checking for changes:
 		for (auto& state_data : states)
 		{
+			emit_continuous_input_events(state_data.next, state_index);
+
 			if (state_data.state_has_changed)
 			{
 				// Trigger the 'state changed' event; `OnInput`.
-				service->event<OnInput>(service, std::monostate{}, index, state_data.next, state_data.previous);
+				service->event<OnInput>(service, std::monostate {}, state_index, state_data.next, state_data.previous);
 
 				// Copy the current state into the previous state.
 				state_data.previous = state_data.next;
@@ -305,11 +307,19 @@ namespace engine
 				state_data.state_has_changed = false;
 			}
 
-			//print("MOVE: {}", state_data.next.directional_input.movement);
-
 			// Must increment; `continue` not allowed.
-			index++;
+			state_index++;
 		}
+	}
+
+	void InputSystem::emit_continuous_input_events(const InputState& state, StateIndex state_index)
+	{
+		// Trigger the continuous 'current input state' event; `OnInputState`.
+		service->event<OnInputState>(service, std::monostate {}, state_index, state);
+
+		const auto& directional_input = state.directional_input;
+
+		directional_input.emit_continuous_input_events(*service, state_index, state);
 	}
 
 	void InputSystem::on_state_update(StateData& state_data)

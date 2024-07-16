@@ -86,6 +86,9 @@ namespace engine
 		// An alias to the `state_index` field; represents the player that caused this input event.
 		inline PlayerIndex player_index() const { return static_cast<PlayerIndex>(state_index); }
 
+		// An alias to the `state` field; represents the current input state.
+		inline const InputState& get_state() const { return state; }
+
 		// Indicates the internal variant-index of `source`.
 		std::size_t source_index() const;
 

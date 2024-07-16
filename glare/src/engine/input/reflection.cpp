@@ -79,6 +79,14 @@ namespace engine
 	}
 
 	template <>
+	void reflect<OnInputState>()
+	{
+		engine_meta_type<OnInputState>()
+			.base<OnInput>()
+		;
+	}
+
+	template <>
 	void reflect<ButtonEvent>()
 	{
 		engine_meta_type<ButtonEvent>()
@@ -94,6 +102,14 @@ namespace engine
 			.data<&OnAnalogInput::analog>("analog"_hs)
 			.data<&OnAnalogInput::value>("value"_hs)
 			.data<&OnAnalogInput::angle>("angle"_hs)
+		;
+	}
+
+	template <>
+	void reflect<OnAnalogInputState>()
+	{
+		engine_meta_type<OnAnalogInputState>()
+			.base<OnAnalogInput>()
 		;
 	}
 
@@ -408,7 +424,7 @@ namespace engine
 	}
 
 	template <>
-	void reflect<InputSystem>()
+	GLARE_GAME_API void reflect<InputSystem>()
 	{
 		// Primitives:
 		reflect<Button>();
@@ -420,11 +436,13 @@ namespace engine
 		// Events:
 		reflect<InputEvent>();
 		reflect<OnInput>();
+		reflect<OnInputState>();
 		reflect<ButtonEvent>();
 		reflect<OnButtonPressed>();
 		reflect<OnButtonReleased>();
 		reflect<OnButtonDown>(); // OnButtonHeld
 		reflect<OnAnalogInput>();
+		reflect<OnAnalogInputState>();
 
 		// Raw device states:
 		reflect<app::input::MouseState>();
