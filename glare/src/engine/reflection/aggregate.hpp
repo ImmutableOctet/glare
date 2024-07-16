@@ -13,6 +13,10 @@
 #include <string_view>
 #include <utility>
 
+#if (GLARE_BOOST_PFR_ENABLED) // || (GLARE_BOOST_REFLECT_ENABLED)
+	#define GLARE_AGGREGATE_REFLECTION_SUPPORTED 1
+#endif
+
 namespace engine
 {
 	namespace impl
@@ -34,12 +38,12 @@ namespace engine
 		namespace boost_pfr
 		{
 			template <typename T, bool recursive=true>
-			auto& reflect_aggregate_fields(auto& type, auto&& new_type_fn)
+			auto& reflect_aggregate_fields_impl(auto& type, auto&& recurse_fn)
 			{
 				// NOTE: Recursion handled at this level, rather than via `enumerate_aggregate_fields`.
 				util::enumerate_aggregate_fields<T, false>
 				(
-					[&type, &new_type_fn]<typename SelfType, typename MemberType, auto member_count, auto member_index, const auto& member_name, auto member_id>()
+					[&type, &recurse_fn]<typename SelfType, typename MemberType, auto member_count, auto member_index, const auto& member_name, auto member_id>()
 					{
 						static_assert(!std::is_same_v<std::remove_reference_t<SelfType>, std::remove_reference_t<MemberType>>);
 
@@ -49,7 +53,7 @@ namespace engine
 							{
 								if (!impl::type_has_data_member_exclusive(engine::resolve<MemberType>()))
 								{
-									reflect_aggregate_fields<MemberType, recursive>(new_type_fn);
+									recurse_fn.operator()<MemberType>();
 								}
 							}
 						}
@@ -111,20 +115,21 @@ namespace engine
 			static_assert(false, "Support for Boost-ext reflect is unfinished.")
 		}
 #endif // GLARE_BOOST_REFLECT_ENABLED
-	}
 
 #if GLARE_BOOST_PFR_ENABLED
-	using impl::boost_pfr::reflect_aggregate_fields;
+		using boost_pfr::reflect_aggregate_fields_impl;
 #elif GLARE_BOOST_REFLECT_ENABLED
-	using impl::boost_reflect::reflect_aggregate_fields;
+		using boost_reflect::reflect_aggregate_fields_impl;
 #endif
+	}
+
 
 	template <typename T, bool recursive=true>
-	auto reflect_aggregate_fields(auto&& new_type_fn)
+	auto reflect_aggregate_fields(auto&& new_type_fn, auto&& recurse_fn)
 	{
 		auto type = new_type_fn.operator()<T>();
 
-		reflect_aggregate_fields<T, recursive>(type, std::forward<decltype(new_type_fn)>(new_type_fn));
+		impl::reflect_aggregate_fields_impl<T, recursive>(type, std::forward<decltype(recurse_fn)>(recurse_fn));
 
 		return type;
 	}
@@ -132,12 +137,23 @@ namespace engine
 	template <typename T, bool recursive=true>
 	decltype(auto) reflect_aggregate_fields()
 	{
+		auto new_type_fn = []<typename NewType>()
+		{
+			return engine_meta_type<NewType>();
+		};
+
+		auto recurse_fn = []<typename MemberType>()
+		{
+			// Alternative implementation:
+			//reflect_aggregate_fields<MemberType, recursive>(new_type_fn);
+
+			reflect<MemberType>();
+		};
+
 		return reflect_aggregate_fields<T, recursive>
 		(
-			[]<typename NewType>()
-			{
-				return engine_meta_type<NewType>();
-			}
+			new_type_fn,
+			recurse_fn
 		);
 	}
 }
