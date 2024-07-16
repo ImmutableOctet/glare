@@ -19,11 +19,11 @@ namespace engine
 		//path = path.lexically_normal();
 
 #ifdef _WIN32
+		auto path_raw = path.string();
+
 		// NOTE: Unfortunately, direct access to the internal buffer of `path` is not provided by the standard.
 		// We retrieve a copy of the path here just to perform the back slash -> slash conversion.
-		using path_symbol_t = PathType::value_type;
-
-		auto path_raw = path.string();
+		using path_symbol_t = typename decltype(path_raw)::value_type; // PathType::value_type;
 
 		// Replace backslashes with slashes on Windows platforms.
 		std::replace(path_raw.begin(), path_raw.end(), static_cast<path_symbol_t>('\\'), static_cast<path_symbol_t>('/'));
@@ -45,7 +45,7 @@ namespace engine
 	}
 
 	template <typename ExistsFunction>
-	EntityFactoryContext::PathType EntityFactoryContext::resolve_path_impl(const PathType& path, const PathType& base_path, ExistsFunction&& exists_fn) const
+	EntityFactoryContext::PathType EntityFactoryContext::resolve_path_impl(const PathType& path, const PathType& base_path, ExistsFunction&& exists_fn, bool check_current_directory, bool check_current_directory_recursive) const
 	{
 		if (!base_path.empty())
 		{
@@ -90,6 +90,52 @@ namespace engine
 		if (exists_fn(path))
 		{
 			return path;
+		}
+
+		if (check_current_directory)
+		{
+			const auto current_directory = std::filesystem::current_path();
+
+			auto directory_impl = [&path, &exists_fn, &current_directory](auto&& directory_entry) -> std::filesystem::path
+			{
+				if (std::filesystem::is_directory(directory_entry))
+				{
+					auto& subdirectory = directory_entry;
+
+					auto nested_path = (subdirectory / path);
+
+					auto relative_path = nested_path.lexically_relative(current_directory); // .make_preferred()
+
+					if (exists_fn(relative_path))
+					{
+						return relative_path;
+					}
+				}
+
+				return {};
+			};
+
+			if (check_current_directory_recursive)
+			{
+				for (const auto& directory_entry : std::filesystem::recursive_directory_iterator { current_directory })
+				{
+					if (auto result = directory_impl(directory_entry); !result.empty())
+					{
+						return result;
+					}
+				}
+			}
+			else
+			{
+				for (const auto& directory_entry : std::filesystem::directory_iterator { current_directory })
+				{
+					if (auto result = directory_impl(directory_entry); !result.empty())
+					{
+						return result;
+					}
+				}
+			}
+
 		}
 
 		return {};
@@ -190,29 +236,70 @@ namespace engine
 	template <typename ExistsFunction>
 	EntityFactoryContext::PathType EntityFactoryContext::resolve_reference_impl(const PathType& path, const PathType& base_path, std::string_view file_extension, ExistsFunction&& exists_fn) const
 	{
-		// TODO: Look into switching lookup order here.
-		// (Exact file extensions should resolve a lot faster than this)
-		auto module_path = resolve_path_impl(path, base_path, exists_fn);
+		auto indirect_module_path = std::filesystem::path {};
 
-		if (module_path.empty())
-		{
-			auto direct_path = path; direct_path.replace_extension(file_extension);
-
-			module_path = resolve_path_impl(direct_path, base_path, exists_fn);
-
-			if (module_path.empty())
+		auto direct_module_path = resolve_path_impl
+		(
+			path, base_path,
+			
+			[&file_extension, &exists_fn, &indirect_module_path](auto&& path)
 			{
-				return {};
+				const bool path_exists = exists_fn(path);
+
+				if ((path_exists) && (std::filesystem::is_regular_file(path)))
+				{
+					// Use this path as-is.
+					// (`indirect_module_path` is left empty)
+					
+					// Tell the caller to stop searching.
+					return true;
+				}
+
+				auto resolved_path = std::filesystem::path {};
+
+				resolved_path = path;
+				resolved_path = resolved_path.replace_extension(file_extension);
+
+				const bool direct_path_exists = exists_fn(resolved_path);
+
+				if ((direct_path_exists) && (std::filesystem::is_regular_file(resolved_path)))
+				{
+					// Use this full path:
+					indirect_module_path = std::move(resolved_path);
+
+					// Tell the caller to stop searching.
+					return true;
+				}
+
+				if ((path_exists) && (std::filesystem::is_directory(path)))
+				{
+					const auto module_name = path.filename();
+
+					resolved_path = path;
+					resolved_path /= module_name;
+					resolved_path = resolved_path.replace_extension(file_extension);
+
+					if (std::filesystem::is_regular_file(resolved_path))
+					{
+						// Use this full path:
+						indirect_module_path = std::move(resolved_path);
+
+						// Tell the caller to stop searching.
+						return true;
+					}
+				}
+
+				// Tell the caller to continue searching.
+				return false;
 			}
-		}
-		else if (std::filesystem::is_directory(module_path))
+		);
+
+		if (!indirect_module_path.empty())
 		{
-			const auto module_name = module_path.filename();
-
-			return (module_path / module_name).replace_extension(file_extension);
+			return indirect_module_path;
 		}
 
-		return module_path;
+		return direct_module_path;
 	}
 
 	EntityFactoryContext::PathType EntityFactoryContext::resolve_reference_impl(const PathType& path, const PathType& base_path, std::string_view file_extension) const

@@ -84,7 +84,7 @@ namespace engine
 			Paths paths;
 		private:
 			template <typename ExistsFunction>
-			PathType resolve_path_impl(const PathType& path, const PathType& base_path, ExistsFunction&& exists_fn) const;
+			PathType resolve_path_impl(const PathType& path, const PathType& base_path, ExistsFunction&& exists_fn, bool check_current_directory=true, bool check_current_directory_recursive=false) const;
 
 			PathType resolve_path_impl(const PathType& path, const PathType& base_path) const;
 
