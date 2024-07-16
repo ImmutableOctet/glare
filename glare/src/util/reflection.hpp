@@ -258,7 +258,7 @@ namespace util
         const auto name_decl_rgx = std::regex("(struct|class|enum|union) ([\\w]+\\:\\:)(\\w+)");
         constexpr std::size_t type_name_index = 3;
 
-        std::smatch rgx_match;
+        std::match_results<decltype(name_view.data())> rgx_match;
 
         // TODO: Look into `std::regex` limitations with `std::string_view`.
         if (!std::regex_search(name_view.data(), rgx_match, name_decl_rgx)) // name_view.begin(), name_view.end()
@@ -268,7 +268,7 @@ namespace util
             return {};
         }
 
-        return { (name_view.data() + rgx_match.position(type_name_index)), rgx_match.length(type_name_index) };
+        return { (name_view.data() + rgx_match.position(type_name_index)), static_cast<std::string_view::size_type>(rgx_match.length(type_name_index)) };
     }
 
     inline entt::meta_type meta_type_from_name(std::string_view type_name, std::string_view namespace_symbol)
