@@ -28,6 +28,7 @@
 #include <engine/script/script.hpp>
 #include <engine/script/script_fiber.hpp>
 #include <engine/script/script_fiber_response.hpp>
+#include <engine/script/script_runtime_impl.hpp>
 
 //#include <engine/meta/meta.hpp>
 #include <engine/meta/types.hpp>
@@ -192,15 +193,7 @@ namespace engine
 
 		registry.on_construct<EntityContextComponent>().connect<&EntitySystem::on_context_init>(*this);
 
-		// Standard events:
-		service.register_event<OnServiceUpdate,           &EntitySystem::on_update>(*this);
-		service.register_event<OnServiceFixedUpdate,      &EntitySystem::on_fixed_update>(*this);
-		service.register_event<OnStateChange,             &EntitySystem::on_state_change>(*this);
-		service.register_event<OnStateActivate,           &EntitySystem::on_state_activate>(*this);
-		service.register_event<OnComponentCreate,         &EntitySystem::on_component_create>(*this);
-		service.register_event<OnComponentUpdate,         &EntitySystem::on_component_update>(*this);
-		service.register_event<OnComponentDestroy,        &EntitySystem::on_component_destroy>(*this);
-		service.register_event<OnParentChanged,           &EntitySystem::on_parent_changed>(*this);
+		registry.on_update<EntityThreadComponent>().connect<&EntitySystem::on_entity_threads_updated_generate_delayed_event>(*this);
 
 		// Commands:
 		service.register_event<StateChangeCommand,        &EntitySystem::on_state_change_command>(*this);
@@ -215,6 +208,20 @@ namespace engine
 		service.register_event<EntityThreadUnlinkCommand, &EntitySystem::on_thread_unlink_command>(*this);
 		service.register_event<EntityThreadSkipCommand,   &EntitySystem::on_thread_skip_command>(*this);
 		service.register_event<EntityThreadRewindCommand, &EntitySystem::on_thread_rewind_command>(*this);
+
+		service.register_event<EntityThreadFiberSpawnCommand, &EntitySystem::on_fiber_thread_spawn_command>(*this);
+
+		// Standard events:
+		service.register_event<OnServiceUpdate,           &EntitySystem::on_update>(*this);
+		service.register_event<OnServiceFixedUpdate,      &EntitySystem::on_fixed_update>(*this);
+		service.register_event<OnStateChange,             &EntitySystem::on_state_change>(*this);
+		service.register_event<OnStateActivate,           &EntitySystem::on_state_activate>(*this);
+		service.register_event<OnComponentCreate,         &EntitySystem::on_component_create>(*this);
+		service.register_event<OnComponentUpdate,         &EntitySystem::on_component_update>(*this);
+		service.register_event<OnComponentDestroy,        &EntitySystem::on_component_destroy>(*this);
+		service.register_event<OnParentChanged,           &EntitySystem::on_parent_changed>(*this);
+		service.register_event<OnEntityThreadsUpdated,    &EntitySystem::on_entity_threads_updated>(*this);
+
 
 		return true;
 	}
@@ -669,6 +676,23 @@ namespace engine
 		print("Entity {}: state #{} activated", state_activate.entity, *state_activate.state.id);
 	}
 
+	void EntitySystem::on_entity_threads_updated_generate_delayed_event(Registry& registry, Entity entity)
+	{
+		// Enqueue the `OnEntityThreadsUpdated` event so that we don't process thread removals before other commands/events have been processed.
+		service->queue_event<OnEntityThreadsUpdated>(entity);
+	}
+
+	void EntitySystem::on_entity_threads_updated(const OnEntityThreadsUpdated& update_event)
+	{
+		auto& registry = get_registry();
+
+		const auto& entity = update_event.entity;
+
+		auto& thread_component = registry.get<EntityThreadComponent>(entity);
+
+		thread_component.erase_completed_threads();
+	}
+
 	void EntitySystem::on_state_change_command(const StateChangeCommand& state_change)
 	{
 		set_state(state_change.target, state_change.state_name);
@@ -840,7 +864,7 @@ namespace engine
 								
 								(descriptor)
 									? descriptor->get_thread_id(local_thread.thread_index)
-									: std::optional<EntityThreadID>(std::nullopt) // 0
+									: EntityThreadID {}
 								,
 
 								static_cast<ThreadEvent::LocalThreadIndex>(*local_index),
@@ -947,7 +971,7 @@ namespace engine
 			
 			[](const EntityThreadSpawnCommand& thread_command, EntityThreadComponent& thread_component, const EntityDescriptor& descriptor, const EntityThreadRange& threads) -> bool
 			{
-				return thread_component.start_threads(descriptor, threads, thread_command.state_index, thread_command.restart_existing);
+				return thread_component.start_threads(descriptor, threads, thread_command.state_index, thread_command.parent_thread_name, thread_command.restart_existing);
 			},
 
 			[](const EntityThreadSpawnCommand& thread_command, EntityThreadComponent& thread_component, const EntityDescriptor& descriptor, EntityThreadID thread_id) -> bool
@@ -956,8 +980,11 @@ namespace engine
 				(
 					descriptor, thread_id,
 					thread_command.state_index,
+					
 					true, true,
-					thread_command.restart_existing
+					thread_command.restart_existing,
+
+					thread_command.parent_thread_name
 				);
 
 				return false;
@@ -1169,6 +1196,39 @@ namespace engine
 		);
 	}
 
+	void EntitySystem::on_fiber_thread_spawn_command(EntityThreadFiberSpawnCommand& thread_command)
+	{
+		auto& fiber = thread_command.fiber;
+
+		if (!fiber)
+		{
+			return;
+		}
+
+		auto& registry = get_registry();
+
+		const auto entity = thread_command.entity();
+
+		registry.patch<EntityThreadComponent>
+		(
+			entity,
+			
+			[&](auto& thread_component)
+			{
+				thread_component.start_thread
+				(
+					std::move(fiber),
+
+					thread_command.state_index,
+					thread_command.thread_name,
+					thread_command.parent_thread_name,
+					thread_command.thread_flags,
+					thread_command.script_handle
+				);
+			}
+		);
+	}
+
 	void EntitySystem::on_component_create(const OnComponentCreate& component_details)
 	{
 		on_component_update({ component_details.entity, component_details.component.as_ref() });
@@ -1360,6 +1420,38 @@ namespace engine
 		return false;
 	}
 
+	bool EntitySystem::try_resume_thread(EntityThread& thread)
+	{
+		if (thread.is_sleeping())
+		{
+			if (thread.has_fiber())
+			{
+				if (thread.active_fiber.has_script_handle())
+				{
+					auto& script = *thread.active_fiber.script;
+
+					if (script.has_yield_continuation_predicate())
+					{
+						const auto& predicate = script.get_yield_continuation_predicate();
+
+						if (predicate(script, {}))
+						{
+							if (thread.resume())
+							{
+								script.set_yield_continuation_predicate(nullptr);
+
+								return true;
+							}
+						}
+					}
+				}
+			}
+		}
+
+
+		return false;
+	}
+
 	template <EntityThreadCadence... target_cadence>
 	std::size_t EntitySystem::progress_threads() // EntityThreadCount
 	{
@@ -1369,24 +1461,41 @@ namespace engine
 
 		std::size_t threads_updated = 0; // EntityThreadCount
 
-		registry.view<InstanceComponent, EntityThreadComponent>().each
+		registry.view<EntityThreadComponent>().each
 		(
-			[&](Entity entity, const InstanceComponent& instance_comp, EntityThreadComponent& thread_comp)
+			[&](Entity entity, EntityThreadComponent& thread_component)
 			{
-				const auto& descriptor = instance_comp.get_descriptor();
+				const auto instance_component = registry.try_get<InstanceComponent>(entity);
+
+				// TODO: Allow `EntityThreadComponent` to work without `InstanceComponent`, then remove this assert.
+				assert(instance_component);
+
+				const EntityDescriptor* descriptor = (instance_component)
+					? (&(instance_component->get_descriptor()))
+					: nullptr
+				;
 
 				bool has_updated_thread = false;
 
-				for (auto& thread_entry : thread_comp.threads)
+				for (auto& thread_entry : thread_component.threads)
 				{
 					if (((thread_entry.cadence == target_cadence) || ...))
 					{
 						if (thread_entry.is_suspended()) // || thread_entry.is_complete (implied)
 						{
-							continue;
+							if (!try_resume_thread(thread_entry))
+							{
+								continue;
+							}
 						}
 
-						const auto& thread_source = descriptor.get_thread(thread_entry.thread_index);
+						const auto thread_source_index = thread_entry.thread_index;
+						const bool has_thread_source_index = (thread_source_index != ENTITY_THREAD_INDEX_INVALID);
+
+						const EntityThreadDescription* thread_source = ((has_thread_source_index) && (descriptor))
+							? (&(descriptor->get_thread(thread_entry.thread_index)))
+							: nullptr
+						;
 
 						auto step = [&]()
 						{
@@ -1394,11 +1503,12 @@ namespace engine
 							(
 								registry,
 								entity,
-						
-								descriptor,
+								
+								// TODO: Make `descriptor` an optional pointer argument.
+								*descriptor,
 								thread_source,
 
-								thread_comp,
+								thread_component,
 								thread_entry
 							);
 
@@ -1429,29 +1539,32 @@ namespace engine
 
 									bool is_implicit_yield_instruction = false;
 
-									const auto& current_instruction = thread_source.get_instruction(initial_instruction_index);
-
-									// After handling a rewind instruction, pause execution until the next `progress_threads` call.
-									// (Ensures continuous loops don't stall the application)
-									switch (current_instruction.type_index())
+									if (thread_source)
 									{
-										case util::variant_index<EntityInstruction::InstructionType, Rewind>():
+										const auto& current_instruction = thread_source->get_instruction(initial_instruction_index);
+
+										// After handling a rewind instruction, pause execution until the next `progress_threads` call.
+										// (Ensures continuous loops don't stall the application)
+										switch (current_instruction.type_index())
 										{
-											is_implicit_yield_instruction = true;
-
-											break;
-										}
-
-										case util::variant_index<EntityInstruction::InstructionType, CadenceControlBlock>():
-										{
-											const auto& cadence_control_block = std::get<CadenceControlBlock>(current_instruction.value);
-
-											if (cadence_control_block.cadence != initial_thread_cadence)
+											case util::variant_index<EntityInstruction::InstructionType, Rewind>():
 											{
 												is_implicit_yield_instruction = true;
+
+												break;
 											}
 
-											break;
+											case util::variant_index<EntityInstruction::InstructionType, CadenceControlBlock>():
+											{
+												const auto& cadence_control_block = std::get<CadenceControlBlock>(current_instruction.value);
+
+												if (cadence_control_block.cadence != initial_thread_cadence)
+												{
+													is_implicit_yield_instruction = true;
+												}
+
+												break;
+											}
 										}
 									}
 
@@ -1473,14 +1586,14 @@ namespace engine
 
 						if (thread_entry.is_complete)
 						{
-							if (auto local_thread_index = thread_comp.get_local_index(thread_entry))
+							if (auto local_thread_index = thread_component.get_local_index(thread_entry))
 							{
 								service->event<OnThreadComplete> // queue_event
 								(
 									entity,
 
 									thread_entry.thread_index,
-									thread_source.thread_id,
+									thread_entry.thread_id,
 
 									static_cast<OnThreadComplete::LocalThreadIndex>(*local_thread_index),
 
@@ -1495,9 +1608,7 @@ namespace engine
 
 				if (has_updated_thread)
 				{
-					thread_comp.erase_completed_threads();
-
-					registry.patch<EntityThreadComponent>(entity); // [](auto&){}
+					registry.patch<EntityThreadComponent>(entity);
 				}
 			}
 		);
@@ -1511,7 +1622,7 @@ namespace engine
 		Entity entity,
 
 		const EntityDescriptor& descriptor,
-		const EntityThreadDescription& source,
+		const EntityThreadDescription* source,
 
 		EntityThreadComponent& thread_comp,
 		EntityThread& thread
@@ -1521,25 +1632,33 @@ namespace engine
 
 		auto& system_manager = this->system_manager;
 
-		if (thread.next_instruction >= source.instructions.size())
+		if (source)
 		{
-			// We've stepped beyond the scope of this thread; mark this thread as complete.
-			thread.is_complete = true;
-
-			if (!source.instructions.empty())
+			if (thread.next_instruction >= source->instructions.size())
 			{
-				// Always point to the last valid instruction when complete.
-				thread.next_instruction = static_cast<EntityInstructionIndex>(source.instructions.size()-1);
-			}
+				// We've stepped beyond the scope of this thread; mark this thread as complete.
+				thread.is_complete = true;
 
-			// Return the last valid instruction.
-			return thread.next_instruction;
+				if (!source->instructions.empty())
+				{
+					// Always point to the last valid instruction when complete.
+					thread.next_instruction = static_cast<EntityInstructionIndex>(source->instructions.size()-1);
+				}
+
+				// Return the last valid instruction.
+				return thread.next_instruction;
+			}
 		}
 
 		auto& service = get_service();
 
-		const auto& instruction = source.instructions[thread.next_instruction];
-		const auto thread_index = thread.thread_index;
+		const EntityInstruction* instruction = (source) ?
+			(&(source->instructions[thread.next_instruction]))
+			: nullptr
+		;
+
+		const auto& thread_index = thread.thread_index;
+		const auto& thread_id    = thread.thread_id;
 
 		std::optional<IndirectMetaAny> coroutine_function = std::nullopt;
 
@@ -1641,6 +1760,11 @@ namespace engine
 
 					thread.active_fiber.script
 				);
+
+				if (thread.active_fiber.script)
+				{
+					thread.active_fiber.script->set_executing_thread(thread);
+				}
 			}
 
 			return thread.active_fiber;
@@ -1694,46 +1818,60 @@ namespace engine
 			);
 		};
 
-		auto resolve_thread_instruction = [this, &registry, &descriptor, entity, thread_index](const auto& thread_instruction) -> std::tuple<Entity, std::optional<EntityThreadIndex>>
+		auto on_spawn_action = [&thread, &on_action](const EntityThreadSpawnAction& action)
+		{
+			on_action
+			(
+				// Thread spawn action.
+				action,
+							
+				// Unused event object.
+				MetaAny {},
+
+				// The state the active `thread` is connected to. (If any)
+				thread.state_index
+			);
+		};
+
+		auto resolve_thread_instruction = [this, &registry, &descriptor, entity, thread_index, thread_id](const auto& thread_instruction) -> std::tuple<Entity, EntityThreadTarget>
 		{
 			const auto target_entity = thread_instruction.target_entity.get(registry, entity);
 			
-			std::optional<EntityThreadIndex> target_thread_index = std::nullopt;
+			EntityThreadTarget target_thread = thread_instruction.thread_id;
 
 			if (target_entity == entity)
 			{
-				if (thread_instruction.thread_id)
+				if (!target_thread)
 				{
-					target_thread_index = descriptor.get_thread_index(*thread_instruction.thread_id);
-				}
-				else
-				{
-					target_thread_index = thread_index;
+					if (thread_id)
+					{
+						target_thread = thread_id;
+					}
+
+					if (!target_thread)
+					{
+						if (thread_index != ENTITY_THREAD_INDEX_INVALID)
+						{
+							target_thread = EntityThreadRange { thread_index, 1 };
+						}
+					}
 				}
 			}
-			else if (const auto* target_descriptor = get_descriptor(target_entity))
-			{
-				target_thread_index = target_descriptor->get_thread_index(thread_instruction.thread_id);
 
-				//assert(target_thread_index);
-			}
-
-			return { target_entity, target_thread_index };
+			return { target_entity, target_thread };
 		};
 
 		auto control_flow_command = [&service, entity, &resolve_thread_instruction] <typename CommandType>
 		(const auto& thread_instruction, bool defer_event, auto&&... additional_args) -> bool
 		{
-			const auto [target_entity, target_thread_index] = resolve_thread_instruction(thread_instruction);
+			const auto [target_entity, target_thread] = resolve_thread_instruction(thread_instruction);
 
-			assert(target_thread_index);
+			assert(target_thread);
 
-			if (!target_thread_index)
+			if (!target_thread)
 			{
 				return false;
 			}
-
-			auto thread_range = EntityThreadRange { *target_thread_index, 1 };
 
 			auto submit_command = [&service, defer_event](CommandType&& command)
 			{
@@ -1757,7 +1895,7 @@ namespace engine
 					{
 						entity, target_entity,
 
-						std::move(thread_range),
+						std::move(target_thread),
 
 						thread_instruction.check_linked,
 
@@ -1773,7 +1911,7 @@ namespace engine
 					{
 						entity, target_entity,
 
-						std::move(thread_range),
+						std::move(target_thread),
 
 						std::forward<decltype(additional_args)>(additional_args)...
 					}
@@ -1789,11 +1927,11 @@ namespace engine
 
 		auto stop_thread = [&registry, &service, entity, &descriptor, &thread_comp, &thread, thread_index, &resolve_thread_instruction](const instructions::Stop& stop={})
 		{
-			const auto [target_entity, target_thread_index] = resolve_thread_instruction(stop);
+			const auto [target_entity, target_thread] = resolve_thread_instruction(stop);
 
-			assert(target_thread_index);
+			assert(target_thread);
 
-			if (!target_thread_index)
+			if (!target_thread)
 			{
 				return;
 			}
@@ -1802,9 +1940,9 @@ namespace engine
 			// 
 			// This is mainly to cover scenarios where the event
 			// produced does not execute immediately after this instruction.
-			if ((target_entity == entity) && (target_thread_index == thread.thread_index))
+			if (target_entity == entity)
 			{
-				if (thread_comp.get_thread(*target_thread_index, stop.check_linked) == &thread)
+				if ((target_thread == thread.thread_id) || (target_thread == EntityThreadRange { thread.thread_index, 1 }))
 				{
 					// Force-pause while awaiting 'stop' command's execution.
 					thread.pause();
@@ -1816,11 +1954,7 @@ namespace engine
 			(
 				entity, target_entity,
 
-				EntityThreadRange
-				{
-					*target_thread_index,
-					1
-				},
+				target_thread,
 
 				stop.check_linked
 			);
@@ -1923,20 +2057,7 @@ namespace engine
 					[&on_action](const EntityThreadSkipAction& action)      { on_action(action); },
 					[&on_action](const EntityThreadRewindAction& action)    { on_action(action); },
 
-					[&thread, &on_action](const EntityThreadSpawnAction& action)
-					{
-						on_action
-						(
-							// Thread spawn action.
-							action,
-							
-							// Unused event object.
-							MetaAny {},
-
-							// The state the active `thread` is connected to. (If any)
-							thread.state_index
-						);
-					},
+					[&on_spawn_action](const EntityThreadSpawnAction& action) { on_spawn_action(action); },
 
 					[&launch_thread](const Start& start) { launch_thread(start, start.restart_existing); },
 					[&launch_thread](const Restart& restart) { launch_thread(restart, true); },
@@ -1967,7 +2088,7 @@ namespace engine
 							return;
 						}
 
-						auto result = thread_comp.link_thread(*local_index);
+						auto result = thread_comp.link_local_thread(*local_index);
 
 						assert(result);
 					},
@@ -1987,19 +2108,17 @@ namespace engine
 						control_flow_command.template operator()<EntityThreadDetachCommand>(detach, true);
 					},
 
-					[&registry, &service, entity, &descriptor, thread_index, &resolve_thread_instruction](const Sleep& sleep) // [..., &thread]
+					[&registry, &service, entity, &descriptor, &resolve_thread_instruction](const Sleep& sleep) // [..., &thread]
 					{
 						const auto source_entity = entity;
-						const auto [target_entity, target_thread_index] = resolve_thread_instruction(sleep);
+						const auto [target_entity, target_thread] = resolve_thread_instruction(sleep);
 				
-						assert(target_thread_index);
+						assert(target_thread);
 
-						if (!target_thread_index)
+						if (!target_thread)
 						{
 							return;
 						}
-
-						const auto thread_range = EntityThreadRange { *target_thread_index, 1 };
 
 						// Trigger an event to immediately pause this thread.
 						// 
@@ -2008,7 +2127,7 @@ namespace engine
 						(
 							source_entity, target_entity,
 
-							thread_range,
+							target_thread,
 
 							sleep.check_linked
 						);
@@ -2023,7 +2142,7 @@ namespace engine
 
 							source_entity, target_entity,
 
-							thread_range,
+							target_thread,
 
 							sleep.check_linked
 						);
@@ -2089,16 +2208,14 @@ namespace engine
 					[entity, &service, &resolve_thread_instruction, &step_stride](const Rewind& rewind)
 					{
 						const auto source_entity = entity;
-						const auto [target_entity, target_thread_index] = resolve_thread_instruction(rewind);
+						const auto [target_entity, target_thread] = resolve_thread_instruction(rewind);
 
-						assert(target_thread_index);
+						assert(target_thread);
 
-						if (!target_thread_index)
+						if (!target_thread)
 						{
 							return;
 						}
-
-						const auto thread_range = EntityThreadRange { *target_thread_index, 1 };
 
 						if ((target_entity == entity) && !rewind.thread_id)
 						{
@@ -2109,7 +2226,7 @@ namespace engine
 						(
 							source_entity, target_entity,
 					
-							thread_range,
+							target_thread,
 					
 							rewind.check_linked,
 							rewind.instructions_rewound
@@ -2288,7 +2405,7 @@ namespace engine
 							auto& target_descriptor = target_instance_comp->get_descriptor();
 
 							EntityThread* target_thread = (variable_assignment.thread_id)
-								? target_thread_comp->get_thread(target_descriptor, *variable_assignment.thread_id)
+								? target_thread_comp->get_thread(target_descriptor, variable_assignment.thread_id)
 								: nullptr
 							;
 
@@ -2457,7 +2574,7 @@ namespace engine
 										entity,
 
 										thread_index,
-										std::optional<EntityThreadID>(std::nullopt), // 0
+										EntityThreadID {},
 										static_cast<ThreadEvent::LocalThreadIndex>(*local_index),
 										thread.next_instruction,
 
@@ -2479,7 +2596,7 @@ namespace engine
 						{
 							if (variable_assignment.thread_id)
 							{
-								if (const auto self_thread_id = descriptor.get_thread_id(thread.thread_index); (*variable_assignment.thread_id == self_thread_id))
+								if (const auto self_thread_id = descriptor.get_thread_id(thread.thread_index); (variable_assignment.thread_id == self_thread_id))
 								{
 									as_thread_local_variable();
 								}
@@ -2534,7 +2651,7 @@ namespace engine
 							}
 
 							// Fallback to assigning an empty value.
-							variable_context.set(variable_scope, variable_name, MetaAny{});
+							variable_context.set(variable_scope, variable_name, MetaAny {});
 						}
 					},
 
@@ -2626,23 +2743,38 @@ namespace engine
 
 		auto sleep_for = [&exec](const Timer::Duration& duration)
 		{
-			exec(EntityInstruction::InstructionType { Sleep { EntityTarget {}, std::nullopt, duration } });
+			exec(EntityInstruction::InstructionType { Sleep { EntityTarget {}, EntityThreadID {}, duration}});
 		};
 
 		auto& fiber = thread.active_fiber;
 
-		if ((!fiber.exists()) || (is_coroutine_instruction(instruction)))
+		if (instruction)
 		{
-			exec(instruction.value);
+			if ((!fiber.exists()) || (is_coroutine_instruction(*instruction)))
+			{
+				exec(instruction->value);
+			}
 		}
 
 		if (fiber.exists())
 		{
-			using ResponseToken = EntityThreadControlFlowToken;
+			using ResponseToken = ScriptControlFlowToken;
 
 			auto control_flow_response = ResponseToken::Default;
 
+			if (fiber.script)
+			{
+				impl::set_running_script(fiber.script);
+			}
+
 			const auto result = fiber();
+
+			if (fiber.script)
+			{
+				assert(impl::get_running_script() == fiber.script);
+
+				impl::clear_running_script();
+			}
 
 			if (fiber.done())
 			{
@@ -2658,11 +2790,17 @@ namespace engine
 
 					[&control_flow_response](const ResponseToken& token) { control_flow_response = token; },
 
+					[&on_action](const EntityStateAction& action) { on_action(action); },
+
 					[this, entity, &fiber, &start_listening, &thread, &step_stride](const EventYieldRequest& yield_request)
 					{
-						const auto& type_id = yield_request.event_type_id;
+						const auto type_id = yield_request.event_type_id;
 
-						if (start_listening(type_id))
+						const bool listen_result = start_listening(type_id);
+
+						assert(listen_result);
+
+						if (listen_result)
 						{
 							assert(fiber.script);
 
@@ -2676,19 +2814,24 @@ namespace engine
 							step_stride = 0;
 						}
 					},
-					
-					[&exec](const EntityInstruction& instruction) { exec(instruction.value); },
 
-					[&sleep_for](const Timer& timer)                   { sleep_for(timer.remaining());            },
-					[&sleep_for](const Timer::Duration& duration)      { sleep_for(duration);                     },
-					[&sleep_for](const Timer::Days& duration)          { sleep_for(Timer::to_duration(duration)); },
-					[&sleep_for](const Timer::Hours& duration)         { sleep_for(Timer::to_duration(duration)); },
-					[&sleep_for](const Timer::Minutes& duration)       { sleep_for(Timer::to_duration(duration)); },
-					[&sleep_for](const Timer::Seconds& duration)       { sleep_for(Timer::to_duration(duration)); },
-					[&sleep_for](const Timer::Milliseconds& duration)  { sleep_for(Timer::to_duration(duration)); },
-					[&sleep_for](const Timer::Microseconds& duration)  { sleep_for(Timer::to_duration(duration)); },
-					[&sleep_for](const Timer::FloatSeconds& duration)  { sleep_for(Timer::to_duration(duration)); },
-					[&sleep_for](const Timer::DoubleSeconds& duration) { sleep_for(Timer::to_duration(duration)); }
+					[&on_action](const EntityStateHash& next_state)     { on_action(EntityStateTransitionAction { next_state }); },
+					[&on_action](const entt::hashed_string& next_state) { on_action(EntityStateTransitionAction { static_cast<EntityStateHash>(next_state) }); },
+
+					[&on_spawn_action](const EntityThreadSpawnAction& action) { on_spawn_action(action); },
+					
+					[&exec](const EntityInstruction& instruction)       { exec(instruction.value); },
+
+					[&sleep_for](const Timer& timer)                    { sleep_for(timer.remaining());            },
+					[&sleep_for](const Timer::Duration& duration)       { sleep_for(duration);                     },
+					[&sleep_for](const Timer::Days& duration)           { sleep_for(Timer::to_duration(duration)); },
+					[&sleep_for](const Timer::Hours& duration)          { sleep_for(Timer::to_duration(duration)); },
+					[&sleep_for](const Timer::Minutes& duration)        { sleep_for(Timer::to_duration(duration)); },
+					[&sleep_for](const Timer::Seconds& duration)        { sleep_for(Timer::to_duration(duration)); },
+					[&sleep_for](const Timer::Milliseconds& duration)   { sleep_for(Timer::to_duration(duration)); },
+					[&sleep_for](const Timer::Microseconds& duration)   { sleep_for(Timer::to_duration(duration)); },
+					[&sleep_for](const Timer::FloatSeconds& duration)   { sleep_for(Timer::to_duration(duration)); },
+					[&sleep_for](const Timer::DoubleSeconds& duration)  { sleep_for(Timer::to_duration(duration)); }
 				);
 			}
 							
@@ -2723,25 +2866,40 @@ namespace engine
 			}
 		}
 
-		auto updated_instruction_index = (thread.next_instruction + step_stride);
+		auto updated_instruction_index = thread.next_instruction;
 
-		// NOTE: In the event the thread is suspended, completion is deferred
-		// until we attempt to process the next instruction.
-		// (e.g. we unpause the thread, but there's nothing else left to do)
-		//
-		// NOTE: A similar check to this is handled at the beginning of this function as well.
-		// (i.e. checking that we don't step over the range of available instructions)
-		if ((!thread.is_suspended()) && (updated_instruction_index >= source.instructions.size()))
+		if (source)
 		{
-			// NOTE: When execution is finished, we always point to
-			// the last valid instruction prior to completion.
-			// (Hence why we don't update `next_instruction` here).
+			updated_instruction_index += step_stride;
 
-			thread.is_complete = true;
+			// NOTE: In the event the thread is suspended, completion is deferred
+			// until we attempt to process the next instruction.
+			// (e.g. we unpause the thread, but there's nothing else left to do)
+			//
+			// NOTE: A similar check to this is handled at the beginning of this function as well.
+			// (i.e. checking that we don't step over the range of available instructions)
+			if ((!thread.is_suspended()) && (updated_instruction_index >= source->instructions.size()))
+			{
+				// NOTE: When execution is finished, we always point to
+				// the last valid instruction prior to completion.
+				// (Hence why we don't update `next_instruction` here).
+
+				thread.is_complete = true;
+			}
+			else
+			{
+				thread.next_instruction = updated_instruction_index;
+			}
 		}
 		else
 		{
-			thread.next_instruction = updated_instruction_index;
+			if (!thread.is_suspended())
+			{
+				if (!fiber)
+				{
+					thread.is_complete = true;
+				}
+			}
 		}
 
 		// Return the next instruction index to the caller.

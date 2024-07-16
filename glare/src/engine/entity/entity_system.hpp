@@ -27,6 +27,8 @@ namespace engine
 	struct OnStateChange;
 	struct OnStateActivate;
 
+	struct OnEntityThreadsUpdated;
+
 	struct OnComponentCreate;
 	struct OnComponentUpdate;
 	struct OnComponentDestroy;
@@ -45,6 +47,7 @@ namespace engine
 	struct EntityThreadUnlinkCommand;
 	struct EntityThreadSkipCommand;
 	struct EntityThreadRewindCommand;
+	struct EntityThreadFiberSpawnCommand;
 
 	struct EntityThread;
 	struct EntityThreadDescription;
@@ -128,6 +131,9 @@ namespace engine
 			void on_state_change(const OnStateChange& state_change);
 			void on_state_activate(const OnStateActivate& state_activate);
 
+			void on_entity_threads_updated_generate_delayed_event(Registry& registry, Entity entity);
+			void on_entity_threads_updated(const OnEntityThreadsUpdated& update_event);
+
 			void on_state_change_command(const StateChangeCommand& state_change);
 			void on_state_activation_command(const StateActivationCommand& state_activation);
 
@@ -140,6 +146,8 @@ namespace engine
 			void on_thread_unlink_command(const EntityThreadUnlinkCommand& thread_command);
 			void on_thread_skip_command(const EntityThreadSkipCommand& thread_command);
 			void on_thread_rewind_command(const EntityThreadRewindCommand& thread_command);
+
+			void on_fiber_thread_spawn_command(EntityThreadFiberSpawnCommand& thread_command);
 
 			void on_component_create(const OnComponentCreate& component_details);
 			void on_component_update(const OnComponentUpdate& component_details);
@@ -162,12 +170,14 @@ namespace engine
 				Entity entity,
 
 				const EntityDescriptor& descriptor,
-				const EntityThreadDescription& source,
+				const EntityThreadDescription* source,
 
 				EntityThreadComponent& thread_comp,
 				EntityThread& thread
 			);
 		private:
+			bool try_resume_thread(EntityThread& thread);
+
 			template <EntityThreadCadence... target_cadence>
 			std::size_t progress_threads(); // EntityThreadCount
 

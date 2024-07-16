@@ -88,5 +88,11 @@ namespace engine
 		MetaAny variable_update_result;
 	};
 
+	// Triggered when one or more of an entity's threads have been updated.
+	struct OnEntityThreadsUpdated
+	{
+		Entity entity;
+	};
+
 	using OnThreadStart = OnThreadSpawn;
 }
