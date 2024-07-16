@@ -9,7 +9,7 @@ namespace engine
 {
 	struct EntityThreadFiber
 	{
-		ScriptFiber fiber   = {};
+		ScriptFiber  fiber  = {};
 		ScriptHandle script = {};
 
 		bool exists() const
@@ -25,6 +25,21 @@ namespace engine
 		bool done() const
 		{
 			return fiber.done();
+		}
+
+		decltype(auto) get_address() const
+		{
+			return fiber.get_coroutine_handle().address();
+		}
+
+		decltype(auto) get_coroutine_handle() const
+		{
+			return fiber.get_coroutine_handle();
+		}
+
+		decltype(auto) get_coroutine_handle()
+		{
+			return fiber.get_coroutine_handle();
 		}
 
 		decltype(auto) operator()(auto&&... args)
