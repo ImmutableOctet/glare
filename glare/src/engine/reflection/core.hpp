@@ -291,6 +291,18 @@ namespace engine
         return impl::define_standard_meta_type<T, config>(type);
     }
 
+    constexpr auto custom_meta_type_apply_name_traits(auto type, auto&& type_name)
+    {
+        if (type_name.ends_with("Component"))
+        {
+            type = type
+                .prop("component"_hs)
+            ;
+        }
+
+        return type;
+    }
+
     // Associates a stripped version of the type's name to its reflection metadata.
     // Allows use of `T` without specifying `engine::T` in contexts where `T` is named dynamically. (e.g. JSON I/O)
     // 
@@ -300,16 +312,11 @@ namespace engine
     auto engine_meta_type(bool sync_context=true)
     {
         constexpr auto type_name = short_name<T>();
-        constexpr auto type_id = hash(type_name);
+        constexpr auto type_id   = hash(type_name);
 
         auto type = custom_meta_type<T, config>(type_id, sync_context);
 
-        if constexpr (type_name.ends_with("Component"))
-        {
-            type = type
-                .prop("component"_hs)
-            ;
-        }
+        type = custom_meta_type_apply_name_traits(type, type_name);
 
         return type;
     }
