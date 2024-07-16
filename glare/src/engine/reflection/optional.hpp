@@ -21,6 +21,8 @@ namespace engine
 		template <typename T>
         auto optional_meta_type(auto opt_type, bool sync_context=true)
         {
+            using namespace engine::literals;
+
             if (sync_context)
             {
                 // Ensure that we're using the correct context.
