@@ -55,18 +55,6 @@
 
 namespace engine
 {
-	// NOTE: Used internally by trigger-condition routines.
-	static std::tuple<MetaTypeID, entt::meta_data>
-	resolve_member(const entt::meta_type& type, std::string_view member_name)
-	{
-		if (member_name.empty())
-		{
-			return resolve_data_member(type, true, "entity", "target", "button", "self", "value", "name");
-		}
-		
-		return resolve_data_member(type, true, member_name);
-	}
-
 	static std::string get_embedded_name(const util::json& data)
 	{
 		if (auto name_it = data.find("name"); name_it != data.end())
@@ -87,7 +75,7 @@ namespace engine
 
 	static std::optional<EntityStateIndex> get_default_state_index(const EntityDescriptor& descriptor, const util::json& data)
 	{
-		if (auto default_state = data.find("default_state"); default_state != data.end())
+		if (auto default_state = util::find_any(data, "state", "default_state"); default_state != data.end())
 		{
 			switch (default_state->type())
 			{
@@ -221,15 +209,43 @@ namespace engine
 	{
 		auto state_path = std::filesystem::path(state_path_raw);
 
+		bool should_load_from_state_path = true;
+
 		if (opt_context)
 		{
-			state_path = opt_context->resolve_reference(state_path, base_path);
+			auto state_path_as_standard_reference = opt_context->resolve_reference(state_path, base_path);
+
+			if (state_path_as_standard_reference.empty())
+			{
+				should_load_from_state_path = false;
+
+				if (auto state_path_as_script_reference = opt_context->resolve_entity_script_reference(state_path, base_path); !state_path_as_script_reference.empty())
+				{
+					state_path = std::move(state_path_as_script_reference);
+				}
+				else if (auto state_path_as_cpp_script_reference = opt_context->resolve_cpp_script_reference(state_path, base_path); !state_path_as_cpp_script_reference.empty())
+				{
+					state_path = std::move(state_path_as_cpp_script_reference);
+				}
+			}
+			else
+			{
+				state_path = std::move(state_path_as_standard_reference);
+			}
+		}
+
+		auto state_data = util::json {};
+		
+		if (should_load_from_state_path)
+		{
+			if (!state_path.empty())
+			{
+				// TODO: Optimize.
+				state_data = util::load_json(state_path);
+			}
 		}
 
 		auto state_base_path = state_path.parent_path();
-
-		// TODO: Optimize.
-		auto state_data = util::load_json(state_path);
 
 		return { std::move(state_base_path), std::move(state_path), std::move(state_data) };
 	}
@@ -544,7 +560,9 @@ namespace engine
 		bool allow_default_entries,
 		bool forward_entry_update_condition_to_flags,
 
-		bool ignore_special_symbols
+		bool ignore_special_symbols,
+
+		std::optional<bool> allow_entry_updates
 	)
 	{
 		// Shorthand for `process_component`.
@@ -552,7 +570,7 @@ namespace engine
 		[
 			&descriptor, &components_out, &shared_component_flags, &opt_parsing_context,
 			allow_new_entry, allow_default_entries, forward_entry_update_condition_to_flags,
-			ignore_special_symbols
+			ignore_special_symbols, allow_entry_updates
 		]
 		(const auto& component_declaration, const util::json* component_content=nullptr) -> bool
 		{
@@ -571,7 +589,9 @@ namespace engine
 				allow_default_entries,
 				forward_entry_update_condition_to_flags,
 
-				ignore_special_symbols
+				ignore_special_symbols,
+
+				allow_entry_updates
 			);
 		};
 
@@ -625,6 +645,7 @@ namespace engine
 
 		// TODO: Change to `std::string_view` (`std::regex` limitation)
 		const std::string& component_declaration, // std::string_view
+
 		const util::json* component_content,
 
 		const MetaTypeDescriptorFlags& component_flags,
@@ -635,10 +656,12 @@ namespace engine
 		bool allow_default_entries,
 		bool forward_entry_update_condition_to_flags,
 
-		bool ignore_special_symbols
+		bool ignore_special_symbols,
+
+		std::optional<bool> allow_entry_update
 	)
 	{
-		auto [component_name, allow_entry_update, constructor_arg_count] = parse_component_declaration(component_declaration);
+		auto [component_name, decl_allow_entry_update, constructor_arg_count] = parse_component_declaration(component_declaration);
 
 		if (!ignore_special_symbols)
 		{
@@ -658,7 +681,7 @@ namespace engine
 
 		if (!component_type)
 		{
-			print("Failed to resolve reflection for symbol: \"{}\"", component_name);
+			//print("Failed to resolve reflection for symbol: \"{}\"", component_name);
 
 			return false;
 		}
@@ -669,7 +692,7 @@ namespace engine
 			components_out, // EntityDescriptor::TypeInfo&
 
 			component_type,
-			allow_entry_update,
+			allow_entry_update.value_or(decl_allow_entry_update),
 			constructor_arg_count,
 
 			component_content,
@@ -732,31 +755,42 @@ namespace engine
 
 		auto& loaded_components = components_out.type_definitions;
 
-		// Check for an existing instance of this type ID:
-		auto it = std::find_if
-		(
-			loaded_components.begin(), loaded_components.end(),
-			[&descriptor, &component_type](const auto& existing_entry) -> bool
-			{
-				auto& existing_component = existing_entry.get(descriptor);
+		auto find_existing = [&descriptor, &component_type, &loaded_components]()
+		{
+			return std::find_if
+			(
+				loaded_components.begin(), loaded_components.end(),
 
-				if (existing_component.get_type_id() == component_type.id())
+				[&descriptor, &component_type](const auto& existing_entry) -> bool
 				{
-					return true;
-				}
+					auto& existing_component = existing_entry.get(descriptor);
 
-				return false;
-			}
-		);
+					if (existing_component.get_type_id() == component_type.id())
+					{
+						return true;
+					}
+
+					return false;
+				}
+			);
+		};
+
+		// Alternative implementation (changes behavior on empty JSON object from default-construction to a no-op):
+		//const bool has_component_content = ((component_content) && (!component_content->empty()));
+
+		const bool has_component_content = static_cast<bool>(component_content);
+
+		// Check for an existing instance of this type ID:
+		auto it = find_existing();
 
 		if (it == loaded_components.end())
 		{
-			if ((!allow_new_entry) || (!allow_default_entries && !component_content))
+			if ((!allow_new_entry) || ((!allow_default_entries) && (!has_component_content)))
 			{
 				return false;
 			}
 
-			// There's no existing instance, and we're allowed 
+			// There's no existing instance, but we're allowed to create a new one.
 			loaded_components.emplace_back(descriptor.allocate(make_component()));
 		}
 		else if (allow_entry_update || force_entry_update)
@@ -767,14 +801,16 @@ namespace engine
 		}
 		else
 		{
-			if ((!allow_new_entry) || (!allow_default_entries && !component_content))
+			if ((!allow_new_entry) || (!has_component_content) || ((!allow_default_entries) && (!component_content->empty())))
 			{
 				return false;
 			}
 
+			auto new_component_store = make_component();
+
 			auto& existing = it->get(descriptor);
 
-			existing = make_component();
+			existing = std::move(new_component_store);
 		}
 
 		return true;
@@ -859,6 +895,34 @@ namespace engine
 			constructor_arg_count,
 			component_flags
 		);
+	}
+
+	std::size_t process_archetype_component_list
+	(
+		EntityDescriptor& descriptor,
+		const util::json& components,
+		const MetaParsingContext& opt_parsing_context,
+		bool change_only_if_missing
+	)
+	{
+		if (change_only_if_missing)
+		{
+			return process_component_list
+			(
+				descriptor, descriptor.components, components,
+				{}, opt_parsing_context,
+
+				true, true, false, true, true
+			);
+		}
+		else
+		{
+			return process_component_list
+			(
+				descriptor, descriptor.components, components,
+				{}, opt_parsing_context
+			);
+		}
 	}
 
 	MetaAny process_trigger_condition_value
@@ -954,7 +1018,7 @@ namespace engine
 		const MetaParsingContext& opt_parsing_context
 	)
 	{
-		auto [member_id, member] = resolve_member(type, member_name);
+		auto [member_id, member] = resolve_trigger_condition_member(type, member_name);
 
 		if (!member && (!member_name.empty()))
 		{
@@ -1036,7 +1100,7 @@ namespace engine
 		const MetaParsingContext& opt_parsing_context
 	)
 	{
-		auto [member_id, member] = resolve_member(type, member_name);
+		auto [member_id, member] = resolve_trigger_condition_member(type, member_name);
 
 		if (!member && (!member_name.empty()))
 		{
@@ -1250,6 +1314,19 @@ namespace engine
 		return { thread_details, accessor_used };
 	}
 
+	bool parse_implicit_component_settings(const util::json& data)
+	{
+		if (const auto implicit_components = util::find_any(data, "implicit_components", "import_components", "component_imports"); implicit_components != data.end())
+		{
+			if (implicit_components->is_boolean())
+			{
+				return implicit_components->get<bool>();
+			}
+		}
+
+		return true;
+	}
+
 	const EntityState* process_state
 	(
 		EntityDescriptor& descriptor,
@@ -1383,12 +1460,33 @@ namespace engine
 		// Assign the state's name to the ID we resolved.
 		state.name = state_id;
 
-		if (!process_state(descriptor, states_out, state, data, base_path, opt_parsing_context, opt_factory_context))
+		const bool has_state_name = (!state_name.empty());
+
+		auto implicit_components_added = std::size_t {};
+
+		if (has_state_name)
 		{
-			return {};
+			const auto implicit_components = parse_implicit_component_settings(data);
+
+			if (implicit_components)
+			{
+				process_state_add_implicit_component_from_name
+				(
+					descriptor, state, state_name,
+					opt_parsing_context, opt_factory_context
+				);
+			}
 		}
 
-		if (!state_name.empty())
+		if (!process_state(descriptor, states_out, state, data, base_path, opt_parsing_context, opt_factory_context))
+		{
+			if (implicit_components_added == 0)
+			{
+				return {};
+			}
+		}
+
+		if (has_state_name)
 		{
 			process_state_default_threads
 			(
@@ -1476,6 +1574,13 @@ namespace engine
 		// (Allows the contents of `data` to take priority over merged-in definitions):
 		if (auto merge = util::find_any(data, "merge", "merge_state", "merge_states", "using"); merge != data.end())
 		{
+			const auto implicit_components = parse_implicit_component_settings(data);
+
+			if (implicit_components)
+			{
+				process_state_local_copy_components(descriptor, state, *merge, opt_parsing_context);
+			}
+
 			// NOTE: Recursion by proxy.
 			merge_state_list(descriptor, states_out, state, *merge, base_path, opt_parsing_context, opt_factory_context);
 		}
@@ -2063,9 +2168,7 @@ namespace engine
 									{
 										thread_index,
 										threads_processed
-									},
-							
-									false
+									}
 								}
 							);
 						},
@@ -2528,6 +2631,51 @@ namespace engine
 		);
 	}
 
+	std::size_t process_archetype_add_implicit_component_from_path
+	(
+		EntityDescriptor& descriptor,
+
+		const std::filesystem::path& archetype_path,
+
+		const std::filesystem::path* opt_base_path,
+		const MetaParsingContext& opt_parsing_context,
+		const EntityFactoryContext* opt_factory_context
+	)
+	{
+		if (archetype_path.has_stem())
+		{
+			if (const auto archetype_local_name = archetype_path.stem(); !archetype_local_name.empty())
+			{
+				const auto archetype = util::json { archetype_local_name.string() };
+
+				return process_archetype_component_list(descriptor, archetype, opt_parsing_context, true);
+			}
+		}
+
+		return {};
+	}
+
+	std::size_t process_state_add_implicit_component_from_name
+	(
+		EntityDescriptor& descriptor,
+		EntityState& state,
+
+		std::string_view state_name,
+
+		const MetaParsingContext& opt_parsing_context,
+		const EntityFactoryContext* opt_factory_context
+	)
+	{
+		if (state_name.empty())
+		{
+			return {};
+		}
+
+		const auto data = util::json { std::string { state_name } };
+
+		return process_state_isolated_components(descriptor, state, data, opt_parsing_context);
+	}
+
 	void process_archetype
 	(
 		EntityDescriptor& descriptor,
@@ -2541,13 +2689,15 @@ namespace engine
 	{
 		if (resolve_external_modules)
 		{
-			// Handles the following: "archetypes", "import", "imports", "modules", "merge", "children"
+			// Handles the following:
+			// "archetypes", "import", "imports", "modules", "merge", "children",
+			// "implicit_components", "import_components", "component_imports"
 			resolve_archetypes(descriptor, data, base_path, opt_parsing_context, opt_factory_context, opt_default_state_index_out);
 		}
 
 		if (auto components = util::find_any(data, "component", "components"); components != data.end())
 		{
-			process_component_list(descriptor, descriptor.components, *components, {}, opt_parsing_context);
+			process_archetype_component_list(descriptor, *components, opt_parsing_context);
 		}
 
 		if (auto states = util::find_any(data, "state", "states"); states != data.end())
@@ -2602,15 +2752,16 @@ namespace engine
 
 			// Ignore these keys:
 
-			// Handled in `resolve_archetypes` routine.
+			// Handled in `resolve_archetypes` routine:
 			"archetypes", "import", "imports", "modules", "merge",
+			"implicit_components", "import_components", "component_imports",
 
 			// Handled in this function (see above):
 			"component", "components",
 			"state", "states",
 			"do", "threads", "execute", "on_enter",
 
-			"default_state",
+			"default_state", // "state",
 
 			// See below.
 			"model", "models",
@@ -2695,6 +2846,12 @@ namespace engine
 		);
 
 		process_archetype_default_threads
+		(
+			descriptor, archetype_path,
+			&base_path, opt_parsing_context, opt_factory_context
+		);
+
+		process_archetype_add_implicit_component_from_path
 		(
 			descriptor, archetype_path,
 			&base_path, opt_parsing_context, opt_factory_context
