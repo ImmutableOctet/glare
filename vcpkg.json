@@ -52,7 +52,7 @@
     },
     {
       "name": "concurrencpp",
-      "version>=": "0.1.7"
+      "version>=": "0.1.7#1"
     }
   ],
   "default-features": [],
