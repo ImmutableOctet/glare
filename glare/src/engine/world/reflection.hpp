@@ -14,5 +14,5 @@ namespace engine
 {
 	class World;
 
-	extern template void reflect<World>();
+	template <> void reflect<World>();
 }

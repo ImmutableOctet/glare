@@ -6,5 +6,5 @@ namespace engine
 {
 	class Editor;
 
-	extern template void reflect<Editor>();
+	template <> void reflect<Editor>();
 }

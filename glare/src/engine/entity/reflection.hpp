@@ -6,5 +6,5 @@ namespace engine
 {
 	class EntitySystem;
 
-	extern template void reflect<EntitySystem>();
+	template <> void reflect<EntitySystem>();
 }
