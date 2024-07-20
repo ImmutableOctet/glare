@@ -138,13 +138,37 @@ namespace engine
 				{
 					return this->set_result(this->predicate(*this, this->get_request()));
 				}
+				else if constexpr (std::is_invocable_r_v<void, Base::PredicateWrapperType, decltype(*this), const RequestType&>)
+				{
+					this->predicate(*this, this->get_request());
+
+					return this->set_result(true);
+				}
 				else if constexpr (std::is_invocable_r_v<bool, Base::PredicateWrapperType, decltype(*this)>)
 				{
 					return this->set_result(this->predicate(*this));
 				}
+				else if constexpr (std::is_invocable_r_v<void, Base::PredicateWrapperType, decltype(*this)>)
+				{
+					this->predicate(*this);
+
+					return this->set_result(true);
+				}
 				else if constexpr (std::is_invocable_r_v<bool, Base::PredicateWrapperType, const RequestType&>)
 				{
 					return this->set_result(this->predicate(this->get_request()));
+				}
+				else if constexpr (std::is_invocable_r_v<void, Base::PredicateWrapperType, const RequestType&>)
+				{
+					this->predicate(this->get_request());
+
+					return this->set_result(true);
+				}
+				else if constexpr (std::is_invocable_r_v<void, Base::PredicateWrapperType>)
+				{
+					this->predicate();
+
+					return this->set_result(true);
 				}
 				else if constexpr (std::is_invocable_v<Base::PredicateWrapperType>)
 				{
