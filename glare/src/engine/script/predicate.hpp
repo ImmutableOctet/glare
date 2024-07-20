@@ -46,9 +46,16 @@ namespace engine
 				}
 				else if constexpr (std::is_invocable_v<PredicateType>)
 				{
-					predicate();
+					if constexpr (util::is_convertible_to_bool<std::invoke_result_t<PredicateType>>)
+					{
+						return static_cast<bool>(predicate());
+					}
+					else
+					{
+						predicate();
 
-					return false;
+						return true;
+					}
 				}
 				else
 				{

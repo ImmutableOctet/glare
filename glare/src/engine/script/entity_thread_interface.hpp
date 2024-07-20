@@ -4,6 +4,7 @@
 #include "conditional_yield_request.hpp"
 #include "opaque_value.hpp"
 #include "script_traits.hpp"
+#include "embedded_script.hpp"
 
 #include <engine/types.hpp>
 #include <engine/timer.hpp>
@@ -15,6 +16,7 @@
 
 #include <util/type_traits.hpp>
 #include <util/function_traits.hpp>
+#include <util/capture.hpp>
 
 #include <utility>
 #include <type_traits>
@@ -398,6 +400,125 @@ namespace engine
 				}
 			}
 
+			template <typename EventType=void>
+			decltype(auto) when(this auto&& self, auto&& callback_or_script, auto&&... until_args)
+			{
+				using SelfType = std::decay_t<decltype(self)>;
+				using CoreScriptType = typename SelfType::CoreScriptType;
+				
+				using callback_t = engine::script::traits::decay_temporary_t<decltype(callback_or_script)>;
+				using capture_wrapper_t = util::Capture<callback_t, decltype(until_args)...>;
+
+				GLARE_SCRIPT_LAMBDA_DEFINE_FORWARDING_FUNCTIONS(self);
+
+				auto script_instance =
+					GLARE_SCRIPT_LAMBDA_BEGIN_EX(_embedded_script_entry_point_wrapper_t, capture_wrapper_t, CoreScriptType)
+						GLARE_SCRIPT_LAMBDA_STANDARD_DECL()
+						{
+							auto& capture_data = static_cast<capture_wrapper_t&>(*this);
+
+							auto& callback = std::get<callback_t>(capture_data.get_capture());
+
+							if constexpr (std::is_same_v<EventType, void>)
+							{
+								co_await until(callback);
+							}
+							else
+							{
+								bool stop_execution = true;
+
+								do
+								{
+									auto&& result = co_await capture_data.apply_capture([&](auto&& _callback, auto&&... args) { return until<EventType>(std::forward<decltype(args)>(args)...); });
+
+									if constexpr (engine::script::traits::is_compatible_script_type_v<SelfType, callback_t>)
+									{
+										start_script(std::move(callback));
+									}
+									else if constexpr (std::is_same_v<std::decay_t<callback_t>, ScriptFiber>)
+									{
+										co_await callback;
+									}
+									else
+									{
+										using result_t = decltype(result);
+
+										if constexpr (std::is_invocable_r_v<bool, callback_t, result_t>)
+										{
+											stop_execution = callback(result);
+										}
+										else if constexpr (std::is_invocable_r_v<ScriptFiber, callback_t, result_t>)
+										{
+											co_await callback(result);
+										}
+										else if constexpr (std::is_invocable_r_v<void, callback_t, result_t>)
+										{
+											callback(result);
+										}
+										else if constexpr (std::is_invocable_r_v<bool, callback_t, decltype(*this), result_t>)
+										{
+											stop_execution = callback(*this, result);
+										}
+										else if constexpr (std::is_invocable_r_v<ScriptFiber, callback_t, decltype(*this), result_t>)
+										{
+											co_await callback(*this, result);
+										}
+										else if constexpr (std::is_invocable_r_v<void, callback_t, decltype(*this), result_t>)
+										{
+											callback(*this, result);
+										}
+										else if constexpr (std::is_invocable_r_v<bool, callback_t>)
+										{
+											stop_execution = callback();
+										}
+										else if constexpr (std::is_invocable_r_v<ScriptFiber, callback_t>)
+										{
+											co_await callback();
+										}
+										else if constexpr (std::is_invocable_r_v<bool, callback_t, GLARE_SCRIPT_ENTRYPOINT_PARAMETER_LIST_TYPES>)
+										{
+											stop_execution = callback(GLARE_SCRIPT_ENTRYPOINT_PARAMETER_LIST_NAMES);
+										}
+										else if constexpr (std::is_invocable_r_v<ScriptFiber, callback_t, GLARE_SCRIPT_ENTRYPOINT_PARAMETER_LIST_TYPES>)
+										{
+											co_await callback(GLARE_SCRIPT_ENTRYPOINT_PARAMETER_LIST_NAMES);
+										}
+										else if constexpr (std::is_invocable_r_v<void, callback_t, GLARE_SCRIPT_ENTRYPOINT_PARAMETER_LIST_TYPES>)
+										{
+											callback(GLARE_SCRIPT_ENTRYPOINT_PARAMETER_LIST_NAMES);
+										}
+										else if constexpr (std::is_invocable_r_v<bool, callback_t, GLARE_SCRIPT_ENTRYPOINT_PARAMETER_LIST_TYPES, result_t>)
+										{
+											stop_execution = callback(GLARE_SCRIPT_ENTRYPOINT_PARAMETER_LIST_NAMES, result);
+										}
+										else if constexpr (std::is_invocable_r_v<ScriptFiber, callback_t, GLARE_SCRIPT_ENTRYPOINT_PARAMETER_LIST_TYPES, result_t>)
+										{
+											co_await callback(GLARE_SCRIPT_ENTRYPOINT_PARAMETER_LIST_NAMES, result);
+										}
+										else if constexpr (std::is_invocable_r_v<void, callback_t, GLARE_SCRIPT_ENTRYPOINT_PARAMETER_LIST_TYPES, result_t>)
+										{
+											callback(GLARE_SCRIPT_ENTRYPOINT_PARAMETER_LIST_NAMES, result);
+										}
+										else if constexpr (std::is_invocable_r_v<void, callback_t>)
+										{
+											callback();
+										}
+										else
+										{
+											co_await until(callback);
+										}
+									}
+								} while (!stop_execution);
+							}
+						}
+					GLARE_SCRIPT_LAMBDA_END_EX(_embedded_script_t, _embedded_script_entry_point_wrapper_t)
+				;
+
+				script_instance.capture(std::forward<decltype(callback_or_script)>(callback_or_script), std::forward<decltype(until_args)>(until_args)...);
+
+				return self.start_thread(std::move(script_instance));
+			}
+
 		protected:
 			// Indicates a request for a state change using a hash value, representing the state's identifier/name.
 			// This does not directly alter any entity, but may be used in conjunction with `co_yield` to submit a request.
@@ -420,7 +541,7 @@ namespace engine
 			template <typename ConditionFunctionType, typename PredicateType, typename... Args>
 			decltype(auto) until_impl_event_or_pause_ex_deduce_event_from_function(this auto&& self, PredicateType&& predicate, Args&&... args)
 			{
-				using function_traits = util::function_traits<ConditionFunctionType>;
+				using function_traits = util::function_traits<std::decay_t<ConditionFunctionType>>;
 				using argument_types = function_traits::argument_types;
 
 				constexpr auto argument_count = std::tuple_size_v<argument_types>;
@@ -507,6 +628,14 @@ namespace engine
 					{
 						return self.pause(std::forward<PredicateType>(predicate));
 					}
+					else if constexpr (std::is_same_v<result_type_decayed, ScriptFiber>)
+					{
+						return self.start_thread(std::forward<PredicateType>(predicate));
+					}
+					else if constexpr (engine::script::traits::is_compatible_script_type_v<decltype(self), result_type_decayed>)
+					{
+						return self.start_script(std::forward<PredicateType>(predicate));
+					}
 					else
 					{
 						return self.template until_impl_event_or_pause_ex_deduce_event_from_function<result_type>(std::forward<PredicateType>(predicate), std::forward<Args>(args)...);
@@ -521,13 +650,20 @@ namespace engine
 			template <typename PredicateOrFactory, typename... Args>
 			decltype(auto) until_impl_event_or_pause(this auto&& self, PredicateOrFactory&& predicate_or_factory, Args&&... args)
 			{
-				if constexpr (std::is_invocable_v<PredicateOrFactory, decltype(self), Args...>)
+				if constexpr (engine::script::traits::is_compatible_script_type_v<decltype(self), PredicateOrFactory>)
 				{
-					return self.until_impl_event_or_pause_ex(std::forward<PredicateOrFactory>(predicate_or_factory), self, std::forward<Args>(args)...);
+					return self.start_script(std::forward<PredicateOrFactory>(predicate_or_factory));
 				}
 				else
 				{
-					return self.until_impl_event_or_pause_ex(std::forward<PredicateOrFactory>(predicate_or_factory), std::forward<Args>(args)...);
+					if constexpr (std::is_invocable_v<PredicateOrFactory, decltype(self), Args...>)
+					{
+						return self.until_impl_event_or_pause_ex(std::forward<PredicateOrFactory>(predicate_or_factory), self, std::forward<Args>(args)...);
+					}
+					else
+					{
+						return self.until_impl_event_or_pause_ex(std::forward<PredicateOrFactory>(predicate_or_factory), std::forward<Args>(args)...);
+					}
 				}
 			}
 	};
