@@ -171,6 +171,9 @@ namespace util
 	template <typename T>
     inline constexpr bool is_convertible_to_bool = (std::is_constructible_v<bool, decltype((std::declval<const T&>()))>); // (std::is_constructible_v<bool, const T&>) // (std::is_convertible_v<T, bool>);
 
+	template <>
+	inline constexpr bool is_convertible_to_bool<void> = false;
+
 	template <typename ArrayType>
 	inline constexpr auto array_size = impl::array_size_trait<ArrayType>::value;
 
@@ -370,4 +373,12 @@ namespace util
 
 	template <typename T>
 	using defined_or_empty_t = defined_or_empty<T>::type;
+
+	template <typename T>
+	using decay_rvalue_t = std::conditional_t
+	<
+		std::is_rvalue_reference_v<T>,
+		std::decay_t<T>,
+		T
+	>;
 }
