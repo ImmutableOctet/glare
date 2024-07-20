@@ -315,6 +315,12 @@ namespace engine
 				);
 			}
 
+			template <typename ScriptType>
+			constexpr bool is_script_type(this auto&& self)
+			{
+				return engine::script::traits::is_compatible_script_type_v<decltype(self), ScriptType>();
+			}
+
 		protected:
 			// Initializes a new script fiber from the entry-point specified.
 			template <typename EntryPoint>

@@ -1,5 +1,10 @@
 #pragma once
 
+#include <util/type_traits.hpp>
+#include <util/member_traits.hpp>
+
+#include <type_traits>
+
 namespace engine
 {
 	namespace script
@@ -69,6 +74,17 @@ namespace engine
 
 			template <typename EventType, typename PredicateType>
 			inline constexpr bool is_continuation_predicate_wrappable_v = is_continuation_predicate_wrappable<EventType, PredicateType>::value;
+
+			template <typename SelfType, typename ScriptType>
+			inline constexpr bool is_compatible_script_type_v = std::is_base_of_v
+			<
+				typename std::decay_t<SelfType>::CoreScriptType,
+
+				std::decay_t<ScriptType>
+			>;
+
+			template <typename T>
+			using decay_temporary_t = util::decay_rvalue_t<T>;
 		}
 	}
 }
