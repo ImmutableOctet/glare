@@ -100,15 +100,49 @@ namespace engine
 
 	MetaType MetaTypeResolutionContext::get_type(const AliasContainer& aliases, std::string_view name, bool is_known_alias)
 	{
-		if (!is_known_alias)
+		auto get_type_impl = [&aliases, is_known_alias](auto&& name)
 		{
-			if (auto type = get_type_raw(name))
+			if (!is_known_alias)
 			{
-				return type;
+				if (auto type = get_type_raw(std::forward<decltype(name)>(name)))
+				{
+					return type;
+				}
+			}
+
+			return get_type_from_alias(aliases, std::forward<decltype(name)>(name));
+		};
+
+		if (auto type = get_type_impl(name))
+		{
+			return type;
+		}
+
+		constexpr auto separator = std::string_view { "/" };
+
+		if (const auto separator_position = name.find(separator); separator_position != std::string_view::npos)
+		{
+			if (const auto name_separators_to_underscores = util::replace(name, separator, "_"); !name_separators_to_underscores.empty())
+			{
+				if (const auto type = get_type_impl(name_separators_to_underscores))
+				{
+					return type;
+				}
+			}
+
+			if (const auto last_name_begin = (separator_position + 1); last_name_begin < name.length())
+			{
+				if (const auto last_name_from_separators = name.substr(last_name_begin); !last_name_from_separators.empty())
+				{
+					if (const auto type = get_type_impl(last_name_from_separators))
+					{
+						return type;
+					}
+				}
 			}
 		}
 
-		return get_type_from_alias(aliases, name);
+		return {};
 	}
 
 	MetaType MetaTypeResolutionContext::get_type_from_alias(const AliasContainer& alias_container, std::string_view alias)
