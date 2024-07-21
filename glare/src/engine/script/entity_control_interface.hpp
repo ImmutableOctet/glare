@@ -171,7 +171,7 @@ namespace engine
 
 			Entity get_parent(this auto&& self, Entity entity)
 			{
-				return self.get(EntityTarget { EntityTarget::ParentTarget {} });
+				return self.get(entity, EntityTarget { EntityTarget::ParentTarget {} });
 			}
 
 			Entity parent(this auto&& self, Entity entity)
