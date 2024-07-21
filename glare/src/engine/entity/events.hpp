@@ -88,6 +88,11 @@ namespace engine
 		MetaAny variable_update_result;
 	};
 
+	struct OnThreadEventCaptured : ThreadEvent
+	{
+		MetaTypeID event_type_id;
+	};
+
 	// Triggered when one or more of an entity's threads have been updated.
 	struct OnEntityThreadsUpdated
 	{

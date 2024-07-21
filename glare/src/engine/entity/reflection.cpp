@@ -402,6 +402,15 @@ namespace engine
 	}
 
 	template <>
+	void reflect<OnThreadEventCaptured>()
+	{
+		engine_meta_type<OnThreadEventCaptured>()
+			.base<ThreadEvent>()
+			.data<&OnThreadEventCaptured::event_type_id>("event_type_id"_hs)
+		;
+	}
+
+	template <>
 	void reflect<StateChangeCommand>()
 	{
 		engine_command_type<StateChangeCommand>()

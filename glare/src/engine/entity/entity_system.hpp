@@ -35,6 +35,8 @@ namespace engine
 
 	struct OnParentChanged;
 
+	struct OnThreadEventCaptured;
+
 	struct StateChangeCommand;
 	struct StateActivationCommand;
 
@@ -148,6 +150,8 @@ namespace engine
 			void on_thread_rewind_command(const EntityThreadRewindCommand& thread_command);
 
 			void on_fiber_thread_spawn_command(EntityThreadFiberSpawnCommand& thread_command);
+
+			void on_thread_event_captured(const OnThreadEventCaptured& thread_event);
 
 			void on_component_create(const OnComponentCreate& component_details);
 			void on_component_update(const OnComponentUpdate& component_details);

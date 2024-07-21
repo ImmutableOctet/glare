@@ -211,6 +211,8 @@ namespace engine
 
 		service.register_event<EntityThreadFiberSpawnCommand, &EntitySystem::on_fiber_thread_spawn_command>(*this);
 
+		service.register_event<OnThreadEventCaptured, &EntitySystem::on_thread_event_captured>(*this);
+
 		// Standard events:
 		service.register_event<OnServiceUpdate,           &EntitySystem::on_update>(*this);
 		service.register_event<OnServiceFixedUpdate,      &EntitySystem::on_fixed_update>(*this);
@@ -1229,6 +1231,60 @@ namespace engine
 		);
 	}
 
+	void EntitySystem::on_thread_event_captured(const OnThreadEventCaptured& thread_event)
+	{
+		auto& registry = get_registry();
+
+		const auto& entity = thread_event.entity;
+
+		auto& thread_component = registry.get<EntityThreadComponent>(entity);
+
+		const auto instance_component = registry.try_get<InstanceComponent>(entity);
+
+		const EntityDescriptor* descriptor = (instance_component)
+			? (&(instance_component->get_descriptor()))
+			: nullptr
+		;
+
+		const auto& local_thread_index = thread_event.local_instance;
+
+		auto& threads = thread_component.get_threads();
+		auto& thread_entry = threads[local_thread_index];
+
+		if (thread_entry.is_suspended()) // || thread_entry.is_complete (implied)
+		{
+			return;
+		}
+
+		const auto& active_fiber = thread_entry.active_fiber;
+
+		if (!active_fiber.has_script_handle())
+		{
+			return;
+		}
+
+		const bool process_event_immediately = (active_fiber.process_events_exhaustively());
+
+		if (!process_event_immediately)
+		{
+			return;
+		}
+
+		const auto thread_source_index = thread_entry.thread_index;
+		const bool has_thread_source_index = (thread_source_index != ENTITY_THREAD_INDEX_INVALID);
+
+		// TODO: Look into making this more generic with an additional ID-based lookup as a fallback.
+		const EntityThreadDescription* thread_source = ((has_thread_source_index) && (descriptor))
+			? (&(descriptor->get_thread(thread_entry.thread_index)))
+			: nullptr
+		;
+
+		// TODO: Look into removing requirement for `descriptor`.
+		assert(descriptor);
+
+		step_thread(registry, entity, *descriptor, thread_source, thread_component, thread_entry);
+	}
+
 	void EntitySystem::on_component_create(const OnComponentCreate& component_details)
 	{
 		on_component_update({ component_details.entity, component_details.component.as_ref() });
@@ -1492,6 +1548,7 @@ namespace engine
 						const auto thread_source_index = thread_entry.thread_index;
 						const bool has_thread_source_index = (thread_source_index != ENTITY_THREAD_INDEX_INVALID);
 
+						// TODO: Look into making this more generic with an additional ID-based lookup as a fallback.
 						const EntityThreadDescription* thread_source = ((has_thread_source_index) && (descriptor))
 							? (&(descriptor->get_thread(thread_entry.thread_index)))
 							: nullptr
