@@ -584,7 +584,7 @@ function(glare_generate_cpp_script_bindings script_target script_directory scrip
 
         if (GLARE_SCRIPT_PRECOMPILED_GENERATE_CONSUMPTION_FILES)
             file(WRITE ${glare_consume_all_scripts_hpp_output_file} "${glare_consume_all_scripts_hpp_content}")
-            configure_file(${glare_consume_all_scripts_hpp_output_file} ${glare_consume_all_scripts_hpp_output_file_cached})
+            configure_file("${glare_consume_all_scripts_hpp_output_file}" "${glare_consume_all_scripts_hpp_output_file_cached}")
         endif()
     endif()
 

@@ -30,6 +30,8 @@
 #include <algorithm>
 #include <variant>
 
+#include <cassert>
+
 // Debugging related:
 #include <util/log.hpp>
 //#include <engine/command.hpp>
@@ -481,7 +483,9 @@ namespace engine
 
 		auto& script = *active_fiber.script;
 
-		if (!script.waiting_for_event(event_instance.type()))
+		const auto event_type = event_instance.type();
+
+		if (!script.waiting_for_event(event_type))
 		{
 			return;
 		}
@@ -496,14 +500,44 @@ namespace engine
 			}
 		}
 
-		// Create a copy of the event for the script to later observe.
-		active_fiber.script->set_captured_event(MetaAny { event_instance });
+		const auto local_index = thread_component.get_local_index(thread);
+
+		const bool can_generate_capture_event = ((service) && (local_index));
+
+		const bool can_process_events_exhaustively = ((can_generate_capture_event) && (active_fiber.process_events_exhaustively()));
+
+		if (can_process_events_exhaustively)
+		{
+			active_fiber.script->set_captured_event(event_instance.as_ref());
+		}
+		else
+		{
+			// Create a copy of the event for the script to later observe.
+			active_fiber.script->set_captured_event(MetaAny { event_instance });
+		}
 
 		// Advancement set to zero to continue execution of the active fiber/coroutine.
 		const EntityInstructionCount instruction_advance = 0;
 
 		// Awaken the thread, allowing it to handle the event.
 		thread.unyield(instruction_advance);
+
+		if (can_generate_capture_event)
+		{
+			assert(service);
+			assert(local_index);
+
+			service->event<OnThreadEventCaptured>
+			(
+				entity,
+				
+				thread.thread_index, thread.thread_id,
+				static_cast<ThreadEvent::LocalThreadIndex>(*local_index),
+				thread.next_instruction,
+
+				event_type.id()
+			);
+		}
 
 		// Remove a reference to this listener for `entity`.
 		// NOTE: See `EntitySystem::step_thread` for corresponding `add_entity` usage prior.

@@ -171,7 +171,7 @@ namespace engine
 
 			Entity get_parent(this auto&& self, Entity entity)
 			{
-				return self.get(EntityTarget { EntityTarget::ParentTarget {} });
+				return self.get(entity, EntityTarget { EntityTarget::ParentTarget {} });
 			}
 
 			Entity parent(this auto&& self, Entity entity)
@@ -294,6 +294,14 @@ namespace engine
 					return player_index;
 				}
 
+				if (const auto parent_entity = self.get_parent(entity); parent_entity != null)
+				{
+					if (const auto player_index = self.get_player_index(parent_entity); player_index != NO_PLAYER)
+					{
+						return player_index;
+					}
+				}
+
 				return NO_PLAYER;
 			}
 
@@ -302,6 +310,14 @@ namespace engine
 				if (const auto player_target_component = self.try_get<PlayerTargetComponent>(entity))
 				{
 					return player_target_component->player_index;
+				}
+
+				if (const auto parent_entity = self.get_parent(entity); parent_entity != null)
+				{
+					if (const auto player_index = self.get_target_player_index(parent_entity); player_index != NO_PLAYER)
+					{
+						return player_index;
+					}
 				}
 
 				return NO_PLAYER;

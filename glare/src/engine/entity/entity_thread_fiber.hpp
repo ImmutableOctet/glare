@@ -27,6 +27,11 @@ namespace engine
 			return fiber.done();
 		}
 
+		bool process_events_exhaustively() const
+		{
+			return true;
+		}
+
 		decltype(auto) get_address() const
 		{
 			return fiber.get_coroutine_handle().address();
