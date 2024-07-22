@@ -1,5 +1,7 @@
 #pragma once
 
+#include "json_fwd.hpp"
+
 #include <math/types.hpp>
 #include <graphics/math_types.hpp>
 
@@ -20,10 +22,6 @@
 
 namespace util
 {
-	//using json = nlohmann::json;
-	//using json = nlohmann::basic_json<nlohmann::fifo_map>;
-	using json = nlohmann::ordered_json;
-
 	namespace literals
 	{
 		//using nlohmann::literals::operator "" _json;
