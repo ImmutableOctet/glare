@@ -120,25 +120,39 @@ namespace engine
 
 		constexpr auto separator = std::string_view { "/" };
 
-		if (const auto separator_position = name.find(separator); separator_position != std::string_view::npos)
+		if (name.contains(separator))
 		{
-			if (const auto name_separators_to_underscores = util::replace(name, separator, "_"); !name_separators_to_underscores.empty())
-			{
-				if (const auto type = get_type_impl(name_separators_to_underscores))
-				{
-					return type;
-				}
-			}
+			auto type = MetaType {};
 
-			if (const auto last_name_begin = (separator_position + 1); last_name_begin < name.length())
-			{
-				if (const auto last_name_from_separators = name.substr(last_name_begin); !last_name_from_separators.empty())
+			auto processed_name = std::string {};
+
+			util::reverse_split
+			(
+				name, separator,
+
+				[&](auto&& name_path_segment)
 				{
-					if (const auto type = get_type_impl(last_name_from_separators))
+					if (!processed_name.empty())
 					{
-						return type;
+						processed_name.insert(processed_name.begin(), '_');
 					}
+
+					processed_name.insert_range(processed_name.begin(), name_path_segment);
+
+					type = get_type_impl(processed_name);
+
+					if (type)
+					{
+						return false;
+					}
+
+					return true;
 				}
+			);
+
+			if (type)
+			{
+				return type;
 			}
 		}
 
