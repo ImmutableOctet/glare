@@ -19,7 +19,7 @@ function(glare_generate_cpp_script_bindings script_target script_directory scrip
         #set_target_properties(${script_target} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS 1)
         set_target_properties(${script_target} PROPERTIES ENABLE_EXPORTS 1)
 
-        if(GLARE_SCRIPT_PRECOMPILED_UNITY)
+        if(GLARE_SCRIPT_PRECOMPILED_UNITY OR GLARE_SCRIPT_PRECOMPILED_CONSUMPTION_UNITY)
             set_target_properties(
                 ${script_target}
                 PROPERTIES
@@ -102,14 +102,21 @@ function(glare_generate_cpp_script_bindings script_target script_directory scrip
 
                 set(glare_script_file_library "glare_script_${glare_script_name}")
 
-                set(glare_script_output_cpp_file "${CMAKE_CURRENT_BINARY_DIR}/generated/script/latest/${glare_script_file_library}.cpp")
-                set(glare_script_output_cpp_file_cached "generated/script/cached/${glare_script_file_library}.cpp")
-                set(glare_script_output_hpp_file "${CMAKE_CURRENT_BINARY_DIR}/generated/script/latest/${glare_script_file_library}.hpp")
-                set(glare_script_output_hpp_file_cached "generated/script/cached/${glare_script_file_library}.hpp")
-                set(glare_consume_script_output_hpp_file "${CMAKE_CURRENT_BINARY_DIR}/generated/script/latest/${glare_script_file_library}_consume.hpp")
-                set(glare_consume_script_output_hpp_file_cached "generated/script/cached/${glare_script_file_library}_consume.hpp")
-                set(glare_consume_script_output_cpp_file "${CMAKE_CURRENT_BINARY_DIR}/generated/script/latest/${glare_script_file_library}_consume.cpp")
-                set(glare_consume_script_output_cpp_file_cached "generated/script/cached/${glare_script_file_library}_consume.cpp")
+                set(glare_script_output_cpp_file_name "${glare_script_file_library}.cpp")
+                set(glare_script_output_cpp_file "${CMAKE_CURRENT_BINARY_DIR}/generated/script/latest/${glare_script_output_cpp_file_name}")
+                set(glare_script_output_cpp_file_cached "generated/script/cached/${glare_script_output_cpp_file_name}")
+                
+                set(glare_script_output_hpp_file_name "${glare_script_file_library}.hpp")
+                set(glare_script_output_hpp_file "${CMAKE_CURRENT_BINARY_DIR}/generated/script/latest/${glare_script_output_hpp_file_name}")
+                set(glare_script_output_hpp_file_cached "generated/script/cached/${glare_script_output_hpp_file_name}")
+
+                set(glare_consume_script_output_hpp_file_name "${glare_script_file_library}_consume.hpp")
+                set(glare_consume_script_output_hpp_file "${CMAKE_CURRENT_BINARY_DIR}/generated/script/latest/${glare_consume_script_output_hpp_file_name}")
+                set(glare_consume_script_output_hpp_file_cached "generated/script/cached/${glare_consume_script_output_hpp_file_name}")
+                
+                set(glare_consume_script_output_cpp_file_name "${glare_script_file_library}_consume.cpp")
+                set(glare_consume_script_output_cpp_file "${CMAKE_CURRENT_BINARY_DIR}/generated/script/latest/${glare_consume_script_output_cpp_file_name}")
+                set(glare_consume_script_output_cpp_file_cached "generated/script/cached/${glare_consume_script_output_cpp_file_name}")
 
                 message("Generating prebuilt script source file: \"${glare_script_file_path}\" -> \"${glare_script_output_cpp_file}\"")
 
@@ -117,33 +124,26 @@ function(glare_generate_cpp_script_bindings script_target script_directory scrip
 
                 set(script_file_header_content
                 "
-                    // Standard includes for `${glare_script_file_library}`:
-                    #if GLARE_SCRIPT_INCLUDE_GLOBAL_HEADER
-                        #include <script_common.hpp>
-                    #endif // GLARE_SCRIPT_INCLUDE_GLOBAL_HEADER
-
-                    #include <script/api.hpp>
-                    #include <script/script_static_decl.hpp>
-                    #include <script/script_common.hpp>
-                    #include <script/code_generation_def.hpp>
-
-                    #include <engine/types.hpp>
-                    #include <engine/script/script.hpp>
-                    #include <engine/script/awaiters.hpp>
-                    #include <engine/script/co_await.hpp>
                     #include <engine/script/code_generation.hpp>
-                    #include <engine/script/embedded_script.hpp>
 
-                    //#include <engine/meta/hash.hpp>
-
-                    #include <utility>
-                    #include <cassert>
+                    #if GLARE_SCRIPT_INCLUDE_GLOBAL_HEADER
+                        #include <script_extensions.hpp>
+                    #endif // GLARE_SCRIPT_INCLUDE_GLOBAL_HEADER
 
                     #define script_${glare_script_local_file_no_ext} \\
                         glare::impl::${glare_script_file_library}::script_ex_t
 
+                    namespace glare_script_common {}
+
+                    namespace engine
+                    {
+                        namespace script {}
+                    }
+
                     namespace glare
                     {
+                        //namespace script {}
+
                         namespace impl
                         {
                             namespace ${glare_script_file_library}
@@ -322,6 +322,27 @@ function(glare_generate_cpp_script_bindings script_target script_directory scrip
 
                 set(before_script
                 "
+                    // Standard includes for `${glare_script_file_library}`:
+                    #if GLARE_SCRIPT_INCLUDE_GLOBAL_HEADER
+                        #include <script_common.hpp>
+                    #endif // GLARE_SCRIPT_INCLUDE_GLOBAL_HEADER
+
+                    #include <script/api.hpp>
+                    #include <script/script_static_decl.hpp>
+                    #include <script/script_common.hpp>
+                    #include <script/code_generation_def.hpp>
+
+                    #include <engine/types.hpp>
+                    #include <engine/script/script.hpp>
+                    #include <engine/script/awaiters.hpp>
+                    #include <engine/script/co_await.hpp>
+                    #include <engine/script/embedded_script.hpp>
+
+                    //#include <engine/meta/hash.hpp>
+
+                    #include <utility>
+                    #include <cassert>
+                    
                     #define _script_no_return_value                              \\
                         glare::impl::${glare_script_file_library}::script_t::operator() \\
                             (${glare_script_file_library}_run_decl_params)
@@ -497,12 +518,33 @@ function(glare_generate_cpp_script_bindings script_target script_directory scrip
                     file(WRITE ${glare_script_output_hpp_file} "${script_file_header_content}")
                     configure_file(${glare_script_output_hpp_file} ${glare_script_output_hpp_file_cached})
 
-                    string(PREPEND before_script "#include <script/${glare_script_output_hpp_file}>\n\n")
+                    string(PREPEND before_script "#include \"${glare_script_output_hpp_file_name}\"\n\n")
                 else()
                     STRING(PREPEND before_script "${script_file_header_content}" "\n\n")
                 endif()
 
                 STRING(PREPEND before_script "#pragma message(\"Precompiling script file: '${glare_script_local_file_no_ext}' (${glare_script_file_path})\")\n")
+
+                if(GLARE_SCRIPT_PRECOMPILED_UNITY OR GLARE_SCRIPT_PRECOMPILED_CONSUMPTION_UNITY)
+                    set(glare_script_unity_group_suffix "")
+
+                    string(REPLACE "/" "_" glare_script_unity_group_suffix "${glare_script_local_directory}")
+
+                    if (GLARE_SCRIPT_PRECOMPILED_CONSUMPTION_UNITY_JUMBO)
+                        set(glare_script_consumption_unity_group "${script_target}_consume_script")
+                    else()
+                        set(glare_script_consumption_unity_group "${script_target}_${glare_script_unity_group_suffix}_consume_script")
+                    endif()
+
+                    message(glare_script_consumption_unity_group=${glare_script_consumption_unity_group})
+                endif()
+
+                if(GLARE_SCRIPT_PRECOMPILED_UNITY)
+                    set(glare_script_unity_group "${script_target}_${glare_script_unity_group_suffix}")
+
+                    #message(glare_script_unity_group=${glare_script_unity_group})
+                    #message("\"${glare_script_output_cpp_file_cached}\" -> `${glare_script_unity_group}`")
+                endif()
 
                 if (GLARE_SCRIPT_PRECOMPILED_GENERATE_CONSUMPTION_FILES)
                     string(PREPEND consume_script_impl_hpp "#pragma once\n\n")
@@ -514,10 +556,10 @@ function(glare_generate_cpp_script_bindings script_target script_directory scrip
                     configure_file(${glare_consume_script_output_hpp_file} ${glare_consume_script_output_hpp_file_cached})
                 
                     if (GLARE_SCRIPT_PRECOMPILED_GENERATE_HEADER_FILES)
-                        string(PREPEND consume_script_impl_cpp "#include <script/${glare_script_output_hpp_file}>\n\n")
+                        string(PREPEND consume_script_impl_cpp "#include \"${glare_script_output_hpp_file_name}\"\n\n")
                     endif()
 
-                    string(PREPEND consume_script_impl_cpp "#include <script/${glare_consume_script_output_hpp_file}>\n\n")
+                    string(PREPEND consume_script_impl_cpp "#include \"${glare_consume_script_output_hpp_file_name}\"\n\n")
 
                     file(WRITE ${glare_consume_script_output_cpp_file}
                         "${consume_script_impl_cpp}"
@@ -533,10 +575,22 @@ function(glare_generate_cpp_script_bindings script_target script_directory scrip
                         ${glare_consume_script_output_cpp_file_cached}
                     )
 
+                    if(GLARE_SCRIPT_PRECOMPILED_UNITY OR GLARE_SCRIPT_PRECOMPILED_CONSUMPTION_UNITY)
+                        set_source_files_properties(
+                            ${glare_consume_script_output_cpp_file_cached}
+        
+                            PROPERTIES
+
+                            UNITY_GROUP "${glare_script_consumption_unity_group}"
+                        )
+
+                        message("Consumption file: ${glare_consume_script_output_cpp_file_cached} (${glare_script_consumption_unity_group} group)")
+                    endif()
+
                     # Append to the shared 'all scripts' header.
                     string(
                         APPEND glare_consume_all_scripts_hpp_content
-                        "#include <script/${glare_consume_script_output_hpp_file}>\n"
+                        "#include \"${glare_consume_script_output_hpp_file_name}\"\n"
                     )
                 else()
                     string(APPEND after_script "\n\n" "${consume_script_impl_hpp}" "\n\n" "${consume_script_impl_cpp}")
@@ -562,15 +616,6 @@ function(glare_generate_cpp_script_bindings script_target script_directory scrip
                 )
 
                 if(GLARE_SCRIPT_PRECOMPILED_UNITY)
-                    set(glare_script_unity_group_suffix "")
-
-                    string(REPLACE "/" "_" glare_script_unity_group_suffix "${glare_script_local_directory}")
-
-                    set(glare_script_unity_group "${script_target}_${glare_script_unity_group_suffix}")
-
-                    #message(glare_script_unity_group=${glare_script_unity_group})
-                    #message("\"${glare_script_output_cpp_file_cached}\" -> `${glare_script_unity_group}`")
-
                     set_source_files_properties(
                         ${glare_script_output_cpp_file_cached}
         
