@@ -67,6 +67,158 @@ namespace engine
 			using SystemIterator      = SystemCollection::iterator;
 			using ConstSystemIterator = SystemCollection::const_iterator;
 
+		protected:
+			template <typename SystemType, typename OpaqueType>
+			static auto* try_get(OpaqueType&& system_ptr)
+			{
+				auto handle = system_ptr.try_cast<std::unique_ptr<SystemType>>();
+
+				if (handle)
+				{
+					return handle->get();
+				}
+
+				return decltype(handle->get()) {}; // {};
+			}
+
+			template <typename SystemType>
+			static SystemID key() // constexpr
+			{
+				//return short_name_hash<SystemType>().value();
+				//return entt::type_hash<SystemType>::value();
+
+				//return entt::type_hash<std::unique_ptr<SystemType>>::value();
+
+				const auto type = resolve<SystemType>();
+
+				assert(type);
+
+				if (type)
+				{
+					return type.id();
+				}
+
+				return SystemID {};
+			}
+
+			template <typename Collection>
+			static auto get_system_iterator(Collection& systems, SystemID system_id)
+			{
+				return std::find_if
+				(
+					systems.begin(), systems.end(),
+
+					[system_id](const System& system_entry)
+					{
+						if (system_entry.type_id == system_id)
+						{
+							return true;
+						}
+
+						return false;
+					}
+				);
+			}
+
+			template <template<typename, typename, typename...> typename TraitType, typename SystemType, typename ServiceType>
+			static constexpr bool has_method()
+			{
+				using Type = std::decay_t<SystemType>;
+
+				if constexpr (TraitType<Type, bool, ServiceType&>::value)
+				{
+					return true;
+				}
+				else if constexpr (TraitType<Type, bool, Service&>::value)
+				{
+					return true;
+				}
+
+				//return (std::is_base_of_v<WorldSystem, SystemType> && std::is_base_of_v<World, ServiceType>);
+
+				return false;
+			}
+
+			template <typename SystemType, typename ServiceType>
+			static constexpr bool has_subscribe()
+			{
+				return has_method<engine::has_method_subscribe, SystemType, ServiceType>();
+			}
+
+			template <typename SystemType, typename ServiceType>
+			static constexpr bool has_unsubscribe()
+			{
+				//return has_subscribe<SystemType>();
+				return has_method<engine::has_method_unsubscribe, SystemType, ServiceType>();
+			}
+
+			// Emplaces a new instance of `SystemType`, if one does not already exist.
+			// If an instance of `SystemType` is found, a reference to that object will be returned instead.
+			template <typename SystemType, typename...Args>
+			SystemType& emplace_system(Args&&... args)
+			{
+				const auto type_id = key<SystemType>();
+
+				auto existing = get_system_iterator(systems, type_id);
+
+				if (existing != systems.end())
+				{
+					auto ptr = existing->get<SystemType>();
+
+					assert(ptr);
+
+					return *ptr;
+				}
+
+				auto allocated_system = std::make_unique<SystemType>(std::forward<Args>(args)...);
+
+				auto allocated_ptr = allocated_system.get();
+
+				assert(allocated_ptr);
+
+				auto& system = systems.emplace_back
+				(
+					type_id,
+
+					MetaAny { std::move(allocated_system) }
+				);
+
+				return *allocated_ptr;
+			}
+
+			// Destroys a system instance, unsubscribing it from `service`, if possible.
+			// This function returns true if the system was successfully destroyed.
+			template <typename SystemType, typename ServiceType> // ServiceType=Service
+			bool destroy_system(ServiceType& service)
+			{
+				auto it = get_system_iterator(systems, key<SystemType>());
+
+				if (it == systems.end())
+				{
+					// System not found.
+					return false;
+				}
+
+				if constexpr (has_unsubscribe<SystemType, ServiceType>())
+				{
+					if (auto system_ptr = it->get<SystemType>())
+					{
+						// Guarantee that the system unsubscribes from `service`, prior to destruction.
+						system_ptr->unsubscribe(service);
+					}
+				}
+
+				// Remove the underlying 'system' object internally.
+				systems.erase(it);
+
+				// System destroyed.
+				return true;
+			}
+
+			// Opaque container of systems and their resources.
+			SystemCollection systems;
+
+		public:
 			/*
 				TODO: Look into scenarios where the underlying object of `system` could be moved as well.
 				Such scenarios are usually unsafe, since the underlying object is likely subscribed to one or more event sinks.
@@ -237,155 +389,5 @@ namespace engine
 
 			inline auto end_iterator() { return systems.end(); }
 			inline auto end() { return end_iterator(); }
-		protected:
-			template <typename SystemType, typename OpaqueType>
-			static auto* try_get(OpaqueType&& system_ptr)
-			{
-				auto handle = system_ptr.try_cast<std::unique_ptr<SystemType>>();
-
-				if (handle)
-				{
-					return handle->get();
-				}
-
-				return decltype(handle->get()) {}; // {};
-			}
-
-			template <typename SystemType>
-			static SystemID key() // constexpr
-			{
-				//return short_name_hash<SystemType>().value();
-				//return entt::type_hash<SystemType>::value();
-
-				//return entt::type_hash<std::unique_ptr<SystemType>>::value();
-
-				const auto type = resolve<SystemType>();
-
-				assert(type);
-
-				if (type)
-				{
-					return type.id();
-				}
-
-				return SystemID {};
-			}
-
-			template <typename Collection>
-			static auto get_system_iterator(Collection& systems, SystemID system_id)
-			{
-				return std::find_if
-				(
-					systems.begin(), systems.end(),
-
-					[system_id](const System& system_entry)
-					{
-						if (system_entry.type_id == system_id)
-						{
-							return true;
-						}
-
-						return false;
-					}
-				);
-			}
-
-			template <template<typename, typename, typename...> typename TraitType, typename SystemType, typename ServiceType>
-			static constexpr bool has_method()
-			{
-				using Type = std::decay_t<SystemType>;
-
-				if constexpr (TraitType<Type, bool, ServiceType&>::value)
-				{
-					return true;
-				}
-				else if constexpr (TraitType<Type, bool, Service&>::value)
-				{
-					return true;
-				}
-
-				//return (std::is_base_of_v<WorldSystem, SystemType> && std::is_base_of_v<World, ServiceType>);
-
-				return false;
-			}
-
-			template <typename SystemType, typename ServiceType>
-			static constexpr bool has_subscribe()
-			{
-				return has_method<engine::has_method_subscribe, SystemType, ServiceType>();
-			}
-
-			template <typename SystemType, typename ServiceType>
-			static constexpr bool has_unsubscribe()
-			{
-				//return has_subscribe<SystemType>();
-				return has_method<engine::has_method_unsubscribe, SystemType, ServiceType>();
-			}
-
-			// Emplaces a new instance of `SystemType`, if one does not already exist.
-			// If an instance of `SystemType` is found, a reference to that object will be returned instead.
-			template <typename SystemType, typename...Args>
-			SystemType& emplace_system(Args&&... args)
-			{
-				const auto type_id = key<SystemType>();
-
-				auto existing = get_system_iterator(systems, type_id);
-
-				if (existing != systems.end())
-				{
-					auto ptr = existing->get<SystemType>();
-
-					assert(ptr);
-
-					return *ptr;
-				}
-
-				auto allocated_system = std::make_unique<SystemType>(std::forward<Args>(args)...);
-
-				auto allocated_ptr = allocated_system.get();
-
-				assert(allocated_ptr);
-
-				auto& system = systems.emplace_back
-				(
-					type_id,
-
-					MetaAny { std::move(allocated_system) }
-				);
-
-				return *allocated_ptr;
-			}
-
-			// Destroys a system instance, unsubscribing it from `service`, if possible.
-			// This function returns true if the system was successfully destroyed.
-			template <typename SystemType, typename ServiceType> // ServiceType=Service
-			bool destroy_system(ServiceType& service)
-			{
-				auto it = get_system_iterator(systems, key<SystemType>());
-
-				if (it == systems.end())
-				{
-					// System not found.
-					return false;
-				}
-
-				if constexpr (has_unsubscribe<SystemType, ServiceType>())
-				{
-					if (auto system_ptr = it->get<SystemType>())
-					{
-						// Guarantee that the system unsubscribes from `service`, prior to destruction.
-						system_ptr->unsubscribe(service);
-					}
-				}
-
-				// Remove the underlying 'system' object internally.
-				systems.erase(it);
-
-				// System destroyed.
-				return true;
-			}
-
-			// Opaque container of systems and their resources.
-			SystemCollection systems;
 	};
 }
