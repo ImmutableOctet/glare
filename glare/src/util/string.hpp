@@ -498,6 +498,60 @@ namespace util
 		return std::nullopt;
 	}
 
+	template <typename Callback>
+	constexpr std::size_t reverse_split(std::string_view data, std::string_view separator, Callback&& callback)
+	{
+		auto segments_found = std::size_t {};
+
+		auto remaining_data = data;
+
+		while (!remaining_data.empty())
+		{
+			const auto position = remaining_data.find_last_of(separator);
+
+			auto remaining_length    = std::size_t {};
+			auto tail_content_offset = std::size_t {};
+
+			if (position != std::string_view::npos)
+			{
+				tail_content_offset = (position + separator.length());
+
+				remaining_length = position;
+			}
+
+			const auto segment = remaining_data.substr(tail_content_offset);
+
+			if constexpr (std::is_invocable_r_v<bool, Callback, decltype(segment), decltype(separator)>)
+			{
+				if (!callback(segment, separator))
+				{
+					break;
+				}
+			}
+			else if constexpr (std::is_invocable_v<Callback, decltype(segment), decltype(separator)>)
+			{
+				callback(segment, separator);
+			}
+			else if constexpr (std::is_invocable_r_v<bool, Callback, decltype(segment)>)
+			{
+				if (!callback(segment))
+				{
+					break;
+				}
+			}
+			else if constexpr (std::is_invocable_v<Callback, decltype(segment)>)
+			{
+				callback(segment);
+			}
+
+			segments_found++;
+
+			remaining_data = remaining_data.substr(0, remaining_length);
+		}
+
+		return segments_found;
+	}
+
 	template <typename StrArrayType>
 	std::size_t count_valid_strings(const StrArrayType& str_array)
 	{
