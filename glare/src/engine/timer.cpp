@@ -25,17 +25,17 @@ namespace engine
 		switch (time_symbol_id)
 		{
 			case "d"_hs:
-				return convert.operator()<Timer::Days>();
+				return convert.template operator()<Timer::Days>();
 			case "h"_hs:
-				return convert.operator()<Timer::Hours>();
+				return convert.template operator()<Timer::Hours>();
 			case "m"_hs:
-				return convert.operator()<Timer::Minutes>();
+				return convert.template operator()<Timer::Minutes>();
 			case "s"_hs:
-				return Timer::to_duration(duration_raw); // return convert.operator()<Timer::Seconds>();
+				return Timer::to_duration(duration_raw); // return convert.template operator()<Timer::Seconds>();
 			case "ms"_hs:
-				return convert.operator()<Timer::Milliseconds>(); // std::milli
+				return convert.template operator()<Timer::Milliseconds>(); // std::milli
 			case "us"_hs:
-				return convert.operator()<Timer::Microseconds>();
+				return convert.template operator()<Timer::Microseconds>();
 		}
 
 		return std::nullopt;
