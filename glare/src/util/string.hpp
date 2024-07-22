@@ -238,7 +238,7 @@ namespace util
 	// 
 	// This function returns true if `str` contains `separator`.
 	template <std::size_t n_separators, typename Callback>
-	bool split
+	constexpr bool split
 	(
 		std::string_view str,
 		const std::array<std::string_view, n_separators>& separators,
@@ -417,7 +417,7 @@ namespace util
 	}
 
 	template <typename Callback>
-	bool split
+	constexpr bool split
 	(
 		std::string_view str,
 		std::string_view separator,
@@ -439,7 +439,7 @@ namespace util
 	}
 
 	template <std::size_t expected_count, typename ArrayType=std::array<std::string_view, expected_count>>
-	std::optional<std::tuple<ArrayType, std::size_t>> split_from_ex
+	constexpr std::optional<std::tuple<ArrayType, std::size_t>> split_from_ex
 	(
 		std::string_view str,
 		std::string_view separator,
@@ -481,7 +481,7 @@ namespace util
 	}
 
 	template <std::size_t expected_count, typename ArrayType=std::array<std::string_view, expected_count>>
-	std::optional<ArrayType> split_from
+	constexpr std::optional<ArrayType> split_from
 	(
 		std::string_view str,
 		std::string_view separator,
