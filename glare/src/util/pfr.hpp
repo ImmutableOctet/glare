@@ -44,7 +44,7 @@ namespace util
 						enumerate_aggregate_fields_ex<member_type, recursive>(member_fn);
 					}
 
-					member_fn.operator()<self_type, member_type, field_count, field_index, field_name>();
+					member_fn.template operator()<self_type, member_type, field_count, field_index, field_name>();
 				}
 			);
 		}
@@ -59,7 +59,7 @@ namespace util
 			{
 				constexpr auto member_id = engine::hash(member_name).value();
 				
-				member_fn.operator()<SelfType, MemberType, total_member_count, member_index, member_name, member_id>();
+				member_fn.template operator()<SelfType, MemberType, total_member_count, member_index, member_name, member_id>();
 			}
 		);
 	}
