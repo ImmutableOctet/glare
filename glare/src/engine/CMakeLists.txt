@@ -33,7 +33,7 @@ endif()
 
 #set(GLARE_REFLECTION_USE_UNITY_BUILD ON)
 
-add_library(glare_engine_reflection STATIC)
+add_library(glare_engine_reflection OBJECT) # STATIC
 add_library(${PROJECT_NAME}::engine_reflection ALIAS glare_engine_reflection)
 
 target_compile_features(glare_engine_reflection PRIVATE cxx_std_23)
