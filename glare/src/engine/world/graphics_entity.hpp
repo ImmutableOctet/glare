@@ -9,11 +9,16 @@
 //#include "physics/collision_group.hpp"
 #include "physics/collision_config.hpp"
 
+#include <engine/entity_type.hpp>
+
 #include <graphics/types.hpp>
+#include <graphics/math_types.hpp>
+
 #include <util/enum_operators.hpp>
 
 #include <cstdint>
 #include <optional>
+#include <memory>
 #include <string>
 
 namespace graphics

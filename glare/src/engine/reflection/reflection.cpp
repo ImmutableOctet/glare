@@ -809,7 +809,6 @@ namespace engine
         reflect<Entity>();
 
         reflect<EntityType>();
-        reflect<LightType>();
 
         // See: `std::chrono::system_clock::duration` in `reflect_stl`.
         //reflect<Timer::Duration>();

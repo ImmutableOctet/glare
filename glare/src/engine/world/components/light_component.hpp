@@ -1,6 +1,7 @@
 #pragma once
 
 #include <engine/world/types.hpp>
+#include <engine/world/light_type.hpp>
 #include <engine/world/light_properties.hpp>
 
 namespace engine

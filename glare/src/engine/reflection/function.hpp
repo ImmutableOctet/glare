@@ -1,9 +1,13 @@
 #pragma once
 
 #include <engine/meta/types.hpp>
+#include <engine/meta/meta_type.hpp>
 
 #include <util/overloads.hpp>
 #include <util/lambda.hpp>
+
+#include <entt/meta/meta.hpp>
+#include <entt/meta/factory.hpp>
 
 #include <utility>
 #include <type_traits>

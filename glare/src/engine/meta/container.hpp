@@ -1,6 +1,8 @@
 #pragma once
 
 #include "types.hpp"
+#include "meta_any.hpp"
+#include "resolve.hpp"
 #include "hash.hpp"
 
 #include <entt/meta/meta.hpp>

@@ -9,6 +9,7 @@
 #include <util/type_traits.hpp>
 
 #include <entt/meta/meta.hpp>
+#include <entt/meta/factory.hpp>
 
 #include <utility>
 #include <type_traits>

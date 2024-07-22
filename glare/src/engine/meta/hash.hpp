@@ -5,6 +5,10 @@
 #include <util/type_traits.hpp>
 #include <util/variant.hpp>
 
+//#inclue <entt/entt.hpp>
+//#include <entt/meta/meta.hpp>
+#include <entt/core/hashed_string.hpp>
+
 #include <string>
 #include <string_view>
 #include <unordered_map>

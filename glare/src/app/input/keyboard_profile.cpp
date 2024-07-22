@@ -3,6 +3,8 @@
 
 #include "input_profile_impl.hpp"
 
+#include <util/json.hpp>
+
 #include <optional>
 
 namespace app::input

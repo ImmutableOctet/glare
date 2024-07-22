@@ -9,7 +9,7 @@
 // Placeholder type.
 #include "keyboard_motion.hpp"
 
-#include <util/json.hpp>
+#include <util/json_fwd.hpp>
 
 #include <string>
 #include <optional>

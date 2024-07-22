@@ -3,7 +3,11 @@
 #include "types.hpp"
 
 #include <engine/meta/types.hpp>
+#include <engine/meta/meta_any.hpp>
+#include <engine/meta/meta_type.hpp>
+#include <engine/meta/resolve.hpp>
 #include <engine/meta/traits.hpp>
+
 //#include <engine/meta/short_name.hpp>
 
 //#include <entt/meta/meta.hpp>

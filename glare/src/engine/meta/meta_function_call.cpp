@@ -7,6 +7,7 @@
 #include "component.hpp"
 #include "traits.hpp"
 #include "runtime_traits.hpp"
+#include "resolve.hpp"
 //#include "data_member.hpp"
 
 #include "meta_data_member.hpp"

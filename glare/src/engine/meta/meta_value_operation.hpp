@@ -1,6 +1,8 @@
 #pragma once
 
 #include "types.hpp"
+#include "meta_any.hpp"
+#include "meta_type.hpp"
 #include "meta_value_operator.hpp"
 
 #include <util/small_vector.hpp>

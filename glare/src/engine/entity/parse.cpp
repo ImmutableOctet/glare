@@ -4,6 +4,7 @@
 
 #include <util/string.hpp>
 #include <util/parse.hpp>
+#include <util/json.hpp>
 
 #include <regex>
 

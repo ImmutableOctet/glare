@@ -14,6 +14,8 @@
 #include "components/frozen_state_component.hpp"
 #include "components/entity_thread_component.hpp"
 
+#include <util/json.hpp>
+
 // Debugging related:
 #include <util/log.hpp>
 

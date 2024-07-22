@@ -22,7 +22,6 @@
 
 #include <engine/entity/entity_target.hpp>
 
-// TODO: Forward declare `util::json`, etc.
 #include <util/json.hpp>
 
 #include <util/format.hpp>

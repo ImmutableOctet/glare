@@ -25,7 +25,7 @@
 #include <engine/meta/meta_variable_target.hpp>
 #include <engine/meta/indirect_meta_variable_target.hpp>
 
-//#include <util/json.hpp>
+#include <util/json.hpp>
 #include <util/magic_enum.hpp>
 
 #include <string>

@@ -12,8 +12,7 @@
 
 //#include <util/binary/binary_input_stream.hpp>
 
-// TODO: Forward declare JSON type.
-#include <util/json.hpp>
+#include <util/json_fwd.hpp>
 
 #include <optional>
 #include <utility>

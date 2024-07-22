@@ -4,6 +4,8 @@
 
 #include <engine/meta/types.hpp>
 
+#include <util/small_vector.hpp>
+
 namespace engine::history
 {
 	struct ComponentCreations : public EntityAction

@@ -1,6 +1,9 @@
 #include "string.hpp"
 
 #include "hash.hpp"
+#include "indirection.hpp"
+#include "meta_any.hpp"
+#include "resolve.hpp"
 
 namespace engine
 {

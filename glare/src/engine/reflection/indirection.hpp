@@ -10,6 +10,7 @@
 //#include <engine/meta/meta_evaluation_context.hpp>
 
 #include <entt/meta/meta.hpp>
+#include <entt/meta/policy.hpp>
 
 #include <utility>
 #include <type_traits>

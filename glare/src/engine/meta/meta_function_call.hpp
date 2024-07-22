@@ -2,6 +2,9 @@
 
 #include "types.hpp"
 
+#include "meta_any.hpp"
+#include "meta_type.hpp"
+
 #include <util/small_vector.hpp>
 
 namespace engine

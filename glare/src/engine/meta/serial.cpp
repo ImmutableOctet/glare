@@ -91,6 +91,14 @@ namespace engine
 						{
 							return util::format("{}:{}", field_name, field_type_name);
 						}
+
+						if (const auto field_type_name = field_type.info().name(); !field_type_name.empty())
+						{
+							if ((hash(field_type_name) == field_type_id))
+							{
+								return util::format("{}:{}", field_name, field_type_name);
+							}
+						}
 					}
 				}
 

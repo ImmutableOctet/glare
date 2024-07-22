@@ -1,5 +1,7 @@
 #include "collision_config.hpp"
 
+#include <engine/entity_type.hpp>
+
 namespace engine
 {
 	CollisionGroup CollisionConfig::resolve_collision_group(EntityType type)

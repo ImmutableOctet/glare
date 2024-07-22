@@ -1,11 +1,10 @@
 #pragma once
 
 #include <engine/types.hpp>
-//#include <engine/relationship.hpp>
-//#include <engine/transform.hpp>
 
-#include <filesystem>
-#include <util/json.hpp>
+#include <engine/entity_type.hpp>
+
+#include <math/types.hpp>
 
 // TODO: Change this API into something generic enough to work for multiple Services, not just `World`.
 

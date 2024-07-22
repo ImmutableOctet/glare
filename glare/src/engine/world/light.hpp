@@ -1,5 +1,7 @@
 #pragma once
 
+#include "light_type.hpp"
+
 #include "camera/components/camera_component.hpp"
 
 #include <math/types.hpp>
@@ -8,6 +10,8 @@
 
 namespace engine
 {
+	class World;
+
 	bool attach_shadows
 	(
 		World& world,

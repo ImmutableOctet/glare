@@ -4,14 +4,18 @@
 #include "scene_loader_config.hpp"
 
 #include <engine/types.hpp>
+
+#include <graphics/math_types.hpp>
+
 #include <util/log.hpp>
-#include <util/json.hpp>
+#include <util/json_fwd.hpp>
 
 #include <filesystem>
 #include <string>
 #include <tuple>
 #include <utility>
 #include <string_view>
+#include <optional>
 
 //#define _ENFORCE_MATCHING_ALLOCATORS 0
 

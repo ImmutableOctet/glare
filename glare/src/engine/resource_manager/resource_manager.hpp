@@ -2,8 +2,6 @@
 
 #include "types.hpp"
 
-#include <util/json.hpp>
-
 //#include <engine/world/physics/collision.hpp>
 
 #include "collision_data.hpp"

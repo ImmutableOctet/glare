@@ -7,10 +7,11 @@
 #include "meta_description.hpp"
 
 #include <engine/meta/types.hpp>
+#include <engine/meta/meta_id_storage.hpp>
+
 #include <engine/timer.hpp>
 
-// TODO: Forward declare JSON type.
-#include <util/json.hpp>
+#include <util/json_fwd.hpp>
 
 #include <util/small_vector.hpp>
 

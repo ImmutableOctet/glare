@@ -1,7 +1,8 @@
 #pragma once
 
-#include <graphics/types.hpp>
 #include <math/types.hpp>
+
+#include <graphics/math_types.hpp>
 
 namespace engine
 {

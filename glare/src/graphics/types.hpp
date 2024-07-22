@@ -2,9 +2,6 @@
 
 #include "fwd.hpp"
 
-// TODO: Determine if this should still be included here.
-#include "misc.hpp"
-
 #include <cstdint>
 
 namespace graphics

@@ -1,6 +1,9 @@
 #pragma once
 
 #include "types.hpp"
+#include "meta_type.hpp"
+#include "meta_any.hpp"
+#include "type_info.hpp"
 
 #include <util/shared_storage_ref.hpp>
 #include <utility>
@@ -24,7 +27,7 @@ namespace engine
 
 			template <typename StorageType, typename ResourceType>
 			IndirectMetaAny(const StorageType& storage, const ResourceType& remote_resource, bool validate_type_id=true)
-				: IndirectMetaAny(entt::type_hash<ResourceType>::value(), storage.get_index_safe(remote_resource), storage.get_checksum())
+				: IndirectMetaAny(engine::type_hash<ResourceType>::value(), storage.get_index_safe(remote_resource), storage.get_checksum())
 			{
 				if (validate_type_id)
 				{

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.hpp"
+#include "meta_any.hpp"
 #include "meta_variable_scope.hpp"
 
 namespace engine

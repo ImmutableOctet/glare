@@ -6,7 +6,7 @@
 #include "mouse_buttons.hpp"
 #include "mouse_motion.hpp"
 
-#include <util/json.hpp>
+#include <util/json_fwd.hpp>
 
 namespace app::input
 {

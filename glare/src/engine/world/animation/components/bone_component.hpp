@@ -1,6 +1,9 @@
 #pragma once
 
 #include <engine/types.hpp>
+#include <engine/entity_type.hpp>
+
+#include <engine/world/animation/types.hpp>
 
 #include <math/types.hpp>
 
@@ -8,6 +11,8 @@
 
 namespace engine
 {
+	class World;
+
 	struct Bone;
 	struct Skeleton;
 

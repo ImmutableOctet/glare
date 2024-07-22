@@ -7,7 +7,7 @@
 #include "gamepad_deadzone.hpp"
 #include "gamepad_buttons.hpp"
 
-#include <util/json.hpp>
+#include <util/json_fwd.hpp>
 //#include "button_mapping.hpp"
 
 #include <unordered_map>

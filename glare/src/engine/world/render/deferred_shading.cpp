@@ -13,6 +13,7 @@
 #include <engine/transform.hpp>
 
 #include <engine/world/world.hpp>
+#include <engine/world/light_type.hpp>
 
 #include <engine/world/components/light_component.hpp>
 #include <engine/world/components/directional_light_component.hpp>

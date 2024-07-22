@@ -4,7 +4,7 @@
 
 #include <engine/timer.hpp>
 
-#include <util/json.hpp>
+#include <util/json_fwd.hpp>
 
 #include <string>
 #include <string_view>

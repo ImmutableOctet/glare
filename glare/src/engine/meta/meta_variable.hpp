@@ -1,10 +1,10 @@
 #pragma once
 
 #include "types.hpp"
+#include "meta_any.hpp"
 #include "meta_parsing_instructions.hpp"
 
-// TODO: Forward declare JSON type.
-#include <util/json.hpp>
+#include <util/json_fwd.hpp>
 
 #include <string_view>
 

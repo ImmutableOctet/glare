@@ -5,6 +5,7 @@
 #include "scene.hpp"
 
 #include "light.hpp"
+#include "light_type.hpp"
 
 //#include "animator.hpp"
 #include "graphics_entity.hpp"

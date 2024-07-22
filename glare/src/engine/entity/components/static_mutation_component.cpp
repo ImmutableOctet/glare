@@ -1,5 +1,7 @@
 #include "static_mutation_component.hpp"
 
+#include <engine/meta/meta_type.hpp>
+
 #include <algorithm>
 
 namespace engine

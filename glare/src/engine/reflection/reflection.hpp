@@ -32,6 +32,8 @@
 #include "service_extensions.hpp"
 
 #include <engine/types.hpp>
+#include <engine/registry.hpp>
+#include <engine/entity.hpp>
 
 //#include <engine/meta/meta.hpp>
 #include <engine/meta/types.hpp>
@@ -52,8 +54,10 @@
 #include <engine/service.hpp>
 #include <engine/system_manager_interface.hpp>
 
-#include <util/reflection.hpp>
 #include <util/json.hpp>
+#include <util/reflection.hpp>
+
+#include <entt/entt.hpp>
 
 #include <string_view>
 #include <type_traits>

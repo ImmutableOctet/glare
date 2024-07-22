@@ -2,6 +2,8 @@
 
 #include "types.hpp"
 #include "hash.hpp"
+#include "type_info.hpp"
+#include "resolve.hpp"
 
 #include <string>
 #include <string_view>

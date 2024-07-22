@@ -1,6 +1,8 @@
 #pragma once
 
 #include "types.hpp"
+#include "meta_type.hpp"
+#include "resolve.hpp"
 
 #include <util/magic_enum.hpp>
 
@@ -53,7 +55,7 @@ namespace engine
 	// Retrieves the runtime (property-based) value associated to `id` in `meta_type_inst`.
     // If no value is associated, this will fail via assertion.
     template <typename EnumType>
-    EnumType get_reflected_enum(const entt::meta_type& meta_type_inst, entt::hashed_string id)
+    EnumType get_reflected_enum(const MetaType& meta_type_inst, entt::hashed_string id)
     {
         auto meta_property = meta_type_inst.prop(id);
         return meta_property.value().cast<EnumType>();
@@ -62,7 +64,7 @@ namespace engine
     // Computes the hash of `enum_value_name`, then retrieves the runtime value associated by `meta_type_inst`.
     // If no value is associated, this will fail via assertion.
     template <typename EnumType>
-    EnumType get_reflected_enum(const entt::meta_type& meta_type_inst, std::string_view enum_value_name)
+    EnumType get_reflected_enum(const MetaType& meta_type_inst, std::string_view enum_value_name)
     {
         return get_reflected_enum<EnumType>(meta_type_inst, entt::hashed_string(enum_value_name.data(), enum_value_name.size()));
     }
@@ -72,6 +74,6 @@ namespace engine
     template <typename EnumType, typename IdentifierType>
     EnumType get_reflected_enum(const IdentifierType& enum_value_identifier)
     {
-        return get_reflected_enum<EnumType>(entt::resolve<EnumType>(), enum_value_identifier);
+        return get_reflected_enum<EnumType>(engine::resolve<EnumType>(), enum_value_identifier);
     }
 };

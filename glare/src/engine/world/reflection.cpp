@@ -5,6 +5,7 @@
 #include "world.hpp"
 #include "world_properties.hpp"
 #include "graphics_entity.hpp"
+#include "light_type.hpp"
 
 #include "components/light_component.hpp"
 #include "components/directional_light_component.hpp"
@@ -218,6 +219,8 @@ namespace engine
 		reflect<CameraProjection>();
 		reflect<WorldProperties>();
 		reflect<LightProperties>();
+
+		reflect<LightType>();
 
 		// Components and behaviors:
 

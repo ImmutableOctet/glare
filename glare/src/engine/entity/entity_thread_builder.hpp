@@ -12,7 +12,7 @@
 #include <engine/meta/meta_parsing_context.hpp>
 //#include <engine/meta/indirect_meta_any.hpp>
 
-#include <util/json.hpp>
+#include <util/json_fwd.hpp>
 
 #include <filesystem>
 #include <string_view>

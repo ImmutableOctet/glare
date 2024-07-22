@@ -31,6 +31,7 @@
 #include <util/string.hpp>
 #include <util/parse.hpp>
 #include <util/io.hpp>
+#include <util/json.hpp>
 #include <util/optional.hpp>
 #include <util/variant.hpp>
 

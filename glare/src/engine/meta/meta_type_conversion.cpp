@@ -1,5 +1,6 @@
 #include "meta_type_conversion.hpp"
 #include "meta_evaluation_context.hpp"
+#include "resolve.hpp"
 
 //#include <entt/meta/meta.hpp>
 

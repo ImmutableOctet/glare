@@ -2,18 +2,22 @@
 
 #include "types.hpp"
 
+#include "light_type.hpp"
+#include "world_properties.hpp"
+#include "scene_loader_config.hpp"
+
+#include "animation/types.hpp"
+
 #include <engine/action.hpp>
 #include <engine/service.hpp>
 #include <engine/transform.hpp>
 #include <engine/delta_time.hpp>
 
-#include "world_properties.hpp"
-#include "scene_loader_config.hpp"
-
 //#include <graphics/types.hpp> // Not actually needed. (`ColorRGB` is actually located in math)
 
 #include <math/types.hpp>
-#include <util/json.hpp>
+
+#include <util/json_fwd.hpp>
 
 #include <string_view>
 #include <filesystem>

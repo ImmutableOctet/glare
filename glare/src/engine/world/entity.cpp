@@ -10,8 +10,6 @@
 #include <engine/events.hpp>
 //#include "world_events.hpp"
 
-#include <util/json.hpp>
-
 namespace engine
 {
 	Entity create_entity(World& world, Entity parent, EntityType type)

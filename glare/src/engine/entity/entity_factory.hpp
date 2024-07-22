@@ -6,7 +6,7 @@
 #include "entity_descriptor.hpp"
 #include "serial.hpp"
 
-#include <util/json.hpp>
+#include <util/json_fwd.hpp>
 #include <util/algorithm.hpp>
 
 #include <filesystem>

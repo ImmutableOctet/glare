@@ -2,6 +2,8 @@
 
 #include <math/types.hpp>
 
+#include <string>
+
 namespace engine
 {
 	struct GraphicsConfig

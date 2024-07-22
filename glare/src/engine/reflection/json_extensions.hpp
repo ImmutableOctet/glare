@@ -2,8 +2,6 @@
 
 #include <engine/meta/serial.hpp>
 
-#include <util/json.hpp>
-
 namespace engine::impl
 {
 	template <typename T>
