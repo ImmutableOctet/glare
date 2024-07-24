@@ -2,6 +2,8 @@
 
 #include "types.hpp"
 
+#include "entity_state_info.hpp"
+
 //#include <engine/meta/types.hpp>
 //#include <engine/meta/meta_variable_target.hpp>
 #include <engine/meta/meta_any.hpp>

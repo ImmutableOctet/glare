@@ -2,10 +2,8 @@
 
 #include <engine/types.hpp>
 
-#include <util/small_vector.hpp>
+//#include <util/small_vector.hpp>
 //#include <vector>
-
-#include <optional>
 
 namespace engine
 {
@@ -31,12 +29,6 @@ namespace engine
 	//using EntityVector = util::small_vector<Entity, 16>; // std::vector<Entity>; // std::unordered_set<Entity>;
 
 	using PrecompiledScriptID = entt::id_type; // StringHash;
-
-	struct EntityStateInfo
-	{
-		EntityStateIndex index;
-		std::optional<EntityStateHash> id; // EntityStateHash
-	};
 
 	inline constexpr EntityThreadIndex      ENTITY_THREAD_INDEX_INVALID      = static_cast<EntityThreadIndex>(-1ull);
 	inline constexpr EntityInstructionIndex ENTITY_INSTRUCTION_INDEX_INVALID = static_cast<EntityInstructionIndex>(-1ull);
