@@ -1,6 +1,5 @@
-#pragma once
-
 #include "reflection.hpp"
+
 #include "types.hpp"
 #include "physics_system.hpp"
 #include "collision_cast.hpp"
