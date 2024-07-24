@@ -46,8 +46,6 @@ if(GLARE_GRAPHICS_USE_UNITY_BUILD)
     glare_configure_unity_build_for_module(glare_graphics "${CMAKE_CURRENT_SOURCE_DIR}" false "${GLARE_GRAPHICS_UNITY_BUILD_GRANULAR}")
 endif()
 
-#set(GLARE_REFLECTION_USE_UNITY_BUILD ON)
-
 add_subdirectory("drivers")
 
 target_include_directories(
