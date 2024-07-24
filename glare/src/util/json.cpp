@@ -1,5 +1,3 @@
-#pragma once
-
 #include "json.hpp"
 
 #include <math/conversion.hpp>

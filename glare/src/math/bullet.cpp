@@ -1,5 +1,3 @@
-#pragma once
-
 #include "bullet.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
