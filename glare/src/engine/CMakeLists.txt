@@ -18,8 +18,8 @@ target_sources(
     PRIVATE
     
     "service.cpp"
-    "timer.cpp"
     "transform.cpp"
+    "time.cpp"
 )
 
 if((GLARE_USE_UNITY_BUILD) AND (NOT GLARE_ENGINE_USE_UNITY_BUILD))
@@ -94,5 +94,6 @@ add_subdirectory("world")
 add_subdirectory("editor")
 add_subdirectory("script")
 add_subdirectory("platform")
+add_subdirectory("network")
 add_subdirectory("test")
 add_subdirectory("reflection")

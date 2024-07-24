@@ -31,7 +31,7 @@
 #include <engine/meta/hash.hpp>
 
 #include <engine/config.hpp>
-#include <engine/timer.hpp>
+#include <engine/time.hpp>
 
 #include <engine/platform/reflection.hpp>
 
@@ -557,8 +557,8 @@ namespace engine
             //.type("Duration"_hs)
             
             // Constructor to convert from floating-point values (seconds) to STL system-clock duration values.
-            // (Commonly aliased via `Timer::Duration`)
-            .ctor<static_cast<T(*)(float)>(&Timer::to_duration)>()
+            // (Commonly aliased via `Timer::Duration`, `engine::time::Duration`, etc.)
+            .ctor<static_cast<T(*)(float)>(&engine::time::to_duration)>()
             
             .ctor<&impl::duration_from_integer>()
 
@@ -811,7 +811,7 @@ namespace engine
         reflect<EntityType>();
 
         // See: `std::chrono::system_clock::duration` in `reflect_stl`.
-        //reflect<Timer::Duration>();
+        //reflect<engine::time::Duration>();
 
         //reflect<LightProperties>();
         //reflect<Axis>(); // RotationAxis
