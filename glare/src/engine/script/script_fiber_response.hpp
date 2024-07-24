@@ -5,9 +5,11 @@
 
 #include <engine/timer.hpp>
 
-#include <engine/entity/entity_instruction.hpp>
-#include <engine/entity/entity_state_action.hpp>
-#include <engine/entity/actions/entity_thread_spawn_action.hpp>
+#include <engine/entity/types.hpp>
+
+//#include <engine/entity/entity_instruction.hpp>
+//#include <engine/entity/entity_state_action.hpp>
+//#include <engine/entity/actions/entity_thread_spawn_action.hpp>
 
 #include <entt/core/hashed_string.hpp>
 
@@ -21,8 +23,8 @@ namespace engine
 		std::monostate,
 
 		ScriptControlFlowToken,
-		EntityStateAction,
-		EntityThreadSpawnAction,
+		//EntityStateAction,
+		//EntityThreadSpawnAction,
 
 		ScriptEventYieldRequest,
 
@@ -31,7 +33,7 @@ namespace engine
 		entt::hashed_string,
 
 		// Instructions:
-		EntityInstruction,
+		//EntityInstruction,
 
 		// Timer/duration:
 		Timer,
