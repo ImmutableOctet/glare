@@ -18,9 +18,10 @@
 
 #include <engine/components/name_component.hpp>
 #include <engine/components/relationship_component.hpp>
-#include <engine/components/player_component.hpp>
-#include <engine/components/player_target_component.hpp>
 #include <engine/components/transform_component.hpp>
+
+#include <engine/player/components/player_component.hpp>
+#include <engine/player/components/player_target_component.hpp>
 
 #include <engine/entity/entity_system.hpp>
 #include <engine/entity/entity_state.hpp>

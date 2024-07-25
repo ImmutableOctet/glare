@@ -8,14 +8,6 @@
 
 namespace engine
 {
-	// Standard forward declarations:
-	class Service;
-	class World;
-	class ResourceManager;
-
-	// TODO: Look into removing this from the main 'types' header.
-	struct AnimationData;
-
 	using SharedStorageIndex = std::uint16_t; // std::uint32_t; // std::size_t; // util::DefaultSharedStorageIndex;
 
 	using Registry     = entt::registry;
@@ -24,19 +16,16 @@ namespace engine
 
 	using StringHash = entt::id_type; // entt::hashed_string;
 
-	/*
-	template <typename... delegate_params>
-	using Delegate = entt::delegate<delegate_params...>;
+	// TODO: Remove/rework:
+	using EntityTypeRaw = std::uint8_t; // std::uint16_t;
 
-	template <typename... sink_parameters>
-	using Sink = entt::sink<sink_parameters...>;
-	*/
+	enum class EntityType : EntityTypeRaw;
 
-	// TODO: Remove/rework.
-	enum class EntityType : std::uint8_t; // std::uint16_t
+	// TODO: Remove from this file.
+	using LightTypeRaw = std::uint8_t;
 
 	// TODO: Remove forward declaration.
-	enum class LightType : std::uint8_t;
+	enum class LightType : LightTypeRaw;
 
 	inline constexpr Entity null = static_cast<Entity>(entt::null); // entt::null_t
 }

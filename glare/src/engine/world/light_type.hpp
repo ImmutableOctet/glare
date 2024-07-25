@@ -1,12 +1,13 @@
 #pragma once
 
-#include <cstdint>
+// TODO: Remove in favor of forward declaration header.
+#include <engine/types.hpp>
 
 #include <util/enum_operators.hpp>
 
 namespace engine
 {
-	enum class LightType : std::uint8_t
+	enum class LightType : LightTypeRaw
 	{
 		// Allows for multiple light sub-components
 		// to be bound to the same entity.
@@ -20,5 +21,5 @@ namespace engine
 		Spotlight = Spot,
 	};
 	
-	FLAG_ENUM(std::uint8_t, LightType);
+	FLAG_ENUM(LightTypeRaw, LightType);
 }

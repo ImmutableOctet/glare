@@ -5,6 +5,8 @@
 
 namespace engine
 {
+	class World;
+
 	struct Transform;
 
 	// Continually rotates an entity according to its configured `spin_vector`.

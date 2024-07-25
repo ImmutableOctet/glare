@@ -1,9 +1,12 @@
 #pragma once
 
+// TODO: Remove in favor of forward declaration header.
+#include <engine/types.hpp>
+
 namespace engine
 {
 	// TODO: Remove/rework.
-	enum class EntityType : std::uint8_t // std::uint16_t
+	enum class EntityType : EntityTypeRaw
 	{
 		Default = 0,
 

@@ -24,6 +24,8 @@
 
 namespace engine
 {
+	class Service;
+
 	class SystemManagerInterface
 	{
 		public:

@@ -10,6 +10,8 @@
 
 namespace engine
 {
+	class World;
+
 	struct RelationshipComponent;
 	struct Transform;
 	struct AnimationComponent;

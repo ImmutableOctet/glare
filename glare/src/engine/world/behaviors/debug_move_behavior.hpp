@@ -13,6 +13,8 @@ namespace app
 
 namespace engine
 {
+	class World;
+
 	struct Transform;
 
 	// TODO: Rework using new high-level input system.
