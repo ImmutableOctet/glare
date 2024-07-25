@@ -4,8 +4,9 @@
 #include <engine/transform.hpp>
 
 #include <engine/components/name_component.hpp>
-#include <engine/components/player_component.hpp>
-#include <engine/components/player_target_component.hpp>
+
+#include <engine/player/components/player_component.hpp>
+#include <engine/player/components/player_target_component.hpp>
 
 #include <engine/entity/types.hpp>
 #include <engine/entity/entity_target.hpp>

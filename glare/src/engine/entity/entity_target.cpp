@@ -8,7 +8,8 @@
 
 #include <engine/components/relationship_component.hpp>
 #include <engine/components/name_component.hpp>
-#include <engine/components/player_component.hpp>
+
+#include <engine/player/components/player_component.hpp>
 
 #include <util/string.hpp>
 #include <util/parse.hpp>
@@ -361,9 +362,9 @@ namespace engine
 				case "player"_hs:
 					if (!command_content.empty())
 					{
-						if (auto player_index = util::from_string<PlayerIndex>(command_content))
+						if (auto player_index = util::from_string<PlayerIndexRaw>(command_content))
 						{
-							return ParseResult { PlayerTarget { *player_index }, parse_offset, false };
+							return ParseResult { PlayerTarget { static_cast<PlayerIndex>(*player_index) }, parse_offset, false };
 						}
 						else if (auto as_indirect = command_content_as_indirect())
 						{

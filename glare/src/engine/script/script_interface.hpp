@@ -3,7 +3,8 @@
 #include "script_fiber.hpp"
 #include "script_entry_point.hpp"
 
-#include <engine/types.hpp>
+#include <engine/player/types.hpp>
+#include <engine/entity/types.hpp>
 
 #include <engine/meta/types.hpp>
 #include <engine/meta/meta_any.hpp>

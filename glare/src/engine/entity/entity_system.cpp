@@ -224,7 +224,6 @@ namespace engine
 		service.register_event<OnParentChanged,           &EntitySystem::on_parent_changed>(*this);
 		service.register_event<OnEntityThreadsUpdated,    &EntitySystem::on_entity_threads_updated>(*this);
 
-
 		return true;
 	}
 

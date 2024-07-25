@@ -3,8 +3,6 @@
 #include <engine/reflection.hpp>
 
 #include "name_component.hpp"
-#include "player_component.hpp"
-#include "player_target_component.hpp"
 #include "type_component.hpp"
 #include "forwarding_component.hpp"
 #include "relationship_component.hpp"
@@ -21,8 +19,6 @@ namespace engine
 {
 	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(TypeComponent, type);
 	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(ForwardingComponent, root_entity);
-	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(PlayerComponent, player_index);
-	GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(PlayerTargetComponent, player_index);
 	//GENERATE_SINGLE_FIELD_COMPONENT_REFLECTION(NameComponent, name);
 
 	// TODO: Reflect the rest of the public API.
@@ -133,8 +129,6 @@ namespace engine
 		reflect<NameComponent>();
 		reflect<TypeComponent>();
 		reflect<ForwardingComponent>();
-		reflect<PlayerComponent>();
-		reflect<PlayerTargetComponent>();
 		reflect<TransformHistoryComponent>();
 
 		// TODO: Implement reflection for `Transform` type as well.

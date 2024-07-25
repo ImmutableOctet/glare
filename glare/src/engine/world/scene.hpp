@@ -5,6 +5,8 @@
 
 #include <engine/types.hpp>
 
+#include <engine/player/player_index.hpp>
+
 #include <graphics/math_types.hpp>
 
 #include <util/log.hpp>
@@ -94,7 +96,7 @@ namespace engine
 			// Optional non-owning pointer to system-manager.
 			SystemManagerInterface* system_manager = nullptr;
 
-			PlayerIndex player_idx_counter = PRIMARY_LOCAL_PLAYER;
+			PlayerIndexRaw player_idx_counter = static_cast<PlayerIndexRaw>(PlayerIndex::PrimaryLocal);
 			
 			bool ensure_scene(Entity parent=null);
 

@@ -36,8 +36,9 @@
 
 #include <engine/components/name_component.hpp>
 #include <engine/components/model_component.hpp>
-#include <engine/components/player_component.hpp>
-#include <engine/components/player_target_component.hpp>
+
+#include <engine/player/components/player_component.hpp>
+#include <engine/player/components/player_target_component.hpp>
 
 #include <engine/input/components/input_component.hpp>
 
@@ -500,11 +501,11 @@ namespace engine
 					"character"
 				);
 
-				auto player_idx = util::get_value<PlayerIndex>(player_cfg, "player", util::get_value<PlayerIndex>(player_cfg, "index", player_idx_counter));
+				const auto player_idx = util::get_value<PlayerIndexRaw>(player_cfg, "player", util::get_value<PlayerIndexRaw>(player_cfg, "index", player_idx_counter));
 
-				assert(player_idx != NO_PLAYER);
+				assert(player_idx != static_cast<PlayerIndexRaw>(PlayerIndex::None));
 
-				registry.emplace_or_replace<PlayerComponent>(player, player_idx);
+				registry.emplace_or_replace<PlayerComponent>(player, static_cast<PlayerIndex>(player_idx));
 				registry.emplace_or_replace<InputComponent>(player, static_cast<InputStateIndex>(player_idx));
 
 				if (!config.players.default_player.name.empty())

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <engine/types.hpp>
+#include <engine/player/types.hpp>
 
 namespace engine
 {

@@ -6,9 +6,12 @@
 #include "meta/meta_type_descriptor.hpp"
 #include "meta/meta_evaluation_context.hpp"
 
+#include "player/player_index.hpp"
+
+#include "player/components/player_component.hpp"
+
 #include "components/relationship_component.hpp"
 #include "components/name_component.hpp"
-#include "components/player_component.hpp"
 
 #include "commands/indirect_component_patch_command.hpp"
 #include "commands/component_patch_command.hpp"
@@ -597,7 +600,7 @@ namespace engine
 
 	Entity Service::get_player() const
 	{
-		return get_player(engine::PRIMARY_LOCAL_PLAYER);
+		return get_player(PlayerIndex::PrimaryLocal);
 	}
 
 	EventHandler& Service::get_active_event_handler()

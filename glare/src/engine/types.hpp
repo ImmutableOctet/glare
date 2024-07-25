@@ -34,9 +34,6 @@ namespace engine
 	using Sink = entt::sink<sink_parameters...>;
 	*/
 
-	// NOTE: Must be equivalent to `app::input::PlayerInputID`.
-	using PlayerIndex = std::uint16_t;
-
 	// TODO: Remove/rework.
 	enum class EntityType : std::uint8_t; // std::uint16_t
 
@@ -44,10 +41,6 @@ namespace engine
 	enum class LightType : std::uint8_t;
 
 	inline constexpr Entity null = static_cast<Entity>(entt::null); // entt::null_t
-
-	inline constexpr PlayerIndex PRIMARY_LOCAL_PLAYER = 1;
-	inline constexpr PlayerIndex NO_PLAYER            = 0;
-	inline constexpr PlayerIndex ANY_PLAYER           = 0;
 
 	// The number of frames per-second targeted by default.
 	inline constexpr FramerateType DEFAULT_FRAMERATE = 60;

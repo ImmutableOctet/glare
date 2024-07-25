@@ -2,6 +2,8 @@
 
 #include "types.hpp"
 
+#include <engine/player/player_index.hpp>
+
 #include <engine/meta/types.hpp>
 #include <engine/meta/indirect_meta_any.hpp>
 
@@ -70,7 +72,7 @@ namespace engine
 
 			struct PlayerTarget
 			{
-				PlayerIndex player_index = NO_PLAYER;
+				PlayerIndex player_index = PlayerIndex::None;
 
 				bool operator==(const PlayerTarget&) const noexcept = default;
 				bool operator!=(const PlayerTarget&) const noexcept = default;

@@ -20,8 +20,8 @@
 #include <engine/script/script_handle.hpp>
 #include <engine/script/script.hpp>
 
-#include <engine/components/player_component.hpp>
-#include <engine/components/player_target_component.hpp>
+#include <engine/player/components/player_component.hpp>
+#include <engine/player/components/player_target_component.hpp>
 
 //#include <engine/resource_manager/resource_manager.hpp>
 

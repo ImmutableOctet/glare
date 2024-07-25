@@ -15,6 +15,7 @@
 #include "commands/events.hpp"
 
 #include "entity/entity_variables.hpp"
+#include "player/types.hpp"
 #include "meta/types.hpp"
 
 #include <app/types.hpp>
