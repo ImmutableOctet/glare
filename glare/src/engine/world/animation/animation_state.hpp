@@ -1,5 +1,7 @@
 #pragma once
 
+#include <engine/rates.hpp>
+
 #include "animation_slice.hpp"
 
 namespace engine
@@ -12,7 +14,7 @@ namespace engine
 
 		// The rate at which `time` advances along the animation `area`.
 		// A negative rate results in reversed playback.
-		float rate = engine::DEFAULT_RATE; // (1.0f / 60.0f);
+		float rate = TARGET_FRAME_DELTA; // (1.0f / 60.0f);
 
 		// If enabled, the animation `time` will progress at `rate` along `area`.
 		// If disabled, animation will be paused at the current `time`.

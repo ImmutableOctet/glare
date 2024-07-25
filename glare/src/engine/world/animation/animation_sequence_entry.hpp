@@ -3,6 +3,7 @@
 #include "animation_transition.hpp"
 
 #include <engine/types.hpp>
+#include <engine/rates.hpp>
 
 namespace engine
 {
@@ -12,7 +13,7 @@ namespace engine
 		AnimationID animation = {};
 
 		// The rate at which `animation` will be played.
-		float rate = engine::DEFAULT_RATE; // (1.0f / 60.0f);
+		float rate = TARGET_FRAME_DELTA; // (1.0f / 60.0f);
 
 		// Specifies the transition to be applied when switching from
 		// `animation` to the next animation in the sequence.
