@@ -2,9 +2,6 @@
 
 #include <engine/types.hpp>
 
-//#include <util/small_vector.hpp>
-//#include <vector>
-
 namespace engine
 {
 	// Opaque identifier used to differentiate entity states.
@@ -21,12 +18,9 @@ namespace engine
 	using EntityInstructionCount = EntityInstructionIndex;
 
 	using EntityThreadIndex = SharedStorageIndex; // std::uint16_t; // std::uint32_t;
-	//enum class EntityThreadIndex : SharedStorageIndex {};
 
 	using EntityThreadCount = EntityThreadIndex;
 	using EntityThreadID = StringHash;
-
-	//using EntityVector = util::small_vector<Entity, 16>; // std::vector<Entity>; // std::unordered_set<Entity>;
 
 	using PrecompiledScriptID = entt::id_type; // StringHash;
 
