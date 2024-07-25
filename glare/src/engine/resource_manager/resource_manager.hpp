@@ -52,6 +52,8 @@ namespace engine
 	struct EntityFactoryContext;
 	struct EntityConstructionContext;
 
+	struct AnimationData;
+
 	using EntityFactoryKey = std::string; // std::string_view; // EntityFactory::FactoryKey:
 
 	// TODO: Revisit weak vs. strong references for caching.
