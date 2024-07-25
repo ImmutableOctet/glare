@@ -16,7 +16,7 @@ namespace engine
 
 				std::enable_if<engine::time::shared::IsDurationType<DurationType>, int>::type=0
 			>
-			Duration to_duration(DurationType duration_value)
+			constexpr Duration to_duration(DurationType duration_value)
 			{
 				return engine::network::time::impl::duration_cast<DurationType>(duration_value);
 			}

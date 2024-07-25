@@ -1,6 +1,7 @@
 #pragma once
 
 #include <engine/time_decl.hpp>
+#include <engine/rates.hpp>
 
 #include <chrono>
 
@@ -19,19 +20,31 @@ namespace engine
 
 			using Interval       = Duration;
 			using UpdateInterval = Interval;
-
-			inline Duration to_duration(FloatSeconds seconds)  { return engine::time::shared::impl::to_duration<Duration>(seconds); }
-			inline Duration to_duration(DoubleSeconds seconds) { return engine::time::shared::impl::to_duration<Duration>(seconds); }
-			inline Duration to_duration(float seconds)         { return engine::time::shared::impl::to_duration<Duration>(seconds); }
-			inline Duration to_duration(double seconds)        { return engine::time::shared::impl::to_duration<Duration>(seconds); }
+			using Rate           = Duration;
+			using UpdateRate     = Rate;
 
 			namespace impl
 			{
 				template <typename DurationType>
-				Duration duration_cast(DurationType duration_value)
+				constexpr Duration duration_cast(DurationType duration_value)
 				{
 					return engine::time::shared::impl::duration_cast<Duration>(duration_value);
 				}
+			}
+
+			constexpr Duration to_duration(FloatSeconds seconds)  { return engine::time::shared::impl::to_duration<Duration>(seconds); }
+			constexpr Duration to_duration(DoubleSeconds seconds) { return engine::time::shared::impl::to_duration<Duration>(seconds); }
+			constexpr Duration to_duration(float seconds)         { return engine::time::shared::impl::to_duration<Duration>(seconds); }
+			constexpr Duration to_duration(double seconds)        { return engine::time::shared::impl::to_duration<Duration>(seconds); }
+
+			constexpr Interval tick_rate()
+			{
+				return engine::time::impl::duration_cast
+				(
+					std::chrono::duration_cast<Nanoseconds>(Seconds { 1 })
+					/
+					TARGET_NETWORK_UPDATES_PER_SECOND
+				);
 			}
 		}
 	}
@@ -40,4 +53,6 @@ namespace engine
 	using NetworkDuration       = network::time::Duration;
 	using NetworkInterval       = network::time::Interval;
 	using NetworkUpdateInterval = network::time::UpdateInterval;
+	using NetworkRate           = network::time::Rate;
+	using NetworkUpdateRate     = network::time::UpdateRate;
 }

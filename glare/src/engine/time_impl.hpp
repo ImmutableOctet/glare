@@ -19,7 +19,7 @@ namespace engine
 			namespace impl
 			{
 				template <typename OutputDurationType, typename FloatType, typename ToDurationRawFn>
-				std::optional<OutputDurationType> to_duration_float_impl(FloatType duration_raw, StringHash time_symbol_id, ToDurationRawFn&& to_duration_from_raw)
+				constexpr std::optional<OutputDurationType> to_duration_float_impl(FloatType duration_raw, StringHash time_symbol_id, ToDurationRawFn&& to_duration_from_raw)
 				{
 					using namespace engine::literals;
 
@@ -54,7 +54,7 @@ namespace engine
 				}
 
 				template <typename InputDurationTypeRaw, typename ToDurationFn>
-				decltype(auto) to_duration_dispatch_impl(InputDurationTypeRaw duration_raw, std::string_view time_symbol, ToDurationFn&& to_duration)
+				constexpr decltype(auto) to_duration_dispatch_impl(InputDurationTypeRaw duration_raw, std::string_view time_symbol, ToDurationFn&& to_duration)
 				{
 					using namespace engine::literals;
 
@@ -67,7 +67,7 @@ namespace engine
 				}
 
 				template <typename OutputDurationType, typename DurationTypeRaw>
-				std::optional<OutputDurationType> to_duration_impl(DurationTypeRaw duration_rep, StringHash time_symbol_id)
+				constexpr std::optional<OutputDurationType> to_duration_impl(DurationTypeRaw duration_rep, StringHash time_symbol_id)
 				{
 					using namespace engine::literals;
 

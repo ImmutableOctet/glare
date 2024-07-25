@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.hpp"
+#include "rates.hpp"
 
 #include <chrono>
 
@@ -16,6 +16,7 @@ namespace engine
 			using Seconds        = std::chrono::seconds; 
 			using Milliseconds   = std::chrono::milliseconds;
 			using Microseconds   = std::chrono::microseconds;
+			using Nanoseconds    = std::chrono::nanoseconds;
 
 			using FloatSeconds   = std::chrono::duration<float>;
 			using DoubleSeconds  = std::chrono::duration<double>;
@@ -29,37 +30,37 @@ namespace engine
 			namespace impl
 			{
 				template <typename OutputDurationType, typename InputDurationType>
-				OutputDurationType duration_cast(InputDurationType&& duration_value)
+				constexpr OutputDurationType duration_cast(InputDurationType&& duration_value)
 				{
 					return std::chrono::duration_cast<OutputDurationType>(duration_value);
 				}
 
 				template <typename OutputDurationType, typename SecondsType>
-				OutputDurationType to_duration_seconds_impl(SecondsType&& seconds)
+				constexpr OutputDurationType to_duration_seconds_impl(SecondsType&& seconds)
 				{
 					return duration_cast<OutputDurationType>(std::chrono::round<std::chrono::nanoseconds>(std::forward<SecondsType>(seconds)));
 				}
 
 				template <typename OutputDurationType>
-				OutputDurationType to_duration(FloatSeconds seconds)
+				constexpr OutputDurationType to_duration(FloatSeconds seconds)
 				{
 					return to_duration_seconds_impl<OutputDurationType>(seconds);
 				}
 
 				template <typename OutputDurationType>
-				OutputDurationType to_duration(float seconds)
+				constexpr OutputDurationType to_duration(float seconds)
 				{
 					return to_duration<OutputDurationType>(FloatSeconds(seconds));
 				}
 
 				template <typename OutputDurationType>
-				OutputDurationType to_duration(DoubleSeconds seconds)
+				constexpr OutputDurationType to_duration(DoubleSeconds seconds)
 				{
 					return to_duration_seconds_impl<OutputDurationType>(seconds);
 				}
 
 				template <typename OutputDurationType>
-				OutputDurationType to_duration(double seconds)
+				constexpr OutputDurationType to_duration(double seconds)
 				{
 					return to_duration<OutputDurationType>(DoubleSeconds(seconds));
 				}
@@ -75,24 +76,33 @@ namespace engine
 
 		using Interval       = Duration;
 		using UpdateInterval = Interval;
-
-		inline Duration to_duration(FloatSeconds seconds)  { return engine::time::shared::impl::to_duration<Duration>(seconds); }
-		inline Duration to_duration(DoubleSeconds seconds) { return engine::time::shared::impl::to_duration<Duration>(seconds); }
-		inline Duration to_duration(float seconds)         { return engine::time::shared::impl::to_duration<Duration>(seconds); }
-		inline Duration to_duration(double seconds)        { return engine::time::shared::impl::to_duration<Duration>(seconds); }
-
-		inline Duration tick_rate()
-		{
-			return to_duration(engine::DEFAULT_RATE);
-		}
+		using Rate           = Duration;
+		using UpdateRate     = Rate;
 
 		namespace impl
 		{
 			template <typename DurationType>
-			Duration duration_cast(DurationType duration_value)
+			constexpr Duration duration_cast(DurationType duration_value)
 			{
 				return engine::time::shared::impl::duration_cast<Duration>(duration_value);
 			}
+		}
+
+		constexpr Duration to_duration(FloatSeconds seconds)  { return engine::time::shared::impl::to_duration<Duration>(seconds); }
+		constexpr Duration to_duration(DoubleSeconds seconds) { return engine::time::shared::impl::to_duration<Duration>(seconds); }
+		constexpr Duration to_duration(float seconds)         { return engine::time::shared::impl::to_duration<Duration>(seconds); }
+		constexpr Duration to_duration(double seconds)        { return engine::time::shared::impl::to_duration<Duration>(seconds); }
+
+		constexpr Interval tick_rate()
+		{
+			//return to_duration(engine::TARGET_FRAME_DELTA_EX);
+
+			return engine::time::impl::duration_cast
+			(
+				std::chrono::duration_cast<Nanoseconds>(Seconds { 1 })
+				/
+				TARGET_FRAMES_PER_SECOND
+			);
 		}
 	}
 
