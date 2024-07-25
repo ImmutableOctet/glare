@@ -5,6 +5,8 @@
 #include "indirection.hpp"
 #include "hash.hpp"
 
+#include <engine/player/types.hpp>
+
 #include <optional>
 #include <utility>
 #include <type_traits>

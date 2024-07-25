@@ -1,6 +1,7 @@
 #pragma once
 
 #include <engine/types.hpp>
+#include <engine/player/types.hpp>
 
 #include <variant>
 #include <functional>
@@ -30,5 +31,5 @@ namespace engine
 	>;
 
 	// Integer type used to indicate which input-state affects an object.
-	using InputStateIndex = PlayerIndex; // std::uint16_t; // std::uint8_t;
+	using InputStateIndex = PlayerIndexRaw; // std::uint16_t; // std::uint8_t;
 }
