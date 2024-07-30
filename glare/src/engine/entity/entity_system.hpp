@@ -9,6 +9,8 @@
 #include <engine/meta/types.hpp>
 #include <engine/meta/meta_variable_scope.hpp>
 
+#include <engine/lod/types.hpp>
+
 #include <util/small_vector.hpp>
 
 #include <string_view>
@@ -36,6 +38,8 @@ namespace engine
 	struct OnParentChanged;
 
 	struct OnThreadEventCaptured;
+
+	struct OnBatchUpdate;
 
 	struct StateChangeCommand;
 	struct StateActivationCommand;
@@ -125,6 +129,7 @@ namespace engine
 
 			void on_update(const OnServiceUpdate& data);
 			void on_fixed_update(const OnServiceFixedUpdate& data);
+			void on_batch_update(const OnBatchUpdate& data);
 
 			void on_state_init(Registry& registry, Entity entity);
 			void on_state_update(Registry& registry, Entity entity);
@@ -183,7 +188,7 @@ namespace engine
 			bool try_resume_thread(EntityThread& thread);
 
 			template <EntityThreadCadence... target_cadence>
-			std::size_t progress_threads(); // EntityThreadCount
+			std::size_t progress_threads(std::optional<UpdateLevel> target_update_level=std::nullopt); // EntityThreadCount
 
 			template <bool allow_emplace, typename EventType=void, typename ThreadCommandType=void, typename RangeCallback=void, typename IDCallback=void, typename ...EventArgs>
 			bool thread_command_impl(const ThreadCommandType& thread_command, RangeCallback&& range_callback, IDCallback&& id_callback, std::string_view dbg_name, std::string_view dbg_name_past_tense, EventArgs&&... event_args);

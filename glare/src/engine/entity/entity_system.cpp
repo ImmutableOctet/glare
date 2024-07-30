@@ -44,6 +44,10 @@
 #include <engine/meta/meta_variable_evaluation_context.hpp>
 #include <engine/meta/meta_variable_storage_interface.hpp>
 
+#include <engine/lod/update_level.hpp>
+#include <engine/lod/events/on_batch_update.hpp>
+#include <engine/lod/components/level_of_detail_component.hpp>
+
 #include <engine/commands/function_command.hpp>
 #include <engine/commands/expr_command.hpp>
 
@@ -216,6 +220,7 @@ namespace engine
 		// Standard events:
 		service.register_event<OnServiceUpdate,           &EntitySystem::on_update>(*this);
 		service.register_event<OnServiceFixedUpdate,      &EntitySystem::on_fixed_update>(*this);
+		service.register_event<OnBatchUpdate,             &EntitySystem::on_batch_update>(*this);
 		service.register_event<OnStateChange,             &EntitySystem::on_state_change>(*this);
 		service.register_event<OnStateActivate,           &EntitySystem::on_state_activate>(*this);
 		service.register_event<OnComponentCreate,         &EntitySystem::on_component_create>(*this);
@@ -549,6 +554,11 @@ namespace engine
 	void EntitySystem::on_fixed_update(const OnServiceFixedUpdate& data)
 	{
 		progress_threads<EntityThreadCadence::FixedUpdate>();
+	}
+
+	void EntitySystem::on_batch_update(const OnBatchUpdate& data)
+	{
+		progress_threads<EntityThreadCadence::Update, EntityThreadCadence::Multi>(data.batch_update_level);
 	}
 
 	// TODO: Review event-handling issue.
@@ -1508,7 +1518,7 @@ namespace engine
 	}
 
 	template <EntityThreadCadence... target_cadence>
-	std::size_t EntitySystem::progress_threads() // EntityThreadCount
+	std::size_t EntitySystem::progress_threads(std::optional<UpdateLevel> target_update_level) // EntityThreadCount
 	{
 		using namespace engine::instructions;
 
@@ -1520,6 +1530,29 @@ namespace engine
 		(
 			[&](Entity entity, EntityThreadComponent& thread_component)
 			{
+				// Ensure that this entity has the correct level of detail:
+				const auto level_of_detail_component = registry.try_get<LevelOfDetailComponent>(entity);
+
+				if (target_update_level)
+				{
+					if (!level_of_detail_component)
+					{
+						return;
+					}
+
+					if (level_of_detail_component->update_level != (*target_update_level))
+					{
+						return;
+					}
+				}
+				else
+				{
+					if (level_of_detail_component)
+					{
+						return;
+					}
+				}
+
 				const auto instance_component = registry.try_get<InstanceComponent>(entity);
 
 				// TODO: Allow `EntityThreadComponent` to work without `InstanceComponent`, then remove this assert.

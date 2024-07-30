@@ -10,6 +10,8 @@
 
 #include <engine/entity/entity_system.hpp>
 
+#include <engine/lod/entity_batch_system.hpp>
+
 #include <engine/world/physics/physics.hpp>
 #include <engine/world/motion/motion.hpp>
 #include <engine/world/animation/animation_system.hpp>
@@ -336,6 +338,8 @@ namespace game
 		system<engine::BillboardBehavior>(world);
 		system<engine::RaveComponent>(world);
 		*/
+
+		world_system<engine::EntityBatchSystem>();
 
 		if (init_renderer)
 		{

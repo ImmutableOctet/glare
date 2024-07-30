@@ -26,6 +26,7 @@
 #include <engine/debug/reflection.hpp>
 #include <engine/input/reflection.hpp>
 #include <engine/world/reflection.hpp>
+#include <engine/lod/reflection.hpp>
 #include <engine/editor/reflection.hpp>
 
 #include <engine/meta/hash.hpp>
