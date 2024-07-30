@@ -1488,11 +1488,17 @@ namespace engine
 
 		if (has_state_name)
 		{
-			process_state_default_threads
-			(
-				descriptor, state, state_name,
-				&base_path, opt_parsing_context, opt_factory_context
-			);
+			// TODO: Make this configurable.
+			const auto implicit_threads = true;
+
+			if (implicit_threads)
+			{
+				process_state_default_threads
+				(
+					descriptor, state, state_name,
+					&base_path, opt_parsing_context, opt_factory_context
+				);
+			}
 		}
 
 		// Check if `state`'s name has been changed from `state_id`.
@@ -1578,7 +1584,19 @@ namespace engine
 
 			if (implicit_components)
 			{
-				process_state_local_copy_components(descriptor, state, *merge, opt_parsing_context);
+				process_state_isolated_components(descriptor, state, *merge, opt_parsing_context);
+			}
+
+			// TODO: Make this configurable.
+			const auto implicit_threads = true;
+
+			if (implicit_threads)
+			{
+				process_state_merge_threads
+				(
+					descriptor, state, *merge,
+					&base_path, opt_parsing_context, opt_factory_context
+				);
 			}
 
 			// NOTE: Recursion by proxy.
@@ -2603,6 +2621,78 @@ namespace engine
 
 			opt_base_path, opt_parsing_context, opt_factory_context
 		);
+	}
+
+	EntityThreadCount process_state_merge_threads
+	(
+		EntityDescriptor& descriptor,
+		EntityState& state,
+		
+		const util::json& merge,
+
+		const std::filesystem::path* opt_base_path,
+		const MetaParsingContext& opt_parsing_context,
+		const EntityFactoryContext* opt_factory_context
+	)
+	{
+		auto entries_processed = EntityThreadCount {};
+
+		auto process_thread_impl = [&](auto&& state_name_data)
+		{
+			return process_default_threads
+			(
+				descriptor, std::forward<decltype(state_name_data)>(state_name_data),
+
+				[&state](EntityThreadIndex thread_index, EntityThreadCount threads_processed)
+				{
+					state.immediate_threads.emplace_back(thread_index, threads_processed);
+				},
+
+				opt_base_path, opt_parsing_context, opt_factory_context
+			);
+		};
+
+		util::json_for_each
+		(
+			merge,
+
+			[&process_thread_impl, &entries_processed](const util::json& state_entry)
+			{
+				switch (state_entry.type())
+				{
+					case util::json::value_t::object:
+					{
+						if (const auto name = get_embedded_name(state_entry); !name.empty())
+						{
+							if (const auto result = process_thread_impl(std::string_view { name }))
+							{
+								entries_processed += result;
+
+								return true;
+							}
+						}
+						
+						const auto direct_result = process_thread_impl(state_entry);
+
+						entries_processed += direct_result;
+
+						break;
+					}
+					default:
+					{
+						const auto result = process_thread_impl(state_entry);
+
+						entries_processed += result;
+
+						break;
+					}
+				}
+				
+				return true;
+			}
+		);
+
+		return entries_processed;
 	}
 
 	EntityThreadCount process_archetype_default_threads

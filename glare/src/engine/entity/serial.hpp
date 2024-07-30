@@ -546,6 +546,18 @@ namespace engine
 		const EntityFactoryContext* opt_factory_context=nullptr
 	);
 
+	EntityThreadCount process_state_merge_threads
+	(
+		EntityDescriptor& descriptor,
+		EntityState& state,
+		
+		const util::json& merge,
+
+		const std::filesystem::path* opt_base_path=nullptr,
+		const MetaParsingContext& opt_parsing_context={},
+		const EntityFactoryContext* opt_factory_context=nullptr
+	);
+
 	EntityThreadCount process_archetype_default_threads
 	(
 		EntityDescriptor& descriptor,
