@@ -12,6 +12,7 @@ target_sources(
 )
 
 add_subdirectory("input")
+add_subdirectory("platform")
 
 if((GLARE_USE_UNITY_BUILD) AND (NOT GLARE_APP_USE_UNITY_BUILD))
     set(GLARE_APP_USE_UNITY_BUILD ON)
