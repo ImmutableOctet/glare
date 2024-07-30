@@ -17,11 +17,7 @@ namespace engine
 			using TimePoint      = CustomTimePoint<Clock>; // Clock::time_point;
 			using Duration       = Clock::duration;
 			using DurationRaw    = Duration::rep;
-
 			using Interval       = Duration;
-			using UpdateInterval = Interval;
-			using Rate           = Duration;
-			using UpdateRate     = Rate;
 
 			namespace impl
 			{
@@ -37,14 +33,14 @@ namespace engine
 			constexpr Duration to_duration(float seconds)         { return engine::time::shared::impl::to_duration<Duration>(seconds); }
 			constexpr Duration to_duration(double seconds)        { return engine::time::shared::impl::to_duration<Duration>(seconds); }
 
-			constexpr Interval tick_rate()
+			constexpr auto tick_rate(auto frames_per_second)
 			{
-				return engine::time::impl::duration_cast
-				(
-					std::chrono::duration_cast<Nanoseconds>(Seconds { 1 })
-					/
-					TARGET_NETWORK_UPDATES_PER_SECOND
-				);
+				return engine::time::shared::impl::tick_rate<Duration>(frames_per_second);
+			}
+
+			constexpr auto tick_rate()
+			{
+				return tick_rate(TARGET_NETWORK_UPDATES_PER_SECOND);
 			}
 		}
 	}
@@ -52,7 +48,8 @@ namespace engine
 	using NetworkClock          = network::time::Clock;
 	using NetworkDuration       = network::time::Duration;
 	using NetworkInterval       = network::time::Interval;
-	using NetworkUpdateInterval = network::time::UpdateInterval;
-	using NetworkRate           = network::time::Rate;
-	using NetworkUpdateRate     = network::time::UpdateRate;
+	using NetworkUpdateInterval = network::time::Interval;
+	using NetworkRate           = network::time::Interval;
+	using NetworkUpdateRate     = network::time::Interval;
+	using NetworkLatency        = network::time::Milliseconds;
 }
