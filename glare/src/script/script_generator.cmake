@@ -322,6 +322,9 @@ function(glare_generate_cpp_script_bindings script_target script_directory scrip
 
                 set(before_script
                 "
+                    //module;
+                    //#include <ctime>
+                    
                     // Standard includes for `${glare_script_file_library}`:
                     #if GLARE_SCRIPT_INCLUDE_GLOBAL_HEADER
                         #include <script_common.hpp>
@@ -341,7 +344,7 @@ function(glare_generate_cpp_script_bindings script_target script_directory scrip
                     //#include <engine/meta/hash.hpp>
 
                     #include <utility>
-                    #include <cassert>
+                    //#include <cassert>
                     
                     #define _script_no_return_value                              \\
                         glare::impl::${glare_script_file_library}::script_t::operator() \\
