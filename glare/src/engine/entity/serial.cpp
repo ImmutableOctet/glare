@@ -785,7 +785,7 @@ namespace engine
 
 		if (it == loaded_components.end())
 		{
-			if ((!allow_new_entry) || ((!allow_default_entries) && (!has_component_content)))
+			if (!allow_new_entry)
 			{
 				return false;
 			}
