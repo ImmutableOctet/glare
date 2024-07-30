@@ -542,9 +542,9 @@ namespace engine
     }
 
     template <>
-    void reflect<std::chrono::system_clock::duration>()
+    void reflect<engine::time::Duration>() // std::chrono::system_clock::duration
     {
-        using T = std::chrono::system_clock::duration;
+        using T = engine::time::Duration; // std::chrono::system_clock::duration;
 
         constexpr bool generate_optional_type = true;
         constexpr bool sync_context = true;
@@ -581,7 +581,9 @@ namespace engine
     {
         reflect<std::string>();
         reflect<std::string_view>();
-        reflect<std::chrono::system_clock::duration>();
+
+        //reflect<std::chrono::system_clock::duration>();
+        reflect<engine::time::Duration>();
     }
 
     template <>
