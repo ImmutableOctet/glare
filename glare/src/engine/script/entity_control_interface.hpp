@@ -13,7 +13,7 @@
 #include <engine/entity/entity_thread_flags.hpp>
 #include <engine/entity/components/entity_target_component.hpp>
 
-#include <engine/world/delta/delta_system.hpp>
+//#include <engine/world/delta/delta_system.hpp>
 
 #include <engine/world/motion/components/focus_component.hpp>
 
@@ -23,6 +23,8 @@
 namespace engine
 {
 	struct PlayerComponent;
+
+	class DeltaSystem;
 
 	class EntityControlInterface
 	{
@@ -208,19 +210,6 @@ namespace engine
 			decltype(auto) get_delta_system(this auto&& self)
 			{
 				return self.template system<DeltaSystem>();
-			}
-
-			float get_delta(this auto&& self)
-			{
-				// TODO: Implement delta value lookup based on LOD batching,
-				// then use value from delta-system as fallback.
-
-				if (const auto delta_system = self.template try_get_system<DeltaSystem>())
-				{
-					return delta_system->get_delta();
-				}
-
-				return 1.0f;
 			}
 
 			bool is_player(this auto&& self, Entity entity)

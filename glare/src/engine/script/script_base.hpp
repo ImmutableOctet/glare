@@ -67,11 +67,6 @@ namespace engine
 				return static_cast<bool>(_script_id);
 			}
 
-			inline float get_delta() const
-			{
-				return EntityControlInterface::get_delta();
-			}
-
 			inline explicit operator Entity() const
 			{
 				return EntitySelfInterface::operator Entity();

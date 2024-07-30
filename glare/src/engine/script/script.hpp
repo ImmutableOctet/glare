@@ -78,6 +78,8 @@ namespace engine
 			World& get_world() override;
 			const World& get_world() const override;
 
+			float get_delta() const;
+
 			EntityThread* get_executing_thread() override;
 			const EntityThread* get_executing_thread() const override;
 

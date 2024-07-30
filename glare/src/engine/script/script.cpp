@@ -6,6 +6,9 @@
 #include <engine/world/world.hpp>
 #include <engine/world/delta/delta_system.hpp>
 
+#include <engine/lod/entity_batch_system.hpp>
+#include <engine/lod/components/level_of_detail_component.hpp>
+
 #include <engine/meta/meta_evaluation_context.hpp>
 
 namespace engine
@@ -133,6 +136,24 @@ namespace engine
 		assert(world);
 
 		return *world;
+	}
+
+	float Script::get_delta() const
+	{
+		if (const auto level_of_detail_component = try_get<LevelOfDetailComponent>())
+		{
+			if (const auto batch_system = try_get_system<EntityBatchSystem>())
+			{
+				return batch_system->get_delta(level_of_detail_component->update_level);
+			}
+		}
+
+		if (const auto delta_system = try_get_system<DeltaSystem>())
+		{
+			return delta_system->get_delta();
+		}
+
+		return 1.0f;
 	}
 
 	EntityThread* Script::get_executing_thread()
