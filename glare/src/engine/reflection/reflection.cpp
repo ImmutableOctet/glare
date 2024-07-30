@@ -59,6 +59,7 @@ namespace engine
     {
         reflect<DebugListener>();
         reflect<EntitySystem>();
+        reflect<EntityBatchSystem>();
         reflect<InputSystem>();
         reflect<Editor>();
 
