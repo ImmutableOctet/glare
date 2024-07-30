@@ -9,30 +9,13 @@ namespace engine
 		systems(world)
 	{}
 
-	void TestGame::update(bool step_forward)
+	void TestGame::update()
 	{
-		world.update(time);
-
-		if (step_forward)
-		{
-			progress_time();
-		}
+		world.update(SystemClock::now());
 	}
 
-	void TestGame::fixed_update(bool step_forward)
+	void TestGame::fixed_update()
 	{
-		world.fixed_update(time);
-
-		if (step_forward)
-		{
-			progress_time();
-		}
-	}
-
-	app::Milliseconds TestGame::progress_time()
-	{
-		time += EXPECTED_TIME_STEP;
-
-		return time;
+		world.fixed_update(SystemClock::now());
 	}
 }

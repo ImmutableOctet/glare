@@ -3,24 +3,22 @@
 #include <engine/types.hpp>
 #include <engine/registry.hpp>
 #include <engine/config.hpp>
-#include <engine/delta_time.hpp>
 
 #include <engine/system_manager.hpp>
 #include <engine/world/world.hpp>
 #include <engine/resource_manager/resource_manager.hpp>
 
-#include <app/types.hpp>
-
 namespace engine
 {
+	class DeltaTime;
+
 	// Basic game-like environment for unit-testing.
 	class TestGame
 	{
 		public:
 			using WorldSystemManager = SystemManager<World>;
 
-			inline static constexpr DeltaTime::Rate EXPECTED_UPDATE_RATE = 60;
-			inline static constexpr app::Milliseconds EXPECTED_TIME_STEP = static_cast<app::Milliseconds>(1000.0f / static_cast<float>(EXPECTED_UPDATE_RATE));
+			inline static constexpr std::uint32_t EXPECTED_UPDATE_RATE = 60;
 
 			TestGame();
 
@@ -69,8 +67,8 @@ namespace engine
 				return world.get_delta_time();
 			}
 
-			void update(bool step_forward=true);
-			void fixed_update(bool step_forward=false); // true
+			void update();
+			void fixed_update();
 
 		protected:
 			Registry registry;
@@ -78,10 +76,5 @@ namespace engine
 			ResourceManager resource_manager;
 			WorldSystemManager systems;
 			World world;
-
-		private:
-			app::Milliseconds progress_time();
-
-			app::Milliseconds time = 0;
 	};
 }
