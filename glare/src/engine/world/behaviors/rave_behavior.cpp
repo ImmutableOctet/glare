@@ -3,7 +3,7 @@
 #include <engine/world/world.hpp>
 #include <engine/components/model_component.hpp>
 
-#include <app/delta_time.hpp>
+#include <engine/delta_time.hpp>
 
 #include <cmath>
 
@@ -33,7 +33,7 @@ namespace engine
 		// (instead of using `DeltaTime` directly)
 		const auto& dt = world.get_delta_time();
 		
-		auto t = static_cast<float>(dt.current_frame_time()) / 600.0f;
+		auto t = static_cast<float>(dt.current_frame_time().time_since_epoch().count()) / 600.0f;
 
 		model.color = { std::sinf(t), std::cosf(t), std::tanf(t), 1.0f };
 	}

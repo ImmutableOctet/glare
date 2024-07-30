@@ -3,7 +3,7 @@
 #include <engine/types.hpp>
 //#include <engine/basic_system.hpp>
 
-#include <app/types.hpp>
+#include <engine/time_decl.hpp>
 
 // If this macro is defined, we will always assume an inbound service-event is coming from a `World` object.
 // This can act as a minor speedup as we won't have to use RTTI (`dynamic_cast`) in order to determine the exact `Service` type.
@@ -118,7 +118,7 @@ namespace engine
 			virtual void on_update(World& world, float delta);
 
 			// Default implementation; blank.
-			virtual void on_fixed_update(World& world, app::Milliseconds time);
+			virtual void on_fixed_update(World& world, TimePoint time);
 
 			// Default implementation; blank.
 			virtual void on_render(World& world, app::Graphics& graphics);

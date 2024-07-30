@@ -113,21 +113,22 @@ namespace game
 			void toggle_input_lock();
 			bool is_input_locked() const;
 
-			void update(app::Milliseconds time) override;
-			void fixed_update(app::Milliseconds time) override;
-			void render(app::Milliseconds time) override;
-
 			entt::dispatcher* get_event_handler() override;
 
 			std::uint64_t get_log_frame_number() const override;
 			std::uint64_t get_log_time_ms() const override;
 
 		protected:
+			bool can_update(TimePoint time) const override;
+			bool can_render(TimePoint time) const override;
+
+			void update(TimePoint time, bool incremental) override;
+			void render(TimePoint time) override;
+
 			void init_default_systems(DeltaSystemMode delta_mode, bool init_renderer=true);
 
 			// Implement Game-specific logic using these:
 			virtual void on_update(float delta) = 0;
-			virtual void on_fixed_update();
 			virtual void on_render(RenderState& render_state);
 			virtual void on_resize(int width, int height);
 

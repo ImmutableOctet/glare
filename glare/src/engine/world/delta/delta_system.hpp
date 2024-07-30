@@ -4,11 +4,10 @@
 
 #include "types.hpp"
 
+#include <engine/time_decl.hpp>
 #include <engine/delta_time.hpp>
 #include <engine/world/world_system.hpp>
 #include <engine/meta/types.hpp>
-
-#include <app/types.hpp>
 
 namespace engine
 {
@@ -33,7 +32,7 @@ namespace engine
 				World& world,
 				EntitySystem& entity_system,
 
-				DeltaTime::Rate ideal_rate,
+				DeltaTime::TicksPerSecond ideal_rate,
 				Mode mode=Mode::Default,
 
 				bool only_track_tagged_entities=false
@@ -41,7 +40,7 @@ namespace engine
 
 			void snapshot(DeltaTimestamp timestamp);
 
-			const DeltaTime& update_delta(app::Milliseconds time);
+			const DeltaTime& update_delta(TimePoint time);
 
 			inline const DeltaTime& get_delta_time() const { return delta_time; }
 			inline DeltaTime& get_delta_time() { return delta_time; }
@@ -74,7 +73,7 @@ namespace engine
 			void on_delta_tracker_update(Registry& registry, Entity entity);
 
 			void on_update(World& world, float delta) override;
-			void on_fixed_update(World& world, app::Milliseconds time) override;
+			void on_fixed_update(World& world, TimePoint time) override;
 
 			void on_transform_changed(const OnTransformChanged& tform_change);
 

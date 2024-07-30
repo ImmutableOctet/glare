@@ -44,10 +44,7 @@ namespace app
 		struct KeyboardState;
 	}
 
-	namespace graphics
-	{
-		struct Graphics;
-	}
+	struct Graphics;
 }
 
 namespace engine
@@ -390,8 +387,8 @@ namespace engine
 				deferred_operations.emplace_back(callback);
 			}
 
-			void update(app::Milliseconds time, float delta);
-			void fixed_update(app::Milliseconds time, float delta=1.0f);
+			void update(TimePoint time, float delta);
+			void fixed_update(TimePoint time, float delta=1.0f);
 
 			void render(app::Graphics& gfx);
 

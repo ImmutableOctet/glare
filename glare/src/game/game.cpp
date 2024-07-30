@@ -126,10 +126,18 @@ namespace game
 		return input.get_lock_status();
 	}
 
-	void Game::update(app::Milliseconds time)
+	bool Game::can_update(TimePoint time) const
 	{
-		auto& mouse = input.get_mouse();
+		return GraphicsApplication::can_update(time);
+	}
 
+	bool Game::can_render(TimePoint time) const
+	{
+		return GraphicsApplication::can_render(time);
+	}
+
+	void Game::update(TimePoint time, bool incremental)
+	{
 		auto& event_handler = world.get_active_event_handler();
 
 		input.poll(&event_handler);
@@ -139,14 +147,7 @@ namespace game
 		on_update(world.get_delta_time());
 	}
 
-	void Game::fixed_update(app::Milliseconds time)
-	{
-		world.fixed_update(time);
-
-		on_fixed_update();
-	}
-
-	void Game::render(app::Milliseconds time)
+	void Game::render(TimePoint time)
 	{
 		using namespace graphics;
 
@@ -366,6 +367,7 @@ namespace game
 					util::inspect_and_store
 					(
 						engine::BulletDebugRenderPhase { graphics.context, effects.get_preprocessor() },
+
 						[this, &physics](auto& bullet_dbg)
 						{
 							physics.register_debug_drawer(bullet_dbg.get_debug_drawer());

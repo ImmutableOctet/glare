@@ -224,7 +224,7 @@ namespace engine
 		return null;
 	}
 
-	void World::update(app::Milliseconds time)
+	void World::update(TimePoint time)
 	{
 		float delta = 1.0f;
 		

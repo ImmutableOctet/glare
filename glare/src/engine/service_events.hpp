@@ -2,7 +2,7 @@
 
 #include "service_originated_event.hpp"
 
-#include <app/types.hpp>
+#include "time_decl.hpp"
 
 namespace app
 {
@@ -18,8 +18,7 @@ namespace engine
 	// This event is triggered immediately by a `Service`, once per continuous update.
 	struct OnServiceUpdate : public ServiceOriginatedEvent
 	{
-		// A snapshot of the application's up-time in milliseconds.
-		app::Milliseconds time;
+		TimePoint time;
 
 		// A normalized rate of execution. This represents the amount
 		// of time that has passed since the last `OnServiceUpdate` trigger.
@@ -29,8 +28,7 @@ namespace engine
 	// This event is triggered immediately by a `Service`, once per fixed update tick.
 	struct OnServiceFixedUpdate : public ServiceOriginatedEvent
 	{
-		// A snapshot of the application's up-time in milliseconds.
-		app::Milliseconds time;
+		TimePoint time;
 
 		// Placeholder delta value. (Should always be `1.0f`)
 		float delta = 1.0f;

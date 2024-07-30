@@ -28,7 +28,6 @@
 #include <engine/entity/entity_instruction.hpp>
 
 #include <engine/world/world.hpp>
-#include <engine/world/delta/delta_system.hpp>
 #include <engine/world/motion/components/velocity_component.hpp>
 
 #include <engine/input/events.hpp>

@@ -11,7 +11,7 @@
 #include <engine/action.hpp>
 #include <engine/service.hpp>
 #include <engine/transform.hpp>
-#include <engine/delta_time.hpp>
+#include <engine/time_decl.hpp>
 
 //#include <graphics/types.hpp> // Not actually needed. (`ColorRGB` is actually located in math)
 
@@ -47,6 +47,7 @@ namespace engine
 	class ResourceManager;
 
 	class DeltaSystem;
+	class DeltaTime;
 
 	struct LightComponent;
 	struct DirectionalLightComponent;
@@ -62,7 +63,7 @@ namespace engine
 	class World : public Service
 	{
 		public:
-			using UpdateRate = DeltaTime::Rate;
+			using UpdateRate = std::uint32_t; // DeltaTime::TicksPerSecond;
 			
 			World
 			(
@@ -111,7 +112,7 @@ namespace engine
 				SystemManagerInterface* opt_system_manager=nullptr
 			);
 
-			void update(app::Milliseconds time);
+			void update(TimePoint time);
 
 			// If `entity` has a `ForwardingComponent` attached, this returns the `root_entity` from that component.
 			// If no `ForwardingComponent` is found, `entity` is returned back to the caller.

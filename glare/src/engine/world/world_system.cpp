@@ -91,7 +91,7 @@ namespace engine
 
 	void WorldSystem::on_render(World& world, app::Graphics& graphics) {}
 	void WorldSystem::on_update(World& world, float delta) {}
-	void WorldSystem::on_fixed_update(World& world, app::Milliseconds time) {}
+	void WorldSystem::on_fixed_update(World& world, TimePoint time) {}
 
 	bool WorldSystem::subscribe(World& world)
 	{

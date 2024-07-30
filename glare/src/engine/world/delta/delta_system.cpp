@@ -29,7 +29,7 @@ namespace engine
 
 		EntitySystem& entity_system,
 
-		DeltaTime::Rate ideal_rate,
+		DeltaTime::TicksPerSecond ideal_rate,
 		Mode mode,
 		bool only_track_tagged_entities
 	) :
@@ -71,7 +71,7 @@ namespace engine
 		);
 	}
 
-	const DeltaTime& DeltaSystem::update_delta(app::Milliseconds time)
+	const DeltaTime& DeltaSystem::update_delta(TimePoint time)
 	{
 		// Update the delta-timer.
 		delta_time << time;
@@ -86,7 +86,7 @@ namespace engine
 
 	DeltaTimestamp DeltaSystem::get_latest_delta_timestamp() const
 	{
-		return static_cast<DeltaTimestamp>(delta_time.current_frame_time());
+		return static_cast<DeltaTimestamp>(delta_time.current_frame_time().time_since_epoch().count());
 	}
 
 	void DeltaSystem::on_subscribe(World& world)
@@ -211,14 +211,14 @@ namespace engine
 		// ...
 	}
 
-	void DeltaSystem::on_fixed_update(World& world, app::Milliseconds time)
+	void DeltaSystem::on_fixed_update(World& world, TimePoint time)
 	{
 		if (mode != Mode::FixedUpdate)
 		{
 			return;
 		}
 
-		snapshot(static_cast<DeltaTimestamp>(time));
+		snapshot(static_cast<DeltaTimestamp>(time.time_since_epoch().count()));
 	}
 
 	void DeltaSystem::on_transform_changed(const OnTransformChanged& tform_change)

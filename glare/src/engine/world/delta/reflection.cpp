@@ -4,7 +4,6 @@
 
 #include <engine/delta_time.hpp>
 
-#include <app/types.hpp>
 #include <math/types.hpp>
 
 #include <string>
@@ -26,12 +25,13 @@ namespace engine
 		custom_meta_type<DeltaTime>("DeltaTime"_hs)
 			.data<nullptr, &DeltaTime::get_delta>("delta"_hs)
 			.data<nullptr, static_cast<DeltaTime::Scalar (DeltaTime::*)() const>(&DeltaTime::get_inv_delta)>("inv_delta"_hs)
-			.data<nullptr, &DeltaTime::get_interval>("interval"_hs)
+			//.data<nullptr, &DeltaTime::get_interval>("interval"_hs)
 			.data<&DeltaTime::set_rate, &DeltaTime::get_rate>("rate"_hs)
-			.data<nullptr, &DeltaTime::current_frame_time>("current_frame_time"_hs)
+			//.data<nullptr, &DeltaTime::current_frame_time>("current_frame_time"_hs)
 			.data<nullptr, &DeltaTime::size>("size"_hs)
 
-			.func<&DeltaTime::calculate_interval>("calculate_interval"_hs)
+			//.func<&DeltaTime::calculate_interval>("calculate_interval"_hs)
+
 			.func<static_cast<DeltaTime::Scalar(*)(DeltaTime::Scalar)>(&DeltaTime::get_inv_delta)>("get_inv_delta"_hs)
 
 			.func<&DeltaTime::per_frame<float>>("per_frame"_hs)
@@ -41,14 +41,14 @@ namespace engine
 
 			.func<&DeltaTime::reset_log>("reset_log"_hs)
 
-			.func<static_cast<void (DeltaTime::*)(DeltaTime::Time, bool)>(&DeltaTime::reset)>("reset"_hs)
-			.func<static_cast<void (DeltaTime::*)(DeltaTime::Rate, DeltaTime::Time, bool)>(&DeltaTime::reset)>("reset"_hs)
+			//.func<static_cast<void (DeltaTime::*)(DeltaTime::Time, bool)>(&DeltaTime::reset)>("reset"_hs)
+			.func<static_cast<void (DeltaTime::*)(DeltaTime::TicksPerSecond, DeltaTime::Time, bool)>(&DeltaTime::reset)>("reset"_hs)
 
-			.func<&DeltaTime::update>("update"_hs)
+			//.func<&DeltaTime::update>("update"_hs)
 
-			.ctor<DeltaTime::Rate, DeltaTime::Time, DeltaTime::Scalar>()
-			.ctor<DeltaTime::Rate, DeltaTime::Time>()
-			.ctor<DeltaTime::Rate>()
+			//.ctor<DeltaTime::TicksPerSecond, DeltaTime::Time, DeltaTime::Scalar>()
+			//.ctor<DeltaTime::TicksPerSecond, DeltaTime::Time>()
+			//.ctor<DeltaTime::TicksPerSecond>()
 		;
 	}
 

@@ -1,11 +1,11 @@
 #pragma once
 
-#include <engine/types.hpp>
+//#include <app/types.hpp>
+//#include <engine/time_decl.hpp>
 
-#include <app/types.hpp>
-//#include <engine/timer.hpp>
+#include <cstdint>
 
 namespace engine
 {
-	using DeltaTimestamp = app::Milliseconds; // Timer::TimePoint;
+	using DeltaTimestamp = std::int64_t; // app::Milliseconds; // TimePoint;
 }
