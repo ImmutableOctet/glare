@@ -43,13 +43,62 @@ function(glare_add_reflection_sources_to_target reflection_target base_path refl
 
     if(GLARE_REFLECTION_USE_UNITY_BUILD)
         if(NOT ${reflection_unity_group} STREQUAL "")
-            set_source_files_properties(
-                ${reflection_sources}
+            if(GLARE_REFLECTION_USE_UNITY_BUILD_JUMBO)
+                set_source_files_properties(
+                    ${reflection_sources}
         
-                PROPERTIES
+                    PROPERTIES
 
-                UNITY_GROUP "${reflection_unity_group}"
-            )
+                    UNITY_GROUP "${reflection_unity_group}"
+                )
+            else()
+                foreach(reflection_source_path ${reflection_sources})
+                    set(reflection_source_relative_path "")
+
+                    #message(base_path=${base_path})
+                    #message(reflection_source_path=${reflection_source_path})
+
+                    cmake_path(RELATIVE_PATH reflection_source_path BASE_DIRECTORY "${base_path}" OUTPUT_VARIABLE reflection_source_relative_path)
+
+                    #message(reflection_source_relative_path=${reflection_source_relative_path})
+
+                    set(reflection_source_submodule_name "${reflection_source_relative_path}")
+
+                    if(GLARE_REFLECTION_USE_UNITY_BUILD_GRANULAR)
+                        while(reflection_source_submodule_name MATCHES "/")
+                            set(reflection_source_submodule_parent_path "")
+                            cmake_path(GET reflection_source_submodule_name PARENT_PATH reflection_source_submodule_parent_path)
+
+                            if(NOT reflection_source_submodule_parent_path MATCHES "/")
+                                set(reflection_source_submodule_name_processed "")
+
+                                STRING(REPLACE "/" "_" reflection_source_submodule_name_processed "${reflection_source_submodule_name}")
+
+                                set(reflection_source_submodule_name ${reflection_source_submodule_name_processed})
+                            else()
+                                set(reflection_source_submodule_name ${reflection_source_submodule_parent_path})
+                            endif()
+
+                            #message(reflection_source_submodule_name=${reflection_source_submodule_name})
+                        endwhile()
+                    else()
+                        while(reflection_source_submodule_name MATCHES "/")
+                            cmake_path(GET reflection_source_submodule_name PARENT_PATH reflection_source_submodule_name)
+                            #message(reflection_source_submodule_name=${reflection_source_submodule_name})
+                        endwhile()
+                    endif()
+
+                    #message(reflection_source_submodule_name=${reflection_source_submodule_name})
+
+                    set_source_files_properties(
+                        ${reflection_source_path}
+        
+                        PROPERTIES
+
+                        UNITY_GROUP "${reflection_unity_group}_${reflection_source_submodule_name}"
+                    )
+                endforeach()
+            endif()
         endif()
     endif()
 endfunction()
