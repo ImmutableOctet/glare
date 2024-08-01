@@ -70,12 +70,13 @@ namespace engine
 				}
 
 			protected:
-				static constexpr Scalar LOG_SCALAR = ((static_cast<Scalar>(1.5) / static_cast<Scalar>(log_size)) * static_cast<Scalar>(0.75));
-				//static constexpr Scalar LOG_SCALAR = (static_cast<Scalar>(1.0) / static_cast<Scalar>(log_size));
+				//static constexpr Scalar LOG_SCALAR = ((static_cast<Scalar>(1.5) / static_cast<Scalar>(log_size)) * static_cast<Scalar>(0.75));
+				static constexpr Scalar LOG_SCALAR = (static_cast<Scalar>(1.0) / static_cast<Scalar>(log_size));
 			
 				static constexpr Scalar DEFAULT_DELTA = static_cast<Scalar>(1.0);
 				static constexpr Scalar DEFAULT_INV_DELTA = get_inv_delta(DEFAULT_DELTA);
 				static constexpr Scalar DEFAULT_MINIMUM_DELTA = static_cast<Scalar>(0.0);
+				static constexpr Scalar DEFAULT_MAXIMUM_DELTA = static_cast<Scalar>(4.0);
 
 				static constexpr Index DEFAULT_NODE = static_cast<Index>(0);
 			
@@ -84,6 +85,7 @@ namespace engine
 				Scalar delta         = DEFAULT_DELTA;
 				Scalar inv_delta     = DEFAULT_INV_DELTA;
 				Scalar minimum_delta = DEFAULT_MINIMUM_DELTA;
+				Scalar maximum_delta = DEFAULT_MAXIMUM_DELTA;
 
 				Index delta_node = DEFAULT_NODE;
 
@@ -95,8 +97,9 @@ namespace engine
 				TicksPerSecond ideal_rate;
 
 			public:
-				constexpr DeltaTimeImpl(TicksPerSecond ideal_rate={}, Time current_time={}, Scalar minimum_delta=DEFAULT_MINIMUM_DELTA) :
-					minimum_delta(minimum_delta)
+				constexpr DeltaTimeImpl(TicksPerSecond ideal_rate={}, Time current_time={}, Scalar minimum_delta=DEFAULT_MINIMUM_DELTA, Scalar maximum_delta=DEFAULT_MAXIMUM_DELTA) :
+					minimum_delta(minimum_delta),
+					maximum_delta(maximum_delta)
 				{
 					set_rate(ideal_rate);
 					reset(current_time);
@@ -175,14 +178,14 @@ namespace engine
 						: DEFAULT_DELTA
 					;
 
-					delta_log[delta_node] = frame_delta;
+					delta_log[delta_node] = std::clamp(frame_delta, minimum_delta, maximum_delta);
 
 					delta_node = ((delta_node + 1) % size());
 
 					const auto delta_sum = std::accumulate(delta_log.begin(), delta_log.end(), Scalar {});
-					const auto delta_unclamped = (delta_sum * LOG_SCALAR);
-
-					delta = std::max(delta_unclamped, minimum_delta);
+					const auto delta_mean = (delta_sum * LOG_SCALAR);
+					
+					delta = delta_mean;
 
 					inv_delta = get_inv_delta(delta);
 
