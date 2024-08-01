@@ -85,6 +85,16 @@ namespace engine
 
 			virtual ~Service();
 
+			inline SystemManagerInterface& get_systems()
+			{
+				return systems;
+			}
+
+			inline const SystemManagerInterface& get_systems() const
+			{
+				return systems;
+			}
+
 			/*
 			inline Registry& get_registry()
 			{
@@ -565,6 +575,7 @@ namespace engine
 			void on_component_replace(ComponentReplaceCommand& component_replace);
 
 			void on_set_parent(const SetParentCommand& parent_command);
+
 		protected:
 			void opaque_function_handler(const FunctionCommand& function_command);
 			void opaque_expression_handler(const ExprCommand& expr_command);
