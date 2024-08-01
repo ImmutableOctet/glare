@@ -255,6 +255,186 @@ namespace engine
 			return std::nullopt;
 		}
 
+		std::optional<ConvexCastResult> convex_cast
+		(
+			PhysicsSystem& physics,
+
+			const btConvexShape& shape,
+
+			const CollisionCastPoint& from,
+			const CollisionCastPoint& to,
+
+			CollisionGroup filter_group,
+			CollisionGroup filter_mask,
+
+			const btCollisionObject* collision_obj_self,
+
+			std::optional<float> allowed_penetration,
+			std::optional<float> skin_width,
+
+			const math::Vector& shape_offset,
+			bool apply_shape_offset,
+			bool apply_shape_size_to_offset
+		)
+		{
+			auto shape_offset_bt = math::to_bullet_vector(shape_offset);
+		
+			if ((apply_shape_offset) && (apply_shape_size_to_offset))
+			{
+				auto min_shape_bounds = btVector3 {};
+				auto max_shape_bounds = btVector3 {};
+
+				shape.getAabb(btTransform::getIdentity(), min_shape_bounds, max_shape_bounds);
+
+				const auto shape_size = (max_shape_bounds - min_shape_bounds);
+				const auto half_shape_size = (shape_size * 0.5f);
+
+				shape_offset_bt -= half_shape_size;
+			}
+
+			auto from_shape_world_offset = btVector3 {};
+
+			// Resolve cast-source:
+			auto from_position_bt = btVector3 {};
+			auto from_matrix_bt = btTransform {};
+
+			const auto skin_adjustment_multiplier = (1.0f - skin_width.value_or(0.0f));
+			const auto skin_adjustment = btVector3 { skin_adjustment_multiplier, skin_adjustment_multiplier, skin_adjustment_multiplier };
+
+			bool basis_skin_adjustment_applied = false;
+
+			util::visit
+			(
+				from,
+
+				[&](const math::Matrix& from)
+				{
+					from_matrix_bt = math::to_bullet_matrix(from);
+				
+					if (skin_width)
+					{
+						from_matrix_bt.setBasis(from_matrix_bt.getBasis().scaled(skin_adjustment));
+
+						basis_skin_adjustment_applied = true;
+					}
+
+					if (apply_shape_offset)
+					{
+						from_shape_world_offset = (from_matrix_bt.getBasis() * shape_offset_bt);
+
+						from_matrix_bt.setOrigin(from_matrix_bt.getOrigin() - from_shape_world_offset);
+					}
+
+					from_position_bt = from_matrix_bt.getOrigin();
+				},
+
+				[&](const math::Vector& from)
+				{
+					auto from_basis = from_matrix_bt.getBasis();
+
+					if (collision_obj_self)
+					{
+						from_basis = collision_obj_self->getWorldTransform().getBasis();
+					}
+
+					from_basis = from_basis.scaled(shape.getLocalScaling());
+
+					if (skin_width)
+					{
+						from_basis = from_basis.scaled(skin_adjustment);
+
+						basis_skin_adjustment_applied = true;
+					}
+
+					from_position_bt = math::to_bullet_vector(from);
+
+					if (apply_shape_offset)
+					{
+						from_shape_world_offset = (from_basis * shape_offset_bt);
+
+						from_position_bt -= from_shape_world_offset;
+					}
+
+					from_matrix_bt = btTransform
+					(
+						from_basis,
+
+						from_position_bt
+					);
+				}
+			);
+
+			// Resolve cast-destination:
+			auto to_position_bt = btVector3 {};
+			auto to_matrix_bt = btTransform {};
+
+			util::visit
+			(
+				to,
+
+				[&](const math::Matrix& to)
+				{
+					to_matrix_bt = math::to_bullet_matrix(to);
+
+					if (skin_width)
+					{
+						to_matrix_bt.setBasis(to_matrix_bt.getBasis().scaled(skin_adjustment));
+					}
+
+					if (apply_shape_offset)
+					{
+						to_matrix_bt.setOrigin(to_matrix_bt.getOrigin() - from_shape_world_offset);
+					}
+
+					to_position_bt = to_matrix_bt.getOrigin();
+				},
+
+				[&](const math::Vector& to)
+				{
+					to_position_bt = math::to_bullet_vector(to);
+
+					if (apply_shape_offset)
+					{
+						const auto& to_shape_world_offset = from_shape_world_offset;
+
+						to_position_bt -= to_shape_world_offset;
+					}
+
+					auto to_basis = from_matrix_bt.getBasis();
+
+					if (!basis_skin_adjustment_applied)
+					{
+						to_basis = to_basis.scaled(skin_adjustment);
+					}
+
+					to_matrix_bt = btTransform(to_basis, to_position_bt);
+
+					// Alternative: no orientation at destination.
+					//to_matrix_bt = btTransform(btMatrix3x3::getIdentity(), to_position_bt);
+				}
+			);
+
+			return convex_cast_impl
+			(
+				physics,
+			
+				shape,
+			
+				from_matrix_bt,
+				to_matrix_bt,
+
+				collision_obj_self,
+			
+				from_position_bt,
+				to_position_bt,
+			
+				static_cast<int>(filter_group),
+				static_cast<int>(filter_mask),
+
+				allowed_penetration
+			);
+		}
+
 		std::optional<ConvexCastResult> convex_cast_to
 		(
 			PhysicsSystem& physics,
@@ -266,7 +446,12 @@ namespace engine
 			std::optional<CollisionGroup> filter_group,
 			std::optional<CollisionGroup> filter_mask,
 
-			std::optional<float> allowed_penetration
+			std::optional<float> allowed_penetration,
+			std::optional<float> skin_width,
+
+			const math::Vector& shape_offset,
+			bool apply_shape_offset,
+			bool apply_shape_size_to_offset
 		)
 		{
 			const CollisionComponent* collision       = nullptr;
@@ -310,57 +495,33 @@ namespace engine
 			assert(collision_shape);
 			assert(collision_obj);
 
-			const auto& from_matrix_bt   = collision_obj->getWorldTransform();
-			const auto& from_position_bt = from_matrix_bt.getOrigin();
-
-			// Resolve cast-destination:
-			btVector3 to_position_bt;
-			btTransform to_matrix_bt;
-
-			util::visit
-			(
-				destination,
-
-				[&to_position_bt, &to_matrix_bt](const math::Matrix& to)
-				{
-					to_matrix_bt = math::to_bullet_matrix(to);
-					to_position_bt = math::to_bullet_vector(math::get_translation(to));
-				},
-
-				[&to_position_bt, &to_matrix_bt, &from_matrix_bt](const math::Vector& to)
-				{
-					to_position_bt = math::to_bullet_vector(to);
-
-					to_matrix_bt = btTransform(from_matrix_bt.getBasis(), to_position_bt);
-
-					// Alternative: no orientation at destination.
-					//to_matrix_bt = btTransform(btMatrix3x3::getIdentity(), to_position_bt);
-				}
-			);
+			const auto& from_matrix_bt = collision_obj->getWorldTransform();
 		
 			// NOTE: This forwarding operation from `collision` is required in the general case,
 			// as 'intersections' and 'solids' are grouped together on Bullet's end.
-			auto filter_group_bt = static_cast<int>(filter_group.value_or((collision) ? collision->get_group() : CollisionGroup::All));
-			auto filter_mask_bt  = static_cast<int>(filter_mask.value_or((collision) ? collision->get_solids() : CollisionGroup::All));
+			const auto filter_group_resolved = (filter_group.value_or((collision) ? collision->get_group() : CollisionGroup::All));
+			const auto filter_mask_resolved  = (filter_mask.value_or((collision) ? collision->get_solids() : CollisionGroup::All));
 
-			return convex_cast_impl
+			return convex_cast
 			(
 				physics,
 			
 				*collision_shape,
 			
-				from_matrix_bt,
-				to_matrix_bt,
+				math::to_matrix(from_matrix_bt),
+				destination,
+
+				filter_group_resolved,
+				filter_mask_resolved,
 
 				collision_obj,
-			
-				from_position_bt,
-				to_position_bt,
-			
-				filter_group_bt,
-				filter_mask_bt,
 
-				allowed_penetration
+				allowed_penetration,
+				skin_width,
+
+				shape_offset,
+				apply_shape_offset,
+				apply_shape_size_to_offset
 			);
 		}
 
@@ -526,89 +687,5 @@ namespace engine
 				self
 			);
 		}
-	}
-
-	std::optional<ConvexCastResult> convex_cast
-	(
-		PhysicsSystem& physics,
-
-		const btConvexShape& shape,
-
-		const CollisionCastPoint& from,
-		const CollisionCastPoint& to,
-
-		CollisionGroup filter_group,
-		CollisionGroup filter_mask,
-
-		const btCollisionObject* collision_obj_self_filter,
-
-		std::optional<float> allowed_penetration
-	)
-	{
-		// Resolve cast-source:
-		btVector3 from_position_bt;
-		btTransform from_matrix_bt;
-
-		util::visit
-		(
-			from,
-
-			[&from_position_bt, &from_matrix_bt](const math::Matrix& from)
-			{
-				from_matrix_bt = math::to_bullet_matrix(from);
-				from_position_bt = math::to_bullet_vector(math::get_translation(from));
-			},
-
-			[&from_position_bt, &from_matrix_bt](const math::Vector& from)
-			{
-				from_position_bt = math::to_bullet_vector(from);
-				from_matrix_bt = btTransform(btMatrix3x3::getIdentity(), from_position_bt);
-			}
-		);
-
-		// Resolve cast-destination:
-		btVector3 to_position_bt;
-		btTransform to_matrix_bt;
-
-		util::visit
-		(
-			to,
-
-			[&to_position_bt, &to_matrix_bt](const math::Matrix& to)
-			{
-				to_matrix_bt = math::to_bullet_matrix(to);
-				to_position_bt = math::to_bullet_vector(math::get_translation(to));
-			},
-
-			[&to_position_bt, &to_matrix_bt, &from_matrix_bt](const math::Vector& to)
-			{
-				to_position_bt = math::to_bullet_vector(to);
-
-				to_matrix_bt = btTransform(from_matrix_bt.getBasis(), to_position_bt);
-
-				// Alternative: no orientation at destination.
-				//to_matrix_bt = btTransform(btMatrix3x3::getIdentity(), to_position_bt);
-			}
-		);
-
-		return impl::convex_cast_impl
-		(
-			physics,
-			
-			shape,
-			
-			from_matrix_bt,
-			to_matrix_bt,
-
-			collision_obj_self_filter,
-			
-			from_position_bt,
-			to_position_bt,
-			
-			static_cast<int>(filter_group),
-			static_cast<int>(filter_mask),
-
-			allowed_penetration
-		);
 	}
 }

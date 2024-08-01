@@ -64,6 +64,37 @@ namespace engine
 			CollisionObjectAndConvexShape
 		>;
 
+		/*
+			Performs a convex-cast using `shape` from the location
+			specified (`from`) to the destination specified (`to`).
+
+			By convention, the closest hit is always used.
+
+			See also: `convex_cast_to` for established collision-objects
+			with well defined starting positions/transforms.
+		*/
+		std::optional<ConvexCastResult> convex_cast
+		(
+			PhysicsSystem& physics,
+
+			const btConvexShape& shape,
+
+			const CollisionCastPoint& from,
+			const CollisionCastPoint& to,
+
+			CollisionGroup filter_group=CollisionGroup::All,
+			CollisionGroup filter_mask=CollisionGroup::All,
+
+			const btCollisionObject* collision_obj_self=nullptr,
+
+			std::optional<float> allowed_penetration=std::nullopt,
+			std::optional<float> skin_width=std::nullopt,
+
+			const math::Vector& shape_offset={},
+			bool apply_shape_offset=true,
+			bool apply_shape_size_to_offset=false
+		);
+
 		std::optional<ConvexCastResult> convex_cast_to
 		(
 			PhysicsSystem& physics,
@@ -75,7 +106,12 @@ namespace engine
 			std::optional<CollisionGroup> filter_group=std::nullopt,
 			std::optional<CollisionGroup> filter_mask=std::nullopt,
 
-			std::optional<float> allowed_penetration=std::nullopt
+			std::optional<float> allowed_penetration=std::nullopt,
+			std::optional<float> skin_width=std::nullopt,
+
+			const math::Vector& shape_offset={},
+			bool apply_shape_offset=true,
+			bool apply_shape_size_to_offset=false
 		);
 
 		std::optional<RayCastResult> ray_cast
@@ -147,10 +183,11 @@ namespace engine
 		std::optional<CollisionGroup> filter_group=std::nullopt, // Defaults to `collision` object's group.
 		std::optional<CollisionGroup> filter_mask=std::nullopt,  // Defaults to `collision` object's mask.
 
-		std::optional<float> allowed_penetration=std::nullopt    // Defaults to internal collision-world's allowable penetration.
+		std::optional<float> allowed_penetration=std::nullopt,   // Defaults to internal collision-world's allowable penetration.
+		std::optional<float> skin_width=std::nullopt             // Defaults to nothing.
 	)
 	{
-		return impl::convex_cast_to(physics, self, destination, filter_group, filter_mask, allowed_penetration);
+		return impl::convex_cast_to(physics, self, destination, filter_group, filter_mask, allowed_penetration, skin_width);
 	}
 
 	// Performs a ray-cast between two points, returning the closest hit detected.
@@ -307,29 +344,5 @@ namespace engine
 		return impl::directional_ray_cast_to(physics, self, direction, max_distance, filter_group, filter_mask);
 	}
 
-	/*
-		Performs a convex-cast using `shape` from the location
-		specified (`from`) to the destination specified (`to`).
-
-		By convention, the closest hit is always used.
-
-		See also: `convex_cast_to` for established collision-objects
-		with well defined starting positions/transforms.
-	*/
-	std::optional<ConvexCastResult> convex_cast
-	(
-		PhysicsSystem& physics,
-
-		const btConvexShape& shape,
-
-		const CollisionCastPoint& from,
-		const CollisionCastPoint& to,
-
-		CollisionGroup filter_group=CollisionGroup::All,
-		CollisionGroup filter_mask=CollisionGroup::All,
-
-		const btCollisionObject* collision_obj_self_filter=nullptr,
-
-		std::optional<float> allowed_penetration=std::nullopt
-	);
+	using impl::convex_cast;
 }
