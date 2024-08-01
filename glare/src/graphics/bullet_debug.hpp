@@ -8,7 +8,8 @@
 //#include "drivers/drivers.hpp"
 
 #include <bullet/LinearMath/btIDebugDraw.h>
-#include <vector>
+
+//#include <vector>
 
 namespace graphics
 {
@@ -31,11 +32,13 @@ namespace graphics
 			virtual void reportErrorWarning(const char*) override {}
 			virtual void draw3dText(const btVector3&, const char*) override {}
 
-			virtual void setDebugMode(int p) override {}
-			virtual int getDebugMode() const { return (DBG_DrawWireframe|DBG_DrawAabb); }
+			virtual void setDebugMode(int mode) override { draw_mode = mode; }
+			virtual int getDebugMode() const { return draw_mode; }
 
 			virtual void clearLines() override;
 			virtual void flushLines() override;
+
+			void flush_gpu_state();
 
 			inline Mesh& get_gpu_state() { return gpu_state; }
 
@@ -56,9 +59,11 @@ namespace graphics
 				return enabled;
 			}
 		protected:
+			void clear_line_data();
+
 			//MeshComposition gpu_state;
 
-			// TODO: Look into optimiziation via two or more gpu states. ('double buffering')
+			// TODO: Look into optimization via two or more gpu states. ('double buffering')
 			Mesh gpu_state;
 
 			Vertices point_data;
@@ -67,6 +72,8 @@ namespace graphics
 			std::size_t max_buffer_size  = 0;
 			std::size_t prev_buffer_size = 0;
 
-			bool enabled = true;
+			int draw_mode = (DBG_DrawWireframe | DBG_DrawAabb);
+
+			bool enabled              : 1 = true;
 	};
 }

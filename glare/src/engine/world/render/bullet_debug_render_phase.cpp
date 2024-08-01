@@ -30,7 +30,7 @@ namespace engine
 				std::string {},
 
 				shader_preprocessor
-				)
+			)
 		) {}
 
 	const RenderParameters& BulletDebugRenderPhase::operator()(const RenderParameters& parameters)
@@ -65,6 +65,8 @@ namespace engine
 		math::Matrix projection, view;
 
 		get_camera_matrices(world, viewport, camera, projection, view);
+
+		debug_drawer->flush_gpu_state();
 
 		ctx.use(shader, [&, this]()
 		{

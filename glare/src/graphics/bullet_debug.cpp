@@ -47,8 +47,9 @@ namespace graphics
 			return;
 		}
 
-		prev_buffer_size = point_data.vertices.size();
-		point_data.vertices.clear();
+		// Disabled for now in favor of clearing during flush operation.
+		// (Allows adding lines between render calls)
+		//clear_line_data();
 	}
 
 	void BulletDebugDrawer::flushLines()
@@ -57,14 +58,27 @@ namespace graphics
 		{
 			return;
 		}
+	}
 
-		if (gpu_state)
+	void BulletDebugDrawer::flush_gpu_state()
+	{
+		if (!enabled)
+		{
+			return;
+		}
+
+		const bool attempt_buffer_reuse = (point_data.vertices.size() <= max_buffer_size);
+		const bool update_attributes    = (point_data.vertices.size() != prev_buffer_size);
+
+		max_buffer_size = std::max(point_data.vertices.size(), max_buffer_size);
+
+		if (false) // (gpu_state)
 		{
 			gpu_state.update_contents<VertexType>
 			(
 				ctx, point_data,
-				(point_data.vertices.size() <= max_buffer_size),
-				(point_data.vertices.size() != prev_buffer_size),
+				attempt_buffer_reuse,
+				update_attributes,
 				std::nullopt, std::nullopt, std::nullopt,
 				false
 			);
@@ -80,6 +94,12 @@ namespace graphics
 			);
 		}
 
-		max_buffer_size = std::max(point_data.vertices.size(), max_buffer_size);
+		clear_line_data();
+	}
+
+	void BulletDebugDrawer::clear_line_data()
+	{
+		prev_buffer_size = point_data.vertices.size();
+		point_data.vertices.clear();
 	}
 }
